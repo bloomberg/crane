@@ -100,34 +100,6 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
-    ~EvenTree() {
-      std::vector<std::shared_ptr<EvenTree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](EvenTree &_node) {
-        if (std::holds_alternative<ENode>(_node.v_)) {
-          auto &_alt = std::get<ENode>(_node.v_);
-          if (_alt.a2) {
-            if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(
-                    _alt.a2->v())) {
-              auto &_palt = std::get<typename MutualIndexed::OddTree::ONode>(
-                  _alt.a2->v_mut());
-              if (_palt.a2) {
-                _stack.push_back(std::move(_palt.a2));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -183,34 +155,6 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
-    ~OddTree() {
-      std::vector<std::shared_ptr<OddTree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](OddTree &_node) {
-        if (std::holds_alternative<ONode>(_node.v_)) {
-          auto &_alt = std::get<ONode>(_node.v_);
-          if (_alt.a2) {
-            if (std::holds_alternative<typename MutualIndexed::EvenTree::ENode>(
-                    _alt.a2->v())) {
-              auto &_palt = std::get<typename MutualIndexed::EvenTree::ENode>(
-                  _alt.a2->v_mut());
-              if (_palt.a2) {
-                _stack.push_back(std::move(_palt.a2));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

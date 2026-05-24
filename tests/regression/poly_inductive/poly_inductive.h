@@ -1,11 +1,11 @@
 #ifndef INCLUDED_POLY_INDUCTIVE
 #define INCLUDED_POLY_INDUCTIVE
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PolyInductive {
   template <typename A> struct pbox {
@@ -98,37 +98,40 @@ struct PolyInductive {
 
     explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
-    pmaybe(const pmaybe<A> &_other) : v_(_other.v_) {}
-
-    pmaybe(pmaybe<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    pmaybe<A> &operator=(const pmaybe<A> &_other) {
-      v_ = _other.v_;
-      return *this;
-    }
-
-    pmaybe<A> &operator=(pmaybe<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    pmaybe<A> clone() const {
-      if (std::holds_alternative<PNothing>(this->v())) {
-        return pmaybe<A>(PNothing{});
-      } else {
-        const auto &[a0] = std::get<PJust>(this->v());
-        return pmaybe<A>(PJust{a0});
-      }
-    }
-
-    // CREATORS
     template <typename _U> explicit pmaybe(const pmaybe<_U> &_other) {
       if (std::holds_alternative<typename pmaybe<_U>::PNothing>(_other.v())) {
         this->v_ = PNothing{};
       } else {
         const auto &[a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
-        this->v_ = PJust{A(a0)};
+        this->v_ = PJust{[&]() -> A {
+          if constexpr (std::is_same_v<_U, std::any>) {
+            if (a0.type() == typeid(A))
+              return std::any_cast<A>(a0);
+            if constexpr (requires {
+                            typename A::first_type;
+                            typename A::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return A{[&]() -> typename A::first_type {
+                         if constexpr (std::is_same_v<typename A::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename A::first_type>(_k);
+                       }(),
+                       [&]() -> typename A::second_type {
+                         if constexpr (std::is_same_v<typename A::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename A::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<A>(a0);
+          } else
+            return A(a0);
+        }()};
       }
     }
 
@@ -210,61 +213,38 @@ struct PolyInductive {
 
     explicit ptree(PNode _v) : v_(std::move(_v)) {}
 
-    ptree(const ptree<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    ptree(ptree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    ptree<A> &operator=(const ptree<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    ptree<A> &operator=(ptree<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    ptree<A> clone() const {
-      ptree<A> _out{};
-
-      struct _CloneFrame {
-        const ptree<A> *_src;
-        ptree<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const ptree<A> *_src = _frame._src;
-        ptree<A> *_dst = _frame._dst;
-        if (std::holds_alternative<PLeaf>(_src->v())) {
-          const auto &_alt = std::get<PLeaf>(_src->v());
-          _dst->v_ = PLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<PNode>(_src->v());
-          _dst->v_ = PNode{_alt.a0 ? std::make_shared<ptree<A>>() : nullptr,
-                           _alt.a1 ? std::make_shared<ptree<A>>() : nullptr};
-          auto &_dst_alt = std::get<PNode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit ptree(const ptree<_U> &_other) {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
         const auto &[a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
-        this->v_ = PLeaf{A(a0)};
+        this->v_ = PLeaf{[&]() -> A {
+          if constexpr (std::is_same_v<_U, std::any>) {
+            if (a0.type() == typeid(A))
+              return std::any_cast<A>(a0);
+            if constexpr (requires {
+                            typename A::first_type;
+                            typename A::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return A{[&]() -> typename A::first_type {
+                         if constexpr (std::is_same_v<typename A::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename A::first_type>(_k);
+                       }(),
+                       [&]() -> typename A::second_type {
+                         if constexpr (std::is_same_v<typename A::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename A::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<A>(a0);
+          } else
+            return A(a0);
+        }()};
       } else {
         const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());
         this->v_ = PNode{a0 ? std::make_shared<ptree<A>>(*a0) : nullptr,
@@ -280,30 +260,6 @@ struct PolyInductive {
     }
 
     // MANIPULATORS
-    ~ptree() {
-      std::vector<std::shared_ptr<ptree<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](ptree<A> &_node) {
-        if (std::holds_alternative<PNode>(_node.v_)) {
-          auto &_alt = std::get<PNode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

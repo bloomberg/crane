@@ -210,3 +210,7 @@ val gen_instance_struct :
 (** Check if a term is a type class instance (constructs a type class record).
 *)
 val is_typeclass_instance : ml_ast -> ml_type -> bool
+
+(** [is_list_global g] returns true iff [g] is the Coq list inductive.
+    Exposed so that cpp_print.ml can detect list types in any_cast contexts. *)
+val is_list_global : GlobRef.t -> bool

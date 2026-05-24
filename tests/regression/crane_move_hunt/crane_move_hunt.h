@@ -21,7 +21,7 @@ struct CraneMoveHunt {
 
     // ACCESSORS
     state clone() const {
-      return state{this->core.clone(), this->cursor.clone(), this->visible};
+      return state{this->core, this->cursor, this->visible};
     }
   };
 

@@ -1,12 +1,12 @@
 #ifndef INCLUDED_REC_RECORD
 #define INCLUDED_REC_RECORD
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct RecRecord {
   template <typename A> struct rlist {
@@ -32,59 +32,43 @@ struct RecRecord {
 
     explicit rlist(Rcons _v) : v_(std::move(_v)) {}
 
-    rlist(const rlist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    rlist(rlist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    rlist<A> &operator=(const rlist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    rlist<A> &operator=(rlist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    rlist<A> clone() const {
-      rlist<A> _out{};
-
-      struct _CloneFrame {
-        const rlist<A> *_src;
-        rlist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const rlist<A> *_src = _frame._src;
-        rlist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Rnil>(_src->v())) {
-          _dst->v_ = Rnil{};
-        } else {
-          const auto &_alt = std::get<Rcons>(_src->v());
-          _dst->v_ =
-              Rcons{_alt.a0, _alt.a1 ? std::make_shared<rlist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Rcons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
         this->v_ = Rnil{};
       } else {
         const auto &[a0, a1] = std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->v_ = Rcons{A(a0), a1 ? std::make_shared<rlist<A>>(*a1) : nullptr};
+        this->v_ = Rcons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<rlist<A>>(*a1) : nullptr};
       }
     }
 
@@ -96,27 +80,6 @@ struct RecRecord {
     }
 
     // MANIPULATORS
-    ~rlist() {
-      std::vector<std::shared_ptr<rlist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](rlist<A> &_node) {
-        if (std::holds_alternative<Rcons>(_node.v_)) {
-          auto &_alt = std::get<Rcons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -194,8 +157,7 @@ struct RecRecord {
 
     // ACCESSORS
     Department clone() const {
-      return Department{this->dept_id, this->dept_head.clone(),
-                        this->dept_size};
+      return Department{this->dept_id, this->dept_head, this->dept_size};
     }
   };
 

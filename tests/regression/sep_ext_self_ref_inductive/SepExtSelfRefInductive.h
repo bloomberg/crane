@@ -1,11 +1,11 @@
 #ifndef INCLUDED_SEPEXTSELFREFINDUCTIVE
 #define INCLUDED_SEPEXTSELFREFINDUCTIVE
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 namespace SepExtSelfRefInductive {
 
@@ -38,66 +38,46 @@ template <S X> struct HashTrie {
 
     explicit Trie(Node _v) : v_(std::move(_v)) {}
 
-    Trie(const Trie<V> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Trie(Trie<V> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Trie<V> &operator=(const Trie<V> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Trie<V> &operator=(Trie<V> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Trie<V> clone() const {
-      Trie<V> _out{};
-
-      struct _CloneFrame {
-        const Trie<V> *_src;
-        Trie<V> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Trie<V> *_src = _frame._src;
-        Trie<V> *_dst = _frame._dst;
-        if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->v_ = Empty{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.k, _alt.v,
-                          _alt.left ? std::make_shared<Trie<V>>() : nullptr,
-                          _alt.right ? std::make_shared<Trie<V>>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.left) {
-            _stack.push_back({_alt.left.get(), _dst_alt.left.get()});
-          }
-          if (_alt.right) {
-            _stack.push_back({_alt.right.get(), _dst_alt.right.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit Trie(const Trie<_U> &_other) {
       if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
         this->v_ = Empty{};
       } else {
         const auto &[k, v, left, right] =
             std::get<typename Trie<_U>::Node>(_other.v());
-        this->v_ =
-            Node{k, V(v), left ? std::make_shared<Trie<V>>(*left) : nullptr,
-                 right ? std::make_shared<Trie<V>>(*right) : nullptr};
+        this->v_ = Node{
+            k,
+            [&]() -> V {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (v.type() == typeid(V))
+                  return std::any_cast<V>(v);
+                if constexpr (requires {
+                                typename V::first_type;
+                                typename V::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(v);
+                  return V{
+                      [&]() -> typename V::first_type {
+                        if constexpr (std::is_same_v<typename V::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename V::first_type>(_k);
+                      }(),
+                      [&]() -> typename V::second_type {
+                        if constexpr (std::is_same_v<typename V::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename V::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<V>(v);
+              } else
+                return V(v);
+            }(),
+            left ? std::make_shared<Trie<V>>(*left) : nullptr,
+            right ? std::make_shared<Trie<V>>(*right) : nullptr};
       }
     }
 
@@ -110,30 +90,6 @@ template <S X> struct HashTrie {
     }
 
     // MANIPULATORS
-    ~Trie() {
-      std::vector<std::shared_ptr<Trie<V>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Trie<V> &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.left) {
-            _stack.push_back(std::move(_alt.left));
-          }
-          if (_alt.right) {
-            _stack.push_back(std::move(_alt.right));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

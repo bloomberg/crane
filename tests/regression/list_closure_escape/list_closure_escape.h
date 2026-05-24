@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ListClosureEscape {
   struct tree {
@@ -33,56 +32,6 @@ struct ListClosureEscape {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->v_ = Leaf{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_shared<tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_shared<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
@@ -91,30 +40,6 @@ struct ListClosureEscape {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -193,53 +118,6 @@ struct ListClosureEscape {
 
     explicit fn_list(FCons _v) : v_(std::move(_v)) {}
 
-    fn_list(const fn_list &_other) : v_(std::move(_other.clone().v_)) {}
-
-    fn_list(fn_list &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    fn_list &operator=(const fn_list &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    fn_list &operator=(fn_list &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    fn_list clone() const {
-      fn_list _out{};
-
-      struct _CloneFrame {
-        const fn_list *_src;
-        fn_list *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const fn_list *_src = _frame._src;
-        fn_list *_dst = _frame._dst;
-        if (std::holds_alternative<FNil>(_src->v())) {
-          _dst->v_ = FNil{};
-        } else {
-          const auto &_alt = std::get<FCons>(_src->v());
-          _dst->v_ =
-              FCons{_alt.a0, _alt.a1 ? std::make_shared<fn_list>() : nullptr};
-          auto &_dst_alt = std::get<FCons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static fn_list fnil() { return fn_list(FNil{}); }
 
     static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
@@ -248,27 +126,6 @@ struct ListClosureEscape {
     }
 
     // MANIPULATORS
-    ~fn_list() {
-      std::vector<std::shared_ptr<fn_list>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](fn_list &_node) {
-        if (std::holds_alternative<FCons>(_node.v_)) {
-          auto &_alt = std::get<FCons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

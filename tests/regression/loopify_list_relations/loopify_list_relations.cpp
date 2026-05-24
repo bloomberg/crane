@@ -478,9 +478,9 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
                       ys.v())) {
                 return false;
               } else {
-                const auto &[a0, a1] =
+                const auto &[a2, a3] =
                     std::get<typename List<uint64_t>::Cons>(ys.v());
-                return (y == a0 || _self_member(_self_member, y, *a1));
+                return (y == a2 || _self_member(_self_member, y, *a3));
               }
             };
             auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
@@ -522,9 +522,9 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
                       ys.v())) {
                 return false;
               } else {
-                const auto &[a0, a1] =
+                const auto &[a2, a3] =
                     std::get<typename List<uint64_t>::Cons>(ys.v());
-                return (y == a0 || _self_member(_self_member, y, *a1));
+                return (y == a2 || _self_member(_self_member, y, *a3));
               }
             };
             auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {

@@ -1,11 +1,11 @@
 #ifndef INCLUDED_LIST_SELF_DEEP_COPY
 #define INCLUDED_LIST_SELF_DEEP_COPY
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -30,58 +30,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -92,27 +76,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -146,76 +109,6 @@ struct ListSelfDeepCopy {
 
     explicit chain(Link _v) : v_(std::move(_v)) {}
 
-    chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
-
-    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    chain &operator=(const chain &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    chain &operator=(chain &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    chain clone() const {
-      chain _out{};
-
-      struct _CloneFrame {
-        const chain *_src;
-        chain *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const chain *_src = _frame._src;
-        chain *_dst = _frame._dst;
-        if (std::holds_alternative<Stop>(_src->v())) {
-          _dst->v_ = Stop{};
-        } else {
-          const auto &_alt = std::get<Link>(_src->v());
-          _dst->v_ = Link{_alt.a0 ? std::make_shared<List<chain>>() : nullptr};
-          auto &_dst_alt = std::get<Link>(_dst->v_);
-          [&] {
-            if (_alt.a0) {
-              const List<chain> *_lsrc = _alt.a0.get();
-              List<chain> *_ldst = _dst_alt.a0.get();
-              while (std::holds_alternative<typename List<chain>::Cons>(
-                  _lsrc->v())) {
-                const auto &_lsrc_c =
-                    std::get<typename List<chain>::Cons>(_lsrc->v());
-                _ldst->v_mut() = typename List<chain>::Cons{
-                    chain{},
-                    _lsrc_c.l ? std::make_shared<List<chain>>() : nullptr};
-                auto &_ldst_c =
-                    std::get<typename List<chain>::Cons>(_ldst->v_mut());
-                _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
-                if (_lsrc_c.l) {
-                  _lsrc = _lsrc_c.l.get();
-                  _ldst = _ldst_c.l.get();
-                } else {
-                  break;
-                }
-              }
-              if (std::holds_alternative<typename List<chain>::Nil>(
-                      _lsrc->v())) {
-                _ldst->v_mut() = typename List<chain>::Nil{};
-              }
-            }
-          }();
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static chain stop() { return chain(Stop{}); }
 
     static chain link(List<chain> a0) {
@@ -223,37 +116,6 @@ struct ListSelfDeepCopy {
     }
 
     // MANIPULATORS
-    ~chain() {
-      std::vector<std::shared_ptr<chain>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](chain &_node) {
-        if (std::holds_alternative<Link>(_node.v_)) {
-          auto &_alt = std::get<Link>(_node.v_);
-          if (_alt.a0) {
-            auto *_lp = _alt.a0.get();
-            while (
-                std::holds_alternative<typename List<chain>::Cons>(_lp->v())) {
-              auto &_lc = std::get<typename List<chain>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_shared<chain>(std::move(_lc.a)));
-              if (_lc.l) {
-                _lp = _lc.l.get();
-              } else {
-                break;
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

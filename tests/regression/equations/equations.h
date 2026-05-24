@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PeanoNat {
   static bool even(uint64_t n);
@@ -148,46 +147,6 @@ struct Equations {
     }
 
     // MANIPULATORS
-    ~gcd_graph() {
-      std::vector<std::shared_ptr<gcd_graph>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](gcd_graph &_node) {
-        if (std::holds_alternative<Gcd_graph_refinement_3>(_node.v_)) {
-          auto &_alt = std::get<Gcd_graph_refinement_3>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<typename Equations::gcd_clause_3_graph::
-                                           Gcd_clause_3_graph_equation_1>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<typename Equations::gcd_clause_3_graph::
-                                         Gcd_clause_3_graph_equation_1>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-            if (std::holds_alternative<typename Equations::gcd_clause_3_graph::
-                                           Gcd_clause_3_graph_equation_2>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<typename Equations::gcd_clause_3_graph::
-                                         Gcd_clause_3_graph_equation_2>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -274,51 +233,6 @@ struct Equations {
     }
 
     // MANIPULATORS
-    ~gcd_clause_3_graph() {
-      std::vector<std::shared_ptr<gcd_clause_3_graph>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](gcd_clause_3_graph &_node) {
-        if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(_node.v_)) {
-          auto &_alt = std::get<Gcd_clause_3_graph_equation_1>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<
-                    typename Equations::gcd_graph::Gcd_graph_refinement_3>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<
-                  typename Equations::gcd_graph::Gcd_graph_refinement_3>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-        if (std::holds_alternative<Gcd_clause_3_graph_equation_2>(_node.v_)) {
-          auto &_alt = std::get<Gcd_clause_3_graph_equation_2>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<
-                    typename Equations::gcd_graph::Gcd_graph_refinement_3>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<
-                  typename Equations::gcd_graph::Gcd_graph_refinement_3>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -647,51 +561,6 @@ struct Equations {
     }
 
     // MANIPULATORS
-    ~collatz_steps_graph() {
-      std::vector<std::shared_ptr<collatz_steps_graph>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](collatz_steps_graph &_node) {
-        if (std::holds_alternative<Collatz_steps_graph_refinement_3>(
-                _node.v_)) {
-          auto &_alt = std::get<Collatz_steps_graph_refinement_3>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<
-                    typename Equations::collatz_steps_clause_3_graph::
-                        Collatz_steps_clause_3_graph_equation_1>(
-                    _alt.hind->v())) {
-              auto &_palt =
-                  std::get<typename Equations::collatz_steps_clause_3_graph::
-                               Collatz_steps_clause_3_graph_equation_1>(
-                      _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-            if (std::holds_alternative<
-                    typename Equations::collatz_steps_clause_3_graph::
-                        Collatz_steps_clause_3_graph_equation_2>(
-                    _alt.hind->v())) {
-              auto &_palt =
-                  std::get<typename Equations::collatz_steps_clause_3_graph::
-                               Collatz_steps_clause_3_graph_equation_2>(
-                      _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -787,55 +656,6 @@ struct Equations {
     }
 
     // MANIPULATORS
-    ~collatz_steps_clause_3_graph() {
-      std::vector<std::shared_ptr<collatz_steps_clause_3_graph>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](collatz_steps_clause_3_graph &_node) {
-        if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
-                _node.v_)) {
-          auto &_alt =
-              std::get<Collatz_steps_clause_3_graph_equation_1>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<typename Equations::collatz_steps_graph::
-                                           Collatz_steps_graph_refinement_3>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<typename Equations::collatz_steps_graph::
-                                         Collatz_steps_graph_refinement_3>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-        if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_2>(
-                _node.v_)) {
-          auto &_alt =
-              std::get<Collatz_steps_clause_3_graph_equation_2>(_node.v_);
-          if (_alt.hind) {
-            if (std::holds_alternative<typename Equations::collatz_steps_graph::
-                                           Collatz_steps_graph_refinement_3>(
-                    _alt.hind->v())) {
-              auto &_palt = std::get<typename Equations::collatz_steps_graph::
-                                         Collatz_steps_graph_refinement_3>(
-                  _alt.hind->v_mut());
-              if (_palt.hind) {
-                _stack.push_back(std::move(_palt.hind));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

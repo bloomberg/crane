@@ -5,7 +5,6 @@
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Ty { TNAT, TBOOL };
 
@@ -56,86 +55,6 @@ public:
 
   explicit Expr(EIf _v) : v_(std::move(_v)) {}
 
-  Expr(const Expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Expr(Expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Expr &operator=(const Expr &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Expr &operator=(Expr &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Expr clone() const {
-    Expr _out{};
-
-    struct _CloneFrame {
-      const Expr *_src;
-      Expr *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Expr *_src = _frame._src;
-      Expr *_dst = _frame._dst;
-      if (std::holds_alternative<ENat>(_src->v())) {
-        const auto &_alt = std::get<ENat>(_src->v());
-        _dst->v_ = ENat{_alt.a0};
-      } else if (std::holds_alternative<EBool>(_src->v())) {
-        const auto &_alt = std::get<EBool>(_src->v());
-        _dst->v_ = EBool{_alt.a0};
-      } else if (std::holds_alternative<EAdd>(_src->v())) {
-        const auto &_alt = std::get<EAdd>(_src->v());
-        _dst->v_ = EAdd{_alt.a0 ? std::make_shared<Expr>() : nullptr,
-                        _alt.a1 ? std::make_shared<Expr>() : nullptr};
-        auto &_dst_alt = std::get<EAdd>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-        }
-      } else if (std::holds_alternative<EEq>(_src->v())) {
-        const auto &_alt = std::get<EEq>(_src->v());
-        _dst->v_ = EEq{_alt.a0 ? std::make_shared<Expr>() : nullptr,
-                       _alt.a1 ? std::make_shared<Expr>() : nullptr};
-        auto &_dst_alt = std::get<EEq>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-        }
-      } else {
-        const auto &_alt = std::get<EIf>(_src->v());
-        _dst->v_ = EIf{_alt.t, _alt.a1 ? std::make_shared<Expr>() : nullptr,
-                       _alt.a2 ? std::make_shared<Expr>() : nullptr,
-                       _alt.a3 ? std::make_shared<Expr>() : nullptr};
-        auto &_dst_alt = std::get<EIf>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-        }
-        if (_alt.a2) {
-          _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-        }
-        if (_alt.a3) {
-          _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Expr enat(uint64_t a0) { return Expr(ENat{a0}); }
 
   static Expr ebool(bool a0) { return Expr(EBool{a0}); }
@@ -157,51 +76,6 @@ public:
   }
 
   // MANIPULATORS
-  ~Expr() {
-    std::vector<std::shared_ptr<Expr>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Expr &_node) {
-      if (std::holds_alternative<EAdd>(_node.v_)) {
-        auto &_alt = std::get<EAdd>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
-        }
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
-        }
-      }
-      if (std::holds_alternative<EEq>(_node.v_)) {
-        auto &_alt = std::get<EEq>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
-        }
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
-        }
-      }
-      if (std::holds_alternative<EIf>(_node.v_)) {
-        auto &_alt = std::get<EIf>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
-        }
-        if (_alt.a2) {
-          _stack.push_back(std::move(_alt.a2));
-        }
-        if (_alt.a3) {
-          _stack.push_back(std::move(_alt.a3));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

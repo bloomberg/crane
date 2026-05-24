@@ -33,58 +33,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -95,27 +79,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -150,35 +113,35 @@ struct ComprehensivePatterns {
     S l1_s;
 
     // ACCESSORS
-    L1 clone() const { return L1{this->l1_s.clone()}; }
+    L1 clone() const { return L1{this->l1_s}; }
   };
 
   struct L2 {
     L1 l2_l1;
 
     // ACCESSORS
-    L2 clone() const { return L2{this->l2_l1.clone()}; }
+    L2 clone() const { return L2{this->l2_l1}; }
   };
 
   struct L3 {
     L2 l3_l2;
 
     // ACCESSORS
-    L3 clone() const { return L3{this->l3_l2.clone()}; }
+    L3 clone() const { return L3{this->l3_l2}; }
   };
 
   struct L4 {
     L3 l4_l3;
 
     // ACCESSORS
-    L4 clone() const { return L4{this->l4_l3.clone()}; }
+    L4 clone() const { return L4{this->l4_l3}; }
   };
 
   struct L5 {
     L4 l5_l4;
 
     // ACCESSORS
-    L5 clone() const { return L5{this->l5_l4.clone()}; }
+    L5 clone() const { return L5{this->l5_l4}; }
   };
 
   static std::pair<
@@ -272,32 +235,6 @@ struct ComprehensivePatterns {
 
     explicit Either(Right_N _v) : v_(std::move(_v)) {}
 
-    Either(const Either &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Either(Either &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Either &operator=(const Either &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Either &operator=(Either &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Either clone() const {
-      if (std::holds_alternative<Left_S>(this->v())) {
-        const auto &[s] = std::get<Left_S>(this->v());
-        return Either(Left_S{s.clone()});
-      } else {
-        const auto &[n] = std::get<Right_N>(this->v());
-        return Either(Right_N{n});
-      }
-    }
-
-    // CREATORS
     static Either left_s(S s) { return Either(Left_S{std::move(s)}); }
 
     static Either right_n(uint64_t n) { return Either(Right_N{n}); }
@@ -349,7 +286,7 @@ struct ComprehensivePatterns {
     uint64_t r2_data;
 
     // ACCESSORS
-    R2 clone() const { return R2{this->r2_inner.clone(), this->r2_data}; }
+    R2 clone() const { return R2{this->r2_inner, this->r2_data}; }
   };
 
   struct R3 {
@@ -358,9 +295,7 @@ struct ComprehensivePatterns {
     uint64_t r3_num;
 
     // ACCESSORS
-    R3 clone() const {
-      return R3{this->r3_r2.clone(), this->r3_r1.clone(), this->r3_num};
-    }
+    R3 clone() const { return R3{this->r3_r2, this->r3_r1, this->r3_num}; }
   };
 
   static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
@@ -453,7 +388,7 @@ struct ComprehensivePatterns {
     NC outer_nc;
 
     // ACCESSORS
-    OuterNC clone() const { return OuterNC{this->outer_nc.clone()}; }
+    OuterNC clone() const { return OuterNC{this->outer_nc}; }
   };
 
   static uint64_t double_proj_nc(const OuterNC &o);
@@ -537,7 +472,7 @@ struct ComprehensivePatterns {
 
     // ACCESSORS
     OuterStmt clone() const {
-      return OuterStmt{this->outer_stmt_inner.clone(), this->outer_stmt_data};
+      return OuterStmt{this->outer_stmt_inner, this->outer_stmt_data};
     }
   };
 
@@ -547,7 +482,7 @@ struct ComprehensivePatterns {
     OuterStmt l3_outer_stmt;
 
     // ACCESSORS
-    Level3Stmt clone() const { return Level3Stmt{this->l3_outer_stmt.clone()}; }
+    Level3Stmt clone() const { return Level3Stmt{this->l3_outer_stmt}; }
   };
 
   static uint64_t triple_chain(const Level3Stmt &l3);
@@ -611,57 +546,6 @@ struct ComprehensivePatterns {
 
     explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-    Tree(const Tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Tree(Tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Tree &operator=(const Tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Tree &operator=(Tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Tree clone() const {
-      Tree _out{};
-
-      struct _CloneFrame {
-        const Tree *_src;
-        Tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Tree *_src = _frame._src;
-        Tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->v_ = Leaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_shared<Tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_shared<Tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, uint64_t a1, Tree a2) {
@@ -670,30 +554,6 @@ struct ComprehensivePatterns {
     }
 
     // MANIPULATORS
-    ~Tree() {
-      std::vector<std::shared_ptr<Tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -994,31 +854,6 @@ struct ComprehensivePatterns {
 
     explicit Container(Full _v) : v_(std::move(_v)) {}
 
-    Container(const Container &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Container(Container &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Container &operator=(const Container &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Container &operator=(Container &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Container clone() const {
-      if (std::holds_alternative<Empty>(this->v())) {
-        return Container(Empty{});
-      } else {
-        const auto &[a0] = std::get<Full>(this->v());
-        return Container(Full{a0.clone()});
-      }
-    }
-
-    // CREATORS
     static Container empty() { return Container(Empty{}); }
 
     static Container full(StateRO a0) { return Container(Full{std::move(a0)}); }

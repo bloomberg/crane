@@ -181,52 +181,6 @@ struct LargeEnum {
 
     explicit tok(TEOF _v) : v_(_v) {}
 
-    tok(const tok &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tok(tok &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tok &operator=(const tok &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tok &operator=(tok &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tok clone() const {
-      if (std::holds_alternative<TNum>(this->v())) {
-        const auto &[a0] = std::get<TNum>(this->v());
-        return tok(TNum{a0});
-      } else if (std::holds_alternative<TPlus>(this->v())) {
-        return tok(TPlus{});
-      } else if (std::holds_alternative<TMinus>(this->v())) {
-        return tok(TMinus{});
-      } else if (std::holds_alternative<TStar>(this->v())) {
-        return tok(TStar{});
-      } else if (std::holds_alternative<TSlash>(this->v())) {
-        return tok(TSlash{});
-      } else if (std::holds_alternative<TLParen>(this->v())) {
-        return tok(TLParen{});
-      } else if (std::holds_alternative<TRParen>(this->v())) {
-        return tok(TRParen{});
-      } else if (std::holds_alternative<TEq>(this->v())) {
-        return tok(TEq{});
-      } else if (std::holds_alternative<TBang>(this->v())) {
-        return tok(TBang{});
-      } else if (std::holds_alternative<TSemicolon>(this->v())) {
-        return tok(TSemicolon{});
-      } else if (std::holds_alternative<TIdent>(this->v())) {
-        const auto &[a0] = std::get<TIdent>(this->v());
-        return tok(TIdent{a0});
-      } else {
-        return tok(TEOF{});
-      }
-    }
-
-    // CREATORS
     static tok tnum(uint64_t a0) { return tok(TNum{a0}); }
 
     static tok tplus() { return tok(TPlus{}); }

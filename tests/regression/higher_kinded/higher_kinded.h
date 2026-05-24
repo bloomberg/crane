@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
@@ -41,61 +40,38 @@ struct HigherKinded {
 
     explicit Tree(Branch _v) : v_(std::move(_v)) {}
 
-    Tree(const Tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Tree(Tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Tree<A> &operator=(const Tree<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Tree<A> &operator=(Tree<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Tree<A> clone() const {
-      Tree<A> _out{};
-
-      struct _CloneFrame {
-        const Tree<A> *_src;
-        Tree<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Tree<A> *_src = _frame._src;
-        Tree<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->v_ = Leaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Branch>(_src->v());
-          _dst->v_ = Branch{_alt.a0 ? std::make_shared<Tree<A>>() : nullptr,
-                            _alt.a1 ? std::make_shared<Tree<A>>() : nullptr};
-          auto &_dst_alt = std::get<Branch>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit Tree(const Tree<_U> &_other) {
       if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
         const auto &[a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
-        this->v_ = Leaf{A(a0)};
+        this->v_ = Leaf{[&]() -> A {
+          if constexpr (std::is_same_v<_U, std::any>) {
+            if (a0.type() == typeid(A))
+              return std::any_cast<A>(a0);
+            if constexpr (requires {
+                            typename A::first_type;
+                            typename A::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return A{[&]() -> typename A::first_type {
+                         if constexpr (std::is_same_v<typename A::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename A::first_type>(_k);
+                       }(),
+                       [&]() -> typename A::second_type {
+                         if constexpr (std::is_same_v<typename A::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename A::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<A>(a0);
+          } else
+            return A(a0);
+        }()};
       } else {
         const auto &[a0, a1] = std::get<typename Tree<_U>::Branch>(_other.v());
         this->v_ = Branch{a0 ? std::make_shared<Tree<A>>(*a0) : nullptr,
@@ -111,30 +87,6 @@ struct HigherKinded {
     }
 
     // MANIPULATORS
-    ~Tree() {
-      std::vector<std::shared_ptr<Tree<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Tree<A> &_node) {
-        if (std::holds_alternative<Branch>(_node.v_)) {
-          auto &_alt = std::get<Branch>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

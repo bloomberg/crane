@@ -1011,6 +1011,14 @@ let mark_higher_order_projections struc =
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
+(** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
+    prune back-edges in the inter-module include graph during separate
+    extraction.  A back-edge exists when module X includes module Y but Y is
+    topologically earlier than X (Y comes before X in the extraction order and
+    therefore Y's content is already (or will be) included when X is compiled).
+    The default is no-op; [separate_extraction] sets it per module. *)
+let opened_filter : (ModPath.t -> bool) ref = ref (fun _ -> true)
+
 (** Renders an entire ML structure to C++ header and implementation files.
     Performs dry run first for renaming, then generates and formats the output.
 *)
@@ -1056,7 +1064,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
-  let opened = opened_libraries () in
+  let opened = List.filter !opened_filter (opened_libraries ()) in
   (* In separate extraction, force fully qualified cross-module references
      (e.g. Datatypes::List instead of bare List). *)
   ( match namespace with
@@ -1365,6 +1373,12 @@ let separate_extraction ~opaque_access lr =
   in
   Cpp_state.set_valid_output_modules valid_mps;
   Common.set_non_output_modules valid_mps;
+  (* Build a topological position map for all extracted modules.  The struc
+     list is already in topological order (each module after its dependencies).
+     We use positions to prune forward includes (A includes B where B comes
+     after A in topo order) which would create circular C++ #include cycles. *)
+  let topo_index : (ModPath.t, int) Hashtbl.t = Hashtbl.create 64 in
+  List.iteri (fun i (mp, _) -> Hashtbl.replace topo_index mp i) struc;
   let rec pre_scan_unmerged sel =
     let refs_unmerged_functor (me : ml_module_expr) =
       let rec get_base : ml_module_expr -> bool = function
@@ -1550,7 +1564,21 @@ let separate_extraction ~opaque_access lr =
           if ns_collides_with_decl base sel then base ^ "_"
           else base
         in
-        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e]
+        (* Only include modules that are topologically earlier (i.e., come
+           before the current module in the extracted structure).  Including a
+           later module would create a circular C++ #include cycle. *)
+        let current_idx =
+          match Hashtbl.find_opt topo_index mp with
+          | Some i -> i
+          | None -> max_int
+        in
+        opened_filter :=
+          (fun mp' ->
+            match Hashtbl.find_opt topo_index mp' with
+            | Some j -> j < current_idx
+            | None -> true);
+        print_structure_to_file ~namespace:(Some ns) (module_filename mp) false [e];
+        opened_filter := (fun _ -> true)
       end
     | (MPdot _ | MPbound _), _ -> assert false
   in

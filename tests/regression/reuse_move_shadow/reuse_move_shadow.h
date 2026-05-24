@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ReuseMoveShadow {
   /// Define node FIRST so it gets variant index 0 and the reuse
@@ -34,56 +33,6 @@ struct ReuseMoveShadow {
 
     explicit tree(Leaf _v) : v_(_v) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<Node>(_src->v())) {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0, _alt.a1 ? std::make_shared<tree>() : nullptr,
-                          _alt.a2 ? std::make_shared<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        } else {
-          _dst->v_ = Leaf{};
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree node(uint64_t a0, tree a1, tree a2) {
       return tree(Node{a0, std::make_shared<tree>(std::move(a1)),
                        std::make_shared<tree>(std::move(a2))});
@@ -92,30 +41,6 @@ struct ReuseMoveShadow {
     static tree leaf() { return tree(Leaf{}); }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

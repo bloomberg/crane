@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE20
 #define INCLUDED_MEM_SAFETY_PROBE20
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -40,56 +41,6 @@ struct MemSafetyProbe20 {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->v_ = Leaf{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_shared<tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_shared<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
@@ -98,30 +49,6 @@ struct MemSafetyProbe20 {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -441,61 +368,44 @@ struct MemSafetyProbe20 {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist<A> &operator=(const mylist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist<A> &operator=(mylist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist<A> clone() const {
-      mylist<A> _out{};
-
-      struct _CloneFrame {
-        const mylist<A> *_src;
-        mylist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist<A> *_src = _frame._src;
-        mylist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->v_ = Mynil{};
-        } else {
-          const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_shared<mylist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
         this->v_ = Mynil{};
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ =
-            Mycons{A(a0), a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -507,27 +417,6 @@ struct MemSafetyProbe20 {
     }
 
     // MANIPULATORS
-    ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist<A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.v_)) {
-          auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

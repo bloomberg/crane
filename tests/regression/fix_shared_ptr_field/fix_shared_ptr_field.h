@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct FixSharedPtrField {
   /// A value-type inductive with recursive self-reference (shared_ptr).
@@ -49,53 +48,6 @@ struct FixSharedPtrField {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist &operator=(const mylist &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist &operator=(mylist &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist clone() const {
-      mylist _out{};
-
-      struct _CloneFrame {
-        const mylist *_src;
-        mylist *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist *_src = _frame._src;
-        mylist *_dst = _frame._dst;
-        if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->v_ = Mynil{};
-        } else {
-          const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ =
-              Mycons{_alt.a0, _alt.a1 ? std::make_shared<mylist>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static mylist mynil() { return mylist(Mynil{}); }
 
     static mylist mycons(uint64_t a0, mylist a1) {
@@ -103,27 +55,6 @@ struct FixSharedPtrField {
     }
 
     // MANIPULATORS
-    ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist &_node) {
-        if (std::holds_alternative<Mycons>(_node.v_)) {
-          auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

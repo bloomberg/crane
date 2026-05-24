@@ -1,10 +1,10 @@
 #ifndef INCLUDED_WPM_OPS
 #define INCLUDED_WPM_OPS
 
+#include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -29,58 +29,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -91,27 +75,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -154,7 +117,7 @@ struct WpmOps {
 
     // ACCESSORS
     state1 clone() const {
-      return state1{this->rom1.clone(), this->prom_addr1, this->prom_data1,
+      return state1{this->rom1, this->prom_addr1, this->prom_data1,
                     this->prom_enable1};
     }
   };
@@ -189,8 +152,8 @@ struct WpmOps {
 
     // ACCESSORS
     state2 clone() const {
-      return state2{this->ram_sys2.clone(), this->rom2.clone(),
-                    this->prom_addr2, this->prom_data2, this->prom_enable2};
+      return state2{this->ram_sys2, this->rom2, this->prom_addr2,
+                    this->prom_data2, this->prom_enable2};
     }
   };
 
@@ -219,8 +182,8 @@ struct WpmOps {
 
     // ACCESSORS
     state3 clone() const {
-      return state3{this->regs3.clone(), this->rom3.clone(), this->prom_addr3,
-                    this->prom_data3, this->prom_enable3};
+      return state3{this->regs3, this->rom3, this->prom_addr3, this->prom_data3,
+                    this->prom_enable3};
     }
   };
 
@@ -248,7 +211,7 @@ struct WpmOps {
 
     // ACCESSORS
     state4 clone() const {
-      return state4{this->rom4.clone(), this->prom_addr4, this->prom_data4,
+      return state4{this->rom4, this->prom_addr4, this->prom_data4,
                     this->prom_enable4};
     }
   };
@@ -275,7 +238,7 @@ struct WpmOps {
 
     // ACCESSORS
     state5 clone() const {
-      return state5{this->rom5.clone(), this->prom_addr5, this->prom_data5,
+      return state5{this->rom5, this->prom_addr5, this->prom_data5,
                     this->prom_enable5};
     }
   };
@@ -302,7 +265,7 @@ struct WpmOps {
 
     // ACCESSORS
     state6 clone() const {
-      return state6{this->rom6.clone(), this->prom_addr6, this->prom_data6,
+      return state6{this->rom6, this->prom_addr6, this->prom_data6,
                     this->prom_enable6};
     }
   };

@@ -1,12 +1,12 @@
 #ifndef INCLUDED_JUMP_TARGETS
 #define INCLUDED_JUMP_TARGETS
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -31,58 +31,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -93,27 +77,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -158,36 +121,6 @@ struct JumpTargets {
 
     explicit instr_collection(NOP_coll _v) : v_(_v) {}
 
-    instr_collection(const instr_collection &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    instr_collection(instr_collection &&_other) noexcept
-        : v_(std::move(_other.v_)) {}
-
-    instr_collection &operator=(const instr_collection &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instr_collection &operator=(instr_collection &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instr_collection clone() const {
-      if (std::holds_alternative<JUN_coll>(this->v())) {
-        const auto &[a0] = std::get<JUN_coll>(this->v());
-        return instr_collection(JUN_coll{a0});
-      } else if (std::holds_alternative<JMS_coll>(this->v())) {
-        const auto &[a0] = std::get<JMS_coll>(this->v());
-        return instr_collection(JMS_coll{a0});
-      } else {
-        return instr_collection(NOP_coll{});
-      }
-    }
-
-    // CREATORS
     static instr_collection jun_coll(uint64_t a0) {
       return instr_collection(JUN_coll{a0});
     }
@@ -300,35 +233,6 @@ struct JumpTargets {
 
     explicit instr_region(NOP_reg _v) : v_(_v) {}
 
-    instr_region(const instr_region &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    instr_region(instr_region &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instr_region &operator=(const instr_region &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instr_region &operator=(instr_region &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instr_region clone() const {
-      if (std::holds_alternative<JUN_reg>(this->v())) {
-        const auto &[a0] = std::get<JUN_reg>(this->v());
-        return instr_region(JUN_reg{a0});
-      } else if (std::holds_alternative<JMS_reg>(this->v())) {
-        const auto &[a0] = std::get<JMS_reg>(this->v());
-        return instr_region(JMS_reg{a0});
-      } else {
-        return instr_region(NOP_reg{});
-      }
-    }
-
-    // CREATORS
     static instr_region jun_reg(uint64_t a0) {
       return instr_region(JUN_reg{a0});
     }
@@ -432,34 +336,6 @@ struct JumpTargets {
 
     explicit instr_jms(NOP_jms _v) : v_(_v) {}
 
-    instr_jms(const instr_jms &_other) : v_(std::move(_other.clone().v_)) {}
-
-    instr_jms(instr_jms &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instr_jms &operator=(const instr_jms &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instr_jms &operator=(instr_jms &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instr_jms clone() const {
-      if (std::holds_alternative<JUN_jms>(this->v())) {
-        const auto &[a0] = std::get<JUN_jms>(this->v());
-        return instr_jms(JUN_jms{a0});
-      } else if (std::holds_alternative<JMS_jms>(this->v())) {
-        const auto &[a0] = std::get<JMS_jms>(this->v());
-        return instr_jms(JMS_jms{a0});
-      } else {
-        return instr_jms(NOP_jms{});
-      }
-    }
-
-    // CREATORS
     static instr_jms jun_jms(uint64_t a0) { return instr_jms(JUN_jms{a0}); }
 
     static instr_jms jms_jms(uint64_t a0) { return instr_jms(JMS_jms{a0}); }
@@ -550,34 +426,6 @@ struct JumpTargets {
 
     explicit instr_jun(NOP_jun _v) : v_(_v) {}
 
-    instr_jun(const instr_jun &_other) : v_(std::move(_other.clone().v_)) {}
-
-    instr_jun(instr_jun &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instr_jun &operator=(const instr_jun &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instr_jun &operator=(instr_jun &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instr_jun clone() const {
-      if (std::holds_alternative<JUN_jun>(this->v())) {
-        const auto &[a0] = std::get<JUN_jun>(this->v());
-        return instr_jun(JUN_jun{a0});
-      } else if (std::holds_alternative<JMS_jun>(this->v())) {
-        const auto &[a0] = std::get<JMS_jun>(this->v());
-        return instr_jun(JMS_jun{a0});
-      } else {
-        return instr_jun(NOP_jun{});
-      }
-    }
-
-    // CREATORS
     static instr_jun jun_jun(uint64_t a0) { return instr_jun(JUN_jun{a0}); }
 
     static instr_jun jms_jun(uint64_t a0) { return instr_jun(JMS_jun{a0}); }

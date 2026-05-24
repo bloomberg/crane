@@ -33,32 +33,6 @@ struct ReuseMixedFields {
 
     explicit payload(AsPair _v) : v_(std::move(_v)) {}
 
-    payload(const payload &_other) : v_(std::move(_other.clone().v_)) {}
-
-    payload(payload &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    payload &operator=(const payload &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    payload &operator=(payload &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    payload clone() const {
-      if (std::holds_alternative<AsNat>(this->v())) {
-        const auto &[a0, a1] = std::get<AsNat>(this->v());
-        return payload(AsNat{a0, a1});
-      } else {
-        const auto &[a0, a1] = std::get<AsPair>(this->v());
-        return payload(AsPair{a0, a1});
-      }
-    }
-
-    // CREATORS
     static payload asnat(uint64_t a0, uint64_t a1) {
       return payload(AsNat{a0, a1});
     }

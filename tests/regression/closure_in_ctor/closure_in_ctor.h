@@ -29,31 +29,6 @@ struct ClosureInCtor {
 
     explicit box(Empty _v) : v_(_v) {}
 
-    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
-
-    box(box &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    box &operator=(const box &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    box &operator=(box &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    box clone() const {
-      if (std::holds_alternative<Box0>(this->v())) {
-        const auto &[a0] = std::get<Box0>(this->v());
-        return box(Box0{a0});
-      } else {
-        return box(Empty{});
-      }
-    }
-
-    // CREATORS
     static box box0(std::function<uint64_t(uint64_t)> a0) {
       return box(Box0{std::move(a0)});
     }

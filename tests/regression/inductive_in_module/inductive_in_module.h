@@ -1,6 +1,7 @@
 #ifndef INCLUDED_INDUCTIVE_IN_MODULE
 #define INCLUDED_INDUCTIVE_IN_MODULE
 
+#include <any>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -72,37 +73,41 @@ struct InductiveInModule {
 
         explicit option(Some _v) : v_(std::move(_v)) {}
 
-        option(const option<A> &_other) : v_(_other.v_) {}
-
-        option(option<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-        option<A> &operator=(const option<A> &_other) {
-          v_ = _other.v_;
-          return *this;
-        }
-
-        option<A> &operator=(option<A> &&_other) noexcept {
-          v_ = std::move(_other.v_);
-          return *this;
-        }
-
-        // ACCESSORS
-        option<A> clone() const {
-          if (std::holds_alternative<None>(this->v())) {
-            return option<A>(None{});
-          } else {
-            const auto &[a] = std::get<Some>(this->v());
-            return option<A>(Some{a});
-          }
-        }
-
-        // CREATORS
         template <typename _U> explicit option(const option<_U> &_other) {
           if (std::holds_alternative<typename option<_U>::None>(_other.v())) {
             this->v_ = None{};
           } else {
             const auto &[a] = std::get<typename option<_U>::Some>(_other.v());
-            this->v_ = Some{A(a)};
+            this->v_ = Some{[&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a.type() == typeid(A))
+                  return std::any_cast<A>(a);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a);
+              } else
+                return A(a);
+            }()};
           }
         }
 

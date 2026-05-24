@@ -1,11 +1,11 @@
 #ifndef INCLUDED_GET_PAIR_BOUND_PROP
 #define INCLUDED_GET_PAIR_BOUND_PROP
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -30,58 +30,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -92,27 +76,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -184,10 +147,9 @@ struct GetPairBoundProp {
 
     // ACCESSORS
     state clone() const {
-      return state{this->ex_acc,           this->ex_regs.clone(),
-                   this->ex_carry,         this->ex_pc,
-                   this->ex_stack.clone(), this->ex_pair_bus,
-                   this->ex_ports.clone()};
+      return state{this->ex_acc,  this->ex_regs,  this->ex_carry,
+                   this->ex_pc,   this->ex_stack, this->ex_pair_bus,
+                   this->ex_ports};
     }
   };
 
@@ -362,99 +324,6 @@ struct GetPairBoundProp {
 
     explicit instr(BBL _v) : v_(std::move(_v)) {}
 
-    instr(const instr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    instr(instr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instr &operator=(const instr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instr &operator=(instr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instr clone() const {
-      if (std::holds_alternative<NOP>(this->v())) {
-        return instr(NOP{});
-      } else if (std::holds_alternative<LDM>(this->v())) {
-        const auto &[n] = std::get<LDM>(this->v());
-        return instr(LDM{n});
-      } else if (std::holds_alternative<LD>(this->v())) {
-        const auto &[r] = std::get<LD>(this->v());
-        return instr(LD{r});
-      } else if (std::holds_alternative<XCH>(this->v())) {
-        const auto &[r] = std::get<XCH>(this->v());
-        return instr(XCH{r});
-      } else if (std::holds_alternative<INC>(this->v())) {
-        const auto &[r] = std::get<INC>(this->v());
-        return instr(INC{r});
-      } else if (std::holds_alternative<ADD>(this->v())) {
-        const auto &[r] = std::get<ADD>(this->v());
-        return instr(ADD{r});
-      } else if (std::holds_alternative<SUB>(this->v())) {
-        const auto &[r] = std::get<SUB>(this->v());
-        return instr(SUB{r});
-      } else if (std::holds_alternative<IAC>(this->v())) {
-        return instr(IAC{});
-      } else if (std::holds_alternative<DAC>(this->v())) {
-        return instr(DAC{});
-      } else if (std::holds_alternative<CLC>(this->v())) {
-        return instr(CLC{});
-      } else if (std::holds_alternative<STC>(this->v())) {
-        return instr(STC{});
-      } else if (std::holds_alternative<CMC>(this->v())) {
-        return instr(CMC{});
-      } else if (std::holds_alternative<CMA>(this->v())) {
-        return instr(CMA{});
-      } else if (std::holds_alternative<CLB>(this->v())) {
-        return instr(CLB{});
-      } else if (std::holds_alternative<RAL>(this->v())) {
-        return instr(RAL{});
-      } else if (std::holds_alternative<RAR>(this->v())) {
-        return instr(RAR{});
-      } else if (std::holds_alternative<TCC>(this->v())) {
-        return instr(TCC{});
-      } else if (std::holds_alternative<TCS>(this->v())) {
-        return instr(TCS{});
-      } else if (std::holds_alternative<DAA>(this->v())) {
-        return instr(DAA{});
-      } else if (std::holds_alternative<KBP>(this->v())) {
-        return instr(KBP{});
-      } else if (std::holds_alternative<JUN>(this->v())) {
-        const auto &[a] = std::get<JUN>(this->v());
-        return instr(JUN{a});
-      } else if (std::holds_alternative<JMS>(this->v())) {
-        const auto &[a] = std::get<JMS>(this->v());
-        return instr(JMS{a});
-      } else if (std::holds_alternative<JCN>(this->v())) {
-        const auto &[c, a] = std::get<JCN>(this->v());
-        return instr(JCN{c, a});
-      } else if (std::holds_alternative<FIM>(this->v())) {
-        const auto &[r, d] = std::get<FIM>(this->v());
-        return instr(FIM{r, d});
-      } else if (std::holds_alternative<SRC>(this->v())) {
-        const auto &[r] = std::get<SRC>(this->v());
-        return instr(SRC{r});
-      } else if (std::holds_alternative<FIN>(this->v())) {
-        const auto &[r] = std::get<FIN>(this->v());
-        return instr(FIN{r});
-      } else if (std::holds_alternative<JIN>(this->v())) {
-        const auto &[r] = std::get<JIN>(this->v());
-        return instr(JIN{r});
-      } else if (std::holds_alternative<ISZ>(this->v())) {
-        const auto &[r, a] = std::get<ISZ>(this->v());
-        return instr(ISZ{r, a});
-      } else {
-        const auto &[d] = std::get<BBL>(this->v());
-        return instr(BBL{d});
-      }
-    }
-
-    // CREATORS
     static instr nop() { return instr(NOP{}); }
 
     static instr ldm(uint64_t n) { return instr(LDM{n}); }

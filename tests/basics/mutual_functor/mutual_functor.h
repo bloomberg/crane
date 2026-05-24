@@ -84,34 +84,6 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<typename MutualTree::forest::FCons>(
-                    _alt.a1->v())) {
-              auto &_palt = std::get<typename MutualTree::forest::FCons>(
-                  _alt.a1->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -198,27 +170,6 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
-    ~forest() {
-      std::vector<std::shared_ptr<forest>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](forest &_node) {
-        if (std::holds_alternative<FCons>(_node.v_)) {
-          auto &_alt = std::get<FCons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -43,32 +43,6 @@ struct ReuseTagMismatch {
 
     explicit direction(GoDown _v) : v_(std::move(_v)) {}
 
-    direction(const direction &_other) : v_(std::move(_other.clone().v_)) {}
-
-    direction(direction &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    direction &operator=(const direction &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    direction &operator=(direction &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    direction clone() const {
-      if (std::holds_alternative<GoUp>(this->v())) {
-        const auto &[a0] = std::get<GoUp>(this->v());
-        return direction(GoUp{a0});
-      } else {
-        const auto &[a0] = std::get<GoDown>(this->v());
-        return direction(GoDown{a0});
-      }
-    }
-
-    // CREATORS
     static direction goup(uint64_t a0) { return direction(GoUp{a0}); }
 
     static direction godown(uint64_t a0) { return direction(GoDown{a0}); }

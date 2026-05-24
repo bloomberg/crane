@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_STRUCTURES
 #define INCLUDED_LOOPIFY_STRUCTURES
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -31,58 +32,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -93,27 +78,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -170,78 +134,6 @@ struct LoopifyStructures {
 
     explicit nested(NList _v) : v_(std::move(_v)) {}
 
-    nested(const nested &_other) : v_(std::move(_other.clone().v_)) {}
-
-    nested(nested &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    nested &operator=(const nested &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    nested &operator=(nested &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    nested clone() const {
-      nested _out{};
-
-      struct _CloneFrame {
-        const nested *_src;
-        nested *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const nested *_src = _frame._src;
-        nested *_dst = _frame._dst;
-        if (std::holds_alternative<Elem>(_src->v())) {
-          const auto &_alt = std::get<Elem>(_src->v());
-          _dst->v_ = Elem{_alt.a0};
-        } else {
-          const auto &_alt = std::get<NList>(_src->v());
-          _dst->v_ =
-              NList{_alt.a0 ? std::make_shared<List<nested>>() : nullptr};
-          auto &_dst_alt = std::get<NList>(_dst->v_);
-          [&] {
-            if (_alt.a0) {
-              const List<nested> *_lsrc = _alt.a0.get();
-              List<nested> *_ldst = _dst_alt.a0.get();
-              while (std::holds_alternative<typename List<nested>::Cons>(
-                  _lsrc->v())) {
-                const auto &_lsrc_c =
-                    std::get<typename List<nested>::Cons>(_lsrc->v());
-                _ldst->v_mut() = typename List<nested>::Cons{
-                    nested{},
-                    _lsrc_c.l ? std::make_shared<List<nested>>() : nullptr};
-                auto &_ldst_c =
-                    std::get<typename List<nested>::Cons>(_ldst->v_mut());
-                _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
-                if (_lsrc_c.l) {
-                  _lsrc = _lsrc_c.l.get();
-                  _ldst = _ldst_c.l.get();
-                } else {
-                  break;
-                }
-              }
-              if (std::holds_alternative<typename List<nested>::Nil>(
-                      _lsrc->v())) {
-                _ldst->v_mut() = typename List<nested>::Nil{};
-              }
-            }
-          }();
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static nested elem(uint64_t a0) { return nested(Elem{a0}); }
 
     static nested nlist(List<nested> a0) {
@@ -249,37 +141,6 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
-    ~nested() {
-      std::vector<std::shared_ptr<nested>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](nested &_node) {
-        if (std::holds_alternative<NList>(_node.v_)) {
-          auto &_alt = std::get<NList>(_node.v_);
-          if (_alt.a0) {
-            auto *_lp = _alt.a0.get();
-            while (
-                std::holds_alternative<typename List<nested>::Cons>(_lp->v())) {
-              auto &_lc = std::get<typename List<nested>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_shared<nested>(std::move(_lc.a)));
-              if (_lc.l) {
-                _lp = _lc.l.get();
-              } else {
-                break;
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -381,65 +242,6 @@ struct LoopifyStructures {
 
     explicit quadtree(Quad _v) : v_(std::move(_v)) {}
 
-    quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    quadtree &operator=(const quadtree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    quadtree &operator=(quadtree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    quadtree clone() const {
-      quadtree _out{};
-
-      struct _CloneFrame {
-        const quadtree *_src;
-        quadtree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const quadtree *_src = _frame._src;
-        quadtree *_dst = _frame._dst;
-        if (std::holds_alternative<QLeaf>(_src->v())) {
-          const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->v_ = QLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Quad>(_src->v());
-          _dst->v_ = Quad{_alt.a0 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a1 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a2 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a3 ? std::make_shared<quadtree>() : nullptr};
-          auto &_dst_alt = std::get<Quad>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-          if (_alt.a3) {
-            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
@@ -450,36 +252,6 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
-    ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](quadtree &_node) {
-        if (std::holds_alternative<Quad>(_node.v_)) {
-          auto &_alt = std::get<Quad>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-          if (_alt.a3) {
-            _stack.push_back(std::move(_alt.a3));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1037,58 +809,6 @@ struct LoopifyStructures {
 
     explicit ltree(LNode _v) : v_(std::move(_v)) {}
 
-    ltree(const ltree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    ltree(ltree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    ltree &operator=(const ltree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    ltree &operator=(ltree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    ltree clone() const {
-      ltree _out{};
-
-      struct _CloneFrame {
-        const ltree *_src;
-        ltree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const ltree *_src = _frame._src;
-        ltree *_dst = _frame._dst;
-        if (std::holds_alternative<LLeaf>(_src->v())) {
-          const auto &_alt = std::get<LLeaf>(_src->v());
-          _dst->v_ = LLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<LNode>(_src->v());
-          _dst->v_ =
-              LNode{_alt.a0, _alt.a1 ? std::make_shared<ltree>() : nullptr,
-                    _alt.a2 ? std::make_shared<ltree>() : nullptr};
-          auto &_dst_alt = std::get<LNode>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static ltree lleaf(uint64_t a0) { return ltree(LLeaf{a0}); }
 
     static ltree lnode(uint64_t a0, ltree a1, ltree a2) {
@@ -1097,30 +817,6 @@ struct LoopifyStructures {
     }
 
     // MANIPULATORS
-    ~ltree() {
-      std::vector<std::shared_ptr<ltree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](ltree &_node) {
-        if (std::holds_alternative<LNode>(_node.v_)) {
-          auto &_alt = std::get<LNode>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

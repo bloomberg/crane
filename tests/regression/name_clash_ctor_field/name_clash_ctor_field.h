@@ -63,32 +63,6 @@ struct NameClashCtorField {
 
     explicit clash2(C2b _v) : v_(std::move(_v)) {}
 
-    clash2(const clash2 &_other) : v_(std::move(_other.clone().v_)) {}
-
-    clash2(clash2 &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    clash2 &operator=(const clash2 &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    clash2 &operator=(clash2 &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    clash2 clone() const {
-      if (std::holds_alternative<C2a>(this->v())) {
-        const auto &[v] = std::get<C2a>(this->v());
-        return clash2(C2a{v});
-      } else {
-        const auto &[result] = std::get<C2b>(this->v());
-        return clash2(C2b{result});
-      }
-    }
-
-    // CREATORS
     static clash2 c2a(uint64_t v) { return clash2(C2a{v}); }
 
     static clash2 c2b(uint64_t result) { return clash2(C2b{result}); }
@@ -191,31 +165,6 @@ struct NameClashCtorField {
 
     explicit box(EmptyBox _v) : v_(_v) {}
 
-    box(const box &_other) : v_(std::move(_other.clone().v_)) {}
-
-    box(box &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    box &operator=(const box &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    box &operator=(box &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    box clone() const {
-      if (std::holds_alternative<Box0>(this->v())) {
-        const auto &[a0] = std::get<Box0>(this->v());
-        return box(Box0{a0.clone()});
-      } else {
-        return box(EmptyBox{});
-      }
-    }
-
-    // CREATORS
     static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
 
     static box emptybox() { return box(EmptyBox{}); }

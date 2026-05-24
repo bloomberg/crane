@@ -33,31 +33,6 @@ struct GeneratedStorageFieldNameClash {
 
     explicit d_v_(Flag _v) : v_(std::move(_v)) {}
 
-    d_v_(const d_v_ &_other) : v_(std::move(_other.clone().v_)) {}
-
-    d_v_(d_v_ &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    d_v_ &operator=(const d_v_ &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    d_v_ &operator=(d_v_ &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    d_v_ clone() const {
-      if (std::holds_alternative<Empty>(this->v())) {
-        return d_v_(Empty{});
-      } else {
-        const auto &[a0] = std::get<Flag>(this->v());
-        return d_v_(Flag{a0});
-      }
-    }
-
-    // CREATORS
     static d_v_ empty() { return d_v_(Empty{}); }
 
     static d_v_ flag(bool a0) { return d_v_(Flag{a0}); }

@@ -48,9 +48,7 @@ struct PrimitiveRecTypeclass {
     point bot_right;
 
     // ACCESSORS
-    rect clone() const {
-      return rect{this->top_left.clone(), this->bot_right.clone()};
-    }
+    rect clone() const { return rect{this->top_left, this->bot_right}; }
   };
 
   static uint64_t rect_width(const rect &r);

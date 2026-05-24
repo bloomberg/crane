@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EMPTY_MATCH
 #define INCLUDED_EMPTY_MATCH
 
+#include <any>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -49,42 +50,72 @@ struct EmptyMatch {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either<A, B> &_other) : v_(_other.v_) {}
-
-    either(either<A, B> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    either<A, B> &operator=(const either<A, B> &_other) {
-      v_ = _other.v_;
-      return *this;
-    }
-
-    either<A, B> &operator=(either<A, B> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    either<A, B> clone() const {
-      if (std::holds_alternative<Left>(this->v())) {
-        const auto &[a0] = std::get<Left>(this->v());
-        return either<A, B>(Left{a0});
-      } else {
-        const auto &[a0] = std::get<Right>(this->v());
-        return either<A, B>(Right{a0});
-      }
-    }
-
-    // CREATORS
     template <typename _U0, typename _U1>
     explicit either(const either<_U0, _U1> &_other) {
       if (std::holds_alternative<typename either<_U0, _U1>::Left>(_other.v())) {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
-        this->v_ = Left{A(a0)};
+        this->v_ = Left{[&]() -> A {
+          if constexpr (std::is_same_v<_U0, std::any>) {
+            if (a0.type() == typeid(A))
+              return std::any_cast<A>(a0);
+            if constexpr (requires {
+                            typename A::first_type;
+                            typename A::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return A{[&]() -> typename A::first_type {
+                         if constexpr (std::is_same_v<typename A::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename A::first_type>(_k);
+                       }(),
+                       [&]() -> typename A::second_type {
+                         if constexpr (std::is_same_v<typename A::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename A::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<A>(a0);
+          } else
+            return A(a0);
+        }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
-        this->v_ = Right{B(a0)};
+        this->v_ = Right{[&]() -> B {
+          if constexpr (std::is_same_v<_U1, std::any>) {
+            if (a0.type() == typeid(B))
+              return std::any_cast<B>(a0);
+            if constexpr (requires {
+                            typename B::first_type;
+                            typename B::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return B{[&]() -> typename B::first_type {
+                         if constexpr (std::is_same_v<typename B::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename B::first_type>(_k);
+                       }(),
+                       [&]() -> typename B::second_type {
+                         if constexpr (std::is_same_v<typename B::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename B::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<B>(a0);
+          } else
+            return B(a0);
+        }()};
       }
     }
 

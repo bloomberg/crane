@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_LISTS
 #define INCLUDED_LOOPIFY_LISTS
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -35,59 +36,43 @@ struct LoopifyLists {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    list<A> &operator=(const list<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    list<A> &operator=(list<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    list<A> clone() const {
-      list<A> _out{};
-
-      struct _CloneFrame {
-        const list<A> *_src;
-        list<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const list<A> *_src = _frame._src;
-        list<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->v_ = Nil{};
-        } else {
-          const auto &_alt = std::get<Cons>(_src->v());
-          _dst->v_ =
-              Cons{_alt.a, _alt.l ? std::make_shared<list<A>>() : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->v_);
-          if (_alt.l) {
-            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
         this->v_ = Nil{};
       } else {
         const auto &[a, l] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a), l ? std::make_shared<list<A>>(*l) : nullptr};
+        this->v_ = Cons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a.type() == typeid(A))
+                  return std::any_cast<A>(a);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a);
+              } else
+                return A(a);
+            }(),
+            l ? std::make_shared<list<A>>(*l) : nullptr};
       }
     }
 
@@ -98,27 +83,6 @@ struct LoopifyLists {
     }
 
     // MANIPULATORS
-    ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](list<A> &_node) {
-        if (std::holds_alternative<Cons>(_node.v_)) {
-          auto &_alt = std::get<Cons>(_node.v_);
-          if (_alt.l) {
-            _stack.push_back(std::move(_alt.l));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -460,15 +424,15 @@ struct LoopifyLists {
               list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto map_cons_impl = [](auto &_self_map_cons,
-                                  const list<list<T1>> &ys) -> list<list<T1>> {
+          auto map_cons_impl = [&](auto &_self_map_cons,
+                                   const list<list<T1>> &ys) -> list<list<T1>> {
             if (std::holds_alternative<typename list<list<T1>>::Nil>(ys.v())) {
               return list<list<T1>>::nil();
             } else {
-              const auto &[a0, a1] =
+              const auto &[a2, a3] =
                   std::get<typename list<list<T1>>::Cons>(ys.v());
-              return list<list<T1>>::cons(list<T1>::cons(a0, a0),
-                                          _self_map_cons(_self_map_cons, *a1));
+              return list<list<T1>>::cons(list<T1>::cons(a0, a2),
+                                          _self_map_cons(_self_map_cons, *a3));
             }
           };
           auto map_cons = [&](const list<list<T1>> &ys) -> list<list<T1>> {

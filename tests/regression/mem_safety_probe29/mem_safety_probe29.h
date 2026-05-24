@@ -33,57 +33,6 @@ struct MemSafetyProbe29 {
 
     explicit inner(INode _v) : v_(std::move(_v)) {}
 
-    inner(const inner &_other) : v_(std::move(_other.clone().v_)) {}
-
-    inner(inner &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    inner &operator=(const inner &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    inner &operator=(inner &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    inner clone() const {
-      inner _out{};
-
-      struct _CloneFrame {
-        const inner *_src;
-        inner *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const inner *_src = _frame._src;
-        inner *_dst = _frame._dst;
-        if (std::holds_alternative<ILeaf>(_src->v())) {
-          _dst->v_ = ILeaf{};
-        } else {
-          const auto &_alt = std::get<INode>(_src->v());
-          _dst->v_ =
-              INode{_alt.a0 ? std::make_shared<inner>() : nullptr, _alt.a1,
-                    _alt.a2 ? std::make_shared<inner>() : nullptr};
-          auto &_dst_alt = std::get<INode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static inner ileaf() { return inner(ILeaf{}); }
 
     static inner inode(inner a0, uint64_t a1, inner a2) {
@@ -92,30 +41,6 @@ struct MemSafetyProbe29 {
     }
 
     // MANIPULATORS
-    ~inner() {
-      std::vector<std::shared_ptr<inner>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](inner &_node) {
-        if (std::holds_alternative<INode>(_node.v_)) {
-          auto &_alt = std::get<INode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -379,57 +304,6 @@ struct MemSafetyProbe29 {
 
     explicit outer(ONode _v) : v_(std::move(_v)) {}
 
-    outer(const outer &_other) : v_(std::move(_other.clone().v_)) {}
-
-    outer(outer &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    outer &operator=(const outer &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    outer &operator=(outer &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    outer clone() const {
-      outer _out{};
-
-      struct _CloneFrame {
-        const outer *_src;
-        outer *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const outer *_src = _frame._src;
-        outer *_dst = _frame._dst;
-        if (std::holds_alternative<OLeaf>(_src->v())) {
-          _dst->v_ = OLeaf{};
-        } else {
-          const auto &_alt = std::get<ONode>(_src->v());
-          _dst->v_ = ONode{_alt.a0 ? std::make_shared<outer>() : nullptr,
-                           _alt.a1.clone(),
-                           _alt.a2 ? std::make_shared<outer>() : nullptr};
-          auto &_dst_alt = std::get<ONode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static outer oleaf() { return outer(OLeaf{}); }
 
     static outer onode(outer a0, inner a1, outer a2) {
@@ -438,30 +312,6 @@ struct MemSafetyProbe29 {
     }
 
     // MANIPULATORS
-    ~outer() {
-      std::vector<std::shared_ptr<outer>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](outer &_node) {
-        if (std::holds_alternative<ONode>(_node.v_)) {
-          auto &_alt = std::get<ONode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -745,75 +595,6 @@ struct MemSafetyProbe29 {
 
     explicit expr(Mul _v) : v_(std::move(_v)) {}
 
-    expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    expr &operator=(const expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    expr &operator=(expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    expr clone() const {
-      expr _out{};
-
-      struct _CloneFrame {
-        const expr *_src;
-        expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const expr *_src = _frame._src;
-        expr *_dst = _frame._dst;
-        if (std::holds_alternative<Lit>(_src->v())) {
-          const auto &_alt = std::get<Lit>(_src->v());
-          _dst->v_ = Lit{_alt.a0};
-        } else if (std::holds_alternative<Neg>(_src->v())) {
-          const auto &_alt = std::get<Neg>(_src->v());
-          _dst->v_ = Neg{_alt.a0 ? std::make_shared<expr>() : nullptr};
-          auto &_dst_alt = std::get<Neg>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-        } else if (std::holds_alternative<Add>(_src->v())) {
-          const auto &_alt = std::get<Add>(_src->v());
-          _dst->v_ = Add{_alt.a0 ? std::make_shared<expr>() : nullptr,
-                         _alt.a1 ? std::make_shared<expr>() : nullptr};
-          auto &_dst_alt = std::get<Add>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<Mul>(_src->v());
-          _dst->v_ = Mul{_alt.a0 ? std::make_shared<expr>() : nullptr,
-                         _alt.a1 ? std::make_shared<expr>() : nullptr};
-          auto &_dst_alt = std::get<Mul>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr neg(expr a0) {
@@ -831,45 +612,6 @@ struct MemSafetyProbe29 {
     }
 
     // MANIPULATORS
-    ~expr() {
-      std::vector<std::shared_ptr<expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](expr &_node) {
-        if (std::holds_alternative<Neg>(_node.v_)) {
-          auto &_alt = std::get<Neg>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-        }
-        if (std::holds_alternative<Add>(_node.v_)) {
-          auto &_alt = std::get<Add>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<Mul>(_node.v_)) {
-          auto &_alt = std::get<Mul>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1365,61 +1107,6 @@ struct MemSafetyProbe29 {
 
     explicit tree3(T3Node _v) : v_(std::move(_v)) {}
 
-    tree3(const tree3 &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree3(tree3 &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree3 &operator=(const tree3 &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree3 &operator=(tree3 &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree3 clone() const {
-      tree3 _out{};
-
-      struct _CloneFrame {
-        const tree3 *_src;
-        tree3 *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree3 *_src = _frame._src;
-        tree3 *_dst = _frame._dst;
-        if (std::holds_alternative<T3Leaf>(_src->v())) {
-          _dst->v_ = T3Leaf{};
-        } else {
-          const auto &_alt = std::get<T3Node>(_src->v());
-          _dst->v_ =
-              T3Node{_alt.a0 ? std::make_shared<tree3>() : nullptr,
-                     _alt.a1 ? std::make_shared<tree3>() : nullptr,
-                     _alt.a2 ? std::make_shared<tree3>() : nullptr, _alt.a3};
-          auto &_dst_alt = std::get<T3Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree3 t3leaf() { return tree3(T3Leaf{}); }
 
     static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, uint64_t a3) {
@@ -1429,33 +1116,6 @@ struct MemSafetyProbe29 {
     }
 
     // MANIPULATORS
-    ~tree3() {
-      std::vector<std::shared_ptr<tree3>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree3 &_node) {
-        if (std::holds_alternative<T3Node>(_node.v_)) {
-          auto &_alt = std::get<T3Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

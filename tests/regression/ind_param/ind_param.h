@@ -41,32 +41,6 @@ struct IndParam {
 
       explicit result(Err _v) : v_(std::move(_v)) {}
 
-      result(const result &_other) : v_(std::move(_other.clone().v_)) {}
-
-      result(result &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-      result &operator=(const result &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      result &operator=(result &&_other) noexcept {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
-
-      // ACCESSORS
-      result clone() const {
-        if (std::holds_alternative<Ok>(this->v())) {
-          const auto &[a0] = std::get<Ok>(this->v());
-          return result(Ok{a0.clone()});
-        } else {
-          const auto &[a0] = std::get<Err>(this->v());
-          return result(Err{a0});
-        }
-      }
-
-      // CREATORS
       static result ok(typename C::t a0) { return result(Ok{std::move(a0)}); }
 
       static result err(uint64_t a0) { return result(Err{a0}); }
@@ -164,34 +138,6 @@ struct IndParam {
 
       explicit t(Pair _v) : v_(std::move(_v)) {}
 
-      t(const t &_other) : v_(std::move(_other.clone().v_)) {}
-
-      t(t &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-      t &operator=(const t &_other) {
-        v_ = std::move(_other.clone().v_);
-        return *this;
-      }
-
-      t &operator=(t &&_other) noexcept {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
-
-      // ACCESSORS
-      t clone() const {
-        if (std::holds_alternative<Empty>(this->v())) {
-          return t(Empty{});
-        } else if (std::holds_alternative<Single>(this->v())) {
-          const auto &[a0] = std::get<Single>(this->v());
-          return t(Single{a0});
-        } else {
-          const auto &[a0, a1] = std::get<Pair>(this->v());
-          return t(Pair{a0, a1});
-        }
-      }
-
-      // CREATORS
       static t empty() { return t(Empty{}); }
 
       static t single(elem a0) { return t(Single{std::move(a0)}); }

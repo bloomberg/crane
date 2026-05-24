@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -43,31 +42,6 @@ template <Elem E> struct Container {
 
     explicit maybe(Just _v) : v_(std::move(_v)) {}
 
-    maybe(const maybe &_other) : v_(std::move(_other.clone().v_)) {}
-
-    maybe(maybe &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    maybe &operator=(const maybe &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    maybe &operator=(maybe &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    maybe clone() const {
-      if (std::holds_alternative<Nothing>(this->v())) {
-        return maybe(Nothing{});
-      } else {
-        const auto &[a0] = std::get<Just>(this->v());
-        return maybe(Just{a0});
-      }
-    }
-
-    // CREATORS
     static maybe nothing() { return maybe(Nothing{}); }
 
     static maybe just(uint64_t a0) { return maybe(Just{a0}); }
@@ -124,53 +98,6 @@ template <Elem E> struct Container {
 
     explicit mlist(MCons _v) : v_(std::move(_v)) {}
 
-    mlist(const mlist &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mlist(mlist &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mlist &operator=(const mlist &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mlist &operator=(mlist &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mlist clone() const {
-      mlist _out{};
-
-      struct _CloneFrame {
-        const mlist *_src;
-        mlist *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mlist *_src = _frame._src;
-        mlist *_dst = _frame._dst;
-        if (std::holds_alternative<MNil>(_src->v())) {
-          _dst->v_ = MNil{};
-        } else {
-          const auto &_alt = std::get<MCons>(_src->v());
-          _dst->v_ = MCons{_alt.a0.clone(),
-                           _alt.a1 ? std::make_shared<mlist>() : nullptr};
-          auto &_dst_alt = std::get<MCons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static mlist mnil() { return mlist(MNil{}); }
 
     static mlist mcons(maybe a0, mlist a1) {
@@ -179,27 +106,6 @@ template <Elem E> struct Container {
     }
 
     // MANIPULATORS
-    ~mlist() {
-      std::vector<std::shared_ptr<mlist>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mlist &_node) {
-        if (std::holds_alternative<MCons>(_node.v_)) {
-          auto &_alt = std::get<MCons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -252,32 +158,6 @@ template <Elem E> struct Container {
 
     explicit mtree(Node _v) : v_(std::move(_v)) {}
 
-    mtree(const mtree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mtree(mtree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mtree &operator=(const mtree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mtree &operator=(mtree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mtree clone() const {
-      if (std::holds_alternative<Leaf>(this->v())) {
-        const auto &[a0] = std::get<Leaf>(this->v());
-        return mtree(Leaf{a0.clone()});
-      } else {
-        const auto &[a0] = std::get<Node>(this->v());
-        return mtree(Node{a0.clone()});
-      }
-    }
-
-    // CREATORS
     static mtree leaf(maybe a0) { return mtree(Leaf{std::move(a0)}); }
 
     static mtree node(mlist a0) { return mtree(Node{std::move(a0)}); }

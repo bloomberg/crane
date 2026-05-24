@@ -97,8 +97,8 @@ struct Dim10TowerProofChainCase {
     // ACCESSORS
     GoodwillieProofChain clone() const {
       return GoodwillieProofChain{this->gc_eventually_zero,
-                                  this->gc_layers_stabilize.clone(),
-                                  this->gc_P_stabilize.clone()};
+                                  this->gc_layers_stabilize,
+                                  this->gc_P_stabilize};
     }
   };
 
@@ -117,7 +117,7 @@ struct Dim10TowerProofChainCase {
 
     // ACCESSORS
     Dim10Bundle clone() const {
-      return Dim10Bundle{this->dt_tower.clone(), this->dt_chain.clone()};
+      return Dim10Bundle{this->dt_tower, this->dt_chain};
     }
   };
 

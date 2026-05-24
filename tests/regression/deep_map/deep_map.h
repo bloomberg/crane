@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_MAP
 #define INCLUDED_DEEP_MAP
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -32,65 +33,45 @@ struct DeepMap {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree<A> &operator=(const tree<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree<A> &operator=(tree<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree<A> clone() const {
-      tree<A> _out{};
-
-      struct _CloneFrame {
-        const tree<A> *_src;
-        tree<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree<A> *_src = _frame._src;
-        tree<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->v_ = Leaf{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ =
-              Node{_alt.a0 ? std::make_shared<tree<A>>() : nullptr, _alt.a1,
-                   _alt.a2 ? std::make_shared<tree<A>>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
         this->v_ = Leaf{};
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_shared<tree<A>>(*a0) : nullptr, A(a1),
-                        a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
+        this->v_ = Node{
+            a0 ? std::make_shared<tree<A>>(*a0) : nullptr,
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a1.type() == typeid(A))
+                  return std::any_cast<A>(a1);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a1);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a1);
+              } else
+                return A(a1);
+            }(),
+            a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
       }
     }
 
@@ -102,30 +83,6 @@ struct DeepMap {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree<A> &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

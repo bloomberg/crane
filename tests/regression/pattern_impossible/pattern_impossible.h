@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PatternImpossible {
   enum class Three { ONE, TWO, THREE };
@@ -67,57 +66,6 @@ struct PatternImpossible {
 
     explicit nested(Node _v) : v_(std::move(_v)) {}
 
-    nested(const nested &_other) : v_(std::move(_other.clone().v_)) {}
-
-    nested(nested &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    nested &operator=(const nested &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    nested &operator=(nested &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    nested clone() const {
-      nested _out{};
-
-      struct _CloneFrame {
-        const nested *_src;
-        nested *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const nested *_src = _frame._src;
-        nested *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->v_ = Leaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_shared<nested>() : nullptr,
-                          _alt.a1 ? std::make_shared<nested>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static nested leaf(uint64_t a0) { return nested(Leaf{a0}); }
 
     static nested node(nested a0, nested a1) {
@@ -126,30 +74,6 @@ struct PatternImpossible {
     }
 
     // MANIPULATORS
-    ~nested() {
-      std::vector<std::shared_ptr<nested>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](nested &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

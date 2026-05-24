@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CONSTRAINED_POLY
 #define INCLUDED_CONSTRAINED_POLY
 
+#include <any>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -48,35 +49,38 @@ struct ConstrainedPoly {
 
     explicit UOption(UNone _v) : v_(_v) {}
 
-    UOption(const UOption<A> &_other) : v_(_other.v_) {}
-
-    UOption(UOption<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    UOption<A> &operator=(const UOption<A> &_other) {
-      v_ = _other.v_;
-      return *this;
-    }
-
-    UOption<A> &operator=(UOption<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    UOption<A> clone() const {
-      if (std::holds_alternative<USome>(this->v())) {
-        const auto &[a0] = std::get<USome>(this->v());
-        return UOption<A>(USome{a0});
-      } else {
-        return UOption<A>(UNone{});
-      }
-    }
-
-    // CREATORS
     template <typename _U> explicit UOption(const UOption<_U> &_other) {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
         const auto &[a0] = std::get<typename UOption<_U>::USome>(_other.v());
-        this->v_ = USome{A(a0)};
+        this->v_ = USome{[&]() -> A {
+          if constexpr (std::is_same_v<_U, std::any>) {
+            if (a0.type() == typeid(A))
+              return std::any_cast<A>(a0);
+            if constexpr (requires {
+                            typename A::first_type;
+                            typename A::second_type;
+                          }) {
+              const auto &[_k, _v] =
+                  std::any_cast<std::pair<std::any, std::any>>(a0);
+              return A{[&]() -> typename A::first_type {
+                         if constexpr (std::is_same_v<typename A::first_type,
+                                                      std::any>)
+                           return _k;
+                         else
+                           return std::any_cast<typename A::first_type>(_k);
+                       }(),
+                       [&]() -> typename A::second_type {
+                         if constexpr (std::is_same_v<typename A::second_type,
+                                                      std::any>)
+                           return _v;
+                         else
+                           return std::any_cast<typename A::second_type>(_v);
+                       }()};
+            }
+            return std::any_cast<A>(a0);
+          } else
+            return A(a0);
+        }()};
       } else {
         this->v_ = UNone{};
       }

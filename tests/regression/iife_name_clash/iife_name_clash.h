@@ -28,31 +28,6 @@ struct IifeNameClash {
 
     explicit wrapper(Empty _v) : v_(_v) {}
 
-    wrapper(const wrapper &_other) : v_(std::move(_other.clone().v_)) {}
-
-    wrapper(wrapper &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    wrapper &operator=(const wrapper &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    wrapper &operator=(wrapper &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    wrapper clone() const {
-      if (std::holds_alternative<Wrap>(this->v())) {
-        const auto &[n] = std::get<Wrap>(this->v());
-        return wrapper(Wrap{n});
-      } else {
-        return wrapper(Empty{});
-      }
-    }
-
-    // CREATORS
     static wrapper wrap(uint64_t n) { return wrapper(Wrap{n}); }
 
     static wrapper empty() { return wrapper(Empty{}); }

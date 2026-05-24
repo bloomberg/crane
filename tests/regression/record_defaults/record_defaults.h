@@ -33,9 +33,7 @@ struct RecordDefaults {
     Point extent;
 
     // ACCESSORS
-    Rect clone() const {
-      return Rect{this->origin.clone(), this->extent.clone()};
-    }
+    Rect clone() const { return Rect{this->origin, this->extent}; }
   };
 
   static uint64_t rect_area(const Rect &r);

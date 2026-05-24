@@ -30,40 +30,70 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  Sum(const Sum<A, B> &_other) : v_(_other.v_) {}
-
-  Sum(Sum<A, B> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Sum<A, B> &operator=(const Sum<A, B> &_other) {
-    v_ = _other.v_;
-    return *this;
-  }
-
-  Sum<A, B> &operator=(Sum<A, B> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Sum<A, B> clone() const {
-    if (std::holds_alternative<Inl>(this->v())) {
-      const auto &[a0] = std::get<Inl>(this->v());
-      return Sum<A, B>(Inl{a0});
-    } else {
-      const auto &[a0] = std::get<Inr>(this->v());
-      return Sum<A, B>(Inr{a0});
-    }
-  }
-
-  // CREATORS
   template <typename _U0, typename _U1>
   explicit Sum(const Sum<_U0, _U1> &_other) {
     if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
       const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
-      this->v_ = Inl{A(a0)};
+      this->v_ = Inl{[&]() -> A {
+        if constexpr (std::is_same_v<_U0, std::any>) {
+          if (a0.type() == typeid(A))
+            return std::any_cast<A>(a0);
+          if constexpr (requires {
+                          typename A::first_type;
+                          typename A::second_type;
+                        }) {
+            const auto &[_k, _v] =
+                std::any_cast<std::pair<std::any, std::any>>(a0);
+            return A{[&]() -> typename A::first_type {
+                       if constexpr (std::is_same_v<typename A::first_type,
+                                                    std::any>)
+                         return _k;
+                       else
+                         return std::any_cast<typename A::first_type>(_k);
+                     }(),
+                     [&]() -> typename A::second_type {
+                       if constexpr (std::is_same_v<typename A::second_type,
+                                                    std::any>)
+                         return _v;
+                       else
+                         return std::any_cast<typename A::second_type>(_v);
+                     }()};
+          }
+          return std::any_cast<A>(a0);
+        } else
+          return A(a0);
+      }()};
     } else {
       const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
-      this->v_ = Inr{B(a0)};
+      this->v_ = Inr{[&]() -> B {
+        if constexpr (std::is_same_v<_U1, std::any>) {
+          if (a0.type() == typeid(B))
+            return std::any_cast<B>(a0);
+          if constexpr (requires {
+                          typename B::first_type;
+                          typename B::second_type;
+                        }) {
+            const auto &[_k, _v] =
+                std::any_cast<std::pair<std::any, std::any>>(a0);
+            return B{[&]() -> typename B::first_type {
+                       if constexpr (std::is_same_v<typename B::first_type,
+                                                    std::any>)
+                         return _k;
+                       else
+                         return std::any_cast<typename B::first_type>(_k);
+                     }(),
+                     [&]() -> typename B::second_type {
+                       if constexpr (std::is_same_v<typename B::second_type,
+                                                    std::any>)
+                         return _v;
+                       else
+                         return std::any_cast<typename B::second_type>(_v);
+                     }()};
+          }
+          return std::any_cast<B>(a0);
+        } else
+          return B(a0);
+      }()};
     }
   }
 

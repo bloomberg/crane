@@ -160,45 +160,6 @@ struct LargeMutual {
     static stmt sskip() { return stmt(SSkip{}); }
 
     // MANIPULATORS
-    ~stmt() {
-      std::vector<std::shared_ptr<stmt>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](stmt &_node) {
-        if (std::holds_alternative<SSeq>(_node.v_)) {
-          auto &_alt = std::get<SSeq>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<SIf>(_node.v_)) {
-          auto &_alt = std::get<SIf>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-        if (std::holds_alternative<SWhile>(_node.v_)) {
-          auto &_alt = std::get<SWhile>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -351,48 +312,6 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
-    ~expr() {
-      std::vector<std::shared_ptr<expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](expr &_node) {
-        if (std::holds_alternative<EAdd>(_node.v_)) {
-          auto &_alt = std::get<EAdd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<EMul>(_node.v_)) {
-          auto &_alt = std::get<EMul>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<ECond>(_node.v_)) {
-          auto &_alt = std::get<ECond>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -566,45 +485,6 @@ struct LargeMutual {
     }
 
     // MANIPULATORS
-    ~bexpr() {
-      std::vector<std::shared_ptr<bexpr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](bexpr &_node) {
-        if (std::holds_alternative<BAnd>(_node.v_)) {
-          auto &_alt = std::get<BAnd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<BOr>(_node.v_)) {
-          auto &_alt = std::get<BOr>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<BNot>(_node.v_)) {
-          auto &_alt = std::get<BNot>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_RECURSION
 #define INCLUDED_MUTUAL_RECURSION
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -65,17 +66,6 @@ struct MutualRecursion {
     }
 
     // CREATORS
-    template <typename _U> explicit tree(const tree<_U> &_other) {
-      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        const auto &[a0] = std::get<typename tree<_U>::Leaf>(_other.v());
-        this->v_ = Leaf{A(a0)};
-      } else {
-        const auto &[a0] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_shared<MutualRecursion::forest<A>>(*a0)
-                           : nullptr};
-      }
-    }
-
     static tree<A> leaf(A a0) { return tree(Leaf{std::move(a0)}); }
 
     static tree<A> node(forest<A> a0) {
@@ -83,35 +73,6 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree<A> &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<
-                    typename MutualRecursion::forest<A>::Trees>(_alt.a0->v())) {
-              auto &_palt =
-                  std::get<typename MutualRecursion::forest<A>::Trees>(
-                      _alt.a0->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -190,17 +151,6 @@ struct MutualRecursion {
     }
 
     // CREATORS
-    template <typename _U> explicit forest(const forest<_U> &_other) {
-      if (std::holds_alternative<typename forest<_U>::Empty>(_other.v())) {
-        this->v_ = Empty{};
-      } else {
-        const auto &[a0, a1] = std::get<typename forest<_U>::Trees>(_other.v());
-        this->v_ = Trees{a0 ? std::make_shared<MutualRecursion::tree<A>>(*a0)
-                            : nullptr,
-                         a1 ? std::make_shared<forest<A>>(*a1) : nullptr};
-      }
-    }
-
     static forest<A> empty() { return forest(Empty{}); }
 
     static forest<A> trees(tree<A> a0, forest<A> a1) {
@@ -209,27 +159,6 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
-    ~forest() {
-      std::vector<std::shared_ptr<forest<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](forest<A> &_node) {
-        if (std::holds_alternative<Trees>(_node.v_)) {
-          auto &_alt = std::get<Trees>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

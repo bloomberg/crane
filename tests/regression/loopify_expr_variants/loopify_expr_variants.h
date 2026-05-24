@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_EXPR_VARIANTS
 #define INCLUDED_LOOPIFY_EXPR_VARIANTS
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -30,58 +31,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -92,27 +77,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -180,72 +144,6 @@ struct LoopifyExprVariants {
 
     explicit cond_expr(Cond _v) : v_(std::move(_v)) {}
 
-    cond_expr(const cond_expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    cond_expr(cond_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    cond_expr &operator=(const cond_expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    cond_expr &operator=(cond_expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    cond_expr clone() const {
-      cond_expr _out{};
-
-      struct _CloneFrame {
-        const cond_expr *_src;
-        cond_expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const cond_expr *_src = _frame._src;
-        cond_expr *_dst = _frame._dst;
-        if (std::holds_alternative<Lit>(_src->v())) {
-          const auto &_alt = std::get<Lit>(_src->v());
-          _dst->v_ = Lit{_alt.a0};
-        } else if (std::holds_alternative<Add>(_src->v())) {
-          const auto &_alt = std::get<Add>(_src->v());
-          _dst->v_ = Add{_alt.a0 ? std::make_shared<cond_expr>() : nullptr,
-                         _alt.a1 ? std::make_shared<cond_expr>() : nullptr};
-          auto &_dst_alt = std::get<Add>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<Cond>(_src->v());
-          _dst->v_ = Cond{_alt.a0 ? std::make_shared<cond_expr>() : nullptr,
-                          _alt.a1 ? std::make_shared<cond_expr>() : nullptr,
-                          _alt.a2 ? std::make_shared<cond_expr>() : nullptr};
-          auto &_dst_alt = std::get<Cond>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static cond_expr lit(uint64_t a0) { return cond_expr(Lit{a0}); }
 
     static cond_expr add(cond_expr a0, cond_expr a1) {
@@ -260,42 +158,6 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
-    ~cond_expr() {
-      std::vector<std::shared_ptr<cond_expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](cond_expr &_node) {
-        if (std::holds_alternative<Add>(_node.v_)) {
-          auto &_alt = std::get<Add>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<Cond>(_node.v_)) {
-          auto &_alt = std::get<Cond>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -686,79 +548,6 @@ struct LoopifyExprVariants {
 
     explicit arith_expr(ADiv _v) : v_(std::move(_v)) {}
 
-    arith_expr(const arith_expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    arith_expr(arith_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    arith_expr &operator=(const arith_expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    arith_expr &operator=(arith_expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    arith_expr clone() const {
-      arith_expr _out{};
-
-      struct _CloneFrame {
-        const arith_expr *_src;
-        arith_expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const arith_expr *_src = _frame._src;
-        arith_expr *_dst = _frame._dst;
-        if (std::holds_alternative<ANum>(_src->v())) {
-          const auto &_alt = std::get<ANum>(_src->v());
-          _dst->v_ = ANum{_alt.a0};
-        } else if (std::holds_alternative<AAdd>(_src->v())) {
-          const auto &_alt = std::get<AAdd>(_src->v());
-          _dst->v_ = AAdd{_alt.a0 ? std::make_shared<arith_expr>() : nullptr,
-                          _alt.a1 ? std::make_shared<arith_expr>() : nullptr};
-          auto &_dst_alt = std::get<AAdd>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<AMul>(_src->v())) {
-          const auto &_alt = std::get<AMul>(_src->v());
-          _dst->v_ = AMul{_alt.a0 ? std::make_shared<arith_expr>() : nullptr,
-                          _alt.a1 ? std::make_shared<arith_expr>() : nullptr};
-          auto &_dst_alt = std::get<AMul>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<ADiv>(_src->v());
-          _dst->v_ = ADiv{_alt.a0 ? std::make_shared<arith_expr>() : nullptr,
-                          _alt.a1 ? std::make_shared<arith_expr>() : nullptr};
-          auto &_dst_alt = std::get<ADiv>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static arith_expr anum(uint64_t a0) { return arith_expr(ANum{a0}); }
 
     static arith_expr aadd(arith_expr a0, arith_expr a1) {
@@ -777,48 +566,6 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
-    ~arith_expr() {
-      std::vector<std::shared_ptr<arith_expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](arith_expr &_node) {
-        if (std::holds_alternative<AAdd>(_node.v_)) {
-          auto &_alt = std::get<AAdd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<AMul>(_node.v_)) {
-          auto &_alt = std::get<AMul>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<ADiv>(_node.v_)) {
-          auto &_alt = std::get<ADiv>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1240,76 +987,6 @@ struct LoopifyExprVariants {
 
     explicit bool_expr(BNot _v) : v_(std::move(_v)) {}
 
-    bool_expr(const bool_expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    bool_expr(bool_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    bool_expr &operator=(const bool_expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    bool_expr &operator=(bool_expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    bool_expr clone() const {
-      bool_expr _out{};
-
-      struct _CloneFrame {
-        const bool_expr *_src;
-        bool_expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const bool_expr *_src = _frame._src;
-        bool_expr *_dst = _frame._dst;
-        if (std::holds_alternative<BTrue>(_src->v())) {
-          _dst->v_ = BTrue{};
-        } else if (std::holds_alternative<BFalse>(_src->v())) {
-          _dst->v_ = BFalse{};
-        } else if (std::holds_alternative<BAnd>(_src->v())) {
-          const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->v_ = BAnd{_alt.a0 ? std::make_shared<bool_expr>() : nullptr,
-                          _alt.a1 ? std::make_shared<bool_expr>() : nullptr};
-          auto &_dst_alt = std::get<BAnd>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<BOr>(_src->v())) {
-          const auto &_alt = std::get<BOr>(_src->v());
-          _dst->v_ = BOr{_alt.a0 ? std::make_shared<bool_expr>() : nullptr,
-                         _alt.a1 ? std::make_shared<bool_expr>() : nullptr};
-          auto &_dst_alt = std::get<BOr>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<BNot>(_src->v());
-          _dst->v_ = BNot{_alt.a0 ? std::make_shared<bool_expr>() : nullptr};
-          auto &_dst_alt = std::get<BNot>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static bool_expr btrue() { return bool_expr(BTrue{}); }
 
     static bool_expr bfalse() { return bool_expr(BFalse{}); }
@@ -1329,45 +1006,6 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
-    ~bool_expr() {
-      std::vector<std::shared_ptr<bool_expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](bool_expr &_node) {
-        if (std::holds_alternative<BAnd>(_node.v_)) {
-          auto &_alt = std::get<BAnd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<BOr>(_node.v_)) {
-          auto &_alt = std::get<BOr>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<BNot>(_node.v_)) {
-          auto &_alt = std::get<BNot>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1940,67 +1578,6 @@ struct LoopifyExprVariants {
 
     explicit list_expr(LReplicate _v) : v_(std::move(_v)) {}
 
-    list_expr(const list_expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    list_expr(list_expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    list_expr &operator=(const list_expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    list_expr &operator=(list_expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    list_expr clone() const {
-      list_expr _out{};
-
-      struct _CloneFrame {
-        const list_expr *_src;
-        list_expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const list_expr *_src = _frame._src;
-        list_expr *_dst = _frame._dst;
-        if (std::holds_alternative<LNil>(_src->v())) {
-          _dst->v_ = LNil{};
-        } else if (std::holds_alternative<LCons>(_src->v())) {
-          const auto &_alt = std::get<LCons>(_src->v());
-          _dst->v_ =
-              LCons{_alt.a0, _alt.a1 ? std::make_shared<list_expr>() : nullptr};
-          auto &_dst_alt = std::get<LCons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<LAppend>(_src->v())) {
-          const auto &_alt = std::get<LAppend>(_src->v());
-          _dst->v_ = LAppend{_alt.a0 ? std::make_shared<list_expr>() : nullptr,
-                             _alt.a1 ? std::make_shared<list_expr>() : nullptr};
-          auto &_dst_alt = std::get<LAppend>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<LReplicate>(_src->v());
-          _dst->v_ = LReplicate{_alt.a0, _alt.a1};
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static list_expr lnil() { return list_expr(LNil{}); }
 
     static list_expr lcons(uint64_t a0, list_expr a1) {
@@ -2017,36 +1594,6 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
-    ~list_expr() {
-      std::vector<std::shared_ptr<list_expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](list_expr &_node) {
-        if (std::holds_alternative<LCons>(_node.v_)) {
-          auto &_alt = std::get<LCons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-        if (std::holds_alternative<LAppend>(_node.v_)) {
-          auto &_alt = std::get<LAppend>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_TREES
 #define INCLUDED_LOOPIFY_TREES
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -30,58 +31,42 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -92,27 +77,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -168,64 +132,44 @@ struct LoopifyTrees {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree<A> &operator=(const tree<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree<A> &operator=(tree<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree<A> clone() const {
-      tree<A> _out{};
-
-      struct _CloneFrame {
-        const tree<A> *_src;
-        tree<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree<A> *_src = _frame._src;
-        tree<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->v_ = Leaf{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ =
-              Node{_alt.l ? std::make_shared<tree<A>>() : nullptr, _alt.x,
-                   _alt.r ? std::make_shared<tree<A>>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.l) {
-            _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-          }
-          if (_alt.r) {
-            _stack.push_back({_alt.r.get(), _dst_alt.r.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit tree(const tree<_U> &_other) {
       if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
         this->v_ = Leaf{};
       } else {
         const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{l ? std::make_shared<tree<A>>(*l) : nullptr, A(x),
-                        r ? std::make_shared<tree<A>>(*r) : nullptr};
+        this->v_ = Node{
+            l ? std::make_shared<tree<A>>(*l) : nullptr,
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (x.type() == typeid(A))
+                  return std::any_cast<A>(x);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(x);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(x);
+              } else
+                return A(x);
+            }(),
+            r ? std::make_shared<tree<A>>(*r) : nullptr};
       }
     }
 
@@ -237,30 +181,6 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
-    ~tree() {
-      std::vector<std::shared_ptr<tree<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree<A> &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.l) {
-            _stack.push_back(std::move(_alt.l));
-          }
-          if (_alt.r) {
-            _stack.push_back(std::move(_alt.r));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -850,61 +770,6 @@ struct LoopifyTrees {
 
     explicit ternary(TNode _v) : v_(std::move(_v)) {}
 
-    ternary(const ternary &_other) : v_(std::move(_other.clone().v_)) {}
-
-    ternary(ternary &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    ternary &operator=(const ternary &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    ternary &operator=(ternary &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    ternary clone() const {
-      ternary _out{};
-
-      struct _CloneFrame {
-        const ternary *_src;
-        ternary *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const ternary *_src = _frame._src;
-        ternary *_dst = _frame._dst;
-        if (std::holds_alternative<TLeaf>(_src->v())) {
-          _dst->v_ = TLeaf{};
-        } else {
-          const auto &_alt = std::get<TNode>(_src->v());
-          _dst->v_ =
-              TNode{_alt.a0 ? std::make_shared<ternary>() : nullptr,
-                    _alt.a1 ? std::make_shared<ternary>() : nullptr,
-                    _alt.a2 ? std::make_shared<ternary>() : nullptr, _alt.a3};
-          auto &_dst_alt = std::get<TNode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static ternary tleaf() { return ternary(TLeaf{}); }
 
     static ternary tnode(ternary a0, ternary a1, ternary a2, uint64_t a3) {
@@ -914,33 +779,6 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
-    ~ternary() {
-      std::vector<std::shared_ptr<ternary>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](ternary &_node) {
-        if (std::holds_alternative<TNode>(_node.v_)) {
-          auto &_alt = std::get<TNode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1240,107 +1078,11 @@ struct LoopifyTrees {
 
     explicit rose(RNode _v) : v_(std::move(_v)) {}
 
-    rose(const rose &_other) : v_(std::move(_other.clone().v_)) {}
-
-    rose(rose &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    rose &operator=(const rose &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    rose &operator=(rose &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    rose clone() const {
-      rose _out{};
-
-      struct _CloneFrame {
-        const rose *_src;
-        rose *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const rose *_src = _frame._src;
-        rose *_dst = _frame._dst;
-        const auto &_alt = std::get<RNode>(_src->v());
-        _dst->v_ =
-            RNode{_alt.a0, _alt.a1 ? std::make_shared<List<rose>>() : nullptr};
-        auto &_dst_alt = std::get<RNode>(_dst->v_);
-        [&] {
-          if (_alt.a1) {
-            const List<rose> *_lsrc = _alt.a1.get();
-            List<rose> *_ldst = _dst_alt.a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lsrc->v())) {
-              const auto &_lsrc_c =
-                  std::get<typename List<rose>::Cons>(_lsrc->v());
-              _ldst->v_mut() = typename List<rose>::Cons{
-                  rose{}, _lsrc_c.l ? std::make_shared<List<rose>>() : nullptr};
-              auto &_ldst_c =
-                  std::get<typename List<rose>::Cons>(_ldst->v_mut());
-              _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
-              if (_lsrc_c.l) {
-                _lsrc = _lsrc_c.l.get();
-                _ldst = _ldst_c.l.get();
-              } else {
-                break;
-              }
-            }
-            if (std::holds_alternative<typename List<rose>::Nil>(_lsrc->v())) {
-              _ldst->v_mut() = typename List<rose>::Nil{};
-            }
-          }
-        }();
-      }
-      return _out;
-    }
-
-    // CREATORS
     static rose rnode(uint64_t a0, List<rose> a1) {
       return rose(RNode{a0, std::make_shared<List<rose>>(std::move(a1))});
     }
 
     // MANIPULATORS
-    ~rose() {
-      std::vector<std::shared_ptr<rose>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](rose &_node) {
-        if (std::holds_alternative<RNode>(_node.v_)) {
-          auto &_alt = std::get<RNode>(_node.v_);
-          if (_alt.a1) {
-            auto *_lp = _alt.a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
-              auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
-              _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
-              if (_lc.l) {
-                _lp = _lc.l.get();
-              } else {
-                break;
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -1577,65 +1319,6 @@ struct LoopifyTrees {
 
     explicit quadtree(Quad _v) : v_(std::move(_v)) {}
 
-    quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    quadtree &operator=(const quadtree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    quadtree &operator=(quadtree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    quadtree clone() const {
-      quadtree _out{};
-
-      struct _CloneFrame {
-        const quadtree *_src;
-        quadtree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const quadtree *_src = _frame._src;
-        quadtree *_dst = _frame._dst;
-        if (std::holds_alternative<QLeaf>(_src->v())) {
-          const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->v_ = QLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Quad>(_src->v());
-          _dst->v_ = Quad{_alt.a0 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a1 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a2 ? std::make_shared<quadtree>() : nullptr,
-                          _alt.a3 ? std::make_shared<quadtree>() : nullptr};
-          auto &_dst_alt = std::get<Quad>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-          if (_alt.a3) {
-            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
@@ -1646,36 +1329,6 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
-    ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](quadtree &_node) {
-        if (std::holds_alternative<Quad>(_node.v_)) {
-          auto &_alt = std::get<Quad>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
-          }
-          if (_alt.a3) {
-            _stack.push_back(std::move(_alt.a3));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -2110,57 +1763,6 @@ struct LoopifyTrees {
 
     explicit simple_tree(SNode _v) : v_(std::move(_v)) {}
 
-    simple_tree(const simple_tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    simple_tree(simple_tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    simple_tree &operator=(const simple_tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    simple_tree &operator=(simple_tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    simple_tree clone() const {
-      simple_tree _out{};
-
-      struct _CloneFrame {
-        const simple_tree *_src;
-        simple_tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const simple_tree *_src = _frame._src;
-        simple_tree *_dst = _frame._dst;
-        if (std::holds_alternative<SLeaf>(_src->v())) {
-          const auto &_alt = std::get<SLeaf>(_src->v());
-          _dst->v_ = SLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<SNode>(_src->v());
-          _dst->v_ = SNode{_alt.a0 ? std::make_shared<simple_tree>() : nullptr,
-                           _alt.a1 ? std::make_shared<simple_tree>() : nullptr};
-          auto &_dst_alt = std::get<SNode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static simple_tree sleaf(uint64_t a0) { return simple_tree(SLeaf{a0}); }
 
     static simple_tree snode(simple_tree a0, simple_tree a1) {
@@ -2169,30 +1771,6 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
-    ~simple_tree() {
-      std::vector<std::shared_ptr<simple_tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](simple_tree &_node) {
-        if (std::holds_alternative<SNode>(_node.v_)) {
-          auto &_alt = std::get<SNode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

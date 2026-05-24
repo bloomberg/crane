@@ -104,34 +104,6 @@ struct MutualValueDeepCopy {
     }
 
     // MANIPULATORS
-    ~a() {
-      std::vector<std::shared_ptr<a>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](a &_node) {
-        if (std::holds_alternative<ANode>(_node.v_)) {
-          auto &_alt = std::get<ANode>(_node.v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<typename MutualValueDeepCopy::b::BNode>(
-                    _alt.a1->v())) {
-              auto &_palt = std::get<typename MutualValueDeepCopy::b::BNode>(
-                  _alt.a1->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -183,34 +155,6 @@ struct MutualValueDeepCopy {
     }
 
     // MANIPULATORS
-    ~b() {
-      std::vector<std::shared_ptr<b>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](b &_node) {
-        if (std::holds_alternative<BNode>(_node.v_)) {
-          auto &_alt = std::get<BNode>(_node.v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<typename MutualValueDeepCopy::a::ANode>(
-                    _alt.a0->v())) {
-              auto &_palt = std::get<typename MutualValueDeepCopy::a::ANode>(
-                  _alt.a0->v_mut());
-              if (_palt.a1) {
-                _stack.push_back(std::move(_palt.a1));
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

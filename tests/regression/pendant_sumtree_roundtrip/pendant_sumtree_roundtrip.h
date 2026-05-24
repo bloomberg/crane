@@ -2,13 +2,13 @@
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
 #include <algorithm>
+#include <any>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -33,59 +33,42 @@ public:
 
   explicit List(Cons0 _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil0>(_src->v())) {
-        _dst->v_ = Nil0{};
-      } else {
-        const auto &_alt = std::get<Cons0>(_src->v());
-        _dst->v_ =
-            Cons0{_alt.a, _alt.l ? std::make_shared<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons0>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
       this->v_ = Nil0{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
-      this->v_ = Cons0{A(a), l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons0{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -96,27 +79,6 @@ public:
   }
 
   // MANIPULATORS
-  ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons0>(_node.v_)) {
-        auto &_alt = std::get<Cons0>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -231,38 +193,42 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  T0(const T0<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  T0(T0<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  T0<A> &operator=(const T0<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  T0<A> &operator=(T0<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  T0<A> clone() const {
-    if (std::holds_alternative<Nil>(this->v())) {
-      return T0<A>(Nil{});
-    } else {
-      const auto &[h, n, a2] = std::get<Cons>(this->v());
-      return T0<A>(
-          Cons{h, n, a2 ? std::make_shared<T0<A>>(a2->clone()) : nullptr});
-    }
-  }
-
-  // CREATORS
   template <typename _U> explicit T0(const T0<_U> &_other) {
     if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[h, n, a2] = std::get<typename T0<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(h), n, a2 ? std::make_shared<T0<A>>(*a2) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (h.type() == typeid(A))
+                return std::any_cast<A>(h);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(h);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(h);
+            } else
+              return A(h);
+          }(),
+          n, a2 ? std::make_shared<T0<A>>(*a2) : nullptr};
     }
   }
 
@@ -304,53 +270,6 @@ public:
 
   explicit T(FS _v) : v_(std::move(_v)) {}
 
-  T(const T &_other) : v_(std::move(_other.clone().v_)) {}
-
-  T(T &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  T &operator=(const T &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  T &operator=(T &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  T clone() const {
-    T _out{};
-
-    struct _CloneFrame {
-      const T *_src;
-      T *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const T *_src = _frame._src;
-      T *_dst = _frame._dst;
-      if (std::holds_alternative<F1>(_src->v())) {
-        const auto &_alt = std::get<F1>(_src->v());
-        _dst->v_ = F1{_alt.n};
-      } else {
-        const auto &_alt = std::get<FS>(_src->v());
-        _dst->v_ = FS{_alt.n, _alt.a1 ? std::make_shared<T>() : nullptr};
-        auto &_dst_alt = std::get<FS>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static T f1(uint64_t n) { return T(F1{n}); }
 
   static T fs(uint64_t n, T a1) {
@@ -358,27 +277,6 @@ public:
   }
 
   // MANIPULATORS
-  ~T() {
-    std::vector<std::shared_ptr<T>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](T &_node) {
-      if (std::holds_alternative<FS>(_node.v_)) {
-        auto &_alt = std::get<FS>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -544,7 +442,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     CertifiedPendant clone() const {
-      return CertifiedPendant{this->cp_meta.clone(), this->cp_digits.clone()};
+      return CertifiedPendant{this->cp_meta, this->cp_digits};
     }
   };
 
@@ -562,7 +460,7 @@ struct PendantSumtreeRoundtripCase {
 
     // ACCESSORS
     PendantGroup clone() const {
-      return PendantGroup{this->pg_top.clone(), this->pg_pendants.clone()};
+      return PendantGroup{this->pg_top, this->pg_pendants};
     }
   };
 
@@ -593,79 +491,6 @@ struct PendantSumtreeRoundtripCase {
 
     explicit SumTree(SumNode _v) : v_(std::move(_v)) {}
 
-    SumTree(const SumTree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    SumTree(SumTree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    SumTree &operator=(const SumTree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    SumTree &operator=(SumTree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    SumTree clone() const {
-      SumTree _out{};
-
-      struct _CloneFrame {
-        const SumTree *_src;
-        SumTree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const SumTree *_src = _frame._src;
-        SumTree *_dst = _frame._dst;
-        if (std::holds_alternative<SumLeaf>(_src->v())) {
-          const auto &_alt = std::get<SumLeaf>(_src->v());
-          _dst->v_ = SumLeaf{_alt.a0.clone()};
-        } else {
-          const auto &_alt = std::get<SumNode>(_src->v());
-          _dst->v_ =
-              SumNode{_alt.a0.clone(),
-                      _alt.a1 ? std::make_shared<List<SumTree>>() : nullptr};
-          auto &_dst_alt = std::get<SumNode>(_dst->v_);
-          [&] {
-            if (_alt.a1) {
-              const List<SumTree> *_lsrc = _alt.a1.get();
-              List<SumTree> *_ldst = _dst_alt.a1.get();
-              while (std::holds_alternative<typename List<SumTree>::Cons0>(
-                  _lsrc->v())) {
-                const auto &_lsrc_c =
-                    std::get<typename List<SumTree>::Cons0>(_lsrc->v());
-                _ldst->v_mut() = typename List<SumTree>::Cons0{
-                    SumTree{},
-                    _lsrc_c.l ? std::make_shared<List<SumTree>>() : nullptr};
-                auto &_ldst_c =
-                    std::get<typename List<SumTree>::Cons0>(_ldst->v_mut());
-                _stack.push_back({&_lsrc_c.a, &_ldst_c.a});
-                if (_lsrc_c.l) {
-                  _lsrc = _lsrc_c.l.get();
-                  _ldst = _ldst_c.l.get();
-                } else {
-                  break;
-                }
-              }
-              if (std::holds_alternative<typename List<SumTree>::Nil0>(
-                      _lsrc->v())) {
-                _ldst->v_mut() = typename List<SumTree>::Nil0{};
-              }
-            }
-          }();
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static SumTree sumleaf(CertifiedPendant a0) {
       return SumTree(SumLeaf{std::move(a0)});
     }
@@ -676,37 +501,6 @@ struct PendantSumtreeRoundtripCase {
     }
 
     // MANIPULATORS
-    ~SumTree() {
-      std::vector<std::shared_ptr<SumTree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](SumTree &_node) {
-        if (std::holds_alternative<SumNode>(_node.v_)) {
-          auto &_alt = std::get<SumNode>(_node.v_);
-          if (_alt.a1) {
-            auto *_lp = _alt.a1.get();
-            while (std::holds_alternative<typename List<SumTree>::Cons0>(
-                _lp->v())) {
-              auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
-              _stack.push_back(std::make_shared<SumTree>(std::move(_lc.a)));
-              if (_lc.l) {
-                _lp = _lc.l.get();
-              } else {
-                break;
-              }
-            }
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

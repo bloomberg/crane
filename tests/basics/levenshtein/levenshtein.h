@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -31,78 +30,11 @@ public:
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Nat &operator=(const Nat &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Nat &operator=(Nat &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Nat clone() const {
-    Nat _out{};
-
-    struct _CloneFrame {
-      const Nat *_src;
-      Nat *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Nat *_src = _frame._src;
-      Nat *_dst = _frame._dst;
-      if (std::holds_alternative<O>(_src->v())) {
-        _dst->v_ = O{};
-      } else {
-        const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_shared<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Nat o() { return Nat(O{}); }
 
   static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
-  ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.v_)) {
-        auto &_alt = std::get<S>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -267,53 +199,6 @@ public:
 
   explicit String(String0 _v) : v_(std::move(_v)) {}
 
-  String(const String &_other) : v_(std::move(_other.clone().v_)) {}
-
-  String(String &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  String &operator=(const String &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  String &operator=(String &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  String clone() const {
-    String _out{};
-
-    struct _CloneFrame {
-      const String *_src;
-      String *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const String *_src = _frame._src;
-      String *_dst = _frame._dst;
-      if (std::holds_alternative<EmptyString>(_src->v())) {
-        _dst->v_ = EmptyString{};
-      } else {
-        const auto &_alt = std::get<String0>(_src->v());
-        _dst->v_ = String0{_alt.a0.clone(),
-                           _alt.a1 ? std::make_shared<String>() : nullptr};
-        auto &_dst_alt = std::get<String0>(_dst->v_);
-        if (_alt.a1) {
-          _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static String emptystring() { return String(EmptyString{}); }
 
   static String string0(Ascii a0, String a1) {
@@ -322,27 +207,6 @@ public:
   }
 
   // MANIPULATORS
-  ~String() {
-    std::vector<std::shared_ptr<String>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](String &_node) {
-      if (std::holds_alternative<String0>(_node.v_)) {
-        auto &_alt = std::get<String0>(_node.v_);
-        if (_alt.a1) {
-          _stack.push_back(std::move(_alt.a1));
-        }
-      }
-    };
-    _drain(*this);
-    while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
-      _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
-      }
-    }
-  }
-
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -402,35 +266,6 @@ struct Levenshtein {
 
     explicit edit(Update _v) : v_(std::move(_v)) {}
 
-    edit(const edit &_other) : v_(std::move(_other.clone().v_)) {}
-
-    edit(edit &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    edit &operator=(const edit &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    edit &operator=(edit &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    edit clone() const {
-      if (std::holds_alternative<Insertion>(this->v())) {
-        const auto &[a, s] = std::get<Insertion>(this->v());
-        return edit(Insertion{a.clone(), s.clone()});
-      } else if (std::holds_alternative<Deletion>(this->v())) {
-        const auto &[a, s] = std::get<Deletion>(this->v());
-        return edit(Deletion{a.clone(), s.clone()});
-      } else {
-        const auto &[a, a_1, neq] = std::get<Update>(this->v());
-        return edit(Update{a.clone(), a_1.clone(), neq.clone()});
-      }
-    }
-
-    // CREATORS
     static edit insertion(Ascii a, String s) {
       return edit(Insertion{std::move(a), std::move(s)});
     }
@@ -523,64 +358,6 @@ struct Levenshtein {
 
     explicit chain(Change _v) : v_(std::move(_v)) {}
 
-    chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
-
-    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    chain &operator=(const chain &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    chain &operator=(chain &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    chain clone() const {
-      chain _out{};
-
-      struct _CloneFrame {
-        const chain *_src;
-        chain *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const chain *_src = _frame._src;
-        chain *_dst = _frame._dst;
-        if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->v_ = Empty{};
-        } else if (std::holds_alternative<Skip>(_src->v())) {
-          const auto &_alt = std::get<Skip>(_src->v());
-          _dst->v_ = Skip{_alt.a.clone(), _alt.s.clone(), _alt.t.clone(),
-                          _alt.n.clone(),
-                          _alt.a4 ? std::make_shared<chain>() : nullptr};
-          auto &_dst_alt = std::get<Skip>(_dst->v_);
-          if (_alt.a4) {
-            _stack.push_back({_alt.a4.get(), _dst_alt.a4.get()});
-          }
-        } else {
-          const auto &_alt = std::get<Change>(_src->v());
-          _dst->v_ = Change{
-              _alt.s.clone(),  _alt.t.clone(),
-              _alt.u.clone(),  _alt.n.clone(),
-              _alt.a4.clone(), _alt.a5 ? std::make_shared<chain>() : nullptr};
-          auto &_dst_alt = std::get<Change>(_dst->v_);
-          if (_alt.a5) {
-            _stack.push_back({_alt.a5.get(), _dst_alt.a5.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static chain empty() { return chain(Empty{}); }
 
     static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
@@ -596,33 +373,6 @@ struct Levenshtein {
     }
 
     // MANIPULATORS
-    ~chain() {
-      std::vector<std::shared_ptr<chain>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](chain &_node) {
-        if (std::holds_alternative<Skip>(_node.v_)) {
-          auto &_alt = std::get<Skip>(_node.v_);
-          if (_alt.a4) {
-            _stack.push_back(std::move(_alt.a4));
-          }
-        }
-        if (std::holds_alternative<Change>(_node.v_)) {
-          auto &_alt = std::get<Change>(_node.v_);
-          if (_alt.a5) {
-            _stack.push_back(std::move(_alt.a5));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
