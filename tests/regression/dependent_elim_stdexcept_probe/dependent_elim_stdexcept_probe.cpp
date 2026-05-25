@@ -7,10 +7,10 @@ void DependentElimStdexceptProbe::get_present(
       switch (a) {
       case Avail::PRESENT: {
         return;
-      }
+      } break;
       case Avail::ABSENT: {
         throw std::logic_error("unreachable");
-      }
+      } break;
       default:
         std::unreachable();
       }

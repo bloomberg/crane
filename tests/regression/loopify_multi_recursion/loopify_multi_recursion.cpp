@@ -100,19 +100,24 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
 
   /// _After2: saves [_s0, fuel_, _s2], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
     uint64_t fuel_;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s2;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s2;
   };
 
   /// _Combine1: receives partial results, combines with _result from final
   /// call.
   struct _Combine1 {
     bool _result;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s1;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s1;
   };
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
@@ -174,10 +179,11 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
 
   /// _After2: saves [_s0, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
     uint64_t fuel_;
   };
 
@@ -327,7 +333,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     const LoopifyMultiRecursion::quadtree *a2;
     const LoopifyMultiRecursion::quadtree *a1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _After_QQuad_1: saves [_result, a1, a0, _s3], dispatches next recursive
@@ -336,7 +342,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result;
     const LoopifyMultiRecursion::quadtree *a1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _After_QQuad_2: saves [_result_0, _result_1, a0, _s3], dispatches next
@@ -345,7 +351,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result_0;
     uint64_t _result_1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _Combine_QQuad: receives partial results, combines with _result from final
@@ -354,7 +360,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result_0;
     uint64_t _result_1;
     uint64_t _result_2;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_QQuad, _After_QQuad_1,
@@ -415,11 +421,12 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
 
   /// _After4: saves [_s0, fuel_], dispatches next recursive call.
   struct _After4 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - std::declval<uint64_t &>()) >
                  std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - std::declval<uint64_t &>())))) _s0;
+             : (std::declval<uint64_t &>() - std::declval<uint64_t &>()))))>
+        _s0;
     uint64_t fuel_;
   };
 

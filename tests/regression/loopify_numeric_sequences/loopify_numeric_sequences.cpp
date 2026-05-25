@@ -12,12 +12,12 @@ uint64_t LoopifyNumericSequences::collatz_length_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
@@ -66,46 +66,66 @@ uint64_t LoopifyNumericSequences::collatz_length(uint64_t n) {
   return collatz_length_fuel((n * UINT64_C(100)), n);
 }
 
-List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
-                                                              uint64_t n) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  uint64_t _loop_fuel = std::move(fuel);
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      uint64_t fuel_ = _loop_fuel - 1;
-      if (_loop_n <= UINT64_C(1)) {
-        *_write = std::make_shared<List<uint64_t>>(
-            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
-        break;
+List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(
+    uint64_t fuel,
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+    uint64_t fuel;
+  };
+
+  /// _Resume1: saves [n], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t n;
+  };
+
+  /// _Resume2: saves [n], resumes after recursive call with _result.
+  struct _Resume2 {
+    uint64_t n;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n, fuel});
+  /// Loopified collatz_sequence_fuel: _Enter -> _Resume1 -> _Resume2.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = List<uint64_t>::nil();
       } else {
-        if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
-          auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(_loop_n, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
-          _loop_fuel = fuel_;
-          continue;
+        uint64_t fuel_ = fuel - 1;
+        if (n <= UINT64_C(1)) {
+          _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
-          auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(_loop_n, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
-          _loop_fuel = fuel_;
-          continue;
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+            _stack.emplace_back(_Resume1{n});
+            _stack.emplace_back(
+                _Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), fuel_});
+          } else {
+            _stack.emplace_back(_Resume2{n});
+            _stack.emplace_back(
+                _Enter{((UINT64_C(3) * n) + UINT64_C(1)), fuel_});
+          }
         }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.n, _result);
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = List<uint64_t>::cons(_f.n, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifyNumericSequences::collatz_sequence(uint64_t n) {
@@ -296,8 +316,10 @@ uint64_t LoopifyNumericSequences::digitsum_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype((UINT64_C(10) ? std::declval<uint64_t &>() % UINT64_C(10)
-                           : std::declval<uint64_t &>())) _s0;
+    std::decay_t<decltype((UINT64_C(10)
+                               ? std::declval<uint64_t &>() % UINT64_C(10)
+                               : std::declval<uint64_t &>()))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -349,9 +371,11 @@ uint64_t LoopifyNumericSequences::dec_to_bin_fuel(
 
   /// _Resume1: saves [_s0, _s1], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype((UINT64_C(2) ? std::declval<uint64_t &>() % UINT64_C(2)
-                          : std::declval<uint64_t &>())) _s0;
-    decltype(UINT64_C(10)) _s1;
+    std::decay_t<decltype((UINT64_C(2)
+                               ? std::declval<uint64_t &>() % UINT64_C(2)
+                               : std::declval<uint64_t &>()))>
+        _s0;
+    std::decay_t<decltype(UINT64_C(10))> _s1;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;

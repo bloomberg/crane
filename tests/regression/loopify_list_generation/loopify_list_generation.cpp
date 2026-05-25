@@ -1,53 +1,87 @@
 #include "loopify_list_generation.h"
 
-List<uint64_t> LoopifyListGeneration::replicate(uint64_t n, uint64_t x) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
+List<uint64_t> LoopifyListGeneration::replicate(
+    uint64_t n,
+    uint64_t
+        x) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [x], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    uint64_t x;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified replicate: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<uint64_t>::nil();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Resume_n_{x});
+        _stack.emplace_back(_Enter{n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(x, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = List<uint64_t>::cons(_f.x, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
-List<uint64_t> LoopifyListGeneration::stutter(const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
+List<uint64_t> LoopifyListGeneration::stutter(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume_Cons: saves [a0_0, a0_1], resumes after recursive call with
+  /// _result.
+  struct _Resume_Cons {
+    uint64_t a0_0;
+    uint64_t a0_1;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified stutter: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(_Resume_Cons{a0, a0});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      auto _cell1 = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
-          std::move(_cell1);
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>(
-                    std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                        .l->v_mut())
-                    .l;
-      _loop_l = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result =
+          List<uint64_t>::cons(_f.a0_0, List<uint64_t>::cons(_f.a0_1, _result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifyListGeneration::cycle(
@@ -91,27 +125,47 @@ List<uint64_t> LoopifyListGeneration::cycle(
   return _result;
 }
 
-List<uint64_t> LoopifyListGeneration::iterate(uint64_t n, uint64_t x) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_x = std::move(x);
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
+List<uint64_t> LoopifyListGeneration::iterate(
+    uint64_t n,
+    uint64_t
+        x) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t x;
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [x], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    uint64_t x;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{x, n});
+  /// Loopified iterate: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t x = _f.x;
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<uint64_t>::nil();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Resume_n_{x});
+        _stack.emplace_back(_Enter{(x + UINT64_C(1)), n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(_loop_x, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-      _loop_x = (_loop_x + UINT64_C(1));
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = List<uint64_t>::cons(_f.x, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifyListGeneration::replicate_list(
@@ -159,62 +213,93 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
   return _result;
 }
 
-List<uint64_t> LoopifyListGeneration::repeat_with_sep(uint64_t sep, uint64_t n,
-                                                      uint64_t x) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      uint64_t n_ = _loop_n - 1;
-      if (n_ <= 0) {
-        *_write = std::make_shared<List<uint64_t>>(
-            List<uint64_t>::cons(x, List<uint64_t>::nil()));
-        break;
+List<uint64_t> LoopifyListGeneration::repeat_with_sep(
+    uint64_t sep, uint64_t n,
+    uint64_t
+        x) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume__x: saves [x, sep], resumes after recursive call with _result.
+  struct _Resume__x {
+    uint64_t x;
+    uint64_t sep;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume__x>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified repeat_with_sep: _Enter -> _Resume__x.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<uint64_t>::nil();
       } else {
-        uint64_t _x = n_ - 1;
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(x, nullptr));
-        auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
-            std::move(_cell1);
-        *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<uint64_t>::Cons>(
-                 std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .l->v_mut())
-                 .l;
-        _loop_n = n_;
-        continue;
+        uint64_t n_ = n - 1;
+        if (n_ <= 0) {
+          _result = List<uint64_t>::cons(x, List<uint64_t>::nil());
+        } else {
+          uint64_t _x = n_ - 1;
+          _stack.emplace_back(_Resume__x{x, sep});
+          _stack.emplace_back(_Enter{n_});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume__x>(_frame));
+      _result =
+          List<uint64_t>::cons(_f.x, List<uint64_t>::cons(_f.sep, _result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
-List<uint64_t> LoopifyListGeneration::range(uint64_t start, uint64_t len) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_len = std::move(len);
-  uint64_t _loop_start = std::move(start);
-  while (true) {
-    if (_loop_len <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
+List<uint64_t> LoopifyListGeneration::range(
+    uint64_t start,
+    uint64_t
+        len) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t len;
+    uint64_t start;
+  };
+
+  /// _Resume_len_: saves [start], resumes after recursive call with _result.
+  struct _Resume_len_ {
+    uint64_t start;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_len_>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{len, start});
+  /// Loopified range: _Enter -> _Resume_len_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t len = _f.len;
+      uint64_t start = _f.start;
+      if (len <= 0) {
+        _result = List<uint64_t>::nil();
+      } else {
+        uint64_t len_ = len - 1;
+        _stack.emplace_back(_Resume_len_{start});
+        _stack.emplace_back(_Enter{len_, (start + UINT64_C(1))});
+      }
     } else {
-      uint64_t len_ = _loop_len - 1;
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(_loop_start, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-      _loop_len = len_;
-      _loop_start = (_loop_start + UINT64_C(1));
-      continue;
+      auto _f = std::move(std::get<_Resume_len_>(_frame));
+      _result = List<uint64_t>::cons(_f.start, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }

@@ -280,31 +280,31 @@ struct InstructionCycles {
     switch (i) {
     case Instr3::NOP3: {
       return f;
-    }
+    } break;
     case Instr3::ADD3: {
       return f0;
-    }
+    } break;
     case Instr3::WRM3: {
       return f1;
-    }
+    } break;
     case Instr3::FIM3: {
       return f2;
-    }
+    } break;
     case Instr3::JMS3: {
       return f3;
-    }
+    } break;
     case Instr3::JCNTAKEN3: {
       return f4;
-    }
+    } break;
     case Instr3::JCNNOTTAKEN3: {
       return f5;
-    }
+    } break;
     case Instr3::ISZTAKEN3: {
       return f6;
-    }
+    } break;
     case Instr3::ISZZERO3: {
       return f7;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -316,31 +316,31 @@ struct InstructionCycles {
     switch (i) {
     case Instr3::NOP3: {
       return f;
-    }
+    } break;
     case Instr3::ADD3: {
       return f0;
-    }
+    } break;
     case Instr3::WRM3: {
       return f1;
-    }
+    } break;
     case Instr3::FIM3: {
       return f2;
-    }
+    } break;
     case Instr3::JMS3: {
       return f3;
-    }
+    } break;
     case Instr3::JCNTAKEN3: {
       return f4;
-    }
+    } break;
     case Instr3::JCNNOTTAKEN3: {
       return f5;
-    }
+    } break;
     case Instr3::ISZTAKEN3: {
       return f6;
-    }
+    } break;
     case Instr3::ISZZERO3: {
       return f7;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -387,31 +387,31 @@ struct InstructionCycles {
     switch (i) {
     case Instr4::NOP4: {
       return f;
-    }
+    } break;
     case Instr4::ADD4: {
       return f0;
-    }
+    } break;
     case Instr4::WRM4: {
       return f1;
-    }
+    } break;
     case Instr4::FIM4: {
       return f2;
-    }
+    } break;
     case Instr4::JMS4: {
       return f3;
-    }
+    } break;
     case Instr4::JCNTAKEN4: {
       return f4;
-    }
+    } break;
     case Instr4::JCNNOTTAKEN4: {
       return f5;
-    }
+    } break;
     case Instr4::ISZTAKEN4: {
       return f6;
-    }
+    } break;
     case Instr4::ISZZERO4: {
       return f7;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -423,31 +423,31 @@ struct InstructionCycles {
     switch (i) {
     case Instr4::NOP4: {
       return f;
-    }
+    } break;
     case Instr4::ADD4: {
       return f0;
-    }
+    } break;
     case Instr4::WRM4: {
       return f1;
-    }
+    } break;
     case Instr4::FIM4: {
       return f2;
-    }
+    } break;
     case Instr4::JMS4: {
       return f3;
-    }
+    } break;
     case Instr4::JCNTAKEN4: {
       return f4;
-    }
+    } break;
     case Instr4::JCNNOTTAKEN4: {
       return f5;
-    }
+    } break;
     case Instr4::ISZTAKEN4: {
       return f6;
-    }
+    } break;
     case Instr4::ISZZERO4: {
       return f7;
-    }
+    } break;
     default:
       std::unreachable();
     }

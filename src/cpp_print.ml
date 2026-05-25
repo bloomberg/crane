@@ -865,9 +865,11 @@ let rec pp_cpp_type par vl t =
       str "std::any"
     | Tauto -> str "auto"
     | Tdecltype e ->
-      (* Print decltype(expr) where expr has been rewritten by
-         rewrite_field_access_for_decltype to use std::declval. *)
-      str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
+      (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
+         rewrite_field_access_for_decltype to use std::declval.
+         decay_t converts function types to function pointers and array types
+         to pointers, which is necessary when storing values in frame structs. *)
+      str "std::decay_t<decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")>"
   in
   h (pp_rec par t)
 
@@ -1865,6 +1867,11 @@ and pp_cpp_stmt env args = function
        get the unqualified base name, capitalize to match enum class
        definition. *)
     let type_name = pp_inductive_type_name ind in
+    let ends_with_return stmts =
+      match List.rev stmts with
+      | Sreturn _ :: _ -> true
+      | _ -> false
+    in
     let pp_branch (ctor, stmts) =
       str "case "
       ++ type_name
@@ -1873,6 +1880,8 @@ and pp_cpp_stmt env args = function
       ++ str ": {"
       ++ fnl ()
       ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+      ++ ( if ends_with_return stmts then mt ()
+         else fnl () ++ str "break;" )
       ++ fnl ()
       ++ str "}"
     in

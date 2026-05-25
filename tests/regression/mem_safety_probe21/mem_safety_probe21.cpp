@@ -86,7 +86,8 @@ uint64_t MemSafetyProbe21::double_grow(
 
   /// _Resume_n_: saves [t], resumes after recursive call with _result.
   struct _Resume_n_ {
-    decltype(tree_sum(std::declval<MemSafetyProbe21::tree &>())) t;
+    std::decay_t<decltype(tree_sum(std::declval<MemSafetyProbe21::tree &>()))>
+        t;
   };
 
   using _Frame = std::variant<_Enter, _Resume_n_>;

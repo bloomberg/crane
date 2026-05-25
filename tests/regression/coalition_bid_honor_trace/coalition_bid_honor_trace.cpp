@@ -255,32 +255,32 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
     switch (c2) {
     case Clan::CLANWOLF: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case Clan::CLANJADEFALCON: {
     switch (c2) {
     case Clan::CLANJADEFALCON: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case Clan::CLANGHOSTBEAR: {
     switch (c2) {
     case Clan::CLANGHOSTBEAR: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -300,13 +300,13 @@ CoalitionBidHonorTraceCase::rank_to_nat(CoalitionBidHonorTraceCase::Rank r) {
   switch (r) {
   case Rank::WARRIOR: {
     return UINT64_C(0);
-  }
+  } break;
   case Rank::STARCAPTAIN: {
     return UINT64_C(3);
-  }
+  } break;
   case Rank::STARCOLONEL: {
     return UINT64_C(4);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -327,13 +327,13 @@ uint64_t CoalitionBidHonorTraceCase::weight_class_value(
   switch (w) {
   case WeightClass::LIGHT: {
     return UINT64_C(10);
-  }
+  } break;
   case WeightClass::HEAVY: {
     return UINT64_C(15);
-  }
+  } break;
   case WeightClass::ASSAULT: {
     return UINT64_C(18);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -344,13 +344,13 @@ uint64_t CoalitionBidHonorTraceCase::unit_class_bonus(
   switch (c) {
   case UnitClass::OMNIMECH: {
     return UINT64_C(20);
-  }
+  } break;
   case UnitClass::BATTLEMECH: {
     return UINT64_C(10);
-  }
+  } break;
   case UnitClass::ELEMENTAL: {
     return UINT64_C(15);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -560,34 +560,34 @@ bool CoalitionBidHonorTraceCase::is_ready(
   switch (rs) {
   case ReadyStatus::NEITHERREADY: {
     return false;
-  }
+  } break;
   case ReadyStatus::ATTACKERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return true;
-    }
+    } break;
     case Side::DEFENDER: {
       return false;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return false;
-    }
+    } break;
     case Side::DEFENDER: {
       return true;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::BOTHREADY: {
     return true;
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -601,41 +601,41 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     switch (side) {
     case Side::ATTACKER: {
       return ReadyStatus::ATTACKERREADY;
-    }
+    } break;
     case Side::DEFENDER: {
       return ReadyStatus::DEFENDERREADY;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::ATTACKERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return rs;
-    }
+    } break;
     case Side::DEFENDER: {
       return ReadyStatus::BOTHREADY;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return ReadyStatus::BOTHREADY;
-    }
+    } break;
     case Side::DEFENDER: {
       return rs;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::BOTHREADY: {
     return rs;
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -647,43 +647,43 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
   switch (rs) {
   case ReadyStatus::NEITHERREADY: {
     return rs;
-  }
+  } break;
   case ReadyStatus::ATTACKERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return ReadyStatus::NEITHERREADY;
-    }
+    } break;
     case Side::DEFENDER: {
       return rs;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return rs;
-    }
+    } break;
     case Side::DEFENDER: {
       return ReadyStatus::NEITHERREADY;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   case ReadyStatus::BOTHREADY: {
     switch (side) {
     case Side::ATTACKER: {
       return ReadyStatus::DEFENDERREADY;
-    }
+    } break;
     case Side::DEFENDER: {
       return ReadyStatus::ATTACKERREADY;
-    }
+    } break;
     default:
       std::unreachable();
     }
-  }
+  } break;
   default:
     std::unreachable();
   }

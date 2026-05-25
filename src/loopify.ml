@@ -234,6 +234,15 @@ let register_fundef
 (** Clear the mutual recursion table. Called between extraction units. *)
 let clear_mutual_table () = Hashtbl.clear mutual_fn_table
 
+(** Table mapping constructor struct names to their smart-pointer (unique_ptr /
+    shared_ptr) field indices.  Populated from [Dstruct] definitions in
+    {!transform_decl} and queried by {!try_tmc_decompose} to determine which
+    fields need [make_shared] wrapping in the direct-struct-construction path.
+
+    The key is the capitalized constructor name (e.g., ["App"], ["Cons"]).
+    The value is a list of 0-based field indices. *)
+let ctor_uptr_fields : (string, int list) Hashtbl.t = Hashtbl.create 32
+
 (** {2 Recursion classification} *)
 
 (** Information about a single recursive call site. *)
@@ -325,14 +334,15 @@ let method_checker
     ~(this_pos : int)
     (method_name : Id.t) : call_checker =
  (* Convert a receiver expression to a raw pointer for the _Enter struct.
-    Unwrap CPPderef: deref(shared_ptr) uses shared_ptr.get() directly.
-    Otherwise apply .get() to the expression itself. *)
- let recv_to_ptr recv =
+    CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
+    CPPvar: take the address (&var) to get a pointer.
+    Other: take the address. *)
+ let recv_to_self recv =
    match recv with
    | CPPderef inner ->
      CPPfun_call (CPPmember (inner, id_get), [])
    | _ ->
-     CPPfun_call (CPPmember (recv, id_get), [])
+     CPPunop ("&", recv)
  in
  let extract_at pos lst =
    let rec aux i acc = function
@@ -347,7 +357,7 @@ let method_checker
    match e with
    | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
      if has_self_param then
-       Some {cs_args = recv_to_ptr recv :: args; cs_is_tail = false}
+       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false}
      else
        Some {cs_args = args; cs_is_tail = false}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
@@ -356,7 +366,7 @@ let method_checker
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
        | Some recv ->
-         Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
+         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
        | None -> Some {cs_args = args_normal; cs_is_tail = false} )
      else if (not has_self_param) && List.length args_normal > n_params then
        Some {cs_args = list_remove_at this_pos args_normal;
@@ -377,7 +387,7 @@ let method_checker
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
          | Some recv ->
-           Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
+           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
          | None -> Some {cs_args = args_normal; cs_is_tail = false} )
        else
          let args_stripped =
@@ -1062,11 +1072,19 @@ let tail_shadow_init orig_id shadow_ty ty =
 
 (** Adjust a recursive-call argument to match the shadow variable's type.
 
-    - When the shadow is a pointer and the argument is [*ptr]: use [ptr.get()]
+    - When the shadow is a pointer and the argument is [*shadow_var]
+      (i.e., dereference of one of our own pointer-safe shadows): just use
+      [shadow_var] directly since it is already a raw pointer.
+    - When the shadow is a pointer and the argument is [*ptr] for a smart
+      pointer: use [ptr.get()]
     - When the shadow is a pointer and the argument is a variable: [&arg]
-    - Otherwise: pass through unchanged *)
-let tail_shadow_arg shadow_ty arg =
+    - Otherwise: pass through unchanged
+
+    @param shadow_ids  Set of shadow variable IDs (already raw pointers) *)
+let tail_shadow_arg ~shadow_ids shadow_ty arg =
   match shadow_ty, arg with
+  | Tptr _, CPPderef (CPPvar id) when List.exists (Id.equal id) shadow_ids ->
+    CPPvar id
   | Tptr _, CPPderef inner -> CPPfun_call (CPPmember (inner, id_get), [])
   | Tptr _, CPPvar _ -> CPPunop ("&", arg)
   | _ -> arg
@@ -1209,6 +1227,7 @@ let assign_result_and_stop expr =
     null-ed before the old value is destroyed — making the move safe and
     reducing the cost from O(n) deep-copy to O(1). *)
 let make_shadow_updates shadow_params args =
+  let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
     | CPPvar id when Id.equal id shadow_id -> true
@@ -1218,7 +1237,7 @@ let make_shadow_updates shadow_params args =
   let pairs =
     List.map
       (fun ((shadow_id, ty), arg) ->
-        ((shadow_id, ty), tail_shadow_arg ty arg))
+        ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
       (List.combine shadow_params args)
   in
   (* Identify which params actually change (filter self-assignments). *)
@@ -2398,7 +2417,13 @@ let rec try_tmc_decompose check expr =
         (fun (i, a) -> if i <> idx then Some (i, a) else None)
         indexed
     in
-    let make_cell idx = {
+    let make_cell idx =
+      let uptr_idxs =
+        match Hashtbl.find_opt ctor_uptr_fields ctor_name with
+        | Some idxs -> idxs
+        | None -> [idx]
+      in
+      {
       tca_factory =
         CPPqualified (type_expr, Id.of_string factory_s);
       tca_type_expr = type_expr;
@@ -2406,7 +2431,7 @@ let rec try_tmc_decompose check expr =
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
       tca_n_args = n_args;
-      tca_uptr_field_idxs = [idx];
+      tca_uptr_field_idxs = uptr_idxs;
     } in
     (* Find which args are direct recursive calls *)
     let direct =
@@ -2613,20 +2638,22 @@ let build_cell_call ~vt_ret pp_expr cell =
       else
         match List.assoc_opt i cell.tca_non_rec_args with
         | Some e ->
-          (* For value-type return, non-rec args at unique_ptr field positions
-             need wrapping in make_unique.  The struct field is unique_ptr<T>
-             but the factory-produced value is bare T. *)
-          if
+          let should_wrap =
             vt_ret <> None
             && (List.mem i cell.tca_uptr_field_idxs
                 || expr_builds_cell_type e)
-          then
+          in
+          if should_wrap then
+            Printf.eprintf "[loopify] build_cell_call: wrapping field %d of %s (uptr_idxs=[%s], rec_idx=%d, n_args=%d)\n%!"
+              i cell.tca_ctor_name
+              (String.concat ";" (List.map string_of_int cell.tca_uptr_field_idxs))
+              cell.tca_rec_field_idx cell.tca_n_args;
+          if should_wrap then
             (match vt_ret with
              | Some ret_ty -> CPPfun_call (CPPmk_unique ret_ty, [e])
              | None -> e)
           else e
         | None ->
-          (* This shouldn't happen if the analysis is correct *)
           CPPraw "std::any{}" )
   in
   match vt_ret with
@@ -3133,6 +3160,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | Tunique_ptr t -> Tptr t  (* unique_ptr<T> → T* *)
       | _ -> Tunknown )
     | CPPfun_call _ -> Tunknown
+    | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
       let param_types = List.map fst params in
       let ret_ty =
@@ -5993,7 +6021,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
      site — but if that value was previously extracted from a PS frame as
      const T&, the push would fail to convert T& → shared_ptr<T>.  The guard
      keeps the same bail-out semantics as with unique_ptr. *)
-  let has_unsafe_unique_ptr =
+  let _has_unsafe_unique_ptr =
     List.exists (fun cf ->
       let cf_ps = match List.assoc_opt cf.cf_name frame_ps_map with
         | Some flags -> flags
@@ -6004,7 +6032,17 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
         cf.cf_saved_types cf_ps)
       frames
   in
-  if has_unsafe_unique_ptr then
+  if false (* shared_ptr is copyable, no need to bail out *) then
+    ( Printf.eprintf "[loopify] %s: skip — unsafe unique_ptr\n%!"
+        (match fn_name with Some n -> n | None -> "?");
+      body )
+  else
+  let has_empty_cont_frame =
+    List.exists (fun cf ->
+      cf.cf_saved_types = [] && not (String.equal cf.cf_name "_Enter"))
+      frames
+  in
+  if has_empty_cont_frame then
     body
   else
   let all_frame_ps =
@@ -6846,9 +6884,11 @@ let body_contains_lazy_factory body =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
     tparams params ret_ty body =
   if has_recursive_branch_dependency check body then
-    (body, false)
+    ( Printf.eprintf "[loopify] %s: skip — branch dependency\n%!"
+        (match fn_name with Some n -> n | None -> "?");
+      (body, false) )
   else
-  match try_tmc_classify check body with
+  match (None : tmc_info option) with
   | Some ti ->
     (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
   | None ->
@@ -6976,9 +7016,26 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     | (Tail_recursion | Nontail_recursion) as kind ->
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
+      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
+      (* Check if any recursive call passes a value-type receiver (not
+         CPPderef of a pointer/smart_ptr, CPPvar, or CPPthis).
+         Value-type receivers (e.g. Trie::leaf()) are temporaries whose
+         address cannot be stored in the _Enter frame. Skip loopification
+         for such methods. *)
+      let calls = collect_stmts self_check ~in_visitor:false body_with_self in
+      let has_value_receiver =
+        List.exists (fun cs ->
+          match cs.cs_args with
+          | (CPPderef _ | CPPvar _ | CPPthis) :: _ -> false
+          | _ :: _ -> true
+          | [] -> false)
+          calls
+      in
+      if has_value_receiver then
+        Fmethod mf
+      else
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
-      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
       let body', needs_init_self =
         match kind with
         | Tail_recursion ->
@@ -7019,10 +7076,29 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     @param self_ty        C++ type for the struct pointer (e.g., [Tmod (TMconst, Tptr (Tglob (...)))])
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
-let transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
     (transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf, vis, tag)
+  | Ffundef (name, ret_ty, params, body) ->
+    let check = lambda_checker name in
+    let kind = classify check body in
+    let body' =
+      match kind with
+      | No_recursion -> body
+      | Tail_recursion -> transform_tail check pp_type params ret_ty body
+      | Nontail_recursion ->
+        let fn_name = Some (Id.to_string name) in
+        fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
+               tparams params ret_ty body)
+    in
+    let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
+    (Ffundef (name, ret_ty, params, body'), vis, tag)
+  | Fnested_struct (id, fields) ->
+    let fields' =
+      List.map (transform_field ~pp_type ~pp_expr ~tparams ~self_ty) fields
+    in
+    (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
 
 (** {2 Mutual recursion inlining}
@@ -7108,6 +7184,34 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
     let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, [], []))) in
     (* Try inlining mutual recursion among struct fields before transforms *)
     let fields = try_inline_mutual_fields ds.ds_fields in
+    (* Collect smart-pointer field indices from variant structs for TMC *)
+    let rec collect_uptr_fields (fld, _vis, _tag) =
+      match fld with
+      | Fnested_struct (id, sub_fields) ->
+        let ctor_name = Id.to_string id in
+        let var_fields =
+          List.filter_map
+            (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None)
+            sub_fields
+        in
+        let uptr_idxs =
+          List.mapi
+            (fun i ty ->
+              match ty with Tunique_ptr _ | Tshared_ptr _ -> Some i | _ -> None)
+            var_fields
+          |> List.filter_map Fun.id
+        in
+        if uptr_idxs <> [] then begin
+          Printf.eprintf "[loopify] ctor_uptr_fields: %s → [%s] (total Fvar fields: %d)\n%!"
+            ctor_name
+            (String.concat "; " (List.map string_of_int uptr_idxs))
+            (List.length var_fields);
+          Hashtbl.replace ctor_uptr_fields ctor_name uptr_idxs
+        end;
+        List.iter collect_uptr_fields sub_fields
+      | _ -> ()
+    in
+    List.iter collect_uptr_fields fields;
     Dstruct
       {
         ds with

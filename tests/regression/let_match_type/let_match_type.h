@@ -33,16 +33,16 @@ struct LetMatchType {
     switch (d) {
     case Direction::NORTH: {
       return f;
-    }
+    } break;
     case Direction::SOUTH: {
       return f0;
-    }
+    } break;
     case Direction::EAST: {
       return f1;
-    }
+    } break;
     case Direction::WEST: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -53,16 +53,16 @@ struct LetMatchType {
     switch (d) {
     case Direction::NORTH: {
       return f;
-    }
+    } break;
     case Direction::SOUTH: {
       return f0;
-    }
+    } break;
     case Direction::EAST: {
       return f1;
-    }
+    } break;
     case Direction::WEST: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }

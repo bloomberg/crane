@@ -5,25 +5,25 @@ uint64_t RecordErasedProofFieldsCase::kind_code(
   switch (k) {
   case ItemKind::KINDA: {
     return UINT64_C(0);
-  }
+  } break;
   case ItemKind::KINDB: {
     return UINT64_C(1);
-  }
+  } break;
   case ItemKind::KINDC: {
     return UINT64_C(2);
-  }
+  } break;
   case ItemKind::KINDD: {
     return UINT64_C(3);
-  }
+  } break;
   case ItemKind::KINDE: {
     return UINT64_C(4);
-  }
+  } break;
   case ItemKind::KINDF: {
     return UINT64_C(5);
-  }
+  } break;
   case ItemKind::KINDG: {
     return UINT64_C(6);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -50,13 +50,13 @@ uint64_t RecordErasedProofFieldsCase::bucket_code(
   switch (b) {
   case TraceBucket::BUCKETA: {
     return UINT64_C(30);
-  }
+  } break;
   case TraceBucket::BUCKETB: {
     return UINT64_C(31);
-  }
+  } break;
   case TraceBucket::BUCKETC: {
     return UINT64_C(32);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -68,13 +68,13 @@ RecordErasedProofFieldsCase::bucket_to_tag(
   switch (b) {
   case TraceBucket::BUCKETA: {
     return StoredTag::tagsecondary(ItemKind::KINDD);
-  }
+  } break;
   case TraceBucket::BUCKETB: {
     return StoredTag::tagsecondary(ItemKind::KINDE);
-  }
+  } break;
   case TraceBucket::BUCKETC: {
     return StoredTag::tagsecondary(ItemKind::KINDB);
-  }
+  } break;
   default:
     std::unreachable();
   }

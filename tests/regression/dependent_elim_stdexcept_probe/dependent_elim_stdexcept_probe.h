@@ -14,10 +14,10 @@ struct DependentElimStdexceptProbe {
     switch (a) {
     case Avail::PRESENT: {
       return f;
-    }
+    } break;
     case Avail::ABSENT: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -27,10 +27,10 @@ struct DependentElimStdexceptProbe {
     switch (a) {
     case Avail::PRESENT: {
       return f;
-    }
+    } break;
     case Avail::ABSENT: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }

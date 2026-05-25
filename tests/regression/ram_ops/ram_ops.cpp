@@ -308,10 +308,10 @@ uint64_t RamOps::score(RamOps::Item x) {
   switch (x) {
   case Item::S_: {
     return UINT64_C(1);
-  }
+  } break;
   case Item::S_0: {
     return UINT64_C(2);
-  }
+  } break;
   default:
     std::unreachable();
   }

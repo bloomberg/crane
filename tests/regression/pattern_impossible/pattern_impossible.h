@@ -13,13 +13,13 @@ struct PatternImpossible {
     switch (t) {
     case Three::ONE: {
       return f;
-    }
+    } break;
     case Three::TWO: {
       return f0;
-    }
+    } break;
     case Three::THREE: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -29,13 +29,13 @@ struct PatternImpossible {
     switch (t) {
     case Three::ONE: {
       return f;
-    }
+    } break;
     case Three::TWO: {
       return f0;
-    }
+    } break;
     case Three::THREE: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }

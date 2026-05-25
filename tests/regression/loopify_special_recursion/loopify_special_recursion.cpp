@@ -114,72 +114,104 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
   return _result;
 }
 
-List<uint64_t>
-LoopifySpecialRecursion::remove_if_sum_even(const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      uint64_t next_val = [&]() {
-        auto &&_sv0 = *a1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-          return UINT64_C(0);
-        } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_sv0.v());
-          return a00;
-        }
-      }();
-      if ((UINT64_C(2) ? (a0 + next_val) % UINT64_C(2) : (a0 + next_val)) ==
-          UINT64_C(0)) {
-        _loop_l = a1.get();
-        continue;
+List<uint64_t> LoopifySpecialRecursion::remove_if_sum_even(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified remove_if_sum_even: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        uint64_t next_val = [&]() {
+          auto &&_sv0 = *a1;
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] =
+                std::get<typename List<uint64_t>::Cons>(_sv0.v());
+            return a00;
+          }
+        }();
+        if ((UINT64_C(2) ? (a0 + next_val) % UINT64_C(2) : (a0 + next_val)) ==
+            UINT64_C(0)) {
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
-List<uint64_t> LoopifySpecialRecursion::reverse_insert(uint64_t x,
-                                                       List<uint64_t> l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_l = std::move(l);
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v_mut())) {
-      *_write = std::make_shared<List<uint64_t>>(
-          List<uint64_t>::cons(x, List<uint64_t>::nil()));
-      break;
-    } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-      if (a0 < x) {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = std::move(*a1);
-        continue;
+List<uint64_t> LoopifySpecialRecursion::reverse_insert(
+    uint64_t x,
+    List<uint64_t>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{l});
+  /// Loopified reverse_insert: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      List<uint64_t> l = std::move(_f.l);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        _result = List<uint64_t>::cons(x, List<uint64_t>::nil());
       } else {
-        *_write =
-            std::make_shared<List<uint64_t>>(List<uint64_t>::cons(x, _loop_l));
-        break;
+        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+        if (a0 < x) {
+          _stack.emplace_back(_Resume1{std::move(a0)});
+          _stack.emplace_back(_Enter{std::move(*a1)});
+        } else {
+          _result = List<uint64_t>::cons(x, l);
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySpecialRecursion::collect_sorted(
@@ -299,17 +331,17 @@ uint64_t LoopifySpecialRecursion::categorize_by(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype(UINT64_C(3)) _s0;
+    std::decay_t<decltype(UINT64_C(3))> _s0;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype(UINT64_C(2)) _s0;
+    std::decay_t<decltype(UINT64_C(2))> _s0;
   };
 
   /// _Resume3: saves [_s0], resumes after recursive call with _result.
   struct _Resume3 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2, _Resume3>;
@@ -355,38 +387,53 @@ uint64_t LoopifySpecialRecursion::categorize_by(
   return _result;
 }
 
-List<uint64_t> LoopifySpecialRecursion::between(uint64_t lo, uint64_t hi,
-                                                const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (lo <= a0) {
-        if (a0 <= hi) {
-          auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = a1.get();
-          continue;
-        } else {
-          _loop_l = a1.get();
-          continue;
-        }
+List<uint64_t> LoopifySpecialRecursion::between(
+    uint64_t lo, uint64_t hi,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified between: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (lo <= a0) {
+          if (a0 <= hi) {
+            _stack.emplace_back(_Resume1{a0});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
+        } else {
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySpecialRecursion::merge_levels(

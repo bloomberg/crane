@@ -103,13 +103,13 @@ template <OrderedType K, BaseType V> struct MakeMap {
       switch (K::compare(k, a1)) {
       case Comparison::EQ: {
         return tree::node(*a0, k, v, *a3);
-      }
+      } break;
       case Comparison::LT: {
         return tree::node(add(k, v, *a0), a1, a2, *a3);
-      }
+      } break;
       case Comparison::GT: {
         return tree::node(*a0, a1, a2, add(k, v, *a3));
-      }
+      } break;
       default:
         std::unreachable();
       }
@@ -124,13 +124,13 @@ template <OrderedType K, BaseType V> struct MakeMap {
       switch (K::compare(k, a1)) {
       case Comparison::EQ: {
         return std::make_optional<typename V::t>(a2);
-      }
+      } break;
       case Comparison::LT: {
         return find(k, *a0);
-      }
+      } break;
       case Comparison::GT: {
         return find(k, *a3);
-      }
+      } break;
       default:
         std::unreachable();
       }

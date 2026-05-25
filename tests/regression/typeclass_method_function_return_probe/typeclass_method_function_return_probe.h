@@ -16,10 +16,10 @@ struct TypeclassMethodFunctionReturnProbe {
       switch (x) {
       case Bool0::TRUE_: {
         return y;
-      }
+      } break;
       case Bool0::FALSE_: {
         return x;
-      }
+      } break;
       default:
         std::unreachable();
       }

@@ -84,26 +84,12 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
-    List<A> _loop_m = std::move(m);
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
-        _loop_self = a1.get();
-        continue;
-      }
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
-    return std::move(*_head);
   }
 };
 

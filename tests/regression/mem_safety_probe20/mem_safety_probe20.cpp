@@ -20,10 +20,10 @@ MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
   case Choice::CLEFT: {
     return wrapped::wrap(
         [=](uint64_t n) mutable { return (t.tree_sum() + n); });
-  }
+  } break;
   case Choice::CRIGHT: {
     return wrapped::wrap([](uint64_t n) { return n; });
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -100,8 +100,9 @@ uint64_t MemSafetyProbe20::sum_wrapped(
 
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    decltype(std::declval<MemSafetyProbe20::wrapped &>().unwrap(
-        std::declval<uint64_t &>())) _s0;
+    std::decay_t<decltype(std::declval<MemSafetyProbe20::wrapped &>().unwrap(
+        std::declval<uint64_t &>()))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;

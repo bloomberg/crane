@@ -260,13 +260,13 @@ struct CoalitionBidHonorTraceCase {
     switch (c) {
     case Clan::CLANWOLF: {
       return f;
-    }
+    } break;
     case Clan::CLANJADEFALCON: {
       return f0;
-    }
+    } break;
     case Clan::CLANGHOSTBEAR: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -276,13 +276,13 @@ struct CoalitionBidHonorTraceCase {
     switch (c) {
     case Clan::CLANWOLF: {
       return f;
-    }
+    } break;
     case Clan::CLANJADEFALCON: {
       return f0;
-    }
+    } break;
     case Clan::CLANGHOSTBEAR: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -296,13 +296,13 @@ struct CoalitionBidHonorTraceCase {
     switch (r) {
     case Rank::WARRIOR: {
       return f;
-    }
+    } break;
     case Rank::STARCAPTAIN: {
       return f0;
-    }
+    } break;
     case Rank::STARCOLONEL: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -312,13 +312,13 @@ struct CoalitionBidHonorTraceCase {
     switch (r) {
     case Rank::WARRIOR: {
       return f;
-    }
+    } break;
     case Rank::STARCAPTAIN: {
       return f0;
-    }
+    } break;
     case Rank::STARCOLONEL: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -348,13 +348,13 @@ struct CoalitionBidHonorTraceCase {
     switch (u) {
     case UnitClass::OMNIMECH: {
       return f;
-    }
+    } break;
     case UnitClass::BATTLEMECH: {
       return f0;
-    }
+    } break;
     case UnitClass::ELEMENTAL: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -365,13 +365,13 @@ struct CoalitionBidHonorTraceCase {
     switch (u) {
     case UnitClass::OMNIMECH: {
       return f;
-    }
+    } break;
     case UnitClass::BATTLEMECH: {
       return f0;
-    }
+    } break;
     case UnitClass::ELEMENTAL: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -383,13 +383,13 @@ struct CoalitionBidHonorTraceCase {
     switch (w) {
     case WeightClass::LIGHT: {
       return f;
-    }
+    } break;
     case WeightClass::HEAVY: {
       return f0;
-    }
+    } break;
     case WeightClass::ASSAULT: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -400,13 +400,13 @@ struct CoalitionBidHonorTraceCase {
     switch (w) {
     case WeightClass::LIGHT: {
       return f;
-    }
+    } break;
     case WeightClass::HEAVY: {
       return f0;
-    }
+    } break;
     case WeightClass::ASSAULT: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -471,10 +471,10 @@ struct CoalitionBidHonorTraceCase {
     switch (s) {
     case Side::ATTACKER: {
       return f;
-    }
+    } break;
     case Side::DEFENDER: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -484,10 +484,10 @@ struct CoalitionBidHonorTraceCase {
     switch (s) {
     case Side::ATTACKER: {
       return f;
-    }
+    } break;
     case Side::DEFENDER: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -552,10 +552,10 @@ struct CoalitionBidHonorTraceCase {
     switch (t) {
     case TrialType::TRIALOFPOSSESSION: {
       return f;
-    }
+    } break;
     case TrialType::TRIALOFANNIHILATION: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -565,10 +565,10 @@ struct CoalitionBidHonorTraceCase {
     switch (t) {
     case TrialType::TRIALOFPOSSESSION: {
       return f;
-    }
+    } break;
     case TrialType::TRIALOFANNIHILATION: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -1037,16 +1037,16 @@ struct CoalitionBidHonorTraceCase {
     switch (r) {
     case ReadyStatus::NEITHERREADY: {
       return f;
-    }
+    } break;
     case ReadyStatus::ATTACKERREADY: {
       return f0;
-    }
+    } break;
     case ReadyStatus::DEFENDERREADY: {
       return f1;
-    }
+    } break;
     case ReadyStatus::BOTHREADY: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -1057,16 +1057,16 @@ struct CoalitionBidHonorTraceCase {
     switch (r) {
     case ReadyStatus::NEITHERREADY: {
       return f;
-    }
+    } break;
     case ReadyStatus::ATTACKERREADY: {
       return f0;
-    }
+    } break;
     case ReadyStatus::DEFENDERREADY: {
       return f1;
-    }
+    } break;
     case ReadyStatus::BOTHREADY: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -1237,10 +1237,10 @@ struct CoalitionBidHonorTraceCase {
         switch (side) {
         case Side::ATTACKER: {
           return std::make_optional<Commander>(attacker_bid.bid_commander);
-        }
+        } break;
         case Side::DEFENDER: {
           return std::make_optional<Commander>(defender_bid.bid_commander);
-        }
+        } break;
         default:
           std::unreachable();
         }
@@ -1262,10 +1262,10 @@ struct CoalitionBidHonorTraceCase {
                   switch (ready0) {
                   case ReadyStatus::NEITHERREADY: {
                     return UINT64_C(2);
-                  }
+                  } break;
                   case ReadyStatus::BOTHREADY: {
                     return UINT64_C(0);
-                  }
+                  } break;
                   default: {
                     return UINT64_C(1);
                   }

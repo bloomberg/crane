@@ -638,7 +638,7 @@ N BinaryNums::n_max(N a, N b) {
   switch (BinNat::compare(a, b)) {
   case Comparison::LT: {
     return b;
-  }
+  } break;
   default: {
     return a;
   }
@@ -659,13 +659,13 @@ Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {
   case Comparison::EQ: {
     return Comparison::EQ;
-  }
+  } break;
   case Comparison::LT: {
     return Comparison::GT;
-  }
+  } break;
   case Comparison::GT: {
     return Comparison::LT;
-  }
+  } break;
   default:
     std::unreachable();
   }

@@ -15,22 +15,22 @@ uint64_t ValidatedPumpDeliveryTraceCase::isf_activity_modifier(
   switch (state) {
   case ActivityState::ACTIVITY_NORMAL: {
     return UINT64_C(100);
-  }
+  } break;
   case ActivityState::ACTIVITY_LIGHTEXERCISE: {
     return UINT64_C(110);
-  }
+  } break;
   case ActivityState::ACTIVITY_MODERATEEXERCISE: {
     return UINT64_C(130);
-  }
+  } break;
   case ActivityState::ACTIVITY_INTENSEEXERCISE: {
     return UINT64_C(150);
-  }
+  } break;
   case ActivityState::ACTIVITY_ILLNESS: {
     return UINT64_C(80);
-  }
+  } break;
   case ActivityState::ACTIVITY_STRESS: {
     return UINT64_C(90);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -41,22 +41,22 @@ uint64_t ValidatedPumpDeliveryTraceCase::icr_activity_modifier(
   switch (state) {
   case ActivityState::ACTIVITY_NORMAL: {
     return UINT64_C(100);
-  }
+  } break;
   case ActivityState::ACTIVITY_LIGHTEXERCISE: {
     return UINT64_C(110);
-  }
+  } break;
   case ActivityState::ACTIVITY_MODERATEEXERCISE: {
     return UINT64_C(125);
-  }
+  } break;
   case ActivityState::ACTIVITY_INTENSEEXERCISE: {
     return UINT64_C(140);
-  }
+  } break;
   case ActivityState::ACTIVITY_ILLNESS: {
     return UINT64_C(85);
-  }
+  } break;
   case ActivityState::ACTIVITY_STRESS: {
     return UINT64_C(95);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -68,7 +68,7 @@ ValidatedPumpDeliveryTraceCase::peak_time(
   switch (itype) {
   case InsulinType::INSULIN_ASPART: {
     return UINT64_C(70);
-  }
+  } break;
   default: {
     return UINT64_C(75);
   }
@@ -706,16 +706,16 @@ ValidatedPumpDeliveryTraceCase::apply_rounding(
   switch (mode) {
   case RoundingMode::ROUNDTWENTIETH: {
     return t;
-  }
+  } break;
   case RoundingMode::ROUNDTENTH: {
     return round_down_to_increment(t, UINT64_C(2));
-  }
+  } break;
   case RoundingMode::ROUNDHALF: {
     return round_down_to_increment(t, UINT64_C(10));
-  }
+  } break;
   case RoundingMode::ROUNDUNIT: {
     return round_down_to_increment(t, ONE_UNIT);
-  }
+  } break;
   default:
     std::unreachable();
   }

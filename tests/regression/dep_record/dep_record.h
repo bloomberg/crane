@@ -171,10 +171,10 @@ struct DepRecord {
     switch (t) {
     case Tag::TNAT: {
       return f;
-    }
+    } break;
     case Tag::TBOOL: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -184,10 +184,10 @@ struct DepRecord {
     switch (t) {
     case Tag::TNAT: {
       return f;
-    }
+    } break;
     case Tag::TBOOL: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }

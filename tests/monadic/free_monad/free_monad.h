@@ -19,7 +19,7 @@ struct FreeMonad {
     };
 
     struct Bind {
-      std::unique_ptr<IO> a;
+      std::shared_ptr<IO> a;
       std::function<IO(std::any)> b;
     };
 
@@ -47,42 +47,10 @@ struct FreeMonad {
 
     explicit IO(Print _v) : v_(std::move(_v)) {}
 
-    IO(const IO &_other) : v_(std::move(_other.clone().v_)) {}
-
-    IO(IO &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    IO &operator=(const IO &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    IO &operator=(IO &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    IO clone() const {
-      if (std::holds_alternative<Pure>(this->v())) {
-        const auto &[a] = std::get<Pure>(this->v());
-        return IO(Pure{a});
-      } else if (std::holds_alternative<Bind>(this->v())) {
-        const auto &[a, b] = std::get<Bind>(this->v());
-        return IO(
-            Bind{a ? std::make_unique<FreeMonad::IO>(a->clone()) : nullptr, b});
-      } else if (std::holds_alternative<Get_line>(this->v())) {
-        return IO(Get_line{});
-      } else {
-        const auto &[a0] = std::get<Print>(this->v());
-        return IO(Print{a0});
-      }
-    }
-
-    // CREATORS
     static IO pure(std::any a) { return IO(Pure{std::move(a)}); }
 
     static IO bind(IO a, std::function<IO(std::any)> b) {
-      return IO(Bind{std::make_unique<IO>(std::move(a)), std::move(b)});
+      return IO(Bind{std::make_shared<IO>(std::move(a)), std::move(b)});
     }
 
     static IO get_line() { return IO(Get_line{}); }
@@ -105,11 +73,11 @@ struct FreeMonad {
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
       const IO &a_value = *a;
-      return std::any_cast<T1>(f0(a_value,
-                                  IO_rect<T1, T2>(f, f0, f1, f2, a_value), b,
-                                  [=](const auto &a) mutable {
-                                    return IO_rect<T1, T2>(f, f0, f1, f2, b(a));
-                                  }));
+      return std::any_cast<T1>(
+          f0(a_value, IO_rect<T1, T2>(f, f0, f1, f2, a_value), b,
+             [=](const auto &a0) mutable {
+               return IO_rect<T1, T2>(f, f0, f1, f2, b(a0));
+             }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;
     } else {
@@ -129,8 +97,8 @@ struct FreeMonad {
       const IO &a_value = *a;
       return std::any_cast<T1>(f0(a_value,
                                   IO_rec<T1, T2>(f, f0, f1, f2, a_value), b,
-                                  [=](const auto &a) mutable {
-                                    return IO_rec<T1, T2>(f, f0, f1, f2, b(a));
+                                  [=](const auto &a0) mutable {
+                                    return IO_rec<T1, T2>(f, f0, f1, f2, b(a0));
                                   }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;

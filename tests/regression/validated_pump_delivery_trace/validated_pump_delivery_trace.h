@@ -536,22 +536,22 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (a) {
     case ActivityState::ACTIVITY_NORMAL: {
       return f;
-    }
+    } break;
     case ActivityState::ACTIVITY_LIGHTEXERCISE: {
       return f0;
-    }
+    } break;
     case ActivityState::ACTIVITY_MODERATEEXERCISE: {
       return f1;
-    }
+    } break;
     case ActivityState::ACTIVITY_INTENSEEXERCISE: {
       return f2;
-    }
+    } break;
     case ActivityState::ACTIVITY_ILLNESS: {
       return f3;
-    }
+    } break;
     case ActivityState::ACTIVITY_STRESS: {
       return f4;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -563,22 +563,22 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (a) {
     case ActivityState::ACTIVITY_NORMAL: {
       return f;
-    }
+    } break;
     case ActivityState::ACTIVITY_LIGHTEXERCISE: {
       return f0;
-    }
+    } break;
     case ActivityState::ACTIVITY_MODERATEEXERCISE: {
       return f1;
-    }
+    } break;
     case ActivityState::ACTIVITY_INTENSEEXERCISE: {
       return f2;
-    }
+    } break;
     case ActivityState::ACTIVITY_ILLNESS: {
       return f3;
-    }
+    } break;
     case ActivityState::ACTIVITY_STRESS: {
       return f4;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -710,13 +710,13 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (i) {
     case InsulinType::INSULIN_HUMALOG: {
       return f;
-    }
+    } break;
     case InsulinType::INSULIN_ASPART: {
       return f0;
-    }
+    } break;
     case InsulinType::INSULIN_LISPRO: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -727,13 +727,13 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (i) {
     case InsulinType::INSULIN_HUMALOG: {
       return f;
-    }
+    } break;
     case InsulinType::INSULIN_ASPART: {
       return f0;
-    }
+    } break;
     case InsulinType::INSULIN_LISPRO: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -1055,16 +1055,16 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (r) {
     case RoundingMode::ROUNDTWENTIETH: {
       return f;
-    }
+    } break;
     case RoundingMode::ROUNDTENTH: {
       return f0;
-    }
+    } break;
     case RoundingMode::ROUNDHALF: {
       return f1;
-    }
+    } break;
     case RoundingMode::ROUNDUNIT: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -1075,16 +1075,16 @@ struct ValidatedPumpDeliveryTraceCase {
     switch (r) {
     case RoundingMode::ROUNDTWENTIETH: {
       return f;
-    }
+    } break;
     case RoundingMode::ROUNDTENTH: {
       return f0;
-    }
+    } break;
     case RoundingMode::ROUNDHALF: {
       return f1;
-    }
+    } break;
     case RoundingMode::ROUNDUNIT: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }

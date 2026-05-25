@@ -86,94 +86,38 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
 
 /// Helper: compute max depth among a list of nested structures.
 uint64_t LoopifyStructures::depth_nested_list_fuel(
-    uint64_t fuel,
-    const List<LoopifyStructures::nested>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<LoopifyStructures::nested> *l;
-    uint64_t fuel;
-  };
-
-  /// _Cont_Elem: resumes after recursive call, then processes rest.
-  struct _Cont_Elem {};
-
-  /// _Cont_NList: saves [a1, f], resumes after recursive call, then processes
-  /// rest.
-  struct _Cont_NList {
-    const List<LoopifyStructures::nested> *a1;
-    uint64_t f;
-  };
-
-  /// _Cont_NList_1: saves [d], resumes after recursive call, then processes
-  /// rest.
-  struct _Cont_NList_1 {
-    uint64_t d;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Elem, _Cont_NList, _Cont_NList_1>;
-  uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l, fuel});
-  /// Loopified depth_nested_list_fuel: _Enter -> _Cont_Elem -> _Cont_NList ->
-  /// _Cont_NList_1.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyStructures::nested> &l = *_f.l;
-      uint64_t fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = UINT64_C(0);
-      } else {
-        uint64_t f = fuel - 1;
-        if (std::holds_alternative<
-                typename List<LoopifyStructures::nested>::Nil>(l.v())) {
-          _result = UINT64_C(0);
-        } else {
-          const auto &[a0, a1] =
-              std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
-          if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
-                  a0.v())) {
-            _stack.emplace_back(_Cont_Elem{});
-            _stack.emplace_back(_Enter{a1.get(), f});
-          } else {
-            const auto &[a00] =
-                std::get<typename LoopifyStructures::nested::NList>(a0.v());
-            _stack.emplace_back(_Cont_NList{a1.get(), f});
-            _stack.emplace_back(_Enter{a00.get(), f});
-          }
-        }
-      }
-    } else if (std::holds_alternative<_Cont_Elem>(_frame)) {
-      auto _f = std::move(std::get<_Cont_Elem>(_frame));
-      uint64_t rest_max = _result;
-      if (UINT64_C(0) <= rest_max) {
-        _result = std::move(rest_max);
-      } else {
-        _result = UINT64_C(0);
-      }
-    } else if (std::holds_alternative<_Cont_NList>(_frame)) {
-      auto _f = std::move(std::get<_Cont_NList>(_frame));
-      const List<LoopifyStructures::nested> &a1 = *_f.a1;
-      uint64_t f = _f.f;
-      uint64_t d = (_result + 1);
-      _stack.emplace_back(_Cont_NList_1{d});
-      _stack.emplace_back(_Enter{&a1, f});
+    uint64_t fuel, const List<LoopifyStructures::nested> &l) {
+  if (fuel <= 0) {
+    return UINT64_C(0);
+  } else {
+    uint64_t f = fuel - 1;
+    if (std::holds_alternative<typename List<LoopifyStructures::nested>::Nil>(
+            l.v())) {
+      return UINT64_C(0);
     } else {
-      auto _f = std::move(std::get<_Cont_NList_1>(_frame));
-      uint64_t d = _f.d;
-      uint64_t rest_max = _result;
-      if (d <= rest_max) {
-        _result = std::move(rest_max);
+      const auto &[a0, a1] =
+          std::get<typename List<LoopifyStructures::nested>::Cons>(l.v());
+      if (std::holds_alternative<typename LoopifyStructures::nested::Elem>(
+              a0.v())) {
+        uint64_t rest_max = depth_nested_list_fuel(f, *a1);
+        if (UINT64_C(0) <= rest_max) {
+          return rest_max;
+        } else {
+          return UINT64_C(0);
+        }
       } else {
-        _result = std::move(d);
+        const auto &[a00] =
+            std::get<typename LoopifyStructures::nested::NList>(a0.v());
+        uint64_t d = (depth_nested_list_fuel(f, *a00) + 1);
+        uint64_t rest_max = depth_nested_list_fuel(f, *a1);
+        if (d <= rest_max) {
+          return rest_max;
+        } else {
+          return d;
+        }
       }
     }
   }
-  return _result;
 }
 
 /// Helper: flatten a list of nested structures to a flat list of nats.

@@ -27,40 +27,40 @@ struct LargeEnum {
     switch (c) {
     case Color::RED: {
       return f;
-    }
+    } break;
     case Color::ORANGE: {
       return f0;
-    }
+    } break;
     case Color::YELLOW: {
       return f1;
-    }
+    } break;
     case Color::GREEN: {
       return f2;
-    }
+    } break;
     case Color::BLUE: {
       return f3;
-    }
+    } break;
     case Color::INDIGO: {
       return f4;
-    }
+    } break;
     case Color::VIOLET: {
       return f5;
-    }
+    } break;
     case Color::BLACK: {
       return f6;
-    }
+    } break;
     case Color::WHITE: {
       return f7;
-    }
+    } break;
     case Color::GRAY: {
       return f8;
-    }
+    } break;
     case Color::BROWN: {
       return f9;
-    }
+    } break;
     case Color::PINK: {
       return f10;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -72,40 +72,40 @@ struct LargeEnum {
     switch (c) {
     case Color::RED: {
       return f;
-    }
+    } break;
     case Color::ORANGE: {
       return f0;
-    }
+    } break;
     case Color::YELLOW: {
       return f1;
-    }
+    } break;
     case Color::GREEN: {
       return f2;
-    }
+    } break;
     case Color::BLUE: {
       return f3;
-    }
+    } break;
     case Color::INDIGO: {
       return f4;
-    }
+    } break;
     case Color::VIOLET: {
       return f5;
-    }
+    } break;
     case Color::BLACK: {
       return f6;
-    }
+    } break;
     case Color::WHITE: {
       return f7;
-    }
+    } break;
     case Color::GRAY: {
       return f8;
-    }
+    } break;
     case Color::BROWN: {
       return f9;
-    }
+    } break;
     case Color::PINK: {
       return f10;
-    }
+    } break;
     default:
       std::unreachable();
     }

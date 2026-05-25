@@ -102,25 +102,25 @@ struct RecordErasedProofFieldsCase {
     switch (i) {
     case ItemKind::KINDA: {
       return f;
-    }
+    } break;
     case ItemKind::KINDB: {
       return f0;
-    }
+    } break;
     case ItemKind::KINDC: {
       return f1;
-    }
+    } break;
     case ItemKind::KINDD: {
       return f2;
-    }
+    } break;
     case ItemKind::KINDE: {
       return f3;
-    }
+    } break;
     case ItemKind::KINDF: {
       return f4;
-    }
+    } break;
     case ItemKind::KINDG: {
       return f5;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -132,25 +132,25 @@ struct RecordErasedProofFieldsCase {
     switch (i) {
     case ItemKind::KINDA: {
       return f;
-    }
+    } break;
     case ItemKind::KINDB: {
       return f0;
-    }
+    } break;
     case ItemKind::KINDC: {
       return f1;
-    }
+    } break;
     case ItemKind::KINDD: {
       return f2;
-    }
+    } break;
     case ItemKind::KINDE: {
       return f3;
-    }
+    } break;
     case ItemKind::KINDF: {
       return f4;
-    }
+    } break;
     case ItemKind::KINDG: {
       return f5;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -227,13 +227,13 @@ struct RecordErasedProofFieldsCase {
     switch (t) {
     case TraceBucket::BUCKETA: {
       return f;
-    }
+    } break;
     case TraceBucket::BUCKETB: {
       return f0;
-    }
+    } break;
     case TraceBucket::BUCKETC: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -244,13 +244,13 @@ struct RecordErasedProofFieldsCase {
     switch (t) {
     case TraceBucket::BUCKETA: {
       return f;
-    }
+    } break;
     case TraceBucket::BUCKETB: {
       return f0;
-    }
+    } break;
     case TraceBucket::BUCKETC: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }

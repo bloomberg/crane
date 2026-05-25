@@ -50,12 +50,13 @@ uint64_t LoopifyNumericMisc::alternating_ops(
 
   /// _Resume1: saves [n_], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype((std::declval<uint64_t &>() + 1)) n_;
+    std::decay_t<decltype((std::declval<uint64_t &>() + 1))> n_;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype(((std::declval<uint64_t &>() + 1) * UINT64_C(2))) _s0;
+    std::decay_t<decltype(((std::declval<uint64_t &>() + 1) * UINT64_C(2)))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
@@ -103,7 +104,7 @@ uint64_t LoopifyNumericMisc::count_even(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -147,7 +148,7 @@ uint64_t LoopifyNumericMisc::count_odd(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;

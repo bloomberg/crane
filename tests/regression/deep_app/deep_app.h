@@ -186,51 +186,89 @@ struct DeepApp {
   /// unless TMC kicks in.  Even with TMC, the destructor chain for
   /// the result is still deep.
   template <typename T1>
-  static mylist<T1> app(const mylist<T1> &l1, mylist<T1> l2) {
-    std::shared_ptr<mylist<T1>> _head{};
-    std::shared_ptr<mylist<T1>> *_write = &_head;
-    mylist<T1> _loop_l2 = std::move(l2);
-    const mylist<T1> *_loop_l1 = &l1;
-    while (true) {
-      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l1->v())) {
-        *_write = std::make_shared<mylist<T1>>(std::move(_loop_l2));
-        break;
+  static mylist<T1> app(const mylist<T1> &l1,
+                        mylist<T1> l2) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
+
+    struct _Enter {
+      mylist<T1> l2;
+      const mylist<T1> *l1;
+    };
+
+    /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Mycons {
+      T1 a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
+    mylist<T1> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{l2, &l1});
+    /// Loopified app: _Enter -> _Resume_Mycons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        mylist<T1> l2 = std::move(_f.l2);
+        const mylist<T1> &l1 = *_f.l1;
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(l1.v())) {
+          _result = std::move(l2);
+        } else {
+          const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l1.v());
+          _stack.emplace_back(_Resume_Mycons{a0});
+          _stack.emplace_back(_Enter{std::move(l2), a1.get()});
+        }
       } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<T1>::Mycons>(_loop_l1->v());
-        auto _cell = std::make_shared<mylist<T1>>(
-            typename mylist<T1>::Mycons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename mylist<T1>::Mycons>((*_write)->v_mut()).a1;
-        _loop_l1 = a1.get();
-        continue;
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = mylist<T1>::mycons(_f.a0, _result);
       }
     }
-    return std::move(*_head);
+    return _result;
   } /// Recursive map — same issue.
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static mylist<T2> map(F0 &&f, const mylist<T1> &l) {
-    std::shared_ptr<mylist<T2>> _head{};
-    std::shared_ptr<mylist<T2>> *_write = &_head;
-    const mylist<T1> *_loop_l = &l;
-    while (true) {
-      if (std::holds_alternative<typename mylist<T1>::Mynil>(_loop_l->v())) {
-        *_write = std::make_shared<mylist<T2>>(mylist<T2>::mynil());
-        break;
+  static mylist<T2>
+  map(F0 &&f,
+      const mylist<T1>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      const mylist<T1> *l;
+    };
+
+    /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Mycons {
+      T2 a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
+    mylist<T2> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified map: _Enter -> _Resume_Mycons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const mylist<T1> &l = *_f.l;
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
+          _result = mylist<T2>::mynil();
+        } else {
+          const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+          _stack.emplace_back(_Resume_Mycons{f(a0)});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       } else {
-        const auto &[a0, a1] =
-            std::get<typename mylist<T1>::Mycons>(_loop_l->v());
-        auto _cell = std::make_shared<mylist<T2>>(
-            typename mylist<T2>::Mycons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename mylist<T2>::Mycons>((*_write)->v_mut()).a1;
-        _loop_l = a1.get();
-        continue;
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = mylist<T2>::mycons(_f.a0, _result);
       }
     }
-    return std::move(*_head);
+    return _result;
   }
 
   /// Identity map to force traversal.
@@ -240,43 +278,13 @@ struct DeepApp {
                                        const mylist<uint64_t> &_x1);
   static uint64_t head_or_zero(const mylist<uint64_t> &l);
 
-  template <typename T1>
-  static uint64_t
-  length(const mylist<T1> &l) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
-
-    struct _Enter {
-      const mylist<T1> *l;
-    };
-
-    /// _Resume_Mycons: resumes after recursive call with _result.
-    struct _Resume_Mycons {};
-
-    using _Frame = std::variant<_Enter, _Resume_Mycons>;
-    uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified length: _Enter -> _Resume_Mycons.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const mylist<T1> &l = *_f.l;
-        if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-          _result = UINT64_C(0);
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-          _stack.emplace_back(_Resume_Mycons{});
-          _stack.emplace_back(_Enter{a1.get()});
-        }
-      } else {
-        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = (_result + 1);
-      }
+  template <typename T1> static uint64_t length(const mylist<T1> &l) {
+    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      return (length<T1>(*a1) + 1);
     }
-    return _result;
   }
 };
 

@@ -585,10 +585,10 @@ struct RocqBug14174 {
       switch (s) {
       case Sumbool::LEFT: {
         return f;
-      }
+      } break;
       case Sumbool::RIGHT: {
         return f0;
-      }
+      } break;
       default:
         std::unreachable();
       }
@@ -599,10 +599,10 @@ struct RocqBug14174 {
       switch (s) {
       case Sumbool::LEFT: {
         return f;
-      }
+      } break;
       case Sumbool::RIGHT: {
         return f0;
-      }
+      } break;
       default:
         std::unreachable();
       }
@@ -726,10 +726,10 @@ struct RocqBug14174 {
         switch (h(z)) {
         case Sumbool::LEFT: {
           return Bool0::TRUE_;
-        }
+        } break;
         case Sumbool::RIGHT: {
           return Bool0::FALSE_;
-        }
+        } break;
         default:
           std::unreachable();
         }

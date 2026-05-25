@@ -2514,6 +2514,17 @@
   (deps loopify_search.t.exe)
   (action (run ./loopify_search.t.exe))))
 
+(subdir loopify_switch_break
+ (rule
+  (targets loopify_switch_break.t.exe)
+  (deps LoopifySwitchBreak.vo loopify_switch_break.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_switch_break.t.exe loopify_switch_break.cpp loopify_switch_break.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_switch_break.t.exe)
+  (action (run ./loopify_switch_break.t.exe))))
+
 (subdir loopify_sequences
  (rule
   (targets loopify_sequences.t.exe)

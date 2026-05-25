@@ -6,15 +6,15 @@ std::string MatchMonadic::color_name(Color c) {
   case Color::RED: {
     std::cout << "red"s << '\n';
     return "red";
-  }
+  } break;
   case Color::GREEN: {
     std::cout << "green"s << '\n';
     return "green";
-  }
+  } break;
   case Color::BLUE: {
     std::cout << "blue"s << '\n';
     return "blue";
-  }
+  } break;
   default:
     std::unreachable();
   }

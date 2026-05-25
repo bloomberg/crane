@@ -74,73 +74,25 @@ struct MemSafetyProbe24 {
     template <typename F0>
       requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
     tree map_tree(F0 &&f) const {
-      const tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const tree *_self;
-      };
-
-      /// _After_Node: saves [_s0, a1], dispatches next recursive call.
-      struct _After_Node {
-        tree *_s0;
-        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
-      };
-
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        tree _result;
-        decltype(std::declval<F0 &>()(std::declval<uint64_t &>())) a1;
-      };
-
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      tree _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified map_tree: _Enter -> _After_Node -> _Combine_Node.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = tree::leaf();
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{a0.get(), f(a1)});
-            _stack.emplace_back(_Enter{a2.get()});
-          }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result =
-              tree::node(std::move(_result), _f.a1, std::move(_f._result));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return tree::leaf();
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return tree::node(a0->map_tree(f), f(a1), a2->map_tree(f));
       }
-      return _result;
     }
 
     /// TEST 4: Recursive function where result uses BOTH t (for return)
     /// and t's children (through recursive calls) — not loopified because
     /// return type is pair. Tests use-after-move in make_pair.
     std::pair<tree, uint64_t> tag_tree() const {
-      const tree *_self = this;
-      auto &&_sv = *_self;
-      if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair(tree::leaf(), UINT64_C(0));
       } else {
-        const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
+        auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         std::pair<tree, uint64_t> pl = a0->tag_tree();
         std::pair<tree, uint64_t> pr = a2->tag_tree();
-        return std::make_pair(*_self,
-                              ((std::move(a1) + pl.second) + pr.second));
+        return std::make_pair(*this, ((std::move(a1) + pl.second) + pr.second));
       }
     }
 
@@ -163,180 +115,38 @@ struct MemSafetyProbe24 {
     }
 
     uint64_t tree_sum() const {
-      const tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const tree *_self;
-      };
-
-      /// _After_Node: saves [_s0, a1], dispatches next recursive call.
-      struct _After_Node {
-        tree *_s0;
-        uint64_t a1;
-      };
-
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        uint64_t _result;
-        uint64_t a1;
-      };
-
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      uint64_t _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{a0.get(), a1});
-            _stack.emplace_back(_Enter{a2.get()});
-          }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{_result, _f.a1});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return ((a0->tree_sum() + a1) + a2->tree_sum());
       }
-      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
                                      T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      const tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const tree *_self;
-      };
-
-      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
-      struct _After_Node {
-        tree *_s0;
-        tree a2;
-        uint64_t a1;
-        tree a0;
-      };
-
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        T1 _result;
-        tree a2;
-        uint64_t a1;
-        tree a0;
-      };
-
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      T1 _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = std::move(f);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
-            _stack.emplace_back(_Enter{a2.get()});
-          }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{
-              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
-                       std::move(_f._result));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
       }
-      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
                                      T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      const tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const tree *_self;
-      };
-
-      /// _After_Node: saves [_s0, a2, a1, a0], dispatches next recursive call.
-      struct _After_Node {
-        tree *_s0;
-        tree a2;
-        uint64_t a1;
-        tree a0;
-      };
-
-      /// _Combine_Node: receives partial results, combines with _result from
-      /// final call.
-      struct _Combine_Node {
-        T1 _result;
-        tree a2;
-        uint64_t a1;
-        tree a0;
-      };
-
-      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
-      T1 _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = std::move(f);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_After_Node{a0.get(), *a2, a1, *a0});
-            _stack.emplace_back(_Enter{a2.get()});
-          }
-        } else if (std::holds_alternative<_After_Node>(_frame)) {
-          auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{
-              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0)});
-          _stack.emplace_back(_Enter{_f._s0});
-        } else {
-          auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = f0(_f.a0, std::move(_result), _f.a1, _f.a2,
-                       std::move(_f._result));
-        }
+      if (std::holds_alternative<typename tree::Leaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
       }
-      return _result;
     }
   };
 
@@ -418,163 +228,43 @@ struct MemSafetyProbe24 {
     const variant_t &v() const { return v_; }
 
     uint64_t length() const {
-      const mylist *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist *_self;
-      };
-
-      /// _Resume_Mycons: saves [_s0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        decltype(UINT64_C(1)) _s0;
-      };
-
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
-      uint64_t _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified length: _Enter -> _Resume_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = UINT64_C(0);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{UINT64_C(1)});
-            _stack.emplace_back(_Enter{a1.get()});
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = (_f._s0 + _result);
-        }
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return (UINT64_C(1) + a1->length());
       }
-      return _result;
     }
 
     mylist<A> app(mylist<A> l2) const {
-      std::shared_ptr<mylist<A>> _head{};
-      std::shared_ptr<mylist<A>> *_write = &_head;
-      const mylist *_loop_self = this;
-      mylist<A> _loop_l2 = std::move(l2);
-      while (true) {
-        auto &&_sv = *_loop_self;
-        if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          *_write = std::make_shared<mylist<A>>(std::move(_loop_l2));
-          break;
-        } else {
-          const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
-          auto _cell = std::make_shared<mylist<A>>(
-              typename mylist<A>::Mycons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;
-          _loop_self = a1.get();
-          continue;
-        }
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return l2;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return mylist<A>::mycons(a0, a1->app(std::move(l2)));
       }
-      return std::move(*_head);
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist *_self;
-      };
-
-      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        F1 f0;
-        mylist<A> a1;
-        A a0;
-      };
-
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
-      T1 _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = std::move(f);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
-            _stack.emplace_back(_Enter{a1.get()});
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.a0, _f.a1, _result);
-        }
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
       }
-      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      const mylist *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist *_self;
-      };
-
-      /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
-      /// _result.
-      struct _Resume_Mycons {
-        F1 f0;
-        mylist<A> a1;
-        A a0;
-      };
-
-      using _Frame = std::variant<_Enter, _Resume_Mycons>;
-      T1 _result{};
-      std::vector<_Frame> _stack;
-      _stack.reserve(8);
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = std::move(f);
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
-            _stack.emplace_back(_Enter{a1.get()});
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-          _result = _f.f0(_f.a0, _f.a1, _result);
-        }
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
       }
-      return _result;
     }
   };
 

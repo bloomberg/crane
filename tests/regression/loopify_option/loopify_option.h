@@ -243,32 +243,51 @@ struct LoopifyOption {
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
-  static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    std::shared_ptr<list<T2>> _head{};
-    std::shared_ptr<list<T2>> *_write = &_head;
-    const list<T1> *_loop_l = &l;
-    while (true) {
-      if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T2>>(list<T2>::nil());
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cs = f(a0);
-        if (_cs.has_value()) {
-          const T2 &y = *_cs;
-          auto _cell =
-              std::make_shared<list<T2>>(typename list<T2>::Cons(y, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
-          _loop_l = a1.get();
-          continue;
+  static list<T2>
+  map_opt(F0 &&f,
+          const list<T1> &l) { /// _Enter: captures varying parameters for each
+                               /// recursive call.
+
+    struct _Enter {
+      const list<T1> *l;
+    };
+
+    /// _Resume_y: saves [y], resumes after recursive call with _result.
+    struct _Resume_y {
+      T2 y;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_y>;
+    list<T2> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified map_opt: _Enter -> _Resume_y.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const list<T1> &l = *_f.l;
+        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+          _result = list<T2>::nil();
         } else {
-          _loop_l = a1.get();
-          continue;
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          auto _cs = f(a0);
+          if (_cs.has_value()) {
+            const T2 &y = *_cs;
+            _stack.emplace_back(_Resume_y{y});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
         }
+      } else {
+        auto _f = std::move(std::get<_Resume_y>(_frame));
+        _result = list<T2>::cons(_f.y, _result);
       }
     }
-    return std::move(*_head);
+    return _result;
   }
 
   /// find_index p l returns the index of the first match, or None.

@@ -11,19 +11,19 @@ struct OpcodeOperandDecode {
     switch (i) {
     case Instruction::NOP_: {
       return f;
-    }
+    } break;
     case Instruction::WRM_: {
       return f0;
-    }
+    } break;
     case Instruction::WRR_: {
       return f1;
-    }
+    } break;
     case Instruction::RDM_: {
       return f2;
-    }
+    } break;
     case Instruction::DCL_: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -34,19 +34,19 @@ struct OpcodeOperandDecode {
     switch (i) {
     case Instruction::NOP_: {
       return f;
-    }
+    } break;
     case Instruction::WRM_: {
       return f0;
-    }
+    } break;
     case Instruction::WRR_: {
       return f1;
-    }
+    } break;
     case Instruction::RDM_: {
       return f2;
-    }
+    } break;
     case Instruction::DCL_: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -57,7 +57,7 @@ struct OpcodeOperandDecode {
     switch (decode(UINT64_C(224), UINT64_C(0))) {
     case Instruction::WRM_: {
       return UINT64_C(1);
-    }
+    } break;
     default: {
       return UINT64_C(0);
     }

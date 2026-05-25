@@ -333,10 +333,10 @@ struct PendantSumtreeRoundtripCase {
     switch (t1) {
     case Twist::TS: {
       return f;
-    }
+    } break;
     case Twist::TZ: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -346,10 +346,10 @@ struct PendantSumtreeRoundtripCase {
     switch (t1) {
     case Twist::TS: {
       return f;
-    }
+    } break;
     case Twist::TZ: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -360,10 +360,10 @@ struct PendantSumtreeRoundtripCase {
     switch (f1) {
     case Fiber::COTTON: {
       return f;
-    }
+    } break;
     case Fiber::CAMELID: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -373,10 +373,10 @@ struct PendantSumtreeRoundtripCase {
     switch (f1) {
     case Fiber::COTTON: {
       return f;
-    }
+    } break;
     case Fiber::CAMELID: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -388,16 +388,16 @@ struct PendantSumtreeRoundtripCase {
     switch (c) {
     case Color::WHITE: {
       return f;
-    }
+    } break;
     case Color::BROWN: {
       return f0;
-    }
+    } break;
     case Color::RED: {
       return f1;
-    }
+    } break;
     case Color::BLUE: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -408,16 +408,16 @@ struct PendantSumtreeRoundtripCase {
     switch (c) {
     case Color::WHITE: {
       return f;
-    }
+    } break;
     case Color::BROWN: {
       return f0;
-    }
+    } break;
     case Color::RED: {
       return f1;
-    }
+    } break;
     case Color::BLUE: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }

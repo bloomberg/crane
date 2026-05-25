@@ -45,10 +45,10 @@ struct RocqBug10757 {
     switch (filtered_var) {
     case Bool0::TRUE_: {
       return Sig<T1>::exist(x0);
-    }
+    } break;
     case Bool0::FALSE_: {
       return iterate0(x_);
-    }
+    } break;
     default:
       std::unreachable();
     }

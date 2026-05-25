@@ -46,40 +46,51 @@ uint64_t MemSafetyProbe7::sum_list(
 /// and computes its length. The tail is unique_ptr.
 MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_len_closures(
-    const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::shared_ptr<
-      MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
-      _head{};
-  std::shared_ptr<
-      MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
-      *_write = &_head;
-  MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
-          mylist<std::function<uint64_t(std::monostate)>>::mynil());
-      break;
+    const MemSafetyProbe7::mylist<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe7::mylist<uint64_t> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    std::decay_t<decltype([=](std::monostate) mutable {
+      return a1_value.length();
+    })>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified build_len_closures: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe7::mylist<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = mylist<std::function<uint64_t(std::monostate)>>::mynil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(l.v());
+        const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
+        _stack.emplace_back(_Resume_Mycons{
+            [=](std::monostate) mutable { return a1_value.length(); }});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
-      const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
-          typename mylist<std::function<uint64_t(std::monostate)>>::Mycons(
-              [=](std::monostate) mutable { return a1_value.length(); },
-              nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename mylist<
-          std::function<uint64_t(std::monostate)>>::Mycons>((*_write)->v_mut())
-                    .a1;
-      _loop_l = a1_value;
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
+          _f._s0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe7::sum_fns(
@@ -129,40 +140,51 @@ uint64_t MemSafetyProbe7::sum_fns(
 /// Each closure captures the entire tail sublist.
 MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_sum_closures(
-    const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::shared_ptr<
-      MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
-      _head{};
-  std::shared_ptr<
-      MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>
-      *_write = &_head;
-  MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
-          mylist<std::function<uint64_t(std::monostate)>>::mynil());
-      break;
+    const MemSafetyProbe7::mylist<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe7::mylist<uint64_t> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    std::decay_t<decltype([=](std::monostate) mutable {
+      return sum_list(a1_value);
+    })>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified build_sum_closures: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe7::mylist<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = mylist<std::function<uint64_t(std::monostate)>>::mynil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(l.v());
+        const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
+        _stack.emplace_back(_Resume_Mycons{
+            [=](std::monostate) mutable { return sum_list(a1_value); }});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
-      const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(std::monostate)>>>(
-          typename mylist<std::function<uint64_t(std::monostate)>>::Mycons(
-              [=](std::monostate) mutable { return sum_list(a1_value); },
-              nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename mylist<
-          std::function<uint64_t(std::monostate)>>::Mycons>((*_write)->v_mut())
-                    .a1;
-      _loop_l = a1_value;
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
+          _f._s0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// TEST 4: Each closure captures the tail AND the current value.
@@ -170,41 +192,49 @@ MemSafetyProbe7::build_sum_closures(
 /// must be independent copies.
 MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe7::build_accum_closures(
-    const MemSafetyProbe7::mylist<uint64_t> &l) {
-  std::shared_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>
-      *_write = &_head;
-  MemSafetyProbe7::mylist<uint64_t> _loop_l = l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>(
-          mylist<std::function<uint64_t(uint64_t)>>::mynil());
-      break;
+    const MemSafetyProbe7::mylist<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe7::mylist<uint64_t> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    std::function<uint64_t(uint64_t)> _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified build_accum_closures: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe7::mylist<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(l.v());
+        const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
+        _stack.emplace_back(_Resume_Mycons{[=](uint64_t n) mutable {
+          return ((a0 + sum_list(a1_value)) + n);
+        }});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
-      const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
-      auto _cell = std::make_shared<
-          MemSafetyProbe7::mylist<std::function<uint64_t(uint64_t)>>>(
-          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
-              [=](uint64_t n) mutable {
-                return ((a0 + sum_list(a1_value)) + n);
-              },
-              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
-               (*_write)->v_mut())
-               .a1;
-      _loop_l = a1_value;
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result =
+          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe7::apply_all(
@@ -253,25 +283,42 @@ uint64_t MemSafetyProbe7::apply_all(
 
 /// TEST 6: Stress test — large list, each closure captures
 /// the entire remaining tail.
-MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
-  std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> _head{};
-  std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
-          mylist<uint64_t>::mynil());
-      break;
+MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [n], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    uint64_t n;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  MemSafetyProbe7::mylist<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified make_nat_list: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = mylist<uint64_t>::mynil();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Resume_n_{n});
+        _stack.emplace_back(_Enter{n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
-          typename mylist<uint64_t>::Mycons(_loop_n, nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<uint64_t>::Mycons>((*_write)->v_mut()).a1;
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = mylist<uint64_t>::mycons(_f.n, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }

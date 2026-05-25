@@ -12,7 +12,7 @@ uint64_t LoopifyMatchArg::count_dots(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -37,7 +37,7 @@ uint64_t LoopifyMatchArg::count_dots(
         case Cell::DOT: {
           _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
           _stack.emplace_back(_Enter{a1.get()});
-        }
+        } break;
         default: {
           _stack.emplace_back(_Enter{a1.get()});
         }
@@ -63,7 +63,7 @@ uint64_t LoopifyMatchArg::my_length(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

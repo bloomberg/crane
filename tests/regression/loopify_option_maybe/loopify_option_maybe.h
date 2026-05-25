@@ -6,6 +6,7 @@
 #include <optional>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename A> struct List {
   // TYPES

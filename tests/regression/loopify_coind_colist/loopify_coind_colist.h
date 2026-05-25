@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -173,34 +174,53 @@ struct LoopifyCoindColist {
     }
   }
 
-  template <typename T1> static List<T1> to_list(uint64_t fuel, colist<T1> l) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
-    colist<T1> _loop_l = std::move(l);
-    uint64_t _loop_fuel = std::move(fuel);
-    while (true) {
-      if (_loop_fuel <= 0) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
-        break;
-      } else {
-        uint64_t f = _loop_fuel - 1;
-        if (std::holds_alternative<typename colist<T1>::Conil>(_loop_l.v())) {
-          *_write = std::make_shared<List<T1>>(List<T1>::nil());
-          break;
+  template <typename T1>
+  static List<T1>
+  to_list(uint64_t fuel,
+          colist<T1> l) { /// _Enter: captures varying parameters for each
+                          /// recursive call.
+
+    struct _Enter {
+      colist<T1> l;
+      uint64_t fuel;
+    };
+
+    /// _Resume_Cocons: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Cocons {
+      T1 a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cocons>;
+    List<T1> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{l, fuel});
+    /// Loopified to_list: _Enter -> _Resume_Cocons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        colist<T1> l = std::move(_f.l);
+        uint64_t fuel = _f.fuel;
+        if (fuel <= 0) {
+          _result = List<T1>::nil();
         } else {
-          const auto &[a0, a1] =
-              std::get<typename colist<T1>::Cocons>(_loop_l.v());
-          auto _cell =
-              std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
-          _loop_l = std::move(*a1);
-          _loop_fuel = f;
-          continue;
+          uint64_t f = fuel - 1;
+          if (std::holds_alternative<typename colist<T1>::Conil>(l.v_mut())) {
+            _result = List<T1>::nil();
+          } else {
+            auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v_mut());
+            _stack.emplace_back(_Resume_Cocons{std::move(a0)});
+            _stack.emplace_back(_Enter{*a1, f});
+          }
         }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cocons>(_frame));
+        _result = List<T1>::cons(_f.a0, _result);
       }
     }
-    return std::move(*_head);
+    return _result;
   }
 
   static inline const List<uint64_t> test_comap = to_list<uint64_t>(

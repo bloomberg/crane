@@ -759,10 +759,10 @@ struct RamOps {
     switch (i) {
     case Item::S_: {
       return f;
-    }
+    } break;
     case Item::S_0: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -772,10 +772,10 @@ struct RamOps {
     switch (i) {
     case Item::S_: {
       return f;
-    }
+    } break;
     case Item::S_0: {
       return f0;
-    }
+    } break;
     default:
       std::unreachable();
     }

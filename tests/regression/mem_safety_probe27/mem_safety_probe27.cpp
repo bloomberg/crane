@@ -65,14 +65,14 @@ uint64_t MemSafetyProbe27::tree_depth(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe27::tree *a0;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     uint64_t _result;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

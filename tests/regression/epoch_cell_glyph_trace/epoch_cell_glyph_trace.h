@@ -242,16 +242,16 @@ struct EpochCellGlyphTraceCase {
     switch (l) {
     case LunarPhase::NEWMOON: {
       return f;
-    }
+    } break;
     case LunarPhase::FIRSTQUARTER: {
       return f0;
-    }
+    } break;
     case LunarPhase::FULLMOON: {
       return f1;
-    }
+    } break;
     case LunarPhase::LASTQUARTER: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -262,16 +262,16 @@ struct EpochCellGlyphTraceCase {
     switch (l) {
     case LunarPhase::NEWMOON: {
       return f;
-    }
+    } break;
     case LunarPhase::FIRSTQUARTER: {
       return f0;
-    }
+    } break;
     case LunarPhase::FULLMOON: {
       return f1;
-    }
+    } break;
     case LunarPhase::LASTQUARTER: {
       return f2;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -300,40 +300,40 @@ struct EpochCellGlyphTraceCase {
     switch (z) {
     case ZodiacSign::ARIES: {
       return f;
-    }
+    } break;
     case ZodiacSign::TAURUS: {
       return f0;
-    }
+    } break;
     case ZodiacSign::GEMINI: {
       return f1;
-    }
+    } break;
     case ZodiacSign::CANCER: {
       return f2;
-    }
+    } break;
     case ZodiacSign::LEO: {
       return f3;
-    }
+    } break;
     case ZodiacSign::VIRGO: {
       return f4;
-    }
+    } break;
     case ZodiacSign::LIBRA: {
       return f5;
-    }
+    } break;
     case ZodiacSign::SCORPIO: {
       return f6;
-    }
+    } break;
     case ZodiacSign::SAGITTARIUS: {
       return f7;
-    }
+    } break;
     case ZodiacSign::CAPRICORN: {
       return f8;
-    }
+    } break;
     case ZodiacSign::AQUARIUS: {
       return f9;
-    }
+    } break;
     case ZodiacSign::PISCES: {
       return f10;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -345,40 +345,40 @@ struct EpochCellGlyphTraceCase {
     switch (z) {
     case ZodiacSign::ARIES: {
       return f;
-    }
+    } break;
     case ZodiacSign::TAURUS: {
       return f0;
-    }
+    } break;
     case ZodiacSign::GEMINI: {
       return f1;
-    }
+    } break;
     case ZodiacSign::CANCER: {
       return f2;
-    }
+    } break;
     case ZodiacSign::LEO: {
       return f3;
-    }
+    } break;
     case ZodiacSign::VIRGO: {
       return f4;
-    }
+    } break;
     case ZodiacSign::LIBRA: {
       return f5;
-    }
+    } break;
     case ZodiacSign::SCORPIO: {
       return f6;
-    }
+    } break;
     case ZodiacSign::SAGITTARIUS: {
       return f7;
-    }
+    } break;
     case ZodiacSign::CAPRICORN: {
       return f8;
-    }
+    } break;
     case ZodiacSign::AQUARIUS: {
       return f9;
-    }
+    } break;
     case ZodiacSign::PISCES: {
       return f10;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -443,19 +443,19 @@ struct EpochCellGlyphTraceCase {
     switch (e) {
     case EclipseCategory::EC_TOTALLUNAR: {
       return f;
-    }
+    } break;
     case EclipseCategory::EC_PARTIALLUNAR: {
       return f0;
-    }
+    } break;
     case EclipseCategory::EC_TOTALSOLAR: {
       return f1;
-    }
+    } break;
     case EclipseCategory::EC_ANNULARSOLAR: {
       return f2;
-    }
+    } break;
     case EclipseCategory::EC_PARTIALSOLAR: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -467,19 +467,19 @@ struct EpochCellGlyphTraceCase {
     switch (e) {
     case EclipseCategory::EC_TOTALLUNAR: {
       return f;
-    }
+    } break;
     case EclipseCategory::EC_PARTIALLUNAR: {
       return f0;
-    }
+    } break;
     case EclipseCategory::EC_TOTALSOLAR: {
       return f1;
-    }
+    } break;
     case EclipseCategory::EC_ANNULARSOLAR: {
       return f2;
-    }
+    } break;
     case EclipseCategory::EC_PARTIALSOLAR: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -519,19 +519,19 @@ struct EpochCellGlyphTraceCase {
     switch (d) {
     case DialGlyph::GLYPH_SIGMA: {
       return f;
-    }
+    } break;
     case DialGlyph::GLYPH_ETA: {
       return f0;
-    }
+    } break;
     case DialGlyph::GLYPH_SIGMATOTAL: {
       return f1;
-    }
+    } break;
     case DialGlyph::GLYPH_ETAANNULAR: {
       return f2;
-    }
+    } break;
     case DialGlyph::GLYPH_EMPTY: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -542,19 +542,19 @@ struct EpochCellGlyphTraceCase {
     switch (d) {
     case DialGlyph::GLYPH_SIGMA: {
       return f;
-    }
+    } break;
     case DialGlyph::GLYPH_ETA: {
       return f0;
-    }
+    } break;
     case DialGlyph::GLYPH_SIGMATOTAL: {
       return f1;
-    }
+    } break;
     case DialGlyph::GLYPH_ETAANNULAR: {
       return f2;
-    }
+    } break;
     case DialGlyph::GLYPH_EMPTY: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }

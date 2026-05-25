@@ -394,60 +394,22 @@ uint64_t LoopifyNumbers::ack(uint64_t m, uint64_t n) {
   return ackermann_fuel(UINT64_C(1000), m, n);
 }
 
-uint64_t LoopifyNumbers::collatz_length_fuel(
-    uint64_t fuel,
-    uint64_t
-        n) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    uint64_t n;
-    uint64_t fuel;
-  };
-
-  /// _Resume1: resumes after recursive call with _result.
-  struct _Resume1 {};
-
-  /// _Resume2: resumes after recursive call with _result.
-  struct _Resume2 {};
-
-  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
-  uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t n = _f.n;
-      uint64_t fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = UINT64_C(0);
-      } else {
-        uint64_t f = fuel - 1;
-        if (n == UINT64_C(1)) {
-          _result = UINT64_C(0);
-        } else {
-          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-            _stack.emplace_back(_Resume1{});
-            _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
-          } else {
-            _stack.emplace_back(_Resume2{});
-            _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
-          }
-        }
-      }
-    } else if (std::holds_alternative<_Resume1>(_frame)) {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_result + 1);
+uint64_t LoopifyNumbers::collatz_length_fuel(uint64_t fuel, uint64_t n) {
+  if (fuel <= 0) {
+    return UINT64_C(0);
+  } else {
+    uint64_t f = fuel - 1;
+    if (n == UINT64_C(1)) {
+      return UINT64_C(0);
     } else {
-      auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_result + 1);
+      if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+        return (collatz_length_fuel(f, (UINT64_C(2) ? n / UINT64_C(2) : 0)) +
+                1);
+      } else {
+        return (collatz_length_fuel(f, ((UINT64_C(3) * n) + UINT64_C(1))) + 1);
+      }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNumbers::collatz_length(uint64_t n) {
@@ -466,8 +428,10 @@ uint64_t LoopifyNumbers::digitsum_fuel(
 
   /// _Resume__x: saves [_s0], resumes after recursive call with _result.
   struct _Resume__x {
-    decltype((UINT64_C(10) ? std::declval<uint64_t &>() % UINT64_C(10)
-                           : std::declval<uint64_t &>())) _s0;
+    std::decay_t<decltype((UINT64_C(10)
+                               ? std::declval<uint64_t &>() % UINT64_C(10)
+                               : std::declval<uint64_t &>()))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume__x>;
@@ -814,54 +778,23 @@ uint64_t LoopifyNumbers::sum_while_positive(
 
 /// count_down_by k n counts down from n by steps of k.
 /// Tests recursion with non-standard step size.
-uint64_t LoopifyNumbers::count_down_by_fuel(
-    uint64_t fuel, uint64_t k,
-    uint64_t
-        n) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    uint64_t n;
-    uint64_t fuel;
-  };
-
-  /// _Resume1: resumes after recursive call with _result.
-  struct _Resume1 {};
-
-  using _Frame = std::variant<_Enter, _Resume1>;
-  uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified count_down_by_fuel: _Enter -> _Resume1.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t n = _f.n;
-      uint64_t fuel = _f.fuel;
-      if (fuel <= 0) {
-        _result = UINT64_C(0);
-      } else {
-        uint64_t f = fuel - 1;
-        if (n <= 0) {
-          _result = UINT64_C(1);
-        } else {
-          uint64_t _x = n - 1;
-          if (n < k) {
-            _result = UINT64_C(1);
-          } else {
-            _stack.emplace_back(_Resume1{});
-            _stack.emplace_back(_Enter{(((n - k) > n ? 0 : (n - k))), f});
-          }
-        }
-      }
+uint64_t LoopifyNumbers::count_down_by_fuel(uint64_t fuel, uint64_t k,
+                                            uint64_t n) {
+  if (fuel <= 0) {
+    return UINT64_C(0);
+  } else {
+    uint64_t f = fuel - 1;
+    if (n <= 0) {
+      return UINT64_C(1);
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_result + 1);
+      uint64_t _x = n - 1;
+      if (n < k) {
+        return UINT64_C(1);
+      } else {
+        return (count_down_by_fuel(f, k, (((n - k) > n ? 0 : (n - k)))) + 1);
+      }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyNumbers::count_down_by(uint64_t k, uint64_t n) {
@@ -1300,56 +1233,78 @@ uint64_t LoopifyNumbers::sum_even_indices(const List<uint64_t> &l) {
 }
 
 /// collatz_list n generates collatz sequence as a list.
-List<uint64_t> LoopifyNumbers::collatz_list_fuel(uint64_t fuel, uint64_t n) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  uint64_t _loop_fuel = std::move(fuel);
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      uint64_t f = _loop_fuel - 1;
-      if (_loop_n == UINT64_C(1)) {
-        *_write = std::make_shared<List<uint64_t>>(
-            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
-        break;
+List<uint64_t> LoopifyNumbers::collatz_list_fuel(
+    uint64_t fuel,
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+    uint64_t fuel;
+  };
+
+  /// _Resume1: saves [n], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t n;
+  };
+
+  /// _Resume2: saves [n], resumes after recursive call with _result.
+  struct _Resume2 {
+    uint64_t n;
+  };
+
+  /// _Resume3: saves [n], resumes after recursive call with _result.
+  struct _Resume3 {
+    uint64_t n;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2, _Resume3>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n, fuel});
+  /// Loopified collatz_list_fuel: _Enter -> _Resume1 -> _Resume2 -> _Resume3.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = List<uint64_t>::nil();
       } else {
-        if ((UINT64_C(2) ? _loop_n % UINT64_C(2) : _loop_n) == UINT64_C(0)) {
-          auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(_loop_n, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
-          _loop_fuel = f;
-          continue;
+        uint64_t f = fuel - 1;
+        if (n == UINT64_C(1)) {
+          _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
-          if ((UINT64_C(3) ? _loop_n % UINT64_C(3) : _loop_n) == UINT64_C(0)) {
-            auto _cell = std::make_shared<List<uint64_t>>(
-                typename List<uint64_t>::Cons(_loop_n, nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_n = (UINT64_C(3) ? _loop_n / UINT64_C(3) : 0);
-            _loop_fuel = f;
-            continue;
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+            _stack.emplace_back(_Resume1{n});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
           } else {
-            auto _cell = std::make_shared<List<uint64_t>>(
-                typename List<uint64_t>::Cons(_loop_n, nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_n = ((UINT64_C(3) * _loop_n) + UINT64_C(1));
-            _loop_fuel = f;
-            continue;
+            if ((UINT64_C(3) ? n % UINT64_C(3) : n) == UINT64_C(0)) {
+              _stack.emplace_back(_Resume2{n});
+              _stack.emplace_back(
+                  _Enter{(UINT64_C(3) ? n / UINT64_C(3) : 0), f});
+            } else {
+              _stack.emplace_back(_Resume3{n});
+              _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
+            }
           }
         }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.n, _result);
+    } else if (std::holds_alternative<_Resume2>(_frame)) {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = List<uint64_t>::cons(_f.n, _result);
+    } else {
+      auto _f = std::move(std::get<_Resume3>(_frame));
+      _result = List<uint64_t>::cons(_f.n, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifyNumbers::collatz_list(uint64_t n) {

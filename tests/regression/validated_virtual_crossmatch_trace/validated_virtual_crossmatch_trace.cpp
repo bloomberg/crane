@@ -32,32 +32,32 @@ bool ValidatedVirtualCrossmatchTraceCase::hla_locus_eq_dec(
     switch (y) {
     case HLALocus::LOCUS_A: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case HLALocus::LOCUS_B: {
     switch (y) {
     case HLALocus::LOCUS_B: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case HLALocus::LOCUS_DR: {
     switch (y) {
     case HLALocus::LOCUS_DR: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -160,7 +160,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
         }
       }
     }
-  }
+  } break;
   case HLALocus::LOCUS_B: {
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
@@ -211,7 +211,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
         }
       }
     }
-  }
+  } break;
   case HLALocus::LOCUS_DR: {
     if (a.hla_group <= 0) {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
@@ -243,7 +243,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
         }
       }
     }
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -362,13 +362,13 @@ ValidatedVirtualCrossmatchTraceCase::virtual_crossmatch_safe(
   switch (classify_mfi_safe(vcfg, max_mfi)) {
   case MFIStrength::MFI_NEGATIVE: {
     return VirtualXMResult::VXM_NEGATIVE;
-  }
+  } break;
   case MFIStrength::MFI_WEAKPOSITIVE: {
     return VirtualXMResult::VXM_WEAKPOSITIVE;
-  }
+  } break;
   case MFIStrength::MFI_MODERATE: {
     return VirtualXMResult::VXM_POSITIVE;
-  }
+  } break;
   default: {
     return VirtualXMResult::VXM_STRONGPOSITIVE;
   }
@@ -382,20 +382,20 @@ ValidatedVirtualCrossmatchTraceCase::transplant_acceptability(
   switch (vxm) {
   case VirtualXMResult::VXM_NEGATIVE: {
     return TransplantAcceptability::ACCEPTABLE;
-  }
+  } break;
   case VirtualXMResult::VXM_WEAKPOSITIVE: {
     if (complement_fixing_dsa) {
       return TransplantAcceptability::UNACCEPTABLE_HIGH_RISK;
     } else {
       return TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION;
     }
-  }
+  } break;
   case VirtualXMResult::VXM_POSITIVE: {
     return TransplantAcceptability::UNACCEPTABLE_HIGH_RISK;
-  }
+  } break;
   case VirtualXMResult::VXM_STRONGPOSITIVE: {
     return TransplantAcceptability::ABSOLUTE_CONTRAINDICATION;
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -419,12 +419,12 @@ bool ValidatedVirtualCrossmatchTraceCase::safe_to_release(
     switch (xm.xmu_confidence) {
     case TestConfidence::CONFIDENCE_LOW: {
       return false;
-    }
+    } break;
     default: {
       return true;
     }
     }
-  }
+  } break;
   default: {
     return false;
   }
@@ -474,10 +474,10 @@ bool ValidatedVirtualCrossmatchTraceCase::risk_acceptable(
   switch (a) {
   case TransplantAcceptability::ACCEPTABLE: {
     return true;
-  }
+  } break;
   case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
     return true;
-  }
+  } break;
   default: {
     return false;
   }

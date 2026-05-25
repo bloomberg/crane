@@ -2,40 +2,50 @@
 
 /// TEST 5: Chain of closures each pre-computing from the tail.
 MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>
-MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
-  std::shared_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>
-      *_write = &_head;
-  MemSafetyProbe6::mylist<uint64_t> _loop_l = l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(_loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
-          mylist<std::function<uint64_t(uint64_t)>>::mynil());
-      break;
+MemSafetyProbe6::build_chain(
+    const MemSafetyProbe6::mylist<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe6::mylist<uint64_t> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    std::function<uint64_t(uint64_t)> _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified build_chain: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe6::mylist<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe6::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(l.v());
+        const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
+        uint64_t rest_len = a1_value.length();
+        _stack.emplace_back(_Resume_Mycons{
+            [=](uint64_t n) mutable { return ((a0 + rest_len) + n); }});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe6::mylist<uint64_t>::Mycons>(
-              _loop_l.v());
-      const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
-      uint64_t rest_len = a1_value.length();
-      auto _cell = std::make_shared<
-          MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
-          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
-              [=](uint64_t n) mutable { return ((a0 + rest_len) + n); },
-              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
-               (*_write)->v_mut())
-               .a1;
-      _loop_l = a1_value;
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result =
+          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe6::apply_chain(

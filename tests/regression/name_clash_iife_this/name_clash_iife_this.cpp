@@ -6,13 +6,13 @@ uint64_t NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
     switch (c) {
     case Color::RED: {
       return shape::circle(UINT64_C(5));
-    }
+    } break;
     case Color::GREEN: {
       return shape::square(UINT64_C(3), UINT64_C(4));
-    }
+    } break;
     case Color::BLUE: {
       return s;
-    }
+    } break;
     default:
       std::unreachable();
     }

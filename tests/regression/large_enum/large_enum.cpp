@@ -4,40 +4,40 @@ uint64_t LargeEnum::color_to_nat(LargeEnum::Color c) {
   switch (c) {
   case Color::RED: {
     return UINT64_C(0);
-  }
+  } break;
   case Color::ORANGE: {
     return UINT64_C(1);
-  }
+  } break;
   case Color::YELLOW: {
     return UINT64_C(2);
-  }
+  } break;
   case Color::GREEN: {
     return UINT64_C(3);
-  }
+  } break;
   case Color::BLUE: {
     return UINT64_C(4);
-  }
+  } break;
   case Color::INDIGO: {
     return UINT64_C(5);
-  }
+  } break;
   case Color::VIOLET: {
     return UINT64_C(6);
-  }
+  } break;
   case Color::BLACK: {
     return UINT64_C(7);
-  }
+  } break;
   case Color::WHITE: {
     return UINT64_C(8);
-  }
+  } break;
   case Color::GRAY: {
     return UINT64_C(9);
-  }
+  } break;
   case Color::BROWN: {
     return UINT64_C(10);
-  }
+  } break;
   case Color::PINK: {
     return UINT64_C(11);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -47,19 +47,19 @@ bool LargeEnum::is_warm(LargeEnum::Color c) {
   switch (c) {
   case Color::RED: {
     return true;
-  }
+  } break;
   case Color::ORANGE: {
     return true;
-  }
+  } break;
   case Color::YELLOW: {
     return true;
-  }
+  } break;
   case Color::BROWN: {
     return true;
-  }
+  } break;
   case Color::PINK: {
     return true;
-  }
+  } break;
   default: {
     return false;
   }
@@ -70,13 +70,13 @@ bool LargeEnum::is_neutral(LargeEnum::Color c) {
   switch (c) {
   case Color::BLACK: {
     return true;
-  }
+  } break;
   case Color::WHITE: {
     return true;
-  }
+  } break;
   case Color::GRAY: {
     return true;
-  }
+  } break;
   default: {
     return false;
   }

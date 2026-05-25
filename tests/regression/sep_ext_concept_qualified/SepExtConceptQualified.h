@@ -21,7 +21,7 @@ template <OrderedType X> struct Make {
     switch (X::compare(a, b)) {
     case Datatypes::Comparison::EQ: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }

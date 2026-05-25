@@ -351,7 +351,7 @@ bool BinInt::leb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
   case Comparison::GT: {
     return false;
-  }
+  } break;
   default: {
     return true;
   }
@@ -362,7 +362,7 @@ bool BinInt::ltb(const Z &x, const Z &y) {
   switch (BinInt::compare(x, y)) {
   case Comparison::LT: {
     return true;
-  }
+  } break;
   default: {
     return false;
   }
@@ -523,16 +523,16 @@ EpochCellGlyphTraceCase::phase_code(EpochCellGlyphTraceCase::LunarPhase p) {
   switch (p) {
   case LunarPhase::NEWMOON: {
     return UINT64_C(0);
-  }
+  } break;
   case LunarPhase::FIRSTQUARTER: {
     return UINT64_C(1);
-  }
+  } break;
   case LunarPhase::FULLMOON: {
     return UINT64_C(2);
-  }
+  } break;
   case LunarPhase::LASTQUARTER: {
     return UINT64_C(3);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -577,40 +577,40 @@ EpochCellGlyphTraceCase::zodiac_code(EpochCellGlyphTraceCase::ZodiacSign z) {
   switch (z) {
   case ZodiacSign::ARIES: {
     return UINT64_C(0);
-  }
+  } break;
   case ZodiacSign::TAURUS: {
     return UINT64_C(1);
-  }
+  } break;
   case ZodiacSign::GEMINI: {
     return UINT64_C(2);
-  }
+  } break;
   case ZodiacSign::CANCER: {
     return UINT64_C(3);
-  }
+  } break;
   case ZodiacSign::LEO: {
     return UINT64_C(4);
-  }
+  } break;
   case ZodiacSign::VIRGO: {
     return UINT64_C(5);
-  }
+  } break;
   case ZodiacSign::LIBRA: {
     return UINT64_C(6);
-  }
+  } break;
   case ZodiacSign::SCORPIO: {
     return UINT64_C(7);
-  }
+  } break;
   case ZodiacSign::SAGITTARIUS: {
     return UINT64_C(8);
-  }
+  } break;
   case ZodiacSign::CAPRICORN: {
     return UINT64_C(9);
-  }
+  } break;
   case ZodiacSign::AQUARIUS: {
     return UINT64_C(10);
-  }
+  } break;
   case ZodiacSign::PISCES: {
     return UINT64_C(11);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -814,19 +814,19 @@ uint64_t EpochCellGlyphTraceCase::eclipse_category_code(
   switch (c) {
   case EclipseCategory::EC_TOTALLUNAR: {
     return UINT64_C(0);
-  }
+  } break;
   case EclipseCategory::EC_PARTIALLUNAR: {
     return UINT64_C(1);
-  }
+  } break;
   case EclipseCategory::EC_TOTALSOLAR: {
     return UINT64_C(2);
-  }
+  } break;
   case EclipseCategory::EC_ANNULARSOLAR: {
     return UINT64_C(3);
-  }
+  } break;
   case EclipseCategory::EC_PARTIALSOLAR: {
     return UINT64_C(4);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -837,19 +837,19 @@ EpochCellGlyphTraceCase::glyph_code(EpochCellGlyphTraceCase::DialGlyph g) {
   switch (g) {
   case DialGlyph::GLYPH_SIGMA: {
     return UINT64_C(0);
-  }
+  } break;
   case DialGlyph::GLYPH_ETA: {
     return UINT64_C(1);
-  }
+  } break;
   case DialGlyph::GLYPH_SIGMATOTAL: {
     return UINT64_C(2);
-  }
+  } break;
   case DialGlyph::GLYPH_ETAANNULAR: {
     return UINT64_C(3);
-  }
+  } break;
   case DialGlyph::GLYPH_EMPTY: {
     return UINT64_C(4);
-  }
+  } break;
   default:
     std::unreachable();
   }
@@ -863,43 +863,43 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
     switch (g) {
     case DialGlyph::GLYPH_SIGMA: {
       return true;
-    }
+    } break;
     case DialGlyph::GLYPH_SIGMATOTAL: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case EclipseCategory::EC_PARTIALLUNAR: {
     switch (g) {
     case DialGlyph::GLYPH_SIGMA: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   case EclipseCategory::EC_ANNULARSOLAR: {
     switch (g) {
     case DialGlyph::GLYPH_ETA: {
       return true;
-    }
+    } break;
     case DialGlyph::GLYPH_ETAANNULAR: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
     }
-  }
+  } break;
   default: {
     switch (g) {
     case DialGlyph::GLYPH_ETA: {
       return true;
-    }
+    } break;
     default: {
       return false;
     }
@@ -946,7 +946,7 @@ uint64_t EpochCellGlyphTraceCase::count_total_lunar(
       switch (a0.he_category) {
       case EclipseCategory::EC_TOTALLUNAR: {
         return UINT64_C(1);
-      }
+      } break;
       default: {
         return UINT64_C(0);
       }
@@ -974,7 +974,7 @@ uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
         } else {
           return UINT64_C(0);
         }
-      }
+      } break;
       default: {
         return UINT64_C(0);
       }
@@ -1070,13 +1070,13 @@ Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {
   case Comparison::EQ: {
     return Comparison::EQ;
-  }
+  } break;
   case Comparison::LT: {
     return Comparison::GT;
-  }
+  } break;
   case Comparison::GT: {
     return Comparison::LT;
-  }
+  } break;
   default:
     std::unreachable();
   }

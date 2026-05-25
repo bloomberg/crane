@@ -65,14 +65,14 @@ uint64_t MemSafetyProbe28::tree_depth(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe28::tree *a0;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     uint64_t _result;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -125,7 +125,7 @@ uint64_t MemSafetyProbe28::zip_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -136,7 +136,9 @@ uint64_t MemSafetyProbe28::zip_trees(
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
     uint64_t a1;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -152,7 +154,9 @@ uint64_t MemSafetyProbe28::zip_trees(
     uint64_t _result;
     uint64_t a10;
     uint64_t a1;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -223,7 +227,7 @@ uint64_t MemSafetyProbe28::zip_depth(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -232,7 +236,9 @@ uint64_t MemSafetyProbe28::zip_depth(
   struct _After_Node {
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
-    decltype(tree_depth(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_depth(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -246,7 +252,9 @@ uint64_t MemSafetyProbe28::zip_depth(
   /// call.
   struct _Combine_Node {
     uint64_t _result;
-    decltype(tree_depth(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_depth(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -314,7 +322,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -325,10 +333,12 @@ uint64_t MemSafetyProbe28::zip_and_sum(
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
-    decltype(tree_sum(
-        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s3;
-    decltype(tree_sum(
-        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s4;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s3;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s4;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -343,10 +353,12 @@ uint64_t MemSafetyProbe28::zip_and_sum(
   struct _Combine_Node {
     uint64_t _result;
     uint64_t a10;
-    decltype(tree_sum(
-        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s2;
-    decltype(tree_sum(
-        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>()))) _s3;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s2;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -427,7 +439,9 @@ uint64_t MemSafetyProbe28::double_zip(
     const MemSafetyProbe28::tree *a00;
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -442,7 +456,9 @@ uint64_t MemSafetyProbe28::double_zip(
   struct _Combine_Node {
     uint64_t _result;
     uint64_t a10;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -513,7 +529,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
 
   /// _Resume_Leaf: saves [_s0, a0], resumes after recursive call with _result.
   struct _Resume_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
   };
 
@@ -642,7 +658,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };

@@ -11,19 +11,19 @@ struct TimingPreservesWfSimple {
     switch (i) {
     case Instr::NOP: {
       return f;
-    }
+    } break;
     case Instr::ADD: {
       return f0;
-    }
+    } break;
     case Instr::WRM: {
       return f1;
-    }
+    } break;
     case Instr::FIM: {
       return f2;
-    }
+    } break;
     case Instr::JMS: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -34,19 +34,19 @@ struct TimingPreservesWfSimple {
     switch (i) {
     case Instr::NOP: {
       return f;
-    }
+    } break;
     case Instr::ADD: {
       return f0;
-    }
+    } break;
     case Instr::WRM: {
       return f1;
-    }
+    } break;
     case Instr::FIM: {
       return f2;
-    }
+    } break;
     case Instr::JMS: {
       return f3;
-    }
+    } break;
     default:
       std::unreachable();
     }

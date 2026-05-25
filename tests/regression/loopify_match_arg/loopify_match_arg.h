@@ -89,13 +89,13 @@ struct LoopifyMatchArg {
     switch (c) {
     case Cell::WALL: {
       return f;
-    }
+    } break;
     case Cell::EMPTY: {
       return f0;
-    }
+    } break;
     case Cell::DOT: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -105,13 +105,13 @@ struct LoopifyMatchArg {
     switch (c) {
     case Cell::WALL: {
       return f;
-    }
+    } break;
     case Cell::EMPTY: {
       return f0;
-    }
+    } break;
     case Cell::DOT: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }

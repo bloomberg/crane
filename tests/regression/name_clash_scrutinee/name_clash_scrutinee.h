@@ -12,13 +12,13 @@ struct NameClashScrutinee {
     switch (c) {
     case Color::RED: {
       return f;
-    }
+    } break;
     case Color::GREEN: {
       return f0;
-    }
+    } break;
     case Color::BLUE: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -28,13 +28,13 @@ struct NameClashScrutinee {
     switch (c) {
     case Color::RED: {
       return f;
-    }
+    } break;
     case Color::GREEN: {
       return f0;
-    }
+    } break;
     case Color::BLUE: {
       return f1;
-    }
+    } break;
     default:
       std::unreachable();
     }
@@ -84,13 +84,13 @@ struct NameClashScrutinee {
         switch (c) {
         case Color::RED: {
           return (a0 + UINT64_C(10));
-        }
+        } break;
         case Color::GREEN: {
           return (a0 + UINT64_C(20));
-        }
+        } break;
         case Color::BLUE: {
           return (a0 + UINT64_C(30));
-        }
+        } break;
         default:
           std::unreachable();
         }
@@ -99,13 +99,13 @@ struct NameClashScrutinee {
         switch (c) {
         case Color::RED: {
           return (a0 * a1);
-        }
+        } break;
         case Color::GREEN: {
           return (a0 + a1);
-        }
+        } break;
         case Color::BLUE: {
           return UINT64_C(0);
-        }
+        } break;
         default:
           std::unreachable();
         }
@@ -118,13 +118,13 @@ struct NameClashScrutinee {
         switch (c) {
         case Color::RED: {
           return UINT64_C(1);
-        }
+        } break;
         case Color::GREEN: {
           return UINT64_C(2);
-        }
+        } break;
         case Color::BLUE: {
           return UINT64_C(3);
-        }
+        } break;
         default:
           std::unreachable();
         }
@@ -212,13 +212,13 @@ struct NameClashScrutinee {
           switch (a0) {
           case Color::RED: {
             return a00;
-          }
+          } break;
           case Color::GREEN: {
             return (a00 * UINT64_C(2));
-          }
+          } break;
           case Color::BLUE: {
             return (a00 * UINT64_C(3));
-          }
+          } break;
           default:
             std::unreachable();
           }
@@ -227,13 +227,13 @@ struct NameClashScrutinee {
           switch (a0) {
           case Color::RED: {
             return (a00 + a10);
-          }
+          } break;
           case Color::GREEN: {
             return (a00 * a10);
-          }
+          } break;
           case Color::BLUE: {
             return UINT64_C(0);
-          }
+          } break;
           default:
             std::unreachable();
           }
