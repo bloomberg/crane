@@ -20,10 +20,10 @@ MemSafetyProbe20::wrap_match(MemSafetyProbe20::tree t,
   case Choice::CLEFT: {
     return wrapped::wrap(
         [=](uint64_t n) mutable { return (t.tree_sum() + n); });
-  } break;
+  }
   case Choice::CRIGHT: {
     return wrapped::wrap([](uint64_t n) { return n; });
-  } break;
+  }
   default:
     std::unreachable();
   }

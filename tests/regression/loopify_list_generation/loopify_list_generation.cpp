@@ -176,9 +176,9 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
     const List<std::pair<uint64_t, uint64_t>> *l;
   };
 
-  /// _Resume_n: saves [rep], resumes after recursive call with _result.
+  /// _Resume_n: saves [_s0], resumes after recursive call with _result.
   struct _Resume_n {
-    List<uint64_t> rep;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_n>;
@@ -202,12 +202,12 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
         const uint64_t &n = a0.first;
         const uint64_t &x = a0.second;
         List<uint64_t> rep = replicate(n, x);
-        _stack.emplace_back(_Resume_n{std::move(rep)});
+        _stack.emplace_back(_Resume_n{std::move(std::move(rep))});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n>(_frame));
-      _result = _f.rep.app(_result);
+      _result = _f._s0.app(_result);
     }
   }
   return _result;

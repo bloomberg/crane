@@ -80,10 +80,10 @@ struct NameClashMatchMatch {
     switch (d) {
     case Dir::GOLEFT: {
       return f;
-    } break;
+    }
     case Dir::GORIGHT: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -93,10 +93,10 @@ struct NameClashMatchMatch {
     switch (d) {
     case Dir::GOLEFT: {
       return f;
-    } break;
+    }
     case Dir::GORIGHT: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }

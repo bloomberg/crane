@@ -18,13 +18,13 @@ uint64_t MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
   switch (c) {
   case Choice::CLEFT: {
     return (t.tree_sum() + n);
-  } break;
+  }
   case Choice::CRIGHT: {
     return n;
-  } break;
+  }
   case Choice::CBOTH: {
     return ((t.tree_sum() + t.tree_sum()) + n);
-  } break;
+  }
   default:
     std::unreachable();
   }

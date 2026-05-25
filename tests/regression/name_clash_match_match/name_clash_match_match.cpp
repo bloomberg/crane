@@ -11,10 +11,10 @@ NameClashMatchMatch::choose_subtree(NameClashMatchMatch::Dir d,
     switch (d) {
     case Dir::GOLEFT: {
       return *a0;
-    } break;
+    }
     case Dir::GORIGHT: {
       return *a2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -44,10 +44,10 @@ NameClashMatchMatch::inline_match_match(NameClashMatchMatch::Dir d,
     switch (d) {
     case Dir::GOLEFT: {
       return t;
-    } break;
+    }
     case Dir::GORIGHT: {
       return tree::leaf();
-    } break;
+    }
     default:
       std::unreachable();
     }

@@ -4,13 +4,13 @@ uint64_t PatternImpossible::complex_match(PatternImpossible::Three x) {
   switch (x) {
   case Three::ONE: {
     return UINT64_C(1);
-  } break;
+  }
   case Three::TWO: {
     return UINT64_C(2);
-  } break;
+  }
   case Three::THREE: {
     return UINT64_C(3);
-  } break;
+  }
   default:
     std::unreachable();
   }
@@ -51,23 +51,24 @@ uint64_t PatternImpossible::double_match(PatternImpossible::Three x,
     switch (y) {
     case Three::ONE: {
       return UINT64_C(1);
-    } break;
+    }
     case Three::TWO: {
       return UINT64_C(2);
-    } break;
+    }
     case Three::THREE: {
       return UINT64_C(3);
-    } break;
+    }
     default:
       std::unreachable();
     }
-  } break;
+    break;
+  }
   case Three::TWO: {
     return UINT64_C(10);
-  } break;
+  }
   case Three::THREE: {
     return UINT64_C(20);
-  } break;
+  }
   default:
     std::unreachable();
   }

@@ -6,7 +6,7 @@ bool PingPong::string_eq(std::string s1, std::string s2) {
                     : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
   case Comparison::EQ: {
     return true;
-  } break;
+  }
   default: {
     return false;
   }

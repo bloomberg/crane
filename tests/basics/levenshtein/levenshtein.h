@@ -117,59 +117,66 @@ struct Ascii {
                   switch (Bool::bool_dec(a7, a70)) {
                   case Sumbool::LEFT: {
                     return Sumbool::LEFT;
-                  } break;
+                  }
                   case Sumbool::RIGHT: {
                     return Sumbool::RIGHT;
-                  } break;
+                  }
                   default:
                     std::unreachable();
                   }
-                } break;
+                  break;
+                }
                 case Sumbool::RIGHT: {
                   return Sumbool::RIGHT;
-                } break;
+                }
                 default:
                   std::unreachable();
                 }
-              } break;
+                break;
+              }
               case Sumbool::RIGHT: {
                 return Sumbool::RIGHT;
-              } break;
+              }
               default:
                 std::unreachable();
               }
-            } break;
+              break;
+            }
             case Sumbool::RIGHT: {
               return Sumbool::RIGHT;
-            } break;
+            }
             default:
               std::unreachable();
             }
-          } break;
+            break;
+          }
           case Sumbool::RIGHT: {
             return Sumbool::RIGHT;
-          } break;
+          }
           default:
             std::unreachable();
           }
-        } break;
+          break;
+        }
         case Sumbool::RIGHT: {
           return Sumbool::RIGHT;
-        } break;
+        }
         default:
           std::unreachable();
         }
-      } break;
+        break;
+      }
       case Sumbool::RIGHT: {
         return Sumbool::RIGHT;
-      } break;
+      }
       default:
         std::unreachable();
       }
-    } break;
+      break;
+    }
     case Sumbool::RIGHT: {
       return Sumbool::RIGHT;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -493,26 +500,28 @@ struct Levenshtein {
       switch (std::move(n1).leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return x;
-      } break;
+      }
       case Bool0::FALSE_: {
         return z;
-      } break;
+      }
       default:
         std::unreachable();
       }
-    } break;
+      break;
+    }
     case Bool0::FALSE_: {
       switch (std::move(n2).leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return y;
-      } break;
+      }
       case Bool0::FALSE_: {
         return z;
-      } break;
+      }
       default:
         std::unreachable();
       }
-    } break;
+      break;
+    }
     default:
       std::unreachable();
     }

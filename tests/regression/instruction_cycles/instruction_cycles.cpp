@@ -15,16 +15,16 @@ uint64_t InstructionCycles::cycles_min(InstructionCycles::Instr3 i) {
   switch (i) {
   case Instr3::FIM3: {
     return UINT64_C(16);
-  } break;
+  }
   case Instr3::JMS3: {
     return UINT64_C(24);
-  } break;
+  }
   case Instr3::JCNTAKEN3: {
     return UINT64_C(16);
-  } break;
+  }
   case Instr3::ISZTAKEN3: {
     return UINT64_C(16);
-  } break;
+  }
   default: {
     return UINT64_C(8);
   }
@@ -35,16 +35,16 @@ uint64_t InstructionCycles::cycles_max(InstructionCycles::Instr4 i) {
   switch (i) {
   case Instr4::FIM4: {
     return UINT64_C(16);
-  } break;
+  }
   case Instr4::JMS4: {
     return UINT64_C(24);
-  } break;
+  }
   case Instr4::JCNTAKEN4: {
     return UINT64_C(16);
-  } break;
+  }
   case Instr4::ISZTAKEN4: {
     return UINT64_C(16);
-  } break;
+  }
   default: {
     return UINT64_C(8);
   }

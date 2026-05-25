@@ -24,13 +24,13 @@ uint64_t NestedMod::Outer::shape_with_color(const Inner::shape &s,
   switch (c) {
   case Color::RED: {
     return (Inner::area(s) + UINT64_C(100));
-  } break;
+  }
   case Color::GREEN: {
     return (Inner::area(s) + UINT64_C(200));
-  } break;
+  }
   case Color::BLUE: {
     return (Inner::area(s) + UINT64_C(300));
-  } break;
+  }
   default:
     std::unreachable();
   }
@@ -40,13 +40,13 @@ uint64_t NestedMod::Outer::color_code(NestedMod::Outer::Color c) {
   switch (c) {
   case Color::RED: {
     return UINT64_C(1);
-  } break;
+  }
   case Color::GREEN: {
     return UINT64_C(2);
-  } break;
+  }
   case Color::BLUE: {
     return UINT64_C(3);
-  } break;
+  }
   default:
     std::unreachable();
   }

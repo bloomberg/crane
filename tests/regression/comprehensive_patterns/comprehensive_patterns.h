@@ -172,13 +172,13 @@ struct ComprehensivePatterns {
     switch (t) {
     case Three::A: {
       return f;
-    } break;
+    }
     case Three::B: {
       return f0;
-    } break;
+    }
     case Three::C: {
       return f3;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -188,13 +188,13 @@ struct ComprehensivePatterns {
     switch (t) {
     case Three::A: {
       return f;
-    } break;
+    }
     case Three::B: {
       return f0;
-    } break;
+    }
     case Three::C: {
       return f3;
-    } break;
+    }
     default:
       std::unreachable();
     }

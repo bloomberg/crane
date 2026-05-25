@@ -225,13 +225,13 @@ struct MemSafetyProbe19 {
     switch (c) {
     case Choice::CLEFT: {
       return f;
-    } break;
+    }
     case Choice::CRIGHT: {
       return f0;
-    } break;
+    }
     case Choice::CBOTH: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -241,13 +241,13 @@ struct MemSafetyProbe19 {
     switch (c) {
     case Choice::CLEFT: {
       return f;
-    } break;
+    }
     case Choice::CRIGHT: {
       return f0;
-    } break;
+    }
     case Choice::CBOTH: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }

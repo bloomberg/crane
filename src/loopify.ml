@@ -3583,6 +3583,12 @@ let clone_for_frame ty expr =
     (match expr with
     | CPPlambda _ -> expr
     | _ -> CPPmove expr)
+  | Tmod (TMconst, _) -> expr
+  | t when not (is_trivially_copyable_type t) ->
+    (match expr with
+    | CPPvar _ -> expr
+    | CPPderef _ -> expr
+    | _ -> CPPmove expr)
   | _ -> expr
 
 (** Apply [clone_for_frame] to parallel type and expression lists. *)
@@ -3814,9 +3820,17 @@ and body_has_unique_owner_decomposition check tparams env body =
 
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)
-let build_decompose_handler (d : decomposed) ~field_names n_saved =
-  let saved_vars = frame_fields_named field_names n_saved in
-  let result_var = CPPvar (id_result) in
+let build_decompose_handler (d : decomposed) ~field_names ~saved_types n_saved =
+  let saved_vars =
+    List.mapi (fun i ty ->
+      let f = frame_field_named field_names i in
+      match ty with
+      | Tmod (TMconst, _) -> f
+      | t when not (is_trivially_copyable_type t) -> CPPmove f
+      | _ -> f)
+    saved_types
+  in
+  let result_var = CPPmove (CPPvar (id_result)) in
   let rebuilt = d.d_rebuild saved_vars result_var in
   assign_result rebuilt
 
@@ -3845,7 +3859,8 @@ let build_scrutinee_handler
         in
         (* Move unique_ptr fields out of the owned frame *)
         let rhs = match ty with
-          | Tunique_ptr _ -> CPPmove field_expr
+          | Tmod (TMconst, _) -> field_expr
+          | t when not (is_trivially_copyable_type t) -> CPPmove field_expr
           | _ -> field_expr
         in
         Sasgn (id, ty_opt, rhs))
@@ -4659,7 +4674,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           let n_saved = List.length d.d_saved in
           let saved_types = infer_saved_types tparams env d.d_saved in
           let final_field_names = derive_field_names d.d_saved in
-          let final_handler = build_decompose_handler d ~field_names:final_field_names n_saved in
+          let final_handler = build_decompose_handler d ~field_names:final_field_names ~saved_types n_saved in
           register_frame frames_ref ~name:final_call_name ~saved_types
             ~saved_exprs:d.d_saved ~env ~handler:final_handler;
           (* Create intermediate Call frame that will push the final Call frame
@@ -5531,7 +5546,9 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_unique_ptr = []) frame_po
     let lookup_uptr name_s = List.assoc_opt name_s frame_unique_ptr in
     let adjust_arg safe is_uptr arg =
       if not safe then arg
-      else if is_uptr then
+      else
+      let arg = match arg with CPPmove a -> a | a -> a in
+      if is_uptr then
         CPPfun_call (CPPmember (arg, id_get), [])
       else
         match arg with

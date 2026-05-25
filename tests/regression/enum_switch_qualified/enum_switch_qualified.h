@@ -11,10 +11,10 @@ struct EnumSwitchQualified {
       switch (c) {
       case Color::RED: {
         return f;
-      } break;
+      }
       case Color::BLUE: {
         return f0;
-      } break;
+      }
       default:
         std::unreachable();
       }
@@ -24,10 +24,10 @@ struct EnumSwitchQualified {
       switch (c) {
       case Color::RED: {
         return f;
-      } break;
+      }
       case Color::BLUE: {
         return f0;
-      } break;
+      }
       default:
         std::unreachable();
       }

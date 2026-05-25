@@ -32,10 +32,11 @@ SuperfluousMoves::bad_branch(SuperfluousMoves::loop_state ls) {
     } else {
       return std::make_pair(false, loop_state{gs3, gs3.pacpos, gs3.ghosts});
     }
-  } break;
+    break;
+  }
   case Mode::FRIGHTENED: {
     return std::make_pair(false, std::move(ls));
-  } break;
+  }
   default:
     std::unreachable();
   }

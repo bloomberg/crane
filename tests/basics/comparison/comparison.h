@@ -10,13 +10,13 @@ struct Comparison {
     switch (c) {
     case Cmp::CMPLT: {
       return f;
-    } break;
+    }
     case Cmp::CMPEQ: {
       return f0;
-    } break;
+    }
     case Cmp::CMPGT: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -26,13 +26,13 @@ struct Comparison {
     switch (c) {
     case Cmp::CMPLT: {
       return f;
-    } break;
+    }
     case Cmp::CMPEQ: {
       return f0;
-    } break;
+    }
     case Cmp::CMPGT: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }

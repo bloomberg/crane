@@ -96,10 +96,10 @@ struct SuperfluousMoves {
     switch (m) {
     case Mode::CHASE: {
       return f;
-    } break;
+    }
     case Mode::FRIGHTENED: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -109,10 +109,10 @@ struct SuperfluousMoves {
     switch (m) {
     case Mode::CHASE: {
       return f;
-    } break;
+    }
     case Mode::FRIGHTENED: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }

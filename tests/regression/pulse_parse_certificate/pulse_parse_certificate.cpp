@@ -90,26 +90,28 @@ bool PulseParseCertificateCase::pulse_class_eqb(
     switch (y) {
     case PulseClass::MARKSHORT: {
       return true;
-    } break;
+    }
     case PulseClass::MARKLONG: {
       return false;
-    } break;
+    }
     default:
       std::unreachable();
     }
-  } break;
+    break;
+  }
   case PulseClass::MARKLONG: {
     switch (y) {
     case PulseClass::MARKSHORT: {
       return false;
-    } break;
+    }
     case PulseClass::MARKLONG: {
       return true;
-    } break;
+    }
     default:
       std::unreachable();
     }
-  } break;
+    break;
+  }
   default:
     std::unreachable();
   }

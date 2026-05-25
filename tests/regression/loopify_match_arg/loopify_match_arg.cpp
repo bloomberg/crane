@@ -37,7 +37,8 @@ uint64_t LoopifyMatchArg::count_dots(
         case Cell::DOT: {
           _stack.emplace_back(_Resume_Cons{UINT64_C(1)});
           _stack.emplace_back(_Enter{a1.get()});
-        } break;
+          break;
+        }
         default: {
           _stack.emplace_back(_Enter{a1.get()});
         }

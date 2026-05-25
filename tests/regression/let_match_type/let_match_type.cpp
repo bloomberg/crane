@@ -99,10 +99,10 @@ LetMatchType::direction_offset(LetMatchType::Direction d) {
     switch (d) {
     case Direction::EAST: {
       return UINT64_C(1);
-    } break;
+    }
     case Direction::WEST: {
       return UINT64_C(2);
-    } break;
+    }
     default: {
       return UINT64_C(0);
     }
@@ -112,10 +112,10 @@ LetMatchType::direction_offset(LetMatchType::Direction d) {
     switch (d) {
     case Direction::NORTH: {
       return UINT64_C(1);
-    } break;
+    }
     case Direction::SOUTH: {
       return UINT64_C(2);
-    } break;
+    }
     default: {
       return UINT64_C(0);
     }

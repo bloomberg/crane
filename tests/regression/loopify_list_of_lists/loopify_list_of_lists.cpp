@@ -171,9 +171,9 @@ List<List<uint64_t>> LoopifyListOfLists::transpose_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume1: saves [heads], resumes after recursive call with _result.
+  /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    List<uint64_t> heads;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -207,7 +207,7 @@ List<List<uint64_t>> LoopifyListOfLists::transpose_fuel(
             } else {
               List<uint64_t> heads = map_hd(ll);
               List<List<uint64_t>> tails = map_tl(ll);
-              _stack.emplace_back(_Resume1{std::move(heads)});
+              _stack.emplace_back(_Resume1{std::move(std::move(heads))});
               _stack.emplace_back(_Enter{std::move(tails), fuel_});
             }
           }
@@ -215,7 +215,7 @@ List<List<uint64_t>> LoopifyListOfLists::transpose_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<List<uint64_t>>::cons(_f.heads, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, _result);
     }
   }
   return _result;

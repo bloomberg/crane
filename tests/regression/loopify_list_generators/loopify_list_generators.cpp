@@ -150,9 +150,9 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [reps], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<uint64_t> reps;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -172,12 +172,12 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         List<uint64_t> reps = replicate_elem(n, a0);
-        _stack.emplace_back(_Resume_Cons{std::move(reps)});
+        _stack.emplace_back(_Resume_Cons{std::move(std::move(reps))});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.reps.app(_result);
+      _result = _f._s0.app(_result);
     }
   }
   return _result;

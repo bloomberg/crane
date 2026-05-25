@@ -14,13 +14,13 @@ struct InductiveInModule {
       switch (c) {
       case Color::RED: {
         return f;
-      } break;
+      }
       case Color::GREEN: {
         return f0;
-      } break;
+      }
       case Color::BLUE: {
         return f1;
-      } break;
+      }
       default:
         std::unreachable();
       }
@@ -30,13 +30,13 @@ struct InductiveInModule {
       switch (c) {
       case Color::RED: {
         return f;
-      } break;
+      }
       case Color::GREEN: {
         return f0;
-      } break;
+      }
       case Color::BLUE: {
         return f1;
-      } break;
+      }
       default:
         std::unreachable();
       }

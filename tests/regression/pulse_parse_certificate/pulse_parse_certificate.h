@@ -116,10 +116,10 @@ struct PulseParseCertificateCase {
     switch (p) {
     case PulseClass::MARKSHORT: {
       return f;
-    } break;
+    }
     case PulseClass::MARKLONG: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -129,10 +129,10 @@ struct PulseParseCertificateCase {
     switch (p) {
     case PulseClass::MARKSHORT: {
       return f;
-    } break;
+    }
     case PulseClass::MARKLONG: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }

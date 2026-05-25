@@ -510,13 +510,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (h) {
     case HLALocus::LOCUS_A: {
       return f;
-    } break;
+    }
     case HLALocus::LOCUS_B: {
       return f0;
-    } break;
+    }
     case HLALocus::LOCUS_DR: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -527,13 +527,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (h) {
     case HLALocus::LOCUS_A: {
       return f;
-    } break;
+    }
     case HLALocus::LOCUS_B: {
       return f0;
-    } break;
+    }
     case HLALocus::LOCUS_DR: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -659,19 +659,19 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (m) {
     case MFIStrength::MFI_NEGATIVE: {
       return f;
-    } break;
+    }
     case MFIStrength::MFI_WEAKPOSITIVE: {
       return f0;
-    } break;
+    }
     case MFIStrength::MFI_MODERATE: {
       return f1;
-    } break;
+    }
     case MFIStrength::MFI_STRONG: {
       return f2;
-    } break;
+    }
     case MFIStrength::MFI_VERYSTRONG: {
       return f3;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -682,19 +682,19 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (m) {
     case MFIStrength::MFI_NEGATIVE: {
       return f;
-    } break;
+    }
     case MFIStrength::MFI_WEAKPOSITIVE: {
       return f0;
-    } break;
+    }
     case MFIStrength::MFI_MODERATE: {
       return f1;
-    } break;
+    }
     case MFIStrength::MFI_STRONG: {
       return f2;
-    } break;
+    }
     case MFIStrength::MFI_VERYSTRONG: {
       return f3;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -721,16 +721,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (v) {
     case VirtualXMResult::VXM_NEGATIVE: {
       return f;
-    } break;
+    }
     case VirtualXMResult::VXM_WEAKPOSITIVE: {
       return f0;
-    } break;
+    }
     case VirtualXMResult::VXM_POSITIVE: {
       return f1;
-    } break;
+    }
     case VirtualXMResult::VXM_STRONGPOSITIVE: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -741,16 +741,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (v) {
     case VirtualXMResult::VXM_NEGATIVE: {
       return f;
-    } break;
+    }
     case VirtualXMResult::VXM_WEAKPOSITIVE: {
       return f0;
-    } break;
+    }
     case VirtualXMResult::VXM_POSITIVE: {
       return f1;
-    } break;
+    }
     case VirtualXMResult::VXM_STRONGPOSITIVE: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -773,16 +773,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (t) {
     case TransplantAcceptability::ACCEPTABLE: {
       return f;
-    } break;
+    }
     case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return f0;
-    } break;
+    }
     case TransplantAcceptability::UNACCEPTABLE_HIGH_RISK: {
       return f1;
-    } break;
+    }
     case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -794,16 +794,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (t) {
     case TransplantAcceptability::ACCEPTABLE: {
       return f;
-    } break;
+    }
     case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return f0;
-    } break;
+    }
     case TransplantAcceptability::UNACCEPTABLE_HIGH_RISK: {
       return f1;
-    } break;
+    }
     case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -826,13 +826,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (t) {
     case TestConfidence::CONFIDENCE_HIGH: {
       return f;
-    } break;
+    }
     case TestConfidence::CONFIDENCE_MEDIUM: {
       return f0;
-    } break;
+    }
     case TestConfidence::CONFIDENCE_LOW: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -843,13 +843,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (t) {
     case TestConfidence::CONFIDENCE_HIGH: {
       return f;
-    } break;
+    }
     case TestConfidence::CONFIDENCE_MEDIUM: {
       return f0;
-    } break;
+    }
     case TestConfidence::CONFIDENCE_LOW: {
       return f1;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -867,16 +867,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (c) {
     case CrossmatchResult::XM_COMPATIBLE: {
       return f;
-    } break;
+    }
     case CrossmatchResult::XM_INCOMPATIBLE: {
       return f0;
-    } break;
+    }
     case CrossmatchResult::XM_INCONCLUSIVE: {
       return f1;
-    } break;
+    }
     case CrossmatchResult::XM_NOT_DONE: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -888,16 +888,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (c) {
     case CrossmatchResult::XM_COMPATIBLE: {
       return f;
-    } break;
+    }
     case CrossmatchResult::XM_INCOMPATIBLE: {
       return f0;
-    } break;
+    }
     case CrossmatchResult::XM_INCONCLUSIVE: {
       return f1;
-    } break;
+    }
     case CrossmatchResult::XM_NOT_DONE: {
       return f2;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -977,7 +977,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
     switch (classify_mfi_safe(validated_luminex, UINT64_C(0))) {
     case MFIStrength::MFI_NEGATIVE: {
       return true;
-    } break;
+    }
     default: {
       return false;
     }
@@ -990,7 +990,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                          donor_hla)) {
     case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
       return true;
-    } break;
+    }
     default: {
       return false;
     }
@@ -1001,7 +1001,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
                                          donor_hla)) {
     case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
       return true;
-    } break;
+    }
     default: {
       return false;
     }

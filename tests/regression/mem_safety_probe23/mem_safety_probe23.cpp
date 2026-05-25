@@ -500,9 +500,9 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
     const MemSafetyProbe23::tree *t;
   };
 
-  /// _After_Node: saves [new_inner, a0], dispatches next recursive call.
+  /// _After_Node: saves [_s0, a0], dispatches next recursive call.
   struct _After_Node {
-    MemSafetyProbe23::tree new_inner;
+    MemSafetyProbe23::tree _s0;
     const MemSafetyProbe23::tree *a0;
   };
 
@@ -532,13 +532,14 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v());
         MemSafetyProbe23::tree new_inner = tree::node(inner, a1, tree::leaf());
-        _stack.emplace_back(_After_Node{std::move(new_inner), a0.get()});
+        _stack.emplace_back(
+            _After_Node{std::move(std::move(new_inner)), a0.get()});
         _stack.emplace_back(_Enter{std::move(inner), a2.get()});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
       _stack.emplace_back(_Combine_Node{_result});
-      _stack.emplace_back(_Enter{std::move(_f.new_inner), _f.a0});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = (std::move(_result) + std::move(_f._result));

@@ -466,9 +466,9 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_Cons: saves [chunk], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<uint64_t> chunk;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -493,13 +493,13 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(
         } else {
           List<uint64_t> chunk = take(n, l);
           List<uint64_t> rest = drop(n, l);
-          _stack.emplace_back(_Resume_Cons{std::move(chunk)});
+          _stack.emplace_back(_Resume_Cons{std::move(std::move(chunk))});
           _stack.emplace_back(_Enter{std::move(rest), fuel_});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f.chunk, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, _result);
     }
   }
   return _result;

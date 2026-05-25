@@ -11,22 +11,22 @@ struct CtorEscapeCollision {
     switch (i) {
     case Item::D_: {
       return f;
-    } break;
+    }
     case Item::D_0: {
       return f0;
-    } break;
+    }
     case Item::D__: {
       return f1;
-    } break;
+    }
     case Item::D__0: {
       return f2;
-    } break;
+    }
     case Item::D__1: {
       return f3;
-    } break;
+    }
     case Item::D__2: {
       return f4;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -37,22 +37,22 @@ struct CtorEscapeCollision {
     switch (i) {
     case Item::D_: {
       return f;
-    } break;
+    }
     case Item::D_0: {
       return f0;
-    } break;
+    }
     case Item::D__: {
       return f1;
-    } break;
+    }
     case Item::D__0: {
       return f2;
-    } break;
+    }
     case Item::D__1: {
       return f3;
-    } break;
+    }
     case Item::D__2: {
       return f4;
-    } break;
+    }
     default:
       std::unreachable();
     }

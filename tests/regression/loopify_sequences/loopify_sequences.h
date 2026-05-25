@@ -190,9 +190,9 @@ struct LoopifySequences {
       uint64_t fuel;
     };
 
-    /// _Resume1: saves [ll], resumes after recursive call with _result.
+    /// _Resume1: saves [_s0], resumes after recursive call with _result.
     struct _Resume1 {
-      List<T1> ll;
+      List<T1> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -271,13 +271,13 @@ struct LoopifySequences {
             auto tails = [&](const List<List<T1>> &l) -> List<List<T1>> {
               return tails_impl(tails_impl, l);
             };
-            _stack.emplace_back(_Resume1{heads(ll)});
+            _stack.emplace_back(_Resume1{std::move(heads(ll))});
             _stack.emplace_back(_Enter{tails(ll), f});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<List<T1>>::cons(_f.ll, _result);
+        _result = List<List<T1>>::cons(_f._s0, _result);
       }
     }
     return _result;

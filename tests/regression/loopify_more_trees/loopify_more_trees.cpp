@@ -702,9 +702,9 @@ List<List<uint64_t>> LoopifyMoreTrees::tree_levels_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_Cons: saves [values], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    List<uint64_t> values;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -730,13 +730,13 @@ List<List<uint64_t>> LoopifyMoreTrees::tree_levels_fuel(
         } else {
           List<uint64_t> values = flatten(map_tree_to_list(level));
           List<LoopifyMoreTrees::tree> next = concat_map_children(level);
-          _stack.emplace_back(_Resume_Cons{std::move(values)});
+          _stack.emplace_back(_Resume_Cons{std::move(std::move(values))});
           _stack.emplace_back(_Enter{std::move(next), fuel_});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f.values, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, _result);
     }
   }
   return _result;

@@ -292,9 +292,9 @@ struct LoopifySearch {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<List<uint64_t>> a0;
+      List<List<uint64_t>> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -313,12 +313,12 @@ struct LoopifySearch {
           _result = List<List<uint64_t>>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Resume_Cons{std::move(f(a0))});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.a0.app(_result);
+        _result = _f._s0.app(_result);
       }
     }
     return _result;

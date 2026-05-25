@@ -702,9 +702,9 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_Cons: saves [smaller, f, a0], dispatches next recursive call.
+  /// _After_Cons: saves [_s0, f, a0], dispatches next recursive call.
   struct _After_Cons {
-    List<uint64_t> smaller;
+    List<uint64_t> _s0;
     uint64_t f;
     uint64_t a0;
   };
@@ -743,14 +743,14 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
           List<uint64_t> greater = filter_impl(
               [=](uint64_t y) mutable { return a0 <= y; }, a1_value);
           _stack.emplace_back(
-              _After_Cons{std::move(smaller), f, std::move(a0)});
+              _After_Cons{std::move(std::move(smaller)), f, std::move(a0)});
           _stack.emplace_back(_Enter{std::move(greater), f});
         }
       }
     } else if (std::holds_alternative<_After_Cons>(_frame)) {
       auto _f = std::move(std::get<_After_Cons>(_frame));
       _stack.emplace_back(_Combine_Cons{std::move(_result), _f.a0});
-      _stack.emplace_back(_Enter{std::move(_f.smaller), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
       _result = std::move(_result).app(

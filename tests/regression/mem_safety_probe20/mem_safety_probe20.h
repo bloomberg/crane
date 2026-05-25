@@ -142,10 +142,10 @@ struct MemSafetyProbe20 {
     switch (c) {
     case Choice::CLEFT: {
       return f;
-    } break;
+    }
     case Choice::CRIGHT: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }
@@ -155,10 +155,10 @@ struct MemSafetyProbe20 {
     switch (c) {
     case Choice::CLEFT: {
       return f;
-    } break;
+    }
     case Choice::CRIGHT: {
       return f0;
-    } break;
+    }
     default:
       std::unreachable();
     }

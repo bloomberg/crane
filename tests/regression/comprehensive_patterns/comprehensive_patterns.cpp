@@ -167,13 +167,13 @@ ComprehensivePatterns::match_three(ComprehensivePatterns::Three t,
   switch (t) {
   case Three::A: {
     return std::make_pair(s, s.s_a);
-  } break;
+  }
   case Three::B: {
     return std::make_pair(s, s.s_b);
-  } break;
+  }
   case Three::C: {
     return std::make_pair(s, s.s_c);
-  } break;
+  }
   default:
     std::unreachable();
   }

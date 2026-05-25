@@ -10,10 +10,10 @@ uint64_t TimingPreservesWfSimple::cycles(TimingPreservesWfSimple::Instr i) {
   switch (i) {
   case Instr::FIM: {
     return UINT64_C(16);
-  } break;
+  }
   case Instr::JMS: {
     return UINT64_C(24);
-  } break;
+  }
   default: {
     return UINT64_C(8);
   }
@@ -26,7 +26,7 @@ TimingPreservesWfSimple::execute(const TimingPreservesWfSimple::state &s,
   switch (i) {
   case Instr::JMS: {
     return state{s.regs_len, s.rom_len, s.pc, (s.stack_len + 1)};
-  } break;
+  }
   default: {
     return state{s.regs_len, s.rom_len, s.pc, s.stack_len};
   }

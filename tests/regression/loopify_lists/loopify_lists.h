@@ -598,9 +598,9 @@ struct LoopifyLists {
       T1 prev;
     };
 
-    /// _Resume1: saves [acc], resumes after recursive call with _result.
+    /// _Resume1: saves [_s0], resumes after recursive call with _result.
     struct _Resume1 {
-      list<T1> acc;
+      list<T1> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -625,14 +625,14 @@ struct LoopifyLists {
             _stack.emplace_back(
                 _Enter{a1.get(), list<T1>::cons(a0, std::move(acc)), a0});
           } else {
-            _stack.emplace_back(_Resume1{std::move(acc)});
+            _stack.emplace_back(_Resume1{std::move(std::move(acc))});
             _stack.emplace_back(
                 _Enter{a1.get(), list<T1>::cons(a0, list<T1>::nil()), a0});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<list<T1>>::cons(_f.acc, _result);
+        _result = list<list<T1>>::cons(_f._s0, _result);
       }
     }
     return _result;
