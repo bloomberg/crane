@@ -300,8 +300,9 @@ LoopifyPatterns::tuple_constr(
     } else {
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t n = _f.n;
-      const std::pair<uint64_t, uint64_t> &p = _result.first;
-      const uint64_t &c = _result.second;
+      auto _cs = std::move(_result);
+      const std::pair<uint64_t, uint64_t> &p = _cs.first;
+      const uint64_t &c = _cs.second;
       const uint64_t &a = p.first;
       const uint64_t &b = p.second;
       _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
@@ -743,7 +744,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
   LoopifyPatterns::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -764,20 +765,20 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
               std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont_Cons{a0, f});
-          _stack.emplace_back(_Enter{std::move(*a1), f});
+          _stack.emplace_back(_Enter{*a1, f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
-      LoopifyPatterns::list<uint64_t> first = _result;
+      LoopifyPatterns::list<uint64_t> first = std::move(_result);
       _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(first), f});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      LoopifyPatterns::list<uint64_t> second = _result;
+      LoopifyPatterns::list<uint64_t> second = std::move(_result);
       _result = list<uint64_t>::cons(std::move(a0), std::move(second));
     }
   }
@@ -959,7 +960,7 @@ uint64_t LoopifyPatterns::multi_guard(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t rest = _result;
+      uint64_t rest = std::move(_result);
       if (UINT64_C(10) < a0) {
         _result = (a0 + rest);
       } else {
@@ -994,7 +995,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::append_lists(
   LoopifyPatterns::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified append_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1040,7 +1041,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::double_append(
   LoopifyPatterns::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1061,7 +1062,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::double_append(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      LoopifyPatterns::list<uint64_t> rest = _result;
+      LoopifyPatterns::list<uint64_t> rest = std::move(_result);
       _result = list<uint64_t>::cons(a0, append_lists(rest, rest));
     }
   }
@@ -1096,7 +1097,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_alt_fuel(
   LoopifyPatterns::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified process_twice_alt_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1117,20 +1118,20 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_alt_fuel(
               std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                   l.v_mut());
           _stack.emplace_back(_Cont_Cons{a0, f});
-          _stack.emplace_back(_Enter{std::move(*a1), f});
+          _stack.emplace_back(_Enter{*a1, f});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t f = _f.f;
-      LoopifyPatterns::list<uint64_t> once = _result;
+      LoopifyPatterns::list<uint64_t> once = std::move(_result);
       _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(once), f});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      LoopifyPatterns::list<uint64_t> twice = _result;
+      LoopifyPatterns::list<uint64_t> twice = std::move(_result);
       _result = list<uint64_t>::cons(std::move(a0), std::move(twice));
     }
   }
@@ -1180,7 +1181,7 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t rest = _result;
+      uint64_t rest = std::move(_result);
       if (a0 == UINT64_C(0)) {
         _result = ((UINT64_C(2) * a0) + rest);
       } else {
@@ -1212,7 +1213,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::merge_alternating(
   LoopifyPatterns::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1)});
   /// Loopified merge_alternating: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1236,7 +1237,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::merge_alternating(
               std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                   l2.v_mut());
           _stack.emplace_back(_Resume_Cons{std::move(a0), std::move(a00)});
-          _stack.emplace_back(_Enter{std::move(*a10), std::move(*a1)});
+          _stack.emplace_back(_Enter{*a10, *a1});
         }
       }
     } else {

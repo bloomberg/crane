@@ -162,7 +162,7 @@ MemSafetyProbe5::collect_left_vals(
   MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, t});
+  _stack.emplace_back(_Enter{std::move(acc), std::move(t)});
   /// Loopified collect_left_vals: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

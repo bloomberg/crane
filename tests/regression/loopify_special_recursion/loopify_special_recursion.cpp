@@ -45,20 +45,20 @@ List<uint64_t> LoopifySpecialRecursion::process_twice_fuel(
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Cont_Cons{a0, fuel_});
-          _stack.emplace_back(_Enter{std::move(*a1), fuel_});
+          _stack.emplace_back(_Enter{*a1, fuel_});
         }
       }
     } else if (std::holds_alternative<_Cont_Cons>(_frame)) {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t fuel_ = _f.fuel_;
-      List<uint64_t> first = _result;
+      List<uint64_t> first = std::move(_result);
       _stack.emplace_back(_Cont_Cons_1{a0});
       _stack.emplace_back(_Enter{std::move(first), fuel_});
     } else {
       auto _f = std::move(std::get<_Cont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> second = _result;
+      List<uint64_t> second = std::move(_result);
       _result = List<uint64_t>::cons(a0, std::move(second));
     }
   }
@@ -88,7 +88,7 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -107,7 +107,7 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rest = _result;
+      List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons(a0, rest.app(rest));
     }
   }
@@ -187,7 +187,7 @@ List<uint64_t> LoopifySpecialRecursion::reverse_insert(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified reverse_insert: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -201,7 +201,7 @@ List<uint64_t> LoopifySpecialRecursion::reverse_insert(
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         if (a0 < x) {
           _stack.emplace_back(_Resume1{std::move(a0)});
-          _stack.emplace_back(_Enter{std::move(*a1)});
+          _stack.emplace_back(_Enter{*a1});
         } else {
           _result = List<uint64_t>::cons(x, l);
         }

@@ -340,14 +340,14 @@ uint64_t LoopifyTrees::sum_of_max_branches(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      uint64_t lsum = _result;
+      uint64_t lsum = std::move(_result);
       _stack.emplace_back(_Cont_Node_1{a1, lsum});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t lsum = _f.lsum;
-      uint64_t rsum = _result;
+      uint64_t rsum = std::move(_result);
       _result = (a1 + (lsum <= rsum ? rsum : lsum));
     }
   }
@@ -546,13 +546,13 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
       auto _f = std::move(std::get<_Cont_RNode>(_frame));
       const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      uint64_t d = (_result + 1);
+      uint64_t d = (std::move(_result) + 1);
       _stack.emplace_back(_Cont_RNode_1{d});
       _stack.emplace_back(_Enter{&a1, f});
     } else {
       auto _f = std::move(std::get<_Cont_RNode_1>(_frame));
       uint64_t d = _f.d;
-      uint64_t rest_max = _result;
+      uint64_t rest_max = std::move(_result);
       if (d <= rest_max) {
         _result = std::move(rest_max);
       } else {
@@ -592,7 +592,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
   LoopifyTrees::tree<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{std::move(t2), std::move(t1)});
   /// Loopified tree_max: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -625,7 +625,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
             max_val = a1;
           }
           _stack.emplace_back(_After_Node{*a00, *a0, max_val});
-          _stack.emplace_back(_Enter{std::move(*a20), std::move(*a2)});
+          _stack.emplace_back(_Enter{*a20, *a2});
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -852,8 +852,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      const uint64_t &lc = _result.first;
-      const uint64_t &ls = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &lc = _cs.first;
+      const uint64_t &ls = _cs.second;
       _stack.emplace_back(_Cont_lc{a1, lc, ls});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -861,8 +862,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       uint64_t a1 = _f.a1;
       uint64_t lc = _f.lc;
       uint64_t ls = _f.ls;
-      const uint64_t &rc = _result.first;
-      const uint64_t &rs = _result.second;
+      auto _cs1 = std::move(_result);
+      const uint64_t &rc = _cs1.first;
+      const uint64_t &rs = _cs1.second;
       _result = std::make_pair(((lc + rc) + 1), (a1 + (ls + rs)));
     }
   }
@@ -889,7 +891,7 @@ List<List<uint64_t>> LoopifyTrees::append_list_lists(
   List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified append_list_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1268,8 +1270,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      const uint64_t &lmin = _result.first;
-      const uint64_t &lmax = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &lmin = _cs.first;
+      const uint64_t &lmax = _cs.second;
       _stack.emplace_back(_Cont_lmin{a1, lmax, lmin});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -1277,8 +1280,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       uint64_t a1 = _f.a1;
       uint64_t lmax = _f.lmax;
       uint64_t lmin = _f.lmin;
-      const uint64_t &rmin = _result.first;
-      const uint64_t &rmax = _result.second;
+      auto _cs1 = std::move(_result);
+      const uint64_t &rmin = _cs1.first;
+      const uint64_t &rmax = _cs1.second;
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
                                max3(lmax, rmax, a1));

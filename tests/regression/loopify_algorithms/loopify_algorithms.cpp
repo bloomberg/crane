@@ -30,7 +30,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified sieve_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -573,7 +573,7 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t rest = _result;
+      uint64_t rest = std::move(_result);
       uint64_t sum = (a0 + rest);
       if (rest == UINT64_C(0)) {
         _result = UINT64_C(0);
@@ -727,7 +727,7 @@ List<uint64_t> LoopifyAlgorithms::suffix_sums(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rest = _result;
+      List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons((a0 + head_nat(UINT64_C(0), rest)), rest);
     }
   }

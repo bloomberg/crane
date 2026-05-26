@@ -304,8 +304,9 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &cand = _result.first;
-      const uint64_t &count = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &cand = _cs.first;
+      const uint64_t &count = _cs.second;
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + UINT64_C(1)));
       } else {

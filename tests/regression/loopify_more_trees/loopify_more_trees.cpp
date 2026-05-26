@@ -271,7 +271,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   LoopifyMoreTrees::tree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{std::move(t2), std::move(t1)});
   /// Loopified tree_max: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -294,7 +294,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
           _stack.emplace_back(
               _After_Node{*a00, *a0, std::max(std::move(a1), std::move(a10))});
-          _stack.emplace_back(_Enter{std::move(*a20), std::move(*a2)});
+          _stack.emplace_back(_Enter{*a20, *a2});
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -480,7 +480,7 @@ List<uint64_t> LoopifyMoreTrees::append_lists(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified append_lists: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -621,7 +621,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::append_trees(
   List<LoopifyMoreTrees::tree> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified append_trees: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

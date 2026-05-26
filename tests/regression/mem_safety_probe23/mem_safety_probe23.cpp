@@ -139,7 +139,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified sum_with_original: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -154,22 +154,22 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
         auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
         _stack.emplace_back(_Cont_Node{a1, a2, t});
-        _stack.emplace_back(_Enter{std::move(*a0)});
+        _stack.emplace_back(_Enter{*a0});
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
       MemSafetyProbe23::tree t = std::move(_f.t);
-      std::pair<MemSafetyProbe23::tree, uint64_t> pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a1, pl, t});
-      _stack.emplace_back(_Enter{std::move(*a2)});
+      std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), std::move(t)});
+      _stack.emplace_back(_Enter{*a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_f.pl);
       MemSafetyProbe23::tree t = std::move(_f.t);
-      std::pair<MemSafetyProbe23::tree, uint64_t> pr = _result;
+      std::pair<MemSafetyProbe23::tree, uint64_t> pr = std::move(_result);
       _result = std::make_pair(std::move(t),
                                ((pl.second + std::move(a1)) + pr.second));
     }
@@ -208,7 +208,7 @@ MemSafetyProbe23::dup_and_double(
   std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t});
+  _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified dup_and_double: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -223,23 +223,25 @@ MemSafetyProbe23::dup_and_double(
         auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
         _stack.emplace_back(_Cont_Node{a1, a2, t});
-        _stack.emplace_back(_Enter{std::move(*a0)});
+        _stack.emplace_back(_Enter{*a0});
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
       MemSafetyProbe23::tree t = std::move(_f.t);
-      std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a1, pl, t});
-      _stack.emplace_back(_Enter{std::move(*a2)});
+      std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl =
+          std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), std::move(t)});
+      _stack.emplace_back(_Enter{*a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pl =
           std::move(_f.pl);
       MemSafetyProbe23::tree t = std::move(_f.t);
-      std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr = _result;
+      std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr =
+          std::move(_result);
       _result = std::make_pair(
           std::move(t),
           tree::node(pl.second, (std::move(a1) * UINT64_C(2)), pr.second));
@@ -310,8 +312,8 @@ MemSafetyProbe23::collect_children(
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
                 uint64_t>
-          pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a0, a1, a2, pl});
+          pl = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{std::move(a0), a1, a2, std::move(pl)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
@@ -323,7 +325,7 @@ MemSafetyProbe23::collect_children(
           pl = std::move(_f.pl);
       std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
                 uint64_t>
-          pr = _result;
+          pr = std::move(_result);
       uint64_t s =
           (([&]() -> uint64_t {
              const std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>
@@ -400,14 +402,14 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_acc(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe23::tree &a2 = *_f.a2;
-      std::pair<MemSafetyProbe23::tree, uint64_t> pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a1, pl});
+      std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl)});
       _stack.emplace_back(_Enter{pl.second, &a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_f.pl);
-      std::pair<MemSafetyProbe23::tree, uint64_t> pr = _result;
+      std::pair<MemSafetyProbe23::tree, uint64_t> pr = std::move(_result);
       _result = std::make_pair(tree::node(pl.first, a1, pr.first), pr.second);
     }
   }
@@ -472,7 +474,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
-      std::pair<uint64_t, uint64_t> pl = _result;
+      std::pair<uint64_t, uint64_t> pl = std::move(_result);
       _stack.emplace_back(_Cont_Node_1{a1, pl, sl, sr});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -481,7 +483,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
       std::pair<uint64_t, uint64_t> pl = std::move(_f.pl);
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
-      std::pair<uint64_t, uint64_t> pr = _result;
+      std::pair<uint64_t, uint64_t> pr = std::move(_result);
       _result = std::make_pair(((sl + a1) + sr), ((pl.first + a1) + pr.first));
     }
   }
@@ -516,7 +518,7 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
   uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{inner, &t});
+  _stack.emplace_back(_Enter{std::move(inner), &t});
   /// Loopified flatten_tree_of_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -581,7 +583,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
   uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, t});
+  _stack.emplace_back(_Enter{n, std::move(t)});
   /// Loopified mixed_recurse: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -602,7 +604,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
               std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
           _stack.emplace_back(
               _After_Node{n_, tree::node(t, std::move(a1), tree::leaf())});
-          _stack.emplace_back(_Enter{n_, std::move(*a2)});
+          _stack.emplace_back(_Enter{n_, *a2});
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -676,8 +678,8 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::annotate_sizes(
       const MemSafetyProbe23::tree &a2 = *_f.a2;
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
-      std::pair<MemSafetyProbe23::tree, uint64_t> pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a1, pl, sl, sr});
+      std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl), sl, sr});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
@@ -685,7 +687,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::annotate_sizes(
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_f.pl);
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
-      std::pair<MemSafetyProbe23::tree, uint64_t> pr = _result;
+      std::pair<MemSafetyProbe23::tree, uint64_t> pr = std::move(_result);
       _result = std::make_pair(tree::node(pl.first, ((a1 + sl) + sr), pr.first),
                                ((pl.second + pr.second) + UINT64_C(1)));
     }

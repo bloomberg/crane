@@ -207,7 +207,7 @@ List<uint64_t> LoopifyAdvancedLists::interleave(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1)});
   /// Loopified interleave: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -226,7 +226,7 @@ List<uint64_t> LoopifyAdvancedLists::interleave(
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(l2.v_mut());
           _stack.emplace_back(_Resume_Cons{std::move(a0), std::move(a00)});
-          _stack.emplace_back(_Enter{std::move(*a10), std::move(*a1)});
+          _stack.emplace_back(_Enter{*a10, *a1});
         }
       }
     } else {

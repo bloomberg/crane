@@ -199,7 +199,7 @@ struct LoopifyPolymorphic {
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l2, &l1});
+    _stack.emplace_back(_Enter{std::move(l2), &l1});
     /// Loopified poly_append: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -301,7 +301,7 @@ struct LoopifyPolymorphic {
           return List<T1>::nil();
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l.v_mut());
-          _loop_l = std::move(*a1);
+          _loop_l = *a1;
           _loop_n = n_;
         }
       }
@@ -512,8 +512,9 @@ struct LoopifyPolymorphic {
         auto _f = std::move(std::get<_Cont_a>(_frame));
         T1 a = _f.a;
         T2 b = _f.b;
-        const List<T1> &as_ = _result.first;
-        const List<T2> &bs = _result.second;
+        auto _cs = std::move(_result);
+        const List<T1> &as_ = _cs.first;
+        const List<T2> &bs = _cs.second;
         _result = std::make_pair(List<T1>::cons(a, as_), List<T2>::cons(b, bs));
       }
     }
@@ -561,8 +562,9 @@ struct LoopifyPolymorphic {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         T1 a0 = _f.a0;
         F0 p = _f.p;
-        const List<T1> &trues = _result.first;
-        const List<T1> &falses = _result.second;
+        auto _cs = std::move(_result);
+        const List<T1> &trues = _cs.first;
+        const List<T1> &falses = _cs.second;
         if (p(a0)) {
           _result = std::make_pair(List<T1>::cons(a0, trues), falses);
         } else {

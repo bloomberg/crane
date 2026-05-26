@@ -416,7 +416,7 @@ List<uint64_t> LoopifyListRelations::interleave(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1)});
   /// Loopified interleave: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -435,7 +435,7 @@ List<uint64_t> LoopifyListRelations::interleave(
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(l2.v_mut());
           _stack.emplace_back(_Resume_Cons{std::move(a0), std::move(a00)});
-          _stack.emplace_back(_Enter{std::move(*a10), std::move(*a1)});
+          _stack.emplace_back(_Enter{*a10, *a1});
         }
       }
     } else {
@@ -472,7 +472,7 @@ List<uint64_t> LoopifyListRelations::merge_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1, fuel});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
   /// Loopified merge_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -498,10 +498,10 @@ List<uint64_t> LoopifyListRelations::merge_fuel(
                 std::get<typename List<uint64_t>::Cons>(l2.v_mut());
             if (a0 <= a00) {
               _stack.emplace_back(_Resume1{std::move(a0)});
-              _stack.emplace_back(_Enter{l2, std::move(*a1), fuel_});
+              _stack.emplace_back(_Enter{l2, *a1, fuel_});
             } else {
               _stack.emplace_back(_Resume2{std::move(a00)});
-              _stack.emplace_back(_Enter{std::move(*a10), l1, fuel_});
+              _stack.emplace_back(_Enter{*a10, l1, fuel_});
             }
           }
         }
@@ -543,7 +543,7 @@ List<uint64_t> LoopifyListRelations::union_(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified union: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

@@ -100,8 +100,9 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyExpr::shape a0 = std::move(_f.a0);
-      const std::pair<uint64_t, uint64_t> &p = _result.first;
-      const uint64_t &t = _result.second;
+      auto _cs = std::move(_result);
+      const std::pair<uint64_t, uint64_t> &p = _cs.first;
+      const uint64_t &t = _cs.second;
       const uint64_t &c = p.first;
       const uint64_t &sq = p.second;
       if (std::holds_alternative<typename LoopifyExpr::shape::Circle>(a0.v())) {

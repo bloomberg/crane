@@ -806,8 +806,9 @@ struct HofTreeLoopify {
         T1 a1 = _f.a1;
         const tree<T1> &a2 = *_f.a2;
         F0 f = _f.f;
-        const T3 &acc1 = _result.first;
-        const tree<T2> &l_ = _result.second;
+        auto _cs = std::move(_result);
+        const T3 &acc1 = _cs.first;
+        const tree<T2> &l_ = _cs.second;
         auto _cs1 = f(acc1, a1);
         const T3 &acc2 = _cs1.first;
         const T2 &x_ = _cs1.second;
@@ -817,10 +818,11 @@ struct HofTreeLoopify {
         auto _f = std::move(std::get<_Cont_acc2>(_frame));
         tree<T2> l_ = std::move(_f.l_);
         T2 x_ = _f.x_;
-        const T3 &acc3 = _result.first;
-        const tree<T2> &r_ = _result.second;
-        _result = std::make_pair(std::move(_result.first),
-                                 tree<T2>::node(l_, x_, r_));
+        auto _cs2 = std::move(_result);
+        const T3 &acc3 = _cs2.first;
+        const tree<T2> &r_ = _cs2.second;
+        _result =
+            std::make_pair(std::move(_cs2.first), tree<T2>::node(l_, x_, r_));
       }
     }
     return _result;

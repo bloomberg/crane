@@ -103,14 +103,14 @@ std::pair<MemSafetyProbe22::tree, uint64_t> MemSafetyProbe22::sum_and_rebuild(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe22::tree &a2 = *_f.a2;
-      std::pair<MemSafetyProbe22::tree, uint64_t> pl = _result;
-      _stack.emplace_back(_Cont_Node_1{a1, pl});
+      std::pair<MemSafetyProbe22::tree, uint64_t> pl = std::move(_result);
+      _stack.emplace_back(_Cont_Node_1{a1, std::move(pl)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       std::pair<MemSafetyProbe22::tree, uint64_t> pl = std::move(_f.pl);
-      std::pair<MemSafetyProbe22::tree, uint64_t> pr = _result;
+      std::pair<MemSafetyProbe22::tree, uint64_t> pr = std::move(_result);
       _result = std::make_pair(tree::node(pl.first, a1, pr.first),
                                ((pl.second + a1) + pr.second));
     }

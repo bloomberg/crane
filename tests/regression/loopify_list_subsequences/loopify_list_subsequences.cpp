@@ -61,7 +61,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(
   List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified tails: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -75,7 +75,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(
       } else {
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         _stack.emplace_back(_Resume_Cons{l});
-        _stack.emplace_back(_Enter{std::move(*a1)});
+        _stack.emplace_back(_Enter{*a1});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
@@ -130,7 +130,7 @@ List<List<uint64_t>> LoopifyListSubsequences::inits_fuel(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       _result = List<List<uint64_t>>::cons(
           List<uint64_t>::nil(), map_cons_helper(a0, std::move(rest)));
     }
@@ -286,7 +286,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, n});
+  _stack.emplace_back(_Enter{std::move(l), n});
   /// Loopified split_at: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -305,14 +305,15 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{std::move(*a1), n_});
+          _stack.emplace_back(_Enter{*a1, n_});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const List<uint64_t> &before = _result.first;
-      const List<uint64_t> &after = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &before = _cs.first;
+      const List<uint64_t> &after = _cs.second;
       _result =
           std::make_pair(List<uint64_t>::cons(std::move(a0), before), after);
     }

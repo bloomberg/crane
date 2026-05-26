@@ -41,8 +41,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
       auto _f = std::move(std::get<_Cont_a>(_frame));
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      const List<uint64_t> &xs = _result.first;
-      const List<uint64_t> &ys = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &xs = _cs.first;
+      const List<uint64_t> &ys = _cs.second;
       _result = std::make_pair(List<uint64_t>::cons(a, xs),
                                List<uint64_t>::cons(b, ys));
     }
@@ -85,8 +86,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const List<uint64_t> &odds = _result.first;
-      const List<uint64_t> &evens = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &odds = _cs.first;
+      const List<uint64_t> &evens = _cs.second;
       _result = std::make_pair(List<uint64_t>::cons(a0, evens), odds);
     }
   }
@@ -128,8 +130,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const List<uint64_t> &yes = _result.first;
-      const List<uint64_t> &no = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &yes = _cs.first;
+      const List<uint64_t> &no = _cs.second;
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, yes), no);
       } else {
@@ -199,21 +202,19 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListPairing::zip_longest_fuel(
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(l2.v());
             _stack.emplace_back(_Resume_Cons{std::make_pair(default0, a00)});
-            _stack.emplace_back(
-                _Enter{std::move(*a10), List<uint64_t>::nil(), fuel_});
+            _stack.emplace_back(_Enter{*a10, List<uint64_t>::nil(), fuel_});
           }
         } else {
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(l1.v());
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
             _stack.emplace_back(_Resume_Nil{std::make_pair(a0, default0)});
-            _stack.emplace_back(
-                _Enter{List<uint64_t>::nil(), std::move(*a1), fuel_});
+            _stack.emplace_back(_Enter{List<uint64_t>::nil(), *a1, fuel_});
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(l2.v());
             _stack.emplace_back(_Resume_Cons_1{std::make_pair(a0, a00)});
-            _stack.emplace_back(_Enter{std::move(*a10), std::move(*a1), fuel_});
+            _stack.emplace_back(_Enter{*a10, *a1, fuel_});
           }
         }
       }
@@ -329,8 +330,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::split_even_odd(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const List<uint64_t> &evens = _result.first;
-      const List<uint64_t> &odds = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &evens = _cs.first;
+      const List<uint64_t> &odds = _cs.second;
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
         _result = std::make_pair(List<uint64_t>::cons(a0, evens), odds);
       } else {

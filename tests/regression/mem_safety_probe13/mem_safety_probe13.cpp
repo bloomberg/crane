@@ -107,9 +107,10 @@ MemSafetyProbe13::tree_vals_and_fns(
       const MemSafetyProbe13::tree &a0_value = _f.a0_value;
       uint64_t a1 = _f.a1;
       const MemSafetyProbe13::tree &a2_value = *_f.a2_value;
-      const MemSafetyProbe13::mylist<uint64_t> &lvals = _result.first;
+      auto _cs = std::move(_result);
+      const MemSafetyProbe13::mylist<uint64_t> &lvals = _cs.first;
       const MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>> &lfns =
-          _result.second;
+          _cs.second;
       _stack.emplace_back(_Cont_lvals{a0_value, a1, a2_value, lfns, lvals});
       _stack.emplace_back(_Enter{&a2_value});
     } else {
@@ -120,9 +121,10 @@ MemSafetyProbe13::tree_vals_and_fns(
       MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>> lfns =
           std::move(_f.lfns);
       MemSafetyProbe13::mylist<uint64_t> lvals = std::move(_f.lvals);
-      const MemSafetyProbe13::mylist<uint64_t> &rvals = _result.first;
+      auto _cs1 = std::move(_result);
+      const MemSafetyProbe13::mylist<uint64_t> &rvals = _cs1.first;
       const MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>> &rfns =
-          _result.second;
+          _cs1.second;
       std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
         return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
       };

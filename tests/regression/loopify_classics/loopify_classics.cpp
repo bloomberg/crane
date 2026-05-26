@@ -149,7 +149,7 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t fuel_ = _f.fuel_;
       uint64_t m = _f.m;
-      uint64_t inner = _result;
+      uint64_t inner = std::move(_result);
       _stack.emplace_back(_Enter{
           inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }

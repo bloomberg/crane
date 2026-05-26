@@ -85,8 +85,9 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &cand = _result.first;
-      const uint64_t &count = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &cand = _cs.first;
+      const uint64_t &count = _cs.second;
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + 1));
       } else {
@@ -246,7 +247,7 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        _loop_l = std::move(*a1);
+        _loop_l = *a1;
         _loop_k = m;
       }
     }
@@ -475,7 +476,7 @@ bool LoopifySearch::subset_sum_fuel(
       const List<uint64_t> &a1 = *_f.a1;
       uint64_t f = _f.f;
       uint64_t target = _f.target;
-      bool without = _result;
+      bool without = std::move(_result);
       if (without) {
         _result = true;
       } else {
@@ -515,7 +516,7 @@ List<uint64_t> LoopifySearch::sieve_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified sieve_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -593,7 +594,7 @@ List<uint64_t> LoopifySearch::nub_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified nub_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -611,10 +612,10 @@ List<uint64_t> LoopifySearch::nub_fuel(
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           if (elem_impl(a0, *a1)) {
-            _stack.emplace_back(_Enter{std::move(*a1), f});
+            _stack.emplace_back(_Enter{*a1, f});
           } else {
             _stack.emplace_back(_Resume1{std::move(a0)});
-            _stack.emplace_back(_Enter{std::move(*a1), f});
+            _stack.emplace_back(_Enter{*a1, f});
           }
         }
       }
@@ -650,7 +651,7 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified remove_duplicates_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -720,7 +721,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -812,8 +813,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      const List<uint64_t> &a = _result.first;
-      const List<uint64_t> &b = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &a = _cs.first;
+      const List<uint64_t> &b = _cs.second;
       _result = std::make_pair(List<uint64_t>::cons(a0, a),
                                List<uint64_t>::cons(a00, b));
     }
@@ -847,7 +849,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1, fuel});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
   /// Loopified merge_sorted_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -873,10 +875,10 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(
                 std::get<typename List<uint64_t>::Cons>(l2.v_mut());
             if (a0 <= a00) {
               _stack.emplace_back(_Resume1{std::move(a0)});
-              _stack.emplace_back(_Enter{l2, std::move(*a1), f});
+              _stack.emplace_back(_Enter{l2, *a1, f});
             } else {
               _stack.emplace_back(_Resume2{std::move(a00)});
-              _stack.emplace_back(_Enter{std::move(*a10), l1, f});
+              _stack.emplace_back(_Enter{*a10, l1, f});
             }
           }
         }
@@ -925,7 +927,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_a -> _Combine_a.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1131,10 +1133,10 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
             _stack.emplace_back(_Resume_Nil{map_cons(
                 a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
                                                List<List<uint64_t>>::nil()))});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           } else {
             _stack.emplace_back(_After_Cons{remaining, remaining, f, a0});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           }
         }
       }
@@ -1289,7 +1291,7 @@ uint64_t LoopifySearch::min_element(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t min_rest = _result;
+      uint64_t min_rest = std::move(_result);
       if (a0 <= min_rest) {
         _result = std::move(a0);
       } else {

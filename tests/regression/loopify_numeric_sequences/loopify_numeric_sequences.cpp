@@ -210,7 +210,7 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
-      _result = ((_result + _f._result_1) + _f._result_0);
+      _result = ((std::move(_result) + _f._result_1) + _f._result_0);
     }
   }
   return _result;
@@ -294,7 +294,7 @@ uint64_t LoopifyNumericSequences::staircase_fuel(
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
-      _result = ((_result + _f._result_1) + _f._result_0);
+      _result = ((std::move(_result) + _f._result_1) + _f._result_0);
     }
   }
   return _result;

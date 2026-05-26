@@ -296,7 +296,7 @@ struct MemSafetyProbe16 {
     uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{acc, trees});
+    _stack.emplace_back(_Enter{std::move(acc), trees});
     /// Loopified compose_summers: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -425,7 +425,7 @@ struct MemSafetyProbe16 {
     mylist<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{k, &t});
+    _stack.emplace_back(_Enter{std::move(k), &t});
     /// Loopified flatten_cps_aux: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

@@ -174,7 +174,7 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
       _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (_result + (_f._result_1 + _f._result_0));
+      _result = (std::move(_result) + (_f._result_1 + _f._result_0));
     }
   }
   return _result;
@@ -517,7 +517,7 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(
     } else {
       auto _f = std::move(std::get<_Cont__x>(_frame));
       uint64_t digit = _f.digit;
-      uint64_t rest = _result;
+      uint64_t rest = std::move(_result);
       _result = (digit + (UINT64_C(10) * rest));
     }
   }
@@ -708,7 +708,7 @@ uint64_t LoopifyNumbers::staircase_fuel(
       _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = (_result + (_f._result_1 + _f._result_0));
+      _result = (std::move(_result) + (_f._result_1 + _f._result_0));
     }
   }
   return _result;
@@ -884,7 +884,7 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
       _stack.emplace_back(_Enter{_f.n_, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
-      _result = ((_result * _f._result_1) + _f._result_0);
+      _result = ((std::move(_result) * _f._result_1) + _f._result_0);
     }
   }
   return _result;
@@ -1060,13 +1060,13 @@ uint64_t LoopifyNumbers::power_mod_fuel(
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t m = _f.m;
-      uint64_t half = _result;
+      uint64_t half = std::move(_result);
       _result = (m ? (half * half) % m : (half * half));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
       uint64_t b = _f.b;
       uint64_t m = _f.m;
-      uint64_t half = _result;
+      uint64_t half = std::move(_result);
       _result = (m ? (b * (half * half)) % m : (b * (half * half)));
     }
   }

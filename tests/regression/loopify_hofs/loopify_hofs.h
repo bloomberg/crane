@@ -515,7 +515,7 @@ struct LoopifyHofs {
     List<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l, fuel});
+    _stack.emplace_back(_Enter{std::move(l), fuel});
     /// Loopified scanl1_fuel: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -657,7 +657,7 @@ struct LoopifyHofs {
         uint64_t a0 = _f.a0;
         uint64_t acc = _f.acc;
         F0 f = _f.f;
-        List<uint64_t> rest = _result;
+        List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(acc, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
       }
@@ -711,7 +711,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        List<uint64_t> rest = _result;
+        List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(a0, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
       }
@@ -805,7 +805,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        List<uint64_t> rest = _result;
+        List<uint64_t> rest = std::move(_result);
         auto _cs = f(a0);
         if (_cs.has_value()) {
           const uint64_t &y = *_cs;
@@ -890,7 +890,7 @@ struct LoopifyHofs {
     List<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l2, l1, fuel});
+    _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
     /// Loopified merge_by_fuel: _Enter -> _Resume1 -> _Resume2.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -918,10 +918,10 @@ struct LoopifyHofs {
                   std::get<typename List<uint64_t>::Cons>(l2.v_mut());
               if (cmp(a0, a00) <= UINT64_C(0)) {
                 _stack.emplace_back(_Resume1{std::move(a0)});
-                _stack.emplace_back(_Enter{l2, std::move(*a1), f});
+                _stack.emplace_back(_Enter{l2, *a1, f});
               } else {
                 _stack.emplace_back(_Resume2{std::move(a00)});
-                _stack.emplace_back(_Enter{std::move(*a10), l1, f});
+                _stack.emplace_back(_Enter{*a10, l1, f});
               }
             }
           }
@@ -991,7 +991,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        uint64_t rest_max = _result;
+        uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max <= fx) {
           _result = std::move(fx);
@@ -1096,7 +1096,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 cmp = _f.cmp;
-        uint64_t m = _result;
+        uint64_t m = std::move(_result);
         if (UINT64_C(0) <= cmp(a0, m)) {
           _result = std::move(a0);
         } else {
@@ -1195,8 +1195,9 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 p = _f.p;
-        const List<uint64_t> &yes = _result.first;
-        const List<uint64_t> &no = _result.second;
+        auto _cs = std::move(_result);
+        const List<uint64_t> &yes = _cs.first;
+        const List<uint64_t> &no = _cs.second;
         if (p(a0)) {
           _result = std::make_pair(List<uint64_t>::cons(a0, yes), no);
         } else {
@@ -1355,8 +1356,9 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        const List<uint64_t> &taken = _result.first;
-        const List<uint64_t> &rest = _result.second;
+        auto _cs = std::move(_result);
+        const List<uint64_t> &taken = _cs.first;
+        const List<uint64_t> &rest = _cs.second;
         _result = std::make_pair(List<uint64_t>::cons(a0, taken), rest);
       }
     }
@@ -1462,10 +1464,11 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        const uint64_t &acc__ = _result.first;
-        const List<uint64_t> &ys = _result.second;
-        _result = std::make_pair(std::move(_result.first),
-                                 List<uint64_t>::cons(y, ys));
+        auto _cs1 = std::move(_result);
+        const uint64_t &acc__ = _cs1.first;
+        const List<uint64_t> &ys = _cs1.second;
+        _result =
+            std::make_pair(std::move(_cs1.first), List<uint64_t>::cons(y, ys));
       }
     }
     return _result;

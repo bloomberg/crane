@@ -144,7 +144,7 @@ struct LoopifyPredicates {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         if (p(std::move(a0))) {
-          _loop_l = std::move(*a1);
+          _loop_l = *a1;
         } else {
           return _loop_l;
         }
@@ -172,7 +172,7 @@ struct LoopifyPredicates {
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{std::move(l)});
     /// Loopified span: _Enter -> _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -187,7 +187,7 @@ struct LoopifyPredicates {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           if (p(a0)) {
             _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{std::move(*a1)});
+            _stack.emplace_back(_Enter{*a1});
           } else {
             _result = std::make_pair(List<uint64_t>::nil(), l);
           }
@@ -195,8 +195,9 @@ struct LoopifyPredicates {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        const List<uint64_t> &yes = _result.first;
-        const List<uint64_t> &no = _result.second;
+        auto _cs = std::move(_result);
+        const List<uint64_t> &yes = _cs.first;
+        const List<uint64_t> &no = _cs.second;
         _result = std::make_pair(List<uint64_t>::cons(std::move(a0), yes), no);
       }
     }
@@ -223,7 +224,7 @@ struct LoopifyPredicates {
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l});
+    _stack.emplace_back(_Enter{std::move(l)});
     /// Loopified break_at: _Enter -> _Cont1.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -240,14 +241,15 @@ struct LoopifyPredicates {
             _result = std::make_pair(List<uint64_t>::nil(), l);
           } else {
             _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{std::move(*a1)});
+            _stack.emplace_back(_Enter{*a1});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
-        const List<uint64_t> &before = _result.first;
-        const List<uint64_t> &after = _result.second;
+        auto _cs = std::move(_result);
+        const List<uint64_t> &before = _cs.first;
+        const List<uint64_t> &after = _cs.second;
         _result =
             std::make_pair(List<uint64_t>::cons(std::move(a0), before), after);
       }

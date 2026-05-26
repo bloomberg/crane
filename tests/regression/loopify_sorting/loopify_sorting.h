@@ -153,8 +153,9 @@ struct LoopifySorting {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         T1 a0 = _f.a0;
         T1 a00 = _f.a00;
-        const List<T1> &l1 = _result.first;
-        const List<T1> &l2 = _result.second;
+        auto _cs = std::move(_result);
+        const List<T1> &l1 = _cs.first;
+        const List<T1> &l2 = _cs.second;
         _result =
             std::make_pair(List<T1>::cons(a0, l1), List<T1>::cons(a00, l2));
       }
@@ -203,7 +204,7 @@ struct LoopifySorting {
     List<uint64_t> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l2, l1, fuel});
+    _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
     /// Loopified merge_by_fuel: _Enter -> _Resume1 -> _Resume2.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -231,10 +232,10 @@ struct LoopifySorting {
                   std::get<typename List<uint64_t>::Cons>(l2.v_mut());
               if (cmp(a0, a00)) {
                 _stack.emplace_back(_Resume1{std::move(a0)});
-                _stack.emplace_back(_Enter{l2, std::move(*a1), f});
+                _stack.emplace_back(_Enter{l2, *a1, f});
               } else {
                 _stack.emplace_back(_Resume2{std::move(a00)});
-                _stack.emplace_back(_Enter{std::move(*a10), l1, f});
+                _stack.emplace_back(_Enter{*a10, l1, f});
               }
             }
           }

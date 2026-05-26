@@ -355,7 +355,7 @@ uint64_t LoopifyNumericMisc::list_min(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t min_rest = _result;
+      uint64_t min_rest = std::move(_result);
       if (a0 < min_rest) {
         _result = std::move(a0);
       } else {

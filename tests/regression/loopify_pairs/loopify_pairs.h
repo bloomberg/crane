@@ -220,8 +220,9 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         T1 a0 = _f.a0;
         F0 p = _f.p;
-        const list<T1> &yes = _result.first;
-        const list<T1> &no = _result.second;
+        auto _cs = std::move(_result);
+        const list<T1> &yes = _cs.first;
+        const list<T1> &no = _cs.second;
         if (p(a0)) {
           _result = std::make_pair(list<T1>::cons(a0, yes), no);
         } else {
@@ -370,7 +371,7 @@ struct LoopifyPairs {
     std::pair<list<T1>, list<T1>> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l, n});
+    _stack.emplace_back(_Enter{std::move(l), n});
     /// Loopified split_at: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
@@ -388,14 +389,15 @@ struct LoopifyPairs {
           } else {
             auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
             _stack.emplace_back(_Cont_Cons{std::move(a0)});
-            _stack.emplace_back(_Enter{std::move(*a1), m});
+            _stack.emplace_back(_Enter{*a1, m});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         T1 a0 = _f.a0;
-        const list<T1> &taken = _result.first;
-        const list<T1> &rest = _result.second;
+        auto _cs = std::move(_result);
+        const list<T1> &taken = _cs.first;
+        const list<T1> &rest = _cs.second;
         _result = std::make_pair(list<T1>::cons(std::move(a0), taken), rest);
       }
     }
@@ -450,8 +452,9 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         T1 a0 = _f.a0;
         T1 a00 = _f.a00;
-        const list<T1> &evens = _result.first;
-        const list<T1> &odds = _result.second;
+        auto _cs = std::move(_result);
+        const list<T1> &evens = _cs.first;
+        const list<T1> &odds = _cs.second;
         _result = std::make_pair(list<T1>::cons(a0, evens),
                                  list<T1>::cons(a00, odds));
       }
@@ -502,8 +505,9 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
         T1 a0 = _f.a0;
-        const list<T1> &ys = _result.first;
-        const list<T1> &zs = _result.second;
+        auto _cs = std::move(_result);
+        const list<T1> &ys = _cs.first;
+        const list<T1> &zs = _cs.second;
         _result = std::make_pair(list<T1>::cons(a0, ys), zs);
       }
     }
@@ -567,10 +571,11 @@ struct LoopifyPairs {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        const uint64_t &final_acc = _result.first;
-        const list<uint64_t> &ys = _result.second;
-        _result = std::make_pair(std::move(_result.first),
-                                 list<uint64_t>::cons(y, ys));
+        auto _cs1 = std::move(_result);
+        const uint64_t &final_acc = _cs1.first;
+        const list<uint64_t> &ys = _cs1.second;
+        _result =
+            std::make_pair(std::move(_cs1.first), list<uint64_t>::cons(y, ys));
       }
     }
     return _result;

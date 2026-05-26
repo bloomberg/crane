@@ -346,10 +346,11 @@ struct LoopifyFolds {
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
-        const uint64_t &final_acc = _result.first;
-        const List<uint64_t> &ys = _result.second;
-        _result = std::make_pair(std::move(_result.first),
-                                 List<uint64_t>::cons(y, ys));
+        auto _cs1 = std::move(_result);
+        const uint64_t &final_acc = _cs1.first;
+        const List<uint64_t> &ys = _cs1.second;
+        _result =
+            std::make_pair(std::move(_cs1.first), List<uint64_t>::cons(y, ys));
       }
     }
     return _result;

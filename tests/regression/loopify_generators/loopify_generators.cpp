@@ -103,21 +103,19 @@ List<std::pair<uint64_t, uint64_t>> LoopifyGenerators::zip_longest_aux(
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(l2.v());
             _stack.emplace_back(_Resume_Cons{std::make_pair(default0, a00)});
-            _stack.emplace_back(
-                _Enter{f, std::move(*a10), List<uint64_t>::nil()});
+            _stack.emplace_back(_Enter{f, *a10, List<uint64_t>::nil()});
           }
         } else {
           const auto &[a0, a1] =
               std::get<typename List<uint64_t>::Cons>(l1.v());
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
             _stack.emplace_back(_Resume_Nil{std::make_pair(a0, default0)});
-            _stack.emplace_back(
-                _Enter{f, List<uint64_t>::nil(), std::move(*a1)});
+            _stack.emplace_back(_Enter{f, List<uint64_t>::nil(), *a1});
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(l2.v());
             _stack.emplace_back(_Resume_Cons_1{std::make_pair(a0, a00)});
-            _stack.emplace_back(_Enter{f, std::move(*a10), std::move(*a1)});
+            _stack.emplace_back(_Enter{f, *a10, *a1});
           }
         }
       }
@@ -200,7 +198,7 @@ List<uint64_t> LoopifyGenerators::build_list_fuel(
     } else {
       auto _f = std::move(std::get<_Cont__x>(_frame));
       uint64_t n_ = _f.n_;
-      List<uint64_t> half_result = _result;
+      List<uint64_t> half_result = std::move(_result);
       _result = half_result.app(List<uint64_t>::cons(n_, half_result));
     }
   }

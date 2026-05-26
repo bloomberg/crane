@@ -98,7 +98,7 @@ List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-        _loop_xs = std::move(*a1);
+        _loop_xs = *a1;
         _loop_m = m_;
       }
     }
@@ -123,7 +123,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{lst});
+  _stack.emplace_back(_Enter{std::move(lst)});
   /// Loopified span_eq: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -137,7 +137,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(lst.v_mut());
         if (first == a0) {
           _stack.emplace_back(_Cont1{a0});
-          _stack.emplace_back(_Enter{std::move(*a1)});
+          _stack.emplace_back(_Enter{*a1});
         } else {
           _result = std::make_pair(List<uint64_t>::nil(), lst);
         }
@@ -145,8 +145,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      const List<uint64_t> &s = _result.first;
-      const List<uint64_t> &r = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &s = _cs.first;
+      const List<uint64_t> &r = _cs.second;
       _result = std::make_pair(List<uint64_t>::cons(std::move(a0), s), r);
     }
   }
@@ -325,7 +326,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(
   List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified tails: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -339,7 +340,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(
       } else {
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         _stack.emplace_back(_Resume_Cons{l});
-        _stack.emplace_back(_Enter{std::move(*a1)});
+        _stack.emplace_back(_Enter{*a1});
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));

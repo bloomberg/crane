@@ -194,7 +194,7 @@ struct LoopifyCoindColist {
     List<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l, fuel});
+    _stack.emplace_back(_Enter{std::move(l), fuel});
     /// Loopified to_list: _Enter -> _Resume_Cocons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

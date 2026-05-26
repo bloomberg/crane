@@ -167,7 +167,7 @@ struct LoopifySearch {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 cmp = _f.cmp;
-        uint64_t m = _result;
+        uint64_t m = std::move(_result);
         if (cmp(a0, m) == UINT64_C(1)) {
           _result = std::move(a0);
         } else {

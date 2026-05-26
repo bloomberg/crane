@@ -124,7 +124,7 @@ List<List<uint64_t>> LoopifyHofs::subsequences(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto map_cons_x_impl =
           [&](auto &_self_map_cons_x,
               const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
@@ -263,7 +263,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified longest_run_fuel: _Enter -> _Cont2 -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -300,7 +300,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
     } else if (std::holds_alternative<_Cont2>(_frame)) {
       auto _f = std::move(std::get<_Cont2>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rec_result = _result;
+      List<uint64_t> rec_result = std::move(_result);
       if (std::holds_alternative<typename List<uint64_t>::Nil>(
               rec_result.v_mut())) {
         _result = List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
@@ -362,7 +362,7 @@ List<List<uint64_t>> LoopifyHofs::power_set(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> sub = _result;
+      List<List<uint64_t>> sub = std::move(_result);
       auto map_cons_x_impl =
           [&](auto &_self_map_cons_x,
               const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {

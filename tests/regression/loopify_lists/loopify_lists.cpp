@@ -356,7 +356,7 @@ uint64_t LoopifyLists::max_prefix_sum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t rest = _result;
+      uint64_t rest = std::move(_result);
       uint64_t sum = (a0 + rest);
       if (UINT64_C(0) <= sum) {
         _result = std::move(sum);
@@ -928,7 +928,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
               l.v());
           if (std::holds_alternative<
                   typename LoopifyLists::list<uint64_t>::Nil>(a0.v())) {
-            _stack.emplace_back(_Enter{std::move(*a1), f});
+            _stack.emplace_back(_Enter{*a1, f});
           } else {
             const auto &[a00, a10] =
                 std::get<typename LoopifyLists::list<uint64_t>::Cons>(a0.v());
@@ -1146,8 +1146,9 @@ LoopifyLists::swizzle(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const LoopifyLists::list<uint64_t> &odds = _result.first;
-      const LoopifyLists::list<uint64_t> &evens = _result.second;
+      auto _cs = std::move(_result);
+      const LoopifyLists::list<uint64_t> &odds = _cs.first;
+      const LoopifyLists::list<uint64_t> &evens = _cs.second;
       _result = std::make_pair(list<uint64_t>::cons(a0, evens), odds);
     }
   }
@@ -1203,7 +1204,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::interleave(
   LoopifyLists::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1)});
   /// Loopified interleave: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1225,7 +1226,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::interleave(
           auto &[a00, a10] =
               std::get<typename LoopifyLists::list<uint64_t>::Cons>(l2.v_mut());
           _stack.emplace_back(_Resume_Cons{std::move(a0), std::move(a00)});
-          _stack.emplace_back(_Enter{std::move(*a10), std::move(*a1)});
+          _stack.emplace_back(_Enter{*a10, *a1});
         }
       }
     } else {
@@ -1395,7 +1396,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::app_helper(
   LoopifyLists::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified app_helper: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1441,7 +1442,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::double_append(
   LoopifyLists::list<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, &l1});
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1462,7 +1463,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::double_append(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      LoopifyLists::list<uint64_t> rest = _result;
+      LoopifyLists::list<uint64_t> rest = std::move(_result);
       _result = list<uint64_t>::cons(a0, app_helper(rest, rest));
     }
   }
@@ -1547,7 +1548,7 @@ LoopifyLists::split_at(
       _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, n});
+  _stack.emplace_back(_Enter{std::move(l), n});
   /// Loopified split_at: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -1567,15 +1568,15 @@ LoopifyLists::split_at(
         } else {
           _stack.emplace_back(_Cont1{a0});
           _stack.emplace_back(
-              _Enter{std::move(*a1),
-                     (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _Enter{*a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         }
       }
     } else {
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      const LoopifyLists::list<uint64_t> &a = _result.first;
-      const LoopifyLists::list<uint64_t> &b = _result.second;
+      auto _cs = std::move(_result);
+      const LoopifyLists::list<uint64_t> &a = _cs.first;
+      const LoopifyLists::list<uint64_t> &b = _cs.second;
       _result = std::make_pair(list<uint64_t>::cons(std::move(a0), a), b);
     }
   }
@@ -1628,8 +1629,9 @@ LoopifyLists::unzip(
       auto _f = std::move(std::get<_Cont_a>(_frame));
       uint64_t a = _f.a;
       uint64_t b = _f.b;
-      const LoopifyLists::list<uint64_t> &xs = _result.first;
-      const LoopifyLists::list<uint64_t> &ys = _result.second;
+      auto _cs = std::move(_result);
+      const LoopifyLists::list<uint64_t> &xs = _cs.first;
+      const LoopifyLists::list<uint64_t> &ys = _cs.second;
       _result = std::make_pair(list<uint64_t>::cons(a, xs),
                                list<uint64_t>::cons(b, ys));
     }
@@ -1697,7 +1699,7 @@ LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
       if (_loop_n == UINT64_C(0)) {
         return _loop_l;
       } else {
-        _loop_l = std::move(*a1);
+        _loop_l = *a1;
         _loop_n =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }
@@ -1815,7 +1817,7 @@ uint64_t LoopifyLists::maximum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t max_rest = _result;
+      uint64_t max_rest = std::move(_result);
       if (max_rest <= a0) {
         _result = std::move(a0);
       } else {
@@ -1870,8 +1872,9 @@ std::pair<uint64_t, uint64_t> LoopifyLists::minmax(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &lo = _result.first;
-      const uint64_t &hi = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &lo = _cs.first;
+      const uint64_t &hi = _cs.second;
       _result = std::make_pair((a0 <= lo ? a0 : lo), (hi <= a0 ? a0 : hi));
     }
   }
@@ -2019,8 +2022,9 @@ std::pair<uint64_t, uint64_t> LoopifyLists::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &cand = _result.first;
-      const uint64_t &cnt = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &cand = _cs.first;
+      const uint64_t &cnt = _cs.second;
       if (a0 == cand) {
         _result = std::make_pair(cand, (cnt + 1));
       } else {
@@ -2147,8 +2151,9 @@ std::pair<uint64_t, uint64_t> LoopifyLists::sum_and_count(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &s = _result.first;
-      const uint64_t &c = _result.second;
+      auto _cs = std::move(_result);
+      const uint64_t &s = _cs.first;
+      const uint64_t &c = _cs.second;
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }

@@ -189,7 +189,7 @@ uint64_t MemSafetyProbe28::zip_trees(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), a10, a1, tree_sum(t2)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
@@ -286,7 +286,7 @@ uint64_t MemSafetyProbe28::zip_depth(
           const auto &[a00, a10, a20] =
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(_After_Node{*a00, a0.get(), tree_depth(t2)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
@@ -391,7 +391,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), a10, tree_sum(*a00), tree_sum(*a20)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
@@ -556,7 +556,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, t2, &t1});
+  _stack.emplace_back(_Enter{std::move(acc), t2, &t1});
   /// Loopified zip_collect: _Enter -> _Resume_Leaf -> _Resume_Leaf_1 ->
   /// _Resume_Node -> _Resume_Node_1.
   while (!_stack.empty()) {
@@ -583,8 +583,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(_Resume_Node{*a00, a0.get()});
           _stack.emplace_back(_Resume_Node_1{a1, a10});
-          _stack.emplace_back(
-              _Enter{std::move(acc), std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{std::move(acc), *a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_Resume_Leaf>(_frame)) {
@@ -689,7 +688,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
   MemSafetyProbe28::tree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t2, &t1});
+  _stack.emplace_back(_Enter{std::move(t2), &t1});
   /// Loopified merge_trees: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
   while (!_stack.empty()) {
@@ -714,7 +713,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v_mut());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), (a1 + std::move(a10))});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {

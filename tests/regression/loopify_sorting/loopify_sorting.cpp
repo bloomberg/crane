@@ -19,7 +19,7 @@ List<uint64_t> LoopifySorting::insert(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified insert: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -35,7 +35,7 @@ List<uint64_t> LoopifySorting::insert(
           _result = List<uint64_t>::cons(x, l);
         } else {
           _stack.emplace_back(_Resume1{std::move(a0)});
-          _stack.emplace_back(_Enter{std::move(*a1)});
+          _stack.emplace_back(_Enter{*a1});
         }
       }
     } else {
@@ -111,7 +111,7 @@ List<uint64_t> LoopifySorting::merge_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l2, l1, fuel});
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
   /// Loopified merge_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -137,10 +137,10 @@ List<uint64_t> LoopifySorting::merge_fuel(
                 std::get<typename List<uint64_t>::Cons>(l2.v_mut());
             if (a0 <= a00) {
               _stack.emplace_back(_Resume1{std::move(a0)});
-              _stack.emplace_back(_Enter{l2, std::move(*a1), f});
+              _stack.emplace_back(_Enter{l2, *a1, f});
             } else {
               _stack.emplace_back(_Resume2{std::move(a00)});
-              _stack.emplace_back(_Enter{std::move(*a10), l1, f});
+              _stack.emplace_back(_Enter{*a10, l1, f});
             }
           }
         }
@@ -187,7 +187,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_l1 -> _Combine_l1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -271,8 +271,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t pivot = _f.pivot;
-      const List<uint64_t> &lo = _result.first;
-      const List<uint64_t> &hi = _result.second;
+      auto _cs = std::move(_result);
+      const List<uint64_t> &lo = _cs.first;
+      const List<uint64_t> &hi = _cs.second;
       if (a0 <= pivot) {
         _result = std::make_pair(List<uint64_t>::cons(a0, lo), hi);
       } else {
@@ -311,7 +312,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_lo -> _Combine_lo.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

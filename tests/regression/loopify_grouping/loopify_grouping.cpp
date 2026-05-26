@@ -76,7 +76,7 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
-      List<List<uint64_t>> rec_result = _result;
+      List<List<uint64_t>> rec_result = std::move(_result);
       _result = prepend_to_groups(a0, a0 == a00, std::move(rec_result));
     }
   }
@@ -139,7 +139,7 @@ List<uint64_t> LoopifyGrouping::nub(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rest = _result;
+      List<uint64_t> rest = std::move(_result);
       if (elem(a0, rest)) {
         _result = std::move(rest);
       } else {
@@ -238,8 +238,9 @@ LoopifyGrouping::partition3(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t pivot = _f.pivot;
-      const std::pair<List<uint64_t>, List<uint64_t>> &p = _result.first;
-      const List<uint64_t> &greater = _result.second;
+      auto _cs = std::move(_result);
+      const std::pair<List<uint64_t>, List<uint64_t>> &p = _cs.first;
+      const List<uint64_t> &greater = _cs.second;
       const List<uint64_t> &less = p.first;
       const List<uint64_t> &equal = p.second;
       if (a0 < pivot) {

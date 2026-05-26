@@ -1220,12 +1220,9 @@ let assign_result_and_stop expr =
     Self-assignments (_loop_x = _loop_x) are skipped entirely. When there is
     only one non-trivial assignment the temps are unnecessary but harmless.
 
-    When a next-value expression is [CPPderef] (i.e., advancing a list to its
-    tail via [*(d_a1)]) and the type is non-trivially-copyable, we wrap it in
-    [CPPmove].  The dereference target is a field inside the loop variable that
-    this same update will overwrite, so the underlying [unique_ptr] will be
-    null-ed before the old value is destroyed — making the move safe and
-    reducing the cost from O(n) deep-copy to O(1). *)
+    [CPPderef] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
+    because the deref target may be through a shared_ptr whose pointee is
+    aliased by the caller. *)
 let make_shadow_updates shadow_params args =
   let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
@@ -1246,15 +1243,7 @@ let make_shadow_updates shadow_params args =
       (fun ((shadow_id, _ty), arg) -> not (is_self_assign shadow_id arg))
       pairs
   in
-  (* Choose the RHS expression for a shadow update.  When the next value is a
-     [CPPderef] into an owned structure (e.g. [*(d_a1)] from a cons-cell
-     pattern match), move instead of copying to avoid an O(n) deep-copy. *)
-  let make_rhs ty arg =
-    let stripped = strip_ref_and_const_type ty in
-    match arg with
-    | CPPderef _ when not (is_trivially_copyable_type stripped) -> CPPmove arg
-    | _ -> arg
-  in
+  let make_rhs _ty arg = arg in
   if List.length non_trivial <= 1 then
     (* 0 or 1 assignment — no hazard possible, assign directly *)
     List.filter_map
@@ -3875,7 +3864,7 @@ let build_scrutinee_handler
   in
   let case_stmt =
     Scustom_case
-      (ty, CPPvar (id_result), tyargs, rewritten_branches, err)
+      (ty, CPPmove (CPPvar (id_result)), tyargs, rewritten_branches, err)
   in
   if n > 0 then
     bindings @ [case_stmt]
@@ -4273,7 +4262,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
       let handler =
         let partials = frame_fields_named all_field_names n_partials in
         let saved_vars = frame_fields_named ~offset:n_partials all_field_names n_saved in
-        let all_results = partials @ [CPPvar (id_result)] in
+        let all_results = partials @ [CPPmove (CPPvar (id_result))] in
         let combined = acd.acd_combine saved_vars all_results in
         assign_result combined
       in
@@ -5006,7 +4995,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       | Some cs ->
         (* Direct call: id = f(args) *)
         let call_name = make_call_frame_name "_Cont" call_counter seen ?branch_ctx () in
-        let handler = [Sasgn (id, ty_opt, CPPvar (id_result))] in
+        let handler = [Sasgn (id, ty_opt, CPPmove (CPPvar (id_result)))] in
         register_frame frames_ref ~name:call_name ~saved_types:[]
           ~saved_exprs:[] ~env ~handler;
         let push_call =
@@ -5052,7 +5041,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           let fnames = last_frame.cf_field_names in
           let partials = frame_fields_named fnames n_partials in
           let saved_vars = frame_fields_named ~offset:n_partials fnames n_saved in
-          let all_results = partials @ [CPPvar (id_result)] in
+          let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
           [Sasgn (id, ty_opt, combined)]
         in
@@ -5173,7 +5162,7 @@ and rewrite_enter_stmts ctx stmts =
         (* Direct call: id = f(args) — no decomposition needed *)
         make_cont_handler
           ~offset:0
-          ~make_assign_expr:(fun _fnames -> CPPvar (id_result))
+          ~make_assign_expr:(fun _fnames -> CPPmove (CPPvar (id_result)))
           ~saved:[] ~types:[]
           ~enter_args:(filter_by_mask varying cs.cs_args)
       | None ->
@@ -5185,7 +5174,7 @@ and rewrite_enter_stmts ctx stmts =
         make_cont_handler
           ~offset:n_d
           ~make_assign_expr:(fun fnames ->
-            d.d_rebuild (frame_fields_named fnames n_d) (CPPvar (id_result)))
+            d.d_rebuild (frame_fields_named fnames n_d) (CPPmove (CPPvar (id_result))))
           ~saved:d.d_saved ~types:d_types
           ~enter_args:(filter_by_mask varying d.d_rec_args)
       | None ->
@@ -5245,7 +5234,7 @@ and rewrite_enter_stmts ctx stmts =
         let patched_handler =
           let partials = frame_fields_named patched_field_names n_partials in
           let saved_vars = frame_fields_named ~offset:n_partials patched_field_names n_orig_saved in
-          let all_results = partials @ [CPPvar (id_result)] in
+          let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
           bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed
         in
@@ -5324,17 +5313,24 @@ let rewrite_enter_stmt ctx stmt =
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
 let make_stack_init ?(pointer_safe = []) varying_params =
+  let move_if_needed ty v =
+    match ty with
+    | Tmod (TMconst, _) | Tref _ -> v
+    | t when not (is_trivially_copyable_type t) -> CPPmove v
+    | _ -> v
+  in
   make_stack_push
     (CPPstruct_id
        ( id_enter,
          [],
          if pointer_safe = [] then
-           List.map (fun (id, _) -> CPPvar id) varying_params
+           List.map (fun (id, ty) -> move_if_needed ty (CPPvar id)) varying_params
          else
            List.map2
-             (fun safe (id, _) ->
+             (fun safe (id, ty) ->
                let v = CPPvar id in
-               if safe then CPPunop ("&", v) else v)
+               if safe then CPPunop ("&", v)
+               else move_if_needed ty v)
              pointer_safe varying_params ))
 
 (** Generate parameter bindings that read frame fields into locals.
@@ -5657,9 +5653,10 @@ let optimize_frame_push_args frame_field_types stmts =
   else
     let lookup name_s = List.assoc_opt name_s frame_field_types in
     let rec worthwhile_move_type = function
-      | Tglob (r, _, _) -> not (Table.is_enum_inductive r)
+      | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
                            && not (Table.is_coinductive r)
-                           && not (Table.is_custom r)
+                           && (not (Table.is_custom r)
+                               || List.exists worthwhile_move_type tparams)
       | Tunique_ptr _ | Tfun _ -> true
       | Tshared_ptr _ -> true
       | Tvariant ts -> List.exists worthwhile_move_type ts
@@ -5678,7 +5675,6 @@ let optimize_frame_push_args frame_field_types stmts =
       | CPPmove _ -> false
       | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
       | CPPvar id when Id.to_string id = "_result" -> true
-      | CPPderef _ when is_enter -> true
       | CPPvar id when List.exists (Id.equal id) owned_vars -> true
       | _ -> false
     in
@@ -5701,9 +5697,85 @@ let optimize_frame_push_args frame_field_types stmts =
           br.smb_field_bindings
       else []
     in
-    let rec on_stmts owned_vars ss = List.map (on_stmt owned_vars) ss
-    and on_stmt owned_vars = function
+    let is_owned_decl_type ty =
+      let rec has_ref = function
+        | Tref _ -> true
+        | Tmod (_, t) -> has_ref t
+        | _ -> false
+      in
+      not (has_ref ty) && worthwhile_move_type (strip_ref_and_const_type ty)
+    in
+    let is_frame_push = function
+      | Sexpr (CPPfun_call (_, [CPPstruct_id (name, _, _)])) ->
+        lookup (Id.to_string name) <> None
+      | _ -> false
+    in
+    let rec take_while pred = function
+      | x :: rest when pred x ->
+        let taken, remaining = take_while pred rest in
+        (x :: taken, remaining)
+      | rest -> ([], rest)
+    in
+    let process_push_group ~decl_owned match_owned pushes =
+      let owned_vars = decl_owned @ match_owned in
+      let push_data = List.map (function
+        | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) ->
+          (callee, name, targs, args)
+        | _ -> assert false
+      ) pushes in
+      let last_push_of = Hashtbl.create 8 in
+      List.iteri (fun idx (_, _, _, args) ->
+        List.iter (function
+          | CPPvar id when List.exists (Id.equal id) owned_vars ->
+            Hashtbl.replace last_push_of (Id.to_string id) idx
+          | _ -> ()
+        ) args
+      ) push_data;
+      let should_move_in_group ~is_enter idx ty arg =
+        let stripped = strip_ref_and_const_type ty in
+        worthwhile_move_type stripped
+        &&
+        match arg with
+        | CPPmove _ -> false
+        | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
+        | CPPvar id when Id.to_string id = "_result" -> true
+        | CPPvar id when List.exists (Id.equal id) owned_vars ->
+          Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
+        | _ -> false
+      in
+      List.mapi (fun idx (callee, name, targs, args) ->
+        match lookup (Id.to_string name) with
+        | Some types when List.length types = List.length args ->
+          let is_enter = Id.to_string name = "_Enter" in
+          let args' = List.map2 (fun ty arg ->
+            if should_move_in_group ~is_enter idx ty arg
+            then CPPmove arg else arg
+          ) types args in
+          Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args')]))
+        | _ -> List.nth pushes idx
+      ) push_data
+    in
+    let rec on_stmts ~decl_owned match_owned = function
+      | [] -> []
+      | (Sasgn (id, (Some ty), _) as s) :: rest
+        when is_owned_decl_type ty ->
+        on_stmt ~decl_owned match_owned s
+        :: on_stmts ~decl_owned:(id :: decl_owned) match_owned rest
+      | s :: rest when is_frame_push s ->
+        let more, after = take_while is_frame_push rest in
+        let group = s :: more in
+        if List.length group >= 2 then
+          process_push_group ~decl_owned match_owned group
+          @ on_stmts ~decl_owned match_owned after
+        else
+          on_stmt ~decl_owned match_owned s
+          :: on_stmts ~decl_owned match_owned rest
+      | s :: rest ->
+        on_stmt ~decl_owned match_owned s
+        :: on_stmts ~decl_owned match_owned rest
+    and on_stmt ~decl_owned match_owned = function
       | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) as s -> (
+        let owned_vars = decl_owned @ match_owned in
         match lookup (Id.to_string name) with
         | Some types ->
           let is_enter = Id.to_string name = "_Enter" in
@@ -5712,23 +5784,29 @@ let optimize_frame_push_args frame_field_types stmts =
                (callee,
                 [CPPstruct_id (name, targs,
                   adjust_args ~is_enter ~owned_vars types args)]))
-        | None -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s )
+        | None -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s )
       | Smatch (branches, default) ->
         let branches' =
           List.map
             (fun br ->
               let new_owned = owned_bindings_of_branch br in
-              { br with smb_body = on_stmts (new_owned @ owned_vars) br.smb_body })
+              { br with smb_body =
+                on_stmts ~decl_owned:[] (new_owned @ match_owned) br.smb_body })
             branches
         in
-        let default' = Option.map (on_stmts owned_vars) default in
+        let default' =
+          Option.map (on_stmts ~decl_owned:[] match_owned) default
+        in
         Smatch (branches', default')
       | Sif (cond, then_body, else_body) ->
-        Sif (cond, on_stmts owned_vars then_body, on_stmts owned_vars else_body)
-      | Sblock body -> Sblock (on_stmts owned_vars body)
-      | s -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s
+        Sif (cond,
+          on_stmts ~decl_owned match_owned then_body,
+          on_stmts ~decl_owned match_owned else_body)
+      | Sblock body ->
+        Sblock (on_stmts ~decl_owned match_owned body)
+      | s -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s
     in
-    on_stmts [] stmts
+    on_stmts ~decl_owned:[] [] stmts
 
 (** Build one branch of the frame-dispatch [Smatch].
 

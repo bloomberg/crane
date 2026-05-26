@@ -218,14 +218,14 @@ uint64_t MemSafetyProbe8::tree_collect(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
-      uint64_t left = _result;
+      uint64_t left = std::move(_result);
       _stack.emplace_back(_Cont_Node_1{a1, left});
       _stack.emplace_back(_Enter{&a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t left = _f.left;
-      uint64_t right = _result;
+      uint64_t right = std::move(_result);
       _result = ((left + a1) + right);
     }
   }

@@ -135,7 +135,7 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        uint64_t rest_max = _result;
+        uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max < fx) {
           _result = std::move(fx);
@@ -193,7 +193,7 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        uint64_t rest_min = _result;
+        uint64_t rest_min = std::move(_result);
         uint64_t fx = f(a0);
         if (fx < rest_min) {
           _result = std::move(fx);
@@ -251,7 +251,7 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        uint64_t rest_best = _result;
+        uint64_t rest_best = std::move(_result);
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);
         if (f_rest < fx) {
@@ -310,7 +310,7 @@ struct LoopifyExtrema {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         F0 f = _f.f;
-        uint64_t rest_best = _result;
+        uint64_t rest_best = std::move(_result);
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);
         if (fx < f_rest) {

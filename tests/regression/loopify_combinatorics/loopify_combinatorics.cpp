@@ -164,10 +164,10 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
             _stack.emplace_back(_Resume_Nil{map_cons(
                 a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
                                                List<List<uint64_t>>::nil()))});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           } else {
             _stack.emplace_back(_After_Cons{remaining, remaining, f, a0});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           }
         }
       }
@@ -290,7 +290,7 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto map_prepend_impl =
           [&](auto &_self_map_prepend,
               const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
@@ -440,7 +440,7 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto map_add_x_impl =
           [&](auto &_self_map_add_x,
               const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
@@ -487,7 +487,7 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
   List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified insert_everywhere: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -502,14 +502,14 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
       } else {
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         _stack.emplace_back(_Cont_Cons{a0, l, x});
-        _stack.emplace_back(_Enter{std::move(*a1)});
+        _stack.emplace_back(_Enter{*a1});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<uint64_t> l = std::move(_f.l);
       uint64_t x = _f.x;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y_impl =
           [&](auto &_self_prepend_y,
               const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
@@ -633,7 +633,7 @@ List<uint64_t> LoopifyCombinatorics::dedup_fuel(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rest = _result;
+      List<uint64_t> rest = std::move(_result);
       if (elem(a0, rest)) {
         _result = std::move(rest);
       } else {

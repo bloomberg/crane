@@ -224,8 +224,9 @@ LoopifyNestedConstructs::tuple_constr(
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
       uint64_t n = _f.n;
-      const std::pair<uint64_t, uint64_t> &p = _result.first;
-      const uint64_t &c = _result.second;
+      auto _cs = std::move(_result);
+      const std::pair<uint64_t, uint64_t> &p = _cs.first;
+      const uint64_t &c = _cs.second;
       const uint64_t &a = p.first;
       const uint64_t &b = p.second;
       _result = std::make_pair(std::make_pair((a + UINT64_C(1)), (b + n)),
@@ -405,13 +406,13 @@ uint64_t LoopifyNestedConstructs::compute_with_lets(
     } else if (std::holds_alternative<_Cont_n__>(_frame)) {
       auto _f = std::move(std::get<_Cont_n__>(_frame));
       uint64_t n__ = _f.n__;
-      uint64_t x = _result;
+      uint64_t x = std::move(_result);
       _stack.emplace_back(_Cont_n___1{x});
       _stack.emplace_back(_Enter{n__});
     } else {
       auto _f = std::move(std::get<_Cont_n___1>(_frame));
       uint64_t x = _f.x;
-      uint64_t y = _result;
+      uint64_t y = std::move(_result);
       uint64_t z = (x + y);
       _result = (z * UINT64_C(2));
     }

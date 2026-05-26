@@ -659,7 +659,7 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> sub_rest = _result;
+      List<List<uint64_t>> sub_rest = std::move(_result);
       auto map_prepend_c_impl =
           [&](auto &_self_map_prepend_c,
               const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
@@ -796,7 +796,7 @@ List<uint64_t> LoopifySequences::lis(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified lis: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -816,9 +816,9 @@ List<uint64_t> LoopifySequences::lis(
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 < a00) {
             _stack.emplace_back(_Resume1{std::move(a0)});
-            _stack.emplace_back(_Enter{std::move(*a1)});
+            _stack.emplace_back(_Enter{*a1});
           } else {
-            _stack.emplace_back(_Enter{std::move(*a1)});
+            _stack.emplace_back(_Enter{*a1});
           }
         }
       }

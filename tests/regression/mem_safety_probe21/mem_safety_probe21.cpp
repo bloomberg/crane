@@ -94,7 +94,7 @@ uint64_t MemSafetyProbe21::double_grow(
   uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, t});
+  _stack.emplace_back(_Enter{n, std::move(t)});
   /// Loopified double_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -256,7 +256,7 @@ uint64_t MemSafetyProbe21::sum_and_grow(
   uint64_t _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{n, t});
+  _stack.emplace_back(_Enter{n, std::move(t)});
   /// Loopified sum_and_grow: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

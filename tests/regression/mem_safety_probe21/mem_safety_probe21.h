@@ -220,7 +220,7 @@ struct MemSafetyProbe21 {
     uint64_t _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{k, &t});
+    _stack.emplace_back(_Enter{std::move(k), &t});
     /// Loopified cps_sum: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());

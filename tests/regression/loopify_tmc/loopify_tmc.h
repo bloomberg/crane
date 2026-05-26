@@ -200,7 +200,7 @@ struct LoopifyTmc {
     list<T1> _result{};
     std::vector<_Frame> _stack;
     _stack.reserve(8);
-    _stack.emplace_back(_Enter{l2, &l1});
+    _stack.emplace_back(_Enter{std::move(l2), &l1});
     /// Loopified app: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
