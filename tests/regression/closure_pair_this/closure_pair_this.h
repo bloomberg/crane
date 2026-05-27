@@ -158,7 +158,7 @@ struct ClosurePairThis {
     uint64_t noise =
         tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
     uint64_t a = p.first(noise);
-    uint64_t b = p.second(UINT64_C(1));
+    uint64_t b = std::move(p).second(UINT64_C(1));
     return (a + b);
   }();
 };

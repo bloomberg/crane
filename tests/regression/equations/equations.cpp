@@ -45,9 +45,9 @@ uint64_t Equations::gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine) {
   }
 }
 
-uint64_t Equations::gcd_unfold(const std::pair<uint64_t, uint64_t> &p) {
-  const uint64_t &n = p.first;
-  const uint64_t &n0 = p.second;
+uint64_t Equations::gcd_unfold(std::pair<uint64_t, uint64_t> p) {
+  uint64_t n = std::move(p.first);
+  uint64_t n0 = std::move(p.second);
   if (n <= 0) {
     return n0;
   } else {
@@ -62,9 +62,9 @@ uint64_t Equations::gcd_unfold(const std::pair<uint64_t, uint64_t> &p) {
 }
 
 Equations::gcd_graph
-Equations::gcd_graph_correct(const std::pair<uint64_t, uint64_t> &x) {
-  const uint64_t &n = x.first;
-  const uint64_t &n0 = x.second;
+Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
+  uint64_t n = std::move(x.first);
+  uint64_t n0 = std::move(x.second);
   if (n <= 0) {
     return gcd_graph::gcd_graph_equation_1(n0);
   } else {
@@ -82,7 +82,7 @@ Equations::gcd_graph_correct(const std::pair<uint64_t, uint64_t> &x) {
                     std::make_pair((n1 + 1), ((((n2 + 1) - (n1 + 1)) > (n2 + 1)
                                                    ? 0
                                                    : ((n2 + 1) - (n1 + 1)))));
-                return gcd_graph_correct(y);
+                return gcd_graph_correct(std::move(y));
               }());
         } else {
           return gcd_clause_3_graph::gcd_clause_3_graph_equation_2(
@@ -92,7 +92,7 @@ Equations::gcd_graph_correct(const std::pair<uint64_t, uint64_t> &x) {
                                          ? 0
                                          : ((n1 + 1) - (n2 + 1)))),
                                    (n2 + 1));
-                return gcd_graph_correct(y);
+                return gcd_graph_correct(std::move(y));
               }());
         }
       }());

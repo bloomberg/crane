@@ -105,7 +105,7 @@ void CountDown::co_count_down() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "stop")) {
+    if (string_eq(std::move(line), "stop")) {
       return;
     } else {
       std::cout << "tick"s << '\n';
@@ -146,7 +146,7 @@ void CountDown::co_announce(uint64_t round) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "stop")) {
+    if (string_eq(std::move(line), "stop")) {
       std::cout << "done"s << '\n';
       return;
     } else {
@@ -161,7 +161,7 @@ void CountDown::co_repeat(std::string msg) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "stop")) {
+    if (string_eq(std::move(line), "stop")) {
       return;
     } else {
       std::cout << msg << '\n';

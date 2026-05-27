@@ -210,11 +210,13 @@ struct MemSafetyProbe23 {
     std::pair<std::pair<tree, tree>, uint64_t> r = collect_children(tree::node(
         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
-    const std::pair<tree, tree> &p = r.first;
-    const uint64_t &s = r.second;
-    const tree &left_child = p.first;
-    const tree &right_child = p.second;
-    return ((tree_sum(left_child) + tree_sum(right_child)) + s);
+    std::pair<tree, tree> p = std::move(r.first);
+    uint64_t s = std::move(r.second);
+    tree left_child = std::move(p.first);
+    tree right_child = std::move(p.second);
+    return (
+        (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +
+        s);
   }();
   /// TEST 4: Recursive function that rebuilds tree with an
   /// ACCUMULATOR that captures the original tree. The accumulator

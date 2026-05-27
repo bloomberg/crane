@@ -189,11 +189,12 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
       } else {
         if (a00 < m) {
           auto _cs = delete_max_aux(m, *a1);
-          const List<BinomialHeap::tree> &j = _cs.first;
-          const List<BinomialHeap::tree> &k = _cs.second;
-          return std::make_pair(List<BinomialHeap::tree>::cons(
-                                    tree::node(a00, *a10, tree::leaf()), j),
-                                k);
+          List<BinomialHeap::tree> j = std::move(_cs.first);
+          List<BinomialHeap::tree> k = std::move(_cs.second);
+          return std::make_pair(
+              List<BinomialHeap::tree>::cons(
+                  tree::node(a00, *a10, tree::leaf()), std::move(j)),
+              std::move(k));
         } else {
           return std::make_pair(
               List<BinomialHeap::tree>::cons(tree::leaf(), *a1),
@@ -202,9 +203,11 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
       }
     } else {
       auto _cs = delete_max_aux(m, *a1);
-      const List<BinomialHeap::tree> &j = _cs.first;
-      const List<BinomialHeap::tree> &k = _cs.second;
-      return std::make_pair(List<BinomialHeap::tree>::cons(tree::leaf(), j), k);
+      List<BinomialHeap::tree> j = std::move(_cs.first);
+      List<BinomialHeap::tree> k = std::move(_cs.second);
+      return std::make_pair(
+          List<BinomialHeap::tree>::cons(tree::leaf(), std::move(j)),
+          std::move(k));
     }
   }
 }
@@ -215,10 +218,10 @@ BinomialHeap::delete_max(const List<BinomialHeap::tree> &q) {
   if (_cs.has_value()) {
     const uint64_t &m = *_cs;
     auto _cs1 = delete_max_aux(m, q);
-    const List<BinomialHeap::tree> &p_ = _cs1.first;
-    const List<BinomialHeap::tree> &q_ = _cs1.second;
+    List<BinomialHeap::tree> p_ = std::move(_cs1.first);
+    List<BinomialHeap::tree> q_ = std::move(_cs1.second);
     return std::make_optional<std::pair<uint64_t, List<BinomialHeap::tree>>>(
-        std::make_pair(m, join(p_, q_, tree::leaf())));
+        std::make_pair(m, join(std::move(p_), std::move(q_), tree::leaf())));
   } else {
     return std::optional<std::pair<uint64_t, List<BinomialHeap::tree>>>();
   }

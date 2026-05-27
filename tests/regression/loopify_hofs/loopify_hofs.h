@@ -1196,12 +1196,14 @@ struct LoopifyHofs {
         uint64_t a0 = _f.a0;
         F0 p = _f.p;
         auto _cs = std::move(_result);
-        const List<uint64_t> &yes = _cs.first;
-        const List<uint64_t> &no = _cs.second;
+        List<uint64_t> yes = std::move(_cs.first);
+        List<uint64_t> no = std::move(_cs.second);
         if (p(a0)) {
-          _result = std::make_pair(List<uint64_t>::cons(a0, yes), no);
+          _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
+                                   std::move(no));
         } else {
-          _result = std::make_pair(yes, List<uint64_t>::cons(a0, no));
+          _result = std::make_pair(std::move(yes),
+                                   List<uint64_t>::cons(a0, std::move(no)));
         }
       }
     }
@@ -1357,9 +1359,10 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
         auto _cs = std::move(_result);
-        const List<uint64_t> &taken = _cs.first;
-        const List<uint64_t> &rest = _cs.second;
-        _result = std::make_pair(List<uint64_t>::cons(a0, taken), rest);
+        List<uint64_t> taken = std::move(_cs.first);
+        List<uint64_t> rest = std::move(_cs.second);
+        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(taken)),
+                                 std::move(rest));
       }
     }
     return _result;
@@ -1456,19 +1459,19 @@ struct LoopifyHofs {
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto _cs = f(acc, a0);
-          const uint64_t &acc_ = _cs.first;
-          const uint64_t &y = _cs.second;
+          uint64_t acc_ = std::move(_cs.first);
+          uint64_t y = std::move(_cs.second);
           _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{a1.get(), std::move(_cs.first)});
+          _stack.emplace_back(_Enter{a1.get(), std::move(acc_)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
         auto _cs1 = std::move(_result);
-        const uint64_t &acc__ = _cs1.first;
-        const List<uint64_t> &ys = _cs1.second;
-        _result =
-            std::make_pair(std::move(_cs1.first), List<uint64_t>::cons(y, ys));
+        uint64_t acc__ = std::move(_cs1.first);
+        List<uint64_t> ys = std::move(_cs1.second);
+        _result = std::make_pair(std::move(acc__),
+                                 List<uint64_t>::cons(y, std::move(ys)));
       }
     }
     return _result;

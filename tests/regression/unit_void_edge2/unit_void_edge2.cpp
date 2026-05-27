@@ -99,7 +99,7 @@ UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
 uint64_t UnitVoidEdge2::compose_option_unit(bool b1, bool b2) {
   std::optional<std::monostate> o1 = make_some_unit(b1);
   std::optional<std::monostate> o2 = make_some_unit(b2);
-  return (use_option_unit(o1) + use_option_unit(o2));
+  return (use_option_unit(std::move(o1)) + use_option_unit(std::move(o2)));
 }
 
 UnitVoidEdge2::pair<uint64_t, std::monostate>

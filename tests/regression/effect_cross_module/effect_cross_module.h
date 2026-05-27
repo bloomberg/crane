@@ -98,7 +98,7 @@ struct EffectCrossModule {
     template <typename T1, typename F0> static T1 with_greeting(F0 &&f) {
       std::string name = ask_name();
       greet(name);
-      return f(name);
+      return f(std::move(name));
     }
   }; /// Outer code uses Inner's definitions
 

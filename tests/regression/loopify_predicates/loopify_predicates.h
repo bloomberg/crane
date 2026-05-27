@@ -196,9 +196,10 @@ struct LoopifyPredicates {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
         auto _cs = std::move(_result);
-        const List<uint64_t> &yes = _cs.first;
-        const List<uint64_t> &no = _cs.second;
-        _result = std::make_pair(List<uint64_t>::cons(std::move(a0), yes), no);
+        List<uint64_t> yes = std::move(_cs.first);
+        List<uint64_t> no = std::move(_cs.second);
+        _result = std::make_pair(
+            List<uint64_t>::cons(std::move(a0), std::move(yes)), std::move(no));
       }
     }
     return _result;
@@ -248,10 +249,11 @@ struct LoopifyPredicates {
         auto _f = std::move(std::get<_Cont1>(_frame));
         uint64_t a0 = _f.a0;
         auto _cs = std::move(_result);
-        const List<uint64_t> &before = _cs.first;
-        const List<uint64_t> &after = _cs.second;
-        _result =
-            std::make_pair(List<uint64_t>::cons(std::move(a0), before), after);
+        List<uint64_t> before = std::move(_cs.first);
+        List<uint64_t> after = std::move(_cs.second);
+        _result = std::make_pair(
+            List<uint64_t>::cons(std::move(a0), std::move(before)),
+            std::move(after));
       }
     }
     return _result;

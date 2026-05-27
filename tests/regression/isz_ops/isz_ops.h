@@ -111,8 +111,10 @@ struct IszOps {
       state s = state{List<uint64_t>::cons(
           UINT64_C(15),
           List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))};
-      return ((isz_loops(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)) +
-              (isz_terminates(s, UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)));
+      return (
+          (isz_loops(std::move(s), UINT64_C(0)) ? UINT64_C(1) : UINT64_C(0)) +
+          (isz_terminates(std::move(s), UINT64_C(0)) ? UINT64_C(1)
+                                                     : UINT64_C(0)));
     }();
   }();
   static inline const std::pair<std::pair<uint64_t, uint64_t>, uint64_t> t =

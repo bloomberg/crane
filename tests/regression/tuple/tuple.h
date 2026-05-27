@@ -58,20 +58,19 @@ struct Tuple {
     return Prod<T1, T2>::pair(a, b);
   }
 
-  template <typename T1, typename T2> static T1 fst(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+  template <typename T1, typename T2> static T1 fst(Prod<T1, T2> p) {
+    auto &[a0, a1] = p;
     return a0;
   }
 
-  template <typename T1, typename T2> static T2 snd(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+  template <typename T1, typename T2> static T2 snd(Prod<T1, T2> p) {
+    auto &[a0, a1] = p;
     return a1;
   }
 
-  template <typename T1, typename T2>
-  static Prod<T2, T1> swap(const Prod<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return Prod<T2, T1>::pair(a1, a0);
+  template <typename T1, typename T2> static Prod<T2, T1> swap(Prod<T1, T2> p) {
+    auto &[a0, a1] = p;
+    return Prod<T2, T1>::pair(std::move(a1), std::move(a0));
   }
 
   static inline const Prod<Nat, Nat> test_pair =

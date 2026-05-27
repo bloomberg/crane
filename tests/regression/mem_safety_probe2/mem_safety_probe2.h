@@ -100,7 +100,7 @@ struct MemSafetyProbe2 {
         return p.first.sum_values(_x0);
       };
       std::function<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
-        return p.second.sum_values(_x0);
+        return std::move(p).second.sum_values(_x0);
       };
       return (f(UINT64_C(1)) + g(UINT64_C(2)));
     }
@@ -433,7 +433,7 @@ struct MemSafetyProbe2 {
           .extract_and_apply();
   static inline const uint64_t test_opt_closure = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-    auto _cs = t.opt_adder(true);
+    auto _cs = std::move(t).opt_adder(true);
     if (_cs.has_value()) {
       const std::function<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(10));

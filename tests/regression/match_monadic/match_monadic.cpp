@@ -96,7 +96,7 @@ std::string MatchMonadic::match_then_bind(uint64_t n) {
 int64_t MatchMonadic::bind_then_match() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>(std::move(line).length());
   if (len == INT64_C(0)) {
     std::cout << "empty"s << '\n';
     return INT64_C(0);

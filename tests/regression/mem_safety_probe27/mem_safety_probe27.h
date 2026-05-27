@@ -286,7 +286,7 @@ struct MemSafetyProbe27 {
     auto _cs = p.first;
     if (_cs.has_value()) {
       const std::function<uint64_t(uint64_t)> &f = *_cs;
-      return (f(UINT64_C(100)) + p.second);
+      return (f(UINT64_C(100)) + std::move(p).second);
     } else {
       return UINT64_C(0);
     }

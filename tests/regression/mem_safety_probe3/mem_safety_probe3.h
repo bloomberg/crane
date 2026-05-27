@@ -385,7 +385,7 @@ struct MemSafetyProbe3 {
     auto _cs = p.first;
     if (_cs.has_value()) {
       const std::function<uint64_t(uint64_t)> &f = *_cs;
-      return (f(UINT64_C(10)) + p.second.sum_values(UINT64_C(0)));
+      return (f(UINT64_C(10)) + std::move(p).second.sum_values(UINT64_C(0)));
     } else {
       return UINT64_C(0);
     }

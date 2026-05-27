@@ -555,20 +555,25 @@ struct LoopifyPatterns {
         F0 p = _f.p;
         F1 q = _f.q;
         auto _cs = std::move(_result);
-        const std::pair<list<uint64_t>, list<uint64_t>> &p0 = _cs.first;
-        const list<uint64_t> &cs = _cs.second;
-        const list<uint64_t> &as_ = p0.first;
-        const list<uint64_t> &bs = p0.second;
+        std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
+        list<uint64_t> cs = std::move(_cs.second);
+        list<uint64_t> as_ = std::move(p0.first);
+        list<uint64_t> bs = std::move(p0.second);
         if (p(a0)) {
           _result = std::make_pair(
-              std::make_pair(list<uint64_t>::cons(a0, as_), bs), cs);
+              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
+                             std::move(bs)),
+              std::move(cs));
         } else {
           if (q(a0)) {
             _result = std::make_pair(
-                std::make_pair(as_, list<uint64_t>::cons(a0, bs)), cs);
+                std::make_pair(std::move(as_),
+                               list<uint64_t>::cons(a0, std::move(bs))),
+                std::move(cs));
           } else {
-            _result = std::make_pair(std::make_pair(as_, bs),
-                                     list<uint64_t>::cons(a0, cs));
+            _result =
+                std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
+                               list<uint64_t>::cons(a0, std::move(cs)));
           }
         }
       }

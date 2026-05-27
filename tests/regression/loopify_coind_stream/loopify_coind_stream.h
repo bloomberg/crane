@@ -204,8 +204,8 @@ struct LoopifyCoindStream {
     requires std::is_invocable_r_v<std::pair<T1, T2>, F0 &, T2 &>
   static stream<T1> unfold(F0 &&f, const T2 &seed) {
     auto _cs = f(seed);
-    const T1 &a = _cs.first;
-    const T2 &s_ = _cs.second;
+    T1 a = std::move(_cs.first);
+    T2 s_ = std::move(_cs.second);
     return stream<T1>::lazy_([=]() mutable -> stream<T1> {
       return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
     });
@@ -221,7 +221,7 @@ struct LoopifyCoindStream {
           nats, doubled);
   static inline const stream<uint64_t> fibs =
       unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
-          [](const std::pair<uint64_t, uint64_t> &pat) {
+          [](std::pair<uint64_t, uint64_t> pat) {
             const uint64_t &a = pat.first;
             const uint64_t &b = pat.second;
             return std::make_pair(a, std::make_pair(b, (a + b)));

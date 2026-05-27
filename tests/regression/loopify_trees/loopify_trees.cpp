@@ -853,8 +853,8 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
       auto _cs = std::move(_result);
-      const uint64_t &lc = _cs.first;
-      const uint64_t &ls = _cs.second;
+      uint64_t lc = std::move(_cs.first);
+      uint64_t ls = std::move(_cs.second);
       _stack.emplace_back(_Cont_lc{a1, lc, ls});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -863,8 +863,8 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       uint64_t lc = _f.lc;
       uint64_t ls = _f.ls;
       auto _cs1 = std::move(_result);
-      const uint64_t &rc = _cs1.first;
-      const uint64_t &rs = _cs1.second;
+      uint64_t rc = std::move(_cs1.first);
+      uint64_t rs = std::move(_cs1.second);
       _result = std::make_pair(((lc + rc) + 1), (a1 + (ls + rs)));
     }
   }
@@ -1271,8 +1271,8 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
       auto _cs = std::move(_result);
-      const uint64_t &lmin = _cs.first;
-      const uint64_t &lmax = _cs.second;
+      uint64_t lmin = std::move(_cs.first);
+      uint64_t lmax = std::move(_cs.second);
       _stack.emplace_back(_Cont_lmin{a1, lmax, lmin});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -1281,8 +1281,8 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       uint64_t lmax = _f.lmax;
       uint64_t lmin = _f.lmin;
       auto _cs1 = std::move(_result);
-      const uint64_t &rmin = _cs1.first;
-      const uint64_t &rmax = _cs1.second;
+      uint64_t rmin = std::move(_cs1.first);
+      uint64_t rmax = std::move(_cs1.second);
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
                                max3(lmax, rmax, a1));

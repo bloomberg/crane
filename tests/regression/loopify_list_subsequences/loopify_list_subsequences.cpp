@@ -312,10 +312,11 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       auto _cs = std::move(_result);
-      const List<uint64_t> &before = _cs.first;
-      const List<uint64_t> &after = _cs.second;
+      List<uint64_t> before = std::move(_cs.first);
+      List<uint64_t> after = std::move(_cs.second);
       _result =
-          std::make_pair(List<uint64_t>::cons(std::move(a0), before), after);
+          std::make_pair(List<uint64_t>::cons(std::move(a0), std::move(before)),
+                         std::move(after));
     }
   }
   return _result;

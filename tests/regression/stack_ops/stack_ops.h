@@ -128,13 +128,13 @@ struct StackOps {
             UINT64_C(9),
             List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
         UINT64_C(3)});
-    const std::optional<uint64_t> &o = _cs.first;
-    const state_with_acc &s_ = _cs.second;
+    std::optional<uint64_t> o = std::move(_cs.first);
+    state_with_acc s_ = std::move(_cs.second);
     if (o.has_value()) {
       const uint64_t &a = *o;
       return ((a + s_.stack_with_acc.length()) + s_.acc);
     } else {
-      return s_.acc;
+      return std::move(s_).acc;
     }
   }();
   static state_basic push_stack(const state_basic &s, uint64_t addr);

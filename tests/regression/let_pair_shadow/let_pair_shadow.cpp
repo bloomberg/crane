@@ -24,11 +24,11 @@ std::pair<uint64_t, uint64_t> LetPairShadow::sub_pair(uint64_t a, uint64_t b) {
 uint64_t LetPairShadow::double_call_destruct(uint64_t a, uint64_t b, uint64_t c,
                                              uint64_t d) {
   auto _cs = add_pair(a, b);
-  const uint64_t &sum_ab = _cs.first;
-  const uint64_t &prod_ab = _cs.second;
+  uint64_t sum_ab = std::move(_cs.first);
+  uint64_t prod_ab = std::move(_cs.second);
   auto _cs1 = sub_pair(c, d);
-  const uint64_t &diff_cd = _cs1.first;
-  const uint64_t &sum_cd = _cs1.second;
+  uint64_t diff_cd = std::move(_cs1.first);
+  uint64_t sum_cd = std::move(_cs1.second);
   return (((sum_ab + prod_ab) + diff_cd) + sum_cd);
 }
 
@@ -37,13 +37,13 @@ uint64_t LetPairShadow::triple_call_destruct(uint64_t a, uint64_t b, uint64_t c,
                                              uint64_t d, uint64_t e,
                                              uint64_t f) {
   auto _cs = add_pair(a, b);
-  const uint64_t &r1 = _cs.first;
-  const uint64_t &r2 = _cs.second;
+  uint64_t r1 = std::move(_cs.first);
+  uint64_t r2 = std::move(_cs.second);
   auto _cs1 = add_pair(c, d);
-  const uint64_t &r3 = _cs1.first;
-  const uint64_t &r4 = _cs1.second;
+  uint64_t r3 = std::move(_cs1.first);
+  uint64_t r4 = std::move(_cs1.second);
   auto _cs2 = add_pair(e, f);
-  const uint64_t &r5 = _cs2.first;
-  const uint64_t &r6 = _cs2.second;
+  uint64_t r5 = std::move(_cs2.first);
+  uint64_t r6 = std::move(_cs2.second);
   return (((((r1 + r2) + r3) + r4) + r5) + r6);
 }

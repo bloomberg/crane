@@ -480,7 +480,7 @@ struct TopologicalSort {
     return lorder
         .template combine<unsigned int>(ListDef::seq(0u, lorder.length()))
         .template map<List<bsl::pair<T1, unsigned int>>>(
-            [](const bsl::pair<List<T1>, unsigned int> &x) {
+            [](bsl::pair<List<T1>, unsigned int> x) {
               List<T1> fs = x.first;
               unsigned int rk = x.second;
               return fs.template map<bsl::pair<T1, unsigned int>>(

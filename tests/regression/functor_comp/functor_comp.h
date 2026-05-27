@@ -154,10 +154,9 @@ struct FunctorComp {
     using t = std::pair<List<uint64_t>, List<uint64_t>>;
     static inline const t empty =
         std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-    static t push(uint64_t x,
-                  const std::pair<List<uint64_t>, List<uint64_t>> &q);
+    static t push(uint64_t x, std::pair<List<uint64_t>, List<uint64_t>> q);
     static std::optional<std::pair<uint64_t, t>>
-    pop(const std::pair<List<uint64_t>, List<uint64_t>> &q);
+    pop(std::pair<List<uint64_t>, List<uint64_t>> q);
     static uint64_t size(const std::pair<List<uint64_t>, List<uint64_t>> &q);
   };
 

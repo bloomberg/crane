@@ -63,7 +63,7 @@ struct MemSafetyProbe24 {
     uint64_t clone_and_transform() const {
       std::pair<tree, uint64_t> p = std::make_pair(*this, this->tree_sum());
       tree t2 = p.first;
-      uint64_t s = p.second;
+      uint64_t s = std::move(p).second;
       tree t3 =
           std::move(t2).map_tree([=](uint64_t n) mutable { return (n + s); });
       return std::move(t3).tree_sum();
@@ -92,7 +92,8 @@ struct MemSafetyProbe24 {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         std::pair<tree, uint64_t> pl = a0->tag_tree();
         std::pair<tree, uint64_t> pr = a2->tag_tree();
-        return std::make_pair(*this, ((std::move(a1) + pl.second) + pr.second));
+        return std::make_pair(*this, ((std::move(a1) + std::move(pl).second) +
+                                      std::move(pr).second));
       }
     }
 

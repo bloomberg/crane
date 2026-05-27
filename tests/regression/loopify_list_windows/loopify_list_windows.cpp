@@ -146,9 +146,10 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
       auto _cs = std::move(_result);
-      const List<uint64_t> &s = _cs.first;
-      const List<uint64_t> &r = _cs.second;
-      _result = std::make_pair(List<uint64_t>::cons(std::move(a0), s), r);
+      List<uint64_t> s = std::move(_cs.first);
+      List<uint64_t> r = std::move(_cs.second);
+      _result = std::make_pair(
+          List<uint64_t>::cons(std::move(a0), std::move(s)), std::move(r));
     }
   }
   return _result;
@@ -524,7 +525,8 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(
   /// _Resume_same: saves [_s0], resumes after recursive call with _result.
   struct _Resume_same {
     std::decay_t<decltype(List<uint64_t>::cons(
-        std::declval<uint64_t &>(), std::declval<List<uint64_t> &>()))>
+        std::declval<uint64_t &>(),
+        std::move(std::declval<List<uint64_t> &>())))>
         _s0;
   };
 
@@ -550,10 +552,11 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto _cs = span_eq(a0, *a1);
-          const List<uint64_t> &same = _cs.first;
-          const List<uint64_t> &rest = _cs.second;
-          _stack.emplace_back(_Resume_same{List<uint64_t>::cons(a0, same)});
-          _stack.emplace_back(_Enter{rest, fuel_});
+          List<uint64_t> same = std::move(_cs.first);
+          List<uint64_t> rest = std::move(_cs.second);
+          _stack.emplace_back(
+              _Resume_same{List<uint64_t>::cons(a0, std::move(same))});
+          _stack.emplace_back(_Enter{std::move(rest), fuel_});
         }
       }
     } else {

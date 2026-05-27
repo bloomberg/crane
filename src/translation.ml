@@ -1043,15 +1043,22 @@ let rewrite_state_threading_moves
   in
   (* [subst] maps state-alias variable IDs to their source pair var + field.
      [subst id = Some (scrut_id, first_id)] means [id] is bound to
-     [scrut_id.first] and can be replaced with [std::move(scrut_id.first)]. *)
+     [scrut_id.first] and can be replaced with [std::move(scrut_id.first)].
+     [direct_owned] tracks variables that already OWN the state value via a
+     move binding (from scrut_is_owned_pair in gen_custom_cpp_case).  These are
+     moved directly ([std::move(id)]) rather than indirectly via scrut.first. *)
+  let direct_owned = ref Id.Set.empty in
   let is_state_val e subst =
     match e with
-    | CPPvar id -> Id.equal id state_id || subst id <> None
+    | CPPvar id ->
+      Id.equal id state_id
+      || Id.Set.mem id !direct_owned
+      || subst id <> None
     | _ -> false
   in
   let wrap_state e subst =
     match e with
-    | CPPvar id when Id.equal id state_id ->
+    | CPPvar id when Id.equal id state_id || Id.Set.mem id !direct_owned ->
       CPPmove (CPPvar id)
     | CPPvar id -> (
       match subst id with
@@ -1066,7 +1073,7 @@ let rewrite_state_threading_moves
      use of the same value (e.g. dup_a x = (x, x)). *)
   let rec count_state_uses subst e =
     match e with
-    | CPPvar id when Id.equal id state_id -> 1
+    | CPPvar id when Id.equal id state_id || Id.Set.mem id !direct_owned -> 1
     | CPPvar id when subst id <> None -> 1
     | CPPmove inner -> count_state_uses subst inner
     | _ ->
@@ -1084,7 +1091,8 @@ let rewrite_state_threading_moves
       let rec move_states e =
         match e with
         | CPPmove _ -> e  (* already moved, avoid double-wrap *)
-        | CPPvar id when Id.equal id state_id -> CPPmove (CPPvar id)
+        | CPPvar id when Id.equal id state_id || Id.Set.mem id !direct_owned ->
+          CPPmove (CPPvar id)
         | CPPvar id when subst id <> None -> wrap_state (CPPvar id) subst
         | _ -> map_expr move_states (rewrite_stmt subst) Fun.id e
       in
@@ -1106,19 +1114,31 @@ let rewrite_state_threading_moves
     match s with
     | Scustom_case (ty, CPPvar scrut_id, tyargs, branches, tmpl) when is_state_pair_type ty ->
       (* Pair pattern match: the first bound var is the state alias.
-         Track it so occurrences in the body are rewritten to
-         [std::move(scrut_id.first)] in terminal positions. *)
+         Two cases depending on whether the template uses move bindings:
+         - const-ref binding (original): alias_id = scrut.first; track as
+           indirect alias so make_pair uses std::move(scrut.first).
+         - move binding (scrut_is_owned_pair): alias_id owns the value via
+           std::move(scrut.first); track as a direct owned var so make_pair
+           uses std::move(alias_id), avoiding a second move from scrut.first. *)
+      let is_move_binding = Common.contains_substring tmpl "std::move" in
       let new_branches =
         List.map
           (fun (params, ret_ty, body_stmts) ->
             match params with
             | (alias_id, _) :: _ ->
-              let first_id = Id.of_string "first" in
-              let new_subst id =
-                if Id.equal id alias_id then Some (scrut_id, first_id)
-                else subst id
-              in
-              (params, ret_ty, List.map (rewrite_stmt new_subst) body_stmts)
+              if is_move_binding then begin
+                direct_owned := Id.Set.add alias_id !direct_owned;
+                let body = List.map (rewrite_stmt subst) body_stmts in
+                direct_owned := Id.Set.remove alias_id !direct_owned;
+                (params, ret_ty, body)
+              end else begin
+                let first_id = Id.of_string "first" in
+                let new_subst id =
+                  if Id.equal id alias_id then Some (scrut_id, first_id)
+                  else subst id
+                in
+                (params, ret_ty, List.map (rewrite_stmt new_subst) body_stmts)
+              end
             | [] ->
               (params, ret_ty, List.map (rewrite_stmt subst) body_stmts))
           branches
@@ -2638,6 +2658,25 @@ let is_trivially_copyable_type = function
     is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
+(** Check if an ML type maps to a non-trivially-copyable C++ value type.
+    These are custom-extracted inductives (e.g., prod → std::pair) that are
+    NOT shared_ptr-wrapped but still benefit from move semantics.
+    Excluded: list (Datatypes::List contains shared_ptr<List> in Cons.l —
+    moving a list value invalidates shared_ptr aliases to inner nodes). *)
+let is_nontrivial_value_ml_type ty =
+  match resolve_tmeta ty with
+  | Miniml.Tglob (r, _, _) ->
+    Table.is_custom r
+    && not (Table.is_custom_scalar_ref r)
+    && not (Escape.is_shared_ptr_type ty)
+    && not (is_list_global r)
+  | _ -> false
+
+let is_prod_ml_type ty =
+  match resolve_tmeta ty with
+  | Miniml.Tglob (r, _, _) -> is_prod_global r
+  | _ -> false
+
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);
     borrowed inductive/shared_ptr/unique_ptr params are passed by const
@@ -3670,6 +3709,17 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
        is marked as owned.  See {!Escape.infer_owned_params}. *)
     let n_all_params = List.length lam_params in
     let owned_flags = Escape.infer_owned_params n_all_params a in
+    (* sub_bindings_escape extends owned_flags for parameters whose sub-bindings
+       escape into constructors — useful for pair params so components can be
+       moved.  Only apply it for value types (custom prod/option etc.), NOT for
+       shared_ptr-backed types (list, cofix, etc.) where moving a by-value loop
+       variable before using refs into it causes UB in the loopified transform. *)
+    let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_all_params a in
+    let owned_flags =
+      List.map2 (fun (base, sub_esc) (_, ty) ->
+        base || (sub_esc && is_prod_ml_type ty))
+        (List.combine owned_flags sub_escape_flags) args
+    in
     let args_with_owned =
       List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
     in
@@ -7020,9 +7070,47 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     in
     count 0 0
   in
+  let pair_g_opt_early = match concrete_match_type with
+    | Tglob (g, _, _) when is_prod_global g -> Some g
+    | _ -> None
+  in
+  let scrut_is_owned_pair = match t with
+    | MLrel i | MLmagic (MLrel i) ->
+      Escape.IntSet.mem i tctx.move_owned_vars
+      && Array.length pv = 1
+      && (let (ids, _, _, body) = pv.(0) in
+          let n = List.length ids in
+          Escape.nb_occur_match (i + n) body = 0)
+    | _ ->
+      Array.length pv = 1
+      && pair_g_opt_early <> None
+  in
+  (* Before generating the scrutinee, mark owned vars that are dead after
+     the scrutinee (not used in any branch body) so they get std::move. *)
   let saved_dead = tctx.move_dead_after in
-  if scrut_uses > 1 then
-    tctx.move_dead_after <- Escape.IntSet.empty;
+  let dead_in_scrut =
+    if Escape.IntSet.is_empty tctx.move_owned_vars then
+      Escape.IntSet.empty
+    else
+      let branch_free =
+        Array.fold_left (fun acc (ids, _, _, body) ->
+          let n = List.length ids in
+          Escape.IntSet.union acc (Escape.free_rels n body))
+          Escape.IntSet.empty pv
+      in
+      Escape.IntSet.filter (fun i ->
+        not (Escape.IntSet.mem i branch_free)
+        && Escape.nb_occur_match i t = 1)
+        tctx.move_owned_vars
+  in
+  let scrut_is_trivial_ml = match t with
+    | MLrel _ | MLmagic (MLrel _) -> true
+    | _ -> false
+  in
+  if scrut_uses > 1 && scrut_is_trivial_ml then
+    tctx.move_dead_after <- Escape.IntSet.empty
+  else
+    tctx.move_dead_after <- Escape.IntSet.union saved_dead dead_in_scrut;
   let t = gen_expr env t in
   tctx.move_dead_after <- saved_dead;
   let pair_g_opt = match concrete_match_type with
@@ -7121,6 +7209,11 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       (t, [])
     end
   in
+  let cmatch =
+    if scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired then
+      "%t0 %b0a0 = std::move(%scrut.first); %t1 %b0a1 = std::move(%scrut.second); %br0"
+    else cmatch
+  in
   let rec gen_cases = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
@@ -7163,8 +7256,20 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
       push_env_types ids';
+      let pat_owned =
+        if scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired then
+          let ids_rev = List.rev ids in
+          List.fold_left (fun acc j ->
+            let (_, ty) = List.nth ids_rev j in
+            if is_nontrivial_value_ml_type ty
+               || Escape.is_shared_ptr_type ty then
+              Escape.IntSet.add (j + 1) acc
+            else acc)
+            Escape.IntSet.empty (List.init n_pat_vars Fun.id)
+        else Escape.IntSet.empty
+      in
       let (br_ids, br_ret, br_stmts) =
-        with_shifted_move_tracking n_pat_vars (fun () ->
+        with_shifted_move_tracking n_pat_vars ~add_owned_set:pat_owned (fun () ->
           gen_cpp_custom_body env' k rty ids' t)
       in
       tctx.env_types <- saved_env_types;
@@ -8825,9 +8930,12 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             true
           | _ -> false )
       in
-      let new_is_shared = Escape.is_shared_ptr_type t && not use_const_ref in
+      let new_is_tracked =
+        (Escape.is_shared_ptr_type t || is_nontrivial_value_ml_type t)
+        && not use_const_ref
+      in
       let owned_for_b =
-        if new_is_shared then
+        if new_is_tracked then
           Escape.IntSet.add 1 shifted_owned
         else
           shifted_owned
@@ -9170,7 +9278,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
        collisions that produce incorrect std::move (use-after-move). *)
     let add_owned =
       match ids with
-      | (_, ty) :: _ when Escape.is_shared_ptr_type ty -> Some 1
+      | (_, ty) :: _ when Escape.is_shared_ptr_type ty
+                          || is_nontrivial_value_ml_type ty -> Some 1
       | _ -> None
     in
     with_shifted_move_tracking 1 ?add_owned (fun () ->
@@ -9528,19 +9637,28 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let saved_owned = tctx.move_owned_vars in
   let saved_nparams = tctx.move_n_params in
   let n_fix_params = List.length ids in
-  let fix_owned = Escape.infer_owned_params (n_fix_params + n_fix_funs) f in
+  let n_total = n_fix_params + n_fix_funs in
+  let fix_owned_base = Escape.infer_owned_params n_total f in
+  let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
   tctx.move_owned_vars <-
     List.fold_left
       (fun acc i ->
         let db = i + 1 in
-        (* ids[i] has db index i+1 *)
-        let owned =
-          match List.nth_opt fix_owned i with
+        let base_owned =
+          match List.nth_opt fix_owned_base i with
+          | Some b -> b
+          | None -> false
+        in
+        let sub_esc =
+          match List.nth_opt fix_sub_esc i with
           | Some b -> b
           | None -> false
         in
         let ml_ty = snd (List.nth ids i) in
-        if owned && Escape.is_shared_ptr_type ml_ty then
+        let owned = base_owned
+          || (sub_esc && is_prod_ml_type ml_ty) in
+        if owned && (Escape.is_shared_ptr_type ml_ty
+                     || is_nontrivial_value_ml_type ml_ty) then
           Escape.IntSet.add db acc
         else
           acc )
@@ -11410,6 +11528,16 @@ let gen_dfun n b cty ty temps =
      returns a bool list in the same order. *)
   let n_params = List.length all_params in
   let owned_flags = Escape.infer_owned_params n_params b in
+  (* Apply sub_bindings_escape only for prod/pair-typed params: ownership lets
+     the pair template generate move-bindings from .first/.second. Not useful
+     for other custom types (optional, mpz, etc.) where sub-bindings are
+     computed values, not structural fields. *)
+  let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_params b in
+  let owned_flags =
+    List.map2 (fun (base, sub_esc) (_, ty) ->
+      base || (sub_esc && is_prod_ml_type ty))
+      (List.combine owned_flags sub_escape_flags) all_ids
+  in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
      length (push_vars' preserves length), so owned_flags aligns 1:1. *)
   let all_ids_with_owned =
@@ -11666,10 +11794,13 @@ let gen_dfun n b cty ty temps =
   tctx.move_owned_vars <-
     List.fold_left
       (fun acc (i, owned) ->
-        if owned && Escape.is_shared_ptr_type (snd (List.nth all_params i)) then
-          Escape.IntSet.add (i + 1) acc
-        else
-          acc )
+        if owned then
+          let ml_ty = snd (List.nth all_params i) in
+          if Escape.is_shared_ptr_type ml_ty
+             || is_nontrivial_value_ml_type ml_ty then
+            Escape.IntSet.add (i + 1) acc
+          else acc
+        else acc )
       Escape.IntSet.empty
       (List.mapi (fun i o -> (i, o)) owned_flags);
   tctx.move_dead_after <- Escape.IntSet.empty;
@@ -11870,6 +12001,12 @@ let gen_sfun n b dom cod temps =
          (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
          all_params )
       (empty_env ())
+  in
+  let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_params b in
+  let owned_flags =
+    List.map2 (fun (base, sub_esc) (_, ty) ->
+      base || (sub_esc && is_prod_ml_type ty))
+      (List.combine owned_flags sub_escape_flags) ids
   in
   (* Zip with ownership flags, then filter out void params *)
   let ids_with_owned =
@@ -13100,7 +13237,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
   let method_owned_flags =
-    Escape.infer_owned_params n_method_params inner_body
+    let base = Escape.infer_owned_params n_method_params inner_body in
+    let sub_esc = Escape.infer_sub_bindings_escape_params n_method_params inner_body in
+    List.map2 (fun (b, s) (_, ty) ->
+      b || (s && is_prod_ml_type ty))
+      (List.combine base sub_esc) ids_with_types
   in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
@@ -13238,7 +13379,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (fun acc (i, owned) ->
         if owned then
           let ml_ty = snd (List.nth ids_with_types i) in
-          if Escape.is_shared_ptr_type ml_ty then
+          if Escape.is_shared_ptr_type ml_ty
+             || is_nontrivial_value_ml_type ml_ty then
             Escape.IntSet.add (i + 1) acc
           else acc
         else acc )

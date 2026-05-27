@@ -154,10 +154,10 @@ struct LoopifySorting {
         T1 a0 = _f.a0;
         T1 a00 = _f.a00;
         auto _cs = std::move(_result);
-        const List<T1> &l1 = _cs.first;
-        const List<T1> &l2 = _cs.second;
-        _result =
-            std::make_pair(List<T1>::cons(a0, l1), List<T1>::cons(a00, l2));
+        List<T1> l1 = std::move(_cs.first);
+        List<T1> l2 = std::move(_cs.second);
+        _result = std::make_pair(List<T1>::cons(a0, std::move(l1)),
+                                 List<T1>::cons(a00, std::move(l2)));
       }
     }
     return _result;

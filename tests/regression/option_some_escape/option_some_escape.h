@@ -89,7 +89,7 @@ struct OptionSomeEscape {
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::optional<std::function<uint64_t(uint64_t)>> o1 =
         option_escape(std::move(t1));
-    return apply_option(o1, UINT64_C(0));
+    return apply_option(std::move(o1), UINT64_C(0));
   }();
 };
 

@@ -94,7 +94,7 @@ struct EffectHigherOrder {
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void apply_effect(F0 &&f, std::string _x0) {
-    f(_x0);
+    f(std::move(_x0));
     return;
   } /// 2. Map-like function over a list with effects
 

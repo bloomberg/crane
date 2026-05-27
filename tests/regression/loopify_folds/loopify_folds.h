@@ -338,19 +338,19 @@ struct LoopifyFolds {
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto _cs = f(acc, a0);
-          const uint64_t &acc_ = _cs.first;
-          const uint64_t &y = _cs.second;
+          uint64_t acc_ = std::move(_cs.first);
+          uint64_t y = std::move(_cs.second);
           _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{a1.get(), std::move(_cs.first)});
+          _stack.emplace_back(_Enter{a1.get(), std::move(acc_)});
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
         uint64_t y = _f.y;
         auto _cs1 = std::move(_result);
-        const uint64_t &final_acc = _cs1.first;
-        const List<uint64_t> &ys = _cs1.second;
-        _result =
-            std::make_pair(std::move(_cs1.first), List<uint64_t>::cons(y, ys));
+        uint64_t final_acc = std::move(_cs1.first);
+        List<uint64_t> ys = std::move(_cs1.second);
+        _result = std::make_pair(std::move(final_acc),
+                                 List<uint64_t>::cons(y, std::move(ys)));
       }
     }
     return _result;
@@ -437,8 +437,8 @@ struct LoopifyFolds {
         } else {
           uint64_t fuel_ = fuel - 1;
           auto _cs = f(seed);
-          const uint64_t &x = _cs.first;
-          const uint64_t &next_seed = _cs.second;
+          uint64_t x = std::move(_cs.first);
+          uint64_t next_seed = std::move(_cs.second);
           _stack.emplace_back(_Resume_x{x});
           _stack.emplace_back(_Enter{next_seed, fuel_});
         }

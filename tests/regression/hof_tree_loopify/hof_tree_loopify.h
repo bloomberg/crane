@@ -807,22 +807,22 @@ struct HofTreeLoopify {
         const tree<T1> &a2 = *_f.a2;
         F0 f = _f.f;
         auto _cs = std::move(_result);
-        const T3 &acc1 = _cs.first;
-        const tree<T2> &l_ = _cs.second;
+        T3 acc1 = std::move(_cs.first);
+        tree<T2> l_ = std::move(_cs.second);
         auto _cs1 = f(acc1, a1);
-        const T3 &acc2 = _cs1.first;
-        const T2 &x_ = _cs1.second;
+        T3 acc2 = std::move(_cs1.first);
+        T2 x_ = std::move(_cs1.second);
         _stack.emplace_back(_Cont_acc2{l_, x_});
-        _stack.emplace_back(_Enter{&a2, std::move(_cs1.first)});
+        _stack.emplace_back(_Enter{&a2, std::move(acc2)});
       } else {
         auto _f = std::move(std::get<_Cont_acc2>(_frame));
         tree<T2> l_ = std::move(_f.l_);
         T2 x_ = _f.x_;
         auto _cs2 = std::move(_result);
-        const T3 &acc3 = _cs2.first;
-        const tree<T2> &r_ = _cs2.second;
-        _result =
-            std::make_pair(std::move(_cs2.first), tree<T2>::node(l_, x_, r_));
+        T3 acc3 = std::move(_cs2.first);
+        tree<T2> r_ = std::move(_cs2.second);
+        _result = std::make_pair(
+            std::move(acc3), tree<T2>::node(std::move(l_), x_, std::move(r_)));
       }
     }
     return _result;

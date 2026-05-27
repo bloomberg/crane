@@ -259,11 +259,11 @@ struct MemSafetyProbe13 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                         UINT64_C(7),
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    auto _cs = tree_vals_and_fns(t);
-    const mylist<uint64_t> &vals = _cs.first;
-    const mylist<std::function<uint64_t(uint64_t)>> &fns = _cs.second;
-    uint64_t val_sum = sum_list(vals);
-    uint64_t fn_sum = sum_list(fns.template map_list<uint64_t>(
+    auto _cs = tree_vals_and_fns(std::move(t));
+    mylist<uint64_t> vals = std::move(_cs.first);
+    mylist<std::function<uint64_t(uint64_t)>> fns = std::move(_cs.second);
+    uint64_t val_sum = sum_list(std::move(vals));
+    uint64_t fn_sum = sum_list(std::move(fns).template map_list<uint64_t>(
         [](std::function<uint64_t(uint64_t)> f) { return f(UINT64_C(0)); }));
     return (val_sum + fn_sum);
   }();

@@ -179,7 +179,7 @@ struct MemSafetyProbe20 {
     std::pair<wrapped, uint64_t> p = pair_from_if(
         tree::node(tree::leaf(), UINT64_C(15), tree::leaf()), true);
     wrapped w = p.first;
-    uint64_t v = p.second;
+    uint64_t v = std::move(p).second;
     return std::move(w).unwrap(v);
   }();
   /// TEST 4: Wrapped closure captured in a locally-constructed tree.

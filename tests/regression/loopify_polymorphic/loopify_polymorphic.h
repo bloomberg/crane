@@ -513,9 +513,10 @@ struct LoopifyPolymorphic {
         T1 a = _f.a;
         T2 b = _f.b;
         auto _cs = std::move(_result);
-        const List<T1> &as_ = _cs.first;
-        const List<T2> &bs = _cs.second;
-        _result = std::make_pair(List<T1>::cons(a, as_), List<T2>::cons(b, bs));
+        List<T1> as_ = std::move(_cs.first);
+        List<T2> bs = std::move(_cs.second);
+        _result = std::make_pair(List<T1>::cons(a, std::move(as_)),
+                                 List<T2>::cons(b, std::move(bs)));
       }
     }
     return _result;
@@ -563,12 +564,14 @@ struct LoopifyPolymorphic {
         T1 a0 = _f.a0;
         F0 p = _f.p;
         auto _cs = std::move(_result);
-        const List<T1> &trues = _cs.first;
-        const List<T1> &falses = _cs.second;
+        List<T1> trues = std::move(_cs.first);
+        List<T1> falses = std::move(_cs.second);
         if (p(a0)) {
-          _result = std::make_pair(List<T1>::cons(a0, trues), falses);
+          _result = std::make_pair(List<T1>::cons(a0, std::move(trues)),
+                                   std::move(falses));
         } else {
-          _result = std::make_pair(trues, List<T1>::cons(a0, falses));
+          _result = std::make_pair(std::move(trues),
+                                   List<T1>::cons(a0, std::move(falses)));
         }
       }
     }

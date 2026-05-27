@@ -86,7 +86,7 @@ struct OptionClosureEscape {
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
         pair_escape(std::move(t1));
-    return p1.first(UINT64_C(0));
+    return std::move(p1).first(UINT64_C(0));
   }();
   /// BUG: match_pair — & captures _args from visit scope.
   static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
@@ -97,7 +97,7 @@ struct OptionClosureEscape {
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
         match_pair(std::move(t1));
-    return p1.first(UINT64_C(0));
+    return std::move(p1).first(UINT64_C(0));
   }();
 };
 

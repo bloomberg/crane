@@ -434,10 +434,10 @@ LoopifyAdvancedPatterns::count_by_shape(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
       auto _cs = std::move(_result);
-      const std::pair<uint64_t, uint64_t> &p = _cs.first;
-      const uint64_t &triangles = _cs.second;
-      const uint64_t &circles = p.first;
-      const uint64_t &squares = p.second;
+      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
+      uint64_t triangles = std::move(_cs.second);
+      uint64_t circles = std::move(p.first);
+      uint64_t squares = std::move(p.second);
       if (std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {
         _result = std::make_pair(

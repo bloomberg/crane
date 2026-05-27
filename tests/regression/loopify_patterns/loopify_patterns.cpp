@@ -301,10 +301,10 @@ LoopifyPatterns::tuple_constr(
       auto _f = std::move(std::get<_Cont_m>(_frame));
       uint64_t n = _f.n;
       auto _cs = std::move(_result);
-      const std::pair<uint64_t, uint64_t> &p = _cs.first;
-      const uint64_t &c = _cs.second;
-      const uint64_t &a = p.first;
-      const uint64_t &b = p.second;
+      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
+      uint64_t c = std::move(_cs.second);
+      uint64_t a = std::move(p.first);
+      uint64_t b = std::move(p.second);
       _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
     }
   }

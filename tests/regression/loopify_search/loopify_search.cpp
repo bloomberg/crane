@@ -86,8 +86,8 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       auto _cs = std::move(_result);
-      const uint64_t &cand = _cs.first;
-      const uint64_t &count = _cs.second;
+      uint64_t cand = std::move(_cs.first);
+      uint64_t count = std::move(_cs.second);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + 1));
       } else {
@@ -814,10 +814,10 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       auto _cs = std::move(_result);
-      const List<uint64_t> &a = _cs.first;
-      const List<uint64_t> &b = _cs.second;
-      _result = std::make_pair(List<uint64_t>::cons(a0, a),
-                               List<uint64_t>::cons(a00, b));
+      List<uint64_t> a = std::move(_cs.first);
+      List<uint64_t> b = std::move(_cs.second);
+      _result = std::make_pair(List<uint64_t>::cons(a0, std::move(a)),
+                               List<uint64_t>::cons(a00, std::move(b)));
     }
   }
   return _result;
@@ -911,9 +911,9 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_a: saves [a, f], dispatches next recursive call.
+  /// _After_a: saves [_s0, f], dispatches next recursive call.
   struct _After_a {
-    List<uint64_t> a;
+    List<uint64_t> _s0;
     uint64_t f;
   };
 
@@ -949,17 +949,17 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto _cs = split_list(l);
-            const List<uint64_t> &a = _cs.first;
-            const List<uint64_t> &b = _cs.second;
-            _stack.emplace_back(_After_a{a, f});
-            _stack.emplace_back(_Enter{b, f});
+            List<uint64_t> a = std::move(_cs.first);
+            List<uint64_t> b = std::move(_cs.second);
+            _stack.emplace_back(_After_a{std::move(std::move(a)), f});
+            _stack.emplace_back(_Enter{std::move(b), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_a>(_frame)) {
       auto _f = std::move(std::get<_After_a>(_frame));
       _stack.emplace_back(_Combine_a{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f.a), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_a>(_frame));
       _result = merge_sorted(std::move(_result), std::move(_f._result));

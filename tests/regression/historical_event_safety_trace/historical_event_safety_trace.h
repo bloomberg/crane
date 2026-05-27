@@ -577,11 +577,11 @@ struct HistoricalEventSafetyTraceCase {
     bool initial_safe = is_safe_bool(pconf, initial_state);
     auto _cs = simulate_with_max(inflow, ctrl, stage_fn, pconf, horizon,
                                  initial_state, UINT64_C(0), UINT64_C(0));
-    const std::pair<State, uint64_t> &p = _cs.first;
-    const uint64_t &max_stg = _cs.second;
-    const State &final_state = p.first;
-    const uint64_t &max_lev = p.second;
-    bool final_safe = is_safe_bool(pconf, final_state);
+    std::pair<State, uint64_t> p = std::move(_cs.first);
+    uint64_t max_stg = std::move(_cs.second);
+    State final_state = std::move(p.first);
+    uint64_t max_lev = std::move(p.second);
+    bool final_safe = is_safe_bool(pconf, std::move(final_state));
     return TestResult{event_id, initial_safe, final_safe, max_lev, max_stg};
   }
 

@@ -503,7 +503,7 @@ struct TopologicalSort {
     return lorder
         .template combine<uint64_t>(ListDef::seq(UINT64_C(0), lorder.length()))
         .template map<List<std::pair<T1, uint64_t>>>(
-            [](const std::pair<List<T1>, uint64_t> &x) {
+            [](std::pair<List<T1>, uint64_t> x) {
               const List<T1> &fs = x.first;
               const uint64_t &rk = x.second;
               return fs.template map<std::pair<T1, uint64_t>>(

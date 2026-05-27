@@ -39,8 +39,8 @@ int64_t MonadicClosure::nested_capture() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = static_cast<int64_t>(a.length());
-  int64_t lb = static_cast<int64_t>(b.length());
+  int64_t la = static_cast<int64_t>(std::move(a).length());
+  int64_t lb = static_cast<int64_t>(std::move(b).length());
   return ((la + lb) & 0x7FFFFFFFFFFFFFFFLL);
 }
 
@@ -70,7 +70,7 @@ std::pair<int64_t, int64_t> MonadicClosure::two_closures() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  int64_t la = static_cast<int64_t>(a.length());
-  int64_t lb = static_cast<int64_t>(b.length());
+  int64_t la = static_cast<int64_t>(std::move(a).length());
+  int64_t lb = static_cast<int64_t>(std::move(b).length());
   return std::make_pair(la, lb);
 }

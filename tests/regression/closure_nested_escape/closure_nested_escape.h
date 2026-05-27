@@ -23,8 +23,8 @@ struct ClosureNestedEscape {
   /// Expected: 8 + 15 = 23.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs = make_pair_fix(UINT64_C(5));
-    const std::function<uint64_t(uint64_t)> &f = _cs.first;
-    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    std::function<uint64_t(uint64_t)> f = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> g = std::move(_cs.second);
     return (f(UINT64_C(3)) + g(UINT64_C(3)));
   }();
   /// test2: With noise.
@@ -41,8 +41,8 @@ struct ClosureNestedEscape {
   /// Expected: 30.
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs = make_pair_fix(UINT64_C(3));
-    const std::function<uint64_t(uint64_t)> &_x = _cs.first;
-    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    std::function<uint64_t(uint64_t)> _x = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> g = std::move(_cs.second);
     return g(UINT64_C(10));
   }();
 };

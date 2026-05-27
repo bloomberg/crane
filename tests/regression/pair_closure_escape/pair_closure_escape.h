@@ -86,7 +86,7 @@ struct PairClosureEscape {
                          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     std::pair<std::function<uint64_t(uint64_t)>, uint64_t> p1 =
         pair_escape(std::move(t1));
-    return use_pair(p1);
+    return use_pair(std::move(p1));
   }();
 };
 

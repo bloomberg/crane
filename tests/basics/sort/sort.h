@@ -141,10 +141,10 @@ struct Sort {
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(_sv0.v());
         auto _cs = split<T1>(*a10);
-        const List<T1> &ls1 = _cs.first;
-        const List<T1> &ls2 = _cs.second;
-        return std::make_pair(List<T1>::cons(a0, ls1),
-                              List<T1>::cons(a00, ls2));
+        List<T1> ls1 = std::move(_cs.first);
+        List<T1> ls2 = std::move(_cs.second);
+        return std::make_pair(List<T1>::cons(a0, std::move(ls1)),
+                              List<T1>::cons(a00, std::move(ls2)));
       }
     }
   }
@@ -185,12 +185,12 @@ struct Sort {
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto _cs = split_pivot<T1>(le_dec0, pivot, *a1);
-      const List<T1> &l1 = _cs.first;
-      const List<T1> &l2 = _cs.second;
+      List<T1> l1 = std::move(_cs.first);
+      List<T1> l2 = std::move(_cs.second);
       if (le_dec0(a0, pivot)) {
-        return std::make_pair(List<T1>::cons(a0, l1), l2);
+        return std::make_pair(List<T1>::cons(a0, std::move(l1)), std::move(l2));
       } else {
-        return std::make_pair(l1, List<T1>::cons(a0, l2));
+        return std::make_pair(std::move(l1), List<T1>::cons(a0, std::move(l2)));
       }
     }
   }

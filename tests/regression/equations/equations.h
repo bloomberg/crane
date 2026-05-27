@@ -43,10 +43,9 @@ struct Equations {
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &,
                                    std::pair<uint64_t, uint64_t> &>
-  static uint64_t gcd_functional(const std::pair<uint64_t, uint64_t> &p,
-                                 F1 &&gcd0) {
-    const uint64_t &n = p.first;
-    const uint64_t &n0 = p.second;
+  static uint64_t gcd_functional(std::pair<uint64_t, uint64_t> p, F1 &&gcd0) {
+    uint64_t n = std::move(p.first);
+    uint64_t n0 = std::move(p.second);
     if (n <= 0) {
       return n0;
     } else {
@@ -62,7 +61,7 @@ struct Equations {
 
   static uint64_t gcd(const std::pair<uint64_t, uint64_t> &x);
   static uint64_t gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine);
-  static uint64_t gcd_unfold(const std::pair<uint64_t, uint64_t> &p);
+  static uint64_t gcd_unfold(std::pair<uint64_t, uint64_t> p);
   struct gcd_graph;
   struct gcd_clause_3_graph;
 
@@ -397,7 +396,7 @@ struct Equations {
     return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
   }
 
-  static gcd_graph gcd_graph_correct(const std::pair<uint64_t, uint64_t> &x);
+  static gcd_graph gcd_graph_correct(std::pair<uint64_t, uint64_t> x);
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
