@@ -401,7 +401,7 @@ struct LoopifyStructures {
         }
       } else {
         auto _f = std::move(std::get<_Resume_y>(_frame));
-        _result = List<uint64_t>::cons(_f.y, _result);
+        _result = List<uint64_t>::cons(_f.y, std::move(_result));
       }
     }
     return _result;
@@ -450,7 +450,7 @@ struct LoopifyStructures {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;

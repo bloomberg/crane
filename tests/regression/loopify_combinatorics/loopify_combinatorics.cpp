@@ -41,7 +41,7 @@ List<uint64_t> LoopifyCombinatorics::remove(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -87,7 +87,7 @@ List<List<uint64_t>> LoopifyCombinatorics::map_cons(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -146,8 +146,8 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &orig = _f.orig;
-      const List<uint64_t> &choices = _f.choices;
+      const List<uint64_t> &orig = std::move(_f.orig);
+      const List<uint64_t> &choices = std::move(_f.choices);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -181,7 +181,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
       _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
-      _result = _f._s0.app(_result);
+      _result = _f._s0.app(std::move(_result));
     }
   }
   return _result;
@@ -242,7 +242,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n * _result);
+      _result = (_f.n * std::move(_result));
     }
   }
   return _result;
@@ -353,7 +353,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::map_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -397,7 +398,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f._s0.app(_result);
+      _result = _f._s0.app(std::move(_result));
     }
   }
   return _result;
@@ -573,7 +574,7 @@ bool LoopifyCombinatorics::elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 || _result);
+      _result = (_f._s0 || std::move(_result));
     }
   }
   return _result;

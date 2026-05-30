@@ -38,7 +38,7 @@ List<List<uint64_t>> LoopifyListSubsequences::map_cons_helper(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -79,7 +79,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f.l, _result);
+      _result = List<List<uint64_t>>::cons(std::move(_f.l), std::move(_result));
     }
   }
   return _result;
@@ -181,7 +181,7 @@ List<uint64_t> LoopifyListSubsequences::init_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -222,7 +222,7 @@ List<uint64_t> LoopifyListSubsequences::snoc(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;

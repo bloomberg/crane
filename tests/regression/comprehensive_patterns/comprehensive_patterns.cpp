@@ -87,9 +87,9 @@ ComprehensivePatterns::nested_containers(ComprehensivePatterns::S s) {
 
 std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>
 ComprehensivePatterns::match_pair(
-    const std::pair<ComprehensivePatterns::S, uint64_t> &p) {
-  const ComprehensivePatterns::S &s = p.first;
-  const uint64_t &n = p.second;
+    std::pair<ComprehensivePatterns::S, uint64_t> p) {
+  ComprehensivePatterns::S s = std::move(p.first);
+  uint64_t n = std::move(p.second);
   return std::make_pair(std::make_pair(s, n), s.s_a);
 }
 
@@ -133,7 +133,7 @@ ComprehensivePatterns::make_list(
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = List<std::pair<ComprehensivePatterns::S, uint64_t>>::cons(
-          _f._s0, _result);
+          _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -355,7 +355,8 @@ ComprehensivePatterns::repeat_r2(
       auto _f = std::move(std::get<_Resume_m>(_frame));
       _result =
           List<std::pair<ComprehensivePatterns::R2,
-                         ComprehensivePatterns::R1>>::cons(_f._s0, _result);
+                         ComprehensivePatterns::R1>>::cons(_f._s0,
+                                                           std::move(_result));
     }
   }
   return _result;
@@ -531,7 +532,7 @@ ComprehensivePatterns::repeat_pair(
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
       _result = List<std::pair<ComprehensivePatterns::R, uint64_t>>::cons(
-          _f._s0, _result);
+          _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -682,7 +683,7 @@ uint64_t ComprehensivePatterns::count_down(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_result + _f._s0);
+      _result = (std::move(_result) + _f._s0);
     }
   }
   return _result;
@@ -776,7 +777,7 @@ uint64_t ComprehensivePatterns::sum_proj(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1026,7 +1027,7 @@ uint64_t ComprehensivePatterns::sum_values(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1097,7 +1098,7 @@ uint64_t ComprehensivePatterns::sum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1161,7 +1162,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1200,5 +1201,5 @@ ComprehensivePatterns::pair_then_match(ComprehensivePatterns::StateOP s) {
   std::pair<ComprehensivePatterns::StateOP, ComprehensivePatterns::StateOP> p =
       std::make_pair(s, s);
   uint64_t x = std::move(s).op_value;
-  return std::make_pair(p, x);
+  return std::make_pair(std::move(p), x);
 }

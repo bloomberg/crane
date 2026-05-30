@@ -71,7 +71,7 @@ List<uint64_t> LoopifyHofs::lookup_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.v, _result);
+      _result = List<uint64_t>::cons(_f.v, std::move(_result));
     }
   }
   return _result;
@@ -187,7 +187,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::pair_with_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -231,7 +232,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f._s0.app(_result);
+      _result = _f._s0.app(std::move(_result));
     }
   }
   return _result;
@@ -315,7 +316,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;

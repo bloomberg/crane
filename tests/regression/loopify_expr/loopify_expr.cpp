@@ -55,7 +55,7 @@ uint64_t LoopifyExpr::sum_shapes(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.val + _result);
+      _result = (_f.val + std::move(_result));
     }
   }
   return _result;

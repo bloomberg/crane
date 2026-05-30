@@ -70,11 +70,11 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
+      _stack.emplace_back(_After2{std::move(_result), _f._s2, _f.fuel__1});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
+      _stack.emplace_back(_Combine3{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
@@ -149,7 +149,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result, _f._s2});
+      _stack.emplace_back(_Combine1{std::move(_result), _f._s2});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -221,7 +221,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -302,15 +302,17 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0});
+      _stack.emplace_back(_After_QQuad_1{std::move(_result), _f.a1, _f.a0});
       _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0});
+      _stack.emplace_back(
+          _After_QQuad_2{_f._result, std::move(_result), _f.a0});
       _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
-      _stack.emplace_back(_Combine_QQuad{_f._result_0, _f._result_1, _result});
+      _stack.emplace_back(
+          _Combine_QQuad{_f._result_0, _f._result_1, std::move(_result)});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
@@ -390,16 +392,18 @@ uint64_t LoopifyMultiRecursion::quad_depth(
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0, _f._s3});
+      _stack.emplace_back(
+          _After_QQuad_1{std::move(_result), _f.a1, _f.a0, _f._s3});
       _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0, _f._s3});
+      _stack.emplace_back(
+          _After_QQuad_2{_f._result, std::move(_result), _f.a0, _f._s3});
       _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
-      _stack.emplace_back(
-          _Combine_QQuad{_f._result_0, _f._result_1, _result, _f._s3});
+      _stack.emplace_back(_Combine_QQuad{_f._result_0, _f._result_1,
+                                         std::move(_result), _f._s3});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
@@ -488,7 +492,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       }
     } else if (std::holds_alternative<_After4>(_frame)) {
       auto _f = std::move(std::get<_After4>(_frame));
-      _stack.emplace_back(_Combine3{_result});
+      _stack.emplace_back(_Combine3{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else if (std::holds_alternative<_Combine3>(_frame)) {
       auto _f = std::move(std::get<_Combine3>(_frame));

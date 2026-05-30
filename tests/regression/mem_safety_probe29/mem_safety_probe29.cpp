@@ -67,8 +67,8 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n_>(_frame));
-      _result =
-          tree3::t3node(std::move(_result), _f._result_1, _f._result_0, _f.n);
+      _result = tree3::t3node(std::move(_result), std::move(_f._result_1),
+                              std::move(_f._result_0), _f.n);
     }
   }
   return _result;

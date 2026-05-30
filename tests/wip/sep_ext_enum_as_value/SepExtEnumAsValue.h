@@ -41,7 +41,7 @@ template <ColorParam P> struct UseColor {
     switch (c) {
     case Color::RED: {
       return true;
-    } break;
+    }
     default: {
       return false;
     }

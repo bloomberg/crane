@@ -211,6 +211,24 @@ let rec is_trivially_copyable_type = function
     Table.is_enum_inductive r || Table.is_custom_scalar_ref r
   | _ -> false
 
+(** Returns [true] for types that are expensive to copy and benefit from
+    [std::move]: [shared_ptr], [unique_ptr], value-type inductives, type
+    variables, and types parameterized by such types. *)
+let rec worthwhile_move_type = function
+  | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
+                         && not (Table.is_coinductive r)
+                         && (not (Table.is_custom r)
+                             || List.exists worthwhile_move_type tparams)
+  | Tunique_ptr _ | Tfun _ -> true
+  | Tshared_ptr _ -> true
+  | Tvariant ts -> List.exists worthwhile_move_type ts
+  | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists worthwhile_move_type ts
+  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
+    worthwhile_move_type t
+  | Tvar _ -> true
+  | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
+
 (** {2 Mutual recursion table}
 
     Functions register their bodies here so mutual pairs can be detected and
@@ -1712,6 +1730,129 @@ type shadow_setup = {
     @param params Function parameters [(id, type)]
     @param body   Function body statements
     @return {!shadow_setup} record consumed by the caller *)
+
+(** Insert [std::move] at last-use positions of owned variables in loopified
+    statement blocks.  Complements {!optimize_frame_push_args} which handles
+    frame-push groups; this pass handles ordinary statements such as
+    [_result = f(_result, _f.field)] and [_loop_x = g(a, _loop_x)].
+
+    [self_ref_candidate key] — true when [key] should be moved in
+    self-referencing assignments ([x = f(...x...)]).  Safe for loop
+    accumulators whose liveness the caller knows ends with the overwrite.
+
+    [last_use_candidate key] — true when [key] may be moved at its final
+    read in the block.  Safe for [_result] and [_f.field] in single-shot
+    handler bodies, NOT safe for loop variables (live across the back-edge). *)
+let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
+  let collect_reads expr =
+    let tbl : (string, int) Hashtbl.t = Hashtbl.create 4 in
+    let add key =
+      let n = try Hashtbl.find tbl key with Not_found -> 0 in
+      Hashtbl.replace tbl key (n + 1)
+    in
+    let rec walk = function
+      | CPPmove _ | CPPlambda _ -> ()
+      | CPPvar id -> add (Id.to_string id)
+      | CPPmember (CPPvar fid, field) when Id.to_string fid = "_f" ->
+        add ("_f." ^ Id.to_string field)
+      | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
+    in
+    walk expr;
+    tbl
+  in
+  let collect_reads_stmt stmt =
+    let merge t1 t2 =
+      Hashtbl.iter (fun k v ->
+        let prev = try Hashtbl.find t1 k with Not_found -> 0 in
+        Hashtbl.replace t1 k (prev + v)) t2;
+      t1
+    in
+    match stmt with
+    | Sexpr (CPPbinop ("=", CPPvar _, rhs)) -> collect_reads rhs
+    | Sasgn (_, _, rhs) -> collect_reads rhs
+    | Sexpr e -> collect_reads e
+    | Sreturn (Some e) -> collect_reads e
+    | Sif (cond, _, _) -> collect_reads cond
+    | s ->
+      let tbl = Hashtbl.create 4 in
+      iter_stmt_children
+        ~on_expr:(fun e -> merge tbl (collect_reads e) |> ignore)
+        ~on_stmts:(fun _ -> ())
+        s;
+      tbl
+  in
+  let rewrite_expr to_move expr =
+    let rec rw = function
+      | CPPmove _ as e -> e
+      | CPPlambda _ as e -> e
+      | CPPvar id as e ->
+        if Hashtbl.mem to_move (Id.to_string id) then CPPmove e else e
+      | CPPmember (CPPvar fid, field) as e
+        when Id.to_string fid = "_f" ->
+        let key = "_f." ^ Id.to_string field in
+        if Hashtbl.mem to_move key then CPPmove e else e
+      | e -> map_expr rw Fun.id Fun.id e
+    in
+    rw expr
+  in
+  let rewrite_stmt to_move stmt =
+    match stmt with
+    | Sexpr (CPPbinop ("=", (CPPvar _ as lhs), rhs)) ->
+      Sexpr (CPPbinop ("=", lhs, rewrite_expr to_move rhs))
+    | _ ->
+      map_stmt (rewrite_expr to_move) Fun.id Fun.id stmt
+  in
+  let build_to_move reads read_after stmt =
+    let to_move : (string, unit) Hashtbl.t = Hashtbl.create 4 in
+    ( match stmt with
+      | Sexpr (CPPbinop ("=", CPPvar lhs, _))
+      | Sasgn (lhs, _, _) ->
+        let key = Id.to_string lhs in
+        if self_ref_candidate key
+           && (try Hashtbl.find reads key with Not_found -> 0) = 1
+        then Hashtbl.replace to_move key ()
+      | _ -> () );
+    Hashtbl.iter (fun key count ->
+      if last_use_candidate key
+         && count = 1
+         && not (Hashtbl.mem read_after key)
+      then Hashtbl.replace to_move key ()
+    ) reads;
+    to_move
+  in
+  let rec process stmts =
+    let stmts = List.map descend stmts in
+    let n = List.length stmts in
+    if n = 0 then []
+    else
+    let arr = Array.of_list stmts in
+    let read_after = Array.init n (fun _ -> Hashtbl.create 4) in
+    let running : (string, unit) Hashtbl.t = Hashtbl.create 8 in
+    for i = n - 1 downto 0 do
+      read_after.(i) <- Hashtbl.copy running;
+      Hashtbl.iter (fun k _ -> Hashtbl.replace running k ())
+        (collect_reads_stmt arr.(i))
+    done;
+    Array.to_list (Array.mapi (fun i s ->
+      let reads = collect_reads_stmt s in
+      let to_move = build_to_move reads read_after.(i) s in
+      if Hashtbl.length to_move = 0 then s
+      else rewrite_stmt to_move s
+    ) arr)
+  and descend stmt =
+    match stmt with
+    | Sif (cond, then_, else_) ->
+      Sif (cond, process then_, process else_)
+    | Smatch (branches, default) ->
+      Smatch (
+        List.map (fun br -> { br with smb_body = process br.smb_body }) branches,
+        Option.map process default)
+    | Sblock body -> Sblock (process body)
+    | Swhile (cond, body) -> Swhile (cond, process body)
+    | s -> s
+  in
+  process stmts
+
 let build_shadow_setup check params body =
   let varying = find_varying_params check params body in
   let pointer_safe = tail_pointer_safe_flags check params body () in
@@ -1806,6 +1947,21 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
     rewrite_visit_stmts check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
+  (* Move loop accumulators at self-referencing assignment sites:
+     [_loop_x = f(_loop_x)] → [_loop_x = f(std::move(_loop_x))].
+     General last-use is disabled for loop vars (live across the back-edge). *)
+  let is_loop_cand key =
+    List.exists (fun (id, ty) ->
+      Id.to_string id = key
+      && worthwhile_move_type (strip_ref_and_const_type ty))
+    shadow_params
+  in
+  let body'' =
+    optimize_last_use_moves
+      ~self_ref_candidate:is_loop_cand
+      ~last_use_candidate:(fun _ -> false)
+      body''
+  in
   (* Assemble the loop body.
      - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]
@@ -5652,21 +5808,6 @@ let optimize_frame_push_args frame_field_types stmts =
   if frame_field_types = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_field_types in
-    let rec worthwhile_move_type = function
-      | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
-                           && not (Table.is_coinductive r)
-                           && (not (Table.is_custom r)
-                               || List.exists worthwhile_move_type tparams)
-      | Tunique_ptr _ | Tfun _ -> true
-      | Tshared_ptr _ -> true
-      | Tvariant ts -> List.exists worthwhile_move_type ts
-      | Tid (_, ts) | Tid_external (_, ts) ->
-        List.exists worthwhile_move_type ts
-      | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
-        worthwhile_move_type t
-      | Tvar _ -> true
-      | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
-    in
     let should_move ~is_enter ~owned_vars ty arg =
       let stripped = strip_ref_and_const_type ty in
       worthwhile_move_type stripped
@@ -6275,10 +6416,22 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)
+  let enter_field_keys =
+    List.filter_map (fun (id, ty) ->
+      if worthwhile_move_type (strip_ref_and_const_type ty)
+      then Some ("_f." ^ Id.to_string id) else None)
+    enter_fields
+  in
+  let is_enter_cand key =
+    key = "_result" || List.mem key enter_field_keys
+  in
   let enter_body =
     make_param_copies ~pointer_safe:pointer_safe_varying varying_params
     @ adjust_frame_push_args ~binding_env ~frame_unique_ptr all_frame_ps rewritten_body
     |> optimize_frame_push_args frame_field_types
+    |> optimize_last_use_moves
+         ~self_ref_candidate:is_enter_cand
+         ~last_use_candidate:is_enter_cand
   in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* Call handlers — fix pointer-safe field bindings, then adjust push args *)
@@ -6304,8 +6457,22 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
             adjust_frame_push_args ~binding_env:cf_binding_env ~frame_unique_ptr all_frame_ps handler
           else handler
         in
+        let cf_types = compute_frame_field_types cf (frame_ps_for cf) in
+        let cf_field_keys =
+          List.filter_map (fun (id, ty) ->
+            if worthwhile_move_type (strip_ref_and_const_type ty)
+            then Some ("_f." ^ Id.to_string id) else None)
+          (List.combine cf.cf_field_names cf_types)
+        in
+        let is_cf_cand key =
+          key = "_result" || List.mem key cf_field_keys
+        in
         make_frame_branch cf.cf_name
-          (optimize_frame_push_args frame_field_types handler))
+          (handler
+           |> optimize_frame_push_args frame_field_types
+           |> optimize_last_use_moves
+                ~self_ref_candidate:is_cf_cand
+                ~last_use_candidate:is_cf_cand))
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push (enter_branch :: call_branches)

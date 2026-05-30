@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe13::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -104,7 +104,7 @@ MemSafetyProbe13::tree_vals_and_fns(
       }
     } else if (std::holds_alternative<_Cont_Node>(_frame)) {
       auto _f = std::move(std::get<_Cont_Node>(_frame));
-      const MemSafetyProbe13::tree &a0_value = _f.a0_value;
+      const MemSafetyProbe13::tree &a0_value = std::move(_f.a0_value);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe13::tree &a2_value = *_f.a2_value;
       auto _cs = std::move(_result);
@@ -115,9 +115,9 @@ MemSafetyProbe13::tree_vals_and_fns(
       _stack.emplace_back(_Enter{&a2_value});
     } else {
       auto _f = std::move(std::get<_Cont_lvals>(_frame));
-      const MemSafetyProbe13::tree &a0_value = _f.a0_value;
+      const MemSafetyProbe13::tree &a0_value = std::move(_f.a0_value);
       uint64_t a1 = _f.a1;
-      const MemSafetyProbe13::tree &a2_value = _f.a2_value;
+      const MemSafetyProbe13::tree &a2_value = std::move(_f.a2_value);
       MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>> lfns =
           std::move(_f.lfns);
       MemSafetyProbe13::mylist<uint64_t> lvals = std::move(_f.lvals);
@@ -175,7 +175,7 @@ MemSafetyProbe13::tree MemSafetyProbe13::make_deep(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._s0);
+      _result = tree::node(std::move(_result), _f.n, _f._s0);
     }
   }
   return _result;
@@ -225,8 +225,8 @@ MemSafetyProbe13::depth_fns(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
-      _result =
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f.f, _result);
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f.f), std::move(_result));
     }
   }
   return _result;
@@ -283,7 +283,8 @@ MemSafetyProbe13::ftree MemSafetyProbe13::tree_to_ftree(
       _stack.emplace_back(_Enter{_f.a0_value});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
-      _result = ftree::fnode(std::move(_result), _f._s1, std::move(_f._result));
+      _result = ftree::fnode(std::move(_result), std::move(_f._s1),
+                             std::move(_f._result));
     }
   }
   return _result;
@@ -345,7 +346,7 @@ MemSafetyProbe13::flatten_tree_fns(
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = std::move(_result).app(
           mylist<std::function<uint64_t(uint64_t)>>::mycons(
-              _f._s1, std::move(_f._result)));
+              std::move(_f._s1), std::move(_f._result)));
     }
   }
   return _result;

@@ -330,7 +330,7 @@ struct MemSafetyProbe18 {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = _f.a0.myapp(_result);
+        _result = std::move(_f.a0).myapp(std::move(_result));
       }
     }
     return _result;

@@ -37,7 +37,7 @@ List<uint64_t> LoopifyScans::scanl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     }
   }
   return _result;
@@ -80,7 +80,7 @@ List<uint64_t> LoopifyScans::scanl_mult(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     }
   }
   return _result;
@@ -129,7 +129,7 @@ List<uint64_t> LoopifyScans::running_max(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.current, _result);
+      _result = List<uint64_t>::cons(_f.current, std::move(_result));
     }
   }
   return _result;
@@ -178,7 +178,7 @@ List<uint64_t> LoopifyScans::running_min(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.current, _result);
+      _result = List<uint64_t>::cons(_f.current, std::move(_result));
     }
   }
   return _result;
@@ -237,7 +237,7 @@ List<uint64_t> LoopifyScans::pairwise_diff(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.diff, _result);
+      _result = List<uint64_t>::cons(_f.diff, std::move(_result));
     }
   }
   return _result;
@@ -290,10 +290,10 @@ List<uint64_t> LoopifyScans::accumulate_if_even(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     }
   }
   return _result;

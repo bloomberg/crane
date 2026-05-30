@@ -44,7 +44,7 @@ uint64_t MemSafetyProbe23::tree_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -98,7 +98,7 @@ uint64_t MemSafetyProbe23::tree_size(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -544,7 +544,7 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result});
+      _stack.emplace_back(_Combine_Node{std::move(_result)});
       _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -613,7 +613,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result});
+      _stack.emplace_back(_Combine_Node{std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_, std::move(_f._s1)});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));

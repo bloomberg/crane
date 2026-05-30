@@ -49,7 +49,7 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = _f.l;
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -189,7 +189,7 @@ List<uint64_t> LoopifyGrouping::remove_elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -304,7 +304,7 @@ uint64_t LoopifyGrouping::count_elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -358,7 +358,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyGrouping::group_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe16::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -87,8 +87,8 @@ MemSafetyProbe16::build_summers(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result =
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -132,7 +132,7 @@ uint64_t MemSafetyProbe16::apply_fns(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.x + _result);
+      _result = (_f.x + std::move(_result));
     }
   }
   return _result;
@@ -178,8 +178,8 @@ MemSafetyProbe16::multi_capture_tree(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result =
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -256,7 +256,7 @@ MemSafetyProbe16::mylist<uint64_t> MemSafetyProbe16::zip_apply(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = mylist<uint64_t>::mycons(_f.a00, _result);
+      _result = mylist<uint64_t>::mycons(_f.a00, std::move(_result));
     }
   }
   return _result;

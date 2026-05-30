@@ -53,10 +53,10 @@ uint64_t LoopifyNumericSequences::collatz_length_fuel(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -119,10 +119,10 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.n, _result);
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.n, _result);
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     }
   }
   return _result;
@@ -202,11 +202,11 @@ uint64_t LoopifyNumericSequences::tribonacci_fuel(
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
+      _stack.emplace_back(_After2{std::move(_result), _f._s2, _f.fuel__1});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
+      _stack.emplace_back(_Combine3{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
@@ -286,11 +286,11 @@ uint64_t LoopifyNumericSequences::staircase_fuel(
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
+      _stack.emplace_back(_After2{std::move(_result), _f._s2, _f.fuel__1});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
+      _stack.emplace_back(_Combine3{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
@@ -349,7 +349,7 @@ uint64_t LoopifyNumericSequences::digitsum_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -406,7 +406,7 @@ uint64_t LoopifyNumericSequences::dec_to_bin_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + (_f._s1 * _result));
+      _result = (_f._s0 + (_f._s1 * std::move(_result)));
     }
   }
   return _result;
@@ -485,7 +485,7 @@ uint64_t LoopifyNumericSequences::sum_divisors_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.d + _result);
+      _result = (_f.d + std::move(_result));
     }
   }
   return _result;

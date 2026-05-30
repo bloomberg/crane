@@ -169,7 +169,7 @@ struct LoopifyCoindStream {
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = List<T1>::cons(_f.s, _result);
+        _result = List<T1>::cons(_f.s, std::move(_result));
       }
     }
     return _result;

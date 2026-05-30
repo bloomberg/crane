@@ -36,7 +36,7 @@ uint64_t MemSafetyProbe7::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -87,7 +87,7 @@ MemSafetyProbe7::build_len_closures(
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
       _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
-          _f._s0, _result);
+          _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -130,7 +130,7 @@ uint64_t MemSafetyProbe7::sum_fns(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -181,7 +181,7 @@ MemSafetyProbe7::build_sum_closures(
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
       _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
-          _f._s0, _result);
+          _f._s0, std::move(_result));
     }
   }
   return _result;
@@ -230,8 +230,8 @@ MemSafetyProbe7::build_accum_closures(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result =
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -275,7 +275,7 @@ uint64_t MemSafetyProbe7::apply_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = _f.a0(_result);
+      _result = std::move(_f.a0)(std::move(_result));
     }
   }
   return _result;
@@ -317,7 +317,7 @@ MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = mylist<uint64_t>::mycons(_f.n, _result);
+      _result = mylist<uint64_t>::mycons(_f.n, std::move(_result));
     }
   }
   return _result;

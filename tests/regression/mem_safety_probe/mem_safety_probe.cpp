@@ -47,8 +47,8 @@ MemSafetyProbe::build_adders(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result =
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s0, _result);
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -92,7 +92,7 @@ uint64_t MemSafetyProbe::apply_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.x + _result);
+      _result = (_f.x + std::move(_result));
     }
   }
   return _result;

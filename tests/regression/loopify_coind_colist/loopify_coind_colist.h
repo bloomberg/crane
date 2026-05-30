@@ -217,7 +217,7 @@ struct LoopifyCoindColist {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cocons>(_frame));
-        _result = List<T1>::cons(_f.a0, _result);
+        _result = List<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;

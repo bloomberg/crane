@@ -129,7 +129,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f._s0 + _result);
+        _result = (_f._s0 + std::move(_result));
       }
     }
     return _result;
@@ -173,7 +173,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _result.app(_f._s0);
+        _result = std::move(_result).app(_f._s0);
       }
     }
     return _result;
@@ -217,7 +217,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<T1>::cons(_f.a0, _result);
+        _result = List<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -283,7 +283,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<T1>::cons(_f.a0, _result);
+        _result = List<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -369,7 +369,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<T1>::cons(_f.a0, _result);
+        _result = List<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -412,7 +412,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<T2>::cons(_f.a0, _result);
+        _result = List<T2>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -463,7 +463,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<std::pair<T1, T2>>::cons(_f._s0, _result);
+        _result = List<std::pair<T1, T2>>::cons(_f._s0, std::move(_result));
       }
     }
     return _result;
@@ -510,8 +510,8 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Cont_a>(_frame));
-        T1 a = _f.a;
-        T2 b = _f.b;
+        T1 a = std::move(_f.a);
+        T2 b = std::move(_f.b);
         auto _cs = std::move(_result);
         List<T1> as_ = std::move(_cs.first);
         List<T2> bs = std::move(_cs.second);
@@ -561,8 +561,8 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = _f.a0;
-        F0 p = _f.p;
+        T1 a0 = std::move(_f.a0);
+        F0 p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<T1> trues = std::move(_cs.first);
         List<T1> falses = std::move(_cs.second);
@@ -631,7 +631,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = List<T1>::cons(_f.x, _result);
+        _result = List<T1>::cons(std::move(_f.x), std::move(_result));
       }
     }
     return _result;

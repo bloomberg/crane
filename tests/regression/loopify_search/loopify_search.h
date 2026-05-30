@@ -166,7 +166,7 @@ struct LoopifySearch {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 cmp = _f.cmp;
+        F0 cmp = std::move(_f.cmp);
         uint64_t m = std::move(_result);
         if (cmp(a0, m) == UINT64_C(1)) {
           _result = std::move(a0);
@@ -246,7 +246,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -318,7 +318,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f._s0.app(_result);
+        _result = std::move(_f._s0).app(std::move(_result));
       }
     }
     return _result;
@@ -442,7 +442,8 @@ struct LoopifySearch {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_BNode>(_frame));
-        _result = f0(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                     std::move(_f._result));
       }
     }
     return _result;
@@ -501,7 +502,8 @@ struct LoopifySearch {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_BNode>(_frame));
-        _result = f0(_f.a0, std::move(_result), _f.a1, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                     std::move(_f._result));
       }
     }
     return _result;
@@ -552,7 +554,7 @@ struct LoopifySearch {
         }
       } else if (std::holds_alternative<_After_BNode>(_frame)) {
         auto _f = std::move(std::get<_After_BNode>(_frame));
-        _stack.emplace_back(_Combine_BNode{_result});
+        _stack.emplace_back(_Combine_BNode{std::move(_result)});
         _stack.emplace_back(_Enter{_f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_BNode>(_frame));
@@ -606,7 +608,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.idx, _result);
+        _result = List<uint64_t>::cons(_f.idx, std::move(_result));
       }
     }
     return _result;

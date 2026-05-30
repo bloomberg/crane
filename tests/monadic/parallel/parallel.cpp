@@ -38,6 +38,6 @@ std::pair<uint64_t, uint64_t> ParallelTest::fast(uint64_t m, uint64_t n) {
 std::pair<uint64_t, uint64_t> ParallelTest::slow(uint64_t m, uint64_t n) {
   std::pair<uint64_t, uint64_t> p = std::make_pair(m, n);
   uint64_t r1 = ack(p);
-  uint64_t r2 = ack(p);
+  uint64_t r2 = ack(std::move(p));
   return std::make_pair(r1, r2);
 }

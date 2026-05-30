@@ -44,7 +44,7 @@ uint64_t MemSafetyProbe22::tree_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -223,7 +223,7 @@ uint64_t MemSafetyProbe22::weighted_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s2});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s2});
       _stack.emplace_back(_Enter{_f._s0, _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -271,7 +271,7 @@ uint64_t MemSafetyProbe22::split_sum(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t n = _f.n;
-      const MemSafetyProbe22::tree &t = _f.t;
+      const MemSafetyProbe22::tree &t = std::move(_f.t);
       if (n <= 0) {
         _result = tree_sum(t);
       } else {
@@ -290,7 +290,7 @@ uint64_t MemSafetyProbe22::split_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result});
+      _stack.emplace_back(_Combine_Node{std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_, std::move(_f._s1)});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -406,10 +406,10 @@ MemSafetyProbe22::insert(const MemSafetyProbe22::tree &t,
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = tree::node(_result, _f.a1, _f.a2);
+      _result = tree::node(std::move(_result), _f.a1, std::move(_f.a2));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = tree::node(_f.a0, _f.a1, _result);
+      _result = tree::node(std::move(_f.a0), _f.a1, std::move(_result));
     }
   }
   return _result;

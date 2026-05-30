@@ -37,7 +37,7 @@ List<uint64_t> LoopifyListCombining::append(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -84,8 +84,8 @@ List<uint64_t> LoopifyListCombining::intersperse(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0, List<uint64_t>::cons(_f.sep, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0, List<uint64_t>::cons(_f.sep, std::move(_result)));
     }
   }
   return _result;
@@ -134,7 +134,8 @@ List<uint64_t> LoopifyListCombining::intercalate(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_f.a0, append(_f.sep, _result));
+      _result = append(std::move(_f.a0),
+                       append(std::move(_f.sep), std::move(_result)));
     }
   }
   return _result;
@@ -175,7 +176,7 @@ List<uint64_t> LoopifyListCombining::concat(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_f.a0, _result);
+      _result = append(std::move(_f.a0), std::move(_result));
     }
   }
   return _result;
@@ -220,7 +221,7 @@ List<uint64_t> LoopifyListCombining::mapcat(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_f._s0, _result);
+      _result = append(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -270,8 +271,8 @@ List<uint64_t> LoopifyListCombining::interleave_two(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0, List<uint64_t>::cons(_f.a00, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0, List<uint64_t>::cons(_f.a00, std::move(_result)));
     }
   }
   return _result;
@@ -320,7 +321,8 @@ List<uint64_t> LoopifyListCombining::concat_sep(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_f.a0, List<uint64_t>::cons(_f.sep, _result));
+      _result = append(std::move(_f.a0),
+                       List<uint64_t>::cons(_f.sep, std::move(_result)));
     }
   }
   return _result;

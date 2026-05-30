@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe15::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -197,7 +197,7 @@ MemSafetyProbe15::tree MemSafetyProbe15::left_spine(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._s0);
+      _result = tree::node(std::move(_result), _f.n, _f._s0);
     }
   }
   return _result;

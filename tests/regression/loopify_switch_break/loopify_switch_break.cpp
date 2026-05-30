@@ -120,13 +120,13 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
       }
     } else if (std::holds_alternative<_Resume_t>(_frame)) {
       auto _f = std::move(std::get<_Resume_t>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     } else if (std::holds_alternative<_Resume_t_1>(_frame)) {
       auto _f = std::move(std::get<_Resume_t_1>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume_t_2>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     }
   }
   return _result;

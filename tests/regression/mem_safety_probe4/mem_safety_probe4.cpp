@@ -42,7 +42,7 @@ uint64_t MemSafetyProbe4::sum_through(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = _f.a0.sum_values(_result);
+      _result = std::move(_f.a0).sum_values(std::move(_result));
     }
   }
   return _result;
@@ -91,7 +91,7 @@ uint64_t MemSafetyProbe4::add_through(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_result + _f._s0);
+      _result = (std::move(_result) + _f._s0);
     }
   }
   return _result;
@@ -145,7 +145,7 @@ uint64_t MemSafetyProbe4::double_partial(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.f(_result) + _f._s0);
+      _result = (std::move(_f.f)(std::move(_result)) + _f._s0);
     }
   }
   return _result;
@@ -197,7 +197,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.w + _result);
+      _result = (_f.w + std::move(_result));
     }
   }
   return _result;
@@ -245,7 +245,7 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = mylist<uint64_t>::mycons(_f._s0, _result);
+      _result = mylist<uint64_t>::mycons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -287,7 +287,7 @@ uint64_t MemSafetyProbe4::mysum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -336,7 +336,7 @@ uint64_t MemSafetyProbe4::process_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = apply_to(_f.f, _result);
+      _result = apply_to(std::move(_f.f), std::move(_result));
     }
   }
   return _result;

@@ -128,7 +128,8 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -174,7 +175,8 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -218,7 +220,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<T1>::cons(_f.a0, _result);
+        _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -262,7 +264,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<T2>::cons(_f.a0, _result);
+        _result = list<T2>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -310,7 +312,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<T1>::cons(_f.a0, _result);
+        _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -352,7 +354,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<T1>::cons(_f.a0, _result);
+        _result = list<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -394,7 +396,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_m>(_frame));
-        _result = list<T1>::cons(_f.x, _result);
+        _result = list<T1>::cons(std::move(_f.x), std::move(_result));
       }
     }
     return _result;
@@ -448,7 +450,7 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<T3>::cons(_f._s0, _result);
+        _result = list<T3>::cons(std::move(_f._s0), std::move(_result));
       }
     }
     return _result;
@@ -495,7 +497,9 @@ struct LoopifyTmc {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<T1>::cons(_f.a0_0, list<T1>::cons(_f.a0_1, _result));
+        _result = list<T1>::cons(
+            std::move(_f.a0_0),
+            list<T1>::cons(std::move(_f.a0_1), std::move(_result)));
       }
     }
     return _result;

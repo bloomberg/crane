@@ -37,7 +37,7 @@ MemSafetyProbe3::tree MemSafetyProbe3::build_deep(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._s0);
+      _result = tree::node(std::move(_result), _f.n, _f._s0);
     }
   }
   return _result;

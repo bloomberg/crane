@@ -145,7 +145,7 @@ List<uint64_t> LoopifyListAccess::lookup_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.v, _result);
+      _result = List<uint64_t>::cons(_f.v, std::move(_result));
     }
   }
   return _result;
@@ -190,7 +190,7 @@ uint64_t LoopifyListAccess::count(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;

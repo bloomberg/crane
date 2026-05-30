@@ -50,7 +50,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -114,7 +114,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s3});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s3});
       _stack.emplace_back(_Enter{_f._s0, _f.a0, _f._s2});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -160,7 +160,7 @@ MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = tree::node(_result, _f.n, _f._s0);
+      _result = tree::node(std::move(_result), _f.n, _f._s0);
     }
   }
   return _result;
@@ -281,7 +281,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));

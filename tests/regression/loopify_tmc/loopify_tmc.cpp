@@ -43,7 +43,7 @@ LoopifyTmc::range(uint64_t lo,
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = list<uint64_t>::cons(_f.hi_, _result);
+      _result = list<uint64_t>::cons(_f.hi_, std::move(_result));
     }
   }
   return _result;
@@ -90,7 +90,7 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::prefix_sums(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = list<uint64_t>::cons(_f.s, _result);
+      _result = list<uint64_t>::cons(_f.s, std::move(_result));
     }
   }
   return _result;

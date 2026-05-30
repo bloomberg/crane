@@ -137,7 +137,7 @@ struct LoopifyGenerators {
         }
       } else {
         auto _f = std::move(std::get<_Resume_m>(_frame));
-        _result = List<uint64_t>::cons(_f.x, _result);
+        _result = List<uint64_t>::cons(_f.x, std::move(_result));
       }
     }
     return _result;
@@ -190,7 +190,7 @@ struct LoopifyGenerators {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<uint64_t>::cons(_f._s0, _result);
+        _result = List<uint64_t>::cons(_f._s0, std::move(_result));
       }
     }
     return _result;
@@ -264,7 +264,7 @@ struct LoopifyGenerators {
         }
       } else {
         auto _f = std::move(std::get<_Resume_val>(_frame));
-        _result = List<uint64_t>::cons(_f.val, _result);
+        _result = List<uint64_t>::cons(_f.val, std::move(_result));
       }
     }
     return _result;

@@ -1002,6 +1002,44 @@ let rec cpp_ty_eq t1 t2 =
   | Tany, Tany -> true
   | _ -> false
 
+let build_guard_compare_stmts n ids =
+  match Table.find_guard_compare n with
+  | None -> []
+  | Some ctor_ref ->
+    let strip_wrappers t =
+      let rec go = function
+        | Tref t | Tmod (_, t) | Tnamespace (_, t) -> go t
+        | t -> t
+      in
+      go t
+    in
+    let rec find_pair = function
+      | (id1, ty1) :: rest ->
+        let base1 = strip_wrappers ty1 in
+        ( match
+            List.find_opt
+              (fun (_, ty2) -> cpp_ty_eq base1 (strip_wrappers ty2))
+              rest
+          with
+        | Some (id2, _) -> Some (id1, id2)
+        | None -> find_pair rest )
+      | [] -> None
+    in
+    ( match find_pair ids with
+    | Some (p1, p2) ->
+      let ctor_expr =
+        match ctor_ref with
+        | GlobRef.ConstructRef ((kn, i), cidx)
+          when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
+          let ctor_name = Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) in
+          CPPenum_val (GlobRef.IndRef (kn, i), ctor_name)
+        | _ -> mk_cppglob ctor_ref []
+      in
+      [ Sif_then
+          ( CPPbinop ("==", CPPunop ("&", CPPvar p1), CPPunop ("&", CPPvar p2)),
+            [Sreturn (Some ctor_expr)] ) ]
+    | None -> [] )
+
 (** Post-processing pass: insert [std::move] for state-threading pattern.
 
     When a fixpoint's return type is [pair<S,R>] and it has a value parameter
@@ -11853,7 +11891,8 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b, no_pure) )
+      let guard = build_guard_compare_stmts n ids in
+      Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -11897,7 +11936,8 @@ let gen_dfun n b cty ty temps =
       (* let b = List.map forward_fun_args b in *)
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, sigma_asserts @ b, no_pure)
+      let guard = build_guard_compare_stmts n ids in
+      Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure)
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;

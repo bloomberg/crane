@@ -34,7 +34,7 @@ uint64_t LoopifyAdvancedLists::product(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 * _result);
+      _result = (_f.a0 * std::move(_result));
     }
   }
   return _result;
@@ -85,7 +85,7 @@ List<uint64_t> LoopifyAdvancedLists::compress(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -132,7 +132,7 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f._s0, _result);
+      _result = List<uint64_t>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -181,7 +181,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAdvancedLists::group_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -231,8 +232,8 @@ List<uint64_t> LoopifyAdvancedLists::interleave(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0, List<uint64_t>::cons(_f.a00, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0, List<uint64_t>::cons(_f.a00, std::move(_result)));
     }
   }
   return _result;
@@ -273,7 +274,7 @@ List<uint64_t> LoopifyAdvancedLists::concat_lists(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.a0.app(_result);
+      _result = std::move(_f.a0).app(std::move(_result));
     }
   }
   return _result;

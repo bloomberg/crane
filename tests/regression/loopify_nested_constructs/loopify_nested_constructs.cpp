@@ -36,7 +36,7 @@ uint64_t LoopifyNestedConstructs::multi_let(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = (_f.c + _result);
+      _result = (_f.c + std::move(_result));
     }
   }
   return _result;
@@ -128,7 +128,7 @@ uint64_t LoopifyNestedConstructs::let_nested(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = (_f.a + _result);
+      _result = (_f.a + std::move(_result));
     }
   }
   return _result;
@@ -177,7 +177,9 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = ((_f._s1 + _result) ? _f.n % (_f._s1 + _result) : _f.n);
+      _result =
+          ((_f._s1 + std::move(_result)) ? _f.n % (_f._s1 + std::move(_result))
+                                         : _f.n);
     }
   }
   return _result;
@@ -280,10 +282,10 @@ uint64_t LoopifyNestedConstructs::alternating_ops(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -343,7 +345,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -459,7 +461,7 @@ uint64_t LoopifyNestedConstructs::nested_match(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n__>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     }
   }
   return _result;

@@ -329,7 +329,7 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = list<uint64_t>::cons(_f.v, _result);
+      _result = list<uint64_t>::cons(_f.v, std::move(_result));
     }
   }
   return _result;
@@ -378,7 +378,8 @@ LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_a>(_frame));
-      _result = list<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          list<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

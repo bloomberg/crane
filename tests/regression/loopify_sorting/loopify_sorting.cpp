@@ -40,7 +40,7 @@ List<uint64_t> LoopifySorting::insert(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -80,7 +80,7 @@ List<uint64_t> LoopifySorting::insertion_sort(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = insert(_f.a0, _result);
+      _result = insert(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -147,10 +147,10 @@ List<uint64_t> LoopifySorting::merge_fuel(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.a00, _result);
+      _result = List<uint64_t>::cons(_f.a00, std::move(_result));
     }
   }
   return _result;
@@ -430,7 +430,7 @@ List<uint64_t> LoopifySorting::remove_duplicates(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -490,10 +490,10 @@ List<uint64_t> LoopifySorting::uniq_sorted_aux(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;

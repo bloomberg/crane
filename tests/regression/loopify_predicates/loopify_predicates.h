@@ -126,7 +126,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -300,7 +300,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -347,7 +347,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -390,7 +390,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.a0 && _result);
+        _result = (_f.a0 && std::move(_result));
       }
     }
     return _result;
@@ -433,7 +433,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.a0 || _result);
+        _result = (_f.a0 || std::move(_result));
       }
     }
     return _result;
@@ -510,7 +510,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.idx, _result);
+        _result = List<uint64_t>::cons(_f.idx, std::move(_result));
       }
     }
     return _result;
@@ -563,7 +563,7 @@ struct LoopifyPredicates {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;

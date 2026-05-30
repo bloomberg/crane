@@ -127,8 +127,8 @@ struct Monadic {
   static State<T1, T3> state_bind(State<T1, T2> ma, F1 &&f) {
     return [=](const T1 &s) mutable {
       auto _cs = ma(s);
-      const T2 &a = _cs.first;
-      const T1 &s_ = _cs.second;
+      T2 a = std::move(_cs.first);
+      T1 s_ = std::move(_cs.second);
       return f(a)(s_);
     };
   }

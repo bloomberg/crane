@@ -162,7 +162,7 @@ struct ComprehensivePatterns {
   static std::pair<std::optional<std::pair<S, uint64_t>>, S>
   nested_containers(S s);
   static std::pair<std::pair<S, uint64_t>, uint64_t>
-  match_pair(const std::pair<S, uint64_t> &p);
+  match_pair(std::pair<S, uint64_t> p);
   static List<std::pair<S, uint64_t>> make_list(uint64_t n, S s);
   static std::optional<std::pair<S, S>> multi_match(const std::optional<S> &o1,
                                                     const std::optional<S> &o2);

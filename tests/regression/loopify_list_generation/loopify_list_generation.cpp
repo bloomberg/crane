@@ -35,7 +35,7 @@ List<uint64_t> LoopifyListGeneration::replicate(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, _result);
+      _result = List<uint64_t>::cons(_f.x, std::move(_result));
     }
   }
   return _result;
@@ -77,8 +77,8 @@ List<uint64_t> LoopifyListGeneration::stutter(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0_0, List<uint64_t>::cons(_f.a0_1, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0_0, List<uint64_t>::cons(_f.a0_1, std::move(_result)));
     }
   }
   return _result;
@@ -119,7 +119,7 @@ List<uint64_t> LoopifyListGeneration::cycle(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = _f.l.app(_result);
+      _result = std::move(_f.l).app(std::move(_result));
     }
   }
   return _result;
@@ -162,7 +162,7 @@ List<uint64_t> LoopifyListGeneration::iterate(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, _result);
+      _result = List<uint64_t>::cons(_f.x, std::move(_result));
     }
   }
   return _result;
@@ -207,7 +207,7 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n>(_frame));
-      _result = _f._s0.app(_result);
+      _result = std::move(_f._s0).app(std::move(_result));
     }
   }
   return _result;
@@ -254,8 +254,8 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(
       }
     } else {
       auto _f = std::move(std::get<_Resume__x>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.x, List<uint64_t>::cons(_f.sep, _result));
+      _result = List<uint64_t>::cons(
+          _f.x, List<uint64_t>::cons(_f.sep, std::move(_result)));
     }
   }
   return _result;
@@ -298,7 +298,7 @@ List<uint64_t> LoopifyListGeneration::range(
       }
     } else {
       auto _f = std::move(std::get<_Resume_len_>(_frame));
-      _result = List<uint64_t>::cons(_f.start, _result);
+      _result = List<uint64_t>::cons(_f.start, std::move(_result));
     }
   }
   return _result;

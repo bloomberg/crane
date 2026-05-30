@@ -71,14 +71,14 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
-      _stack.emplace_back(_Combine_NList{_result});
+      _stack.emplace_back(_Combine_NList{std::move(_result)});
       _stack.emplace_back(_Enter{_f.a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = (std::move(_result) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = (_f.a00 + _result);
+      _result = (_f.a00 + std::move(_result));
     }
   }
   return _result;
@@ -196,7 +196,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
       _result = std::move(_result).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = List<uint64_t>::cons(_f.a00, _result);
+      _result = List<uint64_t>::cons(_f.a00, std::move(_result));
     }
   }
   return _result;

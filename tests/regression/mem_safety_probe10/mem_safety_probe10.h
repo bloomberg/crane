@@ -269,7 +269,7 @@ struct MemSafetyProbe10 {
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
       std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
-      const mylist<uint64_t> &l = _f.l;
+      const mylist<uint64_t> &l = std::move(_f.l);
       _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
           return acc;

@@ -503,8 +503,8 @@ struct HofTreeLoopify {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            f0(_f.a0, std::move(_result), _f.a1, _f.a2, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                     std::move(_f.a2), std::move(_f._result));
       }
     }
     return _result;
@@ -566,8 +566,8 @@ struct HofTreeLoopify {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            f0(_f.a0, std::move(_result), _f.a1, _f.a2, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                     std::move(_f.a2), std::move(_f._result));
       }
     }
     return _result;
@@ -625,8 +625,8 @@ struct HofTreeLoopify {
         _stack.emplace_back(_Enter{_f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            tree<T2>::node(std::move(_result), _f.a1, std::move(_f._result));
+        _result = tree<T2>::node(std::move(_result), std::move(_f.a1),
+                                 std::move(_f._result));
       }
     }
     return _result;
@@ -682,7 +682,8 @@ struct HofTreeLoopify {
         _stack.emplace_back(_Enter{_f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result = f(std::move(_result), _f.a1, std::move(_f._result));
+        _result =
+            f(std::move(_result), std::move(_f.a1), std::move(_f._result));
       }
     }
     return _result;
@@ -747,8 +748,8 @@ struct HofTreeLoopify {
         _stack.emplace_back(_Enter{_f.a00, _f.a0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            tree<T3>::node(std::move(_result), _f._s1, std::move(_f._result));
+        _result = tree<T3>::node(std::move(_result), std::move(_f._s1),
+                                 std::move(_f._result));
       }
     }
     return _result;
@@ -793,7 +794,7 @@ struct HofTreeLoopify {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree<T1> &t = *_f.t;
-        T3 acc = _f.acc;
+        T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = std::make_pair(std::move(acc), tree<T2>::leaf());
         } else {
@@ -803,9 +804,9 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_Cont_Node>(_frame)) {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
-        T1 a1 = _f.a1;
+        T1 a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         auto _cs = std::move(_result);
         T3 acc1 = std::move(_cs.first);
         tree<T2> l_ = std::move(_cs.second);
@@ -817,7 +818,7 @@ struct HofTreeLoopify {
       } else {
         auto _f = std::move(std::get<_Cont_acc2>(_frame));
         tree<T2> l_ = std::move(_f.l_);
-        T2 x_ = _f.x_;
+        T2 x_ = std::move(_f.x_);
         auto _cs2 = std::move(_result);
         T3 acc3 = std::move(_cs2.first);
         tree<T2> r_ = std::move(_cs2.second);

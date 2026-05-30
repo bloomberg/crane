@@ -191,8 +191,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListPairing::zip_longest_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l2 = _f.l2;
-      const List<uint64_t> &l1 = _f.l1;
+      const List<uint64_t> &l2 = std::move(_f.l2);
+      const List<uint64_t> &l1 = std::move(_f.l1);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
@@ -223,13 +223,16 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListPairing::zip_longest_fuel(
       }
     } else if (std::holds_alternative<_Resume_Cons>(_frame)) {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     } else if (std::holds_alternative<_Resume_Cons_1>(_frame)) {
       auto _f = std::move(std::get<_Resume_Cons_1>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -292,7 +295,7 @@ List<uint64_t> LoopifyListPairing::zipWith(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f._s0, _result);
+      _result = List<uint64_t>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

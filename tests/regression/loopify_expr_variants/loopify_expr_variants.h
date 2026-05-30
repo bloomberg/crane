@@ -909,7 +909,7 @@ List<T1> ListDef::repeat(T1 x,
       }
     } else {
       auto _f = std::move(std::get<_Resume_k>(_frame));
-      _result = List<T1>::cons(_f.x, _result);
+      _result = List<T1>::cons(std::move(_f.x), std::move(_result));
     }
   }
   return _result;

@@ -125,7 +125,7 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
-      stm::writeTVar(b, p.second);
+      stm::writeTVar(bsl::move(b), p.second);
       return p.first;
     } else {
       return p.first;
@@ -138,7 +138,7 @@ template <typename K, typename V> struct CHT {
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
-    V v = f(ov);
+    V v = f(bsl::move(ov));
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
@@ -228,8 +228,8 @@ template <typename K, typename V> struct CHT {
     } else {
       auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v_mut());
-      T1 k_ = d_a0.first;
-      T2 v_ = d_a0.second;
+      T1 k_ = std::move(d_a0.first);
+      T2 v_ = std::move(d_a0.second);
       if (eqb(k, k_)) {
         return bsl::make_pair(bsl::make_optional<T2>(v_), *d_a1);
       } else {

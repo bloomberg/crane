@@ -116,7 +116,7 @@ struct LoopifyHofs {
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
-        _loop_acc = f(_loop_acc, a0);
+        _loop_acc = f(std::move(_loop_acc), a0);
       }
     }
   }
@@ -229,7 +229,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<T1>::cons(_f.a0, _result);
+        _result = List<T1>::cons(std::move(_f.a0), std::move(_result));
       }
     }
     return _result;
@@ -273,7 +273,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f._s0.app(_result);
+        _result = std::move(_f._s0).app(std::move(_result));
       }
     }
     return _result;
@@ -331,7 +331,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f._s0.app(_result);
+        _result = std::move(_f._s0).app(std::move(_result));
       }
     }
     return _result;
@@ -381,7 +381,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.i, _result);
+        _result = List<uint64_t>::cons(_f.i, std::move(_result));
       }
     }
     return _result;
@@ -435,7 +435,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -487,7 +487,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<uint64_t>::cons(_f.acc, _result);
+        _result = List<uint64_t>::cons(_f.acc, std::move(_result));
       }
     }
     return _result;
@@ -548,7 +548,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -604,7 +604,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.a0, _result);
+        _result = std::move(_f.f)(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -656,7 +656,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         uint64_t acc = _f.acc;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(acc, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -710,7 +710,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(a0, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -757,7 +757,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f._s0.app(_result);
+        _result = std::move(_f._s0).app(std::move(_result));
       }
     }
     return _result;
@@ -804,7 +804,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         auto _cs = f(a0);
         if (_cs.has_value()) {
@@ -856,7 +856,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.a0 && _result);
+        _result = (_f.a0 && std::move(_result));
       }
     }
     return _result;
@@ -928,10 +928,10 @@ struct LoopifyHofs {
         }
       } else if (std::holds_alternative<_Resume1>(_frame)) {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       } else {
         auto _f = std::move(std::get<_Resume2>(_frame));
-        _result = List<uint64_t>::cons(_f.a00, _result);
+        _result = List<uint64_t>::cons(_f.a00, std::move(_result));
       }
     }
     return _result;
@@ -990,7 +990,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max <= fx) {
@@ -1043,7 +1043,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_m>(_frame));
-        _result = List<uint64_t>::cons(_f.x, _result);
+        _result = List<uint64_t>::cons(_f.x, std::move(_result));
       }
     }
     return _result;
@@ -1095,7 +1095,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 cmp = _f.cmp;
+        F0 cmp = std::move(_f.cmp);
         uint64_t m = std::move(_result);
         if (UINT64_C(0) <= cmp(a0, m)) {
           _result = std::move(a0);
@@ -1146,7 +1146,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.a0, _result);
+        _result = std::move(_f.f)(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -1194,7 +1194,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 p = _f.p;
+        F0 p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<uint64_t> yes = std::move(_cs.first);
         List<uint64_t> no = std::move(_cs.second);
@@ -1307,7 +1307,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;

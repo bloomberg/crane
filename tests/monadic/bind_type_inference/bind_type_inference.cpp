@@ -26,7 +26,7 @@ int64_t BindTypeInference::test4() {
   v.push_back(INT64_C(1));
   v.push_back(INT64_C(2));
   v.push_back(INT64_C(3));
-  return v.size();
+  return std::move(v).size();
 }
 
 List<int64_t> BindTypeInference::intToList(int64_t n) {

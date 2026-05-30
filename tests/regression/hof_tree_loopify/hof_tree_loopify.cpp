@@ -35,7 +35,7 @@ HofTreeLoopify::depth_tree(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = tree<uint64_t>::node(_result, _f.n, _f._s0);
+      _result = tree<uint64_t>::node(std::move(_result), _f.n, _f._s0);
     }
   }
   return _result;

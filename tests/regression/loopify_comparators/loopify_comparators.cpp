@@ -163,10 +163,10 @@ List<uint64_t> LoopifyComparators::merge_by_fuel(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.a00, _result);
+      _result = List<uint64_t>::cons(_f.a00, std::move(_result));
     }
   }
   return _result;
@@ -218,7 +218,7 @@ List<uint64_t> LoopifyComparators::insert_sorted(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -258,7 +258,7 @@ List<uint64_t> LoopifyComparators::insertion_sort(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = insert_sorted(_f.a0, _result);
+      _result = insert_sorted(_f.a0, std::move(_result));
     }
   }
   return _result;

@@ -38,7 +38,7 @@ List<List<uint64_t>> LoopifyTreePaths::map_cons(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

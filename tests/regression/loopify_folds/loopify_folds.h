@@ -148,7 +148,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.a0, _result);
+        _result = std::move(_f.f)(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -193,7 +193,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = List<uint64_t>::cons(_f.acc, _result);
+        _result = List<uint64_t>::cons(_f.acc, std::move(_result));
       }
     }
     return _result;
@@ -295,7 +295,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f(_f.a0, _result);
+        _result = std::move(_f.f)(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -395,7 +395,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = List<uint64_t>::cons(_f.x, _result);
+        _result = List<uint64_t>::cons(_f.x, std::move(_result));
       }
     }
     return _result;
@@ -444,7 +444,7 @@ struct LoopifyFolds {
         }
       } else {
         auto _f = std::move(std::get<_Resume_x>(_frame));
-        _result = List<uint64_t>::cons(_f.x, _result);
+        _result = List<uint64_t>::cons(_f.x, std::move(_result));
       }
     }
     return _result;

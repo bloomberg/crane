@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe18::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -103,7 +103,8 @@ MemSafetyProbe18::build_tree_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = mylist<MemSafetyProbe18::tree>::mycons(_f._s0, _result);
+      _result =
+          mylist<MemSafetyProbe18::tree>::mycons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -148,7 +149,7 @@ uint64_t MemSafetyProbe18::sum_tree_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;

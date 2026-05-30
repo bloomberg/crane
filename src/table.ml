@@ -1462,6 +1462,38 @@ let reset_loopify : unit -> obj =
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
+(* --- Guard Compare --------------------------------------------------- *)
+
+let guard_compare_table =
+  Summary.ref Label.Map.empty ~name:"CraneGuardCompare"
+
+let add_guard_compare fn_ref ctor_ref =
+  let lbl = label_of_r fn_ref in
+  guard_compare_table := Label.Map.add lbl ctor_ref !guard_compare_table
+
+let find_guard_compare r =
+  let lbl = label_of_r r in
+  Label.Map.find_opt lbl !guard_compare_table
+
+let guard_compare_obj : GlobRef.t * GlobRef.t -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Guard Compare"
+       ~cache:(fun (fn_ref, ctor_ref) -> add_guard_compare fn_ref ctor_ref)
+       ~subst:
+         (Some
+            (fun (s, (fn_ref, ctor_ref)) ->
+              (fst (subst_global s fn_ref), fst (subst_global s ctor_ref)) ))
+
+let extract_guard_compare fn_qualid ctor_qualid =
+  check_inside_section ();
+  let fn_ref = Smartlocate.global_with_alias fn_qualid in
+  let ctor_ref = Smartlocate.global_with_alias ctor_qualid in
+  ( match fn_ref with
+  | GlobRef.ConstRef _ -> ()
+  | _ -> error_constant ?loc:fn_qualid.CAst.loc fn_ref );
+  Lib.add_leaf (guard_compare_obj (fn_ref, ctor_ref))
+
 (* Allows to print a comment at the beginning of the output files *)
 let {Goptions.get = file_comment} =
   declare_string_option_and_ref

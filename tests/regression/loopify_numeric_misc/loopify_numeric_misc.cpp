@@ -34,7 +34,7 @@ uint64_t LoopifyNumericMisc::sum_abs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -85,10 +85,10 @@ uint64_t LoopifyNumericMisc::alternating_ops(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.n_ + _result);
+      _result = (_f.n_ + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -132,7 +132,7 @@ uint64_t LoopifyNumericMisc::count_even(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -176,7 +176,7 @@ uint64_t LoopifyNumericMisc::count_odd(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -216,7 +216,7 @@ uint64_t LoopifyNumericMisc::product(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 * _result);
+      _result = (_f.a0 * std::move(_result));
     }
   }
   return _result;
@@ -256,7 +256,7 @@ uint64_t LoopifyNumericMisc::sum_of_squares(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -309,7 +309,7 @@ uint64_t LoopifyNumericMisc::list_max(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = max_two(_f.a0, _result);
+      _result = max_two(_f.a0, std::move(_result));
     }
   }
   return _result;

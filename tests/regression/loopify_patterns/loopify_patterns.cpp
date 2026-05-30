@@ -38,7 +38,7 @@ LoopifyPatterns::multi_let(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.c + _result);
+      _result = (_f.c + std::move(_result));
     }
   }
   return _result;
@@ -123,7 +123,7 @@ LoopifyPatterns::deep_nest(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + (_f._s1 + (_f._s2 + _result)));
+      _result = (_f._s0 + (_f._s1 + (_f._s2 + std::move(_result))));
     }
   }
   return _result;
@@ -192,7 +192,7 @@ bool LoopifyPatterns::bool_chain_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -252,7 +252,7 @@ bool LoopifyPatterns::chained_comp(
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m{_result});
+      _stack.emplace_back(_Combine_m{std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
@@ -452,7 +452,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::cons_computed(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = list<uint64_t>::cons(_f.a0, _result);
+      _result = list<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -498,7 +498,8 @@ uint64_t LoopifyPatterns::mod_pattern(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = ((_result + 1) ? _f.n_ % (_result + 1) : _f.n_);
+      _result =
+          ((std::move(_result) + 1) ? _f.n_ % (std::move(_result) + 1) : _f.n_);
     }
   }
   return _result;
@@ -549,10 +550,10 @@ uint64_t LoopifyPatterns::alternating_ops(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -603,7 +604,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::replace_at(
       }
     } else {
       auto _f = std::move(std::get<_Resume_i>(_frame));
-      _result = list<uint64_t>::cons(_f.a0, _result);
+      _result = list<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -656,7 +657,7 @@ uint64_t LoopifyPatterns::nested_pattern(
       }
     } else {
       auto _f = std::move(std::get<_Resume_a>(_frame));
-      _result = (_f.a + (_f.b + (_f.c + _result)));
+      _result = (_f.a + (_f.b + (_f.c + std::move(_result))));
     }
   }
   return _result;
@@ -698,7 +699,7 @@ uint64_t LoopifyPatterns::let_nested(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.a + _result);
+      _result = (_f.a + std::move(_result));
     }
   }
   return _result;
@@ -840,7 +841,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::as_guard_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = list<uint64_t>::cons(_f.a0, _result);
+      _result = list<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -916,7 +917,7 @@ uint64_t LoopifyPatterns::quad_sum_pattern(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + (_f._s1 + _result));
+      _result = (_f._s0 + (_f._s1 + std::move(_result)));
     }
   }
   return _result;
@@ -1015,7 +1016,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::append_lists(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = list<uint64_t>::cons(_f.a0, _result);
+      _result = list<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -1242,8 +1243,8 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::merge_alternating(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          list<uint64_t>::cons(_f.a0, list<uint64_t>::cons(_f.a00, _result));
+      _result = list<uint64_t>::cons(
+          _f.a0, list<uint64_t>::cons(_f.a00, std::move(_result)));
     }
   }
   return _result;
@@ -1317,7 +1318,7 @@ uint64_t LoopifyPatterns::four_elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + (_f.a00 + (_f.a01 + (_f.a02 + _result))));
+      _result = (_f.a0 + (_f.a00 + (_f.a01 + (_f.a02 + std::move(_result)))));
     }
   }
   return _result;

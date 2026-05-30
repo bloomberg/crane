@@ -1,7 +1,12 @@
 #include "itree_reified.h"
 
 /// Pass-through: takes a reified itree and returns it unchanged.
-void ITreeReified::run_tree(std::shared_ptr<ITree<void>>) { return; }
+void ITreeReified::run_tree(std::shared_ptr<ITree<void>> t) {
+  {
+    std::move(t);
+    return;
+  }
+}
 
 /// Sequence two reified itrees.
 void ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,

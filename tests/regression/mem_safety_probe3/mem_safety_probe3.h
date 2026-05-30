@@ -437,7 +437,7 @@ struct MemSafetyProbe3 {
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = _f.f(_result);
+        _result = std::move(_f.f)(std::move(_result));
       }
     }
     return _result;

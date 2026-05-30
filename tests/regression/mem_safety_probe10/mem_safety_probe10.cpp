@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe10::sum_fns(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -91,9 +91,11 @@ MemSafetyProbe10::collect_adders(
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
       _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
-          _f._s0, mylist<std::function<uint64_t(uint64_t)>>::mycons(
-                      _f._s1, mylist<std::function<uint64_t(uint64_t)>>::mycons(
-                                  _f._s2, _result)));
+          std::move(_f._s0),
+          mylist<std::function<uint64_t(uint64_t)>>::mycons(
+              std::move(_f._s1),
+              mylist<std::function<uint64_t(uint64_t)>>::mycons(
+                  std::move(_f._s2), std::move(_result))));
     }
   }
   return _result;
@@ -154,7 +156,7 @@ MemSafetyProbe10::build_tree_fns(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t depth = _f.depth;
-      const MemSafetyProbe10::tree &t = _f.t;
+      const MemSafetyProbe10::tree &t = std::move(_f.t);
       if (depth <= 0) {
         _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
       } else {
@@ -180,8 +182,8 @@ MemSafetyProbe10::build_tree_fns(
     } else {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
       _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
-          _f._s0,
-          mylist<std::function<uint64_t(uint64_t)>>::mycons(_f._s1, _result));
+          std::move(_f._s0), mylist<std::function<uint64_t(uint64_t)>>::mycons(
+                                 std::move(_f._s1), std::move(_result)));
     }
   }
   return _result;

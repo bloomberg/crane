@@ -36,7 +36,7 @@ LoopifyNumbers::factorial(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n * _result);
+      _result = (_f.n * std::move(_result));
     }
   }
   return _result;
@@ -87,7 +87,7 @@ LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_Combine_m{_result});
+      _stack.emplace_back(_Combine_m{std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
@@ -166,11 +166,11 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{_result, _f._s2, _f.f_1});
+      _stack.emplace_back(_After_m_1{std::move(_result), _f._s2, _f.f_1});
       _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
@@ -265,7 +265,7 @@ LoopifyNumbers::binomial(uint64_t n,
       }
     } else if (std::holds_alternative<_After_k_>(_frame)) {
       auto _f = std::move(std::get<_After_k_>(_frame));
-      _stack.emplace_back(_Combine_k_{_result});
+      _stack.emplace_back(_Combine_k_{std::move(_result)});
       _stack.emplace_back(_Enter{_f.k_, _f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_k_>(_frame));
@@ -324,7 +324,7 @@ LoopifyNumbers::pascal(uint64_t row,
       }
     } else if (std::holds_alternative<_After_r>(_frame)) {
       auto _f = std::move(std::get<_After_r>(_frame));
-      _stack.emplace_back(_Combine_r{_result});
+      _stack.emplace_back(_Combine_r{std::move(_result)});
       _stack.emplace_back(_Enter{_f.c, _f.r});
     } else {
       auto _f = std::move(std::get<_Combine_r>(_frame));
@@ -384,7 +384,7 @@ uint64_t LoopifyNumbers::ackermann_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _stack.emplace_back(_Enter{_result, _f.m_, _f.f});
+      _stack.emplace_back(_Enter{std::move(_result), _f.m_, _f.f});
     }
   }
   return _result;
@@ -462,7 +462,7 @@ uint64_t LoopifyNumbers::digitsum_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume__x>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -562,7 +562,7 @@ LoopifyNumbers::sum_to(uint64_t n) { /// _Enter: captures varying parameters for
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     }
   }
   return _result;
@@ -602,7 +602,7 @@ uint64_t LoopifyNumbers::sum_squares(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -700,11 +700,11 @@ uint64_t LoopifyNumbers::staircase_fuel(
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{_result, _f._s2, _f.f_1});
+      _stack.emplace_back(_After_m_1{std::move(_result), _f._s2, _f.f_1});
       _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
@@ -770,7 +770,7 @@ uint64_t LoopifyNumbers::sum_while_positive(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     }
   }
   return _result;
@@ -876,11 +876,11 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
       }
     } else if (std::holds_alternative<_After_m>(_frame)) {
       auto _f = std::move(std::get<_After_m>(_frame));
-      _stack.emplace_back(_After_m_1{_result, _f.n_, _f.f_1});
+      _stack.emplace_back(_After_m_1{std::move(_result), _f.n_, _f.f_1});
       _stack.emplace_back(_Enter{_f.m, _f.f_0});
     } else if (std::holds_alternative<_After_m_1>(_frame)) {
       auto _f = std::move(std::get<_After_m_1>(_frame));
-      _stack.emplace_back(_Combine_m{_f._result, _result});
+      _stack.emplace_back(_Combine_m{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_m>(_frame));
@@ -1000,7 +1000,7 @@ LoopifyNumbers::power(uint64_t b,
       }
     } else {
       auto _f = std::move(std::get<_Resume_e_>(_frame));
-      _result = (_f.b * _result);
+      _result = (_f.b * std::move(_result));
     }
   }
   return _result;
@@ -1122,7 +1122,7 @@ uint64_t LoopifyNumbers::sum_divisors_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.k + _result);
+      _result = (_f.k + std::move(_result));
     }
   }
   return _result;
@@ -1218,7 +1218,7 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -1295,13 +1295,13 @@ List<uint64_t> LoopifyNumbers::collatz_list_fuel(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<uint64_t>::cons(_f.n, _result);
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     } else if (std::holds_alternative<_Resume2>(_frame)) {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = List<uint64_t>::cons(_f.n, _result);
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume3>(_frame));
-      _result = List<uint64_t>::cons(_f.n, _result);
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     }
   }
   return _result;
@@ -1351,7 +1351,7 @@ uint64_t LoopifyNumbers::sum_divisible_by(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     }
   }
   return _result;

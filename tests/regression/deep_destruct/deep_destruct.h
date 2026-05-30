@@ -127,7 +127,8 @@ struct DeepDestruct {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -173,7 +174,8 @@ struct DeepDestruct {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;

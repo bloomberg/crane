@@ -125,7 +125,8 @@ struct LoopifyTail {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -171,7 +172,8 @@ struct LoopifyTail {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -226,7 +228,7 @@ struct LoopifyTail {
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = a1.get();
-        _loop_acc = f(_loop_acc, a0);
+        _loop_acc = f(std::move(_loop_acc), a0);
       }
     }
   }

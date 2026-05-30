@@ -127,7 +127,8 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -173,7 +174,8 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -259,7 +261,7 @@ struct LoopifyPatterns {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = _f.f;
+        F0 f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (fx < rest_max) {
@@ -344,7 +346,8 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = list<list<T1>>::cons(_f._s0, _f.map_cons_h(_result));
+        _result = list<list<T1>>::cons(
+            _f._s0, std::move(_f.map_cons_h)(std::move(_result)));
       }
     }
     return _result;
@@ -419,10 +422,10 @@ struct LoopifyPatterns {
         }
       } else if (std::holds_alternative<_Resume1>(_frame)) {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<uint64_t>::cons(_f.a0, _result);
+        _result = list<uint64_t>::cons(_f.a0, std::move(_result));
       } else {
         auto _f = std::move(std::get<_Resume2>(_frame));
-        _result = list<uint64_t>::cons(_f.a00, _result);
+        _result = list<uint64_t>::cons(_f.a00, std::move(_result));
       }
     }
     return _result;
@@ -499,7 +502,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<uint64_t>::cons(_f.a0, _result);
+        _result = list<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -552,8 +555,8 @@ struct LoopifyPatterns {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 p = _f.p;
-        F1 q = _f.q;
+        F0 p = std::move(_f.p);
+        F1 q = std::move(_f.q);
         auto _cs = std::move(_result);
         std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
         list<uint64_t> cs = std::move(_cs.second);
@@ -629,7 +632,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = list<uint64_t>::cons(_f.a0, _result);
+        _result = list<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;

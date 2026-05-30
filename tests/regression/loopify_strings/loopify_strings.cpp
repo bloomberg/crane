@@ -37,7 +37,7 @@ List<uint64_t> LoopifyStrings::append(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -84,8 +84,8 @@ List<uint64_t> LoopifyStrings::join_with(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0, List<uint64_t>::cons(_f.sep, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0, List<uint64_t>::cons(_f.sep, std::move(_result)));
     }
   }
   return _result;
@@ -126,7 +126,7 @@ List<uint64_t> LoopifyStrings::repeat_string(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = append(_f.s, _result);
+      _result = append(std::move(_f.s), std::move(_result));
     }
   }
   return _result;
@@ -173,7 +173,8 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
       }
     } else {
       auto _f = std::move(std::get<_Resume__x>(_frame));
-      _result = append(_f.s, append(_f.sep, _result));
+      _result = append(std::move(_f.s),
+                       append(std::move(_f.sep), std::move(_result)));
     }
   }
   return _result;
@@ -225,7 +226,10 @@ List<uint64_t> LoopifyStrings::string_chain_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = append(_f.s, append(_f.sep, append(_result, _f.end_marker)));
+      _result =
+          append(std::move(_f.s),
+                 append(std::move(_f.sep),
+                        append(std::move(_result), std::move(_f.end_marker))));
     }
   }
   return _result;
@@ -274,7 +278,7 @@ List<uint64_t> LoopifyStrings::reverse(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_result, _f._s0);
+      _result = append(std::move(_result), _f._s0);
     }
   }
   return _result;
@@ -329,7 +333,7 @@ bool LoopifyStrings::list_eq(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 && _result);
+      _result = (_f._s0 && std::move(_result));
     }
   }
   return _result;
@@ -380,8 +384,8 @@ List<uint64_t> LoopifyStrings::intersperse(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a0, List<uint64_t>::cons(_f.sep, _result));
+      _result = List<uint64_t>::cons(
+          _f.a0, List<uint64_t>::cons(_f.sep, std::move(_result)));
     }
   }
   return _result;
@@ -430,7 +434,8 @@ List<uint64_t> LoopifyStrings::intercalate(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(_f.a0, append(_f.sep, _result));
+      _result = append(std::move(_f.a0),
+                       append(std::move(_f.sep), std::move(_result)));
     }
   }
   return _result;
@@ -471,7 +476,7 @@ LoopifyStrings::replicate(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, _result);
+      _result = List<uint64_t>::cons(_f.x, std::move(_result));
     }
   }
   return _result;
@@ -532,7 +537,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyStrings::run_length_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

@@ -337,7 +337,7 @@ struct MemSafetyProbe {
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
       std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
-      const mylist<tree> &trees = _f.trees;
+      const mylist<tree> &trees = std::move(_f.trees);
       _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename mylist<tree>::Mynil>(trees.v())) {
           return acc;

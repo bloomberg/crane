@@ -34,7 +34,7 @@ uint64_t LoopifyListWindows::len(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -78,7 +78,7 @@ List<List<uint64_t>> LoopifyListWindows::map_cons_helper(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -207,7 +207,7 @@ List<uint64_t> LoopifyListWindows::differences(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f._s0, _result);
+      _result = List<uint64_t>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -261,7 +261,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListWindows::sliding_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -303,8 +304,8 @@ List<List<uint64_t>> LoopifyListWindows::inits(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          List<List<uint64_t>>::cons(_f._s0, map_cons_helper(_f.a0, _result));
+      _result = List<List<uint64_t>>::cons(
+          _f._s0, map_cons_helper(_f.a0, std::move(_result)));
     }
   }
   return _result;
@@ -345,7 +346,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f.l, _result);
+      _result = List<List<uint64_t>>::cons(std::move(_f.l), std::move(_result));
     }
   }
   return _result;
@@ -393,7 +394,7 @@ List<uint64_t> LoopifyListWindows::take(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -447,7 +448,7 @@ List<List<uint64_t>> LoopifyListWindows::windows_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -484,7 +485,7 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = _f.l;
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -501,7 +502,8 @@ List<List<uint64_t>> LoopifyListWindows::chunks_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<List<uint64_t>>::cons(std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -541,7 +543,7 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = _f.l;
+      const List<uint64_t> &l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -561,7 +563,7 @@ List<List<uint64_t>> LoopifyListWindows::group_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_same>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

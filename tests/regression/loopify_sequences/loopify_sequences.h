@@ -151,7 +151,8 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.a0.app(_f.sep.app(_result));
+        _result =
+            std::move(_f.a0).app(std::move(_f.sep).app(std::move(_result)));
       }
     }
     return _result;
@@ -206,7 +207,7 @@ struct LoopifySequences {
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List<List<T1>> &ll = _f.ll;
+        const List<List<T1>> &ll = std::move(_f.ll);
         uint64_t fuel = _f.fuel;
         if (fuel <= 0) {
           _result = List<List<T1>>::nil();
@@ -277,7 +278,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<List<T1>>::cons(_f._s0, _result);
+        _result = List<List<T1>>::cons(std::move(_f._s0), std::move(_result));
       }
     }
     return _result;
@@ -339,7 +340,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_Resume_m>(_frame));
-        _result = List<uint64_t>::cons(_f.x, _result);
+        _result = List<uint64_t>::cons(_f.x, std::move(_result));
       }
     }
     return _result;
@@ -435,7 +436,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -514,7 +515,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = (_f.a0 && _result);
+        _result = (_f.a0 && std::move(_result));
       }
     }
     return _result;

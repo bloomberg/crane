@@ -46,7 +46,7 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f.l.app(_result);
+      _result = std::move(_f.l).app(std::move(_result));
     }
   }
   return _result;
@@ -94,7 +94,7 @@ List<uint64_t> LoopifyListGenerators::range(
       }
     } else {
       auto _f = std::move(std::get<_Resume_count_>(_frame));
-      _result = List<uint64_t>::cons(_f.start, _result);
+      _result = List<uint64_t>::cons(_f.start, std::move(_result));
     }
   }
   return _result;
@@ -135,7 +135,7 @@ List<uint64_t> LoopifyListGenerators::replicate_elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, _result);
+      _result = List<uint64_t>::cons(_f.x, std::move(_result));
     }
   }
   return _result;
@@ -177,7 +177,7 @@ List<uint64_t> LoopifyListGenerators::replicate_each(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f._s0.app(_result);
+      _result = std::move(_f._s0).app(std::move(_result));
     }
   }
   return _result;
@@ -222,7 +222,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListGenerators::enumerate_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;

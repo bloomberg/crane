@@ -75,7 +75,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -156,7 +156,7 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.acc, _result);
+      _result = List<uint64_t>::cons(_f.acc, std::move(_result));
     }
   }
   return _result;
@@ -210,7 +210,7 @@ List<uint64_t> LoopifyAlgorithms::differences(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f._s0, _result);
+      _result = List<uint64_t>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -280,7 +280,7 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       uint64_t fuel = _f.fuel;
-      const List<uint64_t> &l = _f.l;
+      const List<uint64_t> &l = std::move(_f.l);
       if (fuel <= 0) {
         _result = List<uint64_t>::nil();
       } else {
@@ -316,7 +316,7 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -422,7 +422,7 @@ List<uint64_t> LoopifyAlgorithms::take_impl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<uint64_t>::cons(_f.a0, _result);
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -476,7 +476,7 @@ List<List<uint64_t>> LoopifyAlgorithms::windows_aux(
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = List<List<uint64_t>>::cons(_f._s0, _result);
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -531,7 +531,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::sliding_pairs(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, _result);
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
   return _result;
@@ -627,7 +628,7 @@ uint64_t LoopifyAlgorithms::weighted_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -675,7 +676,7 @@ uint64_t LoopifyAlgorithms::step_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.contribution + _result);
+      _result = (_f.contribution + std::move(_result));
     }
   }
   return _result;

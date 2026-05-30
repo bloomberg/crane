@@ -151,8 +151,8 @@ struct LoopifySorting {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = _f.a0;
-        T1 a00 = _f.a00;
+        T1 a0 = std::move(_f.a0);
+        T1 a00 = std::move(_f.a00);
         auto _cs = std::move(_result);
         List<T1> l1 = std::move(_cs.first);
         List<T1> l2 = std::move(_cs.second);
@@ -242,10 +242,10 @@ struct LoopifySorting {
         }
       } else if (std::holds_alternative<_Resume1>(_frame)) {
         auto _f = std::move(std::get<_Resume1>(_frame));
-        _result = List<uint64_t>::cons(_f.a0, _result);
+        _result = List<uint64_t>::cons(_f.a0, std::move(_result));
       } else {
         auto _f = std::move(std::get<_Resume2>(_frame));
-        _result = List<uint64_t>::cons(_f.a00, _result);
+        _result = List<uint64_t>::cons(_f.a00, std::move(_result));
       }
     }
     return _result;

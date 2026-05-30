@@ -766,6 +766,15 @@ val extract_monad : qualid -> qualid -> qualid -> string -> string list -> unit
              erased to nothing at call sites) *)
 val extract_void : qualid -> qualid -> unit
 
+(** Register a pointer-equality guard for a comparison function.
+    [Crane Guard Compare f => Eq] inserts [if (&p1 == &p2) return Eq;]
+    at the top of [f], where [p1] and [p2] are the first two [const T&]
+    parameters of the same type. *)
+val extract_guard_compare : qualid -> qualid -> unit
+
+(** Look up the guard-compare return constructor for a function, if any. *)
+val find_guard_compare : GlobRef.t -> GlobRef.t option
+
 (** Skip extraction for qualified identifier. *)
 val extract_skip : qualid -> unit
 
