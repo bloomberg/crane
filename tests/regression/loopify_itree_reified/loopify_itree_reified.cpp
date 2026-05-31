@@ -3,27 +3,57 @@
 /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
 /// fixpoint with recursion on fuel that processes reified ITrees. Should
 /// be loopified normally (nontail with _Enter/_Call frames).
-uint64_t
-LoopifyItreeReified::count_taus(uint64_t fuel,
-                                const std::shared_ptr<ITree<uint64_t>> &t) {
-  if (fuel <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t fuel_ = fuel - 1;
-    auto _cs = t->observe();
-    if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
-      auto _x = _itf.value;
-      return UINT64_C(0);
-    } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
-      auto t_ = _itf.next;
-      return (count_taus(fuel_, t_) + 1);
+uint64_t LoopifyItreeReified::count_taus(
+    uint64_t fuel,
+    const std::shared_ptr<ITree<uint64_t>>
+        &t) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    std::shared_ptr<ITree<uint64_t>> t;
+    uint64_t fuel;
+  };
+
+  /// _Resume_t_: resumes after recursive call with _result.
+  struct _Resume_t_ {};
+
+  using _Frame = std::variant<_Enter, _Resume_t_>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{t, fuel});
+  /// Loopified count_taus: _Enter -> _Resume_t_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const std::shared_ptr<ITree<uint64_t>> &t = std::move(_f.t);
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = UINT64_C(0);
+      } else {
+        uint64_t fuel_ = fuel - 1;
+        auto _cs = t->observe();
+        if (std::holds_alternative<typename ITree<uint64_t>::Ret>(_cs)) {
+          const auto &_itf = *std::get_if<typename ITree<uint64_t>::Ret>(&_cs);
+          auto _x = _itf.value;
+          _result = UINT64_C(0);
+        } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
+          const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
+          auto t_ = _itf.next;
+          _stack.emplace_back(_Resume_t_{});
+          _stack.emplace_back(_Enter{t_, fuel_});
+        } else {
+          const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
+          auto _x = _itf.effect;
+          auto _x0 = _itf.cont;
+          _result = UINT64_C(0);
+        }
+      }
     } else {
-      const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-      auto _x = _itf.effect;
-      auto _x0 = _itf.cont;
-      return UINT64_C(0);
+      auto _f = std::move(std::get<_Resume_t_>(_frame));
+      _result = (std::move(_result) + 1);
     }
   }
+  return _result;
 }

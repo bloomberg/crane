@@ -394,22 +394,60 @@ uint64_t LoopifyNumbers::ack(uint64_t m, uint64_t n) {
   return ackermann_fuel(UINT64_C(1000), m, n);
 }
 
-uint64_t LoopifyNumbers::collatz_length_fuel(uint64_t fuel, uint64_t n) {
-  if (fuel <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t f = fuel - 1;
-    if (n == UINT64_C(1)) {
-      return UINT64_C(0);
-    } else {
-      if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-        return (collatz_length_fuel(f, (UINT64_C(2) ? n / UINT64_C(2) : 0)) +
-                1);
+uint64_t LoopifyNumbers::collatz_length_fuel(
+    uint64_t fuel,
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+    uint64_t fuel;
+  };
+
+  /// _Resume1: resumes after recursive call with _result.
+  struct _Resume1 {};
+
+  /// _Resume2: resumes after recursive call with _result.
+  struct _Resume2 {};
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n, fuel});
+  /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = UINT64_C(0);
       } else {
-        return (collatz_length_fuel(f, ((UINT64_C(3) * n) + UINT64_C(1))) + 1);
+        uint64_t f = fuel - 1;
+        if (n == UINT64_C(1)) {
+          _result = UINT64_C(0);
+        } else {
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
+          } else {
+            _stack.emplace_back(_Resume2{});
+            _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
+          }
+        }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (std::move(_result) + 1);
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = (std::move(_result) + 1);
     }
   }
+  return _result;
 }
 
 uint64_t LoopifyNumbers::collatz_length(uint64_t n) {
@@ -778,23 +816,54 @@ uint64_t LoopifyNumbers::sum_while_positive(
 
 /// count_down_by k n counts down from n by steps of k.
 /// Tests recursion with non-standard step size.
-uint64_t LoopifyNumbers::count_down_by_fuel(uint64_t fuel, uint64_t k,
-                                            uint64_t n) {
-  if (fuel <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t f = fuel - 1;
-    if (n <= 0) {
-      return UINT64_C(1);
-    } else {
-      uint64_t _x = n - 1;
-      if (n < k) {
-        return UINT64_C(1);
+uint64_t LoopifyNumbers::count_down_by_fuel(
+    uint64_t fuel, uint64_t k,
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+    uint64_t fuel;
+  };
+
+  /// _Resume1: resumes after recursive call with _result.
+  struct _Resume1 {};
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n, fuel});
+  /// Loopified count_down_by_fuel: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = UINT64_C(0);
       } else {
-        return (count_down_by_fuel(f, k, (((n - k) > n ? 0 : (n - k)))) + 1);
+        uint64_t f = fuel - 1;
+        if (n <= 0) {
+          _result = UINT64_C(1);
+        } else {
+          uint64_t _x = n - 1;
+          if (n < k) {
+            _result = UINT64_C(1);
+          } else {
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{(((n - k) > n ? 0 : (n - k))), f});
+          }
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = (std::move(_result) + 1);
     }
   }
+  return _result;
 }
 
 uint64_t LoopifyNumbers::count_down_by(uint64_t k, uint64_t n) {

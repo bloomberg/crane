@@ -706,15 +706,44 @@ uint64_t LoopifyPatterns::let_nested(
 }
 
 /// Helper: list length.
-uint64_t LoopifyPatterns::list_len(const LoopifyPatterns::list<uint64_t> &l) {
-  if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
-          l.v())) {
-    return UINT64_C(0);
-  } else {
-    const auto &[a0, a1] =
-        std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
-    return (list_len(*a1) + 1);
+uint64_t LoopifyPatterns::list_len(
+    const LoopifyPatterns::list<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const LoopifyPatterns::list<uint64_t> *l;
+  };
+
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified list_len: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyPatterns::list<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
+              l.v())) {
+        _result = UINT64_C(0);
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(_Resume_Cons{});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result = (std::move(_result) + 1);
+    }
   }
+  return _result;
 }
 
 /// process_twice l applies recursion twice: process(process(xs)).

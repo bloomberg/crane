@@ -82,15 +82,44 @@ uint64_t LoopifyNestedConstructs::nested_if(uint64_t n) {
   return nested_if_fuel(n, n);
 }
 
-uint64_t LoopifyNestedConstructs::deep_nest(uint64_t n) {
-  if (n <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t n_ = n - 1;
-    uint64_t inner = deep_nest(n_);
-    uint64_t mid = (inner + UINT64_C(1));
-    return (mid * UINT64_C(2));
+uint64_t LoopifyNestedConstructs::deep_nest(
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Cont_n_: resumes after recursive call, then processes rest.
+  struct _Cont_n_ {};
+
+  using _Frame = std::variant<_Enter, _Cont_n_>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified deep_nest: _Enter -> _Cont_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = UINT64_C(0);
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Cont_n_{});
+        _stack.emplace_back(_Enter{n_});
+      }
+    } else {
+      auto _f = std::move(std::get<_Cont_n_>(_frame));
+      uint64_t inner = std::move(_result);
+      uint64_t mid = (inner + UINT64_C(1));
+      _result = (mid * UINT64_C(2));
+    }
   }
+  return _result;
 }
 
 uint64_t LoopifyNestedConstructs::let_nested(

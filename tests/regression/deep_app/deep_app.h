@@ -280,13 +280,43 @@ struct DeepApp {
                                        const mylist<uint64_t> &_x1);
   static uint64_t head_or_zero(const mylist<uint64_t> &l);
 
-  template <typename T1> static uint64_t length(const mylist<T1> &l) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      return (length<T1>(*a1) + 1);
+  template <typename T1>
+  static uint64_t
+  length(const mylist<T1> &l) { /// _Enter: captures varying parameters for each
+                                /// recursive call.
+
+    struct _Enter {
+      const mylist<T1> *l;
+    };
+
+    /// _Resume_Mycons: resumes after recursive call with _result.
+    struct _Resume_Mycons {};
+
+    using _Frame = std::variant<_Enter, _Resume_Mycons>;
+    uint64_t _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified length: _Enter -> _Resume_Mycons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const mylist<T1> &l = *_f.l;
+        if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+          _stack.emplace_back(_Resume_Mycons{});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+        _result = (std::move(_result) + 1);
+      }
     }
+    return _result;
   }
 };
 

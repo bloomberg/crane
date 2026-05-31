@@ -3,6 +3,9 @@
 
 #include <crane_itree.h>
 #include <memory>
+#include <utility>
+#include <variant>
+#include <vector>
 
 struct LoopifyItreeReified {
   /// Consumer fixpoint: traverses an ITree with fuel. This is a regular

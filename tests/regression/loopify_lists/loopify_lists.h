@@ -776,17 +776,47 @@ struct LoopifyLists {
   /// count_matching p l counts elements satisfying predicate.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static uint64_t count_matching(F0 &&p, const list<uint64_t> &l) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-      if (p(a0)) {
-        return (count_matching(p, *a1) + 1);
+  static uint64_t count_matching(
+      F0 &&p,
+      const list<uint64_t>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      const list<uint64_t> *l;
+    };
+
+    /// _Resume1: resumes after recursive call with _result.
+    struct _Resume1 {};
+
+    using _Frame = std::variant<_Enter, _Resume1>;
+    uint64_t _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified count_matching: _Enter -> _Resume1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
+          if (p(a0)) {
+            _stack.emplace_back(_Resume1{});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
+        }
       } else {
-        return count_matching(p, *a1);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        _result = (std::move(_result) + 1);
       }
     }
+    return _result;
   }
 
   /// categorize k l categorizes elements: 1 for <k, 2 for =k, 3 for >k.

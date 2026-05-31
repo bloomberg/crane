@@ -25,6 +25,18 @@ static UIntList make_large_list(uint64_t n) {
   return l;
 }
 
+static void destroy_list_iteratively(UIntList &l) {
+  while (std::holds_alternative<UIntList::Cons>(l.v())) {
+    auto &cons = std::get<UIntList::Cons>(l.v_mut());
+    auto tail = std::move(cons.l);
+    if (!tail || tail.use_count() > 1) {
+      l = UIntList::nil();
+      return;
+    }
+    l = std::move(*tail);
+  }
+}
+
 int main() {
   // --- Small correctness tests ---
 
@@ -127,41 +139,47 @@ int main() {
   }
 
   // --- Large-scale tests (stack overflow if not loopified) ---
+  // Use 50K elements: enough to overflow stack if recursive (~5MB of frames)
+  // but small enough for shared_ptr destructor chain (~2MB).
+  constexpr uint64_t N = 50000;
+  uint64_t expected_sum = N * (N + 1) / 2;
 
-  auto large = make_large_list(200000);
-
-  // cached_sum with no cache on large list (must recurse 200K times)
   {
-    auto [total, count] = LoopifyConditionalRecursion::cached_sum(
-        std::optional<uint64_t>(), large);
-    // Sum of 1..200000 = 200000*200001/2 = 20000100000
-    ASSERT(total == 20000100000ull);
-    ASSERT(count == 200000);
-  }
+    auto large = make_large_list(N);
 
-  // find_or_recurse with target not in list (must recurse 200K times)
-  {
-    auto [count, remainder] = LoopifyConditionalRecursion::find_or_recurse(
-        999999u, large);
-    // Target not found: recurses all the way to [], sub=(0,[])
-    // Then each step adds 1 to fst sub => count = 200000*(0+1) = 200000
-    ASSERT(count == 200000);
-  }
+    // cached_sum with no cache on large list
+    {
+      auto [total, count] = LoopifyConditionalRecursion::cached_sum(
+          std::optional<uint64_t>(), large);
+      ASSERT(total == expected_sum);
+      ASSERT(count == N);
+    }
 
-  // accum_with_cache with key=0 (never matches, must recurse 200K times)
-  {
-    auto [total, count] = LoopifyConditionalRecursion::accum_with_cache(
-        0u, large);
-    ASSERT(total == 20000100000ull);
-    ASSERT(count == 200000);
-  }
+    // find_or_recurse with target not in list
+    {
+      auto [count, remainder] = LoopifyConditionalRecursion::find_or_recurse(
+          999999u, large);
+      ASSERT(count == N);
+      destroy_list_iteratively(remainder);
+    }
 
-  // multi_return with no memo (must recurse 200K times)
-  {
-    auto [count, payload] = LoopifyConditionalRecursion::multi_return(
-        std::optional<std::pair<uint64_t, uint64_t>>(), large);
-    ASSERT(count == 200000);
-    ASSERT(!payload.has_value());
+    // accum_with_cache with key=0 (never matches)
+    {
+      auto [total, count] = LoopifyConditionalRecursion::accum_with_cache(
+          0u, large);
+      ASSERT(total == expected_sum);
+      ASSERT(count == N);
+    }
+
+    // multi_return with no memo
+    {
+      auto [count, payload] = LoopifyConditionalRecursion::multi_return(
+          std::optional<std::pair<uint64_t, uint64_t>>(), large);
+      ASSERT(count == N);
+      ASSERT(!payload.has_value());
+    }
+
+    destroy_list_iteratively(large);
   }
 
   if (testStatus > 0) {
