@@ -2547,6 +2547,17 @@
   (deps loopify_sorting.t.exe)
   (action (run ./loopify_sorting.t.exe))))
 
+(subdir loopify_conditional_recursion
+ (rule
+  (targets loopify_conditional_recursion.t.exe)
+  (deps LoopifyConditionalRecursion.vo loopify_conditional_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_conditional_recursion.t.exe loopify_conditional_recursion.cpp loopify_conditional_recursion.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_conditional_recursion.t.exe)
+  (action (run ./loopify_conditional_recursion.t.exe))))
+
 (subdir loopify_special_recursion
  (rule
   (targets loopify_special_recursion.t.exe)
