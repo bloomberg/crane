@@ -15,6 +15,17 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir app_doublecall
+ (rule
+  (targets app_doublecall.t.exe)
+  (deps AppDoublecall.vo app_doublecall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} app_doublecall.t.exe app_doublecall.cpp app_doublecall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps app_doublecall.t.exe)
+  (action (run ./app_doublecall.t.exe))))
+
 (subdir dependent_elim_stdexcept_probe
  (rule
   (targets dependent_elim_stdexcept_probe.t.exe)
