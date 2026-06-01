@@ -119,6 +119,7 @@ struct LetFixNestedClone {
                       UINT64_C(5), List<uint64_t>::cons(
                                        UINT64_C(6), List<uint64_t>::nil()))),
               List<List<uint64_t>>::nil()))));
+
   static inline const uint64_t test_count =
       count_nested(List<List<uint64_t>>::cons(
           List<uint64_t>::cons(

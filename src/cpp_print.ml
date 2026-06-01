@@ -903,6 +903,40 @@ and pp_typename_member ty id =
     @param args  accumulated argument expressions for partial application
                  (in reverse order; applied via {!pp_apply_cpp})
     @param t     the MiniCpp expression to render *)
+and extract_from_any ty src_expr =
+  (* Extract a value of type [ty] from [src_expr : any].
+     When ty is Tunique_ptr<T> (recursive inductive), the value is stored
+     directly as T in any; wrap with make_shared<T>. *)
+  match ty with
+  | Tunique_ptr inner ->
+    require_header "memory";
+    str "std::make_shared<" ++ pp_cpp_type false [] inner ++ str ">("
+    ++ str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] inner ++ str ">(" ++ src_expr ++ str "))"
+  | _ ->
+    str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+
+and deque_elem_extract_expr elem_ty src_expr =
+  (* Generate expression to extract elem_ty from a list element stored as any.
+     Pairs are stored as pair<any,any>; other types are stored directly. *)
+  let is_prod_type = function
+    | Tglob (g, [_; _], _) ->
+      let n = Common.pp_global_name Type g in n = "prod" || n = "Prod"
+    | _ -> false
+  in
+  if is_prod_type elem_ty then begin
+    require_header "any";
+    require_header "utility";
+    match elem_ty with
+    | Tglob (_, [t1; t2], _) ->
+      str "[&]() { const auto& _p = " ++ str (sn ()).any_cast
+      ++ str "<std::pair<std::any, std::any>>(" ++ src_expr
+      ++ str "); return std::make_pair("
+      ++ extract_from_any t1 (str "_p.first") ++ str ", "
+      ++ extract_from_any t2 (str "_p.second") ++ str "); }()"
+    | _ -> extract_from_any elem_ty src_expr
+  end else
+    extract_from_any elem_ty src_expr
+
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -964,6 +998,12 @@ and pp_cpp_expr env args t =
           | _ -> false
         in
         if is_list_with_concrete_elem resolved_ty then
+          let g_of_list, elem_ty_of_list =
+            match resolved_ty with
+            | Tnamespace (_, Tglob (g, [elem_ty], _)) -> g, elem_ty
+            | Tglob (g, [elem_ty], _) -> g, elem_ty
+            | _ -> assert false
+          in
           let list_any_ty =
             match resolved_ty with
             | Tnamespace (ns_g, Tglob (g, _, _)) ->
@@ -972,6 +1012,18 @@ and pp_cpp_expr env args t =
               Tglob (g, [Tany], [])
             | _ -> assert false
           in
+          if Table.is_custom g_of_list then begin
+            require_header "any";
+            let elem_s = pp_cpp_type false [] elem_ty_of_list in
+            let src_s =
+              str (sn ()).any_cast ++ str "<"
+              ++ pp_cpp_type false [] list_any_ty
+              ++ str ">(" ++ Id.print id ++ str ")"
+            in
+            let cast_e = deque_elem_extract_expr elem_ty_of_list (str "_e") in
+            str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+            ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+          end else
           pp_cpp_type false [] resolved_ty
           ++ str "(" ++ str (sn ()).any_cast ++ str "<"
           ++ pp_cpp_type false [] list_any_ty
@@ -1375,15 +1427,110 @@ and pp_cpp_expr env args t =
     let field_name = label_of_r r |> Names.Label.to_string in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (f, ts) ->
-    let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
+    (* For constructor calls, compute the expected C++ element type for each
+       field that is a custom list.  When an argument is a grammar-stack
+       variable (id ∈ concrete_typed_any_params), use the callee-dictated
+       element type rather than the stored type, so e.g. nktree(ts) produces
+       deque<Newick_node> while nkinode(ts,l) produces
+       deque<shared_ptr<Newick_node>> — matching each function's signature. *)
+    (* Constructor calls use CPPqualified(CPPglob(IndRef(kn,i), ...), fname),
+       NOT CPPglob(ConstructRef(...)). Extract the enclosing IndRef so we can
+       determine whether a list element type is a self-reference (needs
+       shared_ptr) or a cross-inductive reference (needs value type). *)
+    let ctor_ind_kn_opt =
+      match f with
+      | CPPqualified (CPPglob (GlobRef.IndRef (kn, _), _, _), _) -> Some kn
+      | _ -> None
+    in
+    let render_ctor_arg arg =
+      match ctor_ind_kn_opt, arg with
+      | Some kn_ctor, CPPvar id
+        when Id.Map.mem id !concrete_typed_any_params ->
+        let stored_ty = Id.Map.find id !concrete_typed_any_params in
+        (* If stored as deque<shared_ptr<Inner>> but Inner's MutInd differs
+           from the constructor's MutInd, the constructor expects deque<Inner>
+           (value type). Strip the shared_ptr and re-emit as deque<Inner>. *)
+        let fix_opt = match stored_ty with
+          | Tglob (g, [Tunique_ptr inner], _)
+            when is_list_global g && Table.is_custom g ->
+            ( match inner with
+            | Tglob (GlobRef.IndRef (kn_inner, _), _, _)
+              when not (MutInd.CanOrd.equal kn_inner kn_ctor) ->
+              Some (g, inner)
+            | _ -> None )
+          | _ -> None
+        in
+        ( match fix_opt with
+        | Some (list_g, expected_elem) ->
+          require_header "any";
+          let elem_s = pp_cpp_type false [] expected_elem in
+          let list_any_ty = Tglob (list_g, [Tany], []) in
+          let src_s =
+            str (sn ()).any_cast ++ str "<"
+            ++ pp_cpp_type false [] list_any_ty
+            ++ str ">(" ++ Id.print id ++ str ")"
+          in
+          let cast_e = deque_elem_extract_expr expected_elem (str "_e") in
+          str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+          ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+        | None -> pp_cpp_expr env args arg )
+      | _ -> pp_cpp_expr env args arg
+    in
+    let args_s =
+      match ctor_ind_kn_opt with
+      | None -> pp_list (pp_cpp_expr env args) (List.rev ts)
+      | Some _ ->
+        Pp.prlist_with_sep (fun () -> str ", ")
+          render_ctor_arg
+          (List.rev ts)
+    in
+    let is_custom_list_funcall =
+      match f with
+      | CPPglob (GlobRef.IndRef _ as g, (_ :: _ as tys), _)
+        when is_list_global g && Table.is_custom g ->
+        let elem_ty = List.hd tys in
+        if elem_ty <> Tany && elem_ty <> Tauto then Some elem_ty
+        else None
+      | _ -> None
+    in
+    (match is_custom_list_funcall with
+    | Some elem_ty ->
+      require_header "any";
+      let elem_s = pp_cpp_type false [] elem_ty in
+      let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+      ++ args_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+    | None ->
     let prefix = match f with
       | CPPglob (GlobRef.IndRef _, _, _) ->
         let name_str = string_of_ppcmds (pp_cpp_expr env args f) in
         typename_prefix_for name_str
       | _ -> mt ()
     in
-    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")" )
   | CPPconverting_ctor (ty, ts) ->
+    (* When the target type is a custom-extracted list (e.g. std::deque<T>),
+       a functional-style cast from deque<any> won't work because std::deque
+       has no converting constructor.  Emit an inline loop instead. *)
+    let is_custom_list_convert =
+      let check g elem_ty =
+        is_list_global g && Table.is_custom g
+        && elem_ty <> Tany && elem_ty <> Tauto
+      in
+      match ty with
+      | Tglob (g, [elem_ty], _) when check g elem_ty -> Some elem_ty
+      | Tnamespace (_, Tglob (g, [elem_ty], _)) when check g elem_ty -> Some elem_ty
+      | _ -> None
+    in
+    ( match is_custom_list_convert with
+    | Some elem_ty ->
+      require_header "any";
+      let elem_s = pp_cpp_type false [] elem_ty in
+      let src_s = pp_list (pp_cpp_expr env args) ts in
+      let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+      ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+    | None ->
     let args_s =
       match ty with
       | Tfun ([Tany], Tany) ->
@@ -1405,7 +1552,7 @@ and pp_cpp_expr env args t =
           ts
       | _ -> pp_list (pp_cpp_expr env args) ts
     in
-    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")"
+    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")" )
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPmember _ | CPParrow _
@@ -2678,10 +2825,9 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCty_arg i ->
       if !outer_any_pair_overrode then pp_cpp_type false vl Tany
       else
-        ( try pp_cpp_type false vl (List.nth tyargs i)
-          with Failure _ ->
-            CErrors.anomaly
-              Pp.(str "Custom syntax: unbound type argument in: " ++ str custom)
+        ( match List.nth_opt tyargs i with
+          | Some ty -> pp_cpp_type false vl ty
+          | None -> pp_cpp_type false vl Tauto
         )
     | CCbr_var (i, j) ->
       ( try
@@ -2706,26 +2852,66 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
-      let arg = pp_cpp_expr env [] arg_expr in
-      let arg =
-        match arg_expr with
-        | CPPstring _ -> arg ++ str (sn ()).str_suffix
-        | _ -> arg
+      (* When the expected type (from arg_types) is a concrete custom list AND
+         the argument is a grammar any-typed variable, generate the IIFE using
+         the expected element type rather than the stored type from
+         concrete_typed_any_params.  This handles contexts where the same Coq
+         list type maps to different C++ element types (e.g. list newick_node
+         → deque<Newick_node> for nktree, but deque<shared_ptr<Newick_node>>
+         for nkinode) — the expected type at the call site is always correct. *)
+      let custom_list_iife_opt =
+        match List.nth_opt arg_types i, arg_expr with
+        | Some expected_ty, CPPvar id
+          when Id.Map.mem id !concrete_typed_any_params ->
+          let check_custom_list = function
+            | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g
+              && elem_ty <> Tany && elem_ty <> Tauto ->
+              Some (Tglob (g, [Tany], []), elem_ty)
+            | Tnamespace (_, Tglob (g, [elem_ty], _))
+              when is_list_global g && Table.is_custom g
+              && elem_ty <> Tany && elem_ty <> Tauto ->
+              Some (Tglob (g, [Tany], []), elem_ty)
+            | _ -> None
+          in
+          (match check_custom_list expected_ty with
+          | Some (list_any_ty, elem_ty) ->
+            require_header "any";
+            let elem_s = pp_cpp_type false [] elem_ty in
+            let src_s = str (sn ()).any_cast ++ str "<"
+                        ++ pp_cpp_type false [] list_any_ty
+                        ++ str ">(" ++ Id.print id ++ str ")" in
+            let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+            Some (str "[&]() { std::deque<" ++ elem_s
+                  ++ str "> _r; for (const auto& _e : "
+                  ++ src_s ++ str ") _r.push_back(" ++ cast_e
+                  ++ str "); return _r; }()")
+          | None -> None)
+        | _ -> None
       in
-      (* Parenthesize compound expressions that would bind incorrectly
-         when followed by member access (.c_str() etc.) in templates. *)
       let arg =
-        if followed_by_dot then
-          match arg_expr with
-          | CPPbinop _ -> str "(" ++ arg ++ str ")"
-          | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
-            str "(" ++ arg ++ str ")"
-          | _ -> arg
-        else arg
+        match custom_list_iife_opt with
+        | Some iife -> iife
+        | None ->
+          let arg = pp_cpp_expr env [] arg_expr in
+          let arg =
+            match arg_expr with
+            | CPPstring _ -> arg ++ str (sn ()).str_suffix
+            | _ -> arg
+          in
+          (* Parenthesize compound expressions that would bind incorrectly
+             when followed by member access (.c_str() etc.) in templates. *)
+          if followed_by_dot then
+            match arg_expr with
+            | CPPbinop _ -> str "(" ++ arg ++ str ")"
+            | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+              str "(" ++ arg ++ str ")"
+            | _ -> arg
+          else arg
       in
       match List.nth_opt arg_types i with
-      | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl
-      | None -> arg
+      | Some expected_ty when custom_list_iife_opt = None ->
+        wrap_any_cast_if_needed arg_expr arg expected_ty vl
+      | _ -> arg
     with Failure _ ->
       CErrors.anomaly
         Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)

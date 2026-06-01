@@ -1347,7 +1347,7 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
           mk_uptr_clone snd_inner_s (s ^ "->second") ^
           ")) : nullptr")
     | Tunique_ptr (Tglob (g, [elem_ty], e))
-      when is_list_global g ->
+      when is_list_global g && not (Table.is_custom g) ->
       (* shared_ptr<List<T>>: copy-construct (shared_ptr copy is ref-counted) *)
       require_header "memory";
       let list_s = render (Tglob (g, [elem_ty], e)) in
@@ -1498,6 +1498,21 @@ let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
                ^ "); }()")
       | None ->
         CPPconverting_ctor (orig_dst_ty, [expr]))
+    | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
+                     match strip_ns dst with
+                     | Tglob (g, [elem_ty], _) ->
+                       is_list_global g && Table.is_custom g
+                       && elem_ty <> Tany && elem_ty <> Tauto
+                     | _ -> false) ->
+      let strip_ns = function Tnamespace (_, t) -> t | t -> t in
+      let g, elem_ty = match strip_ns dst with
+        | Tglob (g, [elem_ty], _) -> g, elem_ty
+        | _ -> assert false in
+      let list_any_ty = Tglob (g, [Tany], []) in
+      let src_expr = match src_ty with
+        | Tany -> CPPany_cast (list_any_ty, expr)
+        | _ -> expr in
+      CPPconverting_ctor (dst, [src_expr])
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never unique_ptr)
@@ -2707,7 +2722,7 @@ let is_nontrivial_value_ml_type ty =
     Table.is_custom r
     && not (Table.is_custom_scalar_ref r)
     && not (Escape.is_shared_ptr_type ty)
-    && not (is_list_global r)
+    && not (is_list_global r && not (Table.is_custom r))
   | _ -> false
 
 let is_prod_ml_type ty =
@@ -3442,16 +3457,28 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
         if temps = [] && tys <> []
            && List.exists (function Miniml.Tmeta {contents = None} -> true | _ -> false) tys
         then
-          match tctx.current_cpp_return_type with
-          | Some (Minicpp.Tglob (ret_r, ret_tys, _))
-            when Names.GlobRef.CanOrd.equal n ret_r
-                 && List.length ret_tys = List.length tys ->
-            filter_erased_type_args ret_tys
-          | Some (Minicpp.Tshared_ptr (Minicpp.Tglob (ret_r, ret_tys, _)))
-            when Names.GlobRef.CanOrd.equal n ret_r
-                 && List.length ret_tys = List.length tys ->
-            filter_erased_type_args ret_tys
-          | _ -> temps
+          let from_ret =
+            match tctx.current_cpp_return_type with
+            | Some (Minicpp.Tglob (ret_r, ret_tys, _))
+              when Names.GlobRef.CanOrd.equal n ret_r
+                   && List.length ret_tys = List.length tys ->
+              filter_erased_type_args ret_tys
+            | Some (Minicpp.Tshared_ptr (Minicpp.Tglob (ret_r, ret_tys, _)))
+              when Names.GlobRef.CanOrd.equal n ret_r
+                   && List.length ret_tys = List.length tys ->
+              filter_erased_type_args ret_tys
+            | _ -> []
+          in
+          if from_ret <> [] then from_ret
+          else
+            (* Fallback: try expected_ml_type_for_arg (set by enclosing ctor/let) *)
+            match tctx.expected_ml_type_for_arg with
+            | Some (Miniml.Tglob (exp_r, exp_tys, _))
+              when Names.GlobRef.CanOrd.equal exp_r n
+                   && List.length exp_tys = List.length tys ->
+              let exp_temps = build_template_params env [] exp_tys in
+              filter_erased_type_args exp_temps
+            | _ -> temps
         else temps
       in
       app (mk_cppglob r temps)
@@ -6534,13 +6561,19 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                 | t -> t
               in
               (match strip_ns_tg bare_ty with
-               | Tglob (g, [_], _) when is_list_global g ->
+               | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                  let list_any_ty =
                    match bare_ty with
                    | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
                    | _ -> Tglob (g, [Tany], [])
                  in
                  CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
+               | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
+                 let list_any_ty = Tglob (g, [Tany], []) in
+                 if is_erased_type elem_ty || elem_ty = Tauto then
+                   CPPany_cast (list_any_ty, CPPvar binding_name)
+                 else
+                   CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
                | _ -> CPPany_cast (bare_ty, CPPvar binding_name))
             else
               CPPvar binding_name
@@ -7038,13 +7071,67 @@ and gen_cpp_case (typ : ml_type) t env pv =
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables for std::visit. *)
-and gen_cpp_custom_body env k rty ids body =
+and collect_recursive_ns ml_ty =
+  (* Collect self-recursive inductive types that appear *nested inside* ml_ty
+     and return them as a namespace set so convert_ml_type_to_cpp_type wraps
+     them with Tunique_ptr when they appear as field references.
+
+     The top-level type itself is NOT added: a binding variable h : T has the
+     same C++ type as the deque element (e.g. `const T&` from `front()`), not
+     `shared_ptr<T>`.  Recursive wrapping is only needed when T appears as a
+     *field* of an enclosing composite type (e.g. `pair<string, json_value>`
+     → field `json_value` wrapped as `shared_ptr<json_value>`). *)
+  let rec collect_nested acc = function
+    | Miniml.Tglob (GlobRef.IndRef _ as g, args, _) ->
+      let acc' =
+        if Table.has_recursive_fields g && not (Table.is_custom g)
+        then Refset'.add g acc
+        else acc
+      in
+      List.fold_left collect_nested acc' args
+    | Miniml.Tarr (a, b) -> collect_nested (collect_nested acc a) b
+    | Miniml.Tmeta {contents = Some t} -> collect_nested acc t
+    | _ -> acc
+  in
+  (* Start from the args of the top-level type so the top-level itself
+     is never added to the namespace. *)
+  match ml_ty with
+  | Miniml.Tglob (_, args, _) ->
+    List.fold_left collect_nested Refset'.empty args
+  | Miniml.Tarr (a, b) ->
+    collect_nested (collect_nested Refset'.empty a) b
+  | Miniml.Tmeta {contents = Some t} -> collect_recursive_ns t
+  | _ -> Refset'.empty
+
+and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
   let tvars = get_current_type_vars () in
   let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
   let ids =
     List.map
       (fun (x, ty) ->
-        (x, convert_ml_type_to_cpp_type env Refset'.empty tvars ty) )
+        let ns =
+          match scrut_ind_opt with
+          | Some g_scrut when not (is_prod_global g_scrut) ->
+            (* Use {g_scrut} as the namespace so that type args that are
+               self-references of the scrutinee get shared_ptr wrapping —
+               matching struct field storage.  Exception 1: when the
+               scrutinee is a product/pair (grammar production context),
+               fall through to collect_recursive_ns which correctly uses
+               the binding variable's own type to find recursive inductives.
+               Exception 2: when the binding type IS g_scrut directly (a
+               non-parametric direct self-ref dereferenced by the custom
+               match template), use empty ns so the binding is a value type
+               rather than shared_ptr. *)
+            let is_direct_self_ref =
+              match ty with
+              | Miniml.Tglob (g, [], _) -> GlobRef.CanOrd.equal g g_scrut
+              | _ -> false
+            in
+            if is_direct_self_ref then Refset'.empty
+            else Refset'.singleton g_scrut
+          | _ -> collect_recursive_ns ty
+        in
+        (x, convert_ml_type_to_cpp_type env ns tvars ty) )
       (List.rev ids)
   in
   let body = gen_stmts env k body in
@@ -7306,9 +7393,14 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             Escape.IntSet.empty (List.init n_pat_vars Fun.id)
         else Escape.IntSet.empty
       in
+      let scrut_ind_opt =
+        match ml_typ with
+        | Tglob (GlobRef.IndRef _ as g, _, _) -> Some g
+        | _ -> None
+      in
       let (br_ids, br_ret, br_stmts) =
         with_shifted_move_tracking n_pat_vars ~add_owned_set:pat_owned (fun () ->
-          gen_cpp_custom_body env' k rty ids' t)
+          gen_cpp_custom_body env' k rty ids' t scrut_ind_opt)
       in
       tctx.env_types <- saved_env_types;
       tctx.move_owned_vars <- saved_owned;
@@ -7336,7 +7428,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                    match stripped with
                    | Tglob (g, _, _) when is_prod_global g ->
                      CPPany_cast (Tglob (g, [Tany; Tany], []), CPPvar name)
-                   | Tglob (g, [_], _) when is_list_global g ->
+                   | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
                         so each element is any_cast'd correctly.
@@ -7349,6 +7441,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                      in
                      CPPconverting_ctor (cpp_ty,
                        [CPPany_cast (list_any_ty, CPPvar name)])
+                   | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
+                     let list_any_ty = Tglob (g, [Tany], []) in
+                     if is_erased_type elem_ty then
+                       CPPany_cast (list_any_ty, CPPvar name)
+                     else
+                       CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
                    | Tvar _ | Tglob (GlobRef.ConstRef _, _, _) ->
                      (* Opaque type alias (e.g. nt_semty = std::any): the
                         stored value IS the concrete payload, NOT a std::any
@@ -7413,7 +7511,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                            in
                            let cast_expr =
                              match strip_ns_tglob cpp_ty with
-                             | Tglob (g, [_], _) when is_list_global g ->
+                             | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                                (* Same as Fix A: List<T> vars are stored as
                                   List<any> from grammar productions. *)
                                let list_any_ty =
@@ -7424,6 +7522,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                                in
                                CPPconverting_ctor (cpp_ty,
                                  [CPPany_cast (list_any_ty, CPPvar name)])
+                             | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
+                               let list_any_ty = Tglob (g, [Tany], []) in
+                               if is_erased_type elem_ty then
+                                 CPPany_cast (list_any_ty, CPPvar name)
+                               else
+                                 CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
                              | _ -> CPPany_cast (cpp_ty, CPPvar name)
                            in
                            let body'' =
@@ -14016,7 +14120,7 @@ let gen_ind_header_v2
           | false, true -> `PairSnd
           | false, false -> `None )
         | Miniml.Tglob (g, [arg], _)
-          when is_list_global g && is_direct_self_ref arg ->
+          when is_list_global g && not (Table.is_custom g) && is_direct_self_ref arg ->
           `List g
         | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
         | _ -> `None

@@ -91,6 +91,7 @@ struct OptionClosureEscape {
   /// BUG: match_pair — & captures _args from visit scope.
   static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
   match_pair(const tree &t);
+
   static inline const uint64_t bug_match_pair_clobber = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),

@@ -104,6 +104,7 @@ struct FixEscapeMatch {
   /// Variant: fixpoint captures TWO pattern variables from the match.
   static std::optional<std::function<uint64_t(uint64_t)>>
   make_fn_from_pair(const List<uint64_t> &l);
+
   static inline const uint64_t test_match2 = []() -> uint64_t {
     auto _cs = make_fn_from_pair(List<uint64_t>::cons(
         UINT64_C(10),

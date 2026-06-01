@@ -121,6 +121,7 @@ struct MoveCaptureReuse {
           List<List<uint64_t>>::cons(
               List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil()),
               List<List<uint64_t>>::nil())));
+
   static inline const uint64_t len_sum = []() {
     auto &&_sv = sample;
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {

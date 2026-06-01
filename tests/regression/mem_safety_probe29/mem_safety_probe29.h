@@ -481,6 +481,7 @@ struct MemSafetyProbe29 {
                 expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))))
           .double_expr()
           .eval_expr();
+
   static inline const uint64_t test_cross_type = []() {
     expr e =
         expr::add(expr::lit(UINT64_C(5)),

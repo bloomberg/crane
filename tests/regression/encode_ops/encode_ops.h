@@ -487,6 +487,7 @@ struct EncodeOps {
                   List<instruction3>::cons(instruction3::ldm3(UINT64_C(12)),
                                            List<instruction3>::nil()))))
           .length();
+
   static inline const std::pair<std::pair<bool, uint64_t>, uint64_t> t =
       std::make_pair(std::make_pair(test_encode_bytes_in_range,
                                     test_encode_list_byte_count),

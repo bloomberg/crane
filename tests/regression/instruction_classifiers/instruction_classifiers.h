@@ -962,6 +962,7 @@ struct InstructionClassifiers {
                       List<instr_jump>::cons(
                           instr_jump::isz_jump(UINT64_C(1), UINT64_C(2)),
                           List<instr_jump>::nil()))))));
+
   static inline const std::pair<
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>
       t = std::make_pair(

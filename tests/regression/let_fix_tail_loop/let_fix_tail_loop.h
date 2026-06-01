@@ -103,6 +103,7 @@ struct LetFixTailLoop {
               List<uint64_t>::cons(
                   UINT64_C(4),
                   List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+
   static inline const uint64_t test_len = length_list(List<uint64_t>::cons(
       UINT64_C(10),
       List<uint64_t>::cons(

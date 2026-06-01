@@ -78,8 +78,8 @@ struct PairClosureEscape {
   static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
   pair_escape(tree t);
   static uint64_t
-  use_pair(const std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
-               &p); /// Clobber stack after pair_escape returns.
+  use_pair(const std::pair<std::function<uint64_t(uint64_t)>, uint64_t> &p);
+  /// Clobber stack after pair_escape returns.
   static inline const uint64_t bug_pair_escape = []() {
     tree t1 = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                          UINT64_C(20),
