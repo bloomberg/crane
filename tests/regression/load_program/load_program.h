@@ -121,12 +121,6 @@ struct LoadProgram {
     uint64_t prom_addr;
     uint64_t prom_data;
     bool prom_enable;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->rom, this->prom_addr, this->prom_data,
-                   this->prom_enable};
-    }
   };
 
   struct state_extended {
@@ -137,22 +131,11 @@ struct LoadProgram {
     uint64_t prom_addr_ext;
     uint64_t prom_data_ext;
     bool prom_enable_ext;
-
-    // ACCESSORS
-    state_extended clone() const {
-      return state_extended{
-          this->regs_len,       this->rom_ext,       this->pc,
-          this->stack_len,      this->prom_addr_ext, this->prom_data_ext,
-          this->prom_enable_ext};
-    }
   };
 
   struct state_simple {
     List<uint64_t> rom_;
     uint64_t ptr_;
-
-    // ACCESSORS
-    state_simple clone() const { return state_simple{this->rom_, this->ptr_}; }
   };
 
   static state set_prom_params(const state &s, uint64_t addr, uint64_t data,

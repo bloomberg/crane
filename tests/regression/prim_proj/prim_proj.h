@@ -5,9 +5,6 @@ struct PrimProj {
   struct point {
     uint64_t px;
     uint64_t py;
-
-    // ACCESSORS
-    point clone() const { return point{this->px, this->py}; }
   };
 
   static point add_points(const point &p1, const point &p2);

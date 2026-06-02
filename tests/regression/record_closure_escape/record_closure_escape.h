@@ -79,11 +79,6 @@ struct RecordClosureEscape {
   struct fn_record {
     std::function<uint64_t(uint64_t)> fn_field;
     uint64_t val_field;
-
-    // ACCESSORS
-    fn_record clone() const {
-      return fn_record{this->fn_field, this->val_field};
-    }
   };
 
   /// BUG: Partial application stored in a record field.

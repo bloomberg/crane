@@ -8,9 +8,6 @@ struct PathologicalRecord {
     uint64_t f1;
     uint64_t f2;
     uint64_t f3;
-
-    // ACCESSORS
-    Rec clone() const { return Rec{this->f1, this->f2, this->f3}; }
   };
 
   static uint64_t hof_access(const Rec &r);
@@ -29,11 +26,6 @@ struct PathologicalRecord {
     uint64_t bf3;
     uint64_t bf4;
     uint64_t bf5;
-
-    // ACCESSORS
-    BigRec clone() const {
-      return BigRec{this->bf1, this->bf2, this->bf3, this->bf4, this->bf5};
-    }
   };
 
   static uint64_t scrambled_access(const BigRec &r);

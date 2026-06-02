@@ -125,11 +125,6 @@ struct PromOps {
   struct state1 {
     uint64_t prom_data1;
     bool prom_enable1;
-
-    // ACCESSORS
-    state1 clone() const {
-      return state1{this->prom_data1, this->prom_enable1};
-    }
   };
 
   static uint64_t prom_data_or_zero(const state1 &s);
@@ -141,12 +136,6 @@ struct PromOps {
     uint64_t prom_addr2;
     uint64_t prom_data2;
     bool prom_enable2;
-
-    // ACCESSORS
-    state2 clone() const {
-      return state2{this->acc2, this->prom_addr2, this->prom_data2,
-                    this->prom_enable2};
-    }
   };
 
   static uint64_t flagged_sum(const state2 &s);
@@ -169,15 +158,6 @@ struct PromOps {
     uint64_t prom_addr3;
     uint64_t prom_data3;
     bool prom_enable3;
-
-    // ACCESSORS
-    state3 clone() const {
-      return state3{this->acc3,       this->regs3,      this->carry3,
-                    this->pc3,        this->stack3,     this->ram_sys3,
-                    this->cur_bank3,  this->sel_ram3,   this->rom_ports3,
-                    this->sel_rom3,   this->rom3,       this->test_pin3,
-                    this->prom_addr3, this->prom_data3, this->prom_enable3};
-    }
   };
 
   static state3 set_prom_params3(const state3 &s, uint64_t addr, uint64_t data,
@@ -248,12 +228,6 @@ struct PromOps {
     uint64_t prom_addr5;
     uint64_t prom_data5;
     bool prom_enable5;
-
-    // ACCESSORS
-    state5 clone() const {
-      return state5{this->acc5,       this->regs5,      this->rom5,
-                    this->prom_addr5, this->prom_data5, this->prom_enable5};
-    }
   };
 
   static state5 set_prom_params5(const state5 &s, uint64_t addr, uint64_t data,
@@ -285,12 +259,6 @@ struct PromOps {
     uint64_t prom_addr6;
     uint64_t prom_data6;
     bool prom_enable6;
-
-    // ACCESSORS
-    state6 clone() const {
-      return state6{this->rom6, this->prom_addr6, this->prom_data6,
-                    this->prom_enable6};
-    }
   };
 
   static state6 set_prom_params6(const state6 &s, uint64_t addr, uint64_t data,
@@ -314,12 +282,6 @@ struct PromOps {
     uint64_t prom_addr7;
     uint64_t prom_data7;
     bool prom_enable7;
-
-    // ACCESSORS
-    state7 clone() const {
-      return state7{this->regs7, this->ram_sys7, this->prom_addr7,
-                    this->prom_data7, this->prom_enable7};
-    }
   };
 
   static state7 set_prom_params7(const state7 &s, uint64_t addr, uint64_t data,
@@ -346,12 +308,6 @@ struct PromOps {
     uint64_t prom_addr8;
     uint64_t prom_data8;
     bool prom_enable8;
-
-    // ACCESSORS
-    state8 clone() const {
-      return state8{this->regs8, this->ram_sys8, this->prom_addr8,
-                    this->prom_data8, this->prom_enable8};
-    }
   };
 
   static state8 set_prom_params8(const state8 &s, uint64_t addr, uint64_t data,
@@ -375,12 +331,6 @@ struct PromOps {
     uint64_t prom_addr9;
     uint64_t prom_data9;
     bool prom_enable9;
-
-    // ACCESSORS
-    state9 clone() const {
-      return state9{this->rom9, this->prom_addr9, this->prom_data9,
-                    this->prom_enable9};
-    }
   };
 
   static state9 set_prom_params9(const state9 &s, uint64_t addr, uint64_t data,
@@ -410,14 +360,6 @@ struct PromOps {
     uint64_t prom_addr10;
     uint64_t prom_data10;
     bool prom_enable10;
-
-    // ACCESSORS
-    state10 clone() const {
-      return state10{this->regs10,      this->rom10,        this->acc10,
-                     this->pc10,        this->stack10,      this->cur_bank10,
-                     this->rom_ports10, this->sel_rom10,    this->prom_addr10,
-                     this->prom_data10, this->prom_enable10};
-    }
   };
 
   static state10 set_prom_params10(const state10 &s, uint64_t addr,
@@ -530,12 +472,6 @@ struct PromOps {
     uint64_t prom_addr11;
     uint64_t prom_data11;
     bool prom_enable11;
-
-    // ACCESSORS
-    state11 clone() const {
-      return state11{this->rom11, this->prom_addr11, this->prom_data11,
-                     this->prom_enable11};
-    }
   };
 
   static state11 execute_wpm11(state11 s);

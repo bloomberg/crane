@@ -91,9 +91,6 @@ struct UniversePoly {
   template <typename A, typename B> struct ppair {
     A pfst;
     B psnd;
-
-    // ACCESSORS
-    ppair<A, B> clone() const { return ppair<A, B>{this->pfst, this->psnd}; }
   };
 
   static inline const ppair<uint64_t, bool> test_pair =

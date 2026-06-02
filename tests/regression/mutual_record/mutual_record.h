@@ -105,29 +105,6 @@ struct MutualRecord {
 
     explicit department(Mk_department _v) : v_(std::move(_v)) {}
 
-    department(const department &_other) : v_(std::move(_other.clone().v_)) {}
-
-    department(department &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    department &operator=(const department &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    department &operator=(department &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    department clone() const {
-      const auto &[a0, a1] = std::get<Mk_department>(this->v());
-      return department(Mk_department{
-          a0, a1 ? std::make_shared<List<MutualRecord::employee>>(a1->clone())
-                 : nullptr});
-    }
-
-    // CREATORS
     static department mk_department(uint64_t a0, List<employee> a1) {
       return department(
           Mk_department{a0, std::make_shared<List<employee>>(std::move(a1))});
@@ -159,27 +136,6 @@ struct MutualRecord {
 
     explicit employee(Mk_employee _v) : v_(std::move(_v)) {}
 
-    employee(const employee &_other) : v_(std::move(_other.clone().v_)) {}
-
-    employee(employee &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    employee &operator=(const employee &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    employee &operator=(employee &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    employee clone() const {
-      const auto &[a0, a1] = std::get<Mk_employee>(this->v());
-      return employee(Mk_employee{a0, a1});
-    }
-
-    // CREATORS
     static employee mk_employee(uint64_t a0, uint64_t a1) {
       return employee(Mk_employee{a0, a1});
     }

@@ -17,11 +17,6 @@ struct AxiomTypes {
   struct AxiomRecord {
     uint64_t normal_field;
     MysteryType axiom_field;
-
-    // ACCESSORS
-    AxiomRecord clone() const {
-      return AxiomRecord{this->normal_field, this->axiom_field};
-    }
   };
 
   static AxiomRecord make_axiom_record(std::monostate _x);

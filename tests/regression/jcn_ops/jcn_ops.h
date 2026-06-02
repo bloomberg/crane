@@ -9,11 +9,6 @@ struct JcnOps {
     bool carry;
     bool test_pin;
     uint64_t pc;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->acc, this->carry, this->test_pin, this->pc};
-    }
   };
 
   static bool jcn_condition(const state &s, uint64_t cond);

@@ -198,9 +198,6 @@ struct DepRecord {
   struct Tagged {
     Tag the_tag;
     tag_type the_value;
-
-    // ACCESSORS
-    Tagged clone() const { return Tagged{this->the_tag, this->the_value}; }
   };
 
   static inline const Tagged tagged_nat = Tagged{Tag::TNAT, UINT64_C(42)};

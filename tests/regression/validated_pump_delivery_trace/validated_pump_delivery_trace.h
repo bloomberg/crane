@@ -476,16 +476,10 @@ struct Nat {
 struct ValidatedPumpDeliveryTraceCase {
   struct Mg_dL {
     uint64_t mg_dL_val;
-
-    // ACCESSORS
-    Mg_dL clone() const { return Mg_dL{this->mg_dL_val}; }
   };
 
   struct Grams {
     uint64_t grams_val;
-
-    // ACCESSORS
-    Grams clone() const { return Grams{this->grams_val}; }
   };
 
   using Carbs_g = Grams;
@@ -508,15 +502,6 @@ struct ValidatedPumpDeliveryTraceCase {
     uint64_t cfg_suspend_threshold_mg_dl;
     uint64_t cfg_stacking_warning_threshold_min;
     uint64_t cfg_iob_high_threshold_twentieths;
-
-    // ACCESSORS
-    Config clone() const {
-      return Config{this->cfg_bg_rise_per_gram,
-                    this->cfg_conservative_cob_absorption_percent,
-                    this->cfg_suspend_threshold_mg_dl,
-                    this->cfg_stacking_warning_threshold_min,
-                    this->cfg_iob_high_threshold_twentieths};
-    }
   };
 
   static inline const Config default_config = Config{
@@ -744,11 +729,6 @@ struct ValidatedPumpDeliveryTraceCase {
   struct BolusEvent {
     uint64_t be_dose_twentieths;
     Minutes be_time_minutes;
-
-    // ACCESSORS
-    BolusEvent clone() const {
-      return BolusEvent{this->be_dose_twentieths, this->be_time_minutes};
-    }
   };
 
   static uint64_t div_ceil(uint64_t a, uint64_t b);
@@ -880,13 +860,6 @@ struct ValidatedPumpDeliveryTraceCase {
     Mg_dL prec_target_bg;
     DIA_minutes prec_dia;
     InsulinType prec_insulin_type;
-
-    // ACCESSORS
-    PrecisionParams clone() const {
-      return PrecisionParams{this->prec_icr_tenths, this->prec_isf_tenths,
-                             this->prec_target_bg, this->prec_dia,
-                             this->prec_insulin_type};
-    }
   };
 
   static bool prec_params_valid(const PrecisionParams &p);
@@ -900,14 +873,6 @@ struct ValidatedPumpDeliveryTraceCase {
     bool pi_use_sensor_margin;
     FaultStatus pi_fault;
     std::optional<uint64_t> pi_weight_kg;
-
-    // ACCESSORS
-    PrecisionInput clone() const {
-      return PrecisionInput{this->pi_carbs_g,  this->pi_current_bg,
-                            this->pi_now,      this->pi_bolus_history,
-                            this->pi_activity, this->pi_use_sensor_margin,
-                            this->pi_fault,    this->pi_weight_kg};
-    }
   };
 
   static Insulin_twentieth carb_bolus_twentieths(uint64_t carbs_g,
@@ -1033,15 +998,6 @@ struct ValidatedPumpDeliveryTraceCase {
     bool mpi_use_sensor_margin;
     FaultStatus mpi_fault;
     std::optional<uint64_t> mpi_weight_kg;
-
-    // ACCESSORS
-    MmolPrecisionInput clone() const {
-      return MmolPrecisionInput{
-          this->mpi_carbs_g,  this->mpi_current_bg_mmol_tenths,
-          this->mpi_now,      this->mpi_bolus_history,
-          this->mpi_activity, this->mpi_use_sensor_margin,
-          this->mpi_fault,    this->mpi_weight_kg};
-    }
   };
 
   static uint64_t mmol_tenths_to_mg_dL(uint64_t mmol_tenths);
@@ -1101,13 +1057,6 @@ struct ValidatedPumpDeliveryTraceCase {
     Minutes ps_last_bolus_time;
     bool ps_occlusion_detected;
     uint64_t ps_battery_percent;
-
-    // ACCESSORS
-    PumpState clone() const {
-      return PumpState{this->ps_reservoir_twentieths,
-                       this->ps_basal_rate_hundredths, this->ps_last_bolus_time,
-                       this->ps_occlusion_detected, this->ps_battery_percent};
-    }
   };
 
   static bool pump_can_deliver(const PumpState &state, uint64_t dose);

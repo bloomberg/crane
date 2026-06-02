@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -56,9 +55,6 @@ public:
 struct RocqBug13581 {
   template <typename T0> struct mixin_of {
     std::function<T0(T0)> mixin_f;
-
-    // ACCESSORS
-    mixin_of<T0> clone() const { return mixin_of<T0>{this->mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
@@ -67,9 +63,6 @@ struct RocqBug13581 {
   template <typename T0> struct R {
     std::function<T0(T0)> g;
     Nat x;
-
-    // ACCESSORS
-    R<T0> clone() const { return R<T0>{this->g, this->x}; }
   };
 
   template <typename T1>
@@ -103,62 +96,15 @@ struct RocqBug13581 {
 
     explicit I(D _v) : v_(std::move(_v)) {}
 
-    I(const I<T> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    I(I<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    I<T> &operator=(const I<T> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    I<T> &operator=(I<T> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    I<T> clone() const {
-      I<T> _out{};
-
-      struct _CloneFrame {
-        const I<T> *_src;
-        I<T> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const I<T> *_src = _frame._src;
-        I<T> *_dst = _frame._dst;
-        if (std::holds_alternative<C>(_src->v())) {
-          _dst->v_ = C{};
-        } else {
-          const auto &_alt = std::get<D>(_src->v());
-          _dst->v_ = D{_alt.a0 ? std::make_shared<J<T>>() : nullptr};
-          auto &_dst_alt = std::get<D>(_dst->v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<typename RocqBug13581::J<T>::E>(
-                    _alt.a0->v())) {
-              const auto &_psrc =
-                  std::get<typename RocqBug13581::J<T>::E>(_alt.a0->v());
-              auto &_pdst = std::get<typename RocqBug13581::J<T>::E>(
-                  _dst_alt.a0->v_mut());
-              if (_psrc.a0) {
-                _pdst.a0 = std::make_shared<I<T>>();
-                _stack.push_back({_psrc.a0.get(), _pdst.a0.get()});
-              }
-            }
-          }
-        }
+    template <typename _U> explicit I(const I<_U> &_other) {
+      if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
+        this->v_ = C{};
+      } else {
+        const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
+        this->v_ = D{a0 ? std::make_shared<RocqBug13581::J<T>>(*a0) : nullptr};
       }
-      return _out;
     }
 
-    // CREATORS
     static I<T> c() { return I(C{}); }
 
     static I<T> d(J<T> a0) {
@@ -190,28 +136,11 @@ struct RocqBug13581 {
 
     explicit J(E _v) : v_(std::move(_v)) {}
 
-    J(const J<T> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    J(J<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    J<T> &operator=(const J<T> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
+    template <typename _U> explicit J(const J<_U> &_other) {
+      const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
+      this->v_ = E{a0 ? std::make_shared<RocqBug13581::I<T>>(*a0) : nullptr};
     }
 
-    J<T> &operator=(J<T> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    J<T> clone() const {
-      const auto &[a0] = std::get<E>(this->v());
-      return J<T>(
-          E{a0 ? std::make_shared<RocqBug13581::I<T>>(a0->clone()) : nullptr});
-    }
-
-    // CREATORS
     static J<T> e(I<T> a0) {
       return J(E{std::make_shared<I<T>>(std::move(a0))});
     }

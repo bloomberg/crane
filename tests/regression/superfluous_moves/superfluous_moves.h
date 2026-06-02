@@ -85,9 +85,6 @@ struct SuperfluousMoves {
   /// Tiny position record so projections become shared-pointer field accesses.
   struct position {
     uint64_t px;
-
-    // ACCESSORS
-    position clone() const { return position{this->px}; }
   };
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { CHASE, FRIGHTENED };
@@ -123,11 +120,6 @@ struct SuperfluousMoves {
     position pacpos;
     List<position> ghosts;
     uint64_t lives;
-
-    // ACCESSORS
-    game_state clone() const {
-      return game_state{this->pacpos, this->ghosts, this->lives};
-    }
   };
 
   /// Reduced loop state with only the three fields relevant to the bug.
@@ -135,11 +127,6 @@ struct SuperfluousMoves {
     game_state ls_game;
     position ls_prev_pac;
     List<position> ls_prev_ghosts;
-
-    // ACCESSORS
-    loop_state clone() const {
-      return loop_state{this->ls_game, this->ls_prev_pac, this->ls_prev_ghosts};
-    }
   };
 
   /// Identity tick so the reproducer stays minimal while keeping the same

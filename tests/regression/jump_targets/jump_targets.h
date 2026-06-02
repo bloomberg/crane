@@ -298,9 +298,6 @@ struct JumpTargets {
   struct layout {
     uint64_t base_;
     uint64_t code_;
-
-    // ACCESSORS
-    layout clone() const { return layout{this->base_, this->code_}; }
   };
 
   static bool addr_in_region(uint64_t addr, const layout &l);

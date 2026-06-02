@@ -184,14 +184,15 @@ struct NestedTree {
               } else
                 return A(a);
             }(),
-            std::shared_ptr<tree<std::pair<A, A>>>(*t)};
+            t ? std::make_shared<tree<std::pair<A, A>>>(*t) : nullptr};
       }
     }
 
     static tree<A> leaf() { return tree(Leaf{}); }
 
-    static tree<A> node(A a, const tree<std::pair<A, A>> &t) {
-      return tree(Node{std::move(a), (static_cast<void>(t), nullptr)});
+    static tree<A> node(A a, tree<std::pair<A, A>> t) {
+      return tree(Node{std::move(a),
+                       std::make_shared<tree<std::pair<A, A>>>(std::move(t))});
     }
 
     // MANIPULATORS

@@ -121,9 +121,6 @@ struct ListDef {
 struct Q {
   int64_t Qnum;
   unsigned int Qden;
-
-  // ACCESSORS
-  Q clone() const { return Q{this->Qnum, this->Qden}; }
 };
 
 struct Rdefinitions {
@@ -134,9 +131,6 @@ struct PolygonWindingAreaTraceCase {
   struct Point {
     Real phi;
     Real lambda;
-
-    // ACCESSORS
-    Point clone() const { return Point{this->phi, this->lambda}; }
   };
 
   static inline const Real R_earth_default = Rdefinitions::Q2R(Q{

@@ -125,33 +125,6 @@ struct DeepPatterns {
 
     explicit outer(ORight _v) : v_(std::move(_v)) {}
 
-    outer(const outer &_other) : v_(std::move(_other.clone().v_)) {}
-
-    outer(outer &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    outer &operator=(const outer &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    outer &operator=(outer &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    outer clone() const {
-      if (std::holds_alternative<OLeft>(this->v())) {
-        const auto &[a0] = std::get<OLeft>(this->v());
-        return outer(OLeft{
-            a0 ? std::make_shared<DeepPatterns::inner>(a0->clone()) : nullptr});
-      } else {
-        const auto &[a0] = std::get<ORight>(this->v());
-        return outer(ORight{a0});
-      }
-    }
-
-    // CREATORS
     static outer oleft(inner a0) {
       return outer(OLeft{std::make_shared<inner>(std::move(a0))});
     }
@@ -189,32 +162,6 @@ struct DeepPatterns {
 
     explicit inner(IRight _v) : v_(std::move(_v)) {}
 
-    inner(const inner &_other) : v_(std::move(_other.clone().v_)) {}
-
-    inner(inner &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    inner &operator=(const inner &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    inner &operator=(inner &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    inner clone() const {
-      if (std::holds_alternative<ILeft>(this->v())) {
-        const auto &[a0] = std::get<ILeft>(this->v());
-        return inner(ILeft{a0});
-      } else {
-        const auto &[a0] = std::get<IRight>(this->v());
-        return inner(IRight{a0});
-      }
-    }
-
-    // CREATORS
     static inner ileft(uint64_t a0) { return inner(ILeft{a0}); }
 
     static inner iright(bool a0) { return inner(IRight{a0}); }

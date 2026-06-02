@@ -89,9 +89,6 @@ struct ListDef {
 struct LoopBodyIteration {
   struct state {
     List<uint64_t> regs_;
-
-    // ACCESSORS
-    state clone() const { return state{this->regs_}; }
   };
 
   template <typename T1>

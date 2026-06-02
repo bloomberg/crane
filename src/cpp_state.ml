@@ -417,9 +417,7 @@ let eponymous_record :
     Table.std_lib() and queried everywhere instead of 20+ scattered checks. *)
 type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
-  unique_ptr : string; (* "std::unique_ptr" or "bsl::unique_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
-  make_unique : string; (* "std::make_unique" or "bsl::make_unique" *)
   visit : string; (* "std::visit" or "bsl::visit" *)
   move : string; (* "std::move" or "bsl::move" *)
   forward : string; (* "std::forward" or "bsl::forward" *)
@@ -442,9 +440,7 @@ let std_names : std_names ref =
   ref
     {
       shared_ptr = "std::shared_ptr";
-      unique_ptr = "std::shared_ptr";
       make_shared = "std::make_shared";
-      make_unique = "std::make_shared";
       visit = "std::visit";
       move = "std::move";
       forward = "std::forward";
@@ -472,9 +468,7 @@ let mk_std_names prefix =
   | "bsl::" ->
     {
       shared_ptr = prefix ^ "shared_ptr";
-      unique_ptr = prefix ^ "shared_ptr";
       make_shared = prefix ^ "make_shared";
-      make_unique = prefix ^ "make_shared";
       visit = prefix ^ "visit";
       move = prefix ^ "move";
       forward = prefix ^ "forward";
@@ -494,9 +488,7 @@ let mk_std_names prefix =
     (* Default to "std::" *)
     {
       shared_ptr = "std::shared_ptr";
-      unique_ptr = "std::shared_ptr";
       make_shared = "std::make_shared";
-      make_unique = "std::make_shared";
       visit = "std::visit";
       move = "std::move";
       forward = "std::forward";

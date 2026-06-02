@@ -98,9 +98,6 @@ struct InitStateProps {
   struct state {
     List<uint64_t> regs;
     List<uint64_t> rom;
-
-    // ACCESSORS
-    state clone() const { return state{this->regs, this->rom}; }
   };
 
   static inline const state init_state =

@@ -90,9 +90,6 @@ struct ListDef {
 struct FetchOps {
   struct state {
     List<uint64_t> rom;
-
-    // ACCESSORS
-    state clone() const { return state{this->rom}; }
   };
 
   static uint64_t fetch_byte(const state &s, uint64_t addr);

@@ -111,11 +111,6 @@ struct WrrRdrRoundtrip {
     uint64_t acc;
     List<uint64_t> rom_ports;
     uint64_t sel_rom;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->acc, this->rom_ports, this->sel_rom};
-    }
   };
 
   static state execute_wrr(const state &s);

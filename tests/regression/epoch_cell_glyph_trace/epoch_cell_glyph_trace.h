@@ -221,9 +221,6 @@ struct BinInt {
 struct Q {
   Z Qnum;
   Positive Qden;
-
-  // ACCESSORS
-  Q clone() const { return Q{this->Qnum, this->Qden}; }
 };
 
 struct QArith_base {
@@ -395,14 +392,6 @@ struct EpochCellGlyphTraceCase {
     Z exeligmos_dial;
     Z games_dial;
     Z zodiac_position;
-
-    // ACCESSORS
-    MechanismState clone() const {
-      return MechanismState{this->crank_position, this->metonic_dial,
-                            this->saros_dial,     this->callippic_dial,
-                            this->exeligmos_dial, this->games_dial,
-                            this->zodiac_position};
-    }
   };
 
   static inline const MechanismState initial_state = MechanismState{
@@ -496,15 +485,6 @@ struct EpochCellGlyphTraceCase {
     Z he_saros_member;
     Q he_magnitude;
     bool he_visible_mediterranean;
-
-    // ACCESSORS
-    HistoricalEclipse clone() const {
-      return HistoricalEclipse{
-          this->he_year,         this->he_month,
-          this->he_day,          this->he_category,
-          this->he_saros_series, this->he_saros_member,
-          this->he_magnitude,    this->he_visible_mediterranean};
-    }
   };
   enum class DialGlyph {
     GLYPH_SIGMA,
@@ -684,12 +664,6 @@ struct EpochCellGlyphTraceCase {
     HistoricalEclipse reading_eclipse;
     Z reading_cell;
     DialGlyph reading_glyph;
-
-    // ACCESSORS
-    EpochReading clone() const {
-      return EpochReading{this->reading_state, this->reading_eclipse,
-                          this->reading_cell, this->reading_glyph};
-    }
   };
 
   static EpochReading build_epoch_reading(const Z &epoch_year,
@@ -703,11 +677,6 @@ struct EpochCellGlyphTraceCase {
     Z ve_year;
     Z ve_month;
     HistoricalEclipse ve_eclipse;
-
-    // ACCESSORS
-    ValidEpoch clone() const {
-      return ValidEpoch{this->ve_year, this->ve_month, this->ve_eclipse};
-    }
   };
 
   static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch{

@@ -86,9 +86,6 @@ struct InstructionSequenceExec {
   struct state {
     uint64_t pc_;
     uint64_t acc_;
-
-    // ACCESSORS
-    state clone() const { return state{this->pc_, this->acc_}; }
   };
 
   struct instruction {

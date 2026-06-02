@@ -10,7 +10,7 @@
 
    MiniML (miniml.ml) handles type erasure, signature computation, and ML-level
    optimizations on a language-agnostic functional AST. MiniCpp (this file)
-   captures C++-specific idioms: shared_ptr/unique_ptr memory management,
+   captures C++-specific idioms: shared_ptr memory management,
    std::variant, templates, concepts, namespaces, structs with visibility, move
    semantics, enum classes, and constructors.
 
@@ -108,7 +108,6 @@ type cpp_type =
   | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
-  | Tunique_ptr of cpp_type  (** std::unique_ptr<T> for unique ownership *)
   | Tvoid  (** void type *)
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
@@ -280,9 +279,6 @@ and cpp_expr =
   | CPPnew of cpp_type * cpp_expr list  (** Heap allocation: new Type(args) *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr
       (** Direct std::shared_ptr<T>(expr) construction *)
-  | CPPunique_ptr_ctor of cpp_type * cpp_expr
-      (** Direct std::unique_ptr<T>(expr) construction *)
-  | CPPmk_unique of cpp_type  (** std::make_unique<T> factory function *)
   | CPPthis  (** this pointer in method context *)
   | CPPshared_from_this of cpp_type
       (** std::const_pointer_cast<T>(shared_from_this()) *)

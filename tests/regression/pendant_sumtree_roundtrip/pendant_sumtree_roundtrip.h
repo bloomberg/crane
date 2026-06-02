@@ -428,22 +428,11 @@ struct PendantSumtreeRoundtripCase {
     Color cm_color;
     Twist cm_spin;
     Twist cm_ply;
-
-    // ACCESSORS
-    CordMeta clone() const {
-      return CordMeta{this->cm_fiber, this->cm_color, this->cm_spin,
-                      this->cm_ply};
-    }
   };
 
   struct CertifiedPendant {
     CordMeta cp_meta;
     T0<digit> cp_digits;
-
-    // ACCESSORS
-    CertifiedPendant clone() const {
-      return CertifiedPendant{this->cp_meta, this->cp_digits};
-    }
   };
 
   static std::optional<T0<digit>> pendant_digits(uint64_t n,
@@ -457,11 +446,6 @@ struct PendantSumtreeRoundtripCase {
   struct PendantGroup {
     CertifiedPendant pg_top;
     List<CertifiedPendant> pg_pendants;
-
-    // ACCESSORS
-    PendantGroup clone() const {
-      return PendantGroup{this->pg_top, this->pg_pendants};
-    }
   };
 
   static bool group_sums_validb(uint64_t n, const PendantGroup &g);

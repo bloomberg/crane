@@ -98,39 +98,6 @@ struct Equations {
 
     explicit gcd_graph(Gcd_graph_refinement_3 _v) : v_(std::move(_v)) {}
 
-    gcd_graph(const gcd_graph &_other) : v_(std::move(_other.clone().v_)) {}
-
-    gcd_graph(gcd_graph &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    gcd_graph &operator=(const gcd_graph &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    gcd_graph &operator=(gcd_graph &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    gcd_graph clone() const {
-      if (std::holds_alternative<Gcd_graph_equation_1>(this->v())) {
-        const auto &[y] = std::get<Gcd_graph_equation_1>(this->v());
-        return gcd_graph(Gcd_graph_equation_1{y});
-      } else if (std::holds_alternative<Gcd_graph_equation_2>(this->v())) {
-        const auto &[n] = std::get<Gcd_graph_equation_2>(this->v());
-        return gcd_graph(Gcd_graph_equation_2{n});
-      } else {
-        const auto &[n, n0, hind] = std::get<Gcd_graph_refinement_3>(this->v());
-        return gcd_graph(Gcd_graph_refinement_3{
-            n, n0,
-            hind
-                ? std::make_shared<Equations::gcd_clause_3_graph>(hind->clone())
-                : nullptr});
-      }
-    }
-
-    // CREATORS
     static gcd_graph gcd_graph_equation_1(uint64_t y) {
       return gcd_graph(Gcd_graph_equation_1{y});
     }
@@ -183,42 +150,6 @@ struct Equations {
     explicit gcd_clause_3_graph(Gcd_clause_3_graph_equation_2 _v)
         : v_(std::move(_v)) {}
 
-    gcd_clause_3_graph(const gcd_clause_3_graph &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    gcd_clause_3_graph(gcd_clause_3_graph &&_other) noexcept
-        : v_(std::move(_other.v_)) {}
-
-    gcd_clause_3_graph &operator=(const gcd_clause_3_graph &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    gcd_clause_3_graph clone() const {
-      if (std::holds_alternative<Gcd_clause_3_graph_equation_1>(this->v())) {
-        const auto &[n, n0, hind] =
-            std::get<Gcd_clause_3_graph_equation_1>(this->v());
-        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
-            n, n0,
-            hind ? std::make_shared<Equations::gcd_graph>(hind->clone())
-                 : nullptr});
-      } else {
-        const auto &[n, n0, hind] =
-            std::get<Gcd_clause_3_graph_equation_2>(this->v());
-        return gcd_clause_3_graph(Gcd_clause_3_graph_equation_2{
-            n, n0,
-            hind ? std::make_shared<Equations::gcd_graph>(hind->clone())
-                 : nullptr});
-      }
-    }
-
-    // CREATORS
     static gcd_clause_3_graph
     gcd_clause_3_graph_equation_1(uint64_t n, uint64_t n0, gcd_graph hind) {
       return gcd_clause_3_graph(Gcd_clause_3_graph_equation_1{
@@ -510,40 +441,6 @@ struct Equations {
     explicit collatz_steps_graph(Collatz_steps_graph_refinement_3 _v)
         : v_(std::move(_v)) {}
 
-    collatz_steps_graph(const collatz_steps_graph &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    collatz_steps_graph(collatz_steps_graph &&_other) noexcept
-        : v_(std::move(_other.v_)) {}
-
-    collatz_steps_graph &operator=(const collatz_steps_graph &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    collatz_steps_graph &operator=(collatz_steps_graph &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    collatz_steps_graph clone() const {
-      if (std::holds_alternative<Collatz_steps_graph_equation_1>(this->v())) {
-        return collatz_steps_graph(Collatz_steps_graph_equation_1{});
-      } else if (std::holds_alternative<Collatz_steps_graph_equation_2>(
-                     this->v())) {
-        return collatz_steps_graph(Collatz_steps_graph_equation_2{});
-      } else {
-        const auto &[n, hind] =
-            std::get<Collatz_steps_graph_refinement_3>(this->v());
-        return collatz_steps_graph(Collatz_steps_graph_refinement_3{
-            n, hind ? std::make_shared<Equations::collatz_steps_clause_3_graph>(
-                          hind->clone())
-                    : nullptr});
-      }
-    }
-
-    // CREATORS
     static collatz_steps_graph collatz_steps_graph_equation_1() {
       return collatz_steps_graph(Collatz_steps_graph_equation_1{});
     }
@@ -597,47 +494,6 @@ struct Equations {
         Collatz_steps_clause_3_graph_equation_2 _v)
         : v_(std::move(_v)) {}
 
-    collatz_steps_clause_3_graph(const collatz_steps_clause_3_graph &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&_other) noexcept
-        : v_(std::move(_other.v_)) {}
-
-    collatz_steps_clause_3_graph &
-    operator=(const collatz_steps_clause_3_graph &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    collatz_steps_clause_3_graph &
-    operator=(collatz_steps_clause_3_graph &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    collatz_steps_clause_3_graph clone() const {
-      if (std::holds_alternative<Collatz_steps_clause_3_graph_equation_1>(
-              this->v())) {
-        const auto &[n, hind] =
-            std::get<Collatz_steps_clause_3_graph_equation_1>(this->v());
-        return collatz_steps_clause_3_graph(
-            Collatz_steps_clause_3_graph_equation_1{
-                n, hind ? std::make_shared<Equations::collatz_steps_graph>(
-                              hind->clone())
-                        : nullptr});
-      } else {
-        const auto &[n, hind] =
-            std::get<Collatz_steps_clause_3_graph_equation_2>(this->v());
-        return collatz_steps_clause_3_graph(
-            Collatz_steps_clause_3_graph_equation_2{
-                n, hind ? std::make_shared<Equations::collatz_steps_graph>(
-                              hind->clone())
-                        : nullptr});
-      }
-    }
-
-    // CREATORS
     static collatz_steps_clause_3_graph
     collatz_steps_clause_3_graph_equation_1(uint64_t n,
                                             collatz_steps_graph hind) {

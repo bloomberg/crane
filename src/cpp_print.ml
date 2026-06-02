@@ -854,9 +854,6 @@ let rec pp_cpp_type par vl t =
     | Tshared_ptr t ->
       require_header "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
-    | Tunique_ptr t ->
-      require_header "memory";
-      cpp_angle (sn ()).unique_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
@@ -905,10 +902,10 @@ and pp_typename_member ty id =
     @param t     the MiniCpp expression to render *)
 and extract_from_any ty src_expr =
   (* Extract a value of type [ty] from [src_expr : any].
-     When ty is Tunique_ptr<T> (recursive inductive), the value is stored
+     When ty is Tshared_ptr<T> (recursive inductive), the value is stored
      directly as T in any; wrap with make_shared<T>. *)
   match ty with
-  | Tunique_ptr inner ->
+  | Tshared_ptr inner ->
     require_header "memory";
     str "std::make_shared<" ++ pp_cpp_type false [] inner ++ str ">("
     ++ str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] inner ++ str ">(" ++ src_expr ++ str "))"
@@ -1451,7 +1448,7 @@ and pp_cpp_expr env args t =
            from the constructor's MutInd, the constructor expects deque<Inner>
            (value type). Strip the shared_ptr and re-emit as deque<Inner>. *)
         let fix_opt = match stored_ty with
-          | Tglob (g, [Tunique_ptr inner], _)
+          | Tglob (g, [Tshared_ptr inner], _)
             when is_list_global g && Table.is_custom g ->
             ( match inner with
             | Tglob (GlobRef.IndRef (kn_inner, _), _, _)
@@ -1595,28 +1592,9 @@ and pp_cpp_expr env args t =
       List.iter scan_stmt body;
       !found
     in
-    let rec type_contains_unique_ptr = function
-      | Tunique_ptr _ -> false  (* now rendered as shared_ptr, which is copyable *)
-      | Tshared_ptr t | Tref t | Tptr t | Tmod (_, t) -> type_contains_unique_ptr t
-      | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-       |Tvariant ts | Tnamespace (_, Tglob (_, ts, _)) ->
-        List.exists type_contains_unique_ptr ts
-      | Tfun (dom, cod) ->
-        List.exists type_contains_unique_ptr dom || type_contains_unique_ptr cod
-      | Tnamespace (_, t) | Tqualified (t, _) -> type_contains_unique_ptr t
-      | _ -> false
-    in
     let capture_by_value =
       capture_by_value
       && not body_derefs_var
-      && not
-           ( List.exists
-               (fun (ty, _) -> type_contains_unique_ptr ty)
-               params
-             ||
-             match ret_ty with
-             | Some ty -> type_contains_unique_ptr ty
-             | None -> false )
     in
     let capture_str =
       if not needs_capture then
@@ -1692,9 +1670,6 @@ and pp_cpp_expr env args t =
   | CPPmk_shared t ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
-  | CPPmk_unique t ->
-    require_header "memory";
-    cpp_angle (sn ()).make_unique (pp_cpp_type false [] t)
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
@@ -1815,13 +1790,6 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPshared_ptr_ctor (ty, expr) ->
     str (sn ()).shared_ptr
-    ++ str "<"
-    ++ pp_cpp_type false [] ty
-    ++ str ">("
-    ++ pp_cpp_expr env args expr
-    ++ str ")"
-  | CPPunique_ptr_ctor (ty, expr) ->
-    str (sn ()).unique_ptr
     ++ str "<"
     ++ pp_cpp_type false [] ty
     ++ str ">("
@@ -2447,12 +2415,12 @@ and pp_cpp_stmt env args = function
     branches_pp ++ default_pp ++ fnl () ++ str "}"
 
 (** Check if a return type is eligible for __attribute__((pure)). Types that
-    involve allocation (shared_ptr, unique_ptr), side effects (void), or are
+    involve allocation (shared_ptr), side effects (void), or are
     unknown at definition time (type variables, any, todo) are excluded. Axiom
     type refs are also excluded since functions operating on axiom types may
     transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
-  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
@@ -2470,7 +2438,7 @@ and is_pure_return_type = function
     [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
     if both [A] and [B] are. *)
 and is_constexpr_type = function
-  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ -> false
@@ -2556,7 +2524,6 @@ and resolve_tvars_to_any = function
   | Tmod (m, t) -> Tmod (m, resolve_tvars_to_any t)
   | Tref t -> Tref (resolve_tvars_to_any t)
   | Tshared_ptr t -> Tshared_ptr (resolve_tvars_to_any t)
-  | Tunique_ptr t -> Tunique_ptr (resolve_tvars_to_any t)
   | t -> t
 
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
@@ -3234,7 +3201,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
   | Fraw s ->
     if Common.contains_substring s "std::vector" then
       require_header "vector";
-    if Common.contains_substring s "std::unique_ptr" then
+    if Common.contains_substring s "std::shared_ptr" then
       require_header "memory";
     (* Replace %SELF% placeholder with actual struct name if available *)
     let s =

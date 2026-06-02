@@ -544,11 +544,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
   struct HLAAllele {
     HLALocus hla_locus;
     uint64_t hla_group;
-
-    // ACCESSORS
-    HLAAllele clone() const {
-      return HLAAllele{this->hla_locus, this->hla_group};
-    }
   };
 
   static bool hla_allele_eq_dec(const HLAAllele &x, const HLAAllele &y);
@@ -556,21 +551,12 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct HLATyping {
     List<HLAAllele> hla_typed_alleles;
-
-    // ACCESSORS
-    HLATyping clone() const { return HLATyping{this->hla_typed_alleles}; }
   };
 
   struct HLAEpitope {
     uint64_t epitope_id;
     HLALocus epitope_locus;
     bool epitope_immunogenic;
-
-    // ACCESSORS
-    HLAEpitope clone() const {
-      return HLAEpitope{this->epitope_id, this->epitope_locus,
-                        this->epitope_immunogenic};
-    }
   };
 
   static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
@@ -591,12 +577,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     HLAEpitope ab_epitope;
     uint64_t ab_mfi;
     bool ab_complement_fixing;
-
-    // ACCESSORS
-    EpitopeAntibody clone() const {
-      return EpitopeAntibody{this->ab_epitope, this->ab_mfi,
-                             this->ab_complement_fixing};
-    }
   };
 
   struct VirtualXMProfile {
@@ -604,13 +584,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     uint64_t vxm_current_pra;
     uint64_t vxm_peak_pra;
     uint64_t vxm_sensitization_events;
-
-    // ACCESSORS
-    VirtualXMProfile clone() const {
-      return VirtualXMProfile{this->vxm_epitope_abs, this->vxm_current_pra,
-                              this->vxm_peak_pra,
-                              this->vxm_sensitization_events};
-    }
   };
 
   struct MFIThresholdConfig {
@@ -620,14 +593,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     uint64_t mfi_cfg_strong;
     uint64_t mfi_cfg_lab_id;
     bool mfi_cfg_validated;
-
-    // ACCESSORS
-    MFIThresholdConfig clone() const {
-      return MFIThresholdConfig{
-          this->mfi_cfg_negative, this->mfi_cfg_weak_positive,
-          this->mfi_cfg_moderate, this->mfi_cfg_strong,
-          this->mfi_cfg_lab_id,   this->mfi_cfg_validated};
-    }
   };
 
   static bool mfi_config_valid(const MFIThresholdConfig &cfg);
@@ -637,11 +602,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   struct ValidatedMFIConfig {
     MFIThresholdConfig vmc_config;
-
-    // ACCESSORS
-    ValidatedMFIConfig clone() const {
-      return ValidatedMFIConfig{this->vmc_config};
-    }
   };
 
   static inline const ValidatedMFIConfig validated_luminex =
@@ -907,12 +867,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     CrossmatchResult xmu_result;
     uint64_t xmu_method;
     TestConfidence xmu_confidence;
-
-    // ACCESSORS
-    CrossmatchWithUncertainty clone() const {
-      return CrossmatchWithUncertainty{this->xmu_result, this->xmu_method,
-                                       this->xmu_confidence};
-    }
   };
 
   static bool safe_to_release(const CrossmatchWithUncertainty &xm);
@@ -925,15 +879,6 @@ struct ValidatedVirtualCrossmatchTraceCase {
     uint64_t sto_sample_collection_time;
     uint64_t sto_authorized_by;
     bool sto_emergency_release;
-
-    // ACCESSORS
-    SafeTransfusionOrder clone() const {
-      return SafeTransfusionOrder{
-          this->sto_recipient_id,           this->sto_product_id,
-          this->sto_compatibility_check,    this->sto_crossmatch,
-          this->sto_sample_collection_time, this->sto_authorized_by,
-          this->sto_emergency_release};
-    }
   };
 
   static bool order_sample_valid(uint64_t collection_time,

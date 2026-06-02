@@ -332,12 +332,6 @@ struct CoalitionBidHonorTraceCase {
     Clan cmd_clan;
     Rank cmd_rank;
     bool cmd_bloodnamed;
-
-    // ACCESSORS
-    Commander clone() const {
-      return Commander{this->cmd_id, this->cmd_clan, this->cmd_rank,
-                       this->cmd_bloodnamed};
-    }
   };
 
   static bool may_issue_batchall(const Commander &c);
@@ -424,13 +418,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t unit_piloting;
     bool unit_is_elite;
     bool unit_is_clan;
-
-    // ACCESSORS
-    Unit clone() const {
-      return Unit{this->unit_id,       this->unit_class,   this->unit_weight,
-                  this->unit_tonnage,  this->unit_gunnery, this->unit_piloting,
-                  this->unit_is_elite, this->unit_is_clan};
-    }
   };
 
   static uint64_t unit_skill(const Unit &u);
@@ -448,13 +435,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t fm_clan_count;
     uint64_t fm_total_bv;
     uint64_t fm_total_ecr;
-
-    // ACCESSORS
-    ForceMetrics clone() const {
-      return ForceMetrics{this->fm_count,       this->fm_tonnage,
-                          this->fm_elite_count, this->fm_clan_count,
-                          this->fm_total_bv,    this->fm_total_ecr};
-    }
   };
 
   static inline const ForceMetrics empty_metrics =
@@ -497,11 +477,6 @@ struct CoalitionBidHonorTraceCase {
     Clan cm_clan;
     Commander cm_commander;
     Force cm_force;
-
-    // ACCESSORS
-    CoalitionMember clone() const {
-      return CoalitionMember{this->cm_clan, this->cm_commander, this->cm_force};
-    }
   };
 
   using Coalition = List<CoalitionMember>;
@@ -515,12 +490,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t cmb_member_index;
     Force cmb_new_force;
     Side cmb_side;
-
-    // ACCESSORS
-    CoalitionMemberBid clone() const {
-      return CoalitionMemberBid{this->cmb_member_index, this->cmb_new_force,
-                                this->cmb_side};
-    }
   };
 
   static Coalition update_coalition_force(const List<CoalitionMember> &c,
@@ -530,11 +499,6 @@ struct CoalitionBidHonorTraceCase {
     Force bid_force;
     Side bid_side;
     Commander bid_commander;
-
-    // ACCESSORS
-    ForceBid clone() const {
-      return ForceBid{this->bid_force, this->bid_side, this->bid_commander};
-    }
   };
 
   static ForceMetrics bid_metrics(const ForceBid &b);
@@ -708,11 +672,6 @@ struct CoalitionBidHonorTraceCase {
   struct BattleContext {
     bool ctx_hegira_allowed;
     bool ctx_circle_present;
-
-    // ACCESSORS
-    BattleContext clone() const {
-      return BattleContext{this->ctx_hegira_allowed, this->ctx_circle_present};
-    }
   };
 
   static inline const BattleContext standard_possession_context =
@@ -726,26 +685,12 @@ struct CoalitionBidHonorTraceCase {
     Location chal_location;
     TrialType chal_trial_type;
     BattleContext chal_context;
-
-    // ACCESSORS
-    BatchallChallenge clone() const {
-      return BatchallChallenge{this->chal_challenger, this->chal_clan,
-                               this->chal_prize,      this->chal_initial_force,
-                               this->chal_location,   this->chal_trial_type,
-                               this->chal_context};
-    }
   };
 
   struct BatchallResponse {
     Commander resp_defender;
     Clan resp_clan;
     Force resp_force;
-
-    // ACCESSORS
-    BatchallResponse clone() const {
-      return BatchallResponse{this->resp_defender, this->resp_clan,
-                              this->resp_force};
-    }
   };
 
   struct RefusalReason {
@@ -1445,11 +1390,6 @@ struct CoalitionBidHonorTraceCase {
   struct BatchallState {
     BatchallPhase bs_phase;
     HonorLedger bs_honor;
-
-    // ACCESSORS
-    BatchallState clone() const {
-      return BatchallState{this->bs_phase, this->bs_honor};
-    }
   };
 
   static inline const HonorLedger empty_ledger =

@@ -151,14 +151,6 @@ struct PulseParseCertificateCase {
     Runs certificate_runs;
     uint64_t certificate_base;
     List<PulseClass> certificate_classes;
-
-    // ACCESSORS
-    PulseCertificate clone() const {
-      return PulseCertificate{this->certificate_first_active,
-                              this->certificate_last_active,
-                              this->certificate_runs, this->certificate_base,
-                              this->certificate_classes};
-    }
   };
 
   static bool

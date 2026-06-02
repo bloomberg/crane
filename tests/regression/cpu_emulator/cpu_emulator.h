@@ -144,13 +144,6 @@ struct CpuEmulator {
     List<uint64_t> ex_stack;
     uint64_t ex_pair_bus;
     List<uint64_t> ex_ports;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->ex_acc,  this->ex_regs,  this->ex_carry,
-                   this->ex_pc,   this->ex_stack, this->ex_pair_bus,
-                   this->ex_ports};
-    }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

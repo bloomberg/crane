@@ -101,9 +101,6 @@ struct ComprehensivePatterns {
     uint64_t s_a;
     uint64_t s_b;
     uint64_t s_c;
-
-    // ACCESSORS
-    S clone() const { return S{this->s_a, this->s_b, this->s_c}; }
   };
 
   static std::pair<std::pair<S, uint64_t>, uint64_t> syntactic_variation(S s);
@@ -111,37 +108,22 @@ struct ComprehensivePatterns {
 
   struct L1 {
     S l1_s;
-
-    // ACCESSORS
-    L1 clone() const { return L1{this->l1_s}; }
   };
 
   struct L2 {
     L1 l2_l1;
-
-    // ACCESSORS
-    L2 clone() const { return L2{this->l2_l1}; }
   };
 
   struct L3 {
     L2 l3_l2;
-
-    // ACCESSORS
-    L3 clone() const { return L3{this->l3_l2}; }
   };
 
   struct L4 {
     L3 l4_l3;
-
-    // ACCESSORS
-    L4 clone() const { return L4{this->l4_l3}; }
   };
 
   struct L5 {
     L4 l5_l4;
-
-    // ACCESSORS
-    L5 clone() const { return L5{this->l5_l4}; }
   };
 
   static std::pair<
@@ -276,26 +258,17 @@ struct ComprehensivePatterns {
 
   struct R1 {
     uint64_t r1_val;
-
-    // ACCESSORS
-    R1 clone() const { return R1{this->r1_val}; }
   };
 
   struct R2 {
     R1 r2_inner;
     uint64_t r2_data;
-
-    // ACCESSORS
-    R2 clone() const { return R2{this->r2_inner, this->r2_data}; }
   };
 
   struct R3 {
     R2 r3_r2;
     R1 r3_r1;
     uint64_t r3_num;
-
-    // ACCESSORS
-    R3 clone() const { return R3{this->r3_r2, this->r3_r1, this->r3_num}; }
   };
 
   static std::pair<std::pair<std::pair<R3, R2>, R1>, uint64_t>
@@ -330,9 +303,6 @@ struct ComprehensivePatterns {
   struct R {
     uint64_t val;
     uint64_t dat;
-
-    // ACCESSORS
-    R clone() const { return R{this->val, this->dat}; }
   };
 
   static std::pair<R, uint64_t> pair_inline_proj(R r);
@@ -358,9 +328,6 @@ struct ComprehensivePatterns {
     uint64_t nc_a;
     uint64_t nc_b;
     uint64_t nc_c;
-
-    // ACCESSORS
-    NC clone() const { return NC{this->nc_a, this->nc_b, this->nc_c}; }
   };
 
   static uint64_t use_proj(uint64_t n);
@@ -386,9 +353,6 @@ struct ComprehensivePatterns {
 
   struct OuterNC {
     NC outer_nc;
-
-    // ACCESSORS
-    OuterNC clone() const { return OuterNC{this->outer_nc}; }
   };
 
   static uint64_t double_proj_nc(const OuterNC &o);
@@ -406,9 +370,6 @@ struct ComprehensivePatterns {
   struct State {
     uint64_t state_value;
     uint64_t state_data;
-
-    // ACCESSORS
-    State clone() const { return State{this->state_value, this->state_data}; }
   };
 
   static uint64_t use_two_fc(uint64_t _x0, uint64_t _x1);
@@ -435,9 +396,6 @@ struct ComprehensivePatterns {
 
   struct RSeq {
     uint64_t seq_val;
-
-    // ACCESSORS
-    RSeq clone() const { return RSeq{this->seq_val}; }
   };
 
   static RSeq side_effect(RSeq r);
@@ -448,11 +406,6 @@ struct ComprehensivePatterns {
   struct StateStmt {
     uint64_t stmt_value;
     uint64_t stmt_data;
-
-    // ACCESSORS
-    StateStmt clone() const {
-      return StateStmt{this->stmt_value, this->stmt_data};
-    }
   };
 
   static uint64_t return_proj_stmt(const StateStmt &s);
@@ -461,28 +414,17 @@ struct ComprehensivePatterns {
 
   struct InnerStmt {
     uint64_t inner_stmt_val;
-
-    // ACCESSORS
-    InnerStmt clone() const { return InnerStmt{this->inner_stmt_val}; }
   };
 
   struct OuterStmt {
     InnerStmt outer_stmt_inner;
     uint64_t outer_stmt_data;
-
-    // ACCESSORS
-    OuterStmt clone() const {
-      return OuterStmt{this->outer_stmt_inner, this->outer_stmt_data};
-    }
   };
 
   static uint64_t chained_proj(const OuterStmt &o);
 
   struct Level3Stmt {
     OuterStmt l3_outer_stmt;
-
-    // ACCESSORS
-    Level3Stmt clone() const { return Level3Stmt{this->l3_outer_stmt}; }
   };
 
   static uint64_t triple_chain(const Level3Stmt &l3);
@@ -500,9 +442,6 @@ struct ComprehensivePatterns {
 
   struct RCF {
     uint64_t cf_val;
-
-    // ACCESSORS
-    RCF clone() const { return RCF{this->cf_val}; }
   };
 
   static uint64_t branch_use(bool b, const RCF &r);
@@ -515,9 +454,6 @@ struct ComprehensivePatterns {
   struct StateLB {
     uint64_t lb_value;
     uint64_t lb_data;
-
-    // ACCESSORS
-    StateLB clone() const { return StateLB{this->lb_value, this->lb_data}; }
   };
 
   struct Tree {
@@ -641,9 +577,6 @@ struct ComprehensivePatterns {
   struct StateRO {
     uint64_t ro_value;
     uint64_t ro_data;
-
-    // ACCESSORS
-    StateRO clone() const { return StateRO{this->ro_value, this->ro_data}; }
   };
 
   struct Container {
@@ -713,9 +646,6 @@ struct ComprehensivePatterns {
   struct StateOP {
     uint64_t op_value;
     uint64_t op_data;
-
-    // ACCESSORS
-    StateOP clone() const { return StateOP{this->op_value, this->op_data}; }
   };
 
   static StateOP identity(StateOP s);

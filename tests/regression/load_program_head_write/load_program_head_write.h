@@ -92,12 +92,6 @@ struct LoadProgramHeadWrite {
     uint64_t prom_addr;
     uint64_t prom_data;
     bool prom_enable;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->rom, this->prom_addr, this->prom_data,
-                   this->prom_enable};
-    }
   };
 
   static List<uint64_t> update_nth(uint64_t n, uint64_t x, List<uint64_t> l);

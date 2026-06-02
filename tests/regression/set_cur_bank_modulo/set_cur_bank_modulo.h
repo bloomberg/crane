@@ -9,9 +9,6 @@ struct SetCurBankModulo {
   struct state {
     uint64_t cur_bank;
     uint64_t acc;
-
-    // ACCESSORS
-    state clone() const { return state{this->cur_bank, this->acc}; }
   };
 
   static state set_cur_bank(const state &s, uint64_t b);

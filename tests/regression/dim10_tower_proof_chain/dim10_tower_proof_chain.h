@@ -27,9 +27,6 @@ struct Dim10TowerProofChainCase {
   struct QPos {
     uint64_t qpos_num;
     uint64_t qpos_denom_pred;
-
-    // ACCESSORS
-    QPos clone() const { return QPos{this->qpos_num, this->qpos_denom_pred}; }
   };
 
   static uint64_t qpos_denom(const QPos &q);
@@ -39,9 +36,6 @@ struct Dim10TowerProofChainCase {
 
   struct GradedObj {
     uint64_t go_dim;
-
-    // ACCESSORS
-    GradedObj clone() const { return GradedObj{this->go_dim}; }
   };
 
   static inline const GradedObj go_zero = GradedObj{UINT64_C(0)};
@@ -59,11 +53,6 @@ struct Dim10TowerProofChainCase {
   struct GradedGoodwillieTower {
     std::function<GradedObj(uint64_t)> ggt_P;
     std::function<GradedObj(uint64_t)> ggt_D;
-
-    // ACCESSORS
-    GradedGoodwillieTower clone() const {
-      return GradedGoodwillieTower{this->ggt_P, this->ggt_D};
-    }
   };
 
   static GradedGoodwillieTower make_graded_goodwillie_tower(uint64_t base_dim);
@@ -93,13 +82,6 @@ struct Dim10TowerProofChainCase {
     EventuallyZero gc_eventually_zero;
     SigT<uint64_t, std::any> gc_layers_stabilize;
     SigT<uint64_t, std::any> gc_P_stabilize;
-
-    // ACCESSORS
-    GoodwillieProofChain clone() const {
-      return GoodwillieProofChain{this->gc_eventually_zero,
-                                  this->gc_layers_stabilize,
-                                  this->gc_P_stabilize};
-    }
   };
 
   static GoodwillieProofChain make_goodwillie_proof_chain(uint64_t base_dim);
@@ -114,11 +96,6 @@ struct Dim10TowerProofChainCase {
   struct Dim10Bundle {
     GradedGoodwillieTower dt_tower;
     GoodwillieProofChain dt_chain;
-
-    // ACCESSORS
-    Dim10Bundle clone() const {
-      return Dim10Bundle{this->dt_tower, this->dt_chain};
-    }
   };
 
   static inline const Dim10Bundle dim10_bundle =

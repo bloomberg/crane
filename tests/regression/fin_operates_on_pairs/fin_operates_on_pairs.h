@@ -110,9 +110,6 @@ struct FinOperatesOnPairs {
   struct state {
     List<uint64_t> regs;
     List<uint64_t> rom;
-
-    // ACCESSORS
-    state clone() const { return state{this->regs, this->rom}; }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

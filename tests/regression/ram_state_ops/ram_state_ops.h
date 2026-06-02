@@ -112,26 +112,15 @@ struct RamStateOps {
   struct ram_reg {
     List<uint64_t> reg_main;
     List<uint64_t> reg_status;
-
-    // ACCESSORS
-    ram_reg clone() const { return ram_reg{this->reg_main, this->reg_status}; }
   };
 
   struct ram_chip {
     List<ram_reg> chip_regs;
     uint64_t chip_port;
-
-    // ACCESSORS
-    ram_chip clone() const {
-      return ram_chip{this->chip_regs, this->chip_port};
-    }
   };
 
   struct ram_bank {
     List<ram_chip> bank_chips;
-
-    // ACCESSORS
-    ram_bank clone() const { return ram_bank{this->bank_chips}; }
   };
 
   struct ram_sel {
@@ -139,12 +128,6 @@ struct RamStateOps {
     uint64_t sel_chip;
     uint64_t sel_reg;
     uint64_t sel_char;
-
-    // ACCESSORS
-    ram_sel clone() const {
-      return ram_sel{this->sel_bank, this->sel_chip, this->sel_reg,
-                     this->sel_char};
-    }
   };
 
   struct state {
@@ -156,13 +139,6 @@ struct RamStateOps {
     List<ram_bank> state_ram;
     ram_sel state_sel;
     List<uint64_t> state_rom;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->state_regs, this->state_acc,   this->state_carry,
-                   this->state_pc,   this->state_stack, this->state_ram,
-                   this->state_sel,  this->state_rom};
-    }
   };
 
   static inline const ram_reg empty_reg =

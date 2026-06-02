@@ -111,24 +111,15 @@ struct RecRecord {
   struct RNode {
     uint64_t rn_value;
     std::optional<std::shared_ptr<RNode>> rn_next;
-
-    // ACCESSORS
-    RNode clone() const {
-      return RNode{this->rn_value,
-                   (*this).rn_next.has_value()
-                       ? std::make_optional(std::make_shared<RNode>(
-                             (*(*this).rn_next)->clone()))
-                       : std::nullopt};
-    }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 =
-        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
-                              : std::nullopt;
+    std::optional<RNode> rn_next0 = r.rn_next.has_value()
+                                        ? std::make_optional<RNode>(**r.rn_next)
+                                        : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
@@ -136,29 +127,21 @@ struct RecRecord {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 =
-        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
-                              : std::nullopt;
+    std::optional<RNode> rn_next0 = r.rn_next.has_value()
+                                        ? std::make_optional<RNode>(**r.rn_next)
+                                        : std::nullopt;
     return f(rn_value0, rn_next0);
   }
 
   struct Employee {
     uint64_t emp_name;
     uint64_t emp_dept;
-
-    // ACCESSORS
-    Employee clone() const { return Employee{this->emp_name, this->emp_dept}; }
   };
 
   struct Department {
     uint64_t dept_id;
     Employee dept_head;
     uint64_t dept_size;
-
-    // ACCESSORS
-    Department clone() const {
-      return Department{this->dept_id, this->dept_head, this->dept_size};
-    }
   };
 
   template <typename T1> static uint64_t rlist_length(const rlist<T1> &l) {
@@ -184,22 +167,21 @@ struct RecRecord {
       [](auto &&__x)
           -> std::optional<std::shared_ptr<RNode>> {
         return __x.has_value()
-                   ? std::make_optional(std::make_shared<RNode>((*__x).clone()))
+                   ? std::make_optional(std::make_shared<RNode>(*__x))
                    : std::nullopt;
       }(std::make_optional<RNode>(RNode{
               UINT64_C(2),
               [](auto &&__x)
                   -> std::optional<std::shared_ptr<RNode>> {
                 return __x.has_value()
-                           ? std::make_optional(
-                                 std::make_shared<RNode>((*__x).clone()))
+                           ? std::make_optional(std::make_shared<RNode>(*__x))
                            : std::nullopt;
               }(std::make_optional<RNode>(RNode{
                       UINT64_C(3),
                       [](auto &&__x) -> std::optional<std::shared_ptr<RNode>> {
                         return __x.has_value()
-                                   ? std::make_optional(std::make_shared<RNode>(
-                                         (*__x).clone()))
+                                   ? std::make_optional(
+                                         std::make_shared<RNode>(*__x))
                                    : std::nullopt;
                       }(std::optional<RNode>())}))}))};
   static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);

@@ -26,7 +26,7 @@
     MiniCpp (defined here) is a C++-oriented AST that translation.ml produces
     from MiniML. Where MiniML is language-agnostic (it could target OCaml,
     Haskell, or Scheme), MiniCpp captures C++-specific concepts:
-    shared_ptr/unique_ptr memory management, std::variant for inductives,
+    shared_ptr memory management, std::variant for inductives,
     templates, concepts, namespaces, structs with visibility, move semantics,
     const/static/extern modifiers, constructors, methods, enum classes, and raw
     C++ escape hatches. The MiniML-to-MiniCpp translation resolves how each
@@ -108,7 +108,6 @@ type cpp_type =
   | Tptr of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
-  | Tunique_ptr of cpp_type
   | Tvoid
   | Ttodo
   | Tunknown
@@ -279,8 +278,6 @@ and cpp_expr =
   (* requires (params) { typename type_reqs; { expr } -> constraint; } *)
   | CPPnew of cpp_type * cpp_expr list (* new Type(args) or new Type{args} *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr (* std::shared_ptr<T>(expr) *)
-  | CPPunique_ptr_ctor of cpp_type * cpp_expr (* std::unique_ptr<T>(expr) *)
-  | CPPmk_unique of cpp_type (* std::make_unique<T> *)
   | CPPthis (* this pointer in methods *)
   | CPPshared_from_this of cpp_type
     (* std::const_pointer_cast<T>(shared_from_this()) — for returning this as
@@ -384,7 +381,7 @@ type cpp_schema = int * cpp_type
 
 (** Construct a shared_ptr type wrapping an inductive type (for recursive
     self-references in constructor fields). Using shared_ptr keeps the value type
-    copyable; unique_ptr would require clone() generation. *)
+    copyable without deep-clone machinery. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
@@ -409,7 +406,6 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
   | Tmod (m, t) -> Tmod (m, map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
-  | Tunique_ptr t -> Tunique_ptr (map_cpp_type f t)
   | Tref t -> Tref (map_cpp_type f t)
   | Tptr t -> Tptr (map_cpp_type f t)
   | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
@@ -460,8 +456,6 @@ let map_expr
         List.map ft tyreqs )
   | CPPnew (ty, args) -> CPPnew (ft ty, List.map fe args)
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ft ty, fe e')
-  | CPPunique_ptr_ctor (ty, e') -> CPPunique_ptr_ctor (ft ty, fe e')
-  | CPPmk_unique ty -> CPPmk_unique (ft ty)
   | CPPthis -> e
   | CPPshared_from_this ty -> CPPshared_from_this (ft ty)
   | CPPmember (e', id) -> CPPmember (fe e', id)
@@ -565,7 +559,7 @@ let map_stmt
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -576,7 +570,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -633,7 +627,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
 let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = f acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -644,7 +638,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->

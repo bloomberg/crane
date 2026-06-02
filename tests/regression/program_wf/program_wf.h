@@ -158,9 +158,6 @@ struct ProgramWf {
   struct layout {
     uint64_t base_addr;
     uint64_t code_size;
-
-    // ACCESSORS
-    layout clone() const { return layout{this->base_addr, this->code_size}; }
   };
 
   static std::optional<uint64_t> jump_target(const instruction &i);

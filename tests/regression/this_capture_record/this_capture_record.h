@@ -118,11 +118,6 @@ struct ThisCaptureRecord {
   struct callback_rec {
     std::function<uint64_t(uint64_t)> cr_add;
     std::function<uint64_t(uint64_t)> cr_mul;
-
-    // ACCESSORS
-    callback_rec clone() const {
-      return callback_rec{this->cr_add, this->cr_mul};
-    }
   };
 
   /// Methodified on tree. The extra flag argument forces Crane to

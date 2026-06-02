@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualIndexed {
   struct EvenTree;
@@ -35,64 +34,6 @@ struct MutualIndexed {
 
     explicit EvenTree(ENode _v) : v_(std::move(_v)) {}
 
-    EvenTree(const EvenTree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    EvenTree(EvenTree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    EvenTree &operator=(const EvenTree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    EvenTree &operator=(EvenTree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    EvenTree clone() const {
-      EvenTree _out{};
-
-      struct _CloneFrame {
-        const EvenTree *_src;
-        EvenTree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const EvenTree *_src = _frame._src;
-        EvenTree *_dst = _frame._dst;
-        if (std::holds_alternative<ELeaf>(_src->v())) {
-          _dst->v_ = ELeaf{};
-        } else {
-          const auto &_alt = std::get<ENode>(_src->v());
-          _dst->v_ = ENode{_alt.n, _alt.a1,
-                           _alt.a2 ? std::make_shared<OddTree>() : nullptr};
-          auto &_dst_alt = std::get<ENode>(_dst->v_);
-          if (_alt.a2) {
-            if (std::holds_alternative<typename MutualIndexed::OddTree::ONode>(
-                    _alt.a2->v())) {
-              const auto &_psrc =
-                  std::get<typename MutualIndexed::OddTree::ONode>(
-                      _alt.a2->v());
-              auto &_pdst = std::get<typename MutualIndexed::OddTree::ONode>(
-                  _dst_alt.a2->v_mut());
-              if (_psrc.a2) {
-                _pdst.a2 = std::make_shared<EvenTree>();
-                _stack.push_back({_psrc.a2.get(), _pdst.a2.get()});
-              }
-            }
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static EvenTree eleaf() { return EvenTree(ELeaf{}); }
 
     static EvenTree enode(uint64_t n, uint64_t a1, OddTree a2) {
@@ -126,30 +67,6 @@ struct MutualIndexed {
 
     explicit OddTree(ONode _v) : v_(std::move(_v)) {}
 
-    OddTree(const OddTree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    OddTree(OddTree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    OddTree &operator=(const OddTree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    OddTree &operator=(OddTree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    OddTree clone() const {
-      const auto &[n, a1, a2] = std::get<ONode>(this->v());
-      return OddTree(
-          ONode{n, a1,
-                a2 ? std::make_shared<MutualIndexed::EvenTree>(a2->clone())
-                   : nullptr});
-    }
-
-    // CREATORS
     static OddTree onode(uint64_t n, uint64_t a1, EvenTree a2) {
       return OddTree(ONode{n, a1, std::make_shared<EvenTree>(std::move(a2))});
     }

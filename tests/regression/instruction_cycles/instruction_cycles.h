@@ -98,11 +98,6 @@ struct InstructionCycles {
     uint64_t acc1;
     bool carry1;
     bool test_pin1;
-
-    // ACCESSORS
-    state1 clone() const {
-      return state1{this->acc1, this->carry1, this->test_pin1};
-    }
   };
 
   struct instruction1 {
@@ -254,9 +249,6 @@ struct InstructionCycles {
 
   struct state2 {
     uint64_t acc2;
-
-    // ACCESSORS
-    state2 clone() const { return state2{this->acc2}; }
   };
 
   static uint64_t cycles_jms(const state2 &_x, const instruction2 &i);
@@ -481,11 +473,6 @@ struct InstructionCycles {
     uint64_t acc5;
     bool carry5;
     bool test5;
-
-    // ACCESSORS
-    state5 clone() const {
-      return state5{this->acc5, this->carry5, this->test5};
-    }
   };
 
   struct instruction5 {
@@ -613,9 +600,6 @@ struct InstructionCycles {
 
   struct state6 {
     uint64_t acc6;
-
-    // ACCESSORS
-    state6 clone() const { return state6{this->acc6}; }
   };
 
   static uint64_t cycles6(const state6 &_x, Instruction6 _x0);
@@ -646,9 +630,6 @@ struct InstructionCycles {
 
   struct state7 {
     uint64_t acc7;
-
-    // ACCESSORS
-    state7 clone() const { return state7{this->acc7}; }
   };
 
   static uint64_t cycles7(const state7 &_x, Instruction7 _x0);

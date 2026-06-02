@@ -112,11 +112,6 @@ struct WrmThenRdmReadsBack {
     uint64_t acc;
     List<uint64_t> ram;
     uint64_t sel_char;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->regs, this->acc, this->ram, this->sel_char};
-    }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

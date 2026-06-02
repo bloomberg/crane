@@ -89,23 +89,14 @@ struct ListDef {
 struct RamOps {
   struct ram_reg_main {
     List<uint64_t> reg_main;
-
-    // ACCESSORS
-    ram_reg_main clone() const { return ram_reg_main{this->reg_main}; }
   };
 
   struct ram_chip_main {
     List<ram_reg_main> chip_regs_main;
-
-    // ACCESSORS
-    ram_chip_main clone() const { return ram_chip_main{this->chip_regs_main}; }
   };
 
   struct ram_bank_main {
     List<ram_chip_main> bank_chips_main;
-
-    // ACCESSORS
-    ram_bank_main clone() const { return ram_bank_main{this->bank_chips_main}; }
   };
 
   struct state_main {
@@ -114,13 +105,6 @@ struct RamOps {
     uint64_t sel_chip_main;
     uint64_t sel_reg_main;
     uint64_t sel_char_main;
-
-    // ACCESSORS
-    state_main clone() const {
-      return state_main{this->ram_sys_main, this->cur_bank_main,
-                        this->sel_chip_main, this->sel_reg_main,
-                        this->sel_char_main};
-    }
   };
 
   template <typename T1>
@@ -187,28 +171,16 @@ struct RamOps {
 
   struct chip_port {
     uint64_t chip_port_val;
-
-    // ACCESSORS
-    chip_port clone() const { return chip_port{this->chip_port_val}; }
   };
 
   struct bank_port {
     List<chip_port> bank_chips_port;
-
-    // ACCESSORS
-    bank_port clone() const { return bank_port{this->bank_chips_port}; }
   };
 
   struct state_port {
     List<bank_port> ram_sys_port;
     uint64_t cur_bank_port;
     uint64_t sel_chip_port;
-
-    // ACCESSORS
-    state_port clone() const {
-      return state_port{this->ram_sys_port, this->cur_bank_port,
-                        this->sel_chip_port};
-    }
   };
 
   template <typename T1>
@@ -256,27 +228,14 @@ struct RamOps {
 
   struct ram_reg_status {
     List<uint64_t> reg_status;
-
-    // ACCESSORS
-    ram_reg_status clone() const { return ram_reg_status{this->reg_status}; }
   };
 
   struct ram_chip_status {
     List<ram_reg_status> chip_regs_status;
-
-    // ACCESSORS
-    ram_chip_status clone() const {
-      return ram_chip_status{this->chip_regs_status};
-    }
   };
 
   struct ram_bank_status {
     List<ram_chip_status> bank_chips_status;
-
-    // ACCESSORS
-    ram_bank_status clone() const {
-      return ram_bank_status{this->bank_chips_status};
-    }
   };
 
   struct state_status {
@@ -284,12 +243,6 @@ struct RamOps {
     uint64_t cur_bank_status;
     uint64_t sel_chip_status;
     uint64_t sel_reg_status;
-
-    // ACCESSORS
-    state_status clone() const {
-      return state_status{this->ram_sys_status, this->cur_bank_status,
-                          this->sel_chip_status, this->sel_reg_status};
-    }
   };
 
   template <typename T1>
@@ -361,50 +314,27 @@ struct RamOps {
   struct ram_reg_sel {
     List<uint64_t> reg_main_sel;
     List<uint64_t> reg_status_sel;
-
-    // ACCESSORS
-    ram_reg_sel clone() const {
-      return ram_reg_sel{this->reg_main_sel, this->reg_status_sel};
-    }
   };
 
   struct ram_chip_sel {
     List<ram_reg_sel> chip_regs_sel;
     uint64_t chip_port_sel;
-
-    // ACCESSORS
-    ram_chip_sel clone() const {
-      return ram_chip_sel{this->chip_regs_sel, this->chip_port_sel};
-    }
   };
 
   struct ram_bank_sel {
     List<ram_chip_sel> bank_chips_sel;
-
-    // ACCESSORS
-    ram_bank_sel clone() const { return ram_bank_sel{this->bank_chips_sel}; }
   };
 
   struct ram_sel {
     uint64_t sel_chip;
     uint64_t sel_reg;
     uint64_t sel_char;
-
-    // ACCESSORS
-    ram_sel clone() const {
-      return ram_sel{this->sel_chip, this->sel_reg, this->sel_char};
-    }
   };
 
   struct state_sel {
     List<ram_bank_sel> ram_sys_sel;
     uint64_t cur_bank_sel;
     ram_sel sel_ram;
-
-    // ACCESSORS
-    state_sel clone() const {
-      return state_sel{this->ram_sys_sel, this->cur_bank_sel, this->sel_ram};
-    }
   };
 
   static inline const ram_reg_sel empty_reg_sel =
@@ -449,54 +379,27 @@ struct RamOps {
   struct ram_reg_nested {
     List<uint64_t> reg_main_nested;
     List<uint64_t> reg_status_nested;
-
-    // ACCESSORS
-    ram_reg_nested clone() const {
-      return ram_reg_nested{this->reg_main_nested, this->reg_status_nested};
-    }
   };
 
   struct ram_chip_nested {
     List<ram_reg_nested> chip_regs_nested;
     uint64_t chip_port_nested;
-
-    // ACCESSORS
-    ram_chip_nested clone() const {
-      return ram_chip_nested{this->chip_regs_nested, this->chip_port_nested};
-    }
   };
 
   struct ram_bank_nested {
     List<ram_chip_nested> bank_chips_nested;
-
-    // ACCESSORS
-    ram_bank_nested clone() const {
-      return ram_bank_nested{this->bank_chips_nested};
-    }
   };
 
   struct ram_sel_nested {
     uint64_t sel_chip_nested;
     uint64_t sel_reg_nested;
     uint64_t sel_char_nested;
-
-    // ACCESSORS
-    ram_sel_nested clone() const {
-      return ram_sel_nested{this->sel_chip_nested, this->sel_reg_nested,
-                            this->sel_char_nested};
-    }
   };
 
   struct state_nested {
     List<ram_bank_nested> ram_sys_nested;
     uint64_t cur_bank_nested;
     ram_sel_nested sel_ram_nested;
-
-    // ACCESSORS
-    state_nested clone() const {
-      return state_nested{this->ram_sys_nested, this->cur_bank_nested,
-                          this->sel_ram_nested};
-    }
   };
 
   static inline const ram_reg_nested empty_reg_nested =
@@ -650,11 +553,6 @@ struct RamOps {
   struct state_preserve {
     List<uint64_t> ram_sys_preserve;
     uint64_t cur_bank_preserve;
-
-    // ACCESSORS
-    state_preserve clone() const {
-      return state_preserve{this->ram_sys_preserve, this->cur_bank_preserve};
-    }
   };
 
   static List<uint64_t> ram_write_main_sys_preserve(const state_preserve &s,
@@ -689,30 +587,18 @@ struct RamOps {
 
   struct reg_nested_bank {
     List<uint64_t> status_;
-
-    // ACCESSORS
-    reg_nested_bank clone() const { return reg_nested_bank{this->status_}; }
   };
 
   struct chip_nested_bank {
     List<reg_nested_bank> regs_;
-
-    // ACCESSORS
-    chip_nested_bank clone() const { return chip_nested_bank{this->regs_}; }
   };
 
   struct bank_nested_bank {
     List<chip_nested_bank> chips_;
-
-    // ACCESSORS
-    bank_nested_bank clone() const { return bank_nested_bank{this->chips_}; }
   };
 
   struct state_nested_bank {
     List<bank_nested_bank> banks_;
-
-    // ACCESSORS
-    state_nested_bank clone() const { return state_nested_bank{this->banks_}; }
   };
 
   template <typename T1>

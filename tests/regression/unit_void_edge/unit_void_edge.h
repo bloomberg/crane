@@ -156,11 +156,6 @@ struct UnitVoidEdge {
   struct tagged_nat {
     uint64_t tn_value;
     std::monostate tn_tag;
-
-    // ACCESSORS
-    tagged_nat clone() const {
-      return tagged_nat{this->tn_value, this->tn_tag};
-    }
   };
 
   static tagged_nat make_tagged(uint64_t n);

@@ -147,9 +147,6 @@ struct StepFetchDecodeExec {
     uint64_t acc;
     uint64_t pc;
     List<uint64_t> rom;
-
-    // ACCESSORS
-    state clone() const { return state{this->acc, this->pc, this->rom}; }
   };
 
   static uint64_t fetch_byte(const state &s, uint64_t addr);

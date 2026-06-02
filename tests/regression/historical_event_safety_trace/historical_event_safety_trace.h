@@ -457,12 +457,6 @@ struct HistoricalEventSafetyTraceCase {
     uint64_t reservoir_level_cm;
     uint64_t downstream_stage_cm;
     uint64_t gate_open_pct;
-
-    // ACCESSORS
-    State clone() const {
-      return State{this->reservoir_level_cm, this->downstream_stage_cm,
-                   this->gate_open_pct};
-    }
   };
 
   struct PlantConfig {
@@ -477,21 +471,6 @@ struct HistoricalEventSafetyTraceCase {
     std::function<uint64_t(uint64_t)> reservoir_area_curve_cm2;
     uint64_t design_head_cm;
     uint64_t timestep_s;
-
-    // ACCESSORS
-    PlantConfig clone() const {
-      return PlantConfig{this->max_reservoir_cm,
-                         this->max_downstream_cm,
-                         this->gate_capacity_cm,
-                         this->forecast_error_pct,
-                         this->gate_slew_pct,
-                         this->max_stage_rise_cm,
-                         this->reservoir_area_min_cm2,
-                         this->reservoir_area_max_cm2,
-                         this->reservoir_area_curve_cm2,
-                         this->design_head_cm,
-                         this->timestep_s};
-    }
   };
 
   static bool is_safe_bool(const PlantConfig &pconf, const State &s);
@@ -499,11 +478,6 @@ struct HistoricalEventSafetyTraceCase {
   struct InflowRecord {
     uint64_t ir_timestep;
     uint64_t ir_inflow_cm;
-
-    // ACCESSORS
-    InflowRecord clone() const {
-      return InflowRecord{this->ir_timestep, this->ir_inflow_cm};
-    }
   };
 
   using HistoricalEvent = List<InflowRecord>;
@@ -516,13 +490,6 @@ struct HistoricalEventSafetyTraceCase {
     bool tr_final_safe;
     uint64_t tr_max_level;
     uint64_t tr_max_stage;
-
-    // ACCESSORS
-    TestResult clone() const {
-      return TestResult{this->tr_event_name, this->tr_initial_safe,
-                        this->tr_final_safe, this->tr_max_level,
-                        this->tr_max_stage};
-    }
   };
 
   template <typename F0, typename F1, typename F2>
@@ -594,11 +561,6 @@ struct HistoricalEventSafetyTraceCase {
 
   struct MonotoneRatingTable {
     RatingTable mrt_table;
-
-    // ACCESSORS
-    MonotoneRatingTable clone() const {
-      return MonotoneRatingTable{this->mrt_table};
-    }
   };
 
   static inline const HistoricalEvent flood_1983_inflows =
@@ -727,14 +689,6 @@ return UINT64_C(1000); },
     TestResult hsb_test_2011;
     PlantConfig hsb_hoover_plant;
     TestResult hsb_hoover_test;
-
-    // ACCESSORS
-    HistoricalScenarioBundle clone() const {
-      return HistoricalScenarioBundle{
-          this->hsb_hist_plant, this->hsb_hist_table, this->hsb_hist_initial,
-          this->hsb_test_1983,  this->hsb_test_2011,  this->hsb_hoover_plant,
-          this->hsb_hoover_test};
-    }
   };
 
   static inline const HistoricalScenarioBundle historical_bundle =

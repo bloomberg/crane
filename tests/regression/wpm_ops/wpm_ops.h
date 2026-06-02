@@ -114,12 +114,6 @@ struct WpmOps {
     uint64_t prom_addr1;
     uint64_t prom_data1;
     bool prom_enable1;
-
-    // ACCESSORS
-    state1 clone() const {
-      return state1{this->rom1, this->prom_addr1, this->prom_data1,
-                    this->prom_enable1};
-    }
   };
 
   static state1 execute_wpm1(const state1 &s);
@@ -149,12 +143,6 @@ struct WpmOps {
     uint64_t prom_addr2;
     uint64_t prom_data2;
     bool prom_enable2;
-
-    // ACCESSORS
-    state2 clone() const {
-      return state2{this->ram_sys2, this->rom2, this->prom_addr2,
-                    this->prom_data2, this->prom_enable2};
-    }
   };
 
   static state2 execute_wpm2(const state2 &s);
@@ -179,12 +167,6 @@ struct WpmOps {
     uint64_t prom_addr3;
     uint64_t prom_data3;
     bool prom_enable3;
-
-    // ACCESSORS
-    state3 clone() const {
-      return state3{this->regs3, this->rom3, this->prom_addr3, this->prom_data3,
-                    this->prom_enable3};
-    }
   };
 
   static state3 execute_wpm3(const state3 &s);
@@ -208,12 +190,6 @@ struct WpmOps {
     uint64_t prom_addr4;
     uint64_t prom_data4;
     bool prom_enable4;
-
-    // ACCESSORS
-    state4 clone() const {
-      return state4{this->rom4, this->prom_addr4, this->prom_data4,
-                    this->prom_enable4};
-    }
   };
 
   static state4 execute_wpm4(const state4 &s);
@@ -235,12 +211,6 @@ struct WpmOps {
     uint64_t prom_addr5;
     uint64_t prom_data5;
     bool prom_enable5;
-
-    // ACCESSORS
-    state5 clone() const {
-      return state5{this->rom5, this->prom_addr5, this->prom_data5,
-                    this->prom_enable5};
-    }
   };
 
   static state5 execute_wpm5(const state5 &s);
@@ -262,12 +232,6 @@ struct WpmOps {
     uint64_t prom_addr6;
     uint64_t prom_data6;
     bool prom_enable6;
-
-    // ACCESSORS
-    state6 clone() const {
-      return state6{this->rom6, this->prom_addr6, this->prom_data6,
-                    this->prom_enable6};
-    }
   };
 
   static state6 execute_wpm6(const state6 &s);

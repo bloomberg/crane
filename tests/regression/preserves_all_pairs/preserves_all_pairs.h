@@ -90,9 +90,6 @@ struct PreservesAllPairs {
   struct state {
     List<uint64_t> regs;
     uint64_t acc;
-
-    // ACCESSORS
-    state clone() const { return state{this->regs, this->acc}; }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

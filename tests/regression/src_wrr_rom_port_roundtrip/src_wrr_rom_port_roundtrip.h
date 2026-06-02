@@ -112,11 +112,6 @@ struct SrcWrrRomPortRoundtrip {
     uint64_t acc;
     List<uint64_t> rom_ports;
     uint64_t sel_rom;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->regs, this->acc, this->rom_ports, this->sel_rom};
-    }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

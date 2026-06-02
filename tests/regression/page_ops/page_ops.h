@@ -90,9 +90,6 @@ struct Nat {
 struct PageOps {
   struct state {
     uint64_t pc;
-
-    // ACCESSORS
-    state clone() const { return state{this->pc}; }
   };
 
   static uint64_t addr12_of_nat(uint64_t n);

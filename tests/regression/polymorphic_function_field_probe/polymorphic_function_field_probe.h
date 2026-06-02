@@ -9,9 +9,6 @@ enum class Bool0 { TRUE_, FALSE_ };
 struct PolymorphicFunctionFieldProbe {
   struct poly {
     std::function<std::any(std::any)> apply;
-
-    // ACCESSORS
-    poly clone() const { return poly{this->apply}; }
   };
 
   template <typename T1> static T1 apply(const poly &p0, const T1 &x) {

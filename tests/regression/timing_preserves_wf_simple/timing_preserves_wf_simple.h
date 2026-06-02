@@ -57,11 +57,6 @@ struct TimingPreservesWfSimple {
     uint64_t rom_len;
     uint64_t pc;
     uint64_t stack_len;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->regs_len, this->rom_len, this->pc, this->stack_len};
-    }
   };
 
   static bool wf(const state &s);

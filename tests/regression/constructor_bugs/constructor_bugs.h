@@ -97,38 +97,22 @@ template <typename A> struct Sig {
 struct ConstructorBugs {
   struct field_a {
     uint64_t a_value;
-
-    // ACCESSORS
-    field_a clone() const { return field_a{this->a_value}; }
   };
 
   struct field_b {
     uint64_t b_value;
-
-    // ACCESSORS
-    field_b clone() const { return field_b{this->b_value}; }
   };
 
   struct source_state {
     field_a source_a;
     field_b source_b;
     uint64_t source_flag;
-
-    // ACCESSORS
-    source_state clone() const {
-      return source_state{this->source_a, this->source_b, this->source_flag};
-    }
   };
 
   struct packed_state {
     source_state packed_source;
     field_a packed_a;
     field_b packed_b;
-
-    // ACCESSORS
-    packed_state clone() const {
-      return packed_state{this->packed_source, this->packed_a, this->packed_b};
-    }
   };
 
   static source_state step(source_state s);
@@ -142,24 +126,12 @@ struct ConstructorBugs {
     field_a source_a_list;
     List<field_b> source_b_list;
     uint64_t source_flag_list;
-
-    // ACCESSORS
-    source_state_list clone() const {
-      return source_state_list{this->source_a_list, this->source_b_list,
-                               this->source_flag_list};
-    }
   };
 
   struct packed_state_list {
     source_state_list packed_source_list;
     field_a packed_a_list;
     List<field_b> packed_b_list;
-
-    // ACCESSORS
-    packed_state_list clone() const {
-      return packed_state_list{this->packed_source_list, this->packed_a_list,
-                               this->packed_b_list};
-    }
   };
 
   static source_state_list step_list(source_state_list s);
@@ -169,9 +141,6 @@ struct ConstructorBugs {
   struct state {
     uint64_t value;
     List<uint64_t> data;
-
-    // ACCESSORS
-    state clone() const { return state{this->value, this->data}; }
   };
 
   static state get_state(uint64_t n);
@@ -203,17 +172,11 @@ struct ConstructorBugs {
 
   struct Inner {
     uint64_t inner_val;
-
-    // ACCESSORS
-    Inner clone() const { return Inner{this->inner_val}; }
   };
 
   struct Outer {
     Inner outer_inner;
     uint64_t outer_data;
-
-    // ACCESSORS
-    Outer clone() const { return Outer{this->outer_inner, this->outer_data}; }
   };
 
   static Outer nested_record(Inner i);
@@ -295,9 +258,6 @@ struct ConstructorBugs {
 
   struct Container {
     Outer cont_outer;
-
-    // ACCESSORS
-    Container clone() const { return Container{this->cont_outer}; }
   };
 
   static std::pair<std::pair<Outer, Inner>, uint64_t>
@@ -317,11 +277,6 @@ struct ConstructorBugs {
     uint64_t value_inline;
     uint64_t data_inline;
     uint64_t flag;
-
-    // ACCESSORS
-    State clone() const {
-      return State{this->value_inline, this->data_inline, this->flag};
-    }
   };
 
   static std::pair<State, uint64_t> inline_pair(State s);
@@ -338,11 +293,6 @@ struct ConstructorBugs {
   struct OuterInline {
     State outer_state;
     uint64_t outer_num;
-
-    // ACCESSORS
-    OuterInline clone() const {
-      return OuterInline{this->outer_state, this->outer_num};
-    }
   };
 
   static std::pair<std::pair<OuterInline, State>, uint64_t>

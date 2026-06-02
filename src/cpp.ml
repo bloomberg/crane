@@ -220,8 +220,6 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
             ++ str ">" ) )
       | Tshared_ptr ty ->
         str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-      | Tunique_ptr ty ->
-        str stdlib_ns ++ str "unique_ptr<" ++ qualify_type ty ++ str ">"
       | Tvariant tys ->
         str stdlib_ns
         ++ str "variant<"

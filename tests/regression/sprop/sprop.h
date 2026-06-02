@@ -17,9 +17,6 @@ struct SPropTest {
 
   template <typename A> struct Box {
     A box_value;
-
-    // ACCESSORS
-    Box<A> clone() const { return Box<A>{this->box_value}; }
   };
 
   static uint64_t guarded_pred(uint64_t n);

@@ -111,9 +111,6 @@ struct RocqBug11114 {
   struct pkg {
     List<uint64_t> _sig;
     t _t;
-
-    // ACCESSORS
-    pkg clone() const { return pkg{this->_sig, this->_t}; }
   };
 
   template <typename F0>

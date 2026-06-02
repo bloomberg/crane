@@ -104,13 +104,6 @@ struct ResetState {
     List<uint64_t> stack;
     List<uint64_t> ram_sys;
     List<uint64_t> rom;
-
-    // ACCESSORS
-    state_full clone() const {
-      return state_full{this->acc,     this->regs_full, this->carry,
-                        this->pc_full, this->stack,     this->ram_sys,
-                        this->rom};
-    }
   };
 
   struct state_minimal {
@@ -119,13 +112,6 @@ struct ResetState {
     uint64_t pc_minimal;
     List<uint64_t> ram_sys_minimal;
     List<uint64_t> rom_minimal;
-
-    // ACCESSORS
-    state_minimal clone() const {
-      return state_minimal{this->regs_minimal, this->carry_minimal,
-                           this->pc_minimal, this->ram_sys_minimal,
-                           this->rom_minimal};
-    }
   };
 
   static state_full reset_state_full(const state_full &s);

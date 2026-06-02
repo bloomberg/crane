@@ -125,9 +125,6 @@ struct ClosuresInData {
   struct transform {
     std::function<uint64_t(uint64_t)> forward;
     std::function<uint64_t(uint64_t)> backward;
-
-    // ACCESSORS
-    transform clone() const { return transform{this->forward, this->backward}; }
   };
 
   /// A transform that doubles via addition and halves via division.

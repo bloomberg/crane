@@ -86,9 +86,6 @@ struct VisitMatchBug {
   struct State {
     uint64_t value;
     uint64_t data;
-
-    // ACCESSORS
-    State clone() const { return State{this->value, this->data}; }
   };
 
   static uint64_t match_extract_field(const State &s);

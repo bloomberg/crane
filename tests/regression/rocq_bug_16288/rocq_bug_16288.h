@@ -90,19 +90,11 @@ struct RocqBug16288 {
   template <Nop N> struct M {
     template <typename elt> struct M_t_NonEmpty {
       List<elt> M_m;
-
-      // ACCESSORS
-      M_t_NonEmpty<elt> clone() const { return M_t_NonEmpty<elt>{this->M_m}; }
     };
 
     template <typename X, typename Y> struct M_t_NonEmpty_ {
       X a;
       Y b;
-
-      // ACCESSORS
-      M_t_NonEmpty_<X, Y> clone() const {
-        return M_t_NonEmpty_<X, Y>{this->a, this->b};
-      }
     };
   };
 

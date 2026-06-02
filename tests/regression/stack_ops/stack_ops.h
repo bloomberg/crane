@@ -94,19 +94,11 @@ public:
 struct StackOps {
   struct state_basic {
     List<uint64_t> stack_basic;
-
-    // ACCESSORS
-    state_basic clone() const { return state_basic{this->stack_basic}; }
   };
 
   struct state_with_acc {
     List<uint64_t> stack_with_acc;
     uint64_t acc;
-
-    // ACCESSORS
-    state_with_acc clone() const {
-      return state_with_acc{this->stack_with_acc, this->acc};
-    }
   };
 
   static std::pair<std::optional<uint64_t>, state_basic>

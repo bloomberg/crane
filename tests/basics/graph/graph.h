@@ -159,11 +159,6 @@ template <typename g, typename a> using edge = std::any;
 template <typename A> struct DirectedEdge {
   A edge_from;
   A edge_to;
-
-  // ACCESSORS
-  DirectedEdge<A> clone() const {
-    return DirectedEdge<A>{this->edge_from, this->edge_to};
-  }
 };
 
 template <typename _tcI0, typename T1>
@@ -175,11 +170,6 @@ bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
 template <typename A> struct Directed {
   List<A> directed_nodes;
   List<DirectedEdge<A>> directed_edges;
-
-  // ACCESSORS
-  Directed<A> clone() const {
-    return Directed<A>{this->directed_nodes, this->directed_edges};
-  }
 };
 
 template <typename _tcI0, typename T1> struct DirectedGraph {
@@ -214,11 +204,6 @@ template <typename _tcI0, typename T1> struct DirectedGraph {
 template <typename A> struct UndirectedEdge {
   A edge_first;
   A edge_second;
-
-  // ACCESSORS
-  UndirectedEdge<A> clone() const {
-    return UndirectedEdge<A>{this->edge_first, this->edge_second};
-  }
 };
 
 template <typename _tcI0, typename T1>
@@ -229,11 +214,6 @@ bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
 template <typename A> struct Undirected {
   List<A> undirected_nodes;
   List<UndirectedEdge<A>> undirected_edges;
-
-  // ACCESSORS
-  Undirected<A> clone() const {
-    return Undirected<A>{this->undirected_nodes, this->undirected_edges};
-  }
 };
 
 template <typename _tcI0, typename T1> struct UndirectedGraph {

@@ -7,12 +7,6 @@ struct RecordDefaults {
     uint64_t cfg_height;
     uint64_t cfg_depth;
     bool cfg_debug;
-
-    // ACCESSORS
-    Config clone() const {
-      return Config{this->cfg_width, this->cfg_height, this->cfg_depth,
-                    this->cfg_debug};
-    }
   };
 
   static inline const Config default_config =
@@ -23,17 +17,11 @@ struct RecordDefaults {
   struct Point {
     uint64_t px;
     uint64_t py;
-
-    // ACCESSORS
-    Point clone() const { return Point{this->px, this->py}; }
   };
 
   struct Rect {
     Point origin;
     Point extent;
-
-    // ACCESSORS
-    Rect clone() const { return Rect{this->origin, this->extent}; }
   };
 
   static uint64_t rect_area(const Rect &r);

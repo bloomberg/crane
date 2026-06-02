@@ -6,7 +6,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -49,34 +48,6 @@ template <Elem E> struct MutualTree {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      if (std::holds_alternative<Leaf>(this->v())) {
-        const auto &[a0] = std::get<Leaf>(this->v());
-        return tree(Leaf{a0});
-      } else {
-        const auto &[a0, a1] = std::get<Node>(this->v());
-        return tree(
-            Node{a0, a1 ? std::make_shared<MutualTree::forest>(a1->clone())
-                        : nullptr});
-      }
-    }
-
-    // CREATORS
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(uint64_t a0, forest a1) {
@@ -113,55 +84,6 @@ template <Elem E> struct MutualTree {
 
     explicit forest(FCons _v) : v_(std::move(_v)) {}
 
-    forest(const forest &_other) : v_(std::move(_other.clone().v_)) {}
-
-    forest(forest &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    forest &operator=(const forest &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    forest &operator=(forest &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    forest clone() const {
-      forest _out{};
-
-      struct _CloneFrame {
-        const forest *_src;
-        forest *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const forest *_src = _frame._src;
-        forest *_dst = _frame._dst;
-        if (std::holds_alternative<FNil>(_src->v())) {
-          _dst->v_ = FNil{};
-        } else {
-          const auto &_alt = std::get<FCons>(_src->v());
-          _dst->v_ = FCons{
-              _alt.a0 ? std::make_shared<MutualTree::tree>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_shared<forest>() : nullptr};
-          auto &_dst_alt = std::get<FCons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static forest fnil() { return forest(FNil{}); }
 
     static forest fcons(tree a0, forest a1) {

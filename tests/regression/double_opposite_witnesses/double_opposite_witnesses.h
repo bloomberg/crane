@@ -83,11 +83,6 @@ struct DoubleOppositeWitnessesCase {
   struct Functor {
     std::function<Obj(Obj)> object_of;
     std::function<Hom(Obj, Obj, Hom)> morphism_of;
-
-    // ACCESSORS
-    Functor clone() const {
-      return Functor{this->object_of, this->morphism_of};
-    }
   };
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>

@@ -93,12 +93,6 @@ struct SrcUsesPairValue {
     uint64_t sel_chip;
     uint64_t sel_reg;
     uint64_t sel_char;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->regs, this->sel_rom, this->sel_chip, this->sel_reg,
-                   this->sel_char};
-    }
   };
 
   static uint64_t get_reg(const state &s, uint64_t r);

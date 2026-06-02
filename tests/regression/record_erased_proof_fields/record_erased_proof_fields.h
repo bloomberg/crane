@@ -260,21 +260,10 @@ struct RecordErasedProofFieldsCase {
     ItemKind primary_left_kind;
     ItemKind primary_right_kind;
     StoredTag primary_tag;
-
-    // ACCESSORS
-    PrimaryRecord clone() const {
-      return PrimaryRecord{this->primary_left_kind, this->primary_right_kind,
-                           this->primary_tag};
-    }
   };
 
   struct ErasedProofRecord {
     TraceBucket erased_bucket;
-
-    // ACCESSORS
-    ErasedProofRecord clone() const {
-      return ErasedProofRecord{this->erased_bucket};
-    }
   };
 
   static uint64_t kind_code(ItemKind k);

@@ -100,9 +100,6 @@ struct FoldSequenceStateTraceCase {
     Real A;
     Real B;
     Real C;
-
-    // ACCESSORS
-    Line clone() const { return Line{this->A, this->B, this->C}; }
   };
 
   struct Fold {
@@ -266,11 +263,6 @@ struct FoldSequenceStateTraceCase {
   struct ConstructionState {
     List<Point> state_points;
     List<Line> state_lines;
-
-    // ACCESSORS
-    ConstructionState clone() const {
-      return ConstructionState{this->state_points, this->state_lines};
-    }
   };
 
   static inline const ConstructionState initial_state = ConstructionState{

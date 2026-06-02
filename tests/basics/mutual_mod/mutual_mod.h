@@ -4,7 +4,6 @@
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct EvenOdd {
   struct even_list;
@@ -33,63 +32,6 @@ struct EvenOdd {
 
     explicit even_list(ECons _v) : v_(std::move(_v)) {}
 
-    even_list(const even_list &_other) : v_(std::move(_other.clone().v_)) {}
-
-    even_list(even_list &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    even_list &operator=(const even_list &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    even_list &operator=(even_list &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    even_list clone() const {
-      even_list _out{};
-
-      struct _CloneFrame {
-        const even_list *_src;
-        even_list *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const even_list *_src = _frame._src;
-        even_list *_dst = _frame._dst;
-        if (std::holds_alternative<ENil>(_src->v())) {
-          _dst->v_ = ENil{};
-        } else {
-          const auto &_alt = std::get<ECons>(_src->v());
-          _dst->v_ =
-              ECons{_alt.a0, _alt.a1 ? std::make_shared<odd_list>() : nullptr};
-          auto &_dst_alt = std::get<ECons>(_dst->v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<typename EvenOdd::odd_list::OCons>(
-                    _alt.a1->v())) {
-              const auto &_psrc =
-                  std::get<typename EvenOdd::odd_list::OCons>(_alt.a1->v());
-              auto &_pdst = std::get<typename EvenOdd::odd_list::OCons>(
-                  _dst_alt.a1->v_mut());
-              if (_psrc.a1) {
-                _pdst.a1 = std::make_shared<even_list>();
-                _stack.push_back({_psrc.a1.get(), _pdst.a1.get()});
-              }
-            }
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static even_list enil() { return even_list(ENil{}); }
 
     static even_list econs(uint64_t a0, odd_list a1) {
@@ -122,29 +64,6 @@ struct EvenOdd {
 
     explicit odd_list(OCons _v) : v_(std::move(_v)) {}
 
-    odd_list(const odd_list &_other) : v_(std::move(_other.clone().v_)) {}
-
-    odd_list(odd_list &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    odd_list &operator=(const odd_list &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    odd_list &operator=(odd_list &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    odd_list clone() const {
-      const auto &[a0, a1] = std::get<OCons>(this->v());
-      return odd_list(
-          OCons{a0, a1 ? std::make_shared<EvenOdd::even_list>(a1->clone())
-                       : nullptr});
-    }
-
-    // CREATORS
     static odd_list ocons(uint64_t a0, even_list a1) {
       return odd_list(OCons{a0, std::make_shared<even_list>(std::move(a1))});
     }

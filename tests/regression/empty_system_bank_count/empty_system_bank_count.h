@@ -98,26 +98,15 @@ struct EmptySystemBankCount {
   struct ram_reg {
     List<uint64_t> reg_main;
     List<uint64_t> reg_status;
-
-    // ACCESSORS
-    ram_reg clone() const { return ram_reg{this->reg_main, this->reg_status}; }
   };
 
   struct ram_chip {
     List<ram_reg> chip_regs;
     uint64_t chip_port;
-
-    // ACCESSORS
-    ram_chip clone() const {
-      return ram_chip{this->chip_regs, this->chip_port};
-    }
   };
 
   struct ram_bank {
     List<ram_chip> bank_chips;
-
-    // ACCESSORS
-    ram_bank clone() const { return ram_bank{this->bank_chips}; }
   };
 
   static inline const uint64_t NBANKS = UINT64_C(4);
