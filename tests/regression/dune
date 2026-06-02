@@ -15,6 +15,28 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir any_cast_nested
+ (rule
+  (targets any_cast_nested.t.exe)
+  (deps AnyCastNested.vo any_cast_nested.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested.t.exe any_cast_nested.cpp any_cast_nested.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps any_cast_nested.t.exe)
+  (action (run ./any_cast_nested.t.exe))))
+
+(subdir any_cast_nested_pair
+ (rule
+  (targets any_cast_nested_pair.t.exe)
+  (deps AnyCastNestedPair.vo any_cast_nested_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested_pair.t.exe any_cast_nested_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps any_cast_nested_pair.t.exe)
+  (action (run ./any_cast_nested_pair.t.exe))))
+
 (subdir app_doublecall
  (rule
   (targets app_doublecall.t.exe)
