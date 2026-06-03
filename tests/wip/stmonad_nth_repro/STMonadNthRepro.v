@@ -42,6 +42,9 @@ Section Ops.
     trigger (NewRef I v).
 End Ops.
 
+Crane Extract Inlined Constant Ref => "%t0".
+Crane Extract Inlined Constant myNew => "%result = %a0".
+
 Definition newOnly : itree (MyEvent nat) nat :=
   r1 <- myNew 5 ;;
   Ret 0.
