@@ -11,17 +11,21 @@ From Stdlib Require Import
   Relation_Definitions
   Setoid
   Strings.String
+  Classes.EquivDec
 .
 
 From Crane Require Import Monads.ITree Utils.HMap Utils.HAList Extraction.
 From ExtLib Require Import
+  CmpDec
   Data.Bool
   Data.List
   Data.Monads.EitherMonad
   Data.Pair
   Data.String
+  Data.Option
   Structures.Functor
   Structures.Traversable
+  Structures.Reducible
 .
 
 (* NOTE: *must* import this before the ITree Eq.Paco2 import.*)
@@ -47,6 +51,11 @@ Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
 
+(* TODO: canonicalize on style, according to https://github.com/bloomberg/game-trees/blob/main/theories/Eval.v *)
+(* TODO: canonicalize map -> mem. *)
+(* TODO: canonicalize STRef, no other capitalization! *)
+(* TODO: canonicalize Idx -> Ix. *)
+
 (* Used for runtime checks, though an ideal impl won't need these. *)
 
 Variant Err : Type :=
@@ -57,226 +66,336 @@ Definition failwith
   {A:Type} (s:string) : itree E A := throw (Error s).
 
 
-Module Type ST_SIG.
+(* Modeled after Ix type in https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix *)
+Class Ix (T : Type)
+  (ltu : T -> T -> Prop) (* lte *)
+  {CD : CmpDec eq ltu}
+  : Type :=
+  {
+    (* The list of values defined in the range *)
+    range : prod T T -> list T; 
 
-  Parameter Idx : forall (S : Type), Type.
-  Parameter STRef : forall S A : Type, Type. 
-  Parameter IdxDecEq : forall (S : Type) (i1 i2 : Idx S),  
-      {i1 = i2} + {i1 <> i2}.
-  Parameter mkSTRef : forall S A : Type, Idx S -> STRef S A.
-  Parameter STRefToIdx : forall (S A : Type), STRef S A -> Idx S. 
-  Parameter STEvent : forall S : Type, (Idx S -> Type) -> Type -> Type.
-  Parameter newSTRef : forall {E : Type -> Type} {S : Type}
-                         (V : (Idx S -> Type)) `{STEvent S V -< E}
-                         (I : Idx S),
-      V I -> itree E (STRef S (V I)).
-  Parameter readSTRef : forall {E : Type -> Type} {S : Type} 
-                        (V : Idx S -> Type) `{STEvent S V -< E}
-                        (I : Idx S),
-      STRef S (V I) -> itree E (V I).
-  Parameter writeSTRef : forall {E : Type -> Type} {S : Type} 
-                        (V : Idx S -> Type) `{STEvent S V -< E}
-                        (I : Idx S),
-      STRef S (V I) -> V I -> itree E unit.
+    (* diverge from haskell in using error type *)
+    index : prod T T -> T -> option nat; 
 
-  (* Used to generate fresh, unique indices.*)
-  Parameter IdxGenE : Type -> Type.
-  Parameter newIdx :
-    forall {S : Type}
-      {E : Type -> Type} `{IdxGenE -< E}
-      , itree E (Idx S). 
+    (* decidable equality over the range *)
+    inRange : prod T T -> T -> Prop; (* NOTE: bool here? *)
 
-  (* TODO: better naming... *)
-  Parameter IdxRefSameIdx: forall (S A : Type) (idx : Idx S), (STRefToIdx S A (mkSTRef S A idx)) = idx.
-  Parameter IdxRefSameRef: forall (S A : Type) (ref : STRef S A), (mkSTRef S A (STRefToIdx S A ref)) = ref.
+    (* the size of the elements in the range *)
+    rangeSize : prod T T -> nat;
 
-  (* TODO: indices are ordered. *)
-  (* TODO: indices are unique. *)
+    (* a constructor for an index plus one. *)
+    suc : T -> T;
 
-End ST_SIG.
+    (* function that gives max between indices. *)
+    max : T -> T -> T;
 
+    (* zero value, least value to compare with. *)
+    zero : T; 
+  }.
 
-Module ST_IMPL : ST_SIG.
-
-  Variant STRef' : Type -> Type -> Type :=
-    | MkStRef (S A : Type) (idx : nat) : STRef' S A.
-
-  Definition STRef := STRef'. 
-
-  Definition Idx (S : Type) := nat.
-
-
-  Definition mkSTRef := MkStRef.
-
-  Definition IdxDecEq (S : Type) (i1 i2 : Idx S)
-    : {i1 = i2} + {i1 <> i2} := Nat.eq_dec i1 i2.
-
-  Definition STRefToIdx (S A : Type) (ref : STRef' S A) : Idx S :=
-   match ref with
-   | MkStRef _ _ idx => idx
-   end. 
-
-  Inductive GenNum : Type -> Type :=
-  | NewNat : GenNum nat.
-
-  Definition IdxGenE := GenNum.
-
-  Definition newIdx {S : Type}
-    {E : Type -> Type} `{IdxGenE -< E} 
-    : itree E (Idx S) := trigger NewNat.
-
-
-  Lemma IdxRefSameIdx : forall (S A : Type) (idx : Idx S), (STRefToIdx S A (mkSTRef S A idx)) = idx.
-  Proof. intros. cbn. reflexivity. Qed.
-         
-  Lemma IdxRefSameRef : forall (S A : Type) (ref : STRef S A), (mkSTRef S A (STRefToIdx S A ref)) = ref.
-  Proof. intros. cbn. unfold STRefToIdx. destruct ref. reflexivity. Qed.
-  
-
-
-
-  Variant STEvent' (S : Type) {V : (Idx S) -> Type} : Type -> Type :=
-    | NewSTRef (I : Idx S) (v : V I) : STEvent' S (STRef S (V I))
-    | ReadSTRef (I : Idx S) : STRef S (V I) -> STEvent' S (V I)
-    | WriteSTRef (I : Idx S) : STRef S (V I) -> (V I) -> STEvent' S unit
-  .
-
-  Definition STEvent := STEvent'.
-
-
-  
-
-Section Translation.
-
-  Context {E : Type -> Type}.
-  Context {S : Type}.
-  Context {V : (Idx S) -> Type}.
-  Context `{@STEvent S V -< E}. 
-  Context `{exceptE Err -< E}.
-  Context `{IdxGenE -< E}.
-
-  
-  Definition lookup_err
-    {V : (Idx S) -> Type}
-    {map} `{HMap (Idx S) V map}
-    (k : (Idx S)) (mem : map) : itree E (V k) :=
-    match lookup k mem with
-      | None => throw (Error "Failed to find key in map")
-      | Some v => Ret v
-    end.
-
-  
-  Definition newSTRef {I : Idx S} (v : (V I)) : itree E (STRef' S (V I)) :=
-    trigger (NewSTRef S I v). 
-
-  Definition readSTRef {I : Idx S} (ref : STRef' S (V I)) : itree E (V I) :=
-    trigger (ReadSTRef S I ref).
-
-  Definition writeSTRef {I : Idx S} (ref : STRef' S (V I)) (a : (V I)) : itree E unit :=
-    trigger (WriteSTRef S I ref a).
-
-
-  (* TODO: cleanup! *)
-  Definition handle_STEvent
-    {map} `{HMap (Idx S) V map}
-    : forall (T : Type), @STEvent S V T -> stateT map (itree E) T :=
-    fun T e mem =>
-      match e in (STEvent' _ T0) return (itree E (map * T0)) with
-      | NewSTRef _ Id v =>
-        idx <- @newIdx S E _;;
-        Ret (add Id v mem, MkStRef S (V Id) idx)
-      | ReadSTRef _ Id s =>
-        v <- lookup_err Id mem;;
-        Ret (mem, v)
-      | WriteSTRef _ Id s v =>
-        Ret (add Id v mem, tt)
-      end.
-
-
-
-(* Example Programs*)
-
-
-
-
-
-(* Interpretation in Rocq *)
-
-
-
-  (* TODO: better name perhaps *)
-  Definition handle_STEvent_leave_rest
-    {mem} `{HMap (Idx S) V mem}
-    (T : Type) (e : (STEvent' S +' E) T)
-    : stateT mem (itree (E)) T :=
-    match e with
-    | inl1 e0 => handle_STEvent T e0
-    | inr1 e0 => fun st : mem => r <- trigger e0;; Ret (st, r)
-    end.
-
-
-  Global Instance reldec_idx {S : Type} : @RelDec.RelDec (Idx S) eq :=
-    (RelDec.RelDec_from_dec eq (IdxDecEq S)).
-
-  Global Instance hmap_from_idx :
-    HMap (Idx S) V (halist (Idx S) V) :=
-    @HMap_halist (Idx S) V eq_equivalence (IdxDecEq S).
-
-  Global Instance reldec_idx_correct : @RelDec.RelDec_Correct (Idx S) eq reldec_idx.
-  econstructor.
-  intuition.
-  destruct (IdxDecEq S x y) eqn:Hdec.
-  - destruct IdxDecEq in Hdec; try assumption.
-  - specialize (@reldec_idx S) as reldec.
-    specialize (IdxDecEq S x y) as dec.
-    destruct dec.
-    + contradiction.
-    + unfold RelDec.rel_dec in *. unfold reldec_idx in *. unfold RelDec.RelDec_from_dec in *.
-      destruct (IdxDecEq S x y); try assumption.
-      discriminate H2.
-  - unfold RelDec.rel_dec in *. unfold reldec_idx in *. unfold RelDec.RelDec_from_dec in *.
-    destruct (IdxDecEq S x y); try assumption.
-    + reflexivity.
-    + contradiction.
+#[export] Instance cmp_dec_nat : CmpDec eq Nat.le := {| cmp_dec := Nat.compare |}.
+#[export] Instance cmp_dec_correct : CmpDec_Correct cmp_dec_nat.
+  econstructor. intros.
+  destruct (cmp_dec x y) eqn:Heq
+  + inversion Heq.
+    apply Nat.compare_eq_iff; assumption.
+  + inversion Heq. 
+    apply Nat.compare_le_iff.
+    unfold not.
+    intros HG.
+    destruct (x ?= y)%nat. 
+    * inversion H0.
+    * inversion HG.
+    * inversion H0.
+  + inversion Heq. 
+    specialize (Nat.compare_gt_iff x y) as Hgt.
+    destruct Hgt.
+    * specialize (H H0).
+      apply (Nat.lt_le_incl). assumption.
   Qed.
 
 
-  Global Instance map_idx_correct :
-    HMapOk hmap_from_idx := HMapOk_halist (Idx S) V.
+#[export] Instance nat_ix : Ix nat Nat.le :=
+  {|
+    range := fun p : nat * nat => seq (fst p) ((1 + snd p) - fst p);
+    index := fun (p : nat * nat) (i : nat) =>
+               if andb (Nat.leb (fst p) i) (Nat.leb i (snd p))
+               then Some (i - fst p)
+               else None;
+    inRange := 
+      fun (p : nat * nat) (i : nat) => Nat.le (fst p) i /\ Nat.le i (snd p);
+    rangeSize := fun p : nat * nat => (1 + snd p) - fst p;
+    
+    (* needed to generate new indices *)
+    suc := Datatypes.S; 
+    max := Nat.max; 
+    zero := 0;
+  |}.
 
+
+(* taken from https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix*)
+Definition option_map_list
+  {A B : Type}
+  (l : list (option A))
+  (f : A -> B -> B)
+  (def : B)
+  : option B :=
+fold (fun (next : option A) (acc : option B) => match next with
+                                                | Some a => option_map (f a) acc
+                                                | None => None
+                                                end)
+  (Some def) l.
+
+Class Ix_Correct (T : Type)
+  (ltu : T -> T -> Prop) 
+  {CD : @CmpDec T eq ltu}
+  {CDC : @CmpDec_Correct T eq ltu CD}
+  {HI : @Ix T ltu CD}
+  {RD : @RelDec.RelDec T eq}
+  : Type := 
+  { 
+    inRange_implies_elem : forall (l u i : T),
+      inRange (l,u) i <-> (In i (range (l,u))); 
+
+    (* range (l,u) !! index (l,u) i == i, when inRange (l,u) i *)
+    inRange_elems_are_indexable: forall (l u v : T) (i : nat),
+      index (l,u) v = Some i ->
+      inRange (l,u) v -> (* TODO: superflous precond?*)
+      List.nth_error (range (l,u)) i = Some v;
+
+
+    (* map (index (l,u)) (range (l,u))) == [0..rangeSize (l,u)-1] *)
+    map_over_indices_makes_incr_seq: forall (p : T * T),
+      List.map (index p) (range p)
+      =
+      List.map Some (seq 0 (rangeSize p));
+
+
+    (* rangeSize (l,u) == length (range (l,u)) *)
+    rangeSize_is_length_of_range : forall (p : T * T),
+      rangeSize p = length (range p);
+      
+  }.
+
+From Stdlib Require Import Lia.
+
+Lemma add_sub_le n m : n <= m -> n + (m - n) = m.
+Proof. lia. Qed.
+
+(* TODO: move into nat_ix_correct. unhelpful out here. *)
+Lemma in_seq_iff l u i :
+  In i (seq l (1 + u - l)) <-> l <= i /\ i <= u.
+Proof.
+  destruct (Nat.le_gt_cases l (1 + u)) as [Hle|Hgt].
+  - rewrite in_seq.
+    enough (l + (1 + u - l) = 1 + u) as -> by lia.
+    apply add_sub_le. exact Hle.
+  - replace (1 + u - l) with 0 by lia. simpl.
+    split; [tauto | lia].
+Qed.
+
+#[export,refine] Instance nat_ix_correct : Ix_Correct nat Nat.le :=
+  {|
+    inRange_implies_elem := _;
+    inRange_elems_are_indexable := _;
+    map_over_indices_makes_incr_seq := _;
+    rangeSize_is_length_of_range := _
+  |}.
+- intros l u i. exact (iff_sym (in_seq_iff l u i)).
+- intros l u v i Hidx [Hl Hu].
+  unfold index, range, nat_ix in *. simpl fst in *. simpl snd in *.
+  destruct (Nat.leb l v) eqn:Elv; [|discriminate].
+  destruct (Nat.leb v u) eqn:Evu; simpl andb in Hidx; [|discriminate].
+  inversion Hidx; subst; clear Hidx.
+  apply Nat.leb_le in Elv. apply Nat.leb_le in Evu.
+  rewrite nth_error_seq.
+  replace ((v - l <? 1 + u - l)%nat) with true
+    by (symmetry; apply Nat.ltb_lt; lia).
+  f_equal. apply add_sub_le. lia.
+- intros [l u]. unfold index, range, rangeSize, nat_ix. simpl fst. simpl snd.
+  set (n := 1 + u - l).
+  erewrite List.map_ext_in.
+  2: { intros a Ha. apply in_seq in Ha.
+       destruct (Nat.leb l a) eqn:E1; [| apply Nat.leb_nle in E1; lia].
+       destruct (Nat.leb a u) eqn:E2; [| apply Nat.leb_nle in E2; lia].
+       simpl. reflexivity. }
+  cut (forall k, List.map (fun i => Some (i - l)) (seq (l + k) n)
+                 = List.map Some (seq k n)).
+  { intro H. specialize (H 0). rewrite Nat.add_0_r in H. exact H. }
+  induction n as [|n' IHn']; intro k.
+  + reflexivity.
+  + simpl. f_equal.
+    * f_equal. lia.
+    * replace (S (l + k)) with (l + S k) by lia. apply IHn'.
+- intros [l u]. unfold rangeSize, range, nat_ix. simpl.
+  rewrite length_seq. reflexivity.
+Qed.
+
+Class STRefClass (T : Type) : Type :=
+  {
+    STRef : forall S A : Type, Type; 
+    mkSTRef : forall S A : Type, T -> STRef S A;
+    STRefToIx : forall S A : Type, STRef S A -> T;
+  }.
+
+
+Section STRefNatDefs.
+
+  Variable (T : Type).
+  
+
+  Variant STRefNat : Type -> Type -> Type :=
+  | MkSTRef (S A : Type) (idx : nat) : STRefNat S A.
+
+  
+  Definition STRefToIdxNat (S A : Type) (ref : STRefNat S A) : nat :=
+   match ref with
+   | MkSTRef _ _ idx => idx
+   end. 
+
+End STRefNatDefs.
+
+#[export] Instance nat_ix_stref : STRefClass nat :=
+  {| STRef := STRefNat;
+    mkSTRef := MkSTRef ;
+    STRefToIx := STRefToIdxNat |}.
+
+
+
+
+Section STEventDefine.  
+  Variable (T : Type).
+  Variable (ltu : T -> T -> Prop).
+  Context `{STRefClass T}.
+
+  Variant STEvent (S : Type) (V : T -> Type) : Type -> Type :=
+    | NewSTRef (idx : T) (v : V idx) : STEvent S V (STRef S (V idx))
+    | ReadSTRef (idx : T) : STRef S (V idx) -> STEvent S V (V idx)
+    | WriteSTRef (idx : T) : STRef S (V idx) -> (V idx) -> STEvent S V unit
+  .
+
+End STEventDefine.
+
+(* Arrays! *)
+
+Section STArrayDef.
+
+  (* TODO: Array event definition goes here. *)
+  (* Events in Haskell *)
+(* newArray :: Ix i => (i, i) -> e -> ST s (STArray s i e)
+ * newListArray :: (MArray a e m, Ix i) => (i, i) -> [e] -> m (a i e) 
+ * readArray :: (MArray a e m, Ix i) => a i e -> i -> m e 
+ * writeArray :: (MArray a e m, Ix i) => a i e -> i -> e -> m () 
+ * getElems :: (MArray a e m, Ix i) => a i e -> m [e]  *)
+
+End STArrayDef.
+  
+Section Translation.
+
+  Context {E : Type -> Type}.
+  Context {T S : Type}.
+  Variable (ltu : T -> T -> Prop).
+  Context `{Ix_Correct T ltu}.
+  Context `{EqDec T eq}. (* TODO: add as hint based on Ix_Correct *)
+  Context `{STRefClass T}.
+  Context {V : T -> Type}.
+  Context `{STEvent T S V -< E}. 
+  Context `{exceptE Err -< E}.
+  
+
+  Definition newSTRef (idx : T) (v : (V idx)) : itree E (STRef S (V idx)) :=
+    trigger (NewSTRef T S V idx v).
+
+  Definition readSTRef {idx : T} (ref : STRef S (V idx)) : itree E (V idx) :=
+    trigger (ReadSTRef T S V idx ref).
+
+  Definition writeSTRef {idx : T} (ref : STRef S (V idx)) (a : (V idx)) : itree E unit :=
+    trigger (WriteSTRef T S V idx ref a).
+
+
+  
+  Definition pkey (J K : Type) := (J * K)%type.
+  Definition pkey_type {J K} (V : K -> Type) (pk : pkey J K) := V (snd pk).
+  Definition idx_key := pkey T. 
+  Definition idx_key_type {K} (V : K -> Type) (ik : idx_key K) := V (snd ik).
+
+
+  Context {M : Type}.
+  Context `{HMap (idx_key T) (idx_key_type V) M}.
+  Context `{Foldable M (sigT (idx_key_type V))}.
+
+
+  Definition handle_STEvent `{EqDec T eq} 
+    : forall (A : Type), STEvent T S V A -> stateT M (itree E) A :=
+    fun _ e mem =>
+    match e with
+    | NewSTRef _ _ _ idx v =>
+        let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
+        in Ret (add (n, idx) v mem, mkSTRef S (V idx) idx)
+    | ReadSTRef _ _ _ idx s =>
+        match lookup (STRefToIx S (V idx) s, idx) mem with
+        | Some v => Ret (mem, v)
+        | None => failwith "Lookup failed!"
+        end
+    | WriteSTRef _ _ _ idx s v => Ret (add (STRefToIx S (V idx) s, idx) v mem, tt)
+    end.
+
+(* Interpretation in Rocq *)
+
+  (* TODO: better name perhaps *)
+  Definition handle_STEvent_leave_rest
+    (A : Type) (e : (STEvent T S V +' E) A)
+    : stateT M (itree (E)) A :=
+    match e with
+    | inl1 e0 => handle_STEvent A e0
+    | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
+    end.
+  
+  #[export] Instance hmap_from_idx :
+    HMap T V (halist T V) := @HMap_halist (T) V eq_equivalence H0.
+
+  Global Instance map_idx_correct :
+    HMapOk hmap_from_idx := HMapOk_halist T V.
 
   Definition interp_st
-    {mem} `{HMap (Idx S) V mem}
-    : itree (STEvent' S +' E) ~> stateT mem (itree (E)) :=
+    : itree (STEvent T S V +' E) ~> stateT M (itree (E)) :=
     interp_state handle_STEvent_leave_rest.
 
   
 End Translation.
 
-  Definition runSt {A : Type}
+Definition runSt {A : Type}
+  {T S : Type} {ltu : T -> T -> Prop}
+  `{Ix T ltu}
+  `{Ix_Correct T}
+  `{EqDec T eq}
+  `{STRefClass T}
   {E : Type -> Type}
-  {S : Type}
-  {V : (Idx S) -> Type}
-  `{@STEvent S V -< E} 
-  `{exceptE Err -< E}
-  `{IdxGenE -< E}
-    (f : forall (S : Type), itree ((@STEvent S V) +' E) A)
-    : itree E A :=
-    fmap snd (interp_st _ (f unit) HMap.empty).
-  
-
-
+  {V : T -> Type} `{exceptE Err -< E}
+  (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
+  : itree E A :=
+  fmap snd (interp_st ltu _ (f unit) HMap.empty).
 
 (* CPP Bindings *)
 
-Crane Extract Inlined Constant STRef => "%t1".
-Crane Extract Inlined Constant newSTRef => "%result = %a0".
-Crane Extract Inlined Constant readSTRef => "%a0".
-Crane Extract Inlined Constant writeSTRef => "%a0 = %a1".
-Crane Extract Skip IdxRefSameIdx.
-Crane Extract Skip IdxRefSameRef.
-Crane Extract Skip newIdx.
+Crane Extraction Implicit newSTRef[1].
+Crane Extract Skip Ix_Correct.
+Crane Extract Skip CmpDec_Correct.
+Crane Extract Skip STEvent.
+Crane Extract Skip CmpDec.
+Crane Extract Skip Ix.
+Crane Extract Skip suc.
+Crane Extract Skip max.
+Crane Extract Skip zero.
+Crane Extract Skip mkSTRef.
+Crane Extract Skip STRefToIx.
+(* NOTE: skipping STRefClass seems to drop typing
+  information extraction need to infer value types inside references. *)
+(* Crane Extract Skip STRefClass. *)
+Crane Extract Inlined Constant STRef => "%t3".
+Crane Extract Inlined Constant newSTRef => "%result = %a1".
+Crane Extract Inlined Constant readSTRef => "%a1".
+Crane Extract Inlined Constant writeSTRef => "%a1 = %a2".
 
-End ST_IMPL.
 
-Export ST_IMPL.
