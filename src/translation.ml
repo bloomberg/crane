@@ -950,7 +950,7 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
 (** Return [true] if the C++ type contains any unresolved type variable
-    ([Tvar] or [Tauto]).  Used by {!gen_clone_field_expr} to decide whether
+    ([Tvar] or [Tauto]).  Used by {!gen_type_conversion_expr} to decide whether
     a field needs a converting constructor call. *)
 let rec contains_tvar = function
   | Tvar _ | Tauto -> true
@@ -1217,10 +1217,12 @@ let rec render_cpp_expr_simple = function
   | CPPraw s -> Some s
   | _ -> None
 
-(** Generate inline C++ type-conversion code for a constructor field,
-    converting from [src_ty] to [dst_ty].
+(** Generate an inline C++ expression that converts [expr] from [src_ty] to
+    [dst_ty].  Used at every boundary between the storage representation
+    (where recursive fields are [shared_ptr]-wrapped) and the API
+    representation (where they are bare values).
 
-    Type conversion cases handled:
+    Conversion cases:
     - [shared_ptr<S> -> shared_ptr<T>]: null-check, dereference, make_shared
     - [shared_ptr<T> -> T]: dereference (converting ctor if inner ≠ dst)
     - [T -> shared_ptr<T>]: wrap in make_shared
@@ -1234,11 +1236,11 @@ let rec render_cpp_expr_simple = function
     custom-extracted types with different namespace qualification.
 
     @param skip    predicate for GlobRefs to skip during qualification
-    @param src_ty  the source C++ type (storage representation)
-    @param dst_ty  the destination C++ type (API representation)
-    @param expr    the C++ expression to clone/convert
+    @param src_ty  the source C++ type
+    @param dst_ty  the destination C++ type
+    @param expr    the C++ expression to convert
     @return a [cpp_expr] that produces a value of type [dst_ty] *)
-let gen_clone_field_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
+let gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   let render ty =
     render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
   in
@@ -2714,7 +2716,7 @@ let rec contains_shared_ptr = function
     pointers. *)
 let wrap_storage_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr storage_ty then
-    gen_clone_field_expr ~src_ty:api_ty ~dst_ty:storage_ty expr
+    gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty expr
   else
     expr
 
@@ -2722,7 +2724,7 @@ let wrap_storage_expr ~storage_ty ~api_ty expr =
     (e.g. [shared_ptr] → bare value). *)
 let wrap_api_expr ~storage_ty ~api_ty expr =
   if storage_ty <> api_ty && contains_shared_ptr storage_ty then
-    gen_clone_field_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
+    gen_type_conversion_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
   else
     expr
 
@@ -6413,7 +6415,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             else if is_uptr_field then CPPderef (CPPvar binding_name)
             else if field_ty <> bare_ty
                     && contains_shared_ptr field_ty then
-              gen_clone_field_expr ~src_ty:field_ty ~dst_ty:bare_ty
+              gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
             else if field_is_wholesale_erased i
                     && not (is_erased_type bare_ty) then
@@ -14055,7 +14057,7 @@ let gen_ind_header_v2
                         if _storage_arg = api_arg then
                           arg_var
                         else
-                          gen_clone_field_expr
+                          gen_type_conversion_expr
                             ~src_ty:_storage_arg ~dst_ty:api_arg
                             arg_var )
                       (List.combine storage_args api_args)
@@ -14065,7 +14067,7 @@ let gen_ind_header_v2
                     if storage_ret = api_ret then
                       call
                     else
-                      gen_clone_field_expr
+                      gen_type_conversion_expr
                         ~src_ty:api_ret ~dst_ty:storage_ret
                         call
                   in
@@ -14076,7 +14078,7 @@ let gen_ind_header_v2
                       true )
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
-                  gen_clone_field_expr
+                  gen_type_conversion_expr
                     ~src_ty:api_ty ~dst_ty:storage_ty var
               end
               | Tshared_ptr inner ->
@@ -14088,7 +14090,7 @@ let gen_ind_header_v2
                 if is_trivially_copyable_type api_ty then var
                 else CPPmove var
               | _ ->
-                gen_clone_field_expr
+                gen_type_conversion_expr
                   ~src_ty:api_ty ~dst_ty:storage_ty var )
             cpp_tys
         in
@@ -14236,7 +14238,7 @@ let gen_ind_header_v2
                 let converted =
                   List.map
                     (fun (field_id, src_fty, dst_fty) ->
-                      gen_clone_field_expr
+                      gen_type_conversion_expr
                         ~skip:(fun g -> GlobRef.CanOrd.equal g name)
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         (CPPvar field_id))
