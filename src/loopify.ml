@@ -6469,6 +6469,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
           let stripped = strip_ref_type ty in
           match stripped with
           | Tmod (TMconst, _) -> None  (* const-ref bind: not owned *)
+          | Tglob (r, _, _) when Table.is_coinductive r -> None
           | t when not (is_trivially_copyable_type t) -> Some id
           | _ -> None)
       pairs

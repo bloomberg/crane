@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STM_HASH_MAP_BDE
 #define INCLUDED_STM_HASH_MAP_BDE
 
+#include <any>
 #include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
@@ -17,6 +18,7 @@
 #include <bsl_vector.h>
 #include <fstream>
 #include <stm_adapter.h>
+#include <utility>
 #include <variant>
 
 using namespace BloombergLP;

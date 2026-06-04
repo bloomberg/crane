@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TOPOLOGICAL_SORT_BDE
 #define INCLUDED_TOPOLOGICAL_SORT_BDE
 
+#include <any>
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -12,6 +13,7 @@
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
+#include <utility>
 
 using namespace BloombergLP;
 using namespace bsl::string_literals;

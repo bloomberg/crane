@@ -730,7 +730,13 @@ let header fn () =
 let spec_header si () =
   let imps = get_custom_imports () in
   let himports =
-    if is_bde () then header_imports_bsl
+    if is_bde () then
+      let needed = Common.get_needed_headers () in
+      let extra_std =
+        List.filter (fun h -> List.mem h needed)
+          ["any"; "deque"; "utility"]
+      in
+      header_imports_bsl @ extra_std
     else needed_std_headers ()
   in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)

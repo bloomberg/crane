@@ -207,11 +207,11 @@ struct LoopifyCoindColist {
           _result = List<T1>::nil();
         } else {
           uint64_t f = fuel - 1;
-          if (std::holds_alternative<typename colist<T1>::Conil>(l.v_mut())) {
+          if (std::holds_alternative<typename colist<T1>::Conil>(l.v())) {
             _result = List<T1>::nil();
           } else {
-            auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v_mut());
-            _stack.emplace_back(_Resume_Cocons{std::move(a0)});
+            const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
+            _stack.emplace_back(_Resume_Cocons{a0});
             _stack.emplace_back(_Enter{*a1, f});
           }
         }
