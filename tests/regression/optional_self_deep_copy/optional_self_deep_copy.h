@@ -18,7 +18,7 @@ struct OptionalSelfDeepCopy {
     struct Stop {};
 
     struct More {
-      std::shared_ptr<std::optional<std::shared_ptr<chain>>> a0;
+      std::shared_ptr<std::optional<chain>> a0;
     };
 
     using variant_t = std::variant<Stop, More>;
@@ -37,9 +37,8 @@ struct OptionalSelfDeepCopy {
 
     static chain stop() { return chain(Stop{}); }
 
-    static chain more(std::optional<std::shared_ptr<chain>> a0) {
-      return chain(More{std::make_shared<std::optional<std::shared_ptr<chain>>>(
-          std::move(a0))});
+    static chain more(std::optional<chain> a0) {
+      return chain(More{std::make_shared<std::optional<chain>>(std::move(a0))});
     }
 
     // MANIPULATORS

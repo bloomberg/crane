@@ -17,7 +17,7 @@ struct PairSelfDeepCopy {
     struct Stop {};
 
     struct Link {
-      std::shared_ptr<std::pair<std::shared_ptr<chain>, bool>> a0;
+      std::shared_ptr<std::pair<chain, bool>> a0;
     };
 
     using variant_t = std::variant<Stop, Link>;
@@ -36,10 +36,9 @@ struct PairSelfDeepCopy {
 
     static chain stop() { return chain(Stop{}); }
 
-    static chain link(std::pair<std::shared_ptr<chain>, bool> a0) {
+    static chain link(std::pair<chain, bool> a0) {
       return chain(
-          Link{std::make_shared<std::pair<std::shared_ptr<chain>, bool>>(
-              std::move(a0))});
+          Link{std::make_shared<std::pair<chain, bool>>(std::move(a0))});
     }
 
     // MANIPULATORS

@@ -117,9 +117,14 @@ struct RecRecord {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 = r.rn_next.has_value()
-                                        ? std::make_optional<RNode>(**r.rn_next)
-                                        : std::nullopt;
+    std::optional<RNode> rn_next0{};
+    const auto &__cv = r.rn_next;
+    if (__cv.has_value()) {
+      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
+      rn_next0 = std::make_optional<RNode>((*_cv0_0));
+    } else {
+      rn_next0 = std::optional<RNode>();
+    }
     return f(rn_value0, rn_next0);
   }
 
@@ -127,9 +132,14 @@ struct RecRecord {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 = r.rn_next.has_value()
-                                        ? std::make_optional<RNode>(**r.rn_next)
-                                        : std::nullopt;
+    std::optional<RNode> rn_next0{};
+    const auto &__cv = r.rn_next;
+    if (__cv.has_value()) {
+      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
+      rn_next0 = std::make_optional<RNode>((*_cv0_0));
+    } else {
+      rn_next0 = std::optional<RNode>();
+    }
     return f(rn_value0, rn_next0);
   }
 
@@ -164,25 +174,37 @@ struct RecRecord {
   static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
       UINT64_C(1),
-      [](auto &&__x)
+      [](const auto &__cv)
           -> std::optional<std::shared_ptr<RNode>> {
-        return __x.has_value()
-                   ? std::make_optional(std::make_shared<RNode>(*__x))
-                   : std::nullopt;
+        if (__cv.has_value()) {
+          const RNode &_cv0_0 = *__cv;
+          return std::make_optional<std::shared_ptr<RNode>>(
+              std::make_shared<RNode>(_cv0_0));
+        } else {
+          return std::optional<std::shared_ptr<RNode>>();
+        }
       }(std::make_optional<RNode>(RNode{
               UINT64_C(2),
-              [](auto &&__x)
+              [](const auto &__cv)
                   -> std::optional<std::shared_ptr<RNode>> {
-                return __x.has_value()
-                           ? std::make_optional(std::make_shared<RNode>(*__x))
-                           : std::nullopt;
+                if (__cv.has_value()) {
+                  const RNode &_cv0_0 = *__cv;
+                  return std::make_optional<std::shared_ptr<RNode>>(
+                      std::make_shared<RNode>(_cv0_0));
+                } else {
+                  return std::optional<std::shared_ptr<RNode>>();
+                }
               }(std::make_optional<RNode>(RNode{
                       UINT64_C(3),
-                      [](auto &&__x) -> std::optional<std::shared_ptr<RNode>> {
-                        return __x.has_value()
-                                   ? std::make_optional(
-                                         std::make_shared<RNode>(*__x))
-                                   : std::nullopt;
+                      [](const auto &__cv)
+                          -> std::optional<std::shared_ptr<RNode>> {
+                        if (__cv.has_value()) {
+                          const RNode &_cv0_0 = *__cv;
+                          return std::make_optional<std::shared_ptr<RNode>>(
+                              std::make_shared<RNode>(_cv0_0));
+                        } else {
+                          return std::optional<std::shared_ptr<RNode>>();
+                        }
                       }(std::optional<RNode>())}))}))};
   static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);
   static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};

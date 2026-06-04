@@ -380,8 +380,8 @@ struct TopologicalSort {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<T1, List<T1>>>::Cons>(graph0.v());
-      const T1 &e = std::pair<T1, List<T1>>(a0).first;
-      const List<T1> &_x0 = std::pair<T1, List<T1>>(a0).second;
+      const T1 &e = std::make_pair(a0.first, (*a0.second)).first;
+      const List<T1> &_x0 = std::make_pair(a0.first, (*a0.second)).second;
       return std::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }

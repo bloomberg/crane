@@ -12,8 +12,14 @@ uint64_t RecRecord::rlist_sum(const RecRecord::rlist<uint64_t> &l) {
 }
 
 uint64_t RecRecord::rnode_depth(const RecRecord::RNode &r) {
-  auto _cs = r.rn_next.has_value() ? std::make_optional<RNode>(**r.rn_next)
-                                   : std::nullopt;
+  std::optional<RNode> _cs{};
+  const auto &__cv = r.rn_next;
+  if (__cv.has_value()) {
+    const std::shared_ptr<RNode> &_cv0_0 = *__cv;
+    _cs = std::make_optional<RNode>((*_cv0_0));
+  } else {
+    _cs = std::optional<RNode>();
+  }
   if (_cs.has_value()) {
     const RecRecord::RNode &next = *_cs;
     return (rnode_depth(next) + 1);

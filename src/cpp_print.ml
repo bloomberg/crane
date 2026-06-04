@@ -117,6 +117,7 @@ let collect_referenced_ids body =
     iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
   and check_stmt s =
     match s with
+    | Sraw raw_s -> check_expr (CPPraw raw_s)
     | Scustom_case (_, scrut, _, branches, template) ->
       if Common.contains_substring template "%scrut" then check_expr scrut;
       List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
@@ -187,6 +188,7 @@ let lambda_needs_capture
       !acc
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
+    | Sraw raw_s -> collect_from_expr (refs, decls) (CPPraw raw_s)
     | Sdecl (id, _) -> (refs, IdSet.add id decls)
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
@@ -902,19 +904,26 @@ and pp_typename_member ty id =
     @param t     the MiniCpp expression to render *)
 and extract_from_any ty src_expr =
   (* Extract a value of type [ty] from [src_expr : any].
-     When ty is Tshared_ptr<T> (recursive inductive), the value is stored
-     directly as T in any; wrap with make_shared<T>. *)
-  match ty with
-  | Tshared_ptr inner ->
-    require_header "memory";
-    str "std::make_shared<" ++ pp_cpp_type false [] inner ++ str ">("
-    ++ str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] inner ++ str ">(" ++ src_expr ++ str "))"
-  | _ ->
-    str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+     Semantic values stored in std::any are always bare (never shared_ptr-wrapped);
+     field-level shared_ptr wrapping is only in struct fields, not in grammar
+     action semantic values.  Always extract the bare type. *)
+  str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+
+(** Strip [shared_ptr] wrapping from all positions in a C++ type.
+    Semantic values in [std::any] are always bare; NS-propagated types that
+    added [shared_ptr] for struct storage must be stripped before extracting
+    elements from grammar-action [any] values. *)
+and bare_elem_ty : cpp_type -> cpp_type = function
+  | Tshared_ptr inner -> bare_elem_ty inner
+  | Tglob (g, ts, ns) -> Tglob (g, List.map bare_elem_ty ts, ns)
+  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, bare_elem_ty inner)
+  | other -> other
 
 and deque_elem_extract_expr elem_ty src_expr =
   (* Generate expression to extract elem_ty from a list element stored as any.
-     Pairs are stored as pair<any,any>; other types are stored directly. *)
+     Pairs are stored as pair<any,any>; other types are stored directly.
+     Strip shared_ptr from elem_ty first: semantic values in std::any are bare. *)
+  let elem_ty = bare_elem_ty elem_ty in
   let is_prod_type = function
     | Tglob (g, [_; _], _) ->
       let n = Common.pp_global_name Type g in n = "prod" || n = "Prod"
@@ -1011,13 +1020,14 @@ and pp_cpp_expr env args t =
           in
           if Table.is_custom g_of_list then begin
             require_header "any";
-            let elem_s = pp_cpp_type false [] elem_ty_of_list in
+            let bare_ety = bare_elem_ty elem_ty_of_list in
+            let elem_s = pp_cpp_type false [] bare_ety in
             let src_s =
               str (sn ()).any_cast ++ str "<"
               ++ pp_cpp_type false [] list_any_ty
               ++ str ">(" ++ Id.print id ++ str ")"
             in
-            let cast_e = deque_elem_extract_expr elem_ty_of_list (str "_e") in
+            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
             str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
             ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
           end else
@@ -1460,14 +1470,15 @@ and pp_cpp_expr env args t =
         ( match fix_opt with
         | Some (list_g, expected_elem) ->
           require_header "any";
-          let elem_s = pp_cpp_type false [] expected_elem in
+          let bare_ety = bare_elem_ty expected_elem in
+          let elem_s = pp_cpp_type false [] bare_ety in
           let list_any_ty = Tglob (list_g, [Tany], []) in
           let src_s =
             str (sn ()).any_cast ++ str "<"
             ++ pp_cpp_type false [] list_any_ty
             ++ str ">(" ++ Id.print id ++ str ")"
           in
-          let cast_e = deque_elem_extract_expr expected_elem (str "_e") in
+          let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
           str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
           ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
         | None -> pp_cpp_expr env args arg )
@@ -1493,8 +1504,9 @@ and pp_cpp_expr env args t =
     (match is_custom_list_funcall with
     | Some elem_ty ->
       require_header "any";
-      let elem_s = pp_cpp_type false [] elem_ty in
-      let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+      let bare_ety = bare_elem_ty elem_ty in
+      let elem_s = pp_cpp_type false [] bare_ety in
+      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
       str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
       ++ args_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
     | None ->
@@ -1522,9 +1534,10 @@ and pp_cpp_expr env args t =
     ( match is_custom_list_convert with
     | Some elem_ty ->
       require_header "any";
-      let elem_s = pp_cpp_type false [] elem_ty in
+      let bare_ety = bare_elem_ty elem_ty in
+      let elem_s = pp_cpp_type false [] bare_ety in
       let src_s = pp_list (pp_cpp_expr env args) ts in
-      let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
       str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
       ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
     | None ->
@@ -2843,11 +2856,12 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
           (match check_custom_list expected_ty with
           | Some (list_any_ty, elem_ty) ->
             require_header "any";
-            let elem_s = pp_cpp_type false [] elem_ty in
+            let bare_ety = bare_elem_ty elem_ty in
+            let elem_s = pp_cpp_type false [] bare_ety in
             let src_s = str (sn ()).any_cast ++ str "<"
                         ++ pp_cpp_type false [] list_any_ty
                         ++ str ">(" ++ Id.print id ++ str ")" in
-            let cast_e = deque_elem_extract_expr elem_ty (str "_e") in
+            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
             Some (str "[&]() { std::deque<" ++ elem_s
                   ++ str "> _r; for (const auto& _e : "
                   ++ src_s ++ str ") _r.push_back(" ++ cast_e

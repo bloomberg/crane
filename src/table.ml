@@ -1942,6 +1942,93 @@ let find_custom_match pv =
   mark_custom_used r;
   Refmap'.find r !custom_matchs
 
+let find_custom_match_by_ref r =
+  mark_custom_used r;
+  Refmap'.find_opt r !custom_matchs
+
+(** How a single type-argument binding is projected from the scrutinee in a
+    custom match template. *)
+type accessor = AccMember of string | AccDeref
+
+(** [find_between s prefix suffix] returns the substring of [s] that lies
+    between the first occurrence of [prefix] and the nearest following
+    [suffix].  Returns [None] if either delimiter is absent. *)
+let find_between s prefix suffix =
+  let plen = String.length prefix in
+  let slen = String.length suffix in
+  let rec find_pref i =
+    if i + plen > String.length s then None
+    else if String.sub s i plen = prefix then
+      let start = i + plen in
+      let rec find_suf j =
+        if j + slen > String.length s then None
+        else if String.sub s j slen = suffix then
+          Some (String.sub s start (j - start))
+        else find_suf (j + 1)
+      in
+      find_suf start
+    else find_pref (i + 1)
+  in
+  find_pref 0
+
+(** Parse an accessor expression from a binding RHS in a match template.
+    Recognizes two forms:
+    - ["%scrut.FIELD"] → [Some (AccMember "FIELD")]
+    - ["*%scrut"]      → [Some AccDeref]
+
+    Returns [None] if the expression doesn't match either pattern. *)
+let parse_accessor rhs =
+  let scrut = "%scrut" in
+  let slen = String.length scrut in
+  let rlen = String.length rhs in
+  if rlen > slen + 1 && String.sub rhs 0 slen = scrut && rhs.[slen] = '.'
+  then Some (AccMember (String.sub rhs (slen + 1) (rlen - slen - 1)))
+  else if rlen = slen + 1 && rhs.[0] = '*' && String.sub rhs 1 slen = scrut
+  then Some AccDeref
+  else None
+
+(** Extract accessors from a single-constructor match template by finding
+    binding assignments of the form [%b0a{j} = <expr>;] and parsing each
+    RHS.  Returns [Some accessors] if all bindings parse, [None] if the
+    template structure is unrecognized or any binding fails to parse. *)
+let parse_single_branch_accessors tmpl =
+  let rec go j acc =
+    let pat = Printf.sprintf "%%b0a%d = " j in
+    match find_between tmpl pat ";" with
+    | None -> if j = 0 then None else Some (List.rev acc)
+    | Some rhs ->
+      (match parse_accessor (String.trim rhs) with
+       | None -> None
+       | Some a -> go (j + 1) (a :: acc))
+  in
+  go 0 []
+
+(** For a single-constructor custom inductive, extract the list of field
+    accessors from its match template.  Returns [None] for multi-constructor
+    types or when the template structure is not recognized.
+
+    Used by {!Translation.gen_custom_type_conversion} to inline pair-like
+    conversions as pure expressions without IIFEs. *)
+let find_custom_accessors g =
+  match g with
+  | GlobRef.IndRef (kn, i) ->
+    (match Refmap'.find_opt g !custom_matchs with
+     | None -> None
+     | Some tmpl ->
+       let mib = Global.lookup_mind kn in
+       let n = Array.length mib.mind_packets.(i).mind_consnames in
+       if n = 1 then parse_single_branch_accessors tmpl else None)
+  | _ -> None
+
+let find_custom_ctor_templates (ip : Names.inductive) =
+  let mib = Global.lookup_mind (fst ip) in
+  let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
+  List.init n (fun j ->
+    let g = GlobRef.ConstructRef (ip, succ j) in
+    match Refmap'.find_opt g !customs with
+    | Some (_, s) -> s
+    | None -> "")
+
 (* Printing entries *)
 
 (** Prints the custom extraction mappings for all ConstRef entries in [ref_set],
@@ -2028,6 +2115,11 @@ let ref_imports_object : GlobRef.t * string -> obj =
        "Crane Ref Imports"
        ~cache:(fun (r, s) -> add_ref_import r s)
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
+
+let get_ref_import_list r =
+  match Refmap'.find_opt r !ref_imports with
+  | Some imports -> StringSet.elements imports
+  | None -> []
 
 (* Legacy global custom imports (kept for backward compatibility with
    [add_custom_import] which is called directly in some places). *)
