@@ -656,7 +656,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
         uint64_t acc = _f.acc;
-        F0 f = std::move(_f.f);
+        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(acc, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -710,7 +710,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = std::move(_f.f);
+        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(a0, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -804,7 +804,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = std::move(_f.f);
+        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         auto _cs = f(a0);
         if (_cs.has_value()) {
@@ -990,7 +990,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = std::move(_f.f);
+        auto f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max <= fx) {
@@ -1095,7 +1095,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 cmp = std::move(_f.cmp);
+        auto cmp = std::move(_f.cmp);
         uint64_t m = std::move(_result);
         if (UINT64_C(0) <= cmp(a0, m)) {
           _result = std::move(a0);
@@ -1194,7 +1194,7 @@ struct LoopifyHofs {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 p = std::move(_f.p);
+        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<uint64_t> yes = std::move(_cs.first);
         List<uint64_t> no = std::move(_cs.second);

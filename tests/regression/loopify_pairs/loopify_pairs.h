@@ -220,8 +220,8 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = std::move(_f.a0);
-        F0 p = std::move(_f.p);
+        auto a0 = std::move(_f.a0);
+        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         list<T1> yes = std::move(_cs.first);
         list<T1> no = std::move(_cs.second);
@@ -399,7 +399,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = std::move(_f.a0);
+        auto a0 = std::move(_f.a0);
         auto _cs = std::move(_result);
         list<T1> taken = std::move(_cs.first);
         list<T1> rest = std::move(_cs.second);
@@ -456,8 +456,8 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = std::move(_f.a0);
-        T1 a00 = std::move(_f.a00);
+        auto a0 = std::move(_f.a0);
+        auto a00 = std::move(_f.a00);
         auto _cs = std::move(_result);
         list<T1> evens = std::move(_cs.first);
         list<T1> odds = std::move(_cs.second);
@@ -510,7 +510,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_Cont1>(_frame));
-        T1 a0 = std::move(_f.a0);
+        auto a0 = std::move(_f.a0);
         auto _cs = std::move(_result);
         list<T1> ys = std::move(_cs.first);
         list<T1> zs = std::move(_cs.second);

@@ -261,7 +261,7 @@ struct LoopifyPatterns {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 f = std::move(_f.f);
+        auto f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (fx < rest_max) {
@@ -555,8 +555,8 @@ struct LoopifyPatterns {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 p = std::move(_f.p);
-        F1 q = std::move(_f.q);
+        auto p = std::move(_f.p);
+        auto q = std::move(_f.q);
         auto _cs = std::move(_result);
         std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
         list<uint64_t> cs = std::move(_cs.second);

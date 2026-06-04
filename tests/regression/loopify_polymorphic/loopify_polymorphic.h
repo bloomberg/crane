@@ -510,8 +510,8 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Cont_a>(_frame));
-        T1 a = std::move(_f.a);
-        T2 b = std::move(_f.b);
+        auto a = std::move(_f.a);
+        auto b = std::move(_f.b);
         auto _cs = std::move(_result);
         List<T1> as_ = std::move(_cs.first);
         List<T2> bs = std::move(_cs.second);
@@ -561,8 +561,8 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = std::move(_f.a0);
-        F0 p = std::move(_f.p);
+        auto a0 = std::move(_f.a0);
+        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<T1> trues = std::move(_cs.first);
         List<T1> falses = std::move(_cs.second);

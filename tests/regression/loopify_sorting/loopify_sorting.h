@@ -181,8 +181,8 @@ struct LoopifySorting {
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        T1 a0 = std::move(_f.a0);
-        T1 a00 = std::move(_f.a00);
+        auto a0 = std::move(_f.a0);
+        auto a00 = std::move(_f.a00);
         auto _cs = std::move(_result);
         List<T1> l1 = std::move(_cs.first);
         List<T1> l2 = std::move(_cs.second);

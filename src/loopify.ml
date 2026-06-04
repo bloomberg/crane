@@ -3641,6 +3641,13 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
         Sasgn (id, Some ty, CPPmove field_expr)
+      | Tvar _ ->
+        (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+           deduced as a reference type, [F0 f = std::move(_f.f)] would be
+           ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+           Use [auto] so the declared type is always deduced as a value type,
+           regardless of whether [F0] was a reference or function type. *)
+        Sasgn (id, Some Tauto, CPPmove field_expr)
       | _ -> Sasgn (id, Some ty, field_expr))
     cont_vars
 
@@ -5556,6 +5563,13 @@ let make_param_copies ?(pointer_safe = []) varying_params =
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
       Sasgn (id, Some t, CPPmove f)
+    | Tvar _ ->
+      (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+         deduced as a reference type, [F0 f = std::move(_f.f)] would be
+         ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+         Use [auto] so the declared type is always deduced as a value type,
+         regardless of whether [F0] was a reference or function type. *)
+      Sasgn (id, Some Tauto, CPPmove f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
       Sasgn (id, Some stripped, f)

@@ -574,7 +574,7 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
-        T2 acc = std::move(_f.acc);
+        auto acc = std::move(_f.acc);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = list<T2>::cons(acc, list<T2>::nil());
         } else {
@@ -1084,8 +1084,8 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        F0 p = std::move(_f.p);
-        F1 q = std::move(_f.q);
+        auto p = std::move(_f.p);
+        auto q = std::move(_f.q);
         auto _cs = std::move(_result);
         std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
         list<uint64_t> cs = std::move(_cs.second);
@@ -1250,7 +1250,7 @@ struct LoopifyLists {
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
-        T3 acc = std::move(_f.acc);
+        auto acc = std::move(_f.acc);
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(std::move(acc), list<T2>::nil());
         } else {
@@ -1263,7 +1263,7 @@ struct LoopifyLists {
         }
       } else {
         auto _f = std::move(std::get<_Cont_acc_>(_frame));
-        T2 y = std::move(_f.y);
+        auto y = std::move(_f.y);
         auto _cs1 = std::move(_result);
         T3 acc__ = std::move(_cs1.first);
         list<T2> ys = std::move(_cs1.second);
