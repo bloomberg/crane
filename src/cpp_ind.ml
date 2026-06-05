@@ -60,14 +60,8 @@ let pp_cpp_ind kn ind =
         else if is_enum_cached (GlobRef.IndRef ip) then
           pp (i + 1) (* Enums have no .cpp body *)
         else
-          (* Compute parameter-only type vars (same as in pp_cpp_ind_header) *)
-          let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-          let num_param_vars =
-            List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-          in
-          let param_vars =
-            List.map Common.tparam_name (List.firstn num_param_vars p.ip_vars)
-          in
+          let (raw_pvars, _) = Table.ind_param_vars ind p in
+          let param_vars = List.map Common.tparam_name raw_pvars in
           pp_cpp_decl
             (empty_env ())
             (gen_ind_cpp ~consarg_names:p.ip_consarg_names
@@ -245,15 +239,8 @@ let pp_cpp_ind_header kn ind =
                  (see param_vars below at the struct gen site). Parameters
                  (before the colon) become template params; indices (after the
                  colon) are erased. *)
-              let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-              let num_param_vars =
-                List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-              in
-              let param_vars =
-                List.map
-                  Common.tparam_name
-                  (List.firstn num_param_vars p.ip_vars)
-              in
+              let (raw_pvars, _) = Table.ind_param_vars ind p in
+              let param_vars = List.map Common.tparam_name raw_pvars in
               (* Use the same name as the struct definition (see Dstruct
                  printing below) so forward declarations match their
                  definitions. *)
@@ -485,13 +472,8 @@ let pp_cpp_ind_header kn ind =
              ind.ind_nparams gives the number of Rocq parameters. p.ip_sign
              covers all args (params + indices). Count Keep entries in the first
              nparams positions to get param type var count. *)
-          let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-          let num_param_vars =
-            List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-          in
-          let param_vars =
-            List.map Common.tparam_name (List.firstn num_param_vars p.ip_vars)
-          in
+          let (raw_pvars, _) = Table.ind_param_vars ind p in
+          let param_vars = List.map Common.tparam_name raw_pvars in
           (* Register methods that return std::any (for indexed inductives). A
              method returns std::any if its ML return type becomes an unnamed
              Tvar (indicating type erasure) after C++ conversion. *)

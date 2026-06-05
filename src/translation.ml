@@ -1434,7 +1434,8 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
      scrutinee bound as a lambda parameter. *)
   let gen_custom_type_conversion g src_ts dst_ts orig_dst_ty' inner_expr =
     (* The guard in gen_type_conversion_expr guarantees g is an IndRef. *)
-    let ip = match g with GlobRef.IndRef ip -> ip | _ -> assert false in
+    let ip = match g with GlobRef.IndRef ip -> ip
+      | _ -> CErrors.anomaly (Pp.str "gen_custom_type_conversion: expected IndRef") in
     match Table.find_custom_match_by_ref g with
     | None ->
       CPPconverting_ctor (orig_dst_ty', [inner_expr])
@@ -1607,7 +1608,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let strip_ns = function Tnamespace (_, t) -> t | t -> t in
       let g, elem_ty = match strip_ns dst with
         | Tglob (g, [elem_ty], _) -> g, elem_ty
-        | _ -> assert false in
+        | _ -> CErrors.anomaly (Pp.str "gen_type_conversion_expr: expected list type") in
       let list_any_ty = Tglob (g, [Tany], []) in
       let src_expr = match src_ty with
         | Tany -> CPPany_cast (list_any_ty, expr)
@@ -2353,7 +2354,8 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
     | CPPnullptr | CPPstd_get (_, _, None) | CPPstd_holds_alternative _
     | CPPdeclval _ | CPPtypename_qualified _ | CPPraw _ | CPPbool _ | CPPint _
-    | CPPbrace_init | CPPthis | CPPconverting_ctor _ | CPPqualified_t _ -> ()
+    | CPPbrace_init | CPPthis | CPPconverting_ctor _ | CPPqualified_t _
+    | CPPpair _ -> ()
   and vs = function
     | Sreturn (Some e) | Sexpr e -> ve e
     | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
@@ -2630,9 +2632,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     Some (resolve_tmeta rty)
   | MLletin (_, _, _, body) -> infer_ml_body_type body
   | MLlam (_, ty, body) ->
-    ( match infer_ml_body_type body with
-    | Some rty -> Some (Tarr (ty, rty))
-    | None -> None )
+    Option.map (fun rty -> Tarr (ty, rty)) (infer_ml_body_type body)
   | MLglob (r, _) -> find_type_opt r
   | MLmagic e -> infer_ml_body_type e
   | _ -> None
@@ -2826,6 +2826,18 @@ let is_prod_ml_type ty =
   | Miniml.Tglob (r, _, _) -> is_prod_global r
   | _ -> false
 
+(** Compute ownership flags for function parameters.  Combines escape analysis
+    with sub-binding escape for value-typed (prod) params: a param is owned if
+    it escapes the body, or if its sub-bindings escape and its ML type is a
+    product type (enabling move-from-.first/.second). *)
+let infer_owned_flags n_params body params_with_types =
+  let base = Escape.infer_owned_params n_params body in
+  let sub_esc = Escape.infer_sub_bindings_escape_params n_params body in
+  List.map2
+    (fun (b, se) (_, ty) -> b || (se && is_prod_ml_type ty))
+    (List.combine base sub_esc)
+    params_with_types
+
 (** Wraps a C++ parameter type with const/ref based on ownership semantics.
     Owned inductive/shared_ptr params are passed by value (moved in);
     borrowed inductive/shared_ptr params are passed by const reference;
@@ -2946,6 +2958,32 @@ let wrap_api_expr ~storage_ty ~api_ty expr =
     gen_type_conversion_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
   else
     expr
+
+(* Rocq BinNums.positive constructor indices (1-based): xI = 2n+1, xO = 2n, xH = 1 *)
+let positive_xI_idx = 1
+let positive_xO_idx = 2
+let positive_xH_idx = 3
+
+(* Rocq BinNums.Z constructor indices (1-based): Z0, Zpos, Zneg *)
+let z_pos_idx = 2
+let z_neg_idx = 3
+
+(* Rocq Decimal/Hexadecimal.uint constructor indices (1-based):
+   Nil = 1; digits D0..D9 = 2..11 (decimal), D0..Df = 2..17 (hex) *)
+let uint_nil_idx        = 1
+let decimal_d0_idx      = 2
+let decimal_d9_idx      = 11
+let hex_d0_idx          = 2
+let hex_df_idx          = 17
+
+(* Rocq Number.uint constructor indices (1-based): UIntDecimal, UIntHexadecimal *)
+let num_uint_decimal_idx = 1
+let num_uint_hex_idx     = 2
+
+(* Rocq Decimal.signed_int / Hexadecimal.signed_int constructor indices (1-based):
+   Pos, Neg *)
+let signed_pos_idx = 1
+let signed_neg_idx = 2
 
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
@@ -3305,22 +3343,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
     | GlobRef.ConstructRef ((kn, i), cidx), [inner] ->
       let ind_ref = GlobRef.IndRef (kn, i) in
       ( match Table.get_numeral_info ind_ref with
-      | Some info ->
-        ( match try_fold_positive inner with
-        | Some pos_val ->
-          let z_val =
-            if cidx = 2 then pos_val
-            else if cidx = 3 then Int64.neg pos_val
-            else pos_val
-          in
-          let rendered =
-            Str.global_replace
-              (Str.regexp_string "%n")
-              (Int64.to_string z_val)
-              info.Table.num_fmt
-          in
-          Some (CPPraw rendered)
-        | None -> None )
+      | Some info -> try_fold_z_binary info cidx inner
       | None -> None )
     | _ -> None
   in
@@ -3596,9 +3619,13 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   in
   result
 
+(** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
+    in the ML AST and should be ignored by numeral-folding traversals. *)
+and strip_magic = function MLmagic e -> strip_magic e | e -> e
+
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
 and try_fold_numeral info expr =
-  match expr with
+  match strip_magic expr with
   | MLcons (_ty, cr, []) ->
     ( match cr with
     | GlobRef.ConstructRef (_, cidx) when cidx = info.Table.num_zero_ctor ->
@@ -3609,119 +3636,110 @@ and try_fold_numeral info expr =
     | GlobRef.ConstructRef (_, cidx) when cidx = info.Table.num_succ_ctor ->
       Option.map (fun n -> n + 1) (try_fold_numeral info inner)
     | _ -> None )
-  | MLmagic inner -> try_fold_numeral info inner
   | _ -> None
 
 (** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
     Returns [Some n] where [n > 0] if the entire chain can be folded, or
     [None] if any node is not a recognized positive constructor.
-    Constructors: xI(idx=0) = 2*n+1, xO(idx=1) = 2*n, xH(idx=2) = 1.
-
-    Only folds chains whose parent inductive is registered as [is_custom].
-    This is intentionally called from the Z constructor handler, so the
-    result can be rendered as [INT64_C(value)] instead of overflowing
-    unsigned-int arithmetic. *)
+    Constructor indices (1-based): xI=[positive_xI_idx], xO=[positive_xO_idx],
+    xH=[positive_xH_idx]. *)
 and try_fold_positive expr : int64 option =
-  match expr with
-  | MLcons (_, GlobRef.ConstructRef (_, 3), []) ->
-    (* xH = 1; constructor index 3 (1-based) *)
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), []) when idx = positive_xH_idx ->
     Some 1L
-  | MLcons (_, GlobRef.ConstructRef (_, 1), [inner]) ->
-    (* xI(n) = 2*n + 1; constructor index 1 (1-based) *)
+  | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) when idx = positive_xI_idx ->
     Option.map (fun n -> Int64.add (Int64.mul 2L n) 1L) (try_fold_positive inner)
-  | MLcons (_, GlobRef.ConstructRef (_, 2), [inner]) ->
-    (* xO(n) = 2*n; constructor index 2 (1-based) *)
+  | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) when idx = positive_xO_idx ->
     Option.map (fun n -> Int64.mul 2L n) (try_fold_positive inner)
-  | MLmagic inner -> try_fold_positive inner
   | _ -> None
 
+(** Fold a Zpos/Zneg constructor wrapping a positive chain into a rendered
+    numeral string.  [cidx] is the 1-based constructor index of the Z
+    constructor; [inner] is its positive argument.  Returns [None] if [inner]
+    cannot be folded. *)
+and try_fold_z_binary info cidx inner : cpp_expr option =
+  Option.map
+    (fun pos_val ->
+      let z_val =
+        if cidx = z_pos_idx then pos_val
+        else if cidx = z_neg_idx then Int64.neg pos_val
+        else pos_val
+      in
+      CPPraw (Str.global_replace (Str.regexp_string "%n")
+                (Int64.to_string z_val) info.Table.num_fmt))
+    (try_fold_positive inner)
+
 (** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
-    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., D9(idx=11, digit 9).
+    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[decimal_d9_idx].
     Digits are processed outside-in (most significant first).
     Uses [Z.t] from zarith to avoid overflow on large literals. *)
 and try_fold_decimal_uint expr acc =
-  match expr with
-  | MLcons (_, cr, []) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, 1) -> Some acc
-    | _ -> None )
-  | MLcons (_, cr, [inner]) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 11 ->
-      let digit = Z.of_int (cidx - 2) in
-      try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
-    | _ -> None )
-  | MLmagic inner -> try_fold_decimal_uint inner acc
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), []) when idx = uint_nil_idx ->
+    Some acc
+  | MLcons (_, GlobRef.ConstructRef (_, cidx), [inner])
+    when cidx >= decimal_d0_idx && cidx <= decimal_d9_idx ->
+    let digit = Z.of_int (cidx - decimal_d0_idx) in
+    try_fold_decimal_uint inner Z.(acc * of_int 10 + digit)
   | _ -> None
 
 (** Fold a Hexadecimal.uint digit chain into an arbitrary-precision integer.
-    Constructors: Nil(idx=1), D0(idx=2, digit 0), ..., Df(idx=17, digit 15).
+    Constructor indices (1-based): Nil=[uint_nil_idx], D0..[hex_df_idx].
     Uses [Z.t] from zarith to avoid overflow on large literals. *)
 and try_fold_hex_uint expr acc =
-  match expr with
-  | MLcons (_, cr, []) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, 1) -> Some acc
-    | _ -> None )
-  | MLcons (_, cr, [inner]) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, cidx) when cidx >= 2 && cidx <= 17 ->
-      let digit = Z.of_int (cidx - 2) in
-      try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
-    | _ -> None )
-  | MLmagic inner -> try_fold_hex_uint inner acc
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), []) when idx = uint_nil_idx ->
+    Some acc
+  | MLcons (_, GlobRef.ConstructRef (_, cidx), [inner])
+    when cidx >= hex_d0_idx && cidx <= hex_df_idx ->
+    let digit = Z.of_int (cidx - hex_d0_idx) in
+    try_fold_hex_uint inner Z.(acc * of_int 16 + digit)
   | _ -> None
 
 (** Fold a Number.uint (UIntDecimal | UIntHexadecimal) into an
     arbitrary-precision integer.
-    Constructors: UIntDecimal(idx=1), UIntHexadecimal(idx=2). *)
+    Constructor indices (1-based): UIntDecimal=[num_uint_decimal_idx],
+    UIntHexadecimal=[num_uint_hex_idx]. *)
 and try_fold_num_uint expr =
-  match expr with
-  | MLcons (_, cr, [inner]) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
-    | GlobRef.ConstructRef (_, 2) -> try_fold_hex_uint inner Z.zero
-    | _ -> None )
-  | MLmagic inner -> try_fold_num_uint inner
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) ->
+    if idx = num_uint_decimal_idx then try_fold_decimal_uint inner Z.zero
+    else if idx = num_uint_hex_idx then try_fold_hex_uint inner Z.zero
+    else None
   | _ -> None
 
 (** Fold a Decimal.signed_int (Pos | Neg) wrapping a Decimal.uint chain.
-    Constructors: Pos(idx=1), Neg(idx=2). *)
+    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
 and try_fold_signed_decimal_int expr =
-  match expr with
-  | MLcons (_, cr, [inner]) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, 1) -> try_fold_decimal_uint inner Z.zero
-    | GlobRef.ConstructRef (_, 2) ->
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) ->
+    if idx = signed_pos_idx then try_fold_decimal_uint inner Z.zero
+    else if idx = signed_neg_idx then
       Option.map Z.neg (try_fold_decimal_uint inner Z.zero)
-    | _ -> None )
-  | MLmagic inner -> try_fold_signed_decimal_int inner
+    else None
   | _ -> None
 
 (** Fold a Hexadecimal.signed_int (Pos | Neg) wrapping a Hexadecimal.uint chain.
-    Constructors: Pos(idx=1), Neg(idx=2). *)
+    Constructor indices (1-based): Pos=[signed_pos_idx], Neg=[signed_neg_idx]. *)
 and try_fold_signed_hex_int expr =
-  match expr with
-  | MLcons (_, cr, [inner]) ->
-    ( match cr with
-    | GlobRef.ConstructRef (_, 1) -> try_fold_hex_uint inner Z.zero
-    | GlobRef.ConstructRef (_, 2) ->
+  match strip_magic expr with
+  | MLcons (_, GlobRef.ConstructRef (_, idx), [inner]) ->
+    if idx = signed_pos_idx then try_fold_hex_uint inner Z.zero
+    else if idx = signed_neg_idx then
       Option.map Z.neg (try_fold_hex_uint inner Z.zero)
-    | _ -> None )
-  | MLmagic inner -> try_fold_signed_hex_int inner
+    else None
   | _ -> None
 
 (** Fold a Number.signed_int (IntDecimal | IntHexadecimal) into an
     arbitrary-precision integer.
     Constructors: IntDecimal(idx=1), IntHexadecimal(idx=2). *)
 and try_fold_num_int expr =
-  match expr with
+  match strip_magic expr with
   | MLcons (_, cr, [inner]) ->
     ( match cr with
     | GlobRef.ConstructRef (_, 1) -> try_fold_signed_decimal_int inner
     | GlobRef.ConstructRef (_, 2) -> try_fold_signed_hex_int inner
     | _ -> None )
-  | MLmagic inner -> try_fold_num_int inner
   | _ -> None
 
 (** Generate C++ expression from ML AST. Main expression compiler - handles
@@ -3869,17 +3887,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
        (e.g. captured by a closure, stored in a constructor, or returned), it
        is marked as owned.  See {!Escape.infer_owned_params}. *)
     let n_all_params = List.length lam_params in
-    let owned_flags = Escape.infer_owned_params n_all_params a in
-    (* sub_bindings_escape extends owned_flags for parameters whose sub-bindings
-       escape into constructors — useful for pair params so components can be
-       moved.  Only apply it for value types (custom prod/option etc.), NOT for
-       shared_ptr-backed types (list, cofix, etc.) where moving a by-value loop
-       variable before using refs into it causes UB in the loopified transform. *)
-    let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_all_params a in
-    let owned_flags =
-      List.map2 (fun (base, sub_esc) (_, ty) ->
-        base || (sub_esc && is_prod_ml_type ty))
-        (List.combine owned_flags sub_escape_flags) args
+    let owned_flags = infer_owned_flags n_all_params a args
     in
     let args_with_owned =
       List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
@@ -4386,22 +4394,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
         let z_folded =
           match (_ts, r) with
           | [inner], GlobRef.ConstructRef (_, cidx) ->
-            ( match try_fold_positive inner with
-            | Some pos_val ->
-              let z_val =
-                if cidx = 2 then (* Zpos; ctor 2, 1-based *) pos_val
-                else if cidx = 3 then (* Zneg; ctor 3, 1-based *)
-                  Int64.neg pos_val
-                else 0L
-              in
-              let rendered =
-                Str.global_replace
-                  (Str.regexp_string "%n")
-                  (Int64.to_string z_val)
-                  info.Table.num_fmt
-              in
-              Some (CPPraw rendered)
-            | None -> None )
+            try_fold_z_binary info cidx inner
           | _ -> None
         in
         ( match z_folded with
@@ -4623,9 +4616,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
               (* Resolve any metas in the expected type before matching.
                  The let-binding type may be Tmeta{Some Tglob(...)} so we
                  need to unwrap the meta to get the concrete Tglob. *)
-              let expected_resolved = match tctx.expected_ml_type_for_arg with
-                | Some exp -> Some (resolve_tmeta exp)
-                | None -> None
+              let expected_resolved = Option.map resolve_tmeta tctx.expected_ml_type_for_arg
               in
               (match expected_resolved with
               | Some (Miniml.Tglob (exp_n, exp_tys, _))
@@ -5436,11 +5427,8 @@ and eta_fun env f args =
                   (fun ml_arg ->
                     match ml_arg with
                     | MLrel i ->
-                      ( match get_param_type_by_index i with
-                      | Some ml_ty ->
-                        Some (convert_ml_type_to_cpp_type
-                                env Refset'.empty tvars ml_ty)
-                      | None -> None )
+                      Option.map (convert_ml_type_to_cpp_type env Refset'.empty tvars)
+                        (get_param_type_by_index i)
                     | _ -> None )
                   excess_args
               in
@@ -6864,10 +6852,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         Array.to_list pv
         |> List.find_opt (fun (_, _, p, _) -> match p with Pwild -> true | _ -> false)
       in
-      match wild_br with
-      | Some (_, _, _, body) ->
-        Some (gen_stmts env (fun x -> Sreturn (Some x)) body)
-      | None -> None
+      Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
     in
     let tvars = get_current_type_vars () in
     (* Compute IIFE return type.  Void: [-> void] is required when the lambda
@@ -7216,6 +7201,15 @@ and collect_recursive_ns ml_ty =
   | Miniml.Tmeta {contents = Some t} -> collect_recursive_ns t
   | _ -> Refset'.empty
 
+(** True when environment variable at de Bruijn index [i] has an erased C++
+    type (i.e. [std::any] or a dummy type, arising from dependent-parameter
+    collapse).  Returns [false] if [i] is out of range. *)
+and is_env_var_erased env tvars i =
+  match (try Some (get_env_type i) with _ -> None) with
+  | Some ml_ty ->
+    is_erased_type (convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty)
+  | None -> false
+
 and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
   let tvars = get_current_type_vars () in
   let ret = convert_ml_type_to_cpp_type env Refset'.empty tvars rty in
@@ -7251,18 +7245,10 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
   let k =
     match ret with
     | Tvar _ ->
-      let is_erased_db i =
-        let ml_ty = try Some (get_env_type i) with _ -> None in
-        match ml_ty with
-        | Some ml_ty ->
-          let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
-          is_erased_type cpp_ty
-        | None -> false
-      in
       let body_is_erased =
         match body with
-        | MLrel i -> is_erased_db i
-        | Miniml.MLmagic (MLrel i) -> is_erased_db i
+        | MLrel i -> is_env_var_erased env tvars i
+        | Miniml.MLmagic (MLrel i) -> is_env_var_erased env tvars i
         | _ -> false
       in
       if body_is_erased then (fun e -> k (CPPany_cast (ret, e)))
@@ -7391,7 +7377,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     if scrut_is_magic && pair_g_opt <> None then
       match pair_g_opt with
       | Some g -> (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
-      | None -> assert false
+      | None -> CErrors.anomaly (Pp.str "gen_cpp_case: pair inductive not found")
     else if scrut_is_magic && not (is_erased_type concrete_match_type) then
       (CPPany_cast (concrete_match_type, t), false)
     else if is_erased_type typ then
@@ -7862,53 +7848,39 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
       | [Sswitch (scrut, ind_ref, branches, default)] ->
         let default' =
           match default with
-          | Some stmts -> ( match replace_last_return stmts with
-            | Some stmts' -> Some (Some stmts')
-            | None -> None )
+          | Some stmts -> Option.map (fun s -> Some s) (replace_last_return stmts)
           | None -> Some None
         in
         ( match (map_all_or_none
             (fun (id, stmts) ->
-              match replace_last_return stmts with
-              | Some stmts' -> Some (id, stmts')
-              | None -> None )
+              Option.map (fun stmts' -> (id, stmts')) (replace_last_return stmts))
             branches, default')
         with
         | Some branches', Some default' -> Some [Sswitch (scrut, ind_ref, branches', default')]
         | _ -> None )
       | [Scustom_case (ty, scrut, tyargs, branches, cmatch)] ->
-        ( match map_all_or_none
+        Option.map
+          (fun branches' -> [Scustom_case (ty, scrut, tyargs, branches', cmatch)])
+          (map_all_or_none
             (fun (args, bty, stmts) ->
-              match replace_last_return stmts with
-              | Some stmts' -> Some (args, bty, stmts')
-              | None -> None )
-            branches
-        with
-        | Some branches' ->
-          Some [Scustom_case (ty, scrut, tyargs, branches', cmatch)]
-        | None -> None )
+              Option.map (fun stmts' -> (args, bty, stmts')) (replace_last_return stmts))
+            branches)
       | [Smatch (branches, default)] ->
         let default' =
           match default with
-          | Some stmts -> ( match replace_last_return stmts with
-            | Some stmts' -> Some (Some stmts')
-            | None -> None )
+          | Some stmts -> Option.map (fun s -> Some s) (replace_last_return stmts)
           | None -> Some None
         in
         ( match (map_all_or_none
             (fun br ->
-              match replace_last_return br.smb_body with
-              | Some body' -> Some { br with smb_body = body' }
-              | None -> None )
+              Option.map (fun body' -> { br with smb_body = body' }) (replace_last_return br.smb_body))
             branches, default')
         with
         | Some branches', Some default' ->
           Some [Smatch (branches', default')]
         | _ -> None )
       | stmt :: rest when rest <> [] ->
-        ( match replace_last_return rest with
-        | Some rest' -> Some (stmt :: rest')
-        | None -> None )
+        Option.map (fun rest' -> stmt :: rest') (replace_last_return rest)
       | _ -> None
     in
     ( match replace_last_return body with
@@ -9882,14 +9854,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         | Some i ->
           (match tctx.current_cpp_return_type with
            | Some (Tvar _ as ret_ty) when ret_ty <> Tany ->
-             let ml_ty = try Some (get_env_type i) with _ -> None in
-             let is_erased = match ml_ty with
-               | Some ml_ty ->
-                 let tvars = get_current_type_vars () in
-                 is_erased_type (convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty)
-               | None -> false
-             in
-             if is_erased then CPPany_cast (ret_ty, e) else e
+             let tvars = get_current_type_vars () in
+             if is_env_var_erased env tvars i then CPPany_cast (ret_ty, e) else e
            | _ -> e)
         | None -> e
       in
@@ -11804,21 +11770,8 @@ let gen_dfun n b cty ty temps =
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
   reset_env_types ();
   push_env_types all_ids;
-  (* Infer owned/borrowed for each parameter. all_params has n elements in de
-     Bruijn order (element 0 = de Bruijn 1 = innermost). infer_owned_params
-     returns a bool list in the same order. *)
   let n_params = List.length all_params in
-  let owned_flags = Escape.infer_owned_params n_params b in
-  (* Apply sub_bindings_escape only for prod/pair-typed params: ownership lets
-     the pair template generate move-bindings from .first/.second. Not useful
-     for other custom types (optional, mpz, etc.) where sub-bindings are
-     computed values, not structural fields. *)
-  let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_params b in
-  let owned_flags =
-    List.map2 (fun (base, sub_esc) (_, ty) ->
-      base || (sub_esc && is_prod_ml_type ty))
-      (List.combine owned_flags sub_escape_flags) all_ids
-  in
+  let owned_flags = infer_owned_flags n_params b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
      length (push_vars' preserves length), so owned_flags aligns 1:1. *)
   let all_ids_with_owned =
@@ -12277,19 +12230,13 @@ let gen_dfun n b cty ty temps =
 let gen_sfun n b dom cod temps =
   let all_params, b = collect_lams b in
   let n_params = List.length all_params in
-  let owned_flags = Escape.infer_owned_params n_params b in
+  let owned_flags = infer_owned_flags n_params b all_params in
   let ids, env =
     push_vars'
       (List.map
          (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
          all_params )
       (empty_env ())
-  in
-  let sub_escape_flags = Escape.infer_sub_bindings_escape_params n_params b in
-  let owned_flags =
-    List.map2 (fun (base, sub_esc) (_, ty) ->
-      base || (sub_esc && is_prod_ml_type ty))
-      (List.combine owned_flags sub_escape_flags) ids
   in
   (* Zip with ownership flags, then filter out void params *)
   let ids_with_owned =
@@ -12977,129 +12924,6 @@ let gen_decl_for_pp_dual ~is_header n b ty =
     let spec_ds, spec_env = gen_spec n b ty in
     (Some (spec_ds, spec_env), None, tvars)
 
-(** Generate C++ struct for an inductive type (old version).
-    @param consarg_names  binder names from {!Miniml.ml_ind_packet.ip_consarg_names};
-      when provided, struct fields use descriptive names instead of [d_aJ]. *)
-let gen_ind_header ?(consarg_names = [||]) vars name cnames tys =
-  let templates = List.map (fun n -> (TTtypename, n)) vars in
-  let add_templates d =
-    match templates with
-    | [] -> d
-    | _ -> Dtemplate (templates, None, d)
-  in
-  let header =
-    Array.to_list (Array.map (fun x -> add_templates (Dstruct_decl x)) cnames)
-  in
-  let vartydecl =
-    add_templates
-      (Dusing
-         ( name,
-           Tvariant
-             (Array.to_list
-                (Array.map
-                   (fun x ->
-                     Tglob
-                       (x, List.mapi (fun i id -> Tvar (i, Some id)) vars, []) )
-                   cnames ) ) ) )
-  in
-  let constrdecl =
-    Array.to_list
-      (Array.mapi
-         (fun i tys ->
-           let c = cnames.(i) in
-           let ctor_struct_name = ctor_struct_name_of_ref ~fallback_idx:i c in
-           let ctor_consarg_names =
-             if i < Array.length consarg_names then consarg_names.(i)
-             else []
-           in
-           let n_fields = List.length tys in
-           let field_ids =
-             compute_and_register_field_names ctor_struct_name
-               (augment_with_args_renaming c ctor_consarg_names)
-               ctor_consarg_names n_fields
-           in
-           let constr =
-             List.mapi
-               (fun i x ->
-                 ( List.nth field_ids i,
-                   convert_ml_type_to_cpp_type
-                     (empty_env ())
-                     (Refset'.add name Refset'.empty)
-                     vars
-                     x ) )
-               tys
-           in
-           (* For function parameters, use const ref for shared_ptr types *)
-           let constr_params =
-             List.map
-               (fun (x, ty) ->
-                 let wrapped =
-                   match ty with
-                   | Tshared_ptr _ ->
-                     Tref (Tmod (TMconst, ty)) (* const std::shared_ptr<T>& *)
-                   | _ -> ty
-                 in
-                 (x, wrapped) )
-               constr
-           in
-           let make_args =
-             List.map
-               (fun (x, _) -> mk_cppglob_local (GlobRef.VarRef x) [])
-               constr
-           in
-           let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
-           let make_decl =
-             Ffundecl
-               ( Id.of_string "make",
-                 Tmod (TMstatic, ind_ty_ptr name ty_vars),
-                 List.rev constr_params )
-           in
-           let make_def =
-             Ffundef
-               ( Id.of_string "make",
-                 Tmod (TMstatic, Tshared_ptr (Tglob (name, ty_vars, []))),
-                 constr_params,
-                 [
-                   Sreturn
-                     (Some
-                        (CPPfun_call
-                           ( CPPmk_shared (Tglob (name, ty_vars, [])),
-                             [CPPstruct (c, ty_vars, make_args)] ) ) );
-                 ] )
-           in
-           let fields =
-             if ty_vars == [] then
-               List.append
-                 (List.map
-                    (fun (x, y) -> (Fvar (x, y), VPublic, SNoTag))
-                    constr )
-                 [(make_decl, VPublic, SNoTag)]
-             else
-               List.append
-                 (List.map
-                    (fun (x, y) -> (Fvar (x, y), VPublic, SNoTag))
-                    constr )
-                 [(make_def, VPublic, SNoTag)]
-           in
-           Dstruct
-             {
-               ds_ref = c;
-               ds_fields = fields;
-               ds_tparams = templates;
-               ds_constraint = None;
-               ds_needs_shared_from_this = false;
-             } )
-         tys )
-  in
-  Dnspace (Some name, List.append (List.append header [vartydecl]) constrdecl)
-
-(** Replace [Sreturn (Some CPPthis)] with
-    [Sreturn (Some (CPPshared_from_this inner_ty))] in method bodies, including
-    inside lambdas (e.g., std::visit branches). When a method returns [this]
-    directly, the generated C++ would produce [return this;] which fails because
-    [this] is a raw pointer but the return type is [std::shared_ptr<T>]. Using
-    [shared_from_this()] with [const_pointer_cast] produces a valid [shared_ptr]
-    from the raw pointer. *)
 let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
   | CPPlambda (params, ret, body, cap) ->
@@ -13882,6 +13706,7 @@ let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
     @param is_mutual     true when this type is part of a mutual block
     @param consarg_names field names from Rocq binders, indexed by constructor
     @param mutual_partners other types in the mutual block *)
+
 let gen_ind_header_v2
     ?(is_mutual = false)
     ?(consarg_names = [||])
@@ -14844,7 +14669,7 @@ let gen_ind_header_v2
                                        Id.of_string "v", [])
                   in
                   let rec build_if_chain = function
-                    | [] -> assert false
+                    | [] -> CErrors.anomaly (Pp.str "iterative_destructor: empty constructor list")
                     | [(_, cname_id, field_info, converted)] ->
                       (* Last branch: no guard *)
                       make_branch_body cname_id field_info converted

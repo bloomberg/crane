@@ -64,12 +64,6 @@ val pp_apply : Pp.t -> bool -> Pp.t list -> Pp.t
     comma-separated arguments). *)
 val pp_apply_cpp : Pp.t -> Pp.t list -> Pp.t
 
-(** Same as [pp_apply], but with also protection of the head by parenthesis *)
-val pp_apply2 : Pp.t -> bool -> Pp.t list -> Pp.t
-
-(** Print elements as a tuple; single elements are not parenthesized. *)
-val pp_tuple_light : (bool -> 'a -> Pp.t) -> 'a list -> Pp.t
-
 (** Print elements as a comma-separated tuple with parens. *)
 val pp_tuple : ('a -> Pp.t) -> 'a list -> Pp.t
 
@@ -81,9 +75,6 @@ val pp_list_newline : ('a -> Pp.t) -> 'a list -> Pp.t
 
 (** Print elements as newline-separated statements. *)
 val pp_list_stmt : ('a -> Pp.t) -> 'a list -> Pp.t
-
-(** Print elements as semicolon-separated array. *)
-val pp_array : ('a -> Pp.t) -> 'a list -> Pp.t
 
 (** Print elements as a boxed tuple with line-break hints. *)
 val pp_boxed_tuple : ('a -> Pp.t) -> 'a list -> Pp.t

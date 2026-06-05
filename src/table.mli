@@ -215,6 +215,9 @@ val get_ind_nparams_opt : MutInd.t -> int option
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
 
+val ind_param_vars :
+  Miniml.ml_ind -> Miniml.ml_ind_packet -> Names.Id.t list * int
+
 (** Add inductive kind to table. *)
 val add_inductive_kind : MutInd.t -> inductive_kind -> unit
 

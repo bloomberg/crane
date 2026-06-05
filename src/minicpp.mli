@@ -312,6 +312,8 @@ and cpp_expr =
   | CPPraw of string  (** Raw C++ expression code *)
   | CPPbinop of string * cpp_expr * cpp_expr
       (** Binary operator for reuse optimization conditions *)
+  | CPPpair of cpp_expr * cpp_expr
+      (** Loopify-internal pair; never reaches the printer *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
       (** Ternary conditional: cond ? then_expr : else_expr *)
   | CPPbool of bool  (** Boolean literal: true/false *)

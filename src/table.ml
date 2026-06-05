@@ -234,15 +234,21 @@ let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 let get_ind_nparams_opt kn =
   try Some (unsafe_lookup_ind kn).ind_nparams with Not_found -> None
 
-(* Get the number of parameter type vars for an inductive (via ip_sign). This
-   counts how many Keep entries are in the first nparams positions of
-   ip_sign. *)
+let ind_param_vars ind p =
+  let sign_len = List.length p.Miniml.ip_sign in
+  let nparams = min ind.Miniml.ind_nparams sign_len in
+  let param_sign = List.firstn nparams p.Miniml.ip_sign in
+  let num_param_vars =
+    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+  in
+  (List.firstn num_param_vars p.Miniml.ip_vars, num_param_vars)
+
+(* Get the number of parameter type vars for an inductive (via ip_sign). *)
 let get_ind_num_param_vars_opt kn =
   try
     let ind = unsafe_lookup_ind kn in
-    let packet = ind.ind_packets.(0) in
-    let param_sign = List.firstn ind.ind_nparams packet.ip_sign in
-    Some (List.length (List.filter (fun x -> x == Miniml.Keep) param_sign))
+    let (_, n) = ind_param_vars ind ind.ind_packets.(0) in
+    Some n
   with Not_found | Invalid_argument _ -> None
 
 let inductive_kinds = ref (Mindmap_env.empty : inductive_kind Mindmap_env.t)
@@ -432,12 +438,7 @@ let is_flat_inductive_packet kn ind i =
     if n_ctors <> 1 then false
     else
       let is_mutual = Array.length ind.ind_packets > 1 in
-      let sign_len = List.length p.ip_sign in
-      let nparams = min ind.ind_nparams sign_len in
-      let param_sign = List.firstn nparams p.ip_sign in
-      let num_param_vars =
-        List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-      in
+      let (_, num_param_vars) = ind_param_vars ind p in
       let is_coinductive_ind =
         match Mindmap_env.find_opt kn !inductive_kinds with
         | Some Coinductive -> true
@@ -483,10 +484,7 @@ let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
 let is_enum_inductive_packet ind i =
   let p = ind.ind_packets.(i) in
   let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
-  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-  let num_param_vars =
-    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-  in
+  let (_, num_param_vars) = ind_param_vars ind p in
   all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
 
 let is_enum_inductive r =

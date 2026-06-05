@@ -45,7 +45,7 @@ let last lst =
   in
   match lst with
   | a :: rest -> aux a rest
-  | [] -> failwith "last: empty list"
+  | [] -> CErrors.anomaly (Pp.str "Common.last: empty list")
 
 (** [last_two lst] returns the last two elements of a list with at least two
     elements.
@@ -57,7 +57,7 @@ let last_two lst =
   in
   match lst with
   | a :: b :: rest -> aux (a, b) rest
-  | _ -> failwith "last_two: list has fewer than 2 elements"
+  | _ -> CErrors.anomaly (Pp.str "Common.last_two: fewer than 2 elements")
 
 (** [extract_at_pos pos lst] extracts the element at position [pos] from [lst].
     Returns (Some element, remaining_list) or (None, original_list) if pos is
@@ -131,22 +131,10 @@ let pp_apply_cpp st args =
     @param st   The head expression, always parenthesized when [args] is non-empty
     @param par  Whether to parenthesize the whole application
     @param args The argument documents *)
-let pp_apply2 st par args =
-  let par' = (not (List.is_empty args)) || par in
-  pp_apply (pp_par par' st) par args
-
 (** Print a list of identifiers as space-separated bindings. *)
 let pr_binding = function
   | [] -> mt ()
   | l -> str " " ++ prlist_with_sep (fun () -> str " ") Id.print l
-
-(** Print elements as a tuple; single elements are not parenthesized.
-    @param f Printing function; receives a boolean indicating whether the element
-             needs parenthesization (true for single-element case) *)
-let pp_tuple_light f = function
-  | [] -> mt ()
-  | [x] -> f true x
-  | l -> pp_par true (prlist_with_sep (fun () -> str "," ++ spc ()) (f false) l)
 
 (** Print elements as a comma-separated tuple with parens.
     @param f Printing function applied to each element *)
@@ -182,13 +170,6 @@ let pp_boxed_tuple f = function
   | [] -> mt ()
   | [x] -> f x
   | l -> pp_par true (hov 0 (prlist_with_sep (fun () -> str "," ++ spc ()) f l))
-
-(** Print elements as semicolon-separated array.
-    @param f Printing function applied to each element *)
-let pp_array f = function
-  | [] -> mt ()
-  | [x] -> f x
-  | l -> pp_par true (prlist_with_sep (fun () -> str ";" ++ spc ()) f l)
 
 (** By default, in module Format, you can do horizontal placing of blocks even
     if they include newlines, as long as the number of chars in the blocks is

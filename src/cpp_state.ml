@@ -434,76 +434,42 @@ type std_names = {
   get : string; (* "std::get" or "bsl::get" *)
 }
 
-(** Global reference to standard library names, initialized by init_std_names.
-*)
-let std_names : std_names ref =
-  ref
-    {
-      shared_ptr = "std::shared_ptr";
-      make_shared = "std::make_shared";
-      visit = "std::visit";
-      move = "std::move";
-      forward = "std::forward";
-      any_cast = "std::any_cast";
-      logic_error = "std::logic_error";
-      overloaded = "Overloaded";
-      ns = "std";
-      str_suffix = "s";
-      same_as = "std::same_as";
-      declval = "std::declval";
-      convertible_to = "std::convertible_to";
-      holds_alternative = "std::holds_alternative";
-      get_if = "std::get_if";
-      get = "std::get";
-    }
+let default_std_names =
+  {
+    shared_ptr = "std::shared_ptr";
+    make_shared = "std::make_shared";
+    visit = "std::visit";
+    move = "std::move";
+    forward = "std::forward";
+    any_cast = "std::any_cast";
+    logic_error = "std::logic_error";
+    overloaded = "Overloaded";
+    ns = "std";
+    str_suffix = "s";
+    same_as = "std::same_as";
+    declval = "std::declval";
+    convertible_to = "std::convertible_to";
+    holds_alternative = "std::holds_alternative";
+    get_if = "std::get_if";
+    get = "std::get";
+  }
 
-(** Create a std_names record with the given prefix.
-    @param prefix the namespace prefix to apply, either ["bsl::"] for BDE or
-      any other string to get the default ["std::"] names
-    @return a fully populated [std_names] record with all identifiers prefixed
-      appropriately (e.g., [prefix ^ "shared_ptr"], ["bdlf::Overloaded"] for
-      BDE, etc.) *)
+(** Global reference to standard library names, initialized by init_std_names. *)
+let std_names : std_names ref = ref default_std_names
+
 let mk_std_names prefix =
   match prefix with
   | "bsl::" ->
-    {
-      shared_ptr = prefix ^ "shared_ptr";
-      make_shared = prefix ^ "make_shared";
-      visit = prefix ^ "visit";
-      move = prefix ^ "move";
-      forward = prefix ^ "forward";
-      any_cast = prefix ^ "any_cast";
-      logic_error = prefix ^ "logic_error";
-      overloaded = "bdlf::Overloaded";
-      ns = "bsl";
-      str_suffix = "_s";
-      same_as = "same_as";
-      declval = prefix ^ "declval";
+    let p = prefix in
+    { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
+      visit = p ^ "visit"; move = p ^ "move"; forward = p ^ "forward";
+      any_cast = p ^ "any_cast"; logic_error = p ^ "logic_error";
+      overloaded = "bdlf::Overloaded"; ns = "bsl"; str_suffix = "_s";
+      same_as = "same_as"; declval = p ^ "declval";
       convertible_to = "convertible_to";
-      holds_alternative = prefix ^ "holds_alternative";
-      get_if = prefix ^ "get_if";
-      get = prefix ^ "get";
-    }
-  | _ ->
-    (* Default to "std::" *)
-    {
-      shared_ptr = "std::shared_ptr";
-      make_shared = "std::make_shared";
-      visit = "std::visit";
-      move = "std::move";
-      forward = "std::forward";
-      any_cast = "std::any_cast";
-      logic_error = "std::logic_error";
-      overloaded = "Overloaded";
-      ns = "std";
-      str_suffix = "s";
-      same_as = "std::same_as";
-      declval = "std::declval";
-      convertible_to = "std::convertible_to";
-      holds_alternative = "std::holds_alternative";
-      get_if = "std::get_if";
-      get = "std::get";
-    }
+      holds_alternative = p ^ "holds_alternative";
+      get_if = p ^ "get_if"; get = p ^ "get" }
+  | _ -> default_std_names
 
 (** Initialize standard library names based on Table.std_lib() setting. *)
 let init_std_names () =

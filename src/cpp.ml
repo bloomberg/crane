@@ -915,16 +915,8 @@ let rec pp_structure_elem ~is_header f = function
                           !eponymous_type_ref
                         = Some true
                       then
-                        let param_sign =
-                          List.firstn ind.ind_nparams p.ip_sign
-                        in
-                        let num_param_vars =
-                          List.length
-                            (List.filter
-                               (fun x -> x == Miniml.Keep)
-                               param_sign )
-                        in
-                        found := Some (List.firstn num_param_vars p.ip_vars) )
+                        let (param_vars, _) = Table.ind_param_vars ind p in
+                        found := Some param_vars )
                     ind.ind_packets;
                   !found
                 | _ -> None )

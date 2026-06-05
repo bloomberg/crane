@@ -518,7 +518,8 @@ let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc
     back into a single string. *)
 let flatten_custom_strings cmds =
   String.concat ""
-    (List.map (function CCstring s -> s | _ -> assert false) cmds)
+    (List.map (function CCstring s -> s
+      | _ -> CErrors.anomaly (Pp.str "flatten_custom_strings: non-string command")) cmds)
 
 (** Get the number of template type parameters for an inductive reference,
     defaulting to 2 when unavailable. *)
@@ -1019,7 +1020,7 @@ and pp_cpp_expr env args t =
             match resolved_ty with
             | Tnamespace (_, Tglob (g, [elem_ty], _)) -> g, elem_ty
             | Tglob (g, [elem_ty], _) -> g, elem_ty
-            | _ -> assert false
+            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
           in
           let list_any_ty =
             match resolved_ty with
@@ -1027,7 +1028,7 @@ and pp_cpp_expr env args t =
               Tnamespace (ns_g, Tglob (g, [Tany], []))
             | Tglob (g, _, _) ->
               Tglob (g, [Tany], [])
-            | _ -> assert false
+            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
           in
           if Table.is_custom g_of_list then begin
             require_header "any";
@@ -1394,8 +1395,10 @@ and pp_cpp_expr env args t =
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
           ++ pp br1.smb_scrutinee ++ str ")"
         in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
-        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
+        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
         (cond, e1, e2)
       | [br1], Some [Sreturn (Some e2)] ->
         let cond =
@@ -1403,9 +1406,10 @@ and pp_cpp_expr env args t =
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
           ++ pp br1.smb_scrutinee ++ str ")"
         in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
         (cond, e1, e2)
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected branch structure")
     in
     str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
   | CPPfun_call
@@ -1434,11 +1438,11 @@ and pp_cpp_expr env args t =
     let pp = pp_cpp_expr env args in
     let e1 = match branches with
       | (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     let e2 = match branches with
       | _ :: (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call (CPPglob (r, [], _), [arg]) when Table.is_projection r ->
@@ -1930,6 +1934,8 @@ and pp_cpp_expr env args t =
     ++ str op
     ++ str " "
     ++ paren_child rhs
+  | CPPpair _ ->
+    CErrors.anomaly (Pp.str "CPPpair reached the printer; this is a loopify-internal node")
   | CPPcond (cond, then_expr, else_expr) ->
     pp_cpp_expr env args cond
     ++ str " ? "
@@ -2385,7 +2391,8 @@ and pp_cpp_stmt env args = function
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
          No if/else needed. *)
-      let br = match branches with br :: _ -> br | [] -> assert false in
+      let br = match branches with br :: _ -> br
+        | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt Smatch: empty branch list") in
       let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
       if binding = mt () then body_pp
@@ -2607,7 +2614,7 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
           Tnamespace (ns_g, Tglob (g, [Tany], []))
         | Tglob (g, _, _) ->
           Tglob (g, [Tany], [])
-        | _ -> assert false
+        | _ -> CErrors.anomaly (Pp.str "pp_cpp_type Tshared_ptr: expected list type")
       in
       pp_cpp_type false vl resolved_ty
       ++ str "("
@@ -2948,6 +2955,8 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
   in
   fold_cmds (mt ()) cmds
 
+let pp_type t = pp_cpp_type false [] t
+
 (** Print a template parameter type keyword (typename or concept constraint). *)
 let pp_template_type = function
   | TTtypename -> str "typename"
@@ -2963,7 +2972,7 @@ let pp_template_param (tt, id) =
     ++ spc ()
     ++ Id.print id
     ++ str " = "
-    ++ pp_cpp_type false [] default_ty
+    ++ pp_type default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
 (** Build a [requires] clause from template parameters that have [TTfun]
@@ -2987,10 +2996,10 @@ let pp_requires_of_tparams tparams =
         match tt with
         | TTfun (dom, cod) ->
           require_header "type_traits";
-          let pp_ref ty = pp_cpp_type false [] ty ++ str " &" in
+          let pp_ref ty = pp_type ty ++ str " &" in
           Some
             ( str invocable_r ++ str "<"
-            ++ pp_cpp_type false [] cod
+            ++ pp_type cod
             ++ str ", "
             ++ Id.print id ++ str " &"
             ++ List.fold_left
@@ -3040,10 +3049,10 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       else id_str
     in
     pp_doc_comment_for_name rocq_name
-    ++ h (pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";")
+    ++ h (pp_type ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
     pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
+    ++ h (pp_type ty ++ str " " ++ pp_global Type id ++ str ";")
   | Ffundef (id, ret_ty, params, body) ->
     let saved_any_params = !current_any_typed_params in
     current_any_typed_params :=
@@ -3053,7 +3062,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         Id.Set.empty params;
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
@@ -3064,7 +3073,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     current_any_typed_params := saved_any_params;
     h
       ( qualifier
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s
@@ -3075,7 +3084,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
   | Ffundecl (id, ret_ty, params) ->
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let qualifier =
@@ -3083,7 +3092,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     h
       ( qualifier
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s )
@@ -3119,8 +3128,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
           if
             (not (Id.Set.mem id used_ids))
             && not (String.equal (Id.to_string mf_name) "operator=")
-          then pp_cpp_type false [] ty
-          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          then pp_type ty
+          else pp_type ty ++ str " " ++ Id.print id)
         mf_params
     in
     current_any_typed_params := saved_any_params;
@@ -3146,7 +3155,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
          ( inline_s
          ++ qualifier
          ++ static_s
-         ++ pp_cpp_type false [] mf_ret_type
+         ++ pp_type mf_ret_type
          ++ str " "
          ++ Id.print mf_name
          ++ pp_par true params_s
@@ -3164,7 +3173,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let init_s =
@@ -3216,7 +3225,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       ( str "using "
       ++ Id.print id
       ++ str " = "
-      ++ pp_cpp_type false [] ty
+      ++ pp_type ty
       ++ str ";" )
   | Fdeleted_ctor ->
     let sname =
@@ -3240,7 +3249,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let explicit_s = if is_explicit then str "explicit " else mt () in
@@ -3377,13 +3386,13 @@ let pp_meyers_singleton env id ty expr_pp =
   in
   h
     ( str "static const "
-    ++ pp_cpp_type false [] bare_ty
+    ++ pp_type bare_ty
     ++ str "& "
     ++ pp_global Type id
     ++ str "() {" )
   ++ fnl ()
   ++ str "  static const "
-  ++ pp_cpp_type false [] bare_ty
+  ++ pp_type bare_ty
   ++ str " v = "
   ++ expr_pp
   ++ str ";"
@@ -3408,7 +3417,7 @@ let maybe_loopify decl =
     | None -> Table.loopify ()
   in
   if should then
-    let pp_type t = Pp.string_of_ppcmds (pp_cpp_type false [] t) in
+    let pp_type t = Pp.string_of_ppcmds (pp_type t) in
     let pp_expr e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e) in
     Loopify.transform_decl ~pp_type ~pp_expr decl
   else
@@ -3573,8 +3582,8 @@ and pp_cpp_decl_raw env = function
     let params_s =
       pp_list
         (fun (id, ty) ->
-          if not (Id.Set.mem id used_ids) then pp_cpp_type false [] ty
-          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          if not (Id.Set.mem id used_ids) then pp_type ty
+          else pp_type ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let pp_fundef_name n =
@@ -3591,7 +3600,7 @@ and pp_cpp_decl_raw env = function
           | _ ->
             pp_fundef_name n
             ++ str "<"
-            ++ pp_list (pp_cpp_type false []) tys
+            ++ pp_list (pp_type) tys
             ++ str ">" )
         ids
     in
@@ -3650,7 +3659,7 @@ and pp_cpp_decl_raw env = function
     h
       ( qualifier
       ++ static_kw
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ name
       ++ pp_par true params_s )
@@ -3662,8 +3671,8 @@ and pp_cpp_decl_raw env = function
       pp_list
         (fun (id, ty) ->
           match id with
-          | Some id -> pp_cpp_type false [] ty ++ str " " ++ Id.print id
-          | None -> pp_cpp_type false [] ty )
+          | Some id -> pp_type ty ++ str " " ++ Id.print id
+          | None -> pp_type ty )
         (List.rev params)
     in
     let name =
@@ -3675,7 +3684,7 @@ and pp_cpp_decl_raw env = function
           | _ ->
             pp_global Type n
             ++ str "<"
-            ++ pp_list (pp_cpp_type false []) tys
+            ++ pp_list (pp_type) tys
             ++ str ">" )
         ids
     in
@@ -3697,7 +3706,7 @@ and pp_cpp_decl_raw env = function
     h
       ( qualifier
       ++ static_kw
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ name
       ++ pp_par true params_s )
@@ -3785,7 +3794,7 @@ and pp_cpp_decl_raw env = function
     str "using "
     ++ pp_global Type id
     ++ str " = "
-    ++ pp_cpp_type false [] ty
+    ++ pp_type ty
     ++ str ";"
   | Dasgn (id, ty, e) ->
     (* Special handling for CPPabort: generate lambda with correct return
@@ -3795,7 +3804,7 @@ and pp_cpp_decl_raw env = function
       | CPPabort msg ->
         require_header "stdexcept";
         str "([]() -> "
-        ++ pp_cpp_type false [] ty
+        ++ pp_type ty
         ++ str " { throw "
         ++ str (sn ()).logic_error
         ++ str "(\""
@@ -3834,14 +3843,14 @@ and pp_cpp_decl_raw env = function
       in
       h
         ( static_kw
-        ++ pp_cpp_type false [] ty
+        ++ pp_type ty
         ++ str " "
         ++ pp_global Type id
         ++ str " = "
         ++ wrapped_expr
         ++ str ";" )
   | Ddecl (id, ty) ->
-    h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
+    h (pp_type ty ++ str " " ++ pp_global Type id ++ str ";")
   | Dconcept (id, cstr) ->
     (* For hoisted concepts, use only the simple base name without module
        qualification *)

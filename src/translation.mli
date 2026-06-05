@@ -148,15 +148,6 @@ val gen_record_cpp :
 val gen_typeclass_cpp :
   GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
 
-(** Generate C++ header for an inductive type (older style).
-    @param consarg_names  see {!gen_ind_cpp} *)
-val gen_ind_header :
-  ?consarg_names:Id.t option list array ->
-  variable list ->
-  GlobRef.t ->
-  GlobRef.t array ->
-  ml_type list array ->
-  cpp_decl
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).

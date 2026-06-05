@@ -315,6 +315,9 @@ and cpp_expr =
   | CPPbinop of string * cpp_expr * cpp_expr
     (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
        optimization (&&, ==). *)
+  | CPPpair of cpp_expr * cpp_expr
+    (* Pair of two sub-expressions, used internally by loopify to thread
+       two values through a single expression slot.  Never reaches the printer. *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
     (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
@@ -485,6 +488,7 @@ let map_expr
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
+  | CPPpair (e1, e2) -> CPPpair (fe e1, fe e2)
   | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
   | CPPint _ -> e
@@ -593,6 +597,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
+  | CPPpair (e1, e2) -> on_expr e1; on_expr e2
   | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
   | CPPbraced args -> List.iter on_expr args
   | CPPstd_get (_, _, e_opt) -> Option.iter on_expr e_opt
@@ -662,6 +667,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPrequires (_, constraints, _) ->
     List.fold_left (fun a (e', _) -> fe a e') acc constraints
   | CPPbinop (_, l, r) -> fe (fe acc l) r
+  | CPPpair (e1, e2) -> fe (fe acc e1) e2
   | CPPcond (c, t, f) -> fe (fe (fe acc c) t) f
   | CPPbraced args -> List.fold_left fe acc args
   | CPPstd_get (_, _, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'

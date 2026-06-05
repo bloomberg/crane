@@ -122,8 +122,15 @@ let id_clone        = Id.of_string "clone"
 
 (** {2 List utility helpers} *)
 
-let list_take n xs = List.filteri (fun i _ -> i < n) xs
-let list_drop n xs = List.filteri (fun i _ -> i >= n) xs
+let rec list_take n = function
+  | _ when n <= 0 -> []
+  | [] -> []
+  | x :: xs -> x :: list_take (n - 1) xs
+
+let rec list_drop n = function
+  | xs when n <= 0 -> xs
+  | [] -> []
+  | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
 
 (** {2 Generic AST predicate search}
@@ -503,7 +510,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstring _
    |CPPuint _
    |CPPfloat _
-   |CPPrequires _ -> []
+   |CPPrequires _
+   |CPPpair _ -> []
 
 (** Collect recursive call sites from a list of statements.
     Delegates to {!collect_stmt} for each statement. *)
@@ -698,73 +706,15 @@ let rec count_calls_stmts (check : call_checker) stmts =
     was std::moved.  Until the explicit stack has an owning-enter frame, leave
     these functions recursive. *)
 let rec expr_has_recursive_branch_dependency check expr =
-  match expr with
-  | CPPlambda (_, _, body, _) -> has_recursive_branch_dependency check body
-  | CPPfun_call (f, args) ->
-    expr_has_recursive_branch_dependency check f
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPmethod_call (obj, _, args) ->
-    expr_has_recursive_branch_dependency check obj
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPdot_method_call (obj, _, args) ->
-    expr_has_recursive_branch_dependency check obj
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
-    expr_has_recursive_branch_dependency check e
-  | CPPbinop (_, e1, e2) ->
-    expr_has_recursive_branch_dependency check e1
-    || expr_has_recursive_branch_dependency check e2
-  | CPPcond (c, t, f) ->
-    expr_has_recursive_branch_dependency check c
-    || expr_has_recursive_branch_dependency check t
-    || expr_has_recursive_branch_dependency check f
-  | CPPget (e, _)
-   |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _) -> expr_has_recursive_branch_dependency check e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) ->
-    List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPshared_ptr_ctor (_, e) ->
-    expr_has_recursive_branch_dependency check e
-  | CPPoverloaded exprs ->
-    List.exists (expr_has_recursive_branch_dependency check) exprs
-  | CPPparray (arr, def) ->
-    expr_has_recursive_branch_dependency check def
-    || Array.exists (expr_has_recursive_branch_dependency check) arr
-  | CPPbraced args ->
-    List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPstd_get (_, _, Some e) -> expr_has_recursive_branch_dependency check e
-  | CPPstd_get_if (_, _, e) -> expr_has_recursive_branch_dependency check e
-  | CPPvar _
-   |CPPglob _
-   |CPPvisit
-   |CPPmk_shared _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPnullptr
-   |CPPstd_get (_, _, None)
-   |CPPstd_holds_alternative _
-   |CPPdeclval _
-   |CPPtypename_qualified _
-   |CPPraw _
-   |CPPbool _
-   |CPPint _
-   |CPPbrace_init
-   |CPPunop _
-   |CPPany_cast _
-   |CPPconverting_ctor _
-   |CPPqualified_t _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPrequires _ -> false
+  try
+    iter_expr_children
+      ~on_expr:(fun e' ->
+        if expr_has_recursive_branch_dependency check e' then raise Exit)
+      ~on_stmts:(fun body ->
+        if has_recursive_branch_dependency check body then raise Exit)
+      expr;
+    false
+  with Exit -> true
 
 (** True when [expr] contains a recursive call (counted by
     {!count_calls_expr}) or a branch-dependency on one (detected by
@@ -909,7 +859,9 @@ let find_varying_params check params body =
       params
 
 (** Filter a list keeping only elements at positions where [mask] is [true]. *)
-let filter_by_mask mask lst = List.filteri (fun i _ -> List.nth mask i) lst
+let filter_by_mask mask lst =
+  List.combine mask lst
+  |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
 let make_visit_expr scrut lambdas =
@@ -2408,13 +2360,13 @@ and decompose_double_call check expr =
             match
               inner
             with
-            | CPPbinop ("__dd_pair__", l, _) -> l
+            | CPPpair (l, _) -> l
             | x -> x
           else if i = i2 then
             match
               inner
             with
-            | CPPbinop ("__dd_pair__", _, r) -> r
+            | CPPpair (_, r) -> r
             | x -> x
           else
             let pos =
@@ -2436,8 +2388,7 @@ and decompose_double_call check expr =
         List.map (fun (i, _) -> List.nth args i) non_rec_indexed
       in
       ( match
-          try_pair e1 e2 (fun left right ->
-            CPPbinop ("__dd_pair__", left, right) )
+          try_pair e1 e2 (fun left right -> CPPpair (left, right))
         with
       | Some dd ->
         let saved_offset = List.length dd.dd_saved in
@@ -3446,34 +3397,9 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
   go [] stmts
 
 (** Remove duplicate [Id.t] values, preserving first-occurrence order. *)
-let dedup_ids ids =
-  let seen = Hashtbl.create 8 in
-  List.filter
-    (fun id ->
-      let name = Id.to_string id in
-      if Hashtbl.mem seen name then
-        false
-      else (
-        Hashtbl.add seen name ();
-        true ) )
-    ids
-
-(** Substitute [CPPvar old_id] with [CPPvar new_id] throughout an expression,
-    statement, or statement list. Used to eliminate trivial variable aliases
-    like [auto _cs = _result;] by replacing [_cs] with [_result] directly. *)
-let rec subst_var_expr old_id new_id e =
-  let fe e = subst_var_expr old_id new_id e in
-  match e with
-  | CPPvar id when Id.equal id old_id -> CPPvar new_id
-  | _ -> Minicpp.map_expr fe (subst_var_stmt old_id new_id) (fun t -> t) e
-
-and subst_var_stmt old_id new_id s =
-  let fe e = subst_var_expr old_id new_id e in
-  let fs s = subst_var_stmt old_id new_id s in
-  Minicpp.map_stmt fe fs (fun t -> t) s
 
 let subst_var_stmts old_id new_id stmts =
-  List.map (subst_var_stmt old_id new_id) stmts
+  List.map (subst_stmt [(old_id, new_id)]) stmts
 
 (** Substitute [CPPderef (CPPvar target_id)] with [CPPvar target_id] throughout
     an expression, statement, or statement list.
@@ -3511,7 +3437,7 @@ let collect_branch_free_vars branches =
       let all_vars = List.concat_map free_vars_stmt body in
       List.filter (fun id -> not (List.exists (Id.equal id) pat_bound)) all_vars )
     branches
-  |> dedup_ids
+  |> List.sort_uniq Id.compare
 
 (** Collect free variables from visit (pattern-match) lambda bodies, excluding
     lambda-bound parameters. The result is deduplicated.
@@ -3537,7 +3463,7 @@ let collect_visit_free_vars lambdas =
           body_fvs
       | _ -> [] )
     lambdas
-  |> dedup_ids
+  |> List.sort_uniq Id.compare
 
 (** Rewrite a Scustom_case branch's returns to assign to _result instead. *)
 let rec rewrite_returns_to_result = function
@@ -3839,77 +3765,15 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
   in
   self
   ||
-  match expr with
-  | CPPlambda (_, _, body, _) ->
-    body_has_unique_owner_decomposition check tparams env body
-  | CPPfun_call (f, args) ->
-    expr_has_unique_owner_decomposition check tparams env f
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPmethod_call (obj, _, args) ->
-    expr_has_unique_owner_decomposition check tparams env obj
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPdot_method_call (obj, _, args) ->
-    expr_has_unique_owner_decomposition check tparams env obj
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPbinop (_, e1, e2) ->
-    expr_has_unique_owner_decomposition check tparams env e1
-    || expr_has_unique_owner_decomposition check tparams env e2
-  | CPPcond (c, t, f) ->
-    expr_has_unique_owner_decomposition check tparams env c
-    || expr_has_unique_owner_decomposition check tparams env t
-    || expr_has_unique_owner_decomposition check tparams env f
-  | CPPget (e, _)
-   |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPshared_ptr_ctor (_, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPoverloaded exprs ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) exprs
-  | CPPparray (arr, def) ->
-    expr_has_unique_owner_decomposition check tparams env def
-    || Array.exists (expr_has_unique_owner_decomposition check tparams env) arr
-  | CPPbraced args ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPstd_get (_, _, Some e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPstd_get_if (_, _, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPvar _
-   |CPPglob _
-   |CPPvisit
-   |CPPmk_shared _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPnullptr
-   |CPPstd_get (_, _, None)
-   |CPPstd_holds_alternative _
-   |CPPdeclval _
-   |CPPtypename_qualified _
-   |CPPraw _
-   |CPPbool _
-   |CPPint _
-   |CPPbrace_init
-   |CPPunop _
-   |CPPany_cast _
-   |CPPconverting_ctor _
-   |CPPqualified_t _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPrequires _ -> false
+  (try
+    iter_expr_children
+      ~on_expr:(fun e' ->
+        if expr_has_unique_owner_decomposition check tparams env e' then raise Exit)
+      ~on_stmts:(fun body ->
+        if body_has_unique_owner_decomposition check tparams env body then raise Exit)
+      expr;
+    false
+  with Exit -> true)
 
 and stmt_has_unique_owner_decomposition check tparams env = function
   | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
@@ -4883,7 +4747,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           emit_single_call_frame ctx d
             ~make_handler:(fun svs r -> assign_result (d.d_rebuild svs r))
         | _ ->
-          assert false (* cannot happen: only one recursive call in the list *)
+          CErrors.anomaly (Pp.str "loopify: only one recursive call expected here")
         )
       | None ->
       match check e with
@@ -5968,7 +5832,7 @@ let optimize_frame_push_args frame_field_types stmts =
       let push_data = List.map (function
         | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) ->
           (callee, name, targs, args)
-        | _ -> assert false
+        | _ -> CErrors.anomaly (Pp.str "loopify: unexpected push statement shape")
       ) pushes in
       let last_push_of = Hashtbl.create 8 in
       List.iteri (fun idx (_, _, _, args) ->
@@ -7076,7 +6940,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         | Nontail_recursion ->
             let fn_name = Id.to_string id in
             transform_nontail ~fn_name check pp_type pp_expr tparams params ret_ty lbody
-        | No_recursion -> assert false
+        | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       Some lbody'
   in
@@ -7495,7 +7359,7 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
               augmented_params mf.mf_ret_type body_with_self
           in
           (body', not used_inits)
-        | No_recursion -> assert false
+        | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       if needs_init_self then
         let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
