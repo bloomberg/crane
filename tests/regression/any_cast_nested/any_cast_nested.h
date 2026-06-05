@@ -34,7 +34,7 @@ struct AnyCastNested {
       return std::any_cast<T1>(v);
     } else {
       uint64_t _x = x0 - 1;
-      return a1;
+      return std::any_cast<T1>(a1);
     }
   }
 

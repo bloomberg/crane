@@ -77,6 +77,25 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -144,6 +163,39 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
+    ~cond_expr() {
+      std::vector<std::shared_ptr<cond_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Add>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<Cond>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -285,6 +337,44 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
+    ~arith_expr() {
+      std::vector<std::shared_ptr<arith_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<AAdd>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<AMul>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<ADiv>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -441,6 +531,41 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
+    ~bool_expr() {
+      std::vector<std::shared_ptr<bool_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<BAnd>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<BOr>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<BNot>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -791,6 +916,33 @@ struct LoopifyExprVariants {
     }
 
     // MANIPULATORS
+    ~list_expr() {
+      std::vector<std::shared_ptr<list_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<LCons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<LAppend>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

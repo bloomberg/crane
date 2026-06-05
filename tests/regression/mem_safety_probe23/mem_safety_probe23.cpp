@@ -278,7 +278,7 @@ MemSafetyProbe23::collect_children(
   struct _Cont_Node_1 {
     std::shared_ptr<MemSafetyProbe23::tree> a0;
     uint64_t a1;
-    std::shared_ptr<MemSafetyProbe23::tree> a2;
+    const MemSafetyProbe23::tree *a2;
     std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
               uint64_t>
         pl;
@@ -315,13 +315,13 @@ MemSafetyProbe23::collect_children(
       std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
                 uint64_t>
           pl = std::move(_result);
-      _stack.emplace_back(_Cont_Node_1{std::move(a0), a1, a2, std::move(pl)});
+      _stack.emplace_back(_Cont_Node_1{std::move(a0), a1, &a2, std::move(pl)});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       std::shared_ptr<MemSafetyProbe23::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
-      std::shared_ptr<MemSafetyProbe23::tree> a2 = std::move(_f.a2);
+      const MemSafetyProbe23::tree &a2 = *_f.a2;
       std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
                 uint64_t>
           pl = std::move(_f.pl);
@@ -345,7 +345,7 @@ MemSafetyProbe23::collect_children(
             MemSafetyProbe23::tree _x0 = std::move(p.second);
             return n;
           }());
-      _result = std::make_pair(std::make_pair(*a0, *a2), s);
+      _result = std::make_pair(std::make_pair(*a0, a2), s);
     }
   }
   return _result;

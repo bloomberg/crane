@@ -55,9 +55,9 @@ MemSafetyProbe7::build_len_closures(
 
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    std::decay_t<decltype([=](std::monostate) mutable {
-      return a1_value.length();
-    })>
+    std::function<std::decay_t<
+        decltype(std::declval<const MemSafetyProbe7::mylist<uint64_t> &>()
+                     .length())>(std::monostate)>
         _s0;
   };
 
@@ -87,7 +87,7 @@ MemSafetyProbe7::build_len_closures(
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
       _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
-          _f._s0, std::move(_result));
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;
@@ -149,9 +149,9 @@ MemSafetyProbe7::build_sum_closures(
 
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    std::decay_t<decltype([=](std::monostate) mutable {
-      return sum_list(a1_value);
-    })>
+    std::function<std::decay_t<decltype(sum_list(
+        std::declval<const MemSafetyProbe7::mylist<uint64_t> &>()))>(
+        std::monostate)>
         _s0;
   };
 
@@ -181,7 +181,7 @@ MemSafetyProbe7::build_sum_closures(
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
       _result = mylist<std::function<uint64_t(std::monostate)>>::mycons(
-          _f._s0, std::move(_result));
+          std::move(_f._s0), std::move(_result));
     }
   }
   return _result;

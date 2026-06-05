@@ -4,19 +4,13 @@
 // Regression test for missing any_cast when returning a type-erased sigT
 // payload as a concrete template type.
 //
-// EXPECTED: This test currently FAILS TO COMPILE because the generated
-// extract_a<T1> function does "return a1;" where a1 is std::any but
-// the function return type is T1.  The fix should insert
-// any_cast<T1>(a1) in the S branch.
+// Regression: the generated extract_a<T1> S branch used to emit
+// "return a1;" where a1 is std::any but the return type is T1.
+// The fix inserts any_cast<T1>(a1) so the function compiles and runs.
 //
-// The O branch (nested pair destructuring) demonstrates the
-// apply_fixc_to_nested path and correctly generates any_cast<T1>(a0).
-// The S branch is the failing case — it returns the raw sigT payload
-// (std::any) without casting to the return type T1.
-//
-// Once the bug is fixed, this test should pass at runtime:
-// test_extract(42) calls extract_a<uint64_t> with the O branch,
-// returning 42 via the correct nested pair path.
+// test_extract(x) calls extract_a<uint64_t> with existT _ 1 x (S branch),
+// where payload_ty(S _) = A = uint64_t stored in std::any.
+// Expected: test_extract(x) == x.
 
 #include "any_cast_nested.h"
 
@@ -39,8 +33,8 @@ void aSsErT(bool condition, const char *message, int line) {
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
 int main() {
-  // test_extract(42) constructs sigT(0, pair(10, pair(20, 42)))
-  // and extracts the innermost value (42) via nested pair matching.
+  // test_extract(x) = extract_a<uint64_t>(existT _ 1 x)
+  // S branch: payload is x:uint64_t stored in std::any; any_cast<uint64_t>(a1) = x.
   uint64_t result = AnyCastNested::test_extract(42);
   ASSERT(result == 42);
 
@@ -48,8 +42,8 @@ int main() {
   ASSERT(result2 == 99);
 
   if (testStatus == 0) {
-    std::cout << "test_extract(42) = " << result << " -- correct\n";
-    std::cout << "test_extract(99) = " << result2 << " -- correct\n";
+    std::cout << "test_extract(42) = " << result << " (S-branch, expected 42)\n";
+    std::cout << "test_extract(99) = " << result2 << " (S-branch, expected 99)\n";
   }
 
   return testStatus;

@@ -6,6 +6,7 @@
 #include <optional>
 #include <utility>
 #include <variant>
+#include <vector>
 
 enum class Comparison { EQ, LT, GT };
 
@@ -82,6 +83,28 @@ template <OrderedType K, BaseType V> struct MakeMap {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a3) {
+            _stack.push_back(std::move(_alt->a3));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

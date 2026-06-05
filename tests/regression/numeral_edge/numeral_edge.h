@@ -7,6 +7,7 @@
 #include <optional>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -77,6 +78,25 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -202,6 +222,70 @@ public:
   }
 
   // MANIPULATORS
+  ~Uint() {
+    std::vector<std::shared_ptr<Uint>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<D0>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D1>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D2>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D3>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D4>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D5>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D6>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D7>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D8>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D9>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -388,6 +472,100 @@ public:
   }
 
   // MANIPULATORS
+  ~Uint0() {
+    std::vector<std::shared_ptr<Uint0>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<D10>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D11>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D12>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D13>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D14>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D15>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D16>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D17>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D18>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<D19>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<Da>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<Db>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<Dc>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<Dd>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<De>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+      if (auto *_alt = std::get_if<Df>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

@@ -54,6 +54,34 @@ struct MemSafetyProbe17 {
     }
 
     // MANIPULATORS
+    ~qtree() {
+      std::vector<std::shared_ptr<qtree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<QNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a3) {
+            _stack.push_back(std::move(_alt->a3));
+          }
+          if (_alt->a4) {
+            _stack.push_back(std::move(_alt->a4));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -300,6 +328,25 @@ struct MemSafetyProbe17 {
     }
 
     // MANIPULATORS
+    ~mylist() {
+      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Mycons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

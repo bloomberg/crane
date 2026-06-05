@@ -1,10 +1,12 @@
 #ifndef INCLUDED_MUTUAL_INDEXED
 #define INCLUDED_MUTUAL_INDEXED
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 struct MutualIndexed {
   struct EvenTree;
@@ -41,6 +43,38 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
+    ~EvenTree() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<ENode>(&_v)) {
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename OddTree::ONode>(&_pv)) {
+                if (_alt->a2) {
+                  _stack.push_back(std::move(_alt->a2));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -72,6 +106,38 @@ struct MutualIndexed {
     }
 
     // MANIPULATORS
+    ~OddTree() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<ONode>(&_v)) {
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename EvenTree::ENode>(&_pv)) {
+                if (_alt->a2) {
+                  _stack.push_back(std::move(_alt->a2));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

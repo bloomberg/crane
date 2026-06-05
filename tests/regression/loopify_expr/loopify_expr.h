@@ -78,6 +78,25 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -155,6 +174,52 @@ struct LoopifyExpr {
     }
 
     // MANIPULATORS
+    ~expr() {
+      std::vector<std::shared_ptr<expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Succ>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+        if (auto *_alt = std::get_if<Add>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<Mul>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<Cond>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -687,6 +752,39 @@ struct LoopifyExpr {
     }
 
     // MANIPULATORS
+    ~simple_expr() {
+      std::vector<std::shared_ptr<simple_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Plus>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<IfPos>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -912,6 +1010,39 @@ struct LoopifyExpr {
     }
 
     // MANIPULATORS
+    ~cond_expr() {
+      std::vector<std::shared_ptr<cond_expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<CPlus>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<CCond>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

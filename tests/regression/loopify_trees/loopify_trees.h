@@ -77,6 +77,25 @@ public:
   }
 
   // MANIPULATORS
+  ~List() {
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -167,6 +186,28 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::shared_ptr<tree<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->l) {
+            _stack.push_back(std::move(_alt->l));
+          }
+          if (_alt->r) {
+            _stack.push_back(std::move(_alt->r));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -378,6 +419,31 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
+    ~ternary() {
+      std::vector<std::shared_ptr<ternary>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<TNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -719,6 +785,34 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
+    ~quadtree() {
+      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Quad>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+          if (_alt->a3) {
+            _stack.push_back(std::move(_alt->a3));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -824,6 +918,28 @@ struct LoopifyTrees {
     }
 
     // MANIPULATORS
+    ~simple_tree() {
+      std::vector<std::shared_ptr<simple_tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<SNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

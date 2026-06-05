@@ -90,6 +90,24 @@ public:
     return List(Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
   }
   // MANIPULATORS
+  ~List() {
+    bsl::vector<bsl::shared_ptr<List<t_A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = bsl::get_if<Cons>(&_v)) {
+        if (_alt->d_l) {
+          _stack.push_back(bsl::move(_alt->d_l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = bsl::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }

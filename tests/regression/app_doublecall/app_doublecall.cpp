@@ -23,7 +23,8 @@ std::deque<uint64_t> AppDoublecall::gen_list(uint64_t n) {
 std::deque<uint64_t> AppDoublecall::concat_two(uint64_t a, uint64_t b) {
   return [&]() {
     auto _r = gen_list(a);
-    _r.insert(_r.end(), gen_list(b).begin(), gen_list(b).end());
+    auto _s = gen_list(b);
+    _r.insert(_r.end(), _s.begin(), _s.end());
     return _r;
   }();
 }

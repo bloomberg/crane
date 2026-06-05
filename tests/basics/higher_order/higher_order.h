@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 struct HigherOrder {
   /// A simple polymorphic list type.
@@ -80,6 +81,25 @@ struct HigherOrder {
     }
 
     // MANIPULATORS
+    ~list() {
+      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Cons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

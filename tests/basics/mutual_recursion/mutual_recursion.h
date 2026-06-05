@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 struct MutualRecursion {
   static bool is_even(uint64_t n);
@@ -83,6 +84,41 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<tree<A>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<forest<A>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename forest<A>::Trees>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -131,6 +167,41 @@ struct MutualRecursion {
     }
 
     // MANIPULATORS
+    ~forest() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Trees>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<forest<A>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<tree<A>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename tree<A>::Node>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

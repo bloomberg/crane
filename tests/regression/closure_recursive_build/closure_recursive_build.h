@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 struct ClosureRecursiveBuild {
   /// A list of closures, each one of which captures a different value.
@@ -40,6 +41,25 @@ struct ClosureRecursiveBuild {
     }
 
     // MANIPULATORS
+    ~fn_list() {
+      std::vector<std::shared_ptr<fn_list>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<FCons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

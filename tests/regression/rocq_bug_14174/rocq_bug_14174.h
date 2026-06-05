@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -38,6 +39,25 @@ public:
   static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
+  ~Nat() {
+    std::vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

@@ -1,11 +1,13 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include <any>
 #include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -55,6 +57,41 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
+    ~tree() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<tree>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<forest>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename forest::FCons>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -92,6 +129,41 @@ template <Elem E> struct MutualTree {
     }
 
     // MANIPULATORS
+    ~forest() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<FCons>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<forest>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<tree>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename tree::Node>(&_pv)) {
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

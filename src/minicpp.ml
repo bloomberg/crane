@@ -143,6 +143,10 @@ and cpp_stmt =
        optimization's use_count() check. *)
   | Sif_then of cpp_expr * cpp_stmt list
     (* if without else: condition and then-branch. *)
+  | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
+    (* C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
+       The declaration doubles as the condition (e.g. pointer truthiness).
+       Used for [if (auto *_alt = std::get_if<Ctor>(&_v)) { ... }]. *)
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
@@ -319,6 +323,10 @@ and cpp_expr =
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
+  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
+    (* std::get_if<T>(&variant) — pointer-returning variant accessor.
+       Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
+       [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -483,6 +491,7 @@ let map_expr
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
+  | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -519,6 +528,8 @@ let map_stmt
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
+  | Sif_decl (id, ty, init, then_br, else_br) ->
+    Sif_decl (id, ft ty, fe init, List.map fs then_br, List.map fs else_br)
   | Sraw _ | Scomment _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
@@ -570,7 +581,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -599,6 +610,8 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    on_expr init; on_stmts then_br; on_stmts else_br
   | Sswitch (scrut, _, branches, default) ->
     on_expr scrut;
     List.iter (fun (_, stmts) -> on_stmts stmts) branches;
@@ -638,7 +651,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
@@ -664,6 +677,8 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sif (cond, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif_then (cond, then_br) -> on_stmts (on_expr acc cond) then_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    on_stmts (on_stmts (on_expr acc init) then_br) else_br
   | Sswitch (scrut, _, branches, default) ->
     let acc = on_expr acc scrut in
     let acc = List.fold_left (fun a (_, stmts) -> on_stmts a stmts) acc branches in

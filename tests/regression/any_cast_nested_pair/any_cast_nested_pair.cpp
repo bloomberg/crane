@@ -19,8 +19,7 @@ uint64_t AnyCastNestedPair::apply_pred(AnyCastNestedPair::symbols_semty input) {
   const std::any &v2 = std::any_cast<std::pair<std::any, std::any>>(rest).first;
   const std::any &_x =
       std::any_cast<std::pair<std::any, std::any>>(rest).second;
-  return (getSemVal(v1) +
-          getSemVal(std::any_cast<AnyCastNestedPair::SemVal>(v2)));
+  return (getSemVal(v1) + getSemVal(v2));
 }
 
 uint64_t AnyCastNestedPair::test_pred(uint64_t a, uint64_t b) {

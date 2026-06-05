@@ -152,6 +152,9 @@ and cpp_stmt =
           optimization) *)
   | Sif_then of cpp_expr * cpp_stmt list
       (** Conditional without an else branch *)
+  | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
+      (** C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
+          The declaration doubles as the condition (pointer truthiness). *)
   | Sraw of string  (** Raw C++ code printed verbatim *)
   | Scomment of string  (** Documentation comment, printed as [/// text] *)
   | Sstruct_def of Id.t * (Id.t * cpp_type) list
@@ -317,6 +320,9 @@ and cpp_expr =
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
       (** std::any_cast<T>(expr) — recovers typed value from std::any *)
+  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
+      (** std::get_if<T>(&variant) — pointer-returning variant accessor.
+          Uses [(sn()).get_if] for BDE compatibility. *)
 
 (** Alias for constraint expressions in requires clauses. *)
 and cpp_constraint = cpp_expr

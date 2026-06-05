@@ -477,6 +477,7 @@ let rec collect_expr (check : call_checker) expr =
       arr
   | CPPbraced args -> List.concat_map (collect_expr check) args
   | CPPstd_get (_, _, Some e) -> collect_expr check e
+  | CPPstd_get_if (_, _, e) -> collect_expr check e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -569,6 +570,10 @@ and collect_stmt check ~in_visitor = function
   | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
   | Sif (cond, then_br, else_br) ->
     collect_expr check cond
+    @ collect_stmts check ~in_visitor then_br
+    @ collect_stmts check ~in_visitor else_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    collect_expr check init
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
   | Sif_then (cond, then_br) ->
@@ -733,6 +738,7 @@ let rec expr_has_recursive_branch_dependency check expr =
   | CPPbraced args ->
     List.exists (expr_has_recursive_branch_dependency check) args
   | CPPstd_get (_, _, Some e) -> expr_has_recursive_branch_dependency check e
+  | CPPstd_get_if (_, _, e) -> expr_has_recursive_branch_dependency check e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -3876,6 +3882,8 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
     List.exists (expr_has_unique_owner_decomposition check tparams env) args
   | CPPstd_get (_, _, Some e) ->
     expr_has_unique_owner_decomposition check tparams env e
+  | CPPstd_get_if (_, _, e) ->
+    expr_has_unique_owner_decomposition check tparams env e
   | CPPvar _
    |CPPglob _
    |CPPvisit
@@ -3911,6 +3919,10 @@ and stmt_has_unique_owner_decomposition check tparams env = function
     || expr_has_unique_owner_decomposition check tparams env e
   | Sif (cond, then_br, else_br) ->
     expr_has_unique_owner_decomposition check tparams env cond
+    || body_has_unique_owner_decomposition check tparams env then_br
+    || body_has_unique_owner_decomposition check tparams env else_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    expr_has_unique_owner_decomposition check tparams env init
     || body_has_unique_owner_decomposition check tparams env then_br
     || body_has_unique_owner_decomposition check tparams env else_br
   | Sif_then (cond, then_br) ->
@@ -5629,7 +5641,11 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
         | _ -> None)
       stmts
   in
-  let is_field_access_or_alias local_map field_names j = function
+  let is_field_access_or_alias local_map field_names j expr =
+    (* Strip CPPmove wrappers before pattern matching, since push arguments
+       are commonly [CPPmove (CPPvar x)] or [CPPmove (CPPmember (CPPvar _f, fld))]. *)
+    let expr = match expr with CPPmove e -> e | e -> e in
+    match expr with
     | CPPmember (CPPvar f, field_id) ->
       Id.to_string f = "_f"
       && j < List.length field_names
@@ -5696,7 +5712,14 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
             | None -> ())
         pushes)
     frames;
-  (* Step 2: propagate through Call-to-Call chains until fixpoint *)
+  (* Step 2: propagate through Call-to-Call chains until fixpoint.
+     Two directions:
+     (a) BACKWARD: if target frame's position k is pointer-safe and cf pushes
+         target with its field j (or local from field j) at position k, then
+         cf's field j must also be pointer-safe (it will be forwarded as a raw ptr).
+     (b) FORWARD: if cf's field j is pointer-safe and cf pushes target with
+         that field at position k, then target's position k must also be
+         pointer-safe (it receives a raw pointer and must store/forward it as such). *)
   let changed = ref true in
   while !changed do
     changed := false;
@@ -5708,11 +5731,10 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
           (fun (push_name, args) ->
             match get_flags push_name with
             | Some target_arr when List.length args = Array.length target_arr ->
-              (* If target_arr[k] is true and args[k] is _f.field_j or a local
-                 bound from _f.field_j, then cf's field j must also be pointer-safe *)
               List.iteri
                 (fun k arg ->
-                  if target_arr.(k) then
+                  (* (a) BACKWARD: target[k] true → src[j] true *)
+                  (if target_arr.(k) then
                     match get_flags cf.cf_name with
                     | Some src_arr ->
                       for j = 0 to Array.length src_arr - 1 do
@@ -5722,7 +5744,24 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                           src_arr.(j) <- true;
                           changed := true)
                       done
-                    | None -> ())
+                    | None -> ());
+                  (* (b) FORWARD: src[j] true → target[k] true.
+                     If the argument at position k comes from a pointer-safe
+                     field of cf, then target position k must also be pointer-safe
+                     so its type stays consistent (raw pointer throughout). *)
+                  if not target_arr.(k) then
+                    (match get_flags cf.cf_name with
+                    | Some src_arr ->
+                      let src_is_safe =
+                        Array.exists Fun.id
+                          (Array.mapi (fun j flag ->
+                            flag && is_field_access_or_alias local_map cf.cf_field_names j arg)
+                          src_arr)
+                      in
+                      if src_is_safe then (
+                        target_arr.(k) <- true;
+                        changed := true)
+                    | None -> ()))
                 args
             | _ -> ())
           pushes)
@@ -5757,7 +5796,18 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
       else
       let arg = match arg with CPPmove a -> a | a -> a in
       if is_uptr then
-        CPPfun_call (CPPmember (arg, id_get), [])
+        (* If the argument is a local variable loaded as a const-reference from a
+           pointer-safe frame field (const T &x = *_f.field after fix_handler_bindings),
+           take its address (&x) rather than calling .get() on a non-shared_ptr. *)
+        (match arg with
+         | CPPvar x ->
+           (match List.assoc_opt x binding_env with
+            | Some (CPPderef (CPPmember (CPPvar f, _)))
+              when Id.to_string f = "_f" ->
+              CPPunop ("&", arg)
+            | _ ->
+              CPPfun_call (CPPmember (arg, id_get), []))
+         | _ -> CPPfun_call (CPPmember (arg, id_get), []))
       else
         match arg with
         | CPPderef (CPPvar x) ->
@@ -6142,6 +6192,13 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
       in
       CPPmember (CPPdeclval (Tref pointee_ty), field)
     | None -> expr )
+  | CPPlambda (params, ret_ty, body, _capture) ->
+    (* Rewrite variables inside the lambda body to use std::declval, and remove
+       any capture-default so the lambda is valid inside decltype (which is an
+       unevaluated context where capture-defaults are not allowed in C++23). *)
+    let fe = rewrite_field_access_for_decltype pp_type env in
+    let rec fs stmt = map_stmt fe fs Fun.id stmt in
+    CPPlambda (params, ret_ty, List.map fs body, false)
   | _ ->
     map_expr (rewrite_field_access_for_decltype pp_type env) Fun.id Fun.id expr
 
@@ -6201,23 +6258,41 @@ let fix_handler_bindings field_names cf_ps handler =
         List.exists (Id.equal field_id) ps_field_ids
       | _ -> false
     in
-    List.map
-      (fun stmt ->
-        match stmt with
-        | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
-          let base_ty = match orig_ty with
-            | Tshared_ptr inner -> inner
-            | _ -> strip_ref_and_const_type orig_ty
-          in
-          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
-        | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
-          let base_ty = match orig_ty with
-            | Tshared_ptr inner -> inner
-            | _ -> strip_ref_and_const_type orig_ty
-          in
-          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
-        | s -> s)
-      handler
+    let remapped = ref [] in
+    let fixed =
+      List.map
+        (fun stmt ->
+          match stmt with
+          | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Tshared_ptr inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+          | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Tshared_ptr inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+          | s -> s)
+        handler
+    in
+    (* Rewrite CPPderef(CPPvar x) → CPPvar x for remapped IDs.
+       After rebinding as [const T &x = *_f.field], any [*x] expression that
+       previously dereferenced the shared_ptr is now a double-dereference of a
+       reference, which is invalid.  Replace with [x] directly. *)
+    if !remapped = [] then fixed
+    else
+      let rids = !remapped in
+      let rec fe e = match e with
+        | CPPderef (CPPvar x) when List.exists (Id.equal x) rids -> CPPvar x
+        | e -> map_expr fe Fun.id Fun.id e
+      in
+      let rec fs s = map_stmt fe fs Fun.id s in
+      List.map fs fixed
 
 (** Transform a non-tail recursive function body using an explicit frame-based stack.
 
@@ -6389,6 +6464,23 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
     else
       "Frame: saves" ^ field_names_str ^ " across recursive call."
   in
+  (* Find the first Sreturn expression in a lambda body, for return-type inference. *)
+  let rec extract_lambda_return_expr = function
+    | [] -> None
+    | Sreturn (Some e) :: _ -> Some e
+    | Sif (_, then_body, else_body) :: rest ->
+      (match extract_lambda_return_expr then_body with
+       | Some e -> Some e
+       | None ->
+         match extract_lambda_return_expr else_body with
+         | Some e -> Some e
+         | None -> extract_lambda_return_expr rest)
+    | Sblock stmts :: rest ->
+      (match extract_lambda_return_expr stmts with
+       | Some e -> Some e
+       | None -> extract_lambda_return_expr rest)
+    | _ :: rest -> extract_lambda_return_expr rest
+  in
   let compute_frame_field_types cf cf_ps =
     List.mapi
       (fun j ty ->
@@ -6402,7 +6494,27 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
             let expr = List.nth cf.cf_saved_exprs j in
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | Tunknown | Tauto -> make_decltype_ty pp_type cf.cf_env expr
+            | Tunknown | Tauto ->
+              (* For lambda expressions whose return type can't be inferred
+                 (e.g., a method call like a1_value.length()), generate
+                 std::function<decltype(body_ret_expr)(params)> instead of
+                 std::decay_t<decltype(lambda)>.  The lambda in decltype at
+                 struct definition scope and the actual stored lambda are
+                 different C++ types, so std::decay_t<decltype(lambda)> does
+                 not work.  std::function accepts any callable with a
+                 matching signature. *)
+              let base_expr = match expr with CPPmove e -> e | e -> e in
+              (match base_expr with
+               | CPPlambda (params, _, body, _) ->
+                 let param_types =
+                   List.map (fun (ty, _) -> strip_ref_and_const_type ty) params
+                 in
+                 (match extract_lambda_return_expr body with
+                  | Some ret_expr ->
+                    let rewritten = rewrite_field_access_for_decltype pp_type cf.cf_env ret_expr in
+                    Tfun (param_types, Tdecltype rewritten)
+                  | None -> make_decltype_ty pp_type cf.cf_env expr)
+               | _ -> make_decltype_ty pp_type cf.cf_env expr)
             | ty -> ty)
           | _ -> strip_ref_and_const_type ty)
       cf.cf_saved_types

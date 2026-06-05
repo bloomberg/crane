@@ -590,8 +590,10 @@ let rec is_any_type = function
   | Tnamespace (_, inner) -> is_any_type inner
   | Tid (id, []) -> Id.Set.mem id !any_type_aliases
   | Tglob (GlobRef.ConstRef c, _, _) ->
-    (try Table.find_type (GlobRef.ConstRef c) = Miniml.Tunknown
-     with Not_found -> false)
+    is_axiom_type_ref (GlobRef.ConstRef c)
+    || (try let t = Table.find_type (GlobRef.ConstRef c) in
+            t = Miniml.Tunknown || t = Miniml.Taxiom
+        with Not_found -> false)
   | Tglob (GlobRef.VarRef id, [], _) ->
     let name = Id.to_string id in
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
@@ -655,14 +657,17 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
-    | Tid_external (id, []) ->
-      if String.equal (Id.to_string id) "std::vector" then
-        require_header "vector";
-      Id.print id
     | Tid_external (id, args) ->
-      if String.equal (Id.to_string id) "std::vector" then
-        require_header "vector";
-      Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
+      let id_s = Id.to_string id in
+      let id_s =
+        if String.equal id_s "std::vector" then begin
+          require_header "vector";
+          if (sn ()).ns <> "std" then "bsl::vector" else id_s
+        end else id_s
+      in
+      ( match args with
+        | [] -> str id_s
+        | _ -> str id_s ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tglob (r, tys, args) ->
       (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
          never reach the C++ output. When they do survive — e.g. as a template
@@ -906,8 +911,14 @@ and extract_from_any ty src_expr =
   (* Extract a value of type [ty] from [src_expr : any].
      Semantic values stored in std::any are always bare (never shared_ptr-wrapped);
      field-level shared_ptr wrapping is only in struct fields, not in grammar
-     action semantic values.  Always extract the bare type. *)
-  str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+     action semantic values.  Always extract the bare type.
+
+     When the target type is [Tany] (i.e. [std::any]), the expression is
+     already the right type — emitting [std::any_cast<std::any>(x)] would
+     fail at runtime whenever [x] stores a concrete type like [Json_value]. *)
+  if is_any_type ty then src_expr
+  else
+    str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
 
 (** Strip [shared_ptr] wrapping from all positions in a C++ type.
     Semantic values in [std::any] are always bare; NS-propagated types that
@@ -1835,22 +1846,16 @@ and pp_cpp_expr env args t =
       str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "->" ++ Id.print id ++ str ")"
     | _ ->
       pp_cpp_expr env args e ++ str "->" ++ Id.print id )
-  | CPPmethod_call (obj, method_name, call_args) ->
-    let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    pp_cpp_expr env args obj
-    ++ str "->"
-    ++ Id.print method_name
-    ++ str "("
-    ++ pp_list (pp_cpp_expr env args) call_args
-    ++ str ")"
+  | CPPmethod_call (obj, method_name, call_args)
   | CPPdot_method_call (obj, method_name, call_args) ->
+    let sep = match t with CPPmethod_call _ -> "->" | _ -> "." in
     let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    pp_cpp_expr env args obj
-    ++ str "."
-    ++ Id.print method_name
-    ++ str "("
-    ++ pp_list (pp_cpp_expr env args) call_args
-    ++ str ")"
+    let obj_s = match obj with
+      | CPPderef _ -> str "(" ++ pp_cpp_expr env args obj ++ str ")"
+      | _ -> pp_cpp_expr env args obj
+    in
+    obj_s ++ str sep ++ Id.print method_name
+    ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPqualified (e, id) ->
     pp_cpp_expr env args e ++ str "::" ++ Id.print id
   | CPPqualified_t (ty, id) ->
@@ -1936,13 +1941,29 @@ and pp_cpp_expr env args t =
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
   | CPPany_cast (ty, e) ->
-    require_header "any";
-    str (sn ()).any_cast
-    ++ str "<"
-    ++ pp_cpp_type false [] ty
-    ++ str ">("
-    ++ pp_cpp_expr env args e
-    ++ str ")"
+    (* When the target type resolves to [std::any] (either [Tany] directly, or
+       an axiom/unknown ConstRef like [SemVal = std::any]), the value is already
+       the right type — [any_cast<std::any>(x)] fails if [x] holds a concrete
+       type (e.g. uint64_t). *)
+    if is_any_type ty then
+      pp_cpp_expr env args e
+    else begin
+      require_header "any";
+      str (sn ()).any_cast
+      ++ str "<"
+      ++ pp_cpp_type false [] ty
+      ++ str ">("
+      ++ pp_cpp_expr env args e
+      ++ str ")"
+    end
+  | CPPstd_get_if (ty, ctor, e) ->
+    require_header "variant";
+    let targ = match ctor with
+      | None -> pp_cpp_type false [] ty
+      | Some id -> pp_typename_member ty id
+    in
+    str ((sn ()).get_if ^ "<") ++ targ ++ str ">("
+    ++ pp_cpp_expr env args e ++ str ")"
 
 (** Pretty-print a MiniCpp statement as C++ source.
 
@@ -2065,6 +2086,22 @@ and pp_cpp_stmt env args = function
     ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
     ++ fnl ()
     ++ str "}"
+  | Sif_decl (id, ty, init, then_stmts, else_stmts) ->
+    str "if ("
+    ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id
+    ++ str " = " ++ pp_cpp_expr env args init
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ fnl ()
+    ++ (match else_stmts with
+        | [] -> str "}"
+        | _ ->
+          str "} else {"
+          ++ fnl ()
+          ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+          ++ fnl ()
+          ++ str "}")
   | Sraw code ->
     if Common.contains_substring code "std::vector" then
       require_header "vector";
@@ -3213,11 +3250,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ fnl ()
     ++ body_s ++ str "}"
   | Fraw s ->
-    if Common.contains_substring s "std::vector" then
-      require_header "vector";
-    if Common.contains_substring s "std::shared_ptr" then
-      require_header "memory";
-    (* Replace %SELF% placeholder with actual struct name if available *)
     let s =
       match struct_name with
       | Some sn ->

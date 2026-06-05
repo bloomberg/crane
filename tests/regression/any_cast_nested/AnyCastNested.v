@@ -54,11 +54,12 @@ Definition extract_a (s : { n : nat & payload_ty n }) : A :=
 
 End WithA.
 
-(* Concrete test: A = nat.  extract_a<uint64_t> should work, but the
-   generated code has "return a1;" (std::any) without any_cast<uint64_t>,
-   causing a compilation failure. *)
+(* Concrete test: A = nat.  extract_a<uint64_t>(existT _ 1 x) hits the S
+   branch where payload_ty(S _) = A = nat, so the payload is erased to
+   std::any containing a uint64_t.  The fix inserts any_cast<uint64_t>(a1)
+   so the return is well-typed. *)
 Definition test_extract (x : nat) : nat :=
-  extract_a nat (existT _ 0 (10, (20, x))).
+  extract_a nat (existT _ 1 x).
 
 End AnyCastNested.
 

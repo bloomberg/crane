@@ -1358,6 +1358,21 @@ let lift_iife_assignment target_var target_ty expr =
           :: lifted_body)
   | _ -> None
 
+(** For inductives with dependent parameters (e.g. [sigT]), unresolved
+    meta-type variables ([Tvar']) correspond to fields whose C++ type
+    collapses to [std::any].  Retyping them as [Tdummy Ktype] marks them
+    as erased, triggering [any_cast<T>] wrapping when returned as a
+    template parameter. *)
+let retype_dependent_params (typ : ml_type) ids =
+  let is_dep_ind = match typ with
+    | Tglob (GlobRef.IndRef _ as g, _, _) -> Table.has_dependent_params g
+    | _ -> false
+  in
+  if is_dep_ind then
+    List.map (fun (n, ml_ty) ->
+      match ml_ty with Tvar' _ -> (n, Tdummy Ktype) | _ -> (n, ml_ty)) ids
+  else ids
+
 let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   let render ty =
     render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
@@ -2333,7 +2348,7 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | CPPcond (c, t, f) -> ve c; ve t; ve f
     | CPPbraced es -> List.iter ve es
     | CPPstd_get (_, _, Some e) -> ve e
-    | CPPunop (_, e) -> ve e
+    | CPPunop (_, e) | CPPstd_get_if (_, _, e) -> ve e
     | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPstring _
     | CPPuint _ | CPPfloat _ | CPPconvertible_to _ | CPPabort _ | CPPenum_val _
     | CPPnullptr | CPPstd_get (_, _, None) | CPPstd_holds_alternative _
@@ -2347,6 +2362,7 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
     | Sassign_expr (lhs, e) -> ve lhs; ve e
     | Sif (c, t, f) -> ve c; List.iter vs t; List.iter vs f
     | Sif_then (c, t) -> ve c; List.iter vs t
+    | Sif_decl (_, _, init, t, f) -> ve init; List.iter vs t; List.iter vs f
     | Sswitch (e, _, branches, def) ->
       ve e;
       List.iter (fun (_, stmts) -> List.iter vs stmts) branches;
@@ -6954,7 +6970,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
              ids )
           env
       in
-      push_env_types ids';
+      let env_ids' = retype_dependent_params typ ids' in
+      push_env_types env_ids';
       let dummies =
         List.map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids
       in
@@ -7230,6 +7247,28 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
         (x, convert_ml_type_to_cpp_type env ns tvars ty) )
       (List.rev ids)
   in
+  (* Wrap erased variables with any_cast when returned as a template parameter. *)
+  let k =
+    match ret with
+    | Tvar _ ->
+      let is_erased_db i =
+        let ml_ty = try Some (get_env_type i) with _ -> None in
+        match ml_ty with
+        | Some ml_ty ->
+          let cpp_ty = convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty in
+          is_erased_type cpp_ty
+        | None -> false
+      in
+      let body_is_erased =
+        match body with
+        | MLrel i -> is_erased_db i
+        | Miniml.MLmagic (MLrel i) -> is_erased_db i
+        | _ -> false
+      in
+      if body_is_erased then (fun e -> k (CPPany_cast (ret, e)))
+      else k
+    | _ -> k
+  in
   let body = gen_stmts env k body in
   (ids, ret, body)
 
@@ -7475,6 +7514,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             ids'
         else ids'
       in
+      let ids' = retype_dependent_params ml_typ ids' in
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
@@ -7709,6 +7749,25 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
           List.map fix_stmt br_stmts
         else br_stmts
+      in
+      (* Wrap erased pattern variables with any_cast when returned as a template parameter. *)
+      let br_stmts =
+        match br_ret with
+        | Tvar _ ->
+          let erased_pat_vars =
+            List.fold_left (fun acc (name, cpp_ty) ->
+              if is_erased_type cpp_ty then Id.Set.add name acc else acc)
+              Id.Set.empty br_ids
+          in
+          if Id.Set.is_empty erased_pat_vars then br_stmts
+          else
+            List.map (function
+              | Sreturn (Some (CPPvar name))
+                when Id.Set.mem name erased_pat_vars ->
+                Sreturn (Some (CPPany_cast (br_ret, CPPvar name)))
+              | s -> s)
+              br_stmts
+        | _ -> br_stmts
       in
       (br_ids, br_ret, br_stmts) :: gen_cases cs
     | Pwild | Prel _ | Ptuple _ -> gen_cases cs
@@ -9758,10 +9817,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             | None -> [Sasgn (renamed_name, Some decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
-      push_env_types
-        (List.map
-           (fun ((n, _), (_, ty)) -> (n, ty))
-           (List.combine renamed_ids_fwd ids) );
+      let env_ids =
+        List.map
+          (fun ((n, _), (_, ty)) -> (n, ty))
+          (List.combine renamed_ids_fwd ids)
+        |> retype_dependent_params typ
+      in
+      push_env_types env_ids;
       asgns @ gen_stmts env' k body
   | t ->
     (* Tail position: generate expression with dead-after tracking.
@@ -9810,6 +9872,27 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     end
     else begin
       let e = gen_tail_expr env t in
+      (* Wrap erased coerced variables with any_cast when the return type is a Tvar. *)
+      let e =
+        let i_opt = match t with
+          | MLmagic (MLrel i) -> Some i
+          | _ -> None
+        in
+        match i_opt with
+        | Some i ->
+          (match tctx.current_cpp_return_type with
+           | Some (Tvar _ as ret_ty) when ret_ty <> Tany ->
+             let ml_ty = try Some (get_env_type i) with _ -> None in
+             let is_erased = match ml_ty with
+               | Some ml_ty ->
+                 let tvars = get_current_type_vars () in
+                 is_erased_type (convert_ml_type_to_cpp_type env Refset'.empty tvars ml_ty)
+               | None -> false
+             in
+             if is_erased then CPPany_cast (ret_ty, e) else e
+           | _ -> e)
+        | None -> e
+      in
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result
@@ -14143,10 +14226,248 @@ let gen_ind_header_v2
           []
       in
 
-      (* The iterative destructor was removed: it required use_count() == 1
-         to safely drain shared children, which is not thread-safe.  The
-         compiler-generated default destructor is used instead. *)
-      let iterative_destructor = [] in
+      (** Iterative destructor preventing stack overflow from deeply recursive
+          [shared_ptr] chains.  Drains recursive fields into an explicit stack,
+          only entering nodes with [use_count() == 1] (sole ownership).
+
+          Self-recursive types use [shared_ptr<Self>] directly on the stack.
+          Mutually recursive types use [std::any] to hold different [shared_ptr]
+          types.  Returns [[]] for non-recursive or coinductive types. *)
+      let iterative_destructor =
+        if is_coinductive then []
+        else
+          (** Check whether ML type [t] is a reference to [ref_name] applied to
+              the same type variables [ref_vars] (i.e., a direct recursive or
+              mutual recursive occurrence). *)
+          let rec is_ref_to ref_name ref_vars = function
+            | Miniml.Tglob (r, args, _) ->
+              Environ.QGlobRef.equal Environ.empty_env r ref_name
+              && List.length args = List.length ref_vars
+              && List.for_all
+                   (fun (j, arg) ->
+                     match arg with
+                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
+                       k = j + 1
+                     | _ -> false)
+                   (List.mapi (fun j a -> (j, a)) args)
+            | Miniml.Tmeta {contents = Some t} -> is_ref_to ref_name ref_vars t
+            | _ -> false
+          in
+          let is_direct_self_ref t = is_ref_to name vars t in
+          let is_mutual_ref ty =
+            List.exists
+              (fun (pname, _, _, _) -> is_ref_to pname vars ty)
+              mutual_partners
+          in
+          let is_recursive_ref ty = is_direct_self_ref ty || is_mutual_ref ty in
+          let has_mutual =
+            Array.exists (fun tys_list ->
+              List.exists is_mutual_ref tys_list) tys
+          in
+          (* Shared identifiers used across the destructor body *)
+          let _stack_id = Id.of_string "_stack" in
+          let _alt_id = Id.of_string "_alt" in
+          let _v_id = Id.of_string "_v" in
+          let _cur_id = Id.of_string "_cur" in
+          let _sp_id = Id.of_string "_sp" in
+          let _pv_id = Id.of_string "_pv" in
+          let variant_t_ty = Tid (Id.of_string "variant_t", []) in
+          let self_ty = Tglob (name, ty_vars, []) in
+          (** Build [Sif_then] statements that push each recursive field of a
+              constructor onto [_stack]:
+              [if (_alt->field) _stack.push_back(std::move(_alt->field));] *)
+          let mk_field_pushes fields =
+            List.map (fun field_id ->
+              Sif_then (
+                CPParrow (CPPvar _alt_id, field_id),
+                [Sexpr (CPPdot_method_call (
+                   CPPvar _stack_id,
+                   Id.of_string "push_back",
+                   [CPPmove (CPParrow (CPPvar _alt_id, field_id))]))]
+              )) fields
+          in
+          (** For each constructor, collect recursive [shared_ptr] fields and
+              build an [Sif_decl] that uses [get_if] to test the variant
+              alternative and push recursive fields onto the stack.  Returns
+              [Some stmt] for constructors with recursive fields, [None]
+              otherwise.
+
+              @param parent_ty    type to qualify the constructor in [get_if]
+              @param ctor_opt     [Some ctor_id] for qualified access
+                                  ([typename Parent::Ctor]), [None] for bare
+              @param variant_var  identifier of the variant to test *)
+          let mk_ctor_drain parent_ty ctor_opt variant_var i tys_list cnames_arr =
+            let recursive_fields =
+              List.filter_map
+                (fun (j, ty) ->
+                  if is_recursive_ref ty then
+                    let cname_str =
+                      ctor_struct_name_of_ref ~fallback_idx:i cnames_arr.(i)
+                    in
+                    Some (Common.lookup_ctor_field_name cname_str j)
+                  else None)
+                (List.mapi (fun j ty -> (j, ty)) tys_list)
+            in
+            match recursive_fields with
+            | [] -> None
+            | fields ->
+              let ctor_id =
+                ctor_struct_id_of_ref ~fallback_idx:i cnames_arr.(i)
+              in
+              let ctor_arg = match ctor_opt with
+                | None -> (Tid (ctor_id, []), None)
+                | Some _ -> (parent_ty, Some ctor_id)
+              in
+              Some (Sif_decl (
+                _alt_id, Tptr Tauto,
+                CPPstd_get_if (fst ctor_arg, snd ctor_arg,
+                  CPPunop ("&", CPPvar variant_var)),
+                mk_field_pushes fields,
+                []))
+          in
+          let drain_stmts =
+            Array.to_list
+              (Array.mapi
+                 (fun i tys_list ->
+                   mk_ctor_drain self_ty None _v_id i tys_list cnames)
+                 tys)
+            |> List.filter_map Fun.id
+          in
+          match drain_stmts with
+          | [] -> []
+          | _ when not has_mutual ->
+            (* Self-recursive only: stack holds shared_ptr<Self> directly *)
+            let stack_elem_ty = Tshared_ptr self_ty in
+            let stack_ty =
+              Tid_external (Id.of_string_soft "std::vector", [stack_elem_ty])
+            in
+            let _drain_id = Id.of_string "_drain" in
+            let drain_lambda =
+              CPPlambda (
+                [(Tref variant_t_ty, Some _v_id)],
+                None, drain_stmts, false)
+            in
+            let body =
+              [ Sasgn (_stack_id, Some stack_ty,
+                  CPPbraced []);
+                Sasgn (_drain_id, Some Tauto, drain_lambda);
+                Sexpr (CPPfun_call (CPPvar _drain_id,
+                  [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
+                Swhile (
+                  CPPunop ("!",
+                    CPPdot_method_call (CPPvar _stack_id,
+                      Id.of_string "empty", [])),
+                  [ Sasgn (_cur_id, Some Tauto,
+                      CPPmove (CPPdot_method_call (CPPvar _stack_id,
+                        Id.of_string "back", [])));
+                    Sexpr (CPPdot_method_call (CPPvar _stack_id,
+                      Id.of_string "pop_back", []));
+                    Sif_then (
+                      CPPbinop ("==",
+                        CPPdot_method_call (CPPvar _cur_id,
+                          Id.of_string "use_count", []),
+                        CPPint 1),
+                      [Sexpr (CPPfun_call (CPPvar _drain_id,
+                        [CPPmethod_call (CPPvar _cur_id,
+                          Id.of_string "v_mut", [])]))])
+                  ])
+              ]
+            in
+            [(Fdestructor body, VPublic, SManipulators)]
+          | _ ->
+            (* Mutual recursion: stack holds std::any to accommodate
+               shared_ptrs of different types in the mutual group *)
+            let stack_ty =
+              Tid_external (Id.of_string_soft "std::vector", [Tany])
+            in
+            let _drain_self_id = Id.of_string "_drain_self" in
+            let drain_self_lambda =
+              CPPlambda (
+                [(Tref variant_t_ty, Some _v_id)],
+                None, drain_stmts, false)
+            in
+            (** Build the per-partner drain logic used inside the while loop.
+                For each partner type, generates an [Sif_decl] that casts the
+                [std::any] stack entry to [shared_ptr<Partner>], then drains
+                the partner's recursive fields into the shared stack. *)
+            let gen_partner_branch (pname, pcnames, ptys, _) =
+              let partner_ty = Tglob (pname, ty_vars, []) in
+              let partner_drains =
+                Array.to_list
+                  (Array.mapi
+                     (fun pi ptys_list ->
+                       mk_ctor_drain partner_ty (Some ()) _pv_id
+                         pi ptys_list pcnames)
+                     ptys)
+                |> List.filter_map Fun.id
+              in
+              (partner_ty, partner_drains)
+            in
+            let partner_branches =
+              List.map gen_partner_branch mutual_partners
+            in
+            (* Build the chained if/else-if for any_cast branches in the loop.
+               Self branch: any_cast<shared_ptr<Self>>, call _drain_self.
+               Partner branches: any_cast<shared_ptr<Partner>>, inline drain. *)
+            let deref_sp = CPPderef (CPPvar _sp_id) in
+            let sp_alive_and_unique =
+              CPPbinop ("&&", deref_sp,
+                CPPbinop ("==",
+                  CPPdot_method_call (deref_sp,
+                    Id.of_string "use_count", []),
+                  CPPint 1))
+            in
+            let self_branch_body =
+              [Sif_then (sp_alive_and_unique,
+                [Sexpr (CPPfun_call (CPPvar _drain_self_id,
+                  [CPPmethod_call (deref_sp,
+                    Id.of_string "v_mut", [])]))])]
+            in
+            let rec build_if_chain branches =
+              match branches with
+              | [] -> []
+              | (partner_ty, partner_drains) :: rest ->
+                let inner = build_if_chain rest in
+                let partner_body =
+                  [Sif_then (sp_alive_and_unique,
+                    Sasgn (_pv_id, Some (Tref Tauto),
+                      CPPmethod_call (deref_sp,
+                        Id.of_string "v_mut", []))
+                    :: partner_drains)]
+                in
+                [Sif_decl (_sp_id, Tptr Tauto,
+                  CPPany_cast (Tshared_ptr partner_ty,
+                    CPPunop ("&", CPPvar _cur_id)),
+                  partner_body, inner)]
+            in
+            let loop_body_stmts =
+              [Sif_decl (_sp_id, Tptr Tauto,
+                CPPany_cast (Tshared_ptr self_ty,
+                  CPPunop ("&", CPPvar _cur_id)),
+                self_branch_body,
+                build_if_chain partner_branches)]
+            in
+            let body =
+              [ Sasgn (_stack_id, Some stack_ty, CPPbraced []);
+                Sasgn (_drain_self_id, Some Tauto, drain_self_lambda);
+                Sexpr (CPPfun_call (CPPvar _drain_self_id,
+                  [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
+                Swhile (
+                  CPPunop ("!",
+                    CPPdot_method_call (CPPvar _stack_id,
+                      Id.of_string "empty", [])),
+                  Sasgn (_cur_id, Some Tauto,
+                    CPPmove (CPPdot_method_call (CPPvar _stack_id,
+                      Id.of_string "back", [])))
+                  :: Sexpr (CPPdot_method_call (CPPvar _stack_id,
+                       Id.of_string "pop_back", []))
+                  :: loop_body_stmts)
+              ]
+            in
+            [(Fdestructor body, VPublic, SManipulators)]
+      in
 
       (* For coinductive types, add public constructor accepting
          std::function<variant_t()> (public so make_shared can access it) *)

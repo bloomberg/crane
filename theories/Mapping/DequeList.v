@@ -25,7 +25,7 @@ Crane Extract Inlined Constant Datatypes.length =>
   "static_cast<uint64_t>(%a0.size())" From "cstdint".
 
 Crane Extract Inlined Constant Datatypes.app =>
-  "[&]() { auto _r = %a0; _r.insert(_r.end(), %a1.begin(), %a1.end()); return _r; }()" From "deque".
+  "[&]() { auto _r = %a0; auto _s = %a1; _r.insert(_r.end(), _s.begin(), _s.end()); return _r; }()" From "deque".
 
 (** Higher-order list functions from the [List] module. *)
 Crane Extract Inlined Constant List.map =>
@@ -54,7 +54,7 @@ Crane Extract Inlined Constant List.concat =>
 
 (** String <-> list conversions. *)
 Crane Extract Inlined Constant String.list_ascii_of_string =>
-  "std::deque<char>(%a0.begin(), %a0.end())" From "deque".
+  "[&]() { const auto& _s = %a0; return std::deque<char>(_s.begin(), _s.end()); }()" From "deque".
 
 Crane Extract Inlined Constant String.string_of_list_ascii =>
-  "std::string(%a0.begin(), %a0.end())" From "string".
+  "[&]() { const auto& _s = %a0; return std::string(_s.begin(), _s.end()); }()" From "string".

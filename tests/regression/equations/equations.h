@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 struct PeanoNat {
   static bool even(uint64_t n);
@@ -113,6 +114,48 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~gcd_graph() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Gcd_graph_refinement_3>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp =
+                  std::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt =
+                      std::get_if<typename gcd_clause_3_graph::
+                                      Gcd_clause_3_graph_equation_1>(&_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+              if (auto *_alt =
+                      std::get_if<typename gcd_clause_3_graph::
+                                      Gcd_clause_3_graph_equation_2>(&_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -163,6 +206,46 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~gcd_clause_3_graph() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_1>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+        if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_2>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp =
+                std::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt =
+                      std::get_if<typename gcd_graph::Gcd_graph_refinement_3>(
+                          &_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -457,6 +540,52 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~collatz_steps_graph() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Collatz_steps_graph_refinement_3>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp =
+                std::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp =
+                  std::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
+                      &_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt =
+                      std::get_if<typename collatz_steps_clause_3_graph::
+                                      Collatz_steps_clause_3_graph_equation_1>(
+                          &_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+              if (auto *_alt =
+                      std::get_if<typename collatz_steps_clause_3_graph::
+                                      Collatz_steps_clause_3_graph_equation_2>(
+                          &_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -511,6 +640,50 @@ struct Equations {
     }
 
     // MANIPULATORS
+    ~collatz_steps_clause_3_graph() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt =
+                std::get_if<Collatz_steps_clause_3_graph_equation_1>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+        if (auto *_alt =
+                std::get_if<Collatz_steps_clause_3_graph_equation_2>(&_v)) {
+          if (_alt->hind) {
+            _stack.push_back(std::move(_alt->hind));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp =
+                std::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
+                    &_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp =
+                  std::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt =
+                      std::get_if<typename collatz_steps_graph::
+                                      Collatz_steps_graph_refinement_3>(&_pv)) {
+                if (_alt->hind) {
+                  _stack.push_back(std::move(_alt->hind));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

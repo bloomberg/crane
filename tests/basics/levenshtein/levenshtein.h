@@ -5,6 +5,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -35,6 +36,25 @@ public:
   static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
+  ~Nat() {
+    std::vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -214,6 +234,25 @@ public:
   }
 
   // MANIPULATORS
+  ~String() {
+    std::vector<std::shared_ptr<String>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<String0>(&_v)) {
+        if (_alt->a1) {
+          _stack.push_back(std::move(_alt->a1));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -380,6 +419,30 @@ struct Levenshtein {
     }
 
     // MANIPULATORS
+    ~chain() {
+      std::vector<std::shared_ptr<chain>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Skip>(&_v)) {
+          if (_alt->a4) {
+            _stack.push_back(std::move(_alt->a4));
+          }
+        }
+        if (auto *_alt = std::get_if<Change>(&_v)) {
+          if (_alt->a5) {
+            _stack.push_back(std::move(_alt->a5));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

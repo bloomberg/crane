@@ -664,6 +664,7 @@ let header_imports_bsl =
     "bsl_string.h";
     "bsl_type_traits.h";
     "bsl_variant.h";
+    "bsl_vector.h";
   ]
 
 let mk_include s = str ("#include <" ^ s ^ ">")

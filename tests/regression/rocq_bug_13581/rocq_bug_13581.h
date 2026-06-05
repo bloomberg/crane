@@ -1,11 +1,13 @@
 #ifndef INCLUDED_ROCQ_BUG_13581
 #define INCLUDED_ROCQ_BUG_13581
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#include <vector>
 
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -37,6 +39,25 @@ public:
   static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
+  ~Nat() {
+    std::vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -112,6 +133,38 @@ struct RocqBug13581 {
     }
 
     // MANIPULATORS
+    ~I() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<D>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename J<T>::E>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -146,6 +199,38 @@ struct RocqBug13581 {
     }
 
     // MANIPULATORS
+    ~J() {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<E>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+      };
+      _drain_self(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename I<T>::D>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
