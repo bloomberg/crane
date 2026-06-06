@@ -40,7 +40,7 @@ uint64_t LoopifyExtrema::maximum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t max_rest = _result;
+      uint64_t max_rest = std::move(_result);
       if (max_rest < a0) {
         _result = std::move(a0);
       } else {
@@ -91,7 +91,7 @@ uint64_t LoopifyExtrema::minimum(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t min_rest = _result;
+      uint64_t min_rest = std::move(_result);
       if (a0 < min_rest) {
         _result = std::move(a0);
       } else {
@@ -142,8 +142,9 @@ std::pair<uint64_t, uint64_t> LoopifyExtrema::minmax(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &lo = _result.first;
-      const uint64_t &hi = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t lo = std::move(_cs.first);
+      uint64_t hi = std::move(_cs.second);
       _result = std::make_pair(std::min(a0, lo), std::max(a0, hi));
     }
   }

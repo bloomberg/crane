@@ -11,9 +11,6 @@ struct Coercions {
 
   struct Wrapper {
     uint64_t unwrap;
-
-    // ACCESSORS
-    Wrapper clone() const { return Wrapper{this->unwrap}; }
   };
 
   static uint64_t double_wrapped(const Wrapper &w);
@@ -22,9 +19,6 @@ struct Coercions {
 
   struct BoolBox {
     bool unbox;
-
-    // ACCESSORS
-    BoolBox clone() const { return BoolBox{this->unbox}; }
   };
 
   static uint64_t add_boolbox(uint64_t n, const BoolBox &bb);
@@ -33,9 +27,6 @@ struct Coercions {
 
   struct Transform {
     std::function<uint64_t(uint64_t)> apply_transform;
-
-    // ACCESSORS
-    Transform clone() const { return Transform{this->apply_transform}; }
   };
 
   static inline const Transform double_transform =

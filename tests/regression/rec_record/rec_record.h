@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REC_RECORD
 #define INCLUDED_REC_RECORD
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -15,7 +16,7 @@ struct RecRecord {
 
     struct Rcons {
       A a0;
-      std::unique_ptr<rlist<A>> a1;
+      std::shared_ptr<rlist<A>> a1;
     };
 
     using variant_t = std::variant<Rnil, Rcons>;
@@ -32,59 +33,43 @@ struct RecRecord {
 
     explicit rlist(Rcons _v) : v_(std::move(_v)) {}
 
-    rlist(const rlist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    rlist(rlist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    rlist<A> &operator=(const rlist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    rlist<A> &operator=(rlist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    rlist<A> clone() const {
-      rlist<A> _out{};
-
-      struct _CloneFrame {
-        const rlist<A> *_src;
-        rlist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const rlist<A> *_src = _frame._src;
-        rlist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Rnil>(_src->v())) {
-          _dst->v_ = Rnil{};
-        } else {
-          const auto &_alt = std::get<Rcons>(_src->v());
-          _dst->v_ =
-              Rcons{_alt.a0, _alt.a1 ? std::make_unique<rlist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Rcons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit rlist(const rlist<_U> &_other) {
       if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
         this->v_ = Rnil{};
       } else {
         const auto &[a0, a1] = std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->v_ = Rcons{A(a0), a1 ? std::make_unique<rlist<A>>(*a1) : nullptr};
+        this->v_ = Rcons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<rlist<A>>(*a1) : nullptr};
       }
     }
 
@@ -92,27 +77,25 @@ struct RecRecord {
 
     static rlist<A> rcons(A a0, rlist<A> a1) {
       return rlist(
-          Rcons{std::move(a0), std::make_unique<rlist<A>>(std::move(a1))});
+          Rcons{std::move(a0), std::make_shared<rlist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~rlist() {
-      std::vector<std::unique_ptr<rlist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](rlist<A> &_node) {
-        if (std::holds_alternative<Rcons>(_node.v_)) {
-          auto &_alt = std::get<Rcons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<rlist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Rcons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -147,25 +130,21 @@ struct RecRecord {
 
   struct RNode {
     uint64_t rn_value;
-    std::optional<std::unique_ptr<RNode>> rn_next;
-
-    // ACCESSORS
-    RNode clone() const {
-      return RNode{this->rn_value,
-                   (*this).rn_next.has_value()
-                       ? std::make_optional(std::make_unique<RNode>(
-                             (*(*this).rn_next)->clone()))
-                       : std::nullopt};
-    }
+    std::optional<std::shared_ptr<RNode>> rn_next;
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rect(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 =
-        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
-                              : std::nullopt;
+    std::optional<RNode> rn_next0{};
+    const auto &__cv = r.rn_next;
+    if (__cv.has_value()) {
+      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
+      rn_next0 = std::make_optional<RNode>((*_cv0_0));
+    } else {
+      rn_next0 = std::optional<RNode>();
+    }
     return f(rn_value0, rn_next0);
   }
 
@@ -173,30 +152,26 @@ struct RecRecord {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
   static T1 RNode_rec(F0 &&f, const RNode &r) {
     uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0 =
-        r.rn_next.has_value() ? std::make_optional<RNode>((*r.rn_next)->clone())
-                              : std::nullopt;
+    std::optional<RNode> rn_next0{};
+    const auto &__cv = r.rn_next;
+    if (__cv.has_value()) {
+      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
+      rn_next0 = std::make_optional<RNode>((*_cv0_0));
+    } else {
+      rn_next0 = std::optional<RNode>();
+    }
     return f(rn_value0, rn_next0);
   }
 
   struct Employee {
     uint64_t emp_name;
     uint64_t emp_dept;
-
-    // ACCESSORS
-    Employee clone() const { return Employee{this->emp_name, this->emp_dept}; }
   };
 
   struct Department {
     uint64_t dept_id;
     Employee dept_head;
     uint64_t dept_size;
-
-    // ACCESSORS
-    Department clone() const {
-      return Department{this->dept_id, this->dept_head.clone(),
-                        this->dept_size};
-    }
   };
 
   template <typename T1> static uint64_t rlist_length(const rlist<T1> &l) {
@@ -219,26 +194,37 @@ struct RecRecord {
   static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode{
       UINT64_C(1),
-      [](auto &&__x)
-          -> std::optional<std::unique_ptr<RNode>> {
-        return __x.has_value()
-                   ? std::make_optional(std::make_unique<RNode>((*__x).clone()))
-                   : std::nullopt;
+      [](const auto &__cv)
+          -> std::optional<std::shared_ptr<RNode>> {
+        if (__cv.has_value()) {
+          const RNode &_cv0_0 = *__cv;
+          return std::make_optional<std::shared_ptr<RNode>>(
+              std::make_shared<RNode>(_cv0_0));
+        } else {
+          return std::optional<std::shared_ptr<RNode>>();
+        }
       }(std::make_optional<RNode>(RNode{
               UINT64_C(2),
-              [](auto &&__x)
-                  -> std::optional<std::unique_ptr<RNode>> {
-                return __x.has_value()
-                           ? std::make_optional(
-                                 std::make_unique<RNode>((*__x).clone()))
-                           : std::nullopt;
+              [](const auto &__cv)
+                  -> std::optional<std::shared_ptr<RNode>> {
+                if (__cv.has_value()) {
+                  const RNode &_cv0_0 = *__cv;
+                  return std::make_optional<std::shared_ptr<RNode>>(
+                      std::make_shared<RNode>(_cv0_0));
+                } else {
+                  return std::optional<std::shared_ptr<RNode>>();
+                }
               }(std::make_optional<RNode>(RNode{
                       UINT64_C(3),
-                      [](auto &&__x) -> std::optional<std::unique_ptr<RNode>> {
-                        return __x.has_value()
-                                   ? std::make_optional(std::make_unique<RNode>(
-                                         (*__x).clone()))
-                                   : std::nullopt;
+                      [](const auto &__cv)
+                          -> std::optional<std::shared_ptr<RNode>> {
+                        if (__cv.has_value()) {
+                          const RNode &_cv0_0 = *__cv;
+                          return std::make_optional<std::shared_ptr<RNode>>(
+                              std::make_shared<RNode>(_cv0_0));
+                        } else {
+                          return std::optional<std::shared_ptr<RNode>>();
+                        }
                       }(std::optional<RNode>())}))}))};
   static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);
   static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};

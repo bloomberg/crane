@@ -16,7 +16,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
   /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe8::tree *a0;
-    decltype(UINT64_C(0)) _s1;
+    std::decay_t<decltype(UINT64_C(0))> _s1;
     uint64_t a1;
   };
 
@@ -50,7 +50,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -77,7 +77,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
   struct _After_Node {
     uint64_t _s0;
     const MemSafetyProbe8::tree *a0;
-    decltype(UINT64_C(0)) _s2;
+    std::decay_t<decltype(UINT64_C(0))> _s2;
     uint64_t _s3;
   };
 
@@ -114,7 +114,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s3});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s3});
       _stack.emplace_back(_Enter{_f._s0, _f.a0, _f._s2});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -125,26 +125,45 @@ uint64_t MemSafetyProbe8::tree_weighted(
 }
 
 /// TEST 3: Deep tree traversal — more iterations, more frames.
-MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
-  std::unique_ptr<MemSafetyProbe8::tree> _head{};
-  std::unique_ptr<MemSafetyProbe8::tree> *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_unique<MemSafetyProbe8::tree>(tree::leaf());
-      break;
+MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [_s0, n], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    std::decay_t<decltype(tree::leaf())> _s0;
+    uint64_t n;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  MemSafetyProbe8::tree _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified make_left_spine: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = tree::leaf();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Resume_n_{tree::leaf(), n});
+        _stack.emplace_back(_Enter{n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_unique<MemSafetyProbe8::tree>(typename tree::Node(
-          nullptr, _loop_n,
-          std::make_unique<MemSafetyProbe8::tree>(tree::leaf())));
-      *_write = std::move(_cell);
-      _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result = tree::node(std::move(_result), _f.n, _f._s0);
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// TEST 4: Tree traversal where both recursive calls use
@@ -199,14 +218,14 @@ uint64_t MemSafetyProbe8::tree_collect(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
-      uint64_t left = _result;
+      uint64_t left = std::move(_result);
       _stack.emplace_back(_Cont_Node_1{a1, left});
       _stack.emplace_back(_Enter{&a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t left = _f.left;
-      uint64_t right = _result;
+      uint64_t right = std::move(_result);
       _result = ((left + a1) + right);
     }
   }
@@ -228,7 +247,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
   /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe8::tree *a0;
-    decltype(UINT64_C(0)) _s1;
+    std::decay_t<decltype(UINT64_C(0))> _s1;
     uint64_t a1;
   };
 
@@ -262,7 +281,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0, _f._s1});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));

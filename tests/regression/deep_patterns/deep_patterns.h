@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_PATTERNS
 #define INCLUDED_DEEP_PATTERNS
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -14,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -31,85 +32,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -141,7 +124,7 @@ struct DeepPatterns {
   struct outer {
     // TYPES
     struct OLeft {
-      std::unique_ptr<inner> a0;
+      std::shared_ptr<inner> a0;
     };
 
     struct ORight {
@@ -162,56 +145,36 @@ struct DeepPatterns {
 
     explicit outer(ORight _v) : v_(std::move(_v)) {}
 
-    outer(const outer &_other) : v_(std::move(_other.clone().v_)) {}
-
-    outer(outer &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    outer &operator=(const outer &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    outer &operator=(outer &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    outer clone() const {
-      if (std::holds_alternative<OLeft>(this->v())) {
-        const auto &[a0] = std::get<OLeft>(this->v());
-        return outer(OLeft{
-            a0 ? std::make_unique<DeepPatterns::inner>(a0->clone()) : nullptr});
-      } else {
-        const auto &[a0] = std::get<ORight>(this->v());
-        return outer(ORight{a0});
-      }
-    }
-
-    // CREATORS
     static outer oleft(inner a0) {
-      return outer(OLeft{std::make_unique<inner>(std::move(a0))});
+      return outer(OLeft{std::make_shared<inner>(std::move(a0))});
     }
 
     static outer oright(uint64_t a0) { return outer(ORight{a0}); }
 
     // MANIPULATORS
     ~outer() {
-      std::vector<std::unique_ptr<outer>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [](outer &_node) {
-        if (std::holds_alternative<OLeft>(_node.v_)) {
-          auto &_alt = std::get<OLeft>(_node.v_);
-          if (_alt.a0) {
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<OLeft>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<outer>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<inner>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+            }
+          }
         }
       }
     }
@@ -246,32 +209,6 @@ struct DeepPatterns {
 
     explicit inner(IRight _v) : v_(std::move(_v)) {}
 
-    inner(const inner &_other) : v_(std::move(_other.clone().v_)) {}
-
-    inner(inner &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    inner &operator=(const inner &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    inner &operator=(inner &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    inner clone() const {
-      if (std::holds_alternative<ILeft>(this->v())) {
-        const auto &[a0] = std::get<ILeft>(this->v());
-        return inner(ILeft{a0});
-      } else {
-        const auto &[a0] = std::get<IRight>(this->v());
-        return inner(IRight{a0});
-      }
-    }
-
-    // CREATORS
     static inner ileft(uint64_t a0) { return inner(ILeft{a0}); }
 
     static inner iright(bool a0) { return inner(IRight{a0}); }
@@ -374,7 +311,7 @@ struct DeepPatterns {
 
     struct Cons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -391,59 +328,43 @@ struct DeepPatterns {
 
     explicit mylist(Cons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist<A> &operator=(const mylist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist<A> &operator=(mylist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist<A> clone() const {
-      mylist<A> _out{};
-
-      struct _CloneFrame {
-        const mylist<A> *_src;
-        mylist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist<A> *_src = _frame._src;
-        mylist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->v_ = Nil{};
-        } else {
-          const auto &_alt = std::get<Cons>(_src->v());
-          _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Nil>(_other.v())) {
         this->v_ = Nil{};
       } else {
         const auto &[a0, a1] = std::get<typename mylist<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        this->v_ = Cons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -451,27 +372,25 @@ struct DeepPatterns {
 
     static mylist<A> cons(A a0, mylist<A> a1) {
       return mylist(
-          Cons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist<A> &_node) {
-        if (std::holds_alternative<Cons>(_node.v_)) {
-          auto &_alt = std::get<Cons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Cons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

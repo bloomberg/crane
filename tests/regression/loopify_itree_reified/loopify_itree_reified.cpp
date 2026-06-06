@@ -27,7 +27,7 @@ uint64_t LoopifyItreeReified::count_taus(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const std::shared_ptr<ITree<uint64_t>> &t = _f.t;
+      const std::shared_ptr<ITree<uint64_t>> &t = std::move(_f.t);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = UINT64_C(0);
@@ -52,7 +52,7 @@ uint64_t LoopifyItreeReified::count_taus(
       }
     } else {
       auto _f = std::move(std::get<_Resume_t_>(_frame));
-      _result = (_result + 1);
+      _result = (std::move(_result) + 1);
     }
   }
   return _result;

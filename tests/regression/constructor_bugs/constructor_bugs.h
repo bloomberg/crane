@@ -15,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -32,85 +32,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -135,40 +117,22 @@ template <typename A> struct Sig {
 struct ConstructorBugs {
   struct field_a {
     uint64_t a_value;
-
-    // ACCESSORS
-    field_a clone() const { return field_a{this->a_value}; }
   };
 
   struct field_b {
     uint64_t b_value;
-
-    // ACCESSORS
-    field_b clone() const { return field_b{this->b_value}; }
   };
 
   struct source_state {
     field_a source_a;
     field_b source_b;
     uint64_t source_flag;
-
-    // ACCESSORS
-    source_state clone() const {
-      return source_state{this->source_a.clone(), this->source_b.clone(),
-                          this->source_flag};
-    }
   };
 
   struct packed_state {
     source_state packed_source;
     field_a packed_a;
     field_b packed_b;
-
-    // ACCESSORS
-    packed_state clone() const {
-      return packed_state{this->packed_source.clone(), this->packed_a.clone(),
-                          this->packed_b.clone()};
-    }
   };
 
   static source_state step(source_state s);
@@ -182,26 +146,12 @@ struct ConstructorBugs {
     field_a source_a_list;
     List<field_b> source_b_list;
     uint64_t source_flag_list;
-
-    // ACCESSORS
-    source_state_list clone() const {
-      return source_state_list{this->source_a_list.clone(),
-                               this->source_b_list.clone(),
-                               this->source_flag_list};
-    }
   };
 
   struct packed_state_list {
     source_state_list packed_source_list;
     field_a packed_a_list;
     List<field_b> packed_b_list;
-
-    // ACCESSORS
-    packed_state_list clone() const {
-      return packed_state_list{this->packed_source_list.clone(),
-                               this->packed_a_list.clone(),
-                               this->packed_b_list.clone()};
-    }
   };
 
   static source_state_list step_list(source_state_list s);
@@ -211,9 +161,6 @@ struct ConstructorBugs {
   struct state {
     uint64_t value;
     List<uint64_t> data;
-
-    // ACCESSORS
-    state clone() const { return state{this->value, this->data.clone()}; }
   };
 
   static state get_state(uint64_t n);
@@ -245,19 +192,11 @@ struct ConstructorBugs {
 
   struct Inner {
     uint64_t inner_val;
-
-    // ACCESSORS
-    Inner clone() const { return Inner{this->inner_val}; }
   };
 
   struct Outer {
     Inner outer_inner;
     uint64_t outer_data;
-
-    // ACCESSORS
-    Outer clone() const {
-      return Outer{this->outer_inner.clone(), this->outer_data};
-    }
   };
 
   static Outer nested_record(Inner i);
@@ -295,32 +234,6 @@ struct ConstructorBugs {
 
     explicit MySum(Right _v) : v_(std::move(_v)) {}
 
-    MySum(const MySum &_other) : v_(std::move(_other.clone().v_)) {}
-
-    MySum(MySum &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    MySum &operator=(const MySum &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    MySum &operator=(MySum &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    MySum clone() const {
-      if (std::holds_alternative<Left>(this->v())) {
-        const auto &[a0] = std::get<Left>(this->v());
-        return MySum(Left{a0.clone()});
-      } else {
-        const auto &[a0] = std::get<Right>(this->v());
-        return MySum(Right{a0});
-      }
-    }
-
-    // CREATORS
     static MySum left(Inner a0) { return MySum(Left{std::move(a0)}); }
 
     static MySum right(uint64_t a0) { return MySum(Right{a0}); }
@@ -365,9 +278,6 @@ struct ConstructorBugs {
 
   struct Container {
     Outer cont_outer;
-
-    // ACCESSORS
-    Container clone() const { return Container{this->cont_outer.clone()}; }
   };
 
   static std::pair<std::pair<Outer, Inner>, uint64_t>
@@ -387,11 +297,6 @@ struct ConstructorBugs {
     uint64_t value_inline;
     uint64_t data_inline;
     uint64_t flag;
-
-    // ACCESSORS
-    State clone() const {
-      return State{this->value_inline, this->data_inline, this->flag};
-    }
   };
 
   static std::pair<State, uint64_t> inline_pair(State s);
@@ -408,11 +313,6 @@ struct ConstructorBugs {
   struct OuterInline {
     State outer_state;
     uint64_t outer_num;
-
-    // ACCESSORS
-    OuterInline clone() const {
-      return OuterInline{this->outer_state.clone(), this->outer_num};
-    }
   };
 
   static std::pair<std::pair<OuterInline, State>, uint64_t>

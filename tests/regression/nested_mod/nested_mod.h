@@ -74,35 +74,6 @@ struct NestedMod {
 
         explicit shape(Triangle _v) : v_(std::move(_v)) {}
 
-        shape(const shape &_other) : v_(std::move(_other.clone().v_)) {}
-
-        shape(shape &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-        shape &operator=(const shape &_other) {
-          v_ = std::move(_other.clone().v_);
-          return *this;
-        }
-
-        shape &operator=(shape &&_other) noexcept {
-          v_ = std::move(_other.v_);
-          return *this;
-        }
-
-        // ACCESSORS
-        shape clone() const {
-          if (std::holds_alternative<Circle>(this->v())) {
-            const auto &[a0] = std::get<Circle>(this->v());
-            return shape(Circle{a0});
-          } else if (std::holds_alternative<Square>(this->v())) {
-            const auto &[a0] = std::get<Square>(this->v());
-            return shape(Square{a0});
-          } else {
-            const auto &[a0, a1, a2] = std::get<Triangle>(this->v());
-            return shape(Triangle{a0, a1, a2});
-          }
-        }
-
-        // CREATORS
         static shape circle(uint64_t a0) { return shape(Circle{a0}); }
 
         static shape square(uint64_t a0) { return shape(Square{a0}); }

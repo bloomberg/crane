@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <type_traits>
+#include <utility>
 #include <variant>
 
 struct EffectHofVoid {
@@ -14,7 +15,7 @@ struct EffectHofVoid {
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void apply_void(F0 &&f, std::string _x0) {
-    f(_x0);
+    f(std::move(_x0));
     return;
   } /// 2. Apply a void callback then return a value
 

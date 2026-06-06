@@ -87,40 +87,56 @@ ComprehensivePatterns::nested_containers(ComprehensivePatterns::S s) {
 
 std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>
 ComprehensivePatterns::match_pair(
-    const std::pair<ComprehensivePatterns::S, uint64_t> &p) {
-  const ComprehensivePatterns::S &s = p.first;
-  const uint64_t &n = p.second;
+    std::pair<ComprehensivePatterns::S, uint64_t> p) {
+  ComprehensivePatterns::S s = std::move(p.first);
+  uint64_t n = std::move(p.second);
   return std::make_pair(std::make_pair(s, n), s.s_a);
 }
 
 List<std::pair<ComprehensivePatterns::S, uint64_t>>
-ComprehensivePatterns::make_list(uint64_t n, ComprehensivePatterns::S s) {
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::S, uint64_t>>> *_write =
-      &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write =
-          std::make_unique<List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
-              List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil());
-      break;
+ComprehensivePatterns::make_list(
+    uint64_t n,
+    ComprehensivePatterns::S
+        s) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
+    std::decay_t<decltype(std::make_pair(
+        std::declval<ComprehensivePatterns::S &>(),
+        std::declval<ComprehensivePatterns::S &>().s_a))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_m>;
+  List<std::pair<ComprehensivePatterns::S, uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified make_list: _Enter -> _Resume_m.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<std::pair<ComprehensivePatterns::S, uint64_t>>::nil();
+      } else {
+        uint64_t m = n - 1;
+        _stack.emplace_back(_Resume_m{std::make_pair(s, s.s_a)});
+        _stack.emplace_back(_Enter{m});
+      }
     } else {
-      uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<
-          List<std::pair<ComprehensivePatterns::S, uint64_t>>>(
-          typename List<std::pair<ComprehensivePatterns::S, uint64_t>>::Cons(
-              std::make_pair(s, s.s_a), nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<
-          std::pair<ComprehensivePatterns::S, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
-                    .l;
-      _loop_n = m;
-      continue;
+      auto _f = std::move(std::get<_Resume_m>(_frame));
+      _result = List<std::pair<ComprehensivePatterns::S, uint64_t>>::cons(
+          _f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 std::optional<std::pair<ComprehensivePatterns::S, ComprehensivePatterns::S>>
@@ -297,39 +313,53 @@ ComprehensivePatterns::cond_proj(bool b, ComprehensivePatterns::R2 r2) {
 }
 
 List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
-ComprehensivePatterns::repeat_r2(uint64_t n, ComprehensivePatterns::R2 r2) {
-  std::unique_ptr<
-      List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
-      _head{};
-  std::unique_ptr<
-      List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>
-      *_write = &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write = std::make_unique<List<
-          std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
-          List<std::pair<ComprehensivePatterns::R2,
-                         ComprehensivePatterns::R1>>::nil());
-      break;
+ComprehensivePatterns::repeat_r2(
+    uint64_t n,
+    ComprehensivePatterns::R2
+        r2) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
+    std::decay_t<decltype(std::make_pair(
+        std::declval<ComprehensivePatterns::R2 &>(),
+        std::declval<ComprehensivePatterns::R2 &>().r2_inner))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_m>;
+  List<std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>
+      _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified repeat_r2: _Enter -> _Resume_m.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<std::pair<ComprehensivePatterns::R2,
+                                 ComprehensivePatterns::R1>>::nil();
+      } else {
+        uint64_t m = n - 1;
+        _stack.emplace_back(_Resume_m{std::make_pair(r2, r2.r2_inner)});
+        _stack.emplace_back(_Enter{m});
+      }
     } else {
-      uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<List<
-          std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>>(
-          typename List<
-              std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R1>>::
-              Cons(std::make_pair(r2, r2.r2_inner), nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<std::pair<ComprehensivePatterns::R2,
-                                            ComprehensivePatterns::R1>>::Cons>(
-               (*_write)->v_mut())
-               .l;
-      _loop_n = m;
-      continue;
+      auto _f = std::move(std::get<_Resume_m>(_frame));
+      _result =
+          List<std::pair<ComprehensivePatterns::R2,
+                         ComprehensivePatterns::R1>>::cons(_f._s0,
+                                                           std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 std::pair<std::pair<ComprehensivePatterns::R3, ComprehensivePatterns::R2>,
@@ -463,33 +493,49 @@ ComprehensivePatterns::chain_to_pair(ComprehensivePatterns::R r1) {
 }
 
 List<std::pair<ComprehensivePatterns::R, uint64_t>>
-ComprehensivePatterns::repeat_pair(uint64_t n, ComprehensivePatterns::R r) {
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<ComprehensivePatterns::R, uint64_t>>> *_write =
-      &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write =
-          std::make_unique<List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
-              List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil());
-      break;
+ComprehensivePatterns::repeat_pair(
+    uint64_t n,
+    ComprehensivePatterns::R
+        r) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_m: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_m {
+    std::decay_t<decltype(std::make_pair(
+        std::declval<ComprehensivePatterns::R &>(),
+        std::declval<ComprehensivePatterns::R &>().val))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_m>;
+  List<std::pair<ComprehensivePatterns::R, uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified repeat_pair: _Enter -> _Resume_m.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = List<std::pair<ComprehensivePatterns::R, uint64_t>>::nil();
+      } else {
+        uint64_t m = n - 1;
+        _stack.emplace_back(_Resume_m{std::make_pair(r, r.val)});
+        _stack.emplace_back(_Enter{m});
+      }
     } else {
-      uint64_t m = _loop_n - 1;
-      auto _cell = std::make_unique<
-          List<std::pair<ComprehensivePatterns::R, uint64_t>>>(
-          typename List<std::pair<ComprehensivePatterns::R, uint64_t>>::Cons(
-              std::make_pair(r, r.val), nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<
-          std::pair<ComprehensivePatterns::R, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
-                    .l;
-      _loop_n = m;
-      continue;
+      auto _f = std::move(std::get<_Resume_m>(_frame));
+      _result = List<std::pair<ComprehensivePatterns::R, uint64_t>>::cons(
+          _f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 std::pair<ComprehensivePatterns::R, uint64_t>
@@ -611,7 +657,9 @@ uint64_t ComprehensivePatterns::count_down(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype(std::declval<const ComprehensivePatterns::NC &>().nc_b) _s0;
+    std::decay_t<
+        decltype(std::declval<const ComprehensivePatterns::NC &>().nc_b)>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
@@ -635,7 +683,7 @@ uint64_t ComprehensivePatterns::count_down(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_result + _f._s0);
+      _result = (std::move(_result) + _f._s0);
     }
   }
   return _result;
@@ -703,7 +751,9 @@ uint64_t ComprehensivePatterns::sum_proj(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype(std::declval<const ComprehensivePatterns::NC &>().nc_a) _s0;
+    std::decay_t<
+        decltype(std::declval<const ComprehensivePatterns::NC &>().nc_a)>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
@@ -727,7 +777,7 @@ uint64_t ComprehensivePatterns::sum_proj(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -950,8 +1000,10 @@ uint64_t ComprehensivePatterns::sum_values(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype(std::declval<const ComprehensivePatterns::StateStmt &>()
-                 .stmt_value) _s0;
+    std::decay_t<
+        decltype(std::declval<const ComprehensivePatterns::StateStmt &>()
+                     .stmt_value)>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
@@ -975,7 +1027,7 @@ uint64_t ComprehensivePatterns::sum_values(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1020,7 +1072,9 @@ uint64_t ComprehensivePatterns::sum_with_state(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype(std::declval<const ComprehensivePatterns::RCF &>().cf_val) _s0;
+    std::decay_t<
+        decltype(std::declval<const ComprehensivePatterns::RCF &>().cf_val)>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
@@ -1044,7 +1098,7 @@ uint64_t ComprehensivePatterns::sum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1082,8 +1136,9 @@ uint64_t ComprehensivePatterns::accum_with_state(
 
   /// _Resume_m: saves [_s0], resumes after recursive call with _result.
   struct _Resume_m {
-    decltype(std::declval<const ComprehensivePatterns::StateLB &>()
-                 .lb_value) _s0;
+    std::decay_t<decltype(std::declval<const ComprehensivePatterns::StateLB &>()
+                              .lb_value)>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;
@@ -1107,7 +1162,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -1146,5 +1201,5 @@ ComprehensivePatterns::pair_then_match(ComprehensivePatterns::StateOP s) {
   std::pair<ComprehensivePatterns::StateOP, ComprehensivePatterns::StateOP> p =
       std::make_pair(s, s);
   uint64_t x = std::move(s).op_value;
-  return std::make_pair(p, x);
+  return std::make_pair(std::move(p), x);
 }

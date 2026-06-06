@@ -13,9 +13,6 @@ struct Datatypes {
 struct RecordFunctionFieldStdlibProbe {
   struct endo {
     std::function<Bool0(Bool0)> run;
-
-    // ACCESSORS
-    endo clone() const { return endo{this->run}; }
   };
 
   static inline const endo e = endo{Datatypes::negb};

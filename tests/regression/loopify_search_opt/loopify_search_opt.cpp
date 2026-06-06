@@ -1,40 +1,54 @@
 #include "loopify_search_opt.h"
 
-List<uint64_t> LoopifySearchOpt::lis(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
-            List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-        break;
+List<uint64_t> LoopifySearchOpt::lis(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified lis: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        const auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        if (a0 < a00) {
-          auto _cell = std::make_unique<List<uint64_t>>(
-              typename List<uint64_t>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = a1.get();
-          continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        auto &&_sv0 = *a1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+          _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
         } else {
-          _loop_l = a1.get();
-          continue;
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_sv0.v());
+          if (a0 < a00) {
+            _stack.emplace_back(_Resume1{a0});
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Enter{a1.get()});
+          }
         }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
@@ -166,7 +180,7 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result, _f.value});
+      _stack.emplace_back(_Combine1{std::move(_result), _f.value});
       _stack.emplace_back(_Enter{_f.a1, _f.capacity, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -241,7 +255,7 @@ bool LoopifySearchOpt::subset_sum_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f.a1, _f.target, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -290,8 +304,9 @@ std::pair<uint64_t, uint64_t> LoopifySearchOpt::majority(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &cand = _result.first;
-      const uint64_t &count = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t cand = std::move(_cs.first);
+      uint64_t count = std::move(_cs.second);
       if (a0 == cand) {
         _result = std::make_pair(cand, (count + UINT64_C(1)));
       } else {

@@ -7,20 +7,12 @@ struct RecordProj {
   struct Point {
     uint64_t x;
     uint64_t y;
-
-    // ACCESSORS
-    Point clone() const { return Point{this->x, this->y}; }
   };
 
   struct ComplexRecord {
     uint64_t field1;
     uint64_t field2;
     uint64_t field3;
-
-    // ACCESSORS
-    ComplexRecord clone() const {
-      return ComplexRecord{this->field1, this->field2, this->field3};
-    }
   };
 
   static uint64_t weird_access(const Point &p);

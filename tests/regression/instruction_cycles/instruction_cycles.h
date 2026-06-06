@@ -1,6 +1,7 @@
 #ifndef INCLUDED_INSTRUCTION_CYCLES
 #define INCLUDED_INSTRUCTION_CYCLES
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -13,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -30,85 +31,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -135,11 +118,6 @@ struct InstructionCycles {
     uint64_t acc1;
     bool carry1;
     bool test_pin1;
-
-    // ACCESSORS
-    state1 clone() const {
-      return state1{this->acc1, this->carry1, this->test_pin1};
-    }
   };
 
   struct instruction1 {
@@ -165,32 +143,6 @@ struct InstructionCycles {
 
     explicit instruction1(NOP1 _v) : v_(_v) {}
 
-    instruction1(const instruction1 &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    instruction1(instruction1 &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instruction1 &operator=(const instruction1 &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instruction1 &operator=(instruction1 &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instruction1 clone() const {
-      if (std::holds_alternative<JCN1>(this->v())) {
-        const auto &[a0, a1] = std::get<JCN1>(this->v());
-        return instruction1(JCN1{a0, a1});
-      } else {
-        return instruction1(NOP1{});
-      }
-    }
-
-    // CREATORS
     static instruction1 jcn1(uint64_t a0, uint64_t a1) {
       return instruction1(JCN1{a0, a1});
     }
@@ -282,32 +234,6 @@ struct InstructionCycles {
 
     explicit instruction2(NOP2 _v) : v_(_v) {}
 
-    instruction2(const instruction2 &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    instruction2(instruction2 &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instruction2 &operator=(const instruction2 &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instruction2 &operator=(instruction2 &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instruction2 clone() const {
-      if (std::holds_alternative<JMS2>(this->v())) {
-        const auto &[a0] = std::get<JMS2>(this->v());
-        return instruction2(JMS2{a0});
-      } else {
-        return instruction2(NOP2{});
-      }
-    }
-
-    // CREATORS
     static instruction2 jms2(uint64_t a0) { return instruction2(JMS2{a0}); }
 
     static instruction2 nop2() { return instruction2(NOP2{}); }
@@ -343,9 +269,6 @@ struct InstructionCycles {
 
   struct state2 {
     uint64_t acc2;
-
-    // ACCESSORS
-    state2 clone() const { return state2{this->acc2}; }
   };
 
   static uint64_t cycles_jms(const state2 &_x, const instruction2 &i);
@@ -570,11 +493,6 @@ struct InstructionCycles {
     uint64_t acc5;
     bool carry5;
     bool test5;
-
-    // ACCESSORS
-    state5 clone() const {
-      return state5{this->acc5, this->carry5, this->test5};
-    }
   };
 
   struct instruction5 {
@@ -605,35 +523,6 @@ struct InstructionCycles {
 
     explicit instruction5(INC5 _v) : v_(std::move(_v)) {}
 
-    instruction5(const instruction5 &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    instruction5(instruction5 &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instruction5 &operator=(const instruction5 &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instruction5 &operator=(instruction5 &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instruction5 clone() const {
-      if (std::holds_alternative<NOP5>(this->v())) {
-        return instruction5(NOP5{});
-      } else if (std::holds_alternative<JCN5>(this->v())) {
-        const auto &[a0] = std::get<JCN5>(this->v());
-        return instruction5(JCN5{a0});
-      } else {
-        const auto &[a0] = std::get<INC5>(this->v());
-        return instruction5(INC5{a0});
-      }
-    }
-
-    // CREATORS
     static instruction5 nop5() { return instruction5(NOP5{}); }
 
     static instruction5 jcn5(uint64_t a0) { return instruction5(JCN5{a0}); }
@@ -731,9 +620,6 @@ struct InstructionCycles {
 
   struct state6 {
     uint64_t acc6;
-
-    // ACCESSORS
-    state6 clone() const { return state6{this->acc6}; }
   };
 
   static uint64_t cycles6(const state6 &_x, Instruction6 _x0);
@@ -764,9 +650,6 @@ struct InstructionCycles {
 
   struct state7 {
     uint64_t acc7;
-
-    // ACCESSORS
-    state7 clone() const { return state7{this->acc7}; }
   };
 
   static uint64_t cycles7(const state7 &_x, Instruction7 _x0);

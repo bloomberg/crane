@@ -4,9 +4,6 @@
 struct KbpMultibitDefault {
   struct state {
     uint64_t acc;
-
-    // ACCESSORS
-    state clone() const { return state{this->acc}; }
   };
 
   static state execute_kbp(const state &s);

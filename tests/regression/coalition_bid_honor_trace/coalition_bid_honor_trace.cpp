@@ -260,6 +260,7 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
       return false;
     }
     }
+    break;
   }
   case Clan::CLANJADEFALCON: {
     switch (c2) {
@@ -270,6 +271,7 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
       return false;
     }
     }
+    break;
   }
   case Clan::CLANGHOSTBEAR: {
     switch (c2) {
@@ -280,6 +282,7 @@ bool CoalitionBidHonorTraceCase::clan_eq_dec(
       return false;
     }
     }
+    break;
   }
   default:
     std::unreachable();
@@ -572,6 +575,7 @@ bool CoalitionBidHonorTraceCase::is_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
@@ -584,6 +588,7 @@ bool CoalitionBidHonorTraceCase::is_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::BOTHREADY: {
     return true;
@@ -608,6 +613,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::ATTACKERREADY: {
     switch (side) {
@@ -620,6 +626,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
@@ -632,6 +639,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::set_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::BOTHREADY: {
     return rs;
@@ -659,6 +667,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::DEFENDERREADY: {
     switch (side) {
@@ -671,6 +680,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   case ReadyStatus::BOTHREADY: {
     switch (side) {
@@ -683,6 +693,7 @@ CoalitionBidHonorTraceCase::ReadyStatus CoalitionBidHonorTraceCase::clear_ready(
     default:
       std::unreachable();
     }
+    break;
   }
   default:
     std::unreachable();

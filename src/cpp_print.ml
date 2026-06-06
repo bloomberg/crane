@@ -33,6 +33,10 @@ open Cpp_names
 (** Memoized regex for matching the [::] C++ scope-resolution operator. *)
 let re_double_colon = Str.regexp_string "::"
 
+(* Global mutable state in this file:
+   - axiom_type_refs: accumulates across the full extraction session; never cleared
+     because axiom classifications are global to a Rocq session. *)
+
 (** Registry of GlobRefs that are axiom types (extracted as std::any). Functions
     whose return type involves an axiom type should not be marked
     __attribute__((pure)) because they may transitively call axiom stubs that
@@ -117,6 +121,7 @@ let collect_referenced_ids body =
     iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
   and check_stmt s =
     match s with
+    | Sraw raw_s -> check_expr (CPPraw raw_s)
     | Scustom_case (_, scrut, _, branches, template) ->
       if Common.contains_substring template "%scrut" then check_expr scrut;
       List.iter (fun (_, _, stmts) -> List.iter check_stmt stmts) branches
@@ -187,6 +192,7 @@ let lambda_needs_capture
       !acc
   and collect_from_stmt (refs, decls) stmt =
     match stmt with
+    | Sraw raw_s -> collect_from_expr (refs, decls) (CPPraw raw_s)
     | Sdecl (id, _) -> (refs, IdSet.add id decls)
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
@@ -516,7 +522,8 @@ let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc
     back into a single string. *)
 let flatten_custom_strings cmds =
   String.concat ""
-    (List.map (function CCstring s -> s | _ -> assert false) cmds)
+    (List.map (function CCstring s -> s
+      | _ -> CErrors.anomaly (Pp.str "flatten_custom_strings: non-string command")) cmds)
 
 (** Get the number of template type parameters for an inductive reference,
     defaulting to 2 when unavailable. *)
@@ -561,6 +568,19 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
+(** Map from parameter IDs to their concrete C++ type, for variables that
+    are std::any at runtime (because their outer pair match used pair<any,any>)
+    but have a concrete declared type (e.g. [prs : List<std::any>]).  When such
+    a variable is used, it must be wrapped with [any_cast<T>(id)] to recover
+    the stored value.  Unlike [current_any_typed_params] (which relies on
+    [wrap_any_cast_if_needed] at use sites with known expected types), this map
+    causes the cast to be emitted at EVERY use site, unconditionally. *)
+let concrete_typed_any_params : cpp_type Id.Map.t ref = ref Id.Map.empty
+
+(** Cached prod (pair) global reference, used to construct [pair<any,any>] casts
+    when the CCscrut expected_type is not itself a pair type (e.g. Tany). *)
+let known_prod_g : GlobRef.t option ref = ref None
+
 (** Set of type names introduced by [using X = std::any;] — tracked so
     [is_any_type] can recognize [Tid] aliases for [std::any]. *)
 let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
@@ -575,8 +595,13 @@ let rec is_any_type = function
   | Tnamespace (_, inner) -> is_any_type inner
   | Tid (id, []) -> Id.Set.mem id !any_type_aliases
   | Tglob (GlobRef.ConstRef c, _, _) ->
-    (try Table.find_type (GlobRef.ConstRef c) = Miniml.Tunknown
-     with Not_found -> false)
+    is_axiom_type_ref (GlobRef.ConstRef c)
+    || (try let t = Table.find_type (GlobRef.ConstRef c) in
+            t = Miniml.Tunknown || t = Miniml.Taxiom
+        with Not_found -> false)
+  | Tglob (GlobRef.VarRef id, [], _) ->
+    let name = Id.to_string id in
+    name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
 (** Pretty-print a MiniCpp type as C++ source text.
@@ -637,14 +662,17 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
-    | Tid_external (id, []) ->
-      if String.equal (Id.to_string id) "std::vector" then
-        require_header "vector";
-      Id.print id
     | Tid_external (id, args) ->
-      if String.equal (Id.to_string id) "std::vector" then
-        require_header "vector";
-      Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
+      let id_s = Id.to_string id in
+      let id_s =
+        if String.equal id_s "std::vector" then begin
+          require_header "vector";
+          if (sn ()).ns <> "std" then "bsl::vector" else id_s
+        end else id_s
+      in
+      ( match args with
+        | [] -> str id_s
+        | _ -> str id_s ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tglob (r, tys, args) ->
       (* Erased type/prop/implicit markers (from Tdummy in the ML AST) should
          never reach the C++ output. When they do survive — e.g. as a template
@@ -838,9 +866,6 @@ let rec pp_cpp_type par vl t =
     | Tshared_ptr t ->
       require_header "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
-    | Tunique_ptr t ->
-      require_header "memory";
-      cpp_angle (sn ()).unique_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
@@ -849,9 +874,11 @@ let rec pp_cpp_type par vl t =
       str "std::any"
     | Tauto -> str "auto"
     | Tdecltype e ->
-      (* Print decltype(expr) where expr has been rewritten by
-         rewrite_field_access_for_decltype to use std::declval. *)
-      str "decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")"
+      (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
+         rewrite_field_access_for_decltype to use std::declval.
+         decay_t converts function types to function pointers and array types
+         to pointers, which is necessary when storing values in frame structs. *)
+      str "std::decay_t<decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")>"
   in
   h (pp_rec par t)
 
@@ -885,6 +912,53 @@ and pp_typename_member ty id =
     @param args  accumulated argument expressions for partial application
                  (in reverse order; applied via {!pp_apply_cpp})
     @param t     the MiniCpp expression to render *)
+and extract_from_any ty src_expr =
+  (* Extract a value of type [ty] from [src_expr : any].
+     Semantic values stored in std::any are always bare (never shared_ptr-wrapped);
+     field-level shared_ptr wrapping is only in struct fields, not in grammar
+     action semantic values.  Always extract the bare type.
+
+     When the target type is [Tany] (i.e. [std::any]), the expression is
+     already the right type — emitting [std::any_cast<std::any>(x)] would
+     fail at runtime whenever [x] stores a concrete type like [Json_value]. *)
+  if is_any_type ty then src_expr
+  else
+    str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ src_expr ++ str ")"
+
+(** Strip [shared_ptr] wrapping from all positions in a C++ type.
+    Semantic values in [std::any] are always bare; NS-propagated types that
+    added [shared_ptr] for struct storage must be stripped before extracting
+    elements from grammar-action [any] values. *)
+and bare_elem_ty : cpp_type -> cpp_type = function
+  | Tshared_ptr inner -> bare_elem_ty inner
+  | Tglob (g, ts, ns) -> Tglob (g, List.map bare_elem_ty ts, ns)
+  | Tnamespace (ns_g, inner) -> Tnamespace (ns_g, bare_elem_ty inner)
+  | other -> other
+
+and deque_elem_extract_expr elem_ty src_expr =
+  (* Generate expression to extract elem_ty from a list element stored as any.
+     Pairs are stored as pair<any,any>; other types are stored directly.
+     Strip shared_ptr from elem_ty first: semantic values in std::any are bare. *)
+  let elem_ty = bare_elem_ty elem_ty in
+  let is_prod_type = function
+    | Tglob (g, [_; _], _) ->
+      let n = Common.pp_global_name Type g in n = "prod" || n = "Prod"
+    | _ -> false
+  in
+  if is_prod_type elem_ty then begin
+    require_header "any";
+    require_header "utility";
+    match elem_ty with
+    | Tglob (_, [t1; t2], _) ->
+      str "[&]() { const auto& _p = " ++ str (sn ()).any_cast
+      ++ str "<std::pair<std::any, std::any>>(" ++ src_expr
+      ++ str "); return std::make_pair("
+      ++ extract_from_any t1 (str "_p.first") ++ str ", "
+      ++ extract_from_any t2 (str "_p.second") ++ str "); }()"
+    | _ -> extract_from_any elem_ty src_expr
+  end else
+    extract_from_any elem_ty src_expr
+
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -896,7 +970,7 @@ and pp_cpp_expr env args t =
       try
         let ml_ty = Table.find_type ref_name in
         Translation.convert_ml_type_to_cpp_type
-          env Refset'.empty [] (Translation.ml_codomain ml_ty)
+          env [] (Translation.ml_codomain ml_ty)
       with _ -> Tauto
     in
     let result_str = "_r" in
@@ -932,7 +1006,55 @@ and pp_cpp_expr env args t =
     ++ str "}()"
   in
   match t with
-  | CPPvar id -> Id.print id
+  | CPPvar id ->
+    ( match Id.Map.find_opt id !concrete_typed_any_params with
+      | Some ty ->
+        (* For List<T> (T ≠ std::any) grammar productions always store List<std::any>
+           at runtime.  Use the converting constructor so element casts are correct. *)
+        let resolved_ty = resolve_tvars_to_any ty in
+        let is_list_with_concrete_elem = function
+          | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
+            is_list_global g && elem_ty <> Tany
+          | Tglob (g, [elem_ty], _) ->
+            is_list_global g && elem_ty <> Tany
+          | _ -> false
+        in
+        if is_list_with_concrete_elem resolved_ty then
+          let g_of_list, elem_ty_of_list =
+            match resolved_ty with
+            | Tnamespace (_, Tglob (g, [elem_ty], _)) -> g, elem_ty
+            | Tglob (g, [elem_ty], _) -> g, elem_ty
+            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
+          in
+          let list_any_ty =
+            match resolved_ty with
+            | Tnamespace (ns_g, Tglob (g, _, _)) ->
+              Tnamespace (ns_g, Tglob (g, [Tany], []))
+            | Tglob (g, _, _) ->
+              Tglob (g, [Tany], [])
+            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
+          in
+          if Table.is_custom g_of_list then begin
+            require_header "any";
+            let bare_ety = bare_elem_ty elem_ty_of_list in
+            let elem_s = pp_cpp_type false [] bare_ety in
+            let src_s =
+              str (sn ()).any_cast ++ str "<"
+              ++ pp_cpp_type false [] list_any_ty
+              ++ str ">(" ++ Id.print id ++ str ")"
+            in
+            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
+            str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+            ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+          end else
+          pp_cpp_type false [] resolved_ty
+          ++ str "(" ++ str (sn ()).any_cast ++ str "<"
+          ++ pp_cpp_type false [] list_any_ty
+          ++ str ">(" ++ Id.print id ++ str "))"
+        else
+          str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
+          ++ str ">(" ++ Id.print id ++ str ")"
+      | None -> Id.print id )
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in
     if Common.contains_substring custom "%result" then
@@ -1174,7 +1296,7 @@ and pp_cpp_expr env args t =
           in
           let ml_arg_types = extract_arg_types ml_ty in
           List.map
-            (Translation.convert_ml_type_to_cpp_type env Refset'.empty [])
+            (Translation.convert_ml_type_to_cpp_type env [])
             ml_arg_types
         with _ -> []
       in
@@ -1277,8 +1399,10 @@ and pp_cpp_expr env args t =
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
           ++ pp br1.smb_scrutinee ++ str ")"
         in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
-        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
+        let e2 = match br2.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
         (cond, e1, e2)
       | [br1], Some [Sreturn (Some e2)] ->
         let cond =
@@ -1286,9 +1410,10 @@ and pp_cpp_expr env args t =
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
           ++ pp br1.smb_scrutinee ++ str ")"
         in
-        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e | _ -> assert false in
+        let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
+          | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
         (cond, e1, e2)
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected branch structure")
     in
     str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
   | CPPfun_call
@@ -1317,28 +1442,146 @@ and pp_cpp_expr env args t =
     let pp = pp_cpp_expr env args in
     let e1 = match branches with
       | (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     let e2 = match branches with
       | _ :: (_, _, [Sreturn (Some e)]) :: _ -> e
-      | _ -> assert false
+      | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call (CPPglob (r, [], _), [arg]) when Table.is_projection r ->
     let field_name = label_of_r r |> Names.Label.to_string in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (f, ts) ->
-    let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
+    (* For constructor calls, compute the expected C++ element type for each
+       field that is a custom list.  When an argument is a grammar-stack
+       variable (id ∈ concrete_typed_any_params), use the callee-dictated
+       element type rather than the stored type, so e.g. nktree(ts) produces
+       deque<Newick_node> while nkinode(ts,l) produces
+       deque<shared_ptr<Newick_node>> — matching each function's signature. *)
+    (* Constructor calls use CPPqualified(CPPglob(IndRef(kn,i), ...), fname),
+       NOT CPPglob(ConstructRef(...)). Extract the enclosing IndRef so we can
+       determine whether a list element type is a self-reference (needs
+       shared_ptr) or a cross-inductive reference (needs value type). *)
+    let ctor_ind_kn_opt =
+      match f with
+      | CPPqualified (CPPglob (GlobRef.IndRef (kn, _), _, _), _) -> Some kn
+      | _ -> None
+    in
+    let render_ctor_arg arg =
+      match ctor_ind_kn_opt, arg with
+      | Some kn_ctor, CPPvar id
+        when Id.Map.mem id !concrete_typed_any_params ->
+        let stored_ty = Id.Map.find id !concrete_typed_any_params in
+        (* If stored as deque<shared_ptr<Inner>> but Inner's MutInd differs
+           from the constructor's MutInd, the constructor expects deque<Inner>
+           (value type). Strip the shared_ptr and re-emit as deque<Inner>. *)
+        let fix_opt = match stored_ty with
+          | Tglob (g, [Tshared_ptr inner], _)
+            when is_list_global g && Table.is_custom g ->
+            ( match inner with
+            | Tglob (GlobRef.IndRef (kn_inner, _), _, _)
+              when not (MutInd.CanOrd.equal kn_inner kn_ctor) ->
+              Some (g, inner)
+            | _ -> None )
+          | _ -> None
+        in
+        ( match fix_opt with
+        | Some (list_g, expected_elem) ->
+          require_header "any";
+          let bare_ety = bare_elem_ty expected_elem in
+          let elem_s = pp_cpp_type false [] bare_ety in
+          let list_any_ty = Tglob (list_g, [Tany], []) in
+          let src_s =
+            str (sn ()).any_cast ++ str "<"
+            ++ pp_cpp_type false [] list_any_ty
+            ++ str ">(" ++ Id.print id ++ str ")"
+          in
+          let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
+          str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+          ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+        | None -> pp_cpp_expr env args arg )
+      | _ -> pp_cpp_expr env args arg
+    in
+    let args_s =
+      match ctor_ind_kn_opt with
+      | None -> pp_list (pp_cpp_expr env args) (List.rev ts)
+      | Some _ ->
+        Pp.prlist_with_sep (fun () -> str ", ")
+          render_ctor_arg
+          (List.rev ts)
+    in
+    let is_custom_list_funcall =
+      match f with
+      | CPPglob (GlobRef.IndRef _ as g, (_ :: _ as tys), _)
+        when is_list_global g && Table.is_custom g ->
+        let elem_ty = List.hd tys in
+        if elem_ty <> Tany && elem_ty <> Tauto then Some elem_ty
+        else None
+      | _ -> None
+    in
+    (match is_custom_list_funcall with
+    | Some elem_ty ->
+      require_header "any";
+      let bare_ety = bare_elem_ty elem_ty in
+      let elem_s = pp_cpp_type false [] bare_ety in
+      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
+      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+      ++ args_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+    | None ->
     let prefix = match f with
       | CPPglob (GlobRef.IndRef _, _, _) ->
         let name_str = string_of_ppcmds (pp_cpp_expr env args f) in
         typename_prefix_for name_str
       | _ -> mt ()
     in
-    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")"
+    prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")" )
   | CPPconverting_ctor (ty, ts) ->
-    let args_s = pp_list (pp_cpp_expr env args) ts in
-    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")"
+    (* When the target type is a custom-extracted list (e.g. std::deque<T>),
+       a functional-style cast from deque<any> won't work because std::deque
+       has no converting constructor.  Emit an inline loop instead. *)
+    let is_custom_list_convert =
+      let check g elem_ty =
+        is_list_global g && Table.is_custom g
+        && elem_ty <> Tany && elem_ty <> Tauto
+      in
+      match ty with
+      | Tglob (g, [elem_ty], _) when check g elem_ty -> Some elem_ty
+      | Tnamespace (_, Tglob (g, [elem_ty], _)) when check g elem_ty -> Some elem_ty
+      | _ -> None
+    in
+    ( match is_custom_list_convert with
+    | Some elem_ty ->
+      require_header "any";
+      let bare_ety = bare_elem_ty elem_ty in
+      let elem_s = pp_cpp_type false [] bare_ety in
+      let src_s = pp_list (pp_cpp_expr env args) ts in
+      let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
+      str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
+      ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+    | None ->
+    let args_s =
+      match ty with
+      | Tfun ([Tany], Tany) ->
+        (* std::function<std::any(std::any)> conversion: the argument is either
+           a lambda (already callable, no cast needed) or a std::any value that
+           holds a callable and must be any_cast'd before the conversion. *)
+        pp_list
+          (fun e ->
+            let e_s = pp_cpp_expr env args e in
+            match e with
+            | CPPlambda _ -> e_s
+            | _ ->
+              str (sn ()).any_cast
+              ++ str "<"
+              ++ pp_cpp_type false [] ty
+              ++ str ">("
+              ++ e_s
+              ++ str ")")
+          ts
+      | _ -> pp_list (pp_cpp_expr env args) ts
+    in
+    pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")" )
   | CPPderef e ->
     let needs_parens = match e with
       | CPPvar _ | CPPthis | CPPfun_call _ | CPPmember _ | CPParrow _
@@ -1381,28 +1624,9 @@ and pp_cpp_expr env args t =
       List.iter scan_stmt body;
       !found
     in
-    let rec type_contains_unique_ptr = function
-      | Tunique_ptr _ -> true
-      | Tshared_ptr t | Tref t | Tptr t | Tmod (_, t) -> type_contains_unique_ptr t
-      | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
-       |Tvariant ts | Tnamespace (_, Tglob (_, ts, _)) ->
-        List.exists type_contains_unique_ptr ts
-      | Tfun (dom, cod) ->
-        List.exists type_contains_unique_ptr dom || type_contains_unique_ptr cod
-      | Tnamespace (_, t) | Tqualified (t, _) -> type_contains_unique_ptr t
-      | _ -> false
-    in
     let capture_by_value =
       capture_by_value
       && not body_derefs_var
-      && not
-           ( List.exists
-               (fun (ty, _) -> type_contains_unique_ptr ty)
-               params
-             ||
-             match ret_ty with
-             | Some ty -> type_contains_unique_ptr ty
-             | None -> false )
     in
     let capture_str =
       if not needs_capture then
@@ -1422,7 +1646,19 @@ and pp_cpp_expr env args t =
       else
         mt ()
     in
+    (* Register lambda parameters whose type is std::any in current_any_typed_params
+       so that wrap_any_cast_if_needed fires for any-erased pair scrutinees accessed
+       via .first/.second in the body (e.g. when lambda is stored as
+       std::function<std::any(std::any)> and auto = std::any at call site). *)
+    let saved_any_params = !current_any_typed_params in
+    List.iter (fun (ty, id_opt) ->
+      match id_opt with
+      | Some id when is_any_type ty ->
+        current_any_typed_params := Id.Set.add id !current_any_typed_params
+      | _ -> ()
+    ) params;
     let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
+    current_any_typed_params := saved_any_params;
     let params_s, capture =
       match params with
       | [] -> (mt (), capture_str)
@@ -1466,13 +1702,12 @@ and pp_cpp_expr env args t =
   | CPPmk_shared t ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
-  | CPPmk_unique t ->
-    require_header "memory";
-    cpp_angle (sn ()).make_unique (pp_cpp_type false [] t)
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
-  | CPPstructmk (id, tys, es) ->
+  | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
+    let suffix = match e with CPPstructmk _ -> "::make(" | _ -> "{" in
+    let closing = match e with CPPstructmk _ -> str ")" | _ -> str "}" in
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
       match tys with
@@ -1487,23 +1722,7 @@ and pp_cpp_expr env args t =
     in
     let name_str = string_of_ppcmds struct_name in
     typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str "::make(" ++ es_s ++ str ")"
-  | CPPstruct (id, tys, es) ->
-    let es_s = pp_list (pp_cpp_expr env args) es in
-    let templates =
-      match tys with
-      | [] -> mt ()
-      | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
-    in
-    let struct_name =
-      match id with
-      | GlobRef.IndRef _ when is_eponymous_record_cached id ->
-        str (Common.pp_type_name_capitalized id)
-      | _ -> pp_global Type id
-    in
-    let name_str = string_of_ppcmds struct_name in
-    typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
+    ++ struct_name ++ templates ++ str suffix ++ es_s ++ closing
   | CPPstruct_id (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -1594,13 +1813,6 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args expr
     ++ str ")"
-  | CPPunique_ptr_ctor (ty, expr) ->
-    str (sn ()).unique_ptr
-    ++ str "<"
-    ++ pp_cpp_type false [] ty
-    ++ str ">("
-    ++ pp_cpp_expr env args expr
-    ++ str ")"
   | CPPthis -> str "this"
   | CPPshared_from_this ty ->
     str "std::const_pointer_cast<"
@@ -1628,22 +1840,16 @@ and pp_cpp_expr env args t =
       str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "->" ++ Id.print id ++ str ")"
     | _ ->
       pp_cpp_expr env args e ++ str "->" ++ Id.print id )
-  | CPPmethod_call (obj, method_name, call_args) ->
-    let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    pp_cpp_expr env args obj
-    ++ str "->"
-    ++ Id.print method_name
-    ++ str "("
-    ++ pp_list (pp_cpp_expr env args) call_args
-    ++ str ")"
+  | CPPmethod_call (obj, method_name, call_args)
   | CPPdot_method_call (obj, method_name, call_args) ->
+    let sep = match t with CPPmethod_call _ -> "->" | _ -> "." in
     let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    pp_cpp_expr env args obj
-    ++ str "."
-    ++ Id.print method_name
-    ++ str "("
-    ++ pp_list (pp_cpp_expr env args) call_args
-    ++ str ")"
+    let obj_s = match obj with
+      | CPPderef _ -> str "(" ++ pp_cpp_expr env args obj ++ str ")"
+      | _ -> pp_cpp_expr env args obj
+    in
+    obj_s ++ str sep ++ Id.print method_name
+    ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPqualified (e, id) ->
     pp_cpp_expr env args e ++ str "::" ++ Id.print id
   | CPPqualified_t (ty, id) ->
@@ -1718,6 +1924,8 @@ and pp_cpp_expr env args t =
     ++ str op
     ++ str " "
     ++ paren_child rhs
+  | CPPpair _ ->
+    CErrors.anomaly (Pp.str "CPPpair reached the printer; this is a loopify-internal node")
   | CPPcond (cond, then_expr, else_expr) ->
     pp_cpp_expr env args cond
     ++ str " ? "
@@ -1729,13 +1937,29 @@ and pp_cpp_expr env args t =
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
   | CPPany_cast (ty, e) ->
-    require_header "any";
-    str (sn ()).any_cast
-    ++ str "<"
-    ++ pp_cpp_type false [] ty
-    ++ str ">("
-    ++ pp_cpp_expr env args e
-    ++ str ")"
+    (* When the target type resolves to [std::any] (either [Tany] directly, or
+       an axiom/unknown ConstRef like [SemVal = std::any]), the value is already
+       the right type — [any_cast<std::any>(x)] fails if [x] holds a concrete
+       type (e.g. uint64_t). *)
+    if is_any_type ty then
+      pp_cpp_expr env args e
+    else begin
+      require_header "any";
+      str (sn ()).any_cast
+      ++ str "<"
+      ++ pp_cpp_type false [] ty
+      ++ str ">("
+      ++ pp_cpp_expr env args e
+      ++ str ")"
+    end
+  | CPPstd_get_if (ty, ctor, e) ->
+    require_header "variant";
+    let targ = match ctor with
+      | None -> pp_cpp_type false [] ty
+      | Some id -> pp_typename_member ty id
+    in
+    str ((sn ()).get_if ^ "<") ++ targ ++ str ">("
+    ++ pp_cpp_expr env args e ++ str ")"
 
 (** Pretty-print a MiniCpp statement as C++ source.
 
@@ -1788,6 +2012,11 @@ and pp_cpp_stmt env args = function
        get the unqualified base name, capitalize to match enum class
        definition. *)
     let type_name = pp_inductive_type_name ind in
+    let ends_with_return stmts =
+      match List.rev stmts with
+      | Sreturn _ :: _ -> true
+      | _ -> false
+    in
     let pp_branch (ctor, stmts) =
       str "case "
       ++ type_name
@@ -1796,6 +2025,8 @@ and pp_cpp_stmt env args = function
       ++ str ": {"
       ++ fnl ()
       ++ pp_list_stmt (pp_cpp_stmt env args) stmts
+      ++ ( if ends_with_return stmts then mt ()
+         else fnl () ++ str "break;" )
       ++ fnl ()
       ++ str "}"
     in
@@ -1851,6 +2082,22 @@ and pp_cpp_stmt env args = function
     ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
     ++ fnl ()
     ++ str "}"
+  | Sif_decl (id, ty, init, then_stmts, else_stmts) ->
+    str "if ("
+    ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id
+    ++ str " = " ++ pp_cpp_expr env args init
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ fnl ()
+    ++ (match else_stmts with
+        | [] -> str "}"
+        | _ ->
+          str "} else {"
+          ++ fnl ()
+          ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+          ++ fnl ()
+          ++ str "}")
   | Sraw code ->
     if Common.contains_substring code "std::vector" then
       require_header "vector";
@@ -2134,7 +2381,8 @@ and pp_cpp_stmt env args = function
     if n_branches = 1 && default = None then
       (* Single-constructor exhaustive match: emit binding + body inline.
          No if/else needed. *)
-      let br = match branches with br :: _ -> br | [] -> assert false in
+      let br = match branches with br :: _ -> br
+        | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt Smatch: empty branch list") in
       let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
       if binding = mt () then body_pp
@@ -2214,12 +2462,12 @@ and pp_cpp_stmt env args = function
     branches_pp ++ default_pp ++ fnl () ++ str "}"
 
 (** Check if a return type is eligible for __attribute__((pure)). Types that
-    involve allocation (shared_ptr, unique_ptr), side effects (void), or are
+    involve allocation (shared_ptr), side effects (void), or are
     unknown at definition time (type variables, any, todo) are excluded. Axiom
     type refs are also excluded since functions operating on axiom types may
     transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
-  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
@@ -2237,7 +2485,7 @@ and is_pure_return_type = function
     [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
     if both [A] and [B] are. *)
 and is_constexpr_type = function
-  | Tshared_ptr _ | Tunique_ptr _ -> false
+  | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ -> false
@@ -2295,6 +2543,7 @@ and is_concrete_cpp_type = function
   | Tvar _ -> false
   | Tunknown | Ttodo | Tany | Tauto -> false
   | Tmod (_, inner) -> is_concrete_cpp_type inner
+  | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true
 
 (** Check if an expression is a method call whose return type is [std::any]. *)
@@ -2323,7 +2572,6 @@ and resolve_tvars_to_any = function
   | Tmod (m, t) -> Tmod (m, resolve_tvars_to_any t)
   | Tref t -> Tref (resolve_tvars_to_any t)
   | Tshared_ptr t -> Tshared_ptr (resolve_tvars_to_any t)
-  | Tunique_ptr t -> Tunique_ptr (resolve_tvars_to_any t)
   | t -> t
 
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
@@ -2340,12 +2588,40 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
      && is_concrete_cpp_type expected_ty
   then
     let resolved_ty = resolve_tvars_to_any expected_ty in
-    str (sn ()).any_cast
-    ++ str "<"
-    ++ pp_cpp_type false vl resolved_ty
-    ++ str ">("
-    ++ expr_printed
-    ++ str ")"
+    (* For List<T> where T ≠ std::any, the grammar framework stores List<std::any>
+       at runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
+       so the element type is recovered correctly by the converting constructor. *)
+    let is_list_with_concrete_elem = function
+      | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
+        is_list_global g && elem_ty <> Tany
+      | Tglob (g, [elem_ty], _) ->
+        is_list_global g && elem_ty <> Tany
+      | _ -> false
+    in
+    if is_list_with_concrete_elem resolved_ty then
+      let list_any_ty =
+        match resolved_ty with
+        | Tnamespace (ns_g, Tglob (g, _, _)) ->
+          Tnamespace (ns_g, Tglob (g, [Tany], []))
+        | Tglob (g, _, _) ->
+          Tglob (g, [Tany], [])
+        | _ -> CErrors.anomaly (Pp.str "pp_cpp_type Tshared_ptr: expected list type")
+      in
+      pp_cpp_type false vl resolved_ty
+      ++ str "("
+      ++ str (sn ()).any_cast
+      ++ str "<"
+      ++ pp_cpp_type false vl list_any_ty
+      ++ str ">("
+      ++ expr_printed
+      ++ str "))"
+    else
+      str (sn ()).any_cast
+      ++ str "<"
+      ++ pp_cpp_type false vl resolved_ty
+      ++ str ">("
+      ++ expr_printed
+      ++ str ")"
   else
     expr_printed
 
@@ -2381,6 +2657,43 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
     @param vl      type variable names in scope
     @param cmds    parsed placeholder token list to substitute *)
 and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
+  (* When CCscrut overrides expected_ty to pair<any,any> (because the scrutinee
+     is a std::any-typed variable and the pair is built by concat_tuple), the
+     tail variable (second branch param) will have type std::any at runtime.
+     Propagate this to current_any_typed_params so that the inner Scustom_case
+     for that variable also fires the override, enabling recursive propagation
+     through the full pair chain. *)
+  let outer_any_pair_overrode = ref false in
+  (* Pre-set outer_any_pair_overrode before any token processing so that
+     %t0, which appears before %scrut in the pair-match template, also
+     prints as std::any when the runtime pair is pair<any,any>.  We have
+     two cases that guarantee this:
+       (a) The translation layer already wrapped the scrutinee with
+           any_cast<pair<any,any>>(…) — CPPany_cast with a prod/Prod head.
+       (b) The scrutinee is a CPPvar in current_any_typed_params (i.e. a
+           std::any param) and there are type args (i.e. it is a pair context).
+     In both cases the full CCscrut handler will confirm and set the flag
+     again; the pre-set here just makes it visible to CCty_arg earlier. *)
+  let () =
+    match t with
+    | Some (CPPany_cast (Tglob (g, _, _), _))
+      when (let n = Common.pp_global_name Type g in
+            String.equal n "prod" || String.equal n "Prod") ->
+      outer_any_pair_overrode := true;
+      known_prod_g := Some g
+    | Some (CPPvar id)
+      when Id.Set.mem id !current_any_typed_params ->
+      (* Only pre-set for pair templates: check that the scrutinee type is
+         prod/Prod so we don't corrupt %t0 in non-pair custom templates. *)
+      ( match typ with
+        | Some (Tglob (g, _ :: _, _))
+          when (let n = Common.pp_global_name Type g in
+                String.equal n "prod" || String.equal n "Prod") ->
+          outer_any_pair_overrode := true;
+          known_prod_g := Some g
+        | _ -> () )
+    | _ -> ()
+  in
   let pp ?(followed_by_dot=false) cmd =
     match cmd with
     | CCstring s -> str s
@@ -2395,7 +2708,67 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
         in
         ( match typ with
         | Some expected_ty ->
-          wrap_any_cast_if_needed t_expr t_printed expected_ty vl
+          (* When the scrutinee is a std::any variable (function<any(any)> param)
+             and the expected type is a concrete pair, concat_tuple always stores
+             pair<any,any> at runtime regardless of the logical pair type.
+             Override expected_ty with pair<any,any> so the cast is correct. *)
+          (* Eagerly cache the prod global from whichever pair type is visible
+             here (expected_ty or CPPany_cast scrutinee), so that nested pair
+             matches can fall back to it when their own expected_ty is Tany. *)
+          let store_if_prod = function
+            | Tglob (g, _, _)
+              when (let n = Common.pp_global_name Type g in
+                    String.equal n "prod" || String.equal n "Prod") ->
+              known_prod_g := Some g
+            | _ -> ()
+          in
+          store_if_prod expected_ty;
+          (match t_expr with CPPany_cast (ty, _) -> store_if_prod ty | _ -> ());
+          let effective_ty = match t_expr, expected_ty with
+            | CPPvar id, Tglob (g, (_ :: _), _)
+              when Id.Set.mem id !current_any_typed_params
+                && (let n = Common.pp_global_name Type g in
+                    String.equal n "prod" || String.equal n "Prod") ->
+              (* id is std::any at runtime (invariant of current_any_typed_params),
+                 so always cast to pair<any,any> regardless of declared arg types. *)
+              known_prod_g := Some g;
+              outer_any_pair_overrode := true;
+              Tglob (g, [Tany; Tany], [])
+            | CPPvar id, _
+              when Id.Set.mem id !current_any_typed_params ->
+              (* id is std::any at runtime but expected_ty is not a pair type
+                 (e.g. Tany for an erased result).  If this is a pair match
+                 template (detected by ".first" in the template string), emit
+                 any_cast<pair<any,any>>(id).  Use known_prod_g if available,
+                 otherwise fall back to emitting ns::pair<ns::any,ns::any>. *)
+              let is_pair_tmpl =
+                let len = String.length custom in
+                let rec search i =
+                  if i + 6 > len then false
+                  else if String.sub custom i 6 = ".first" then true
+                  else search (i + 1)
+                in search 0
+              in
+              if is_pair_tmpl then begin
+                outer_any_pair_overrode := true;
+                match !known_prod_g with
+                | Some g -> Tglob (g, [Tany; Tany], [])
+                | None -> expected_ty (* should not happen in practice *)
+              end else
+                expected_ty
+            | CPPany_cast (Tglob (g, _, _), _), _
+              when (let n = Common.pp_global_name Type g in
+                    String.equal n "prod" || String.equal n "Prod") ->
+              (* The translation layer already wrapped the scrutinee with
+                 any_cast<pair<any,any>>(…).  The printed %scrut is already
+                 correct; just override effective_ty so %t0/%t1 print as
+                 std::any instead of the declared Coq types. *)
+              outer_any_pair_overrode := true;
+              known_prod_g := Some g;
+              Tglob (g, [Tany; Tany], [])
+            | _ -> expected_ty
+          in
+          wrap_any_cast_if_needed t_expr t_printed effective_ty vl
         | None -> t_printed )
       | None ->
         CErrors.anomaly
@@ -2408,17 +2781,69 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
       )
     | CCbody i ->
       ( try
-          let _, _, ss = List.nth cases i in
-          pp_list_stmt (pp_cpp_stmt env []) ss
+          let ids, _, ss = List.nth cases i in
+          (* Register any-typed pattern variables from this branch so that
+             wrap_any_cast_if_needed detects them at arg sites expecting
+             concrete types (e.g. List<any> in cons(head, tail)). *)
+          let saved_any_params = !current_any_typed_params in
+          List.iter (fun (id, ty) ->
+            if is_any_type ty then
+              current_any_typed_params := Id.Set.add id !current_any_typed_params
+          ) ids;
+          (* When CCscrut overrode to pair<any,any>, ALL branch params are
+             std::any at runtime (extracted from .first / .second of the cast
+             pair).  For each param:
+             - Pair-typed params: add to current_any_typed_params so the inner
+               Scustom_case also fires the pair<any,any> override.
+             - Concrete non-pair params (e.g. prs : List<any>): add to
+               concrete_typed_any_params so that every CPPvar use site emits
+               any_cast<T>(id) unconditionally.  Do NOT also add to
+               current_any_typed_params to avoid double-casting. *)
+          (* Also fire when the scrutinee expression was already wrapped with
+             any_cast<pair<any,any>>(…) by the translation layer (scrut_is_magic
+             or is_erased_type in gen_custom_cpp_case).  In that case the printer's
+             CCscrut never matches CPPvar id (scrut is a CPPany_cast node), so
+             outer_any_pair_overrode stays false even though all branch params are
+             std::any at runtime. *)
+          let scrut_is_any_cast_pair = match t with
+            | Some (CPPany_cast (Tglob (g, _, _), _)) ->
+              let n = Common.pp_global_name Type g in
+              (String.equal n "prod" || String.equal n "Prod")
+              && (known_prod_g := Some g; true)
+            | _ -> false
+          in
+          let saved_concrete_params = !concrete_typed_any_params in
+          if !outer_any_pair_overrode || scrut_is_any_cast_pair then
+            List.iter (fun (id, ty) ->
+              let is_pair_ty = match ty with
+                | Tglob (g, _ :: _, _) ->
+                  let n = Common.pp_global_name Type g in
+                  String.equal n "prod" || String.equal n "Prod"
+                | _ -> false
+              in
+              if is_any_type ty || is_pair_ty then
+                current_any_typed_params :=
+                  Id.Set.add id !current_any_typed_params
+              else if not (is_any_type ty) then begin
+                (* Concrete non-pair: needs explicit any_cast at every use. *)
+                concrete_typed_any_params :=
+                  Id.Map.add id ty !concrete_typed_any_params
+              end
+            ) ids;
+          let result = pp_list_stmt (pp_cpp_stmt env []) ss in
+          current_any_typed_params := saved_any_params;
+          concrete_typed_any_params := saved_concrete_params;
+          result
         with Failure _ ->
           CErrors.anomaly
             Pp.(str "Custom syntax: unbound case body in: " ++ str custom) )
     | CCty_arg i ->
-      ( try pp_cpp_type false vl (List.nth tyargs i)
-        with Failure _ ->
-          CErrors.anomaly
-            Pp.(str "Custom syntax: unbound type argument in: " ++ str custom)
-      )
+      if !outer_any_pair_overrode then pp_cpp_type false vl Tany
+      else
+        ( match List.nth_opt tyargs i with
+          | Some ty -> pp_cpp_type false vl ty
+          | None -> pp_cpp_type false vl Tauto
+        )
     | CCbr_var (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
@@ -2442,26 +2867,67 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
-      let arg = pp_cpp_expr env [] arg_expr in
-      let arg =
-        match arg_expr with
-        | CPPstring _ -> arg ++ str (sn ()).str_suffix
-        | _ -> arg
+      (* When the expected type (from arg_types) is a concrete custom list AND
+         the argument is a grammar any-typed variable, generate the IIFE using
+         the expected element type rather than the stored type from
+         concrete_typed_any_params.  This handles contexts where the same Coq
+         list type maps to different C++ element types (e.g. list newick_node
+         → deque<Newick_node> for nktree, but deque<shared_ptr<Newick_node>>
+         for nkinode) — the expected type at the call site is always correct. *)
+      let custom_list_iife_opt =
+        match List.nth_opt arg_types i, arg_expr with
+        | Some expected_ty, CPPvar id
+          when Id.Map.mem id !concrete_typed_any_params ->
+          let check_custom_list = function
+            | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g
+              && elem_ty <> Tany && elem_ty <> Tauto ->
+              Some (Tglob (g, [Tany], []), elem_ty)
+            | Tnamespace (_, Tglob (g, [elem_ty], _))
+              when is_list_global g && Table.is_custom g
+              && elem_ty <> Tany && elem_ty <> Tauto ->
+              Some (Tglob (g, [Tany], []), elem_ty)
+            | _ -> None
+          in
+          (match check_custom_list expected_ty with
+          | Some (list_any_ty, elem_ty) ->
+            require_header "any";
+            let bare_ety = bare_elem_ty elem_ty in
+            let elem_s = pp_cpp_type false [] bare_ety in
+            let src_s = str (sn ()).any_cast ++ str "<"
+                        ++ pp_cpp_type false [] list_any_ty
+                        ++ str ">(" ++ Id.print id ++ str ")" in
+            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
+            Some (str "[&]() { std::deque<" ++ elem_s
+                  ++ str "> _r; for (const auto& _e : "
+                  ++ src_s ++ str ") _r.push_back(" ++ cast_e
+                  ++ str "); return _r; }()")
+          | None -> None)
+        | _ -> None
       in
-      (* Parenthesize compound expressions that would bind incorrectly
-         when followed by member access (.c_str() etc.) in templates. *)
       let arg =
-        if followed_by_dot then
-          match arg_expr with
-          | CPPbinop _ -> str "(" ++ arg ++ str ")"
-          | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
-            str "(" ++ arg ++ str ")"
-          | _ -> arg
-        else arg
+        match custom_list_iife_opt with
+        | Some iife -> iife
+        | None ->
+          let arg = pp_cpp_expr env [] arg_expr in
+          let arg =
+            match arg_expr with
+            | CPPstring _ -> arg ++ str (sn ()).str_suffix
+            | _ -> arg
+          in
+          (* Parenthesize compound expressions that would bind incorrectly
+             when followed by member access (.c_str() etc.) in templates. *)
+          if followed_by_dot then
+            match arg_expr with
+            | CPPbinop _ -> str "(" ++ arg ++ str ")"
+            | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+              str "(" ++ arg ++ str ")"
+            | _ -> arg
+          else arg
       in
       match List.nth_opt arg_types i with
-      | Some expected_ty -> wrap_any_cast_if_needed arg_expr arg expected_ty vl
-      | None -> arg
+      | Some expected_ty when custom_list_iife_opt = None ->
+        wrap_any_cast_if_needed arg_expr arg expected_ty vl
+      | _ -> arg
     with Failure _ ->
       CErrors.anomaly
         Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)
@@ -2480,6 +2946,8 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
   in
   fold_cmds (mt ()) cmds
 
+let pp_type t = pp_cpp_type false [] t
+
 (** Print a template parameter type keyword (typename or concept constraint). *)
 let pp_template_type = function
   | TTtypename -> str "typename"
@@ -2495,7 +2963,7 @@ let pp_template_param (tt, id) =
     ++ spc ()
     ++ Id.print id
     ++ str " = "
-    ++ pp_cpp_type false [] default_ty
+    ++ pp_type default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
 (** Build a [requires] clause from template parameters that have [TTfun]
@@ -2519,10 +2987,10 @@ let pp_requires_of_tparams tparams =
         match tt with
         | TTfun (dom, cod) ->
           require_header "type_traits";
-          let pp_ref ty = pp_cpp_type false [] ty ++ str " &" in
+          let pp_ref ty = pp_type ty ++ str " &" in
           Some
             ( str invocable_r ++ str "<"
-            ++ pp_cpp_type false [] cod
+            ++ pp_type cod
             ++ str ", "
             ++ Id.print id ++ str " &"
             ++ List.fold_left
@@ -2572,10 +3040,10 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       else id_str
     in
     pp_doc_comment_for_name rocq_name
-    ++ h (pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";")
+    ++ h (pp_type ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
     pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
+    ++ h (pp_type ty ++ str " " ++ pp_global Type id ++ str ";")
   | Ffundef (id, ret_ty, params, body) ->
     let saved_any_params = !current_any_typed_params in
     current_any_typed_params :=
@@ -2585,7 +3053,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
         Id.Set.empty params;
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
@@ -2596,7 +3064,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     current_any_typed_params := saved_any_params;
     h
       ( qualifier
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s
@@ -2607,7 +3075,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
   | Ffundecl (id, ret_ty, params) ->
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let qualifier =
@@ -2615,7 +3083,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     h
       ( qualifier
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ Id.print id
       ++ pp_par true params_s )
@@ -2651,8 +3119,8 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
           if
             (not (Id.Set.mem id used_ids))
             && not (String.equal (Id.to_string mf_name) "operator=")
-          then pp_cpp_type false [] ty
-          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          then pp_type ty
+          else pp_type ty ++ str " " ++ Id.print id)
         mf_params
     in
     current_any_typed_params := saved_any_params;
@@ -2678,7 +3146,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
          ( inline_s
          ++ qualifier
          ++ static_s
-         ++ pp_cpp_type false [] mf_ret_type
+         ++ pp_type mf_ret_type
          ++ str " "
          ++ Id.print mf_name
          ++ pp_par true params_s
@@ -2696,7 +3164,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let init_s =
@@ -2748,7 +3216,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       ( str "using "
       ++ Id.print id
       ++ str " = "
-      ++ pp_cpp_type false [] ty
+      ++ pp_type ty
       ++ str ";" )
   | Fdeleted_ctor ->
     let sname =
@@ -2772,7 +3240,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     in
     let params_s =
       pp_list
-        (fun (id, ty) -> pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
         params
     in
     let explicit_s = if is_explicit then str "explicit " else mt () in
@@ -2781,22 +3249,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ h (explicit_s ++ sname ++ pp_par true params_s ++ str " {")
     ++ fnl ()
     ++ body_s ++ str "}"
-  | Fraw s ->
-    if Common.contains_substring s "std::vector" then
-      require_header "vector";
-    if Common.contains_substring s "std::unique_ptr" then
-      require_header "memory";
-    (* Replace %SELF% placeholder with actual struct name if available *)
-    let s =
-      match struct_name with
-      | Some sn ->
-        Str.global_replace
-          (Str.regexp_string "%SELF%")
-          (Pp.string_of_ppcmds sn)
-          s
-      | None -> s
-    in
-    str s
 
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
@@ -2914,13 +3366,13 @@ let pp_meyers_singleton env id ty expr_pp =
   in
   h
     ( str "static const "
-    ++ pp_cpp_type false [] bare_ty
+    ++ pp_type bare_ty
     ++ str "& "
     ++ pp_global Type id
     ++ str "() {" )
   ++ fnl ()
   ++ str "  static const "
-  ++ pp_cpp_type false [] bare_ty
+  ++ pp_type bare_ty
   ++ str " v = "
   ++ expr_pp
   ++ str ";"
@@ -2945,7 +3397,7 @@ let maybe_loopify decl =
     | None -> Table.loopify ()
   in
   if should then
-    let pp_type t = Pp.string_of_ppcmds (pp_cpp_type false [] t) in
+    let pp_type t = Pp.string_of_ppcmds (pp_type t) in
     let pp_expr e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e) in
     Loopify.transform_decl ~pp_type ~pp_expr decl
   else
@@ -3110,8 +3562,8 @@ and pp_cpp_decl_raw env = function
     let params_s =
       pp_list
         (fun (id, ty) ->
-          if not (Id.Set.mem id used_ids) then pp_cpp_type false [] ty
-          else pp_cpp_type false [] ty ++ str " " ++ Id.print id)
+          if not (Id.Set.mem id used_ids) then pp_type ty
+          else pp_type ty ++ str " " ++ Id.print id)
         (List.rev params)
     in
     let pp_fundef_name n =
@@ -3128,7 +3580,7 @@ and pp_cpp_decl_raw env = function
           | _ ->
             pp_fundef_name n
             ++ str "<"
-            ++ pp_list (pp_cpp_type false []) tys
+            ++ pp_list (pp_type) tys
             ++ str ">" )
         ids
     in
@@ -3177,17 +3629,18 @@ and pp_cpp_decl_raw env = function
        (out-of-line) or inline in a template struct (in-struct + in-template).
        constexpr requires the definition visible in the header, so only use
        it for inline template struct definitions. *)
+    let throws = body_is_throw body in
     let qualifier =
       fun_qualifier
         ~can_constexpr:(render_ctx.rc_in_struct && not is_out_of_struct_def)
-        ~throws:(body_is_throw body)
+        ~throws
         ~no_pure
         ret_ty params
     in
     h
       ( qualifier
       ++ static_kw
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ name
       ++ pp_par true params_s )
@@ -3199,8 +3652,8 @@ and pp_cpp_decl_raw env = function
       pp_list
         (fun (id, ty) ->
           match id with
-          | Some id -> pp_cpp_type false [] ty ++ str " " ++ Id.print id
-          | None -> pp_cpp_type false [] ty )
+          | Some id -> pp_type ty ++ str " " ++ Id.print id
+          | None -> pp_type ty )
         (List.rev params)
     in
     let name =
@@ -3212,7 +3665,7 @@ and pp_cpp_decl_raw env = function
           | _ ->
             pp_global Type n
             ++ str "<"
-            ++ pp_list (pp_cpp_type false []) tys
+            ++ pp_list (pp_type) tys
             ++ str ">" )
         ids
     in
@@ -3234,7 +3687,7 @@ and pp_cpp_decl_raw env = function
     h
       ( qualifier
       ++ static_kw
-      ++ pp_cpp_type false [] ret_ty
+      ++ pp_type ret_ty
       ++ str " "
       ++ name
       ++ pp_par true params_s )
@@ -3310,20 +3763,6 @@ and pp_cpp_decl_raw env = function
     ++ f_s
     ++ fnl ()
     ++ str "};"
-  | Dstruct_decl id -> str "struct " ++ pp_global Type id ++ str ";"
-  | Dusing (_, Tglob (GlobRef.VarRef dummy_id, _, _))
-    when (let n = Id.to_string dummy_id in
-          n = "dummy_prop" || n = "dummy_type" || n = "dummy_implicit") ->
-    mt () (* Skip erased type aliases *)
-  | Dusing (id, ty) ->
-    if is_any_type ty then
-      any_type_aliases :=
-        Id.Set.add (Id.of_string (Common.pp_global_name Type id)) !any_type_aliases;
-    str "using "
-    ++ pp_global Type id
-    ++ str " = "
-    ++ pp_cpp_type false [] ty
-    ++ str ";"
   | Dasgn (id, ty, e) ->
     (* Special handling for CPPabort: generate lambda with correct return
        type *)
@@ -3332,7 +3771,7 @@ and pp_cpp_decl_raw env = function
       | CPPabort msg ->
         require_header "stdexcept";
         str "([]() -> "
-        ++ pp_cpp_type false [] ty
+        ++ pp_type ty
         ++ str " { throw "
         ++ str (sn ()).logic_error
         ++ str "(\""
@@ -3371,14 +3810,12 @@ and pp_cpp_decl_raw env = function
       in
       h
         ( static_kw
-        ++ pp_cpp_type false [] ty
+        ++ pp_type ty
         ++ str " "
         ++ pp_global Type id
         ++ str " = "
         ++ wrapped_expr
         ++ str ";" )
-  | Ddecl (id, ty) ->
-    h (pp_cpp_type false [] ty ++ str " " ++ pp_global Type id ++ str ";")
   | Dconcept (id, cstr) ->
     (* For hoisted concepts, use only the simple base name without module
        qualification *)
@@ -3444,7 +3881,7 @@ and pp_cpp_decl_raw env = function
     @param vl   type variable names for de Bruijn index lookup
     @param t    the MiniML type to convert and render *)
 let pp_type par vl t =
-  let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] t in
+  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] t in
   pp_cpp_type par vl cty
 
 (** {2 Pretty-printing of expressions. [par] indicates whether parentheses are

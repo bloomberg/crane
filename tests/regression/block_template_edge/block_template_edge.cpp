@@ -41,6 +41,6 @@ uint64_t BlockTemplateEdge::block_unused() {
 int64_t BlockTemplateEdge::block_then_pure() {
   std::string s;
   std::getline(std::cin, s);
-  int64_t n = static_cast<int64_t>(s.length());
+  int64_t n = static_cast<int64_t>(std::move(s).length());
   return ((n + n) & 0x7FFFFFFFFFFFFFFFLL);
 }

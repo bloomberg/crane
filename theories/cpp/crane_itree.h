@@ -12,6 +12,7 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <variant>
 
 template <typename R>
@@ -133,8 +134,13 @@ template<typename Effect, typename Cont>
 auto itree_vis(Effect effect, Cont cont) {
     using TreePtr = std::invoke_result_t<Cont, std::any>;
     using TreeT = typename TreePtr::element_type;
-    return TreeT::vis(
-        std::function<std::any()>(std::move(effect)),
+    std::function<std::any()> eff;
+    if constexpr (std::is_same_v<std::decay_t<Effect>, std::any>) {
+        eff = std::any_cast<std::function<std::any()>>(effect);
+    } else {
+        eff = std::function<std::any()>(std::move(effect));
+    }
+    return TreeT::vis(std::move(eff),
         std::function<TreePtr(std::any)>(std::move(cont)));
 }
 

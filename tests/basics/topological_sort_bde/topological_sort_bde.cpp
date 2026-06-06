@@ -11,6 +11,7 @@
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
+#include <bsl_vector.h>
 
 namespace BloombergLP {}
 List<unsigned int> ListDef::seq(unsigned int start, unsigned int len) {

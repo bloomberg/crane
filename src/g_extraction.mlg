@@ -299,6 +299,11 @@ VERNAC COMMAND EXTEND ExtractionNumeral CLASSIFIED AS SIDEFF
   -> { Table.extract_numeral x fmt }
 END
 
+VERNAC COMMAND EXTEND ExtractionGuardCompare CLASSIFIED AS SIDEFF
+| [ "Crane" "Guard" "Compare" global(f) "=>" global(ret) ]
+  -> { Table.extract_guard_compare f ret }
+END
+
 (* Show the extraction of the current proof *)
 
 VERNAC COMMAND EXTEND ShowExtraction CLASSIFIED AS QUERY STATE proof_query

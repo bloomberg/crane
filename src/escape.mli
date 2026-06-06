@@ -87,6 +87,14 @@ val single_use_nargs : int -> ml_ast -> int
             [i+1] (de Bruijn) escapes and must be passed by value *)
 val infer_owned_params : int -> ml_ast -> bool list
 
+(** [infer_sub_bindings_escape_params n body] returns a bool list of length [n]
+    where element [i] is [true] when the parameter at de Bruijn index [i+1] is
+    used only as a case scrutinee but its extracted sub-bindings escape into
+    constructors.  Callers should only OR this into [infer_owned_params] for
+    parameters whose ML type maps to a non-trivially-copyable value type (e.g.,
+    custom [prod]), NOT for shared_ptr-backed types ([list], cofix, etc.). *)
+val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
+
 (** {2 Phase 2: reset/reuse optimization} *)
 
 (** [find_reuse_candidates scrutinee_type branches] identifies branches where

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LET_PAIR_SHADOW
 #define INCLUDED_LET_PAIR_SHADOW
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -34,7 +35,7 @@ struct LetPairShadow {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -51,61 +52,44 @@ struct LetPairShadow {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist<A> &operator=(const mylist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist<A> &operator=(mylist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist<A> clone() const {
-      mylist<A> _out{};
-
-      struct _CloneFrame {
-        const mylist<A> *_src;
-        mylist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist<A> *_src = _frame._src;
-        mylist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->v_ = Mynil{};
-        } else {
-          const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
         this->v_ = Mynil{};
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -113,27 +97,25 @@ struct LetPairShadow {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist<A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.v_)) {
-          auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Mycons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -179,12 +161,12 @@ struct LetPairShadow {
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       auto _cs = f(acc, a0);
-      const T3 &new_acc = _cs.first;
-      const T2 &y = _cs.second;
+      T3 new_acc = std::move(_cs.first);
+      T2 y = std::move(_cs.second);
       auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *a1);
-      const mylist<T2> &rest = _cs1.first;
-      const T3 &final_acc = _cs1.second;
-      return std::make_pair(mylist<T2>::mycons(y, rest), final_acc);
+      mylist<T2> rest = std::move(_cs1.first);
+      T3 final_acc = std::move(_cs1.second);
+      return std::make_pair(mylist<T2>::mycons(y, std::move(rest)), final_acc);
     }
   }
 
@@ -201,9 +183,9 @@ struct LetPairShadow {
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))));
-    const mylist<uint64_t> &l = _cs.first;
-    const uint64_t &acc = _cs.second;
-    return (mylist_sum(l) + acc);
+    mylist<uint64_t> l = std::move(_cs.first);
+    uint64_t acc = std::move(_cs.second);
+    return (mylist_sum(std::move(l)) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).
   static std::pair<uint64_t, uint64_t> add_pair(uint64_t a, uint64_t b);

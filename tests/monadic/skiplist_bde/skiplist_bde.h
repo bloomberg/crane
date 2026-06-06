@@ -13,9 +13,11 @@
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
 #include <bsl_variant.h>
+#include <bsl_vector.h>
 #include <fstream>
 #include <skipnode.h>
 #include <stm_adapter.h>
+#include <utility>
 #include <variant>
 
 using namespace BloombergLP;
@@ -35,8 +37,8 @@ template <typename K, typename V> struct SkipList {
   SkipPath<K, V> findPath(F0 &&ltK, const K &target) const {
     unsigned int lvl = stm::readTVar(this->slLevel);
     SkipPath<K, V> path = SkipPath<K, V>{};
-    return SkipList<int, int>::template findPath_aux<K, V>(ltK, this->slHead,
-                                                           target, lvl, path);
+    return SkipList<int, int>::template findPath_aux<K, V>(
+        ltK, this->slHead, target, lvl, bsl::move(path));
   }
   template <typename F0, typename F1>
     requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
@@ -78,7 +80,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
+                                                    this->slHead, newN);
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
           return std::monostate{};
@@ -89,7 +92,8 @@ template <typename K, typename V> struct SkipList {
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+      SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
+                                                  newN);
       if (curLvl < newLevel) {
         stm::writeTVar(this->slLevel, newLevel);
         return std::monostate{};
@@ -112,7 +116,7 @@ template <typename K, typename V> struct SkipList {
         unsigned int curLvl = stm::readTVar(this->slLevel);
         SkipList<int, int>::template extendPath<K, V>(
             path, this->slHead, (node->level + 1), curLvl);
-        SkipList<int, int>::template unlinkNode<K, V>(path, node);
+        SkipList<int, int>::template unlinkNode<K, V>(bsl::move(path), node);
         return std::monostate{};
       } else {
         return std::monostate{};
@@ -166,7 +170,8 @@ template <typename K, typename V> struct SkipList {
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> firstOpt =
         ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<K, V>>>(
             this->slHead->forward[0u]));
-    return SkipList<int, int>::template length_aux<K, V>(10000u, firstOpt, 0u);
+    return SkipList<int, int>::template length_aux<K, V>(
+        10000u, bsl::move(firstOpt), 0u);
   }
   template <typename F0, typename F1>
     requires bsl::is_invocable_r_v<bool, F0 &, K &, K &> &&
@@ -231,7 +236,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
+                                                    this->slHead, newN);
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
           return std::monostate{};
@@ -242,7 +248,8 @@ template <typename K, typename V> struct SkipList {
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+      SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
+                                                  newN);
       if (curLvl < newLevel) {
         stm::writeTVar(this->slLevel, newLevel);
         return std::monostate{};
@@ -270,7 +277,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
+                                                    this->slHead, newN);
         [&]() -> void {
           if (curLvl < newLevel) {
             stm::writeTVar(this->slLevel, newLevel);
@@ -284,7 +292,8 @@ template <typename K, typename V> struct SkipList {
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+      SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
+                                                  newN);
       [&]() -> void {
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
@@ -427,7 +436,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(key0, data0, level);
-        SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
+                                                    this->slHead, newN);
         [&]() -> void {
           if (curLvl < level) {
             stm::writeTVar(this->slLevel, level);
@@ -441,7 +451,8 @@ template <typename K, typename V> struct SkipList {
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(key0, data0, level);
-      SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+      SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
+                                                  newN);
       [&]() -> void {
         if (curLvl < level) {
           stm::writeTVar(this->slLevel, level);
@@ -488,7 +499,8 @@ template <typename K, typename V> struct SkipList {
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(key0, data0, level);
-        SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+        SkipList<int, int>::template linkNode<K, V>(bsl::move(path),
+                                                    this->slHead, newN);
         [&]() -> void {
           if (curLvl < level) {
             stm::writeTVar(this->slLevel, level);
@@ -506,7 +518,8 @@ template <typename K, typename V> struct SkipList {
     } else {
       bsl::shared_ptr<SkipNode<K, V>> newN =
           SkipNode<K, V>::create(key0, data0, level);
-      SkipList<int, int>::template linkNode<K, V>(path, this->slHead, newN);
+      SkipList<int, int>::template linkNode<K, V>(bsl::move(path), this->slHead,
+                                                  newN);
       [&]() -> void {
         if (curLvl < level) {
           stm::writeTVar(this->slLevel, level);
@@ -718,7 +731,7 @@ template <typename K, typename V> struct SkipList {
       } else {
         unsigned int level_ = _loop_level - 1;
         _loop_level = level_;
-        _loop_curr = pred;
+        _loop_curr = bsl::move(pred);
       }
     }
   }
@@ -732,8 +745,8 @@ template <typename K, typename V> struct SkipList {
         pred->forward[level],
         opt_to_ptr(
             bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(newNode)));
-    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(newNode->forward[level],
-                                                      opt_to_ptr(oldNext));
+    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+        bsl::move(newNode)->forward[level], opt_to_ptr(bsl::move(oldNext)));
     return;
   }
   template <typename T1, typename T2>
@@ -803,8 +816,8 @@ template <typename K, typename V> struct SkipList {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> targetNext =
         ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
             target->forward[level]));
-    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(pred->forward[level],
-                                                      opt_to_ptr(targetNext));
+    stm::writeTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
+        pred->forward[level], opt_to_ptr(bsl::move(targetNext)));
     return;
   }
   template <typename T1, typename T2>
@@ -847,7 +860,7 @@ template <typename K, typename V> struct SkipList {
       if (_loop_level <= 0) {
         bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(
-                pred->forward[0u]));
+                bsl::move(pred)->forward[0u]));
         if (nextOpt.has_value()) {
           bsl::shared_ptr<SkipNode<T1, T2>> node = *nextOpt;
           return eqK(node->key, target);
@@ -857,7 +870,7 @@ template <typename K, typename V> struct SkipList {
       } else {
         unsigned int level_ = _loop_level - 1;
         _loop_level = level_;
-        _loop_curr = pred;
+        _loop_curr = bsl::move(pred);
       }
     }
   }
@@ -879,7 +892,7 @@ template <typename K, typename V> struct SkipList {
           bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt = ptr_to_opt(
               stm::readTVar<bsl::shared_ptr<SkipNode<T1, T2>>>(n->forward[0u]));
           _loop_acc = (_loop_acc + 1);
-          _loop_node = nextOpt;
+          _loop_node = bsl::move(nextOpt);
           _loop_fuel = fuel_;
         } else {
           return _loop_acc;
@@ -907,7 +920,7 @@ template <typename K, typename V> struct SkipList {
           _loop_fuel = fuel_;
         } else {
           return bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(
-              _loop_curr);
+              bsl::move(_loop_curr));
         }
       }
     }
@@ -1000,10 +1013,10 @@ template <typename K, typename V> struct SkipList {
           bsl::shared_ptr<SkipNode<T1, T2>> next0 = *nextOpt;
           if (eqK(next0->key, target)) {
             return bsl::make_optional<bsl::shared_ptr<SkipNode<T1, T2>>>(
-                _loop_curr);
+                bsl::move(_loop_curr));
           } else {
             bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-            _loop_x = _loop_curr;
+            _loop_x = bsl::move(_loop_curr);
             _loop_fuel = fuel_;
             _loop_curr = bsl::move(_next_curr);
           }

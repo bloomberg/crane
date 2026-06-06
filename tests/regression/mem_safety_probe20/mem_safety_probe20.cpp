@@ -100,8 +100,9 @@ uint64_t MemSafetyProbe20::sum_wrapped(
 
   /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    decltype(std::declval<MemSafetyProbe20::wrapped &>().unwrap(
-        std::declval<uint64_t &>())) _s0;
+    std::decay_t<decltype(std::declval<MemSafetyProbe20::wrapped &>().unwrap(
+        std::declval<uint64_t &>()))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -127,7 +128,7 @@ uint64_t MemSafetyProbe20::sum_wrapped(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;

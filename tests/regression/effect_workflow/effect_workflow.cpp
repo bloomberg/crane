@@ -39,7 +39,7 @@ std::string EffectWorkflow::conditional_create(std::string path) {
 void EffectWorkflow::read_and_set() {
   std::string line;
   std::getline(std::cin, line);
-  setenv("USER_INPUT"s.c_str(), line.c_str(), 1);
+  setenv("USER_INPUT"s.c_str(), std::move(line).c_str(), 1);
   return;
 }
 
@@ -79,7 +79,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
 int64_t EffectWorkflow::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>(std::move(line).length());
   return len;
 }
 

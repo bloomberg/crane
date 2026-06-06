@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe17::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -127,8 +127,11 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QNode>(_frame));
-      _result = _result.myapp(_f._result_2.myapp(
-          mylist<uint64_t>::mycons(_f.a2, _f._result_1.myapp(_f._result_0))));
+      _result = std::move(_result).myapp(
+          std::move(_f._result_2)
+              .myapp(mylist<uint64_t>::mycons(
+                  _f.a2,
+                  std::move(_f._result_1).myapp(std::move(_f._result_0)))));
     }
   }
   return _result;
@@ -146,18 +149,18 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
   /// _After_n_: saves [n_, _s1, n, _s3], dispatches next recursive call.
   struct _After_n_ {
     uint64_t n_;
-    decltype(qtree::qleaf()) _s1;
+    std::decay_t<decltype(qtree::qleaf())> _s1;
     uint64_t n;
-    decltype(qtree::qleaf()) _s3;
+    std::decay_t<decltype(qtree::qleaf())> _s3;
   };
 
   /// _Combine_n_: receives partial results, combines with _result from final
   /// call.
   struct _Combine_n_ {
     MemSafetyProbe17::qtree _result;
-    decltype(qtree::qleaf()) _s1;
+    std::decay_t<decltype(qtree::qleaf())> _s1;
     uint64_t n;
-    decltype(qtree::qleaf()) _s3;
+    std::decay_t<decltype(qtree::qleaf())> _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;

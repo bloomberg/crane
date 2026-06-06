@@ -10,7 +10,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -34,37 +34,54 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifyAdvancedPatterns::as_guard(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (UINT64_C(3) < len_impl(*_loop_l)) {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+List<uint64_t> LoopifyAdvancedPatterns::as_guard(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified as_guard: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (UINT64_C(3) < len_impl(l)) {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t LoopifyAdvancedPatterns::multi_guard(
@@ -82,7 +99,7 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    decltype(UINT64_C(1)) _s0;
+    std::decay_t<decltype(UINT64_C(1))> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
@@ -115,10 +132,10 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -180,7 +197,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -227,7 +244,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
       }
     } else {
       auto _f = std::move(std::get<_Resume_a>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -263,36 +280,53 @@ uint64_t LoopifyAdvancedPatterns::guard_accum(uint64_t acc,
   }
 }
 
-List<uint64_t> LoopifyAdvancedPatterns::cons_computed(uint64_t n,
-                                                      const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      uint64_t next_n;
-      if (UINT64_C(0) < _loop_n) {
-        next_n =
-            (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+List<uint64_t> LoopifyAdvancedPatterns::cons_computed(
+    uint64_t n,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+    uint64_t n;
+  };
+
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l, n});
+  /// Loopified cons_computed: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      uint64_t n = _f.n;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        next_n = _loop_n;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        uint64_t next_n;
+        if (UINT64_C(0) < n) {
+          next_n = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+        } else {
+          next_n = n;
+        }
+        _stack.emplace_back(_Resume_Cons{a0});
+        _stack.emplace_back(_Enter{a1.get(), next_n});
       }
-      auto _cell = std::make_unique<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-      _loop_l = a1.get();
-      _loop_n = next_n;
-      continue;
+    } else {
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t LoopifyAdvancedPatterns::extract_value(
@@ -324,8 +358,9 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(extract_value(
-        std::declval<LoopifyAdvancedPatterns::shape &>())) a0;
+    std::decay_t<decltype(extract_value(
+        std::declval<LoopifyAdvancedPatterns::shape &>()))>
+        a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -352,7 +387,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -398,10 +433,11 @@ LoopifyAdvancedPatterns::count_by_shape(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      const std::pair<uint64_t, uint64_t> &p = _result.first;
-      const uint64_t &triangles = _result.second;
-      const uint64_t &circles = p.first;
-      const uint64_t &squares = p.second;
+      auto _cs = std::move(_result);
+      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
+      uint64_t triangles = std::move(_cs.second);
+      uint64_t circles = std::move(p.first);
+      uint64_t squares = std::move(p.second);
       if (std::holds_alternative<
               typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {
         _result = std::make_pair(
@@ -419,35 +455,51 @@ LoopifyAdvancedPatterns::count_by_shape(
   return _result;
 }
 
-List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
-                                                   const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_idx = std::move(idx);
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_idx == UINT64_C(0)) {
-        *_write =
-            std::make_unique<List<uint64_t>>(List<uint64_t>::cons(value, *a1));
-        break;
+List<uint64_t> LoopifyAdvancedPatterns::replace_at(
+    uint64_t idx, uint64_t value,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+    uint64_t idx;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l, idx});
+  /// Loopified replace_at: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      uint64_t idx = _f.idx;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        _loop_idx = (((_loop_idx - UINT64_C(1)) > _loop_idx
-                          ? 0
-                          : (_loop_idx - UINT64_C(1))));
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (idx == UINT64_C(0)) {
+          _result = List<uint64_t>::cons(value, *a1);
+        } else {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(
+              _Enter{a1.get(),
+                     (((idx - UINT64_C(1)) > idx ? 0 : (idx - UINT64_C(1))))});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }

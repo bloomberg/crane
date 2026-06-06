@@ -15,13 +15,13 @@ struct WhereClause {
     };
 
     struct Plus {
-      std::unique_ptr<Expr> a0;
-      std::unique_ptr<Expr> a1;
+      std::shared_ptr<Expr> a0;
+      std::shared_ptr<Expr> a1;
     };
 
     struct Times {
-      std::unique_ptr<Expr> a0;
-      std::unique_ptr<Expr> a1;
+      std::shared_ptr<Expr> a0;
+      std::shared_ptr<Expr> a1;
     };
 
     using variant_t = std::variant<Num, Plus, Times>;
@@ -40,110 +40,45 @@ struct WhereClause {
 
     explicit Expr(Times _v) : v_(std::move(_v)) {}
 
-    Expr(const Expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Expr(Expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Expr &operator=(const Expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Expr &operator=(Expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Expr clone() const {
-      Expr _out{};
-
-      struct _CloneFrame {
-        const Expr *_src;
-        Expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Expr *_src = _frame._src;
-        Expr *_dst = _frame._dst;
-        if (std::holds_alternative<Num>(_src->v())) {
-          const auto &_alt = std::get<Num>(_src->v());
-          _dst->v_ = Num{_alt.a0};
-        } else if (std::holds_alternative<Plus>(_src->v())) {
-          const auto &_alt = std::get<Plus>(_src->v());
-          _dst->v_ = Plus{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<Expr>() : nullptr};
-          auto &_dst_alt = std::get<Plus>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<Times>(_src->v());
-          _dst->v_ = Times{_alt.a0 ? std::make_unique<Expr>() : nullptr,
-                           _alt.a1 ? std::make_unique<Expr>() : nullptr};
-          auto &_dst_alt = std::get<Times>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static Expr num(uint64_t a0) { return Expr(Num{a0}); }
 
     static Expr plus(Expr a0, Expr a1) {
-      return Expr(Plus{std::make_unique<Expr>(std::move(a0)),
-                       std::make_unique<Expr>(std::move(a1))});
+      return Expr(Plus{std::make_shared<Expr>(std::move(a0)),
+                       std::make_shared<Expr>(std::move(a1))});
     }
 
     static Expr times(Expr a0, Expr a1) {
-      return Expr(Times{std::make_unique<Expr>(std::move(a0)),
-                        std::make_unique<Expr>(std::move(a1))});
+      return Expr(Times{std::make_shared<Expr>(std::move(a0)),
+                        std::make_shared<Expr>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~Expr() {
-      std::vector<std::unique_ptr<Expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Expr &_node) {
-        if (std::holds_alternative<Plus>(_node.v_)) {
-          auto &_alt = std::get<Plus>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<Expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Plus>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<Times>(_node.v_)) {
-          auto &_alt = std::get<Times>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<Times>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -224,17 +159,17 @@ struct WhereClause {
     struct BFalse {};
 
     struct BAnd {
-      std::unique_ptr<BExpr> a0;
-      std::unique_ptr<BExpr> a1;
+      std::shared_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a1;
     };
 
     struct BOr {
-      std::unique_ptr<BExpr> a0;
-      std::unique_ptr<BExpr> a1;
+      std::shared_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a1;
     };
 
     struct BNot {
-      std::unique_ptr<BExpr> a0;
+      std::shared_ptr<BExpr> a0;
     };
 
     using variant_t = std::variant<BTrue, BFalse, BAnd, BOr, BNot>;
@@ -257,130 +192,56 @@ struct WhereClause {
 
     explicit BExpr(BNot _v) : v_(std::move(_v)) {}
 
-    BExpr(const BExpr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    BExpr(BExpr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    BExpr &operator=(const BExpr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    BExpr &operator=(BExpr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    BExpr clone() const {
-      BExpr _out{};
-
-      struct _CloneFrame {
-        const BExpr *_src;
-        BExpr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const BExpr *_src = _frame._src;
-        BExpr *_dst = _frame._dst;
-        if (std::holds_alternative<BTrue>(_src->v())) {
-          _dst->v_ = BTrue{};
-        } else if (std::holds_alternative<BFalse>(_src->v())) {
-          _dst->v_ = BFalse{};
-        } else if (std::holds_alternative<BAnd>(_src->v())) {
-          const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->v_ = BAnd{_alt.a0 ? std::make_unique<BExpr>() : nullptr,
-                          _alt.a1 ? std::make_unique<BExpr>() : nullptr};
-          auto &_dst_alt = std::get<BAnd>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<BOr>(_src->v())) {
-          const auto &_alt = std::get<BOr>(_src->v());
-          _dst->v_ = BOr{_alt.a0 ? std::make_unique<BExpr>() : nullptr,
-                         _alt.a1 ? std::make_unique<BExpr>() : nullptr};
-          auto &_dst_alt = std::get<BOr>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<BNot>(_src->v());
-          _dst->v_ = BNot{_alt.a0 ? std::make_unique<BExpr>() : nullptr};
-          auto &_dst_alt = std::get<BNot>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static BExpr btrue() { return BExpr(BTrue{}); }
 
     static BExpr bfalse() { return BExpr(BFalse{}); }
 
     static BExpr band(BExpr a0, BExpr a1) {
-      return BExpr(BAnd{std::make_unique<BExpr>(std::move(a0)),
-                        std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BAnd{std::make_shared<BExpr>(std::move(a0)),
+                        std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bor(BExpr a0, BExpr a1) {
-      return BExpr(BOr{std::make_unique<BExpr>(std::move(a0)),
-                       std::make_unique<BExpr>(std::move(a1))});
+      return BExpr(BOr{std::make_shared<BExpr>(std::move(a0)),
+                       std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bnot(BExpr a0) {
-      return BExpr(BNot{std::make_unique<BExpr>(std::move(a0))});
+      return BExpr(BNot{std::make_shared<BExpr>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~BExpr() {
-      std::vector<std::unique_ptr<BExpr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](BExpr &_node) {
-        if (std::holds_alternative<BAnd>(_node.v_)) {
-          auto &_alt = std::get<BAnd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<BExpr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<BAnd>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<BOr>(_node.v_)) {
-          auto &_alt = std::get<BOr>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<BOr>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<BNot>(_node.v_)) {
-          auto &_alt = std::get<BNot>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<BNot>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -461,14 +322,14 @@ struct WhereClause {
     };
 
     struct APlus {
-      std::unique_ptr<AExpr> a0;
-      std::unique_ptr<AExpr> a1;
+      std::shared_ptr<AExpr> a0;
+      std::shared_ptr<AExpr> a1;
     };
 
     struct AIf {
       BExpr a0;
-      std::unique_ptr<AExpr> a1;
-      std::unique_ptr<AExpr> a2;
+      std::shared_ptr<AExpr> a1;
+      std::shared_ptr<AExpr> a2;
     };
 
     using variant_t = std::variant<ANum, APlus, AIf>;
@@ -487,111 +348,45 @@ struct WhereClause {
 
     explicit AExpr(AIf _v) : v_(std::move(_v)) {}
 
-    AExpr(const AExpr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    AExpr(AExpr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    AExpr &operator=(const AExpr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    AExpr &operator=(AExpr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    AExpr clone() const {
-      AExpr _out{};
-
-      struct _CloneFrame {
-        const AExpr *_src;
-        AExpr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const AExpr *_src = _frame._src;
-        AExpr *_dst = _frame._dst;
-        if (std::holds_alternative<ANum>(_src->v())) {
-          const auto &_alt = std::get<ANum>(_src->v());
-          _dst->v_ = ANum{_alt.a0};
-        } else if (std::holds_alternative<APlus>(_src->v())) {
-          const auto &_alt = std::get<APlus>(_src->v());
-          _dst->v_ = APlus{_alt.a0 ? std::make_unique<AExpr>() : nullptr,
-                           _alt.a1 ? std::make_unique<AExpr>() : nullptr};
-          auto &_dst_alt = std::get<APlus>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<AIf>(_src->v());
-          _dst->v_ = AIf{_alt.a0.clone(),
-                         _alt.a1 ? std::make_unique<AExpr>() : nullptr,
-                         _alt.a2 ? std::make_unique<AExpr>() : nullptr};
-          auto &_dst_alt = std::get<AIf>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static AExpr anum(uint64_t a0) { return AExpr(ANum{a0}); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
-      return AExpr(APlus{std::make_unique<AExpr>(std::move(a0)),
-                         std::make_unique<AExpr>(std::move(a1))});
+      return AExpr(APlus{std::make_shared<AExpr>(std::move(a0)),
+                         std::make_shared<AExpr>(std::move(a1))});
     }
 
     static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
-      return AExpr(AIf{std::move(a0), std::make_unique<AExpr>(std::move(a1)),
-                       std::make_unique<AExpr>(std::move(a2))});
+      return AExpr(AIf{std::move(a0), std::make_shared<AExpr>(std::move(a1)),
+                       std::make_shared<AExpr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~AExpr() {
-      std::vector<std::unique_ptr<AExpr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](AExpr &_node) {
-        if (std::holds_alternative<APlus>(_node.v_)) {
-          auto &_alt = std::get<APlus>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<AExpr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<APlus>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<AIf>(_node.v_)) {
-          auto &_alt = std::get<AIf>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+        if (auto *_alt = std::get_if<AIf>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

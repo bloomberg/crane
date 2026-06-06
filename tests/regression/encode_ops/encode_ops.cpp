@@ -15,8 +15,8 @@ EncodeOps::encode_list2(const List<EncodeOps::instruction2> &prog) {
     const auto &[a0, a1] =
         std::get<typename List<EncodeOps::instruction2>::Cons>(prog.v());
     auto _cs = a0.encode2();
-    const uint64_t &b1 = _cs.first;
-    const uint64_t &b2 = _cs.second;
+    uint64_t b1 = std::move(_cs.first);
+    uint64_t b2 = std::move(_cs.second);
     return List<uint64_t>::cons(b1,
                                 List<uint64_t>::cons(b2, encode_list2(*a1)));
   }

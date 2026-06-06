@@ -64,7 +64,7 @@ std::string EffectBindAction::echo_if(bool flag) {
   std::getline(std::cin, line);
   [&]() -> void {
     if (flag) {
-      std::cout << line << '\n';
+      std::cout << std::move(line) << '\n';
       return;
     } else {
       return;

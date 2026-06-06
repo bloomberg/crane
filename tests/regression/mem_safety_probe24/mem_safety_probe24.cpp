@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe24::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -136,16 +136,18 @@ MemSafetyProbe24::zip_trees(
   struct _After_Node {
     const MemSafetyProbe24::tree *a00;
     const MemSafetyProbe24::tree *a0;
-    decltype(std::make_pair(std::declval<uint64_t &>(),
-                            std::declval<uint64_t &>())) _s2;
+    std::decay_t<decltype(std::make_pair(std::declval<uint64_t &>(),
+                                         std::declval<uint64_t &>()))>
+        _s2;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> _result;
-    decltype(std::make_pair(std::declval<uint64_t &>(),
-                            std::declval<uint64_t &>())) _s1;
+    std::decay_t<decltype(std::make_pair(std::declval<uint64_t &>(),
+                                         std::declval<uint64_t &>()))>
+        _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

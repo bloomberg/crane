@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RAM_OPS
 #define INCLUDED_RAM_OPS
 
+#include <any>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -12,7 +13,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -29,85 +30,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -126,27 +109,14 @@ struct ListDef {
 struct RamOps {
   struct ram_reg_main {
     List<uint64_t> reg_main;
-
-    // ACCESSORS
-    ram_reg_main clone() const { return ram_reg_main{this->reg_main.clone()}; }
   };
 
   struct ram_chip_main {
     List<ram_reg_main> chip_regs_main;
-
-    // ACCESSORS
-    ram_chip_main clone() const {
-      return ram_chip_main{this->chip_regs_main.clone()};
-    }
   };
 
   struct ram_bank_main {
     List<ram_chip_main> bank_chips_main;
-
-    // ACCESSORS
-    ram_bank_main clone() const {
-      return ram_bank_main{this->bank_chips_main.clone()};
-    }
   };
 
   struct state_main {
@@ -155,13 +125,6 @@ struct RamOps {
     uint64_t sel_chip_main;
     uint64_t sel_reg_main;
     uint64_t sel_char_main;
-
-    // ACCESSORS
-    state_main clone() const {
-      return state_main{this->ram_sys_main.clone(), this->cur_bank_main,
-                        this->sel_chip_main, this->sel_reg_main,
-                        this->sel_char_main};
-    }
   };
 
   template <typename T1>
@@ -228,28 +191,16 @@ struct RamOps {
 
   struct chip_port {
     uint64_t chip_port_val;
-
-    // ACCESSORS
-    chip_port clone() const { return chip_port{this->chip_port_val}; }
   };
 
   struct bank_port {
     List<chip_port> bank_chips_port;
-
-    // ACCESSORS
-    bank_port clone() const { return bank_port{this->bank_chips_port.clone()}; }
   };
 
   struct state_port {
     List<bank_port> ram_sys_port;
     uint64_t cur_bank_port;
     uint64_t sel_chip_port;
-
-    // ACCESSORS
-    state_port clone() const {
-      return state_port{this->ram_sys_port.clone(), this->cur_bank_port,
-                        this->sel_chip_port};
-    }
   };
 
   template <typename T1>
@@ -297,29 +248,14 @@ struct RamOps {
 
   struct ram_reg_status {
     List<uint64_t> reg_status;
-
-    // ACCESSORS
-    ram_reg_status clone() const {
-      return ram_reg_status{this->reg_status.clone()};
-    }
   };
 
   struct ram_chip_status {
     List<ram_reg_status> chip_regs_status;
-
-    // ACCESSORS
-    ram_chip_status clone() const {
-      return ram_chip_status{this->chip_regs_status.clone()};
-    }
   };
 
   struct ram_bank_status {
     List<ram_chip_status> bank_chips_status;
-
-    // ACCESSORS
-    ram_bank_status clone() const {
-      return ram_bank_status{this->bank_chips_status.clone()};
-    }
   };
 
   struct state_status {
@@ -327,12 +263,6 @@ struct RamOps {
     uint64_t cur_bank_status;
     uint64_t sel_chip_status;
     uint64_t sel_reg_status;
-
-    // ACCESSORS
-    state_status clone() const {
-      return state_status{this->ram_sys_status.clone(), this->cur_bank_status,
-                          this->sel_chip_status, this->sel_reg_status};
-    }
   };
 
   template <typename T1>
@@ -404,54 +334,27 @@ struct RamOps {
   struct ram_reg_sel {
     List<uint64_t> reg_main_sel;
     List<uint64_t> reg_status_sel;
-
-    // ACCESSORS
-    ram_reg_sel clone() const {
-      return ram_reg_sel{this->reg_main_sel.clone(),
-                         this->reg_status_sel.clone()};
-    }
   };
 
   struct ram_chip_sel {
     List<ram_reg_sel> chip_regs_sel;
     uint64_t chip_port_sel;
-
-    // ACCESSORS
-    ram_chip_sel clone() const {
-      return ram_chip_sel{this->chip_regs_sel.clone(), this->chip_port_sel};
-    }
   };
 
   struct ram_bank_sel {
     List<ram_chip_sel> bank_chips_sel;
-
-    // ACCESSORS
-    ram_bank_sel clone() const {
-      return ram_bank_sel{this->bank_chips_sel.clone()};
-    }
   };
 
   struct ram_sel {
     uint64_t sel_chip;
     uint64_t sel_reg;
     uint64_t sel_char;
-
-    // ACCESSORS
-    ram_sel clone() const {
-      return ram_sel{this->sel_chip, this->sel_reg, this->sel_char};
-    }
   };
 
   struct state_sel {
     List<ram_bank_sel> ram_sys_sel;
     uint64_t cur_bank_sel;
     ram_sel sel_ram;
-
-    // ACCESSORS
-    state_sel clone() const {
-      return state_sel{this->ram_sys_sel.clone(), this->cur_bank_sel,
-                       this->sel_ram.clone()};
-    }
   };
 
   static inline const ram_reg_sel empty_reg_sel =
@@ -496,56 +399,27 @@ struct RamOps {
   struct ram_reg_nested {
     List<uint64_t> reg_main_nested;
     List<uint64_t> reg_status_nested;
-
-    // ACCESSORS
-    ram_reg_nested clone() const {
-      return ram_reg_nested{this->reg_main_nested.clone(),
-                            this->reg_status_nested.clone()};
-    }
   };
 
   struct ram_chip_nested {
     List<ram_reg_nested> chip_regs_nested;
     uint64_t chip_port_nested;
-
-    // ACCESSORS
-    ram_chip_nested clone() const {
-      return ram_chip_nested{this->chip_regs_nested.clone(),
-                             this->chip_port_nested};
-    }
   };
 
   struct ram_bank_nested {
     List<ram_chip_nested> bank_chips_nested;
-
-    // ACCESSORS
-    ram_bank_nested clone() const {
-      return ram_bank_nested{this->bank_chips_nested.clone()};
-    }
   };
 
   struct ram_sel_nested {
     uint64_t sel_chip_nested;
     uint64_t sel_reg_nested;
     uint64_t sel_char_nested;
-
-    // ACCESSORS
-    ram_sel_nested clone() const {
-      return ram_sel_nested{this->sel_chip_nested, this->sel_reg_nested,
-                            this->sel_char_nested};
-    }
   };
 
   struct state_nested {
     List<ram_bank_nested> ram_sys_nested;
     uint64_t cur_bank_nested;
     ram_sel_nested sel_ram_nested;
-
-    // ACCESSORS
-    state_nested clone() const {
-      return state_nested{this->ram_sys_nested.clone(), this->cur_bank_nested,
-                          this->sel_ram_nested.clone()};
-    }
   };
 
   static inline const ram_reg_nested empty_reg_nested =
@@ -699,12 +573,6 @@ struct RamOps {
   struct state_preserve {
     List<uint64_t> ram_sys_preserve;
     uint64_t cur_bank_preserve;
-
-    // ACCESSORS
-    state_preserve clone() const {
-      return state_preserve{this->ram_sys_preserve.clone(),
-                            this->cur_bank_preserve};
-    }
   };
 
   static List<uint64_t> ram_write_main_sys_preserve(const state_preserve &s,
@@ -739,38 +607,18 @@ struct RamOps {
 
   struct reg_nested_bank {
     List<uint64_t> status_;
-
-    // ACCESSORS
-    reg_nested_bank clone() const {
-      return reg_nested_bank{this->status_.clone()};
-    }
   };
 
   struct chip_nested_bank {
     List<reg_nested_bank> regs_;
-
-    // ACCESSORS
-    chip_nested_bank clone() const {
-      return chip_nested_bank{this->regs_.clone()};
-    }
   };
 
   struct bank_nested_bank {
     List<chip_nested_bank> chips_;
-
-    // ACCESSORS
-    bank_nested_bank clone() const {
-      return bank_nested_bank{this->chips_.clone()};
-    }
   };
 
   struct state_nested_bank {
     List<bank_nested_bank> banks_;
-
-    // ACCESSORS
-    state_nested_bank clone() const {
-      return state_nested_bank{this->banks_.clone()};
-    }
   };
 
   template <typename T1>

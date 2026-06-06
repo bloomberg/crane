@@ -9,5 +9,6 @@
 #include <bsl_string.h>
 #include <bsl_type_traits.h>
 #include <bsl_variant.h>
+#include <bsl_vector.h>
 
 namespace BloombergLP {}

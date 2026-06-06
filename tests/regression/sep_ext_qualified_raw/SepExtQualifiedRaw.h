@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTQUALIFIEDRAW
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -20,7 +21,7 @@ template <OrderedType X> struct Make {
     struct Node {
       typename X::t a0;
       A a1;
-      std::unique_ptr<Fmap<A>> a2;
+      std::shared_ptr<Fmap<A>> a2;
     };
 
     using variant_t = std::variant<Empty, Node>;
@@ -37,61 +38,45 @@ template <OrderedType X> struct Make {
 
     explicit Fmap(Node _v) : v_(std::move(_v)) {}
 
-    Fmap(const Fmap<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Fmap(Fmap<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Fmap<A> &operator=(const Fmap<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Fmap<A> &operator=(Fmap<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Fmap<A> clone() const {
-      Fmap<A> _out{};
-
-      struct _CloneFrame {
-        const Fmap<A> *_src;
-        Fmap<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Fmap<A> *_src = _frame._src;
-        Fmap<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Empty>(_src->v())) {
-          _dst->v_ = Empty{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0, _alt.a1,
-                          _alt.a2 ? std::make_unique<Fmap<A>>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit Fmap(const Fmap<_U> &_other) {
       if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
         this->v_ = Empty{};
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename Fmap<_U>::Node>(_other.v());
-        this->v_ =
-            Node{a0, A(a1), a2 ? std::make_unique<Fmap<A>>(*a2) : nullptr};
+        this->v_ = Node{
+            a0,
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a1.type() == typeid(A))
+                  return std::any_cast<A>(a1);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a1);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a1);
+              } else
+                return A(a1);
+            }(),
+            a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr};
       }
     }
 
@@ -99,27 +84,25 @@ template <OrderedType X> struct Make {
 
     static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
       return Fmap(Node{std::move(a0), std::move(a1),
-                       std::make_unique<Fmap<A>>(std::move(a2))});
+                       std::make_shared<Fmap<A>>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~Fmap() {
-      std::vector<std::unique_ptr<Fmap<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Fmap<A> &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+      std::vector<std::shared_ptr<Fmap<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

@@ -408,32 +408,37 @@ std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   if (std::holds_alternative<typename Positive::XI>(a.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(a.v());
     auto _cs = BinInt::pos_div_eucl(*a0, b);
-    const Z &q = _cs.first;
-    const Z &r = _cs.second;
-    Z r_ = BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r),
-                       Z::zpos(Positive::xh()));
+    Z q = std::move(_cs.first);
+    Z r = std::move(_cs.second);
+    Z r_ = BinInt::add(
+        BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(r)),
+        Z::zpos(Positive::xh()));
     if (BinInt::ltb(r_, b)) {
       return std::make_pair(
-          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), std::move(r_));
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          std::move(r_));
     } else {
       return std::make_pair(
-          BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
-                      Z::zpos(Positive::xh())),
+          BinInt::add(
+              BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+              Z::zpos(Positive::xh())),
           BinInt::sub(std::move(r_), b));
     }
   } else if (std::holds_alternative<typename Positive::XO>(a.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(a.v());
     auto _cs = BinInt::pos_div_eucl(*a0, b);
-    const Z &q = _cs.first;
-    const Z &r = _cs.second;
-    Z r_ = BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), r);
+    Z q = std::move(_cs.first);
+    Z r = std::move(_cs.second);
+    Z r_ = BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(r));
     if (BinInt::ltb(r_, b)) {
       return std::make_pair(
-          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q), std::move(r_));
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          std::move(r_));
     } else {
       return std::make_pair(
-          BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), q),
-                      Z::zpos(Positive::xh())),
+          BinInt::add(
+              BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+              Z::zpos(Positive::xh())),
           BinInt::sub(std::move(r_), b));
     }
   } else {
@@ -456,15 +461,15 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
       return BinInt::pos_div_eucl(std::move(a0), b);
     } else {
       const auto &[a00] = std::get<typename Z::Zneg>(b.v());
-      auto _cs = BinInt::pos_div_eucl(a0, Z::zpos(a00));
-      const Z &q = _cs.first;
-      const Z &r = _cs.second;
-      if (std::holds_alternative<typename Z::Z0>(r.v())) {
-        return std::make_pair(BinInt::opp(q), Z::z0());
+      auto _cs = BinInt::pos_div_eucl(std::move(a0), Z::zpos(a00));
+      Z q = std::move(_cs.first);
+      Z r = std::move(_cs.second);
+      if (std::holds_alternative<typename Z::Z0>(r.v_mut())) {
+        return std::make_pair(BinInt::opp(std::move(q)), Z::z0());
       } else {
         return std::make_pair(
-            BinInt::opp(BinInt::add(q, Z::zpos(Positive::xh()))),
-            BinInt::add(b, r));
+            BinInt::opp(BinInt::add(std::move(q), Z::zpos(Positive::xh()))),
+            BinInt::add(b, std::move(r)));
       }
     }
   } else {
@@ -472,37 +477,37 @@ std::pair<Z, Z> BinInt::div_eucl(Z a, const Z &b) {
     if (std::holds_alternative<typename Z::Z0>(b.v())) {
       return std::make_pair(Z::z0(), a);
     } else if (std::holds_alternative<typename Z::Zpos>(b.v())) {
-      auto _cs = BinInt::pos_div_eucl(a0, b);
-      const Z &q = _cs.first;
-      const Z &r = _cs.second;
-      if (std::holds_alternative<typename Z::Z0>(r.v())) {
-        return std::make_pair(BinInt::opp(q), Z::z0());
+      auto _cs = BinInt::pos_div_eucl(std::move(a0), b);
+      Z q = std::move(_cs.first);
+      Z r = std::move(_cs.second);
+      if (std::holds_alternative<typename Z::Z0>(r.v_mut())) {
+        return std::make_pair(BinInt::opp(std::move(q)), Z::z0());
       } else {
         return std::make_pair(
-            BinInt::opp(BinInt::add(q, Z::zpos(Positive::xh()))),
-            BinInt::sub(b, r));
+            BinInt::opp(BinInt::add(std::move(q), Z::zpos(Positive::xh()))),
+            BinInt::sub(b, std::move(r)));
       }
     } else {
       const auto &[a00] = std::get<typename Z::Zneg>(b.v());
-      auto _cs = BinInt::pos_div_eucl(a0, Z::zpos(a00));
-      const Z &q = _cs.first;
-      const Z &r = _cs.second;
-      return std::make_pair(std::move(_cs.first), BinInt::opp(r));
+      auto _cs = BinInt::pos_div_eucl(std::move(a0), Z::zpos(a00));
+      Z q = std::move(_cs.first);
+      Z r = std::move(_cs.second);
+      return std::make_pair(std::move(q), BinInt::opp(std::move(r)));
     }
   }
 }
 
 Z BinInt::div(const Z &a, const Z &b) {
   auto _cs = BinInt::div_eucl(a, b);
-  const Z &q = _cs.first;
-  const Z &_x = _cs.second;
+  Z q = std::move(_cs.first);
+  Z _x = std::move(_cs.second);
   return q;
 }
 
 Z BinInt::modulo(const Z &a, const Z &b) {
   auto _cs = BinInt::div_eucl(a, b);
-  const Z &_x = _cs.first;
-  const Z &r = _cs.second;
+  Z _x = std::move(_cs.first);
+  Z r = std::move(_cs.second);
   return r;
 }
 
@@ -871,6 +876,7 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
       return false;
     }
     }
+    break;
   }
   case EclipseCategory::EC_PARTIALLUNAR: {
     switch (g) {
@@ -881,6 +887,7 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
       return false;
     }
     }
+    break;
   }
   case EclipseCategory::EC_ANNULARSOLAR: {
     switch (g) {
@@ -894,6 +901,7 @@ bool EpochCellGlyphTraceCase::category_matches_glyph(
       return false;
     }
     }
+    break;
   }
   default: {
     switch (g) {
@@ -974,6 +982,7 @@ uint64_t EpochCellGlyphTraceCase::count_visible_total_lunar(
         } else {
           return UINT64_C(0);
         }
+        break;
       }
       default: {
         return UINT64_C(0);

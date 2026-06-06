@@ -8,9 +8,6 @@ struct JmsBblRoundtrip {
     uint64_t pc;
     uint64_t ret;
     bool has_ret;
-
-    // ACCESSORS
-    state clone() const { return state{this->pc, this->ret, this->has_ret}; }
   };
 
   static uint64_t addr12_of_nat(uint64_t n);

@@ -780,11 +780,7 @@ let compute_returns_any tbl (s : ml_structure) =
           Array.iteri
             (fun i p ->
               let ind_ref = GlobRef.IndRef (kn, i) in
-              let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-              let num_param_vars =
-                List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-              in
-              let param_vars = List.firstn num_param_vars p.ip_vars in
+              let (param_vars, _) = Table.ind_param_vars ind p in
               Hashtbl.replace ind_param_vars ind_ref param_vars )
             ind.ind_packets
         | SEmodule m ->
@@ -844,7 +840,6 @@ let compute_returns_any tbl (s : ml_structure) =
           let ret_cpp =
             Translation.convert_ml_type_to_cpp_type
               env
-              Refset'.empty
               param_vars
               ret_ml
           in

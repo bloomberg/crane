@@ -33,31 +33,6 @@ struct GeneratedVariantFactoryNameClash {
 
     explicit token(Other _v) : v_(std::move(_v)) {}
 
-    token(const token &_other) : v_(std::move(_other.clone().v_)) {}
-
-    token(token &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    token &operator=(const token &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    token &operator=(token &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    token clone() const {
-      if (std::holds_alternative<Variant_t>(this->v())) {
-        return token(Variant_t{});
-      } else {
-        const auto &[a0] = std::get<Other>(this->v());
-        return token(Other{a0});
-      }
-    }
-
-    // CREATORS
     static token Variant_t_() { return token(Variant_t{}); }
 
     static token other(bool a0) { return token(Other{a0}); }

@@ -19,8 +19,8 @@ bool Matcher::regexp_eq(const Matcher::regexp &r, const Matcher::regexp &x) {
   } else if (std::holds_alternative<typename Matcher::regexp::Char>(r.v())) {
     const auto &[c0] = std::get<typename Matcher::regexp::Char>(r.v());
     if (std::holds_alternative<typename Matcher::regexp::Char>(x.v())) {
-      const auto &[c1] = std::get<typename Matcher::regexp::Char>(x.v());
-      if (char_eq(c0, c1)) {
+      const auto &[c2] = std::get<typename Matcher::regexp::Char>(x.v());
+      if (char_eq(c0, c2)) {
         return true;
       } else {
         return false;
@@ -75,8 +75,8 @@ bool Matcher::regexp_eq(const Matcher::regexp &r, const Matcher::regexp &x) {
   } else {
     const auto &[r2] = std::get<typename Matcher::regexp::Star>(r.v());
     if (std::holds_alternative<typename Matcher::regexp::Star>(x.v())) {
-      const auto &[r3] = std::get<typename Matcher::regexp::Star>(x.v());
-      if (regexp_eq(*r2, *r3)) {
+      const auto &[r4] = std::get<typename Matcher::regexp::Star>(x.v());
+      if (regexp_eq(*r2, *r4)) {
         return true;
       } else {
         return false;

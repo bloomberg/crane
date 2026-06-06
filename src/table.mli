@@ -215,6 +215,9 @@ val get_ind_nparams_opt : MutInd.t -> int option
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
 
+val ind_param_vars :
+  Miniml.ml_ind -> Miniml.ml_ind_packet -> Names.Id.t list * int
+
 (** Add inductive kind to table. *)
 val add_inductive_kind : MutInd.t -> inductive_kind -> unit
 
@@ -635,6 +638,23 @@ val is_custom_match : ml_branch array -> bool
 (** Find custom match extraction code. *)
 val find_custom_match : ml_branch array -> string
 
+(** Look up the match template for an inductive directly by GlobRef. *)
+val find_custom_match_by_ref : GlobRef.t -> string option
+
+(** Structured accessor for projecting a field from a value of a custom type. *)
+type accessor = AccMember of string | AccDeref
+
+(** For single-constructor custom types, return the accessor for each type-arg
+    binding, derived from the match template.  Returns [None] for multi-branch
+    types or when the template structure is not recognized. *)
+val find_custom_accessors : GlobRef.t -> accessor list option
+
+(** Get the constructor template strings for an inductive, in constructor order. *)
+val find_custom_ctor_templates : Names.inductive -> string list
+
+(** Get the header import list registered for a GlobRef via [From] declarations. *)
+val get_ref_import_list : GlobRef.t -> string list
+
 (** Check if reference is a monad. *)
 val is_monad : GlobRef.t -> bool
 
@@ -765,6 +785,15 @@ val extract_monad : qualid -> qualid -> qualid -> string -> string list -> unit
     @param g the qualified identifier of the ghost term (the single constructor,
              erased to nothing at call sites) *)
 val extract_void : qualid -> qualid -> unit
+
+(** Register a pointer-equality guard for a comparison function.
+    [Crane Guard Compare f => Eq] inserts [if (&p1 == &p2) return Eq;]
+    at the top of [f], where [p1] and [p2] are the first two [const T&]
+    parameters of the same type. *)
+val extract_guard_compare : qualid -> qualid -> unit
+
+(** Look up the guard-compare return constructor for a function, if any. *)
+val find_guard_compare : GlobRef.t -> GlobRef.t option
 
 (** Skip extraction for qualified identifier. *)
 val extract_skip : qualid -> unit

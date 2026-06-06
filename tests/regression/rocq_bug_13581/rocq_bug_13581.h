@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ROCQ_BUG_13581
 #define INCLUDED_ROCQ_BUG_13581
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -16,7 +17,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -33,74 +34,26 @@ public:
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Nat &operator=(const Nat &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Nat &operator=(Nat &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Nat clone() const {
-    Nat _out{};
-
-    struct _CloneFrame {
-      const Nat *_src;
-      Nat *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Nat *_src = _frame._src;
-      Nat *_dst = _frame._dst;
-      if (std::holds_alternative<O>(_src->v())) {
-        _dst->v_ = O{};
-      } else {
-        const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.v_)) {
-        auto &_alt = std::get<S>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+    std::vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -123,9 +76,6 @@ public:
 struct RocqBug13581 {
   template <typename T0> struct mixin_of {
     std::function<T0(T0)> mixin_f;
-
-    // ACCESSORS
-    mixin_of<T0> clone() const { return mixin_of<T0>{this->mixin_f}; }
   };
 
   static inline const mixin_of<Nat> d =
@@ -134,9 +84,6 @@ struct RocqBug13581 {
   template <typename T0> struct R {
     std::function<T0(T0)> g;
     Nat x;
-
-    // ACCESSORS
-    R<T0> clone() const { return R<T0>{this->g, this->x.clone()}; }
   };
 
   template <typename T1>
@@ -153,7 +100,7 @@ struct RocqBug13581 {
     struct C {};
 
     struct D {
-      std::unique_ptr<J<T>> a0;
+      std::shared_ptr<J<T>> a0;
     };
 
     using variant_t = std::variant<C, D>;
@@ -170,102 +117,50 @@ struct RocqBug13581 {
 
     explicit I(D _v) : v_(std::move(_v)) {}
 
-    I(const I<T> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    I(I<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    I<T> &operator=(const I<T> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    I<T> &operator=(I<T> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    I<T> clone() const {
-      I<T> _out{};
-
-      struct _CloneFrame {
-        const I<T> *_src;
-        I<T> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const I<T> *_src = _frame._src;
-        I<T> *_dst = _frame._dst;
-        if (std::holds_alternative<C>(_src->v())) {
-          _dst->v_ = C{};
-        } else {
-          const auto &_alt = std::get<D>(_src->v());
-          _dst->v_ = D{_alt.a0 ? std::make_unique<J<T>>() : nullptr};
-          auto &_dst_alt = std::get<D>(_dst->v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<typename RocqBug13581::J<T>::E>(
-                    _alt.a0->v())) {
-              const auto &_psrc =
-                  std::get<typename RocqBug13581::J<T>::E>(_alt.a0->v());
-              auto &_pdst = std::get<typename RocqBug13581::J<T>::E>(
-                  _dst_alt.a0->v_mut());
-              if (_psrc.a0) {
-                _pdst.a0 = std::make_unique<I<T>>();
-                _stack.push_back({_psrc.a0.get(), _pdst.a0.get()});
-              }
-            }
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit I(const I<_U> &_other) {
       if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
         this->v_ = C{};
       } else {
         const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
-        this->v_ = D{a0 ? std::make_unique<RocqBug13581::J<T>>(*a0) : nullptr};
+        this->v_ = D{a0 ? std::make_shared<RocqBug13581::J<T>>(*a0) : nullptr};
       }
     }
 
     static I<T> c() { return I(C{}); }
 
     static I<T> d(J<T> a0) {
-      return I(D{std::make_unique<J<T>>(std::move(a0))});
+      return I(D{std::make_shared<J<T>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~I() {
-      std::vector<std::unique_ptr<I<T>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](I<T> &_node) {
-        if (std::holds_alternative<D>(_node.v_)) {
-          auto &_alt = std::get<D>(_node.v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<typename RocqBug13581::J<T>::E>(
-                    _alt.a0->v())) {
-              auto &_palt =
-                  std::get<typename RocqBug13581::J<T>::E>(_alt.a0->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<D>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename J<T>::E>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -279,7 +174,7 @@ struct RocqBug13581 {
   template <typename T> struct J {
     // TYPES
     struct E {
-      std::unique_ptr<I<T>> a0;
+      std::shared_ptr<I<T>> a0;
     };
 
     using variant_t = std::variant<E>;
@@ -294,62 +189,44 @@ struct RocqBug13581 {
 
     explicit J(E _v) : v_(std::move(_v)) {}
 
-    J(const J<T> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    J(J<T> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    J<T> &operator=(const J<T> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    J<T> &operator=(J<T> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    J<T> clone() const {
-      const auto &[a0] = std::get<E>(this->v());
-      return J<T>(
-          E{a0 ? std::make_unique<RocqBug13581::I<T>>(a0->clone()) : nullptr});
-    }
-
-    // CREATORS
     template <typename _U> explicit J(const J<_U> &_other) {
       const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
-      this->v_ = E{a0 ? std::make_unique<RocqBug13581::I<T>>(*a0) : nullptr};
+      this->v_ = E{a0 ? std::make_shared<RocqBug13581::I<T>>(*a0) : nullptr};
     }
 
     static J<T> e(I<T> a0) {
-      return J(E{std::make_unique<I<T>>(std::move(a0))});
+      return J(E{std::make_shared<I<T>>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~J() {
-      std::vector<std::unique_ptr<J<T>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](J<T> &_node) {
-        if (std::holds_alternative<E>(_node.v_)) {
-          auto &_alt = std::get<E>(_node.v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<typename RocqBug13581::I<T>::D>(
-                    _alt.a0->v())) {
-              auto &_palt =
-                  std::get<typename RocqBug13581::I<T>::D>(_alt.a0->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<E>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<J<T>>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<I<T>>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename I<T>::D>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
         }
       }
     }

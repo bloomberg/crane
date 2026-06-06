@@ -41,7 +41,7 @@ MutualValueDeepCopy::dup_a(MutualValueDeepCopy::a x) {
 
 bool MutualValueDeepCopy::copied_reaches_end(const MutualValueDeepCopy::a &x) {
   auto _cs = dup_a(x);
-  const MutualValueDeepCopy::a &x1 = _cs.first;
-  const MutualValueDeepCopy::a &x2 = _cs.second;
-  return (reaches_end_a(x1) && reaches_end_a(x2));
+  MutualValueDeepCopy::a x1 = std::move(_cs.first);
+  MutualValueDeepCopy::a x2 = std::move(_cs.second);
+  return (reaches_end_a(std::move(x1)) && reaches_end_a(std::move(x2)));
 }

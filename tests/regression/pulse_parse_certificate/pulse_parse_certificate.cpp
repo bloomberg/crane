@@ -97,6 +97,7 @@ bool PulseParseCertificateCase::pulse_class_eqb(
     default:
       std::unreachable();
     }
+    break;
   }
   case PulseClass::MARKLONG: {
     switch (y) {
@@ -109,6 +110,7 @@ bool PulseParseCertificateCase::pulse_class_eqb(
     default:
       std::unreachable();
     }
+    break;
   }
   default:
     std::unreachable();

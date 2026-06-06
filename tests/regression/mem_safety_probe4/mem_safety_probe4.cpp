@@ -42,7 +42,7 @@ uint64_t MemSafetyProbe4::sum_through(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = _f.a0.sum_values(_result);
+      _result = std::move(_f.a0).sum_values(std::move(_result));
     }
   }
   return _result;
@@ -91,7 +91,7 @@ uint64_t MemSafetyProbe4::add_through(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_result + _f._s0);
+      _result = (std::move(_result) + _f._s0);
     }
   }
   return _result;
@@ -145,7 +145,7 @@ uint64_t MemSafetyProbe4::double_partial(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.f(_result) + _f._s0);
+      _result = (std::move(_f.f)(std::move(_result)) + _f._s0);
     }
   }
   return _result;
@@ -197,7 +197,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.w + _result);
+      _result = (_f.w + std::move(_result));
     }
   }
   return _result;
@@ -205,34 +205,50 @@ uint64_t MemSafetyProbe4::weighted_sum(
 
 /// TEST 5: Map building new trees from partial app results across recursion.
 MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
-    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l) {
-  std::unique_ptr<MemSafetyProbe4::mylist<uint64_t>> _head{};
-  std::unique_ptr<MemSafetyProbe4::mylist<uint64_t>> *_write = &_head;
-  const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
-            _loop_l->v())) {
-      *_write = std::make_unique<MemSafetyProbe4::mylist<uint64_t>>(
-          mylist<uint64_t>::mynil());
-      break;
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    uint64_t _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe4::mylist<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified transform_list: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mynil>(
+              l.v())) {
+        _result = mylist<uint64_t>::mynil();
+      } else {
+        const auto &[a0, a1] = std::get<
+            typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
+            l.v());
+        std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
+          return a0.sum_values(_x0);
+        };
+        _stack.emplace_back(_Resume_Mycons{f(UINT64_C(0))});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe4::mylist<MemSafetyProbe4::tree>::Mycons>(
-          _loop_l->v());
-      std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
-        return a0.sum_values(_x0);
-      };
-      auto _cell = std::make_unique<MemSafetyProbe4::mylist<uint64_t>>(
-          typename mylist<uint64_t>::Mycons(f(UINT64_C(0)), nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<uint64_t>::Mycons>((*_write)->v_mut()).a1;
-      _loop_l = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = mylist<uint64_t>::mycons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe4::mysum(
@@ -271,7 +287,7 @@ uint64_t MemSafetyProbe4::mysum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -320,7 +336,7 @@ uint64_t MemSafetyProbe4::process_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = apply_to(_f.f, _result);
+      _result = apply_to(std::move(_f.f), std::move(_result));
     }
   }
   return _result;

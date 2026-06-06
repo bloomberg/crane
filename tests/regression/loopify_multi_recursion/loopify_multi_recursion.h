@@ -23,10 +23,10 @@ struct LoopifyMultiRecursion {
     };
 
     struct QQuad {
-      std::unique_ptr<quadtree> a0;
-      std::unique_ptr<quadtree> a1;
-      std::unique_ptr<quadtree> a2;
-      std::unique_ptr<quadtree> a3;
+      std::shared_ptr<quadtree> a0;
+      std::shared_ptr<quadtree> a1;
+      std::shared_ptr<quadtree> a2;
+      std::shared_ptr<quadtree> a3;
     };
 
     using variant_t = std::variant<QLeaf, QQuad>;
@@ -43,101 +43,40 @@ struct LoopifyMultiRecursion {
 
     explicit quadtree(QQuad _v) : v_(std::move(_v)) {}
 
-    quadtree(const quadtree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    quadtree(quadtree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    quadtree &operator=(const quadtree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    quadtree &operator=(quadtree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    quadtree clone() const {
-      quadtree _out{};
-
-      struct _CloneFrame {
-        const quadtree *_src;
-        quadtree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const quadtree *_src = _frame._src;
-        quadtree *_dst = _frame._dst;
-        if (std::holds_alternative<QLeaf>(_src->v())) {
-          const auto &_alt = std::get<QLeaf>(_src->v());
-          _dst->v_ = QLeaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<QQuad>(_src->v());
-          _dst->v_ = QQuad{_alt.a0 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a1 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a2 ? std::make_unique<quadtree>() : nullptr,
-                           _alt.a3 ? std::make_unique<quadtree>() : nullptr};
-          auto &_dst_alt = std::get<QQuad>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-          if (_alt.a3) {
-            _stack.push_back({_alt.a3.get(), _dst_alt.a3.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(QQuad{std::make_unique<quadtree>(std::move(a0)),
-                            std::make_unique<quadtree>(std::move(a1)),
-                            std::make_unique<quadtree>(std::move(a2)),
-                            std::make_unique<quadtree>(std::move(a3))});
+      return quadtree(QQuad{std::make_shared<quadtree>(std::move(a0)),
+                            std::make_shared<quadtree>(std::move(a1)),
+                            std::make_shared<quadtree>(std::move(a2)),
+                            std::make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::unique_ptr<quadtree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](quadtree &_node) {
-        if (std::holds_alternative<QQuad>(_node.v_)) {
-          auto &_alt = std::get<QQuad>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<QQuad>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
-          if (_alt.a3) {
-            _stack.push_back(std::move(_alt.a3));
+          if (_alt->a3) {
+            _stack.push_back(std::move(_alt->a3));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

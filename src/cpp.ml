@@ -174,7 +174,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
     in
     let args, ret_ty = get_function_parts t in
     let cpp_ret =
-      convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret_ty
+      convert_ml_type_to_cpp_type (empty_env ()) [] ret_ty
     in
     let stdlib_ns = (sn ()).ns ^ "::" in
     let same_as = (sn ()).same_as in
@@ -220,8 +220,6 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
             ++ str ">" ) )
       | Tshared_ptr ty ->
         str stdlib_ns ++ str "shared_ptr<" ++ qualify_type ty ++ str ">"
-      | Tunique_ptr ty ->
-        str stdlib_ns ++ str "unique_ptr<" ++ qualify_type ty ++ str ">"
       | Tvariant tys ->
         str stdlib_ns
         ++ str "variant<"
@@ -276,7 +274,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
     else
       let cpp_args =
         List.map
-          (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [])
+          (convert_ml_type_to_cpp_type (empty_env ()) [])
           args
       in
       let declvals =
@@ -917,16 +915,8 @@ let rec pp_structure_elem ~is_header f = function
                           !eponymous_type_ref
                         = Some true
                       then
-                        let param_sign =
-                          List.firstn ind.ind_nparams p.ip_sign
-                        in
-                        let num_param_vars =
-                          List.length
-                            (List.filter
-                               (fun x -> x == Miniml.Keep)
-                               param_sign )
-                        in
-                        found := Some (List.firstn num_param_vars p.ip_vars) )
+                        let (param_vars, _) = Table.ind_param_vars ind p in
+                        found := Some param_vars )
                     ind.ind_packets;
                   !found
                 | _ -> None )
@@ -1080,7 +1070,6 @@ let rec pp_structure_elem ~is_header f = function
                       ty_vars
                       (convert_ml_type_to_cpp_type
                          (empty_env ())
-                         Refset'.empty
                          ty_vars
                          field_ty )
                   in

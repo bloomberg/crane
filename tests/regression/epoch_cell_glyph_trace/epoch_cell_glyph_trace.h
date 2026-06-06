@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EPOCH_CELL_GLYPH_TRACE
 #define INCLUDED_EPOCH_CELL_GLYPH_TRACE
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -13,7 +14,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -30,85 +31,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -123,11 +106,11 @@ enum class Comparison { EQ, LT, GT };
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -148,93 +131,37 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Positive &operator=(const Positive &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Positive &operator=(Positive &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Positive clone() const {
-    Positive _out{};
-
-    struct _CloneFrame {
-      const Positive *_src;
-      Positive *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Positive *_src = _frame._src;
-      Positive *_dst = _frame._dst;
-      if (std::holds_alternative<XI>(_src->v())) {
-        const auto &_alt = std::get<XI>(_src->v());
-        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XI>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      } else if (std::holds_alternative<XO>(_src->v())) {
-        const auto &_alt = std::get<XO>(_src->v());
-        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XO>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      } else {
-        _dst->v_ = XH{};
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::unique_ptr<Positive>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Positive &_node) {
-      if (std::holds_alternative<XI>(_node.v_)) {
-        auto &_alt = std::get<XI>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+    std::vector<std::shared_ptr<Positive>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<XI>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
-      if (std::holds_alternative<XO>(_node.v_)) {
-        auto &_alt = std::get<XO>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+      if (auto *_alt = std::get_if<XO>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -273,34 +200,6 @@ public:
 
   explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
-  Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Z &operator=(const Z &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Z &operator=(Z &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Z clone() const {
-    if (std::holds_alternative<Z0>(this->v())) {
-      return Z(Z0{});
-    } else if (std::holds_alternative<Zpos>(this->v())) {
-      const auto &[a0] = std::get<Zpos>(this->v());
-      return Z(Zpos{a0.clone()});
-    } else {
-      const auto &[a0] = std::get<Zneg>(this->v());
-      return Z(Zneg{a0.clone()});
-    }
-  }
-
-  // CREATORS
   static Z z0() { return Z(Z0{}); }
 
   static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
@@ -366,9 +265,6 @@ struct BinInt {
 struct Q {
   Z Qnum;
   Positive Qden;
-
-  // ACCESSORS
-  Q clone() const { return Q{this->Qnum.clone(), this->Qden.clone()}; }
 };
 
 struct QArith_base {
@@ -540,15 +436,6 @@ struct EpochCellGlyphTraceCase {
     Z exeligmos_dial;
     Z games_dial;
     Z zodiac_position;
-
-    // ACCESSORS
-    MechanismState clone() const {
-      return MechanismState{
-          this->crank_position.clone(), this->metonic_dial.clone(),
-          this->saros_dial.clone(),     this->callippic_dial.clone(),
-          this->exeligmos_dial.clone(), this->games_dial.clone(),
-          this->zodiac_position.clone()};
-    }
   };
 
   static inline const MechanismState initial_state = MechanismState{
@@ -642,15 +529,6 @@ struct EpochCellGlyphTraceCase {
     Z he_saros_member;
     Q he_magnitude;
     bool he_visible_mediterranean;
-
-    // ACCESSORS
-    HistoricalEclipse clone() const {
-      return HistoricalEclipse{
-          this->he_year.clone(),         this->he_month.clone(),
-          this->he_day.clone(),          this->he_category,
-          this->he_saros_series.clone(), this->he_saros_member.clone(),
-          this->he_magnitude.clone(),    this->he_visible_mediterranean};
-    }
   };
   enum class DialGlyph {
     GLYPH_SIGMA,
@@ -830,13 +708,6 @@ struct EpochCellGlyphTraceCase {
     HistoricalEclipse reading_eclipse;
     Z reading_cell;
     DialGlyph reading_glyph;
-
-    // ACCESSORS
-    EpochReading clone() const {
-      return EpochReading{this->reading_state.clone(),
-                          this->reading_eclipse.clone(),
-                          this->reading_cell.clone(), this->reading_glyph};
-    }
   };
 
   static EpochReading build_epoch_reading(const Z &epoch_year,
@@ -850,12 +721,6 @@ struct EpochCellGlyphTraceCase {
     Z ve_year;
     Z ve_month;
     HistoricalEclipse ve_eclipse;
-
-    // ACCESSORS
-    ValidEpoch clone() const {
-      return ValidEpoch{this->ve_year.clone(), this->ve_month.clone(),
-                        this->ve_eclipse.clone()};
-    }
   };
 
   static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch{

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STM_HASH_MAP_BDE
 #define INCLUDED_STM_HASH_MAP_BDE
 
+#include <any>
 #include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
@@ -17,6 +18,7 @@
 #include <bsl_vector.h>
 #include <fstream>
 #include <stm_adapter.h>
+#include <utility>
 #include <variant>
 
 using namespace BloombergLP;
@@ -31,7 +33,7 @@ template <typename t_A> struct List {
   struct Nil {};
   struct Cons {
     t_A d_a;
-    bsl::unique_ptr<List<t_A>> d_l;
+    bsl::shared_ptr<List<t_A>> d_l;
   };
   using variant_t = bsl::variant<Nil, Cons>;
 
@@ -44,77 +46,65 @@ public:
   List() {}
   explicit List(Nil _v) : d_v_(_v) {}
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
-  List(const List<t_A> &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
-  List(List<t_A> &&_other) noexcept : d_v_(bsl::move(_other.d_v_)) {}
-  List<t_A> &operator=(const List<t_A> &_other) {
-    d_v_ = bsl::move(_other.clone().d_v_);
-    return *this;
-  }
-  List<t_A> &operator=(List<t_A> &&_other) noexcept {
-    d_v_ = bsl::move(_other.d_v_);
-    return *this;
-  }
-  // ACCESSORS
-  List<t_A> clone() const {
-    List<t_A> _out{};
-    struct _CloneFrame {
-      const List<t_A> *_src;
-      List<t_A> *_dst;
-    };
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<t_A> *_src = _frame._src;
-      List<t_A> *_dst = _frame._dst;
-      if (bsl::holds_alternative<Nil>(_src->v())) {
-        _dst->d_v_ = Nil{};
-      } else {
-        const auto &_alt = bsl::get<Cons>(_src->v());
-        _dst->d_v_ =
-            Cons{_alt.d_a, _alt.d_l ? bsl::make_unique<List<t_A>>() : nullptr};
-        auto &_dst_alt = bsl::get<Cons>(_dst->d_v_);
-        if (_alt.d_l) {
-          _stack.push_back({_alt.d_l.get(), _dst_alt.d_l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (bsl::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->d_v_ = Nil{};
     } else {
       const auto &[d_a, d_l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ =
-          Cons{t_A(d_a), d_l ? std::make_unique<List<t_A>>(*d_l) : nullptr};
+      this->d_v_ = Cons{
+          [&]() -> t_A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (d_a.type() == typeid(t_A))
+                return std::any_cast<t_A>(d_a);
+              if constexpr (requires {
+                              typename t_A::first_type;
+                              typename t_A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(d_a);
+                return t_A{
+                    [&]() -> typename t_A::first_type {
+                      if constexpr (std::is_same_v<typename t_A::first_type,
+                                                   std::any>)
+                        return _k;
+                      else
+                        return std::any_cast<typename t_A::first_type>(_k);
+                    }(),
+                    [&]() -> typename t_A::second_type {
+                      if constexpr (std::is_same_v<typename t_A::second_type,
+                                                   std::any>)
+                        return _v;
+                      else
+                        return std::any_cast<typename t_A::second_type>(_v);
+                    }()};
+              }
+              return std::any_cast<t_A>(d_a);
+            } else
+              return t_A(d_a);
+          }(),
+          d_l ? std::make_shared<List<t_A>>(*d_l) : nullptr};
     }
   }
   static List<t_A> nil() { return List(Nil{}); }
   static List<t_A> cons(t_A a, List<t_A> l) {
-    return List(Cons{bsl::move(a), bsl::make_unique<List<t_A>>(bsl::move(l))});
+    return List(Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
   }
   // MANIPULATORS
   ~List() {
-    std::vector<bsl::unique_ptr<List<t_A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<t_A> &_node) {
-      if (bsl::holds_alternative<Cons>(_node.d_v_)) {
-        auto &_alt = bsl::get<Cons>(_node.d_v_);
-        if (_alt.d_l) {
-          _stack.push_back(bsl::move(_alt.d_l));
+    bsl::vector<bsl::shared_ptr<List<t_A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = bsl::get_if<Cons>(&_v)) {
+        if (_alt->d_l) {
+          _stack.push_back(bsl::move(_alt->d_l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = bsl::move(_stack.back());
+      auto _cur = bsl::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -155,7 +145,7 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       V _x = *_cs;
-      stm::writeTVar(b, p.second);
+      stm::writeTVar(bsl::move(b), p.second);
       return p.first;
     } else {
       return p.first;
@@ -168,7 +158,7 @@ template <typename K, typename V> struct CHT {
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     bsl::optional<V> ov =
         CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
-    V v = f(ov);
+    V v = f(bsl::move(ov));
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
@@ -258,8 +248,8 @@ template <typename K, typename V> struct CHT {
     } else {
       auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v_mut());
-      T1 k_ = d_a0.first;
-      T2 v_ = d_a0.second;
+      T1 k_ = std::move(d_a0.first);
+      T2 v_ = std::move(d_a0.second);
       if (eqb(k, k_)) {
         return bsl::make_pair(bsl::make_optional<T2>(v_), *d_a1);
       } else {

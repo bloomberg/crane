@@ -26,7 +26,7 @@
     MiniCpp (defined here) is a C++-oriented AST that translation.ml produces
     from MiniML. Where MiniML is language-agnostic (it could target OCaml,
     Haskell, or Scheme), MiniCpp captures C++-specific concepts:
-    shared_ptr/unique_ptr memory management, std::variant for inductives,
+    shared_ptr memory management, std::variant for inductives,
     templates, concepts, namespaces, structs with visibility, move semantics,
     const/static/extern modifiers, constructors, methods, enum classes, and raw
     C++ escape hatches. The MiniML-to-MiniCpp translation resolves how each
@@ -108,7 +108,6 @@ type cpp_type =
   | Tptr of cpp_type
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
-  | Tunique_ptr of cpp_type
   | Tvoid
   | Ttodo
   | Tunknown
@@ -144,6 +143,10 @@ and cpp_stmt =
        optimization's use_count() check. *)
   | Sif_then of cpp_expr * cpp_stmt list
     (* if without else: condition and then-branch. *)
+  | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
+    (* C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
+       The declaration doubles as the condition (e.g. pointer truthiness).
+       Used for [if (auto *_alt = std::get_if<Ctor>(&_v)) { ... }]. *)
   | Sraw of string
     (* Raw C++ code, printed verbatim. Used for low-level operations in reuse
        optimization. *)
@@ -257,8 +260,8 @@ and cpp_expr =
   | CPPvisit
   | CPPmk_shared of cpp_type
   | CPPoverloaded of cpp_expr list
-    (* cpp_expressions in list should only be lambdas. TODO: enforce in the AST?
-       split up to a funcall *)
+    (* Invariant: all elements must be CPPlambda. Enforced at construction
+       in make_visit_expr (loopify.ml). *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
   | CPPstruct of
       GlobRef.t
@@ -279,8 +282,6 @@ and cpp_expr =
   (* requires (params) { typename type_reqs; { expr } -> constraint; } *)
   | CPPnew of cpp_type * cpp_expr list (* new Type(args) or new Type{args} *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr (* std::shared_ptr<T>(expr) *)
-  | CPPunique_ptr_ctor of cpp_type * cpp_expr (* std::unique_ptr<T>(expr) *)
-  | CPPmk_unique of cpp_type (* std::make_unique<T> *)
   | CPPthis (* this pointer in methods *)
   | CPPshared_from_this of cpp_type
     (* std::const_pointer_cast<T>(shared_from_this()) — for returning this as
@@ -314,6 +315,9 @@ and cpp_expr =
   | CPPbinop of string * cpp_expr * cpp_expr
     (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
        optimization (&&, ==). *)
+  | CPPpair of cpp_expr * cpp_expr
+    (* Pair of two sub-expressions, used internally by loopify to thread
+       two values through a single expression slot.  Never reaches the printer. *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
     (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
@@ -322,6 +326,10 @@ and cpp_expr =
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
+  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
+    (* std::get_if<T>(&variant) — pointer-returning variant accessor.
+       Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
+       [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -361,8 +369,6 @@ and cpp_field =
       * bool (* explicit *)
       * (Id.t * cpp_type) list
       * cpp_stmt list
-  (* Raw C++ field declaration (e.g., converting constructors) *)
-  | Fraw of string
 
 (** Method field descriptor for struct methods. *)
 and method_field = {
@@ -384,7 +390,7 @@ type cpp_schema = int * cpp_type
 
 (** Construct a shared_ptr type wrapping an inductive type (for recursive
     self-references in constructor fields). Using shared_ptr keeps the value type
-    copyable; unique_ptr would require clone() generation. *)
+    copyable without deep-clone machinery. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
@@ -409,7 +415,6 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
   | Tmod (m, t) -> Tmod (m, map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
-  | Tunique_ptr t -> Tunique_ptr (map_cpp_type f t)
   | Tref t -> Tref (map_cpp_type f t)
   | Tptr t -> Tptr (map_cpp_type f t)
   | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
@@ -460,8 +465,6 @@ let map_expr
         List.map ft tyreqs )
   | CPPnew (ty, args) -> CPPnew (ft ty, List.map fe args)
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ft ty, fe e')
-  | CPPunique_ptr_ctor (ty, e') -> CPPunique_ptr_ctor (ft ty, fe e')
-  | CPPmk_unique ty -> CPPmk_unique (ft ty)
   | CPPthis -> e
   | CPPshared_from_this ty -> CPPshared_from_this (ft ty)
   | CPPmember (e', id) -> CPPmember (fe e', id)
@@ -483,12 +486,14 @@ let map_expr
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
+  | CPPpair (e1, e2) -> CPPpair (fe e1, fe e2)
   | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
   | CPPint _ -> e
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
+  | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -525,6 +530,8 @@ let map_stmt
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
+  | Sif_decl (id, ty, init, then_br, else_br) ->
+    Sif_decl (id, ft ty, fe init, List.map fs then_br, List.map fs else_br)
   | Sraw _ | Scomment _ -> s
   | Sstruct_def (id, fields) ->
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
@@ -565,7 +572,7 @@ let map_stmt
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -576,7 +583,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -588,6 +595,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
+  | CPPpair (e1, e2) -> on_expr e1; on_expr e2
   | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
   | CPPbraced args -> List.iter on_expr args
   | CPPstd_get (_, _, e_opt) -> Option.iter on_expr e_opt
@@ -605,6 +613,8 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    on_expr init; on_stmts then_br; on_stmts else_br
   | Sswitch (scrut, _, branches, default) ->
     on_expr scrut;
     List.iter (fun (_, stmts) -> on_stmts stmts) branches;
@@ -633,7 +643,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
 let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = f acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPPmk_unique _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -644,7 +654,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPunique_ptr_ctor (_, e') | CPPany_cast (_, e') | CPPunop (_, e') ->
+  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
@@ -655,6 +665,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPrequires (_, constraints, _) ->
     List.fold_left (fun a (e', _) -> fe a e') acc constraints
   | CPPbinop (_, l, r) -> fe (fe acc l) r
+  | CPPpair (e1, e2) -> fe (fe acc e1) e2
   | CPPcond (c, t, f) -> fe (fe (fe acc c) t) f
   | CPPbraced args -> List.fold_left fe acc args
   | CPPstd_get (_, _, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'
@@ -670,6 +681,8 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sif (cond, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif_then (cond, then_br) -> on_stmts (on_expr acc cond) then_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    on_stmts (on_stmts (on_expr acc init) then_br) else_br
   | Sswitch (scrut, _, branches, default) ->
     let acc = on_expr acc scrut in
     let acc = List.fold_left (fun a (_, stmts) -> on_stmts a stmts) acc branches in
@@ -720,10 +733,7 @@ type cpp_decl =
       ds_needs_shared_from_this : bool;
           (* inherit enable_shared_from_this when a method returns this *)
     }
-  | Dstruct_decl of GlobRef.t
-  | Dusing of GlobRef.t * cpp_type
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
-  | Ddecl of GlobRef.t * cpp_type
   | Dconcept of
       GlobRef.t
       * cpp_expr (* template params are provided by an outer Dtemplate *)

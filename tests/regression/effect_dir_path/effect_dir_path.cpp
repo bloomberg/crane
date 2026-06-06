@@ -21,7 +21,7 @@ std::optional<std::string> EffectDirPath::first_file(std::string path) {
 /// 2. current_path (zero args) chained to env
 void EffectDirPath::save_cwd() {
   std::string cwd = std::filesystem::current_path().string();
-  setenv("CWD"s.c_str(), cwd.c_str(), 1);
+  setenv("CWD"s.c_str(), std::move(cwd).c_str(), 1);
   return;
 }
 
@@ -39,7 +39,7 @@ std::optional<std::string> EffectDirPath::check_and_list(std::string path) {
 void EffectDirPath::show_absolute(std::string path) {
   std::string abs =
       std::filesystem::absolute(std::filesystem::path(path)).string();
-  std::cout << abs << '\n';
+  std::cout << std::move(abs) << '\n';
   return;
 }
 

@@ -9,20 +9,12 @@ struct CraneMoveHunt {
   struct box {
     uint64_t payload;
     bool enabled;
-
-    // ACCESSORS
-    box clone() const { return box{this->payload, this->enabled}; }
   };
 
   struct state {
     box core;
     box cursor;
     bool visible;
-
-    // ACCESSORS
-    state clone() const {
-      return state{this->core.clone(), this->cursor.clone(), this->visible};
-    }
   };
 
   static box clone_box(const box &b);

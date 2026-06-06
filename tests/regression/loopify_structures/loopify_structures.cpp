@@ -71,14 +71,14 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
       }
     } else if (std::holds_alternative<_After_NList>(_frame)) {
       auto _f = std::move(std::get<_After_NList>(_frame));
-      _stack.emplace_back(_Combine_NList{_result});
+      _stack.emplace_back(_Combine_NList{std::move(_result)});
       _stack.emplace_back(_Enter{_f.a00, _f.f});
     } else if (std::holds_alternative<_Combine_NList>(_frame)) {
       auto _f = std::move(std::get<_Combine_NList>(_frame));
       _result = (std::move(_result) + std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = (_f.a00 + _result);
+      _result = (_f.a00 + std::move(_result));
     }
   }
   return _result;
@@ -149,7 +149,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
       }
     } else if (std::holds_alternative<_Cont_Elem>(_frame)) {
       auto _f = std::move(std::get<_Cont_Elem>(_frame));
-      uint64_t rest_max = _result;
+      uint64_t rest_max = std::move(_result);
       if (UINT64_C(0) <= rest_max) {
         _result = std::move(rest_max);
       } else {
@@ -159,13 +159,13 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
       auto _f = std::move(std::get<_Cont_NList>(_frame));
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      uint64_t d = (_result + 1);
+      uint64_t d = (std::move(_result) + 1);
       _stack.emplace_back(_Cont_NList_1{d});
       _stack.emplace_back(_Enter{&a1, f});
     } else {
       auto _f = std::move(std::get<_Cont_NList_1>(_frame));
       uint64_t d = _f.d;
-      uint64_t rest_max = _result;
+      uint64_t rest_max = std::move(_result);
       if (d <= rest_max) {
         _result = std::move(rest_max);
       } else {
@@ -252,7 +252,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
       _result = std::move(_result).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Elem>(_frame));
-      _result = List<uint64_t>::cons(_f.a00, _result);
+      _result = List<uint64_t>::cons(_f.a00, std::move(_result));
     }
   }
   return _result;

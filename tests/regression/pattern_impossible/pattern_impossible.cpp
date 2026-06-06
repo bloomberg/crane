@@ -61,6 +61,7 @@ uint64_t PatternImpossible::double_match(PatternImpossible::Three x,
     default:
       std::unreachable();
     }
+    break;
   }
   case Three::TWO: {
     return UINT64_C(10);

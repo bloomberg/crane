@@ -108,6 +108,7 @@ let id_stack        = Id.of_string "_stack"
 let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
 let id_frame        = Id.of_string "_frame"
+let id_Frame        = Id.of_string "_Frame"
 let id_self         = Id.of_string "_self"
 
 (* Method names used with CPPmethod_call / CPPmember *)
@@ -122,8 +123,15 @@ let id_clone        = Id.of_string "clone"
 
 (** {2 List utility helpers} *)
 
-let list_take n xs = List.filteri (fun i _ -> i < n) xs
-let list_drop n xs = List.filteri (fun i _ -> i >= n) xs
+let rec list_take n = function
+  | _ when n <= 0 -> []
+  | [] -> []
+  | x :: xs -> x :: list_take (n - 1) xs
+
+let rec list_drop n = function
+  | xs when n <= 0 -> xs
+  | [] -> []
+  | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
 
 (** {2 Generic AST predicate search}
@@ -211,6 +219,28 @@ let rec is_trivially_copyable_type = function
     Table.is_enum_inductive r || Table.is_custom_scalar_ref r
   | _ -> false
 
+(** Returns [true] for types that are expensive to copy and benefit from
+    [std::move]: [shared_ptr], value-type inductives, type variables, and
+    types parameterized by such types. *)
+let rec worthwhile_move_type = function
+  | Tglob (r, tparams, _) -> not (Table.is_enum_inductive r)
+                         && not (Table.is_coinductive r)
+                         && (not (Table.is_custom r)
+                             || List.exists worthwhile_move_type tparams)
+  | Tshared_ptr _ | Tfun _ -> true
+  | Tvariant ts -> List.exists worthwhile_move_type ts
+  | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists worthwhile_move_type ts
+  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
+    worthwhile_move_type t
+  | Tvar _ -> true
+  | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
+
+(* Global mutable state in this file and their reset granularity:
+   - mutual_fn_table : reset between extraction units (clear_mutual_table)
+   - ctor_ptr_fields : accumulates across the full session; never cleared because
+     struct shapes don't change within a Rocq session *)
+
 (** {2 Mutual recursion table}
 
     Functions register their bodies here so mutual pairs can be detected and
@@ -233,6 +263,15 @@ let register_fundef
 
 (** Clear the mutual recursion table. Called between extraction units. *)
 let clear_mutual_table () = Hashtbl.clear mutual_fn_table
+
+(** Table mapping constructor struct names to their shared_ptr field indices.
+    Populated from [Dstruct] definitions in {!transform_decl} and queried by
+    {!try_tmc_decompose} to determine which fields need [make_shared] wrapping
+    in the direct-struct-construction path.
+
+    The key is the capitalized constructor name (e.g., ["App"], ["Cons"]).
+    The value is a list of 0-based field indices. *)
+let ctor_ptr_fields : (string, int list) Hashtbl.t = Hashtbl.create 32
 
 (** {2 Recursion classification} *)
 
@@ -284,16 +323,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
    | CPPfun_call (CPPvar id, args) ->
      let matches_name =
        List.exists
-         (fun (r, _) ->
-           let label =
-             match r with
-             | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-             | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-             | GlobRef.ConstructRef ((ind, _), _) ->
-               Label.to_id (MutInd.label ind)
-             | GlobRef.VarRef v -> v
-           in
-           Id.equal id label )
+         (fun (r, _) -> Id.equal id (Label.to_id (Common.label_of_r r)))
          fn_refs
      in
      if matches_name then
@@ -325,14 +355,15 @@ let method_checker
     ~(this_pos : int)
     (method_name : Id.t) : call_checker =
  (* Convert a receiver expression to a raw pointer for the _Enter struct.
-    Unwrap CPPderef: deref(shared_ptr) uses shared_ptr.get() directly.
-    Otherwise apply .get() to the expression itself. *)
- let recv_to_ptr recv =
+    CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
+    CPPvar: take the address (&var) to get a pointer.
+    Other: take the address. *)
+ let recv_to_self recv =
    match recv with
    | CPPderef inner ->
      CPPfun_call (CPPmember (inner, id_get), [])
    | _ ->
-     CPPfun_call (CPPmember (recv, id_get), [])
+     CPPunop ("&", recv)
  in
  let extract_at pos lst =
    let rec aux i acc = function
@@ -347,7 +378,7 @@ let method_checker
    match e with
    | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
      if has_self_param then
-       Some {cs_args = recv_to_ptr recv :: args; cs_is_tail = false}
+       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false}
      else
        Some {cs_args = args; cs_is_tail = false}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
@@ -356,7 +387,7 @@ let method_checker
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
        | Some recv ->
-         Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
+         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
        | None -> Some {cs_args = args_normal; cs_is_tail = false} )
      else if (not has_self_param) && List.length args_normal > n_params then
        Some {cs_args = list_remove_at this_pos args_normal;
@@ -364,20 +395,14 @@ let method_checker
      else
        Some {cs_args = args_normal; cs_is_tail = false}
    | CPPfun_call (CPPglob (r, _, _), args) ->
-     let label =
-       match r with
-       | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-       | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-       | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
-       | GlobRef.VarRef v -> v
-     in
+     let label = Label.to_id (Common.label_of_r r) in
      if Id.equal label method_name then
        let args_normal = List.rev args in
        if has_self_param then
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
          | Some recv ->
-           Some {cs_args = recv_to_ptr recv :: rest; cs_is_tail = false}
+           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
          | None -> Some {cs_args = args_normal; cs_is_tail = false} )
        else
          let args_stripped =
@@ -438,7 +463,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
    |CPPnew (_, args) -> List.concat_map (collect_expr check) args
-  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
+  | CPPshared_ptr_ctor (_, e) ->
     collect_expr check e
   | CPPbinop (_, e1, e2) -> collect_expr check e1 @ collect_expr check e2
   | CPPcond (c, t, f) ->
@@ -450,11 +475,11 @@ let rec collect_expr (check : call_checker) expr =
       arr
   | CPPbraced args -> List.concat_map (collect_expr check) args
   | CPPstd_get (_, _, Some e) -> collect_expr check e
+  | CPPstd_get_if (_, _, e) -> collect_expr check e
   | CPPvar _
    |CPPglob _
    |CPPvisit
    |CPPmk_shared _
-   |CPPmk_unique _
    |CPPthis
    |CPPshared_from_this _
    |CPPconvertible_to _
@@ -476,7 +501,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstring _
    |CPPuint _
    |CPPfloat _
-   |CPPrequires _ -> []
+   |CPPrequires _
+   |CPPpair _ -> []
 
 (** Collect recursive call sites from a list of statements.
     Delegates to {!collect_stmt} for each statement. *)
@@ -545,6 +571,10 @@ and collect_stmt check ~in_visitor = function
     collect_expr check cond
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    collect_expr check init
+    @ collect_stmts check ~in_visitor then_br
+    @ collect_stmts check ~in_visitor else_br
   | Sif_then (cond, then_br) ->
     collect_expr check cond @ collect_stmts check ~in_visitor then_br
   | Swhile (cond, body) ->
@@ -607,7 +637,7 @@ let rec count_calls_expr (check : call_checker) expr =
    |CPPstruct_id (_, _, args)
    |CPPnew (_, args) ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
-  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
+  | CPPshared_ptr_ctor (_, e) ->
     count_calls_expr check e
   | CPPoverloaded exprs ->
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 exprs
@@ -663,77 +693,19 @@ let rec count_calls_stmts (check : call_checker) stmts =
     If a recursive call is used to compute a branch condition or scrutinee, the
     current rewrite may need to keep an owned cloned subtree alive while
     evaluating the selected continuation.  Popping the continuation frame before
-    pushing [_Enter] can leave only a raw pointer into a destroyed [unique_ptr]
-    owner.  Until the explicit stack has an owning-enter frame, leave these
-    functions recursive. *)
+    pushing [_Enter] can leave a dangling raw pointer from a shared_ptr that
+    was std::moved.  Until the explicit stack has an owning-enter frame, leave
+    these functions recursive. *)
 let rec expr_has_recursive_branch_dependency check expr =
-  match expr with
-  | CPPlambda (_, _, body, _) -> has_recursive_branch_dependency check body
-  | CPPfun_call (f, args) ->
-    expr_has_recursive_branch_dependency check f
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPmethod_call (obj, _, args) ->
-    expr_has_recursive_branch_dependency check obj
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPdot_method_call (obj, _, args) ->
-    expr_has_recursive_branch_dependency check obj
-    || List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
-    expr_has_recursive_branch_dependency check e
-  | CPPbinop (_, e1, e2) ->
-    expr_has_recursive_branch_dependency check e1
-    || expr_has_recursive_branch_dependency check e2
-  | CPPcond (c, t, f) ->
-    expr_has_recursive_branch_dependency check c
-    || expr_has_recursive_branch_dependency check t
-    || expr_has_recursive_branch_dependency check f
-  | CPPget (e, _)
-   |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _) -> expr_has_recursive_branch_dependency check e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) ->
-    List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
-    expr_has_recursive_branch_dependency check e
-  | CPPoverloaded exprs ->
-    List.exists (expr_has_recursive_branch_dependency check) exprs
-  | CPPparray (arr, def) ->
-    expr_has_recursive_branch_dependency check def
-    || Array.exists (expr_has_recursive_branch_dependency check) arr
-  | CPPbraced args ->
-    List.exists (expr_has_recursive_branch_dependency check) args
-  | CPPstd_get (_, _, Some e) -> expr_has_recursive_branch_dependency check e
-  | CPPvar _
-   |CPPglob _
-   |CPPvisit
-   |CPPmk_shared _
-   |CPPmk_unique _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPnullptr
-   |CPPstd_get (_, _, None)
-   |CPPstd_holds_alternative _
-   |CPPdeclval _
-   |CPPtypename_qualified _
-   |CPPraw _
-   |CPPbool _
-   |CPPint _
-   |CPPbrace_init
-   |CPPunop _
-   |CPPany_cast _
-   |CPPconverting_ctor _
-   |CPPqualified_t _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPrequires _ -> false
+  try
+    iter_expr_children
+      ~on_expr:(fun e' ->
+        if expr_has_recursive_branch_dependency check e' then raise Exit)
+      ~on_stmts:(fun body ->
+        if has_recursive_branch_dependency check body then raise Exit)
+      expr;
+    false
+  with Exit -> true
 
 (** True when [expr] contains a recursive call (counted by
     {!count_calls_expr}) or a branch-dependency on one (detected by
@@ -878,10 +850,16 @@ let find_varying_params check params body =
       params
 
 (** Filter a list keeping only elements at positions where [mask] is [true]. *)
-let filter_by_mask mask lst = List.filteri (fun i _ -> List.nth mask i) lst
+let filter_by_mask mask lst =
+  List.combine mask lst
+  |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
 let make_visit_expr scrut lambdas =
+  List.iter (function
+    | CPPlambda _ -> ()
+    | _ -> CErrors.anomaly (Pp.str "make_visit_expr: CPPoverloaded requires lambda elements"))
+    lambdas;
   CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])
 
 (** Wrap a [std::visit] dispatch into a single-statement list. *)
@@ -1062,11 +1040,19 @@ let tail_shadow_init orig_id shadow_ty ty =
 
 (** Adjust a recursive-call argument to match the shadow variable's type.
 
-    - When the shadow is a pointer and the argument is [*ptr]: use [ptr.get()]
+    - When the shadow is a pointer and the argument is [*shadow_var]
+      (i.e., dereference of one of our own pointer-safe shadows): just use
+      [shadow_var] directly since it is already a raw pointer.
+    - When the shadow is a pointer and the argument is [*ptr] for a smart
+      pointer: use [ptr.get()]
     - When the shadow is a pointer and the argument is a variable: [&arg]
-    - Otherwise: pass through unchanged *)
-let tail_shadow_arg shadow_ty arg =
+    - Otherwise: pass through unchanged
+
+    @param shadow_ids  Set of shadow variable IDs (already raw pointers) *)
+let tail_shadow_arg ~shadow_ids shadow_ty arg =
   match shadow_ty, arg with
+  | Tptr _, CPPderef (CPPvar id) when List.exists (Id.equal id) shadow_ids ->
+    CPPvar id
   | Tptr _, CPPderef inner -> CPPfun_call (CPPmember (inner, id_get), [])
   | Tptr _, CPPvar _ -> CPPunop ("&", arg)
   | _ -> arg
@@ -1202,13 +1188,11 @@ let assign_result_and_stop expr =
     Self-assignments (_loop_x = _loop_x) are skipped entirely. When there is
     only one non-trivial assignment the temps are unnecessary but harmless.
 
-    When a next-value expression is [CPPderef] (i.e., advancing a list to its
-    tail via [*(d_a1)]) and the type is non-trivially-copyable, we wrap it in
-    [CPPmove].  The dereference target is a field inside the loop variable that
-    this same update will overwrite, so the underlying [unique_ptr] will be
-    null-ed before the old value is destroyed — making the move safe and
-    reducing the cost from O(n) deep-copy to O(1). *)
+    [CPPderef] arguments (advancing a list tail via [*(d_a1)]) are NOT moved
+    because the deref target may be through a shared_ptr whose pointee is
+    aliased by the caller. *)
 let make_shadow_updates shadow_params args =
+  let shadow_ids = List.map (fun (id, _) -> id) shadow_params in
   let is_self_assign shadow_id arg =
     match arg with
     | CPPvar id when Id.equal id shadow_id -> true
@@ -1218,7 +1202,7 @@ let make_shadow_updates shadow_params args =
   let pairs =
     List.map
       (fun ((shadow_id, ty), arg) ->
-        ((shadow_id, ty), tail_shadow_arg ty arg))
+        ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
       (List.combine shadow_params args)
   in
   (* Identify which params actually change (filter self-assignments). *)
@@ -1227,15 +1211,7 @@ let make_shadow_updates shadow_params args =
       (fun ((shadow_id, _ty), arg) -> not (is_self_assign shadow_id arg))
       pairs
   in
-  (* Choose the RHS expression for a shadow update.  When the next value is a
-     [CPPderef] into an owned structure (e.g. [*(d_a1)] from a cons-cell
-     pattern match), move instead of copying to avoid an O(n) deep-copy. *)
-  let make_rhs ty arg =
-    let stripped = strip_ref_and_const_type ty in
-    match arg with
-    | CPPderef _ when not (is_trivially_copyable_type stripped) -> CPPmove arg
-    | _ -> arg
-  in
+  let make_rhs _ty arg = arg in
   if List.length non_trivial <= 1 then
     (* 0 or 1 assignment — no hazard possible, assign directly *)
     List.filter_map
@@ -1704,6 +1680,129 @@ type shadow_setup = {
     @param params Function parameters [(id, type)]
     @param body   Function body statements
     @return {!shadow_setup} record consumed by the caller *)
+
+(** Insert [std::move] at last-use positions of owned variables in loopified
+    statement blocks.  Complements {!optimize_frame_push_args} which handles
+    frame-push groups; this pass handles ordinary statements such as
+    [_result = f(_result, _f.field)] and [_loop_x = g(a, _loop_x)].
+
+    [self_ref_candidate key] — true when [key] should be moved in
+    self-referencing assignments ([x = f(...x...)]).  Safe for loop
+    accumulators whose liveness the caller knows ends with the overwrite.
+
+    [last_use_candidate key] — true when [key] may be moved at its final
+    read in the block.  Safe for [_result] and [_f.field] in single-shot
+    handler bodies, NOT safe for loop variables (live across the back-edge). *)
+let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
+  let collect_reads expr =
+    let tbl : (string, int) Hashtbl.t = Hashtbl.create 4 in
+    let add key =
+      let n = try Hashtbl.find tbl key with Not_found -> 0 in
+      Hashtbl.replace tbl key (n + 1)
+    in
+    let rec walk = function
+      | CPPmove _ | CPPlambda _ -> ()
+      | CPPvar id -> add (Id.to_string id)
+      | CPPmember (CPPvar fid, field) when Id.to_string fid = "_f" ->
+        add ("_f." ^ Id.to_string field)
+      | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
+    in
+    walk expr;
+    tbl
+  in
+  let collect_reads_stmt stmt =
+    let merge t1 t2 =
+      Hashtbl.iter (fun k v ->
+        let prev = try Hashtbl.find t1 k with Not_found -> 0 in
+        Hashtbl.replace t1 k (prev + v)) t2;
+      t1
+    in
+    match stmt with
+    | Sexpr (CPPbinop ("=", CPPvar _, rhs)) -> collect_reads rhs
+    | Sasgn (_, _, rhs) -> collect_reads rhs
+    | Sexpr e -> collect_reads e
+    | Sreturn (Some e) -> collect_reads e
+    | Sif (cond, _, _) -> collect_reads cond
+    | s ->
+      let tbl = Hashtbl.create 4 in
+      iter_stmt_children
+        ~on_expr:(fun e -> merge tbl (collect_reads e) |> ignore)
+        ~on_stmts:(fun _ -> ())
+        s;
+      tbl
+  in
+  let rewrite_expr to_move expr =
+    let rec rw = function
+      | CPPmove _ as e -> e
+      | CPPlambda _ as e -> e
+      | CPPvar id as e ->
+        if Hashtbl.mem to_move (Id.to_string id) then CPPmove e else e
+      | CPPmember (CPPvar fid, field) as e
+        when Id.to_string fid = "_f" ->
+        let key = "_f." ^ Id.to_string field in
+        if Hashtbl.mem to_move key then CPPmove e else e
+      | e -> map_expr rw Fun.id Fun.id e
+    in
+    rw expr
+  in
+  let rewrite_stmt to_move stmt =
+    match stmt with
+    | Sexpr (CPPbinop ("=", (CPPvar _ as lhs), rhs)) ->
+      Sexpr (CPPbinop ("=", lhs, rewrite_expr to_move rhs))
+    | _ ->
+      map_stmt (rewrite_expr to_move) Fun.id Fun.id stmt
+  in
+  let build_to_move reads read_after stmt =
+    let to_move : (string, unit) Hashtbl.t = Hashtbl.create 4 in
+    ( match stmt with
+      | Sexpr (CPPbinop ("=", CPPvar lhs, _))
+      | Sasgn (lhs, _, _) ->
+        let key = Id.to_string lhs in
+        if self_ref_candidate key
+           && (try Hashtbl.find reads key with Not_found -> 0) = 1
+        then Hashtbl.replace to_move key ()
+      | _ -> () );
+    Hashtbl.iter (fun key count ->
+      if last_use_candidate key
+         && count = 1
+         && not (Hashtbl.mem read_after key)
+      then Hashtbl.replace to_move key ()
+    ) reads;
+    to_move
+  in
+  let rec process stmts =
+    let stmts = List.map descend stmts in
+    let n = List.length stmts in
+    if n = 0 then []
+    else
+    let arr = Array.of_list stmts in
+    let read_after = Array.init n (fun _ -> Hashtbl.create 4) in
+    let running : (string, unit) Hashtbl.t = Hashtbl.create 8 in
+    for i = n - 1 downto 0 do
+      read_after.(i) <- Hashtbl.copy running;
+      Hashtbl.iter (fun k _ -> Hashtbl.replace running k ())
+        (collect_reads_stmt arr.(i))
+    done;
+    Array.to_list (Array.mapi (fun i s ->
+      let reads = collect_reads_stmt s in
+      let to_move = build_to_move reads read_after.(i) s in
+      if Hashtbl.length to_move = 0 then s
+      else rewrite_stmt to_move s
+    ) arr)
+  and descend stmt =
+    match stmt with
+    | Sif (cond, then_, else_) ->
+      Sif (cond, process then_, process else_)
+    | Smatch (branches, default) ->
+      Smatch (
+        List.map (fun br -> { br with smb_body = process br.smb_body }) branches,
+        Option.map process default)
+    | Sblock body -> Sblock (process body)
+    | Swhile (cond, body) -> Swhile (cond, process body)
+    | s -> s
+  in
+  process stmts
+
 let build_shadow_setup check params body =
   let varying = find_varying_params check params body in
   let pointer_safe = tail_pointer_safe_flags check params body () in
@@ -1798,6 +1897,21 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
     rewrite_visit_stmts check varying shadow_params body'
   in
   let body'' = strip_unnecessary_blocks body'' in
+  (* Move loop accumulators at self-referencing assignment sites:
+     [_loop_x = f(_loop_x)] → [_loop_x = f(std::move(_loop_x))].
+     General last-use is disabled for loop vars (live across the back-edge). *)
+  let is_loop_cand key =
+    List.exists (fun (id, ty) ->
+      Id.to_string id = key
+      && worthwhile_move_type (strip_ref_and_const_type ty))
+    shadow_params
+  in
+  let body'' =
+    optimize_last_use_moves
+      ~self_ref_candidate:is_loop_cand
+      ~last_use_candidate:(fun _ -> false)
+      body''
+  in
   (* Assemble the loop body.
      - Non-void: [... while (true) { ... return val; }]
      - Void:     [... while (true) { ... } return;]
@@ -1900,9 +2014,9 @@ type tmc_cell_alloc = {
   tca_n_args : int;
       (** Total number of constructor arguments *)
   tca_uptr_field_idxs : int list;
-      (** Field indices that are stored as [unique_ptr] in the struct
+      (** Field indices that are stored as [shared_ptr] in the struct
           (self-referencing fields).  Used by {!build_cell_call} to
-          wrap value-type args in [make_unique] for direct struct construction. *)
+          wrap value-type args in [make_shared] for direct struct construction. *)
 }
 
 (** Information about a single TMC-eligible branch: a return expression of the
@@ -2241,13 +2355,13 @@ and decompose_double_call check expr =
             match
               inner
             with
-            | CPPbinop ("__dd_pair__", l, _) -> l
+            | CPPpair (l, _) -> l
             | x -> x
           else if i = i2 then
             match
               inner
             with
-            | CPPbinop ("__dd_pair__", _, r) -> r
+            | CPPpair (_, r) -> r
             | x -> x
           else
             let pos =
@@ -2269,8 +2383,7 @@ and decompose_double_call check expr =
         List.map (fun (i, _) -> List.nth args i) non_rec_indexed
       in
       ( match
-          try_pair e1 e2 (fun left right ->
-            CPPbinop ("__dd_pair__", left, right) )
+          try_pair e1 e2 (fun left right -> CPPpair (left, right))
         with
       | Some dd ->
         let saved_offset = List.length dd.dd_saved in
@@ -2398,7 +2511,13 @@ let rec try_tmc_decompose check expr =
         (fun (i, a) -> if i <> idx then Some (i, a) else None)
         indexed
     in
-    let make_cell idx = {
+    let make_cell idx =
+      let uptr_idxs =
+        match Hashtbl.find_opt ctor_ptr_fields ctor_name with
+        | Some idxs -> idxs
+        | None -> [idx]
+      in
+      {
       tca_factory =
         CPPqualified (type_expr, Id.of_string factory_s);
       tca_type_expr = type_expr;
@@ -2406,7 +2525,7 @@ let rec try_tmc_decompose check expr =
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
       tca_n_args = n_args;
-      tca_uptr_field_idxs = [idx];
+      tca_uptr_field_idxs = uptr_idxs;
     } in
     (* Find which args are direct recursive calls *)
     let direct =
@@ -2575,7 +2694,7 @@ let patch_tmc_dest ~vt_ret _pp_expr _ti val_expr =
      No branch needed: the pointer handles both the first-element and
      subsequent-element cases uniformly.
      For value-type returns, base-case values need make_unique wrapping;
-     cell values (from build_cell_call) are already unique_ptr. *)
+     cell values (from build_cell_call) are already shared_ptr. *)
   let val_expr =
     match vt_ret with
     | Some _ -> CPPmove val_expr
@@ -2584,11 +2703,11 @@ let patch_tmc_dest ~vt_ret _pp_expr _ti val_expr =
   [Sexpr (CPPbinop ("=", CPPderef (CPPvar (id_write)), val_expr))]
 
 (** Wrap a base-case value in [make_unique] for value-type returns.
-    TMC branch cells are already [unique_ptr] from {!build_cell_call}. *)
+    TMC branch cells are already [shared_ptr]-wrapped from {!build_cell_call}. *)
 let wrap_base_for_vt vt_ret val_expr =
   match vt_ret with
   | Some ret_ty ->
-    CPPfun_call (CPPmk_unique ret_ty, [val_expr])
+    CPPfun_call (CPPmk_shared ret_ty, [val_expr])
   | None -> val_expr
 
 (** Build a constructor call with [nullptr] at the recursive argument position.
@@ -2613,20 +2732,22 @@ let build_cell_call ~vt_ret pp_expr cell =
       else
         match List.assoc_opt i cell.tca_non_rec_args with
         | Some e ->
-          (* For value-type return, non-rec args at unique_ptr field positions
-             need wrapping in make_unique.  The struct field is unique_ptr<T>
-             but the factory-produced value is bare T. *)
-          if
+          let should_wrap =
             vt_ret <> None
             && (List.mem i cell.tca_uptr_field_idxs
                 || expr_builds_cell_type e)
-          then
+          in
+          if should_wrap then
+            Printf.eprintf "[loopify] build_cell_call: wrapping field %d of %s (uptr_idxs=[%s], rec_idx=%d, n_args=%d)\n%!"
+              i cell.tca_ctor_name
+              (String.concat ";" (List.map string_of_int cell.tca_uptr_field_idxs))
+              cell.tca_rec_field_idx cell.tca_n_args;
+          if should_wrap then
             (match vt_ret with
-             | Some ret_ty -> CPPfun_call (CPPmk_unique ret_ty, [e])
+             | Some ret_ty -> CPPfun_call (CPPmk_shared ret_ty, [e])
              | None -> e)
           else e
         | None ->
-          (* This shouldn't happen if the analysis is correct *)
           CPPraw "std::any{}" )
   in
   match vt_ret with
@@ -2637,7 +2758,7 @@ let build_cell_call ~vt_ret pp_expr cell =
     let struct_init =
       CPPraw ("typename " ^ type_str ^ "::" ^ cell.tca_ctor_name)
     in
-    CPPfun_call (CPPmk_unique ret_ty,
+    CPPfun_call (CPPmk_shared ret_ty,
                  [CPPfun_call (struct_init, args)])
   | None ->
     CPPfun_call (cell.tca_factory, args)
@@ -2818,10 +2939,10 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup check params body
   in
-  (* For value-type returns, _head is unique_ptr<ret_ty> and _write points
-     into the unique_ptr chain.  For pointer returns, _head is the bare type. *)
+  (* For value-type returns, _head is shared_ptr<ret_ty> and _write points
+     into the shared_ptr chain.  For pointer returns, _head is the bare type. *)
   let head_ty = match vt_ret with
-    | Some t -> Tunique_ptr t
+    | Some t -> Tshared_ptr t
     | None -> ret_ty
   in
   let head_decl = Sdecl_init (id_head, head_ty) in
@@ -3064,7 +3185,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPmove inner -> infer_saved_type tparams env inner
     | CPPderef inner ->
       ( match infer_saved_type tparams env inner with
-      | Tshared_ptr t | Tunique_ptr t | Tptr t -> t
+      | Tshared_ptr t | Tptr t -> t
       | t -> t )
     | CPPbinop (_, lhs, rhs) ->
       (* Try left operand first; fall back to right.  This handles the common
@@ -3124,15 +3245,15 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->
-      (* shared_ptr::get() / unique_ptr::get() returns a raw pointer.
+      (* shared_ptr::get() returns a raw pointer.
          Infer from the inner expression. *)
       let inner_ty = infer_saved_type tparams env inner in
       ( match inner_ty with
       | Tptr t -> Tptr t  (* already a pointer *)
       | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
-      | Tunique_ptr t -> Tptr t  (* unique_ptr<T> → T* *)
       | _ -> Tunknown )
     | CPPfun_call _ -> Tunknown
+    | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
       let param_types = List.map fst params in
       let ret_ty =
@@ -3191,7 +3312,7 @@ let rec free_vars_expr = function
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
    |CPPnew (_, args) -> List.concat_map free_vars_expr args
-  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) -> free_vars_expr e
+  | CPPshared_ptr_ctor (_, e) -> free_vars_expr e
   | CPPoverloaded es -> List.concat_map free_vars_expr es
   | CPPlambda (params, _, body, _) ->
     let bound = List.filter_map (fun (_, id_opt) -> id_opt) params in
@@ -3271,34 +3392,9 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
   go [] stmts
 
 (** Remove duplicate [Id.t] values, preserving first-occurrence order. *)
-let dedup_ids ids =
-  let seen = Hashtbl.create 8 in
-  List.filter
-    (fun id ->
-      let name = Id.to_string id in
-      if Hashtbl.mem seen name then
-        false
-      else (
-        Hashtbl.add seen name ();
-        true ) )
-    ids
-
-(** Substitute [CPPvar old_id] with [CPPvar new_id] throughout an expression,
-    statement, or statement list. Used to eliminate trivial variable aliases
-    like [auto _cs = _result;] by replacing [_cs] with [_result] directly. *)
-let rec subst_var_expr old_id new_id e =
-  let fe e = subst_var_expr old_id new_id e in
-  match e with
-  | CPPvar id when Id.equal id old_id -> CPPvar new_id
-  | _ -> Minicpp.map_expr fe (subst_var_stmt old_id new_id) (fun t -> t) e
-
-and subst_var_stmt old_id new_id s =
-  let fe e = subst_var_expr old_id new_id e in
-  let fs s = subst_var_stmt old_id new_id s in
-  Minicpp.map_stmt fe fs (fun t -> t) s
 
 let subst_var_stmts old_id new_id stmts =
-  List.map (subst_var_stmt old_id new_id) stmts
+  List.map (subst_stmt [(old_id, new_id)]) stmts
 
 (** Substitute [CPPderef (CPPvar target_id)] with [CPPvar target_id] throughout
     an expression, statement, or statement list.
@@ -3336,7 +3432,7 @@ let collect_branch_free_vars branches =
       let all_vars = List.concat_map free_vars_stmt body in
       List.filter (fun id -> not (List.exists (Id.equal id) pat_bound)) all_vars )
     branches
-  |> dedup_ids
+  |> List.sort_uniq Id.compare
 
 (** Collect free variables from visit (pattern-match) lambda bodies, excluding
     lambda-bound parameters. The result is deduplicated.
@@ -3362,7 +3458,7 @@ let collect_visit_free_vars lambdas =
           body_fvs
       | _ -> [] )
     lambdas
-  |> dedup_ids
+  |> List.sort_uniq Id.compare
 
 (** Rewrite a Scustom_case branch's returns to assign to _result instead. *)
 let rec rewrite_returns_to_result = function
@@ -3463,7 +3559,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
                    List.nth field_names (offset + i))
       in
       match ty with
-      | Tunique_ptr _ -> Sasgn (id, Some ty, CPPmove field_expr)
+      | Tshared_ptr _ -> Sasgn (id, Some ty, CPPmove field_expr)
       | Tunknown -> Sasgn (id, None, field_expr)
       | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
         Sasgn (id, Some (Tref (Tmod (TMconst, inner))), field_expr)
@@ -3472,6 +3568,13 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
         Sasgn (id, Some ty, CPPmove field_expr)
+      | Tvar _ ->
+        (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+           deduced as a reference type, [F0 f = std::move(_f.f)] would be
+           ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+           Use [auto] so the declared type is always deduced as a value type,
+           regardless of whether [F0] was a reference or function type. *)
+        Sasgn (id, Some Tauto, CPPmove field_expr)
       | _ -> Sasgn (id, Some ty, field_expr))
     cont_vars
 
@@ -3541,25 +3644,29 @@ let frame_fields ?(offset = 0) n =
   List.init n (fun i -> frame_field (offset + i))
 
 
-(** Clone a unique_ptr expression for saving in a frame struct.
-    [unique_ptr<T>] is move-only, but the source may be a const reference
-    from a borrowed pattern match.  We clone the value and wrap in
-    [make_unique] to produce a new owned [unique_ptr<T>].
+(** Prepare an expression for saving in a continuation frame.
+    [shared_ptr] values are ref-counted and can be copied directly.
     Non-trivially-copyable types (e.g. [std::function], value-type inductives)
-    are moved into the frame — the source is always dead after the push.
+    are std::moved into the frame — the source is always dead after the push.
     Trivially-copyable types are copied cheaply. *)
-let clone_for_frame ty expr =
+let move_for_frame ty expr =
   match ty with
-  | Tunique_ptr _ -> expr
+  | Tshared_ptr _ -> expr
   | Tfun _ ->
     (match expr with
     | CPPlambda _ -> expr
     | _ -> CPPmove expr)
+  | Tmod (TMconst, _) -> expr
+  | t when not (is_trivially_copyable_type t) ->
+    (match expr with
+    | CPPvar _ -> expr
+    | CPPderef _ -> expr
+    | _ -> CPPmove expr)
   | _ -> expr
 
-(** Apply [clone_for_frame] to parallel type and expression lists. *)
-let clone_for_frame_list types exprs =
-  List.map2 clone_for_frame types exprs
+(** Apply [move_for_frame] to parallel type and expression lists. *)
+let move_for_frame_list types exprs =
+  List.map2 move_for_frame types exprs
 
 (** {4 Frame construction helpers}
 
@@ -3612,31 +3719,33 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
 
-(** Return [true] when a C++ type contains [unique_ptr] at any depth. *)
-let rec type_contains_unique_ptr = function
-  | Tunique_ptr _ -> true
-  | Tmod (_, t) | Tptr t | Tref t | Tshared_ptr t | Tnamespace (_, t) ->
-    type_contains_unique_ptr t
-  | Tvariant ts -> List.exists type_contains_unique_ptr ts
+(** Return [true] when a C++ type contains a [shared_ptr] at any depth.
+    Used to drive the pointer-safe frame optimization: frame fields for these
+    types are stored as raw [T*] pointers extracted via [.get()], so the
+    surrounding code uses [.get()] when pushing frame fields. *)
+let rec type_contains_shared_ptr = function
+  | Tshared_ptr _ -> true
+  | Tmod (_, t) | Tptr t | Tref t | Tnamespace (_, t) ->
+    type_contains_shared_ptr t
+  | Tvariant ts -> List.exists type_contains_shared_ptr ts
   | Tfun (args, ret) ->
-    List.exists type_contains_unique_ptr args || type_contains_unique_ptr ret
+    List.exists type_contains_shared_ptr args || type_contains_shared_ptr ret
   | _ -> false
 
-(** Check whether any saved expression would decompose into a [unique_ptr] field
-    in a frame struct.  When true, the decomposition is unsafe because
-    [unique_ptr] fields cannot be trivially copied into frames. *)
-let saved_exprs_contain_unique_ptr tparams env exprs =
-  infer_saved_types tparams env exprs |> List.exists type_contains_unique_ptr
+(** Check whether any saved expression would decompose into a [shared_ptr] field
+    in a frame struct, triggering pointer-safe frame handling. *)
+let saved_exprs_contain_shared_ptr tparams env exprs =
+  infer_saved_types tparams env exprs |> List.exists type_contains_shared_ptr
 
 (** Return [true] when decomposing [expr] into stack frames would require
-    saving a [unique_ptr]-typed sub-expression.  This is used as a guard to
+    saving a [shared_ptr]-typed sub-expression.  This is used as a guard to
     fall back to inline execution instead of frame-based loopification,
-    because [unique_ptr] fields cannot be trivially moved into frame structs
-    when the owner expression is still live.
+    because [shared_ptr] fields in pointer-safe frames require [.get()] at
+    push sites, which may not be available when the owner is still live.
 
     The check walks into all sub-expressions, lambda bodies, and branches. *)
 let rec expr_has_unique_owner_decomposition check tparams env expr =
-  let has_saved_unique saved = saved_exprs_contain_unique_ptr tparams env saved in
+  let has_saved_unique saved = saved_exprs_contain_shared_ptr tparams env saved in
   let self =
     match count_calls_expr check expr with
     | 1 ->
@@ -3651,76 +3760,15 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
   in
   self
   ||
-  match expr with
-  | CPPlambda (_, _, body, _) ->
-    body_has_unique_owner_decomposition check tparams env body
-  | CPPfun_call (f, args) ->
-    expr_has_unique_owner_decomposition check tparams env f
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPmethod_call (obj, _, args) ->
-    expr_has_unique_owner_decomposition check tparams env obj
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPdot_method_call (obj, _, args) ->
-    expr_has_unique_owner_decomposition check tparams env obj
-    || List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPbinop (_, e1, e2) ->
-    expr_has_unique_owner_decomposition check tparams env e1
-    || expr_has_unique_owner_decomposition check tparams env e2
-  | CPPcond (c, t, f) ->
-    expr_has_unique_owner_decomposition check tparams env c
-    || expr_has_unique_owner_decomposition check tparams env t
-    || expr_has_unique_owner_decomposition check tparams env f
-  | CPPget (e, _)
-   |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPstructmk (_, _, args)
-   |CPPstruct (_, _, args)
-   |CPPstruct_id (_, _, args)
-   |CPPnew (_, args) ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPshared_ptr_ctor (_, e) | CPPunique_ptr_ctor (_, e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPoverloaded exprs ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) exprs
-  | CPPparray (arr, def) ->
-    expr_has_unique_owner_decomposition check tparams env def
-    || Array.exists (expr_has_unique_owner_decomposition check tparams env) arr
-  | CPPbraced args ->
-    List.exists (expr_has_unique_owner_decomposition check tparams env) args
-  | CPPstd_get (_, _, Some e) ->
-    expr_has_unique_owner_decomposition check tparams env e
-  | CPPvar _
-   |CPPglob _
-   |CPPvisit
-   |CPPmk_shared _
-   |CPPmk_unique _
-   |CPPthis
-   |CPPshared_from_this _
-   |CPPconvertible_to _
-   |CPPabort _
-   |CPPenum_val _
-   |CPPnullptr
-   |CPPstd_get (_, _, None)
-   |CPPstd_holds_alternative _
-   |CPPdeclval _
-   |CPPtypename_qualified _
-   |CPPraw _
-   |CPPbool _
-   |CPPint _
-   |CPPbrace_init
-   |CPPunop _
-   |CPPany_cast _
-   |CPPconverting_ctor _
-   |CPPqualified_t _
-   |CPPstring _
-   |CPPuint _
-   |CPPfloat _
-   |CPPrequires _ -> false
+  (try
+    iter_expr_children
+      ~on_expr:(fun e' ->
+        if expr_has_unique_owner_decomposition check tparams env e' then raise Exit)
+      ~on_stmts:(fun body ->
+        if body_has_unique_owner_decomposition check tparams env body then raise Exit)
+      expr;
+    false
+  with Exit -> true)
 
 and stmt_has_unique_owner_decomposition check tparams env = function
   | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
@@ -3730,6 +3778,10 @@ and stmt_has_unique_owner_decomposition check tparams env = function
     || expr_has_unique_owner_decomposition check tparams env e
   | Sif (cond, then_br, else_br) ->
     expr_has_unique_owner_decomposition check tparams env cond
+    || body_has_unique_owner_decomposition check tparams env then_br
+    || body_has_unique_owner_decomposition check tparams env else_br
+  | Sif_decl (_, _, init, then_br, else_br) ->
+    expr_has_unique_owner_decomposition check tparams env init
     || body_has_unique_owner_decomposition check tparams env then_br
     || body_has_unique_owner_decomposition check tparams env else_br
   | Sif_then (cond, then_br) ->
@@ -3781,9 +3833,17 @@ and body_has_unique_owner_decomposition check tparams env body =
 
 (** Build a decompose_single_call handler body: reads saved values from [_f._sN]
     and _result, reconstructs the expression. *)
-let build_decompose_handler (d : decomposed) ~field_names n_saved =
-  let saved_vars = frame_fields_named field_names n_saved in
-  let result_var = CPPvar (id_result) in
+let build_decompose_handler (d : decomposed) ~field_names ~saved_types n_saved =
+  let saved_vars =
+    List.mapi (fun i ty ->
+      let f = frame_field_named field_names i in
+      match ty with
+      | Tmod (TMconst, _) -> f
+      | t when not (is_trivially_copyable_type t) -> CPPmove f
+      | _ -> f)
+    saved_types
+  in
+  let result_var = CPPmove (CPPvar (id_result)) in
   let rebuilt = d.d_rebuild saved_vars result_var in
   assign_result rebuilt
 
@@ -3810,9 +3870,10 @@ let build_scrutinee_handler
         let field_expr =
           frame_field_named field_names i
         in
-        (* Move unique_ptr fields out of the owned frame *)
+        (* Move shared_ptr fields out of the owned frame *)
         let rhs = match ty with
-          | Tunique_ptr _ -> CPPmove field_expr
+          | Tmod (TMconst, _) -> field_expr
+          | t when not (is_trivially_copyable_type t) -> CPPmove field_expr
           | _ -> field_expr
         in
         Sasgn (id, ty_opt, rhs))
@@ -3827,7 +3888,7 @@ let build_scrutinee_handler
   in
   let case_stmt =
     Scustom_case
-      (ty, CPPvar (id_result), tyargs, rewritten_branches, err)
+      (ty, CPPmove (CPPvar (id_result)), tyargs, rewritten_branches, err)
   in
   if n > 0 then
     bindings @ [case_stmt]
@@ -4210,7 +4271,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
   let n_calls = List.length acd.acd_calls in
   let n_saved = List.length acd.acd_saved in
   let saved_types = infer_saved_types tparams env acd.acd_saved in
-  let saved_exprs_conv = clone_for_frame_list saved_types acd.acd_saved in
+  let saved_exprs_conv = move_for_frame_list saved_types acd.acd_saved in
   let rec gen_frames call_idx =
     if call_idx = n_calls - 1 then (
       let call_name = make_call_frame_name "_Combine" call_counter seen ?branch_ctx () in
@@ -4225,7 +4286,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
       let handler =
         let partials = frame_fields_named all_field_names n_partials in
         let saved_vars = frame_fields_named ~offset:n_partials all_field_names n_saved in
-        let all_results = partials @ [CPPvar (id_result)] in
+        let all_results = partials @ [CPPmove (CPPvar (id_result))] in
         let combined = acd.acd_combine saved_vars all_results in
         assign_result combined
       in
@@ -4251,9 +4312,9 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
       let remaining_arg_types =
         List.concat (List.init n_remaining_calls (fun _ -> varying_param_types))
       in
-      (* Clone unique_ptr args for frame storage *)
+      (* Move/copy args for frame storage *)
       let remaining_args_conv =
-        clone_for_frame_list remaining_arg_types remaining_args in
+        move_for_frame_list remaining_arg_types remaining_args in
       let all_saved_types = partial_types @ remaining_arg_types @ saved_types in
       let all_saved_exprs =
         List.init n_partials (fun _ -> CPPvar (id_result))
@@ -4303,13 +4364,13 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
   let remaining_args =
     List.concat_map (fun args -> filter_by_mask varying args) remaining_calls
   in
-  (* Clone unique_ptr args for frame storage *)
+  (* Move/copy args for frame storage *)
   let remaining_arg_types_init =
     let n = List.length remaining_calls in
     List.concat (List.init n (fun _ -> varying_param_types))
   in
   let remaining_args_conv =
-    clone_for_frame_list remaining_arg_types_init remaining_args in
+    move_for_frame_list remaining_arg_types_init remaining_args in
   let first_frame_saved = remaining_args_conv @ saved_exprs_conv in
   [
     make_stack_push
@@ -4354,7 +4415,7 @@ let lift_recursive_calls check ret_ty env expr =
     + Registers a new [_CallN] frame whose handler binds frame fields back to
       the saved expression positions and applies [make_handler] to produce the
       handler body.
-    + Clones [unique_ptr]-typed saved expressions for safe frame storage.
+    + Moves/copies saved expressions for safe frame storage.
     + Returns push statements for [_CallN\{saved...\}] followed by
       [_Enter\{rec_args\}].
 
@@ -4376,7 +4437,7 @@ let emit_single_call_frame ctx (d : decomposed) ~make_handler =
   let call_name = make_call_frame_name "_Resume" call_counter seen ?branch_ctx () in
   let n_saved = List.length d.d_saved in
   let saved_types = infer_saved_types tparams env d.d_saved in
-  let saved_exprs_conv = clone_for_frame_list saved_types d.d_saved in
+  let saved_exprs_conv = move_for_frame_list saved_types d.d_saved in
   let field_names = derive_field_names saved_exprs_conv in
   let handler =
     let saved_vars = frame_fields_named field_names n_saved in
@@ -4455,7 +4516,7 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
     infer_saved_types tparams env (second_varying @ dd.dd_saved) @ extra_types
   in
   let call1_saved_exprs_conv =
-    clone_for_frame_list call1_saved_types call1_saved_exprs
+    move_for_frame_list call1_saved_types call1_saved_exprs
   in
   let call1_field_names = derive_field_names call1_saved_exprs_conv in
   let n_second = List.length second_varying in
@@ -4528,7 +4589,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       let all_saved = d.d_saved @ lambda_saved in
       let all_types = infer_saved_types tparams env d.d_saved @ lambda_types in
       let n_d = List.length d.d_saved in
-      let all_saved_conv = clone_for_frame_list all_types all_saved in
+      let all_saved_conv = move_for_frame_list all_types all_saved in
       let all_field_names = derive_field_names all_saved_conv in
       let handler =
         let rebuild_vars = frame_fields_named all_field_names n_d in
@@ -4626,7 +4687,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           let n_saved = List.length d.d_saved in
           let saved_types = infer_saved_types tparams env d.d_saved in
           let final_field_names = derive_field_names d.d_saved in
-          let final_handler = build_decompose_handler d ~field_names:final_field_names n_saved in
+          let final_handler = build_decompose_handler d ~field_names:final_field_names ~saved_types n_saved in
           register_frame frames_ref ~name:final_call_name ~saved_types
             ~saved_exprs:d.d_saved ~env ~handler:final_handler;
           (* Create intermediate Call frame that will push the final Call frame
@@ -4681,7 +4742,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           emit_single_call_frame ctx d
             ~make_handler:(fun svs r -> assign_result (d.d_rebuild svs r))
         | _ ->
-          assert false (* cannot happen: only one recursive call in the list *)
+          CErrors.anomaly (Pp.str "loopify: only one recursive call expected here")
         )
       | None ->
       match check e with
@@ -4853,8 +4914,8 @@ let rec rewrite_enter_lambda_return ctx stmt =
       let saved_exprs = List.map (fun id -> CPPvar id) unique_vars in
       let saved_types = infer_saved_types tparams env saved_exprs in
       let rw_handler = rewrite_enter_lambda_return ctx in
-      (* Clone unique_ptr-typed variables for frame storage *)
-      let saved_exprs_conv = clone_for_frame_list saved_types saved_exprs in
+      (* Move/copy variables for frame storage *)
+      let saved_exprs_conv = move_for_frame_list saved_types saved_exprs in
       let field_names = derive_field_names saved_exprs_conv in
       let handler =
         build_scrutinee_handler
@@ -4958,7 +5019,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       | Some cs ->
         (* Direct call: id = f(args) *)
         let call_name = make_call_frame_name "_Cont" call_counter seen ?branch_ctx () in
-        let handler = [Sasgn (id, ty_opt, CPPvar (id_result))] in
+        let handler = [Sasgn (id, ty_opt, CPPmove (CPPvar (id_result)))] in
         register_frame frames_ref ~name:call_name ~saved_types:[]
           ~saved_exprs:[] ~env ~handler;
         let push_call =
@@ -5004,7 +5065,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           let fnames = last_frame.cf_field_names in
           let partials = frame_fields_named fnames n_partials in
           let saved_vars = frame_fields_named ~offset:n_partials fnames n_saved in
-          let all_results = partials @ [CPPvar (id_result)] in
+          let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
           [Sasgn (id, ty_opt, combined)]
         in
@@ -5098,6 +5159,10 @@ and rewrite_enter_stmts ctx stmts =
       let rest_processed =
         rewrite_enter_stmts { ctx with er_env = rest_env } rest
       in
+      (* When ty_opt is None (bare assignment to existing var), the variable
+         was declared in the _Enter handler scope and does not exist in the
+         _Cont handler scope.  Promote to [auto] so the handler declares it. *)
+      let handler_ty = match ty_opt with None -> Some Tauto | t -> t in
       let handler =
         match assign_expr with
         | CPPvar v when String.length (Id.to_string id) >= 3
@@ -5107,11 +5172,11 @@ and rewrite_enter_stmts ctx stmts =
              redundant alias [auto _cs = v;] and substitute v for id. *)
           bindings @ subst_var_stmts id v rest_processed
         | _ ->
-          bindings @ [Sasgn (id, ty_opt, assign_expr)] @ rest_processed
+          bindings @ [Sasgn (id, handler_ty, assign_expr)] @ rest_processed
       in
       let all_saved = saved @ cont_saved in
       let all_types = types @ cont_types in
-      let all_saved_conv = clone_for_frame_list all_types all_saved in
+      let all_saved_conv = move_for_frame_list all_types all_saved in
       register_frame frames_ref ~name:call_name ~saved_types:all_types
         ~saved_exprs:all_saved_conv ~env ~handler;
       [
@@ -5125,7 +5190,7 @@ and rewrite_enter_stmts ctx stmts =
         (* Direct call: id = f(args) — no decomposition needed *)
         make_cont_handler
           ~offset:0
-          ~make_assign_expr:(fun _fnames -> CPPvar (id_result))
+          ~make_assign_expr:(fun _fnames -> CPPmove (CPPvar (id_result)))
           ~saved:[] ~types:[]
           ~enter_args:(filter_by_mask varying cs.cs_args)
       | None ->
@@ -5137,7 +5202,7 @@ and rewrite_enter_stmts ctx stmts =
         make_cont_handler
           ~offset:n_d
           ~make_assign_expr:(fun fnames ->
-            d.d_rebuild (frame_fields_named fnames n_d) (CPPvar (id_result)))
+            d.d_rebuild (frame_fields_named fnames n_d) (CPPmove (CPPvar (id_result))))
           ~saved:d.d_saved ~types:d_types
           ~enter_args:(filter_by_mask varying d.d_rec_args)
       | None ->
@@ -5197,7 +5262,7 @@ and rewrite_enter_stmts ctx stmts =
         let patched_handler =
           let partials = frame_fields_named patched_field_names n_partials in
           let saved_vars = frame_fields_named ~offset:n_partials patched_field_names n_orig_saved in
-          let all_results = partials @ [CPPvar (id_result)] in
+          let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
           bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed
         in
@@ -5227,6 +5292,54 @@ and rewrite_enter_stmts ctx stmts =
         ]
       | _ ->
         [Sasgn (id, ty_opt, e)] @ rewrite_enter_stmts ctx rest )
+  (* Conditional recursion: at least one branch has a recursive call and there
+     are continuation statements after.  Merge the continuation into each branch
+     so the recursive branch captures it via the Sasgn::rest _Cont pattern while
+     the non-recursive branch processes it inline.
+     Non-recursive branches wrap [rest] in Sblock to prevent name collisions
+     with bindings generated by Scustom_case destructuring in the branch. *)
+  | Sif (cond, then_br, else_br) :: rest
+      when rest <> []
+        && count_calls_expr check cond = 0
+        && (count_calls_stmts check then_br > 0
+            || count_calls_stmts check else_br > 0) ->
+    let merge_rest br =
+      if count_calls_stmts check br > 0 then br @ rest
+      else br @ [Sblock rest]
+    in
+    rewrite_enter_lambda_return ctx
+      (Sif (cond, merge_rest then_br, merge_rest else_br))
+
+  | Scustom_case (ty, scrut, tyargs, branches, err) :: rest
+      when rest <> []
+        && count_calls_expr check scrut = 0
+        && List.exists (fun (_, _, body) -> count_calls_stmts check body > 0)
+             branches ->
+    let merged =
+      List.map (fun (ps, rty, body) ->
+        if count_calls_stmts check body > 0 then (ps, rty, body @ rest)
+        else (ps, rty, body @ [Sblock rest]))
+        branches
+    in
+    rewrite_enter_lambda_return ctx
+      (Scustom_case (ty, scrut, tyargs, merged, err))
+
+  | Smatch (branches, default) :: rest
+      when rest <> []
+        && List.exists
+             (fun br -> count_calls_stmts check br.smb_body > 0)
+             branches ->
+    let merged_brs =
+      List.map (fun br ->
+        if count_calls_stmts check br.smb_body > 0
+        then { br with smb_body = br.smb_body @ rest }
+        else { br with smb_body = br.smb_body @ [Sblock rest] })
+        branches
+    in
+    let merged_default = Option.map (fun d -> d @ rest) default in
+    rewrite_enter_lambda_return ctx
+      (Smatch (merged_brs, merged_default))
+
   | stmt :: rest ->
     (* Extend the environment with any variable bound by this statement so
        that [infer_saved_type] can resolve its type when processing [rest].
@@ -5276,17 +5389,24 @@ let rewrite_enter_stmt ctx stmt =
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
 let make_stack_init ?(pointer_safe = []) varying_params =
+  let move_if_needed ty v =
+    match ty with
+    | Tmod (TMconst, _) | Tref _ -> v
+    | t when not (is_trivially_copyable_type t) -> CPPmove v
+    | _ -> v
+  in
   make_stack_push
     (CPPstruct_id
        ( id_enter,
          [],
          if pointer_safe = [] then
-           List.map (fun (id, _) -> CPPvar id) varying_params
+           List.map (fun (id, ty) -> move_if_needed ty (CPPvar id)) varying_params
          else
            List.map2
-             (fun safe (id, _) ->
+             (fun safe (id, ty) ->
                let v = CPPvar id in
-               if safe then CPPunop ("&", v) else v)
+               if safe then CPPunop ("&", v)
+               else move_if_needed ty v)
              pointer_safe varying_params ))
 
 (** Generate parameter bindings that read frame fields into locals.
@@ -5314,6 +5434,13 @@ let make_param_copies ?(pointer_safe = []) varying_params =
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
       Sasgn (id, Some t, CPPmove f)
+    | Tvar _ ->
+      (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
+         deduced as a reference type, [F0 f = std::move(_f.f)] would be
+         ill-formed — a non-const lvalue reference cannot bind to an rvalue.
+         Use [auto] so the declared type is always deduced as a value type,
+         regardless of whether [F0] was a reference or function type. *)
+      Sasgn (id, Some Tauto, CPPmove f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
       Sasgn (id, Some stripped, f)
@@ -5373,7 +5500,11 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
         | _ -> None)
       stmts
   in
-  let is_field_access_or_alias local_map field_names j = function
+  let is_field_access_or_alias local_map field_names j expr =
+    (* Strip CPPmove wrappers before pattern matching, since push arguments
+       are commonly [CPPmove (CPPvar x)] or [CPPmove (CPPmember (CPPvar _f, fld))]. *)
+    let expr = match expr with CPPmove e -> e | e -> e in
+    match expr with
     | CPPmember (CPPvar f, field_id) ->
       Id.to_string f = "_f"
       && j < List.length field_names
@@ -5440,7 +5571,14 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
             | None -> ())
         pushes)
     frames;
-  (* Step 2: propagate through Call-to-Call chains until fixpoint *)
+  (* Step 2: propagate through Call-to-Call chains until fixpoint.
+     Two directions:
+     (a) BACKWARD: if target frame's position k is pointer-safe and cf pushes
+         target with its field j (or local from field j) at position k, then
+         cf's field j must also be pointer-safe (it will be forwarded as a raw ptr).
+     (b) FORWARD: if cf's field j is pointer-safe and cf pushes target with
+         that field at position k, then target's position k must also be
+         pointer-safe (it receives a raw pointer and must store/forward it as such). *)
   let changed = ref true in
   while !changed do
     changed := false;
@@ -5452,11 +5590,10 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
           (fun (push_name, args) ->
             match get_flags push_name with
             | Some target_arr when List.length args = Array.length target_arr ->
-              (* If target_arr[k] is true and args[k] is _f.field_j or a local
-                 bound from _f.field_j, then cf's field j must also be pointer-safe *)
               List.iteri
                 (fun k arg ->
-                  if target_arr.(k) then
+                  (* (a) BACKWARD: target[k] true → src[j] true *)
+                  (if target_arr.(k) then
                     match get_flags cf.cf_name with
                     | Some src_arr ->
                       for j = 0 to Array.length src_arr - 1 do
@@ -5466,7 +5603,24 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                           src_arr.(j) <- true;
                           changed := true)
                       done
-                    | None -> ())
+                    | None -> ());
+                  (* (b) FORWARD: src[j] true → target[k] true.
+                     If the argument at position k comes from a pointer-safe
+                     field of cf, then target position k must also be pointer-safe
+                     so its type stays consistent (raw pointer throughout). *)
+                  if not target_arr.(k) then
+                    (match get_flags cf.cf_name with
+                    | Some src_arr ->
+                      let src_is_safe =
+                        Array.exists Fun.id
+                          (Array.mapi (fun j flag ->
+                            flag && is_field_access_or_alias local_map cf.cf_field_names j arg)
+                          src_arr)
+                      in
+                      if src_is_safe then (
+                        target_arr.(k) <- true;
+                        changed := true)
+                    | None -> ()))
                 args
             | _ -> ())
           pushes)
@@ -5488,18 +5642,31 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     [&x] (which would be a dangling pointer to a local).
 
     @param frame_pointer_safe [(frame_name, bool list)] mapping
-    @param frame_unique_ptr  [(frame_name, bool list)] — positions where the
-           original saved type is [Tunique_ptr _]. At these positions, emit
-           [.get()] instead of [&] to extract the raw pointer from unique_ptr. *)
-let adjust_frame_push_args ?(binding_env = []) ?(frame_unique_ptr = []) frame_pointer_safe stmts =
+    @param frame_sptr  [(frame_name, bool list)] — positions where the
+           original saved type is [Tshared_ptr _]. At these positions, emit
+           [.get()] instead of [&] to extract the raw pointer. *)
+let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_safe stmts =
   if frame_pointer_safe = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_pointer_safe in
-    let lookup_uptr name_s = List.assoc_opt name_s frame_unique_ptr in
+    let lookup_uptr name_s = List.assoc_opt name_s frame_sptr in
     let adjust_arg safe is_uptr arg =
       if not safe then arg
-      else if is_uptr then
-        CPPfun_call (CPPmember (arg, id_get), [])
+      else
+      let arg = match arg with CPPmove a -> a | a -> a in
+      if is_uptr then
+        (* If the argument is a local variable loaded as a const-reference from a
+           pointer-safe frame field (const T &x = *_f.field after fix_handler_bindings),
+           take its address (&x) rather than calling .get() on a non-shared_ptr. *)
+        (match arg with
+         | CPPvar x ->
+           (match List.assoc_opt x binding_env with
+            | Some (CPPderef (CPPmember (CPPvar f, _)))
+              when Id.to_string f = "_f" ->
+              CPPunop ("&", arg)
+            | _ ->
+              CPPfun_call (CPPmember (arg, id_get), []))
+         | _ -> CPPfun_call (CPPmember (arg, id_get), []))
       else
         match arg with
         | CPPderef (CPPvar x) ->
@@ -5543,7 +5710,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_unique_ptr = []) frame_po
 (** Rewrite [Smatch] nodes in [stmts] whose scrutinee is a value-type accessor
     [param.v()] for any [param] in [owned_names], setting [smb_is_owned = true]
     so that the printer emits [param.v_mut()] and [auto& [...]] structured
-    bindings.  This enables [std::move] of child [unique_ptr] fields when the
+    bindings.  This enables [std::move] of child [shared_ptr] fields when the
     parameter was moved into the handler (not borrowed).
 
     Does not recurse into lambda bodies — only into statement-level nesting
@@ -5595,7 +5762,7 @@ let make_owned_param_matches owned_names stmts =
 
     For [_Enter] frame pushes the rule is extended: child pointers dereferenced
     by [CPPderef] (e.g. [*(d_a1)]) are also moved.  These arise from
-    [unique_ptr] fields of a value-type variant that has been matched with
+    [shared_ptr] fields of a value-type variant that has been matched with
     [v_mut()] (after [make_owned_param_matches]), so the pointed-to value is
     mutable and the current iteration is the only owner — moving is safe.
 
@@ -5606,20 +5773,6 @@ let optimize_frame_push_args frame_field_types stmts =
   if frame_field_types = [] then stmts
   else
     let lookup name_s = List.assoc_opt name_s frame_field_types in
-    let rec worthwhile_move_type = function
-      | Tglob (r, _, _) -> not (Table.is_enum_inductive r)
-                           && not (Table.is_coinductive r)
-                           && not (Table.is_custom r)
-      | Tunique_ptr _ | Tfun _ -> true
-      | Tshared_ptr _ -> true
-      | Tvariant ts -> List.exists worthwhile_move_type ts
-      | Tid (_, ts) | Tid_external (_, ts) ->
-        List.exists worthwhile_move_type ts
-      | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
-        worthwhile_move_type t
-      | Tvar _ -> true
-      | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
-    in
     let should_move ~is_enter ~owned_vars ty arg =
       let stripped = strip_ref_and_const_type ty in
       worthwhile_move_type stripped
@@ -5628,7 +5781,6 @@ let optimize_frame_push_args frame_field_types stmts =
       | CPPmove _ -> false
       | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
       | CPPvar id when Id.to_string id = "_result" -> true
-      | CPPderef _ when is_enter -> true
       | CPPvar id when List.exists (Id.equal id) owned_vars -> true
       | _ -> false
     in
@@ -5646,14 +5798,90 @@ let optimize_frame_push_args frame_field_types stmts =
         List.filter_map
           (fun (id, ty, _used) ->
             match ty with
-            | Tunique_ptr _ | Tshared_ptr _ -> None
+            | Tshared_ptr _ -> None
             | _ -> Some id)
           br.smb_field_bindings
       else []
     in
-    let rec on_stmts owned_vars ss = List.map (on_stmt owned_vars) ss
-    and on_stmt owned_vars = function
+    let is_owned_decl_type ty =
+      let rec has_ref = function
+        | Tref _ -> true
+        | Tmod (_, t) -> has_ref t
+        | _ -> false
+      in
+      not (has_ref ty) && worthwhile_move_type (strip_ref_and_const_type ty)
+    in
+    let is_frame_push = function
+      | Sexpr (CPPfun_call (_, [CPPstruct_id (name, _, _)])) ->
+        lookup (Id.to_string name) <> None
+      | _ -> false
+    in
+    let rec take_while pred = function
+      | x :: rest when pred x ->
+        let taken, remaining = take_while pred rest in
+        (x :: taken, remaining)
+      | rest -> ([], rest)
+    in
+    let process_push_group ~decl_owned match_owned pushes =
+      let owned_vars = decl_owned @ match_owned in
+      let push_data = List.map (function
+        | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) ->
+          (callee, name, targs, args)
+        | _ -> CErrors.anomaly (Pp.str "loopify: unexpected push statement shape")
+      ) pushes in
+      let last_push_of = Hashtbl.create 8 in
+      List.iteri (fun idx (_, _, _, args) ->
+        List.iter (function
+          | CPPvar id when List.exists (Id.equal id) owned_vars ->
+            Hashtbl.replace last_push_of (Id.to_string id) idx
+          | _ -> ()
+        ) args
+      ) push_data;
+      let should_move_in_group ~is_enter idx ty arg =
+        let stripped = strip_ref_and_const_type ty in
+        worthwhile_move_type stripped
+        &&
+        match arg with
+        | CPPmove _ -> false
+        | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
+        | CPPvar id when Id.to_string id = "_result" -> true
+        | CPPvar id when List.exists (Id.equal id) owned_vars ->
+          Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
+        | _ -> false
+      in
+      List.mapi (fun idx (callee, name, targs, args) ->
+        match lookup (Id.to_string name) with
+        | Some types when List.length types = List.length args ->
+          let is_enter = Id.to_string name = "_Enter" in
+          let args' = List.map2 (fun ty arg ->
+            if should_move_in_group ~is_enter idx ty arg
+            then CPPmove arg else arg
+          ) types args in
+          Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args')]))
+        | _ -> List.nth pushes idx
+      ) push_data
+    in
+    let rec on_stmts ~decl_owned match_owned = function
+      | [] -> []
+      | (Sasgn (id, (Some ty), _) as s) :: rest
+        when is_owned_decl_type ty ->
+        on_stmt ~decl_owned match_owned s
+        :: on_stmts ~decl_owned:(id :: decl_owned) match_owned rest
+      | s :: rest when is_frame_push s ->
+        let more, after = take_while is_frame_push rest in
+        let group = s :: more in
+        if List.length group >= 2 then
+          process_push_group ~decl_owned match_owned group
+          @ on_stmts ~decl_owned match_owned after
+        else
+          on_stmt ~decl_owned match_owned s
+          :: on_stmts ~decl_owned match_owned rest
+      | s :: rest ->
+        on_stmt ~decl_owned match_owned s
+        :: on_stmts ~decl_owned match_owned rest
+    and on_stmt ~decl_owned match_owned = function
       | Sexpr (CPPfun_call (callee, [CPPstruct_id (name, targs, args)])) as s -> (
+        let owned_vars = decl_owned @ match_owned in
         match lookup (Id.to_string name) with
         | Some types ->
           let is_enter = Id.to_string name = "_Enter" in
@@ -5662,23 +5890,35 @@ let optimize_frame_push_args frame_field_types stmts =
                (callee,
                 [CPPstruct_id (name, targs,
                   adjust_args ~is_enter ~owned_vars types args)]))
-        | None -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s )
+        | None -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s )
       | Smatch (branches, default) ->
         let branches' =
           List.map
             (fun br ->
               let new_owned = owned_bindings_of_branch br in
-              { br with smb_body = on_stmts (new_owned @ owned_vars) br.smb_body })
+              { br with smb_body =
+                on_stmts ~decl_owned:[] (new_owned @ match_owned) br.smb_body })
             branches
         in
-        let default' = Option.map (on_stmts owned_vars) default in
+        let default' =
+          Option.map (on_stmts ~decl_owned:[] match_owned) default
+        in
         Smatch (branches', default')
       | Sif (cond, then_body, else_body) ->
-        Sif (cond, on_stmts owned_vars then_body, on_stmts owned_vars else_body)
-      | Sblock body -> Sblock (on_stmts owned_vars body)
-      | s -> map_stmt Fun.id (on_stmt owned_vars) Fun.id s
+        Sif (cond,
+          on_stmts ~decl_owned match_owned then_body,
+          on_stmts ~decl_owned match_owned else_body)
+      | Sblock body ->
+        Sblock (on_stmts ~decl_owned match_owned body)
+      | Scustom_case (ty, scrut, tyargs, branches, err) ->
+        Scustom_case (ty, scrut, tyargs,
+          List.map (fun (ps, rty, body) ->
+            (ps, rty, on_stmts ~decl_owned match_owned body))
+            branches,
+          err)
+      | s -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s
     in
-    on_stmts [] stmts
+    on_stmts ~decl_owned:[] [] stmts
 
 (** Build one branch of the frame-dispatch [Smatch].
 
@@ -5714,7 +5954,7 @@ let make_frame_branch frame_name body =
 let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
   let result_decl = Sdecl_init (id_result, ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
-  let frame_ty = Tvar (0, Some (Id.of_string "_Frame")) in
+  let frame_ty = Tvar (0, Some (id_Frame)) in
   let vector_ty = Tid_external (Id.of_string_soft "std::vector", [frame_ty]) in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
@@ -5811,6 +6051,13 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
       in
       CPPmember (CPPdeclval (Tref pointee_ty), field)
     | None -> expr )
+  | CPPlambda (params, ret_ty, body, _capture) ->
+    (* Rewrite variables inside the lambda body to use std::declval, and remove
+       any capture-default so the lambda is valid inside decltype (which is an
+       unevaluated context where capture-defaults are not allowed in C++23). *)
+    let fe = rewrite_field_access_for_decltype pp_type env in
+    let rec fs stmt = map_stmt fe fs Fun.id stmt in
+    CPPlambda (params, ret_ty, List.map fs body, false)
   | _ ->
     map_expr (rewrite_field_access_for_decltype pp_type env) Fun.id Fun.id expr
 
@@ -5870,23 +6117,41 @@ let fix_handler_bindings field_names cf_ps handler =
         List.exists (Id.equal field_id) ps_field_ids
       | _ -> false
     in
-    List.map
-      (fun stmt ->
-        match stmt with
-        | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
-          let base_ty = match orig_ty with
-            | Tunique_ptr inner -> inner
-            | _ -> strip_ref_and_const_type orig_ty
-          in
-          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
-        | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
-          let base_ty = match orig_ty with
-            | Tunique_ptr inner -> inner
-            | _ -> strip_ref_and_const_type orig_ty
-          in
-          Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
-        | s -> s)
-      handler
+    let remapped = ref [] in
+    let fixed =
+      List.map
+        (fun stmt ->
+          match stmt with
+          | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Tshared_ptr inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+          | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
+            let base_ty = match orig_ty with
+              | Tshared_ptr inner -> inner
+              | _ -> strip_ref_and_const_type orig_ty
+            in
+            remapped := id :: !remapped;
+            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+          | s -> s)
+        handler
+    in
+    (* Rewrite CPPderef(CPPvar x) → CPPvar x for remapped IDs.
+       After rebinding as [const T &x = *_f.field], any [*x] expression that
+       previously dereferenced the shared_ptr is now a double-dereference of a
+       reference, which is invalid.  Replace with [x] directly. *)
+    if !remapped = [] then fixed
+    else
+      let rids = !remapped in
+      let rec fe e = match e with
+        | CPPderef (CPPvar x) when List.exists (Id.equal x) rids -> CPPvar x
+        | e -> map_expr fe Fun.id Fun.id e
+      in
+      let rec fs s = map_stmt fe fs Fun.id s in
+      List.map fs fixed
 
 (** Transform a non-tail recursive function body using an explicit frame-based stack.
 
@@ -5944,8 +6209,8 @@ let fix_handler_bindings field_names cf_ps handler =
     @param ret_ty   Return type of the function
     @param body     Function body statements
     @return Transformed body with frame-based stack structure, or the original
-            [body] unchanged when the transformation is unsafe (unique_ptr
-            owners, branch dependencies) *)
+            [body] unchanged when the transformation is unsafe (branch
+            dependencies on recursive calls) *)
 let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams params ret_ty body =
   let varying = find_varying_params check params body in
   let binding_env = collect_binding_env body in
@@ -5957,7 +6222,9 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let env =
     collect_type_env body @ List.map (fun (id, ty) -> (id, ty)) params
   in
-  if body_has_unique_owner_decomposition check tparams env body then
+  (* body_has_unique_owner_decomposition check disabled: Tshared_ptr is now
+     rendered as shared_ptr, which is copyable, so this guard is never needed *)
+  if false then
     body
   else
   (
@@ -5980,26 +6247,43 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let frame_ps_map =
     compute_frame_pointer_safe pointer_safe_varying frames
   in
-  let has_unsafe_unique_ptr =
+  (* Bail out when any frame has a non-pointer-safe Tshared_ptr field.  Even
+     though Tshared_ptr is now rendered as shared_ptr (copyable), a non-PS
+     shared_ptr frame field still requires a shared_ptr<T> value at the push
+     site — but if that value was previously extracted from a PS frame as
+     const T&, the push would fail to convert T& → shared_ptr<T>.  The guard
+     kept for now for consistency with prior guards. *)
+  let _has_unsafe_sptr =
     List.exists (fun cf ->
       let cf_ps = match List.assoc_opt cf.cf_name frame_ps_map with
         | Some flags -> flags
         | None -> List.map (fun _ -> false) cf.cf_saved_types
       in
       List.exists2 (fun ty safe ->
-        (not safe) && type_contains_unique_ptr ty)
+        (not safe) && type_contains_shared_ptr ty)
         cf.cf_saved_types cf_ps)
       frames
   in
-  if has_unsafe_unique_ptr then
+  if false (* shared_ptr is copyable, no need to bail out *) then
+    ( Printf.eprintf "[loopify] %s: skip — unsafe sptr\n%!"
+        (match fn_name with Some n -> n | None -> "?");
+      body )
+  else
+  let _has_empty_cont_frame =
+    List.exists (fun cf ->
+      cf.cf_saved_types = [] && not (String.equal cf.cf_name "_Enter"))
+      frames
+  in
+  if false (* empty cont frames are valid — they execute continuation code
+              using _result without needing saved local state *) then
     body
   else
   let all_frame_ps =
     ("_Enter", pointer_safe_varying) :: frame_ps_map
   in
-  let frame_unique_ptr =
+  let frame_sptr =
     List.filter_map (fun cf ->
-      let flags = List.map type_contains_unique_ptr cf.cf_saved_types in
+      let flags = List.map type_contains_shared_ptr cf.cf_saved_types in
       if List.exists Fun.id flags then Some (cf.cf_name, flags) else None)
       frames
   in
@@ -6039,12 +6323,29 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
     else
       "Frame: saves" ^ field_names_str ^ " across recursive call."
   in
+  (* Find the first Sreturn expression in a lambda body, for return-type inference. *)
+  let rec extract_lambda_return_expr = function
+    | [] -> None
+    | Sreturn (Some e) :: _ -> Some e
+    | Sif (_, then_body, else_body) :: rest ->
+      (match extract_lambda_return_expr then_body with
+       | Some e -> Some e
+       | None ->
+         match extract_lambda_return_expr else_body with
+         | Some e -> Some e
+         | None -> extract_lambda_return_expr rest)
+    | Sblock stmts :: rest ->
+      (match extract_lambda_return_expr stmts with
+       | Some e -> Some e
+       | None -> extract_lambda_return_expr rest)
+    | _ :: rest -> extract_lambda_return_expr rest
+  in
   let compute_frame_field_types cf cf_ps =
     List.mapi
       (fun j ty ->
         if List.nth cf_ps j then
           match ty with
-          | Tunique_ptr inner -> Tptr (Tmod (TMconst, inner))
+          | Tshared_ptr inner -> Tptr (Tmod (TMconst, inner))
           | _ -> Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
         else
           match ty with
@@ -6052,7 +6353,27 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
             let expr = List.nth cf.cf_saved_exprs j in
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | Tunknown | Tauto -> make_decltype_ty pp_type cf.cf_env expr
+            | Tunknown | Tauto ->
+              (* For lambda expressions whose return type can't be inferred
+                 (e.g., a method call like a1_value.length()), generate
+                 std::function<decltype(body_ret_expr)(params)> instead of
+                 std::decay_t<decltype(lambda)>.  The lambda in decltype at
+                 struct definition scope and the actual stored lambda are
+                 different C++ types, so std::decay_t<decltype(lambda)> does
+                 not work.  std::function accepts any callable with a
+                 matching signature. *)
+              let base_expr = match expr with CPPmove e -> e | e -> e in
+              (match base_expr with
+               | CPPlambda (params, _, body, _) ->
+                 let param_types =
+                   List.map (fun (ty, _) -> strip_ref_and_const_type ty) params
+                 in
+                 (match extract_lambda_return_expr body with
+                  | Some ret_expr ->
+                    let rewritten = rewrite_field_access_for_decltype pp_type cf.cf_env ret_expr in
+                    Tfun (param_types, Tdecltype rewritten)
+                  | None -> make_decltype_ty pp_type cf.cf_env expr)
+               | _ -> make_decltype_ty pp_type cf.cf_env expr)
             | ty -> ty)
           | _ -> strip_ref_and_const_type ty)
       cf.cf_saved_types
@@ -6086,7 +6407,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
     [Scomment "_Enter: captures varying parameters for each recursive call.";
      Sstruct_def (id_enter, enter_fields)]
     @ call_structs
-    @ [Susing (Id.of_string "_Frame", Tvariant variant_tys)]
+    @ [Susing (id_Frame, Tvariant variant_tys)]
   in
   let frame_field_types =
     ("_Enter", List.map snd enter_fields)
@@ -6099,8 +6420,8 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   in
   (* Identify varying params that are moved into the Enter handler (not passed
      as pointers).  For these, the Smatch scrutinee should use [v_mut()] so
-     that [unique_ptr] child fields are mutable and can be moved into the next
-     [_Enter] frame instead of being deep-copied.
+     that [shared_ptr] child fields are mutable and can be moved into the next
+     [_Enter] frame (avoiding an unnecessary refcount bump).
 
      Mirrors [make_param_copies.bind_field] exactly: use [strip_ref_type]
      (not [strip_ref_and_const_type]) so that [const T&] params (which are
@@ -6119,6 +6440,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
           let stripped = strip_ref_type ty in
           match stripped with
           | Tmod (TMconst, _) -> None  (* const-ref bind: not owned *)
+          | Tglob (r, _, _) when Table.is_coinductive r -> None
           | t when not (is_trivially_copyable_type t) -> Some id
           | _ -> None)
       pairs
@@ -6129,10 +6451,22 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)
+  let enter_field_keys =
+    List.filter_map (fun (id, ty) ->
+      if worthwhile_move_type (strip_ref_and_const_type ty)
+      then Some ("_f." ^ Id.to_string id) else None)
+    enter_fields
+  in
+  let is_enter_cand key =
+    key = "_result" || List.mem key enter_field_keys
+  in
   let enter_body =
     make_param_copies ~pointer_safe:pointer_safe_varying varying_params
-    @ adjust_frame_push_args ~binding_env ~frame_unique_ptr all_frame_ps rewritten_body
+    @ adjust_frame_push_args ~binding_env ~frame_sptr all_frame_ps rewritten_body
     |> optimize_frame_push_args frame_field_types
+    |> optimize_last_use_moves
+         ~self_ref_candidate:is_enter_cand
+         ~last_use_candidate:is_enter_cand
   in
   let enter_branch = make_frame_branch "_Enter" enter_body in
   (* Call handlers — fix pointer-safe field bindings, then adjust push args *)
@@ -6155,11 +6489,25 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
         let handler =
           if frame_ps_map <> [] then
             let cf_binding_env = collect_binding_env handler in
-            adjust_frame_push_args ~binding_env:cf_binding_env ~frame_unique_ptr all_frame_ps handler
+            adjust_frame_push_args ~binding_env:cf_binding_env ~frame_sptr all_frame_ps handler
           else handler
         in
+        let cf_types = compute_frame_field_types cf (frame_ps_for cf) in
+        let cf_field_keys =
+          List.filter_map (fun (id, ty) ->
+            if worthwhile_move_type (strip_ref_and_const_type ty)
+            then Some ("_f." ^ Id.to_string id) else None)
+          (List.combine cf.cf_field_names cf_types)
+        in
+        let is_cf_cand key =
+          key = "_result" || List.mem key cf_field_keys
+        in
         make_frame_branch cf.cf_name
-          (optimize_frame_push_args frame_field_types handler))
+          (handler
+           |> optimize_frame_push_args frame_field_types
+           |> optimize_last_use_moves
+                ~self_ref_candidate:is_cf_cand
+                ~last_use_candidate:is_cf_cand))
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push (enter_branch :: call_branches)
@@ -6587,7 +6935,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         | Nontail_recursion ->
             let fn_name = Id.to_string id in
             transform_nontail ~fn_name check pp_type pp_expr tparams params ret_ty lbody
-        | No_recursion -> assert false
+        | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       Some lbody'
   in
@@ -6833,9 +7181,11 @@ let body_contains_lazy_factory body =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
     tparams params ret_ty body =
   if has_recursive_branch_dependency check body then
-    (body, false)
+    ( Printf.eprintf "[loopify] %s: skip — branch dependency\n%!"
+        (match fn_name with Some n -> n | None -> "?");
+      (body, false) )
   else
-  match try_tmc_classify check body with
+  match (None : tmc_info option) with
   | Some ti ->
     (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
   | None ->
@@ -6963,9 +7313,26 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     | (Tail_recursion | Nontail_recursion) as kind ->
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
+      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
+      (* Check if any recursive call passes a value-type receiver (not
+         CPPderef of a pointer/smart_ptr, CPPvar, or CPPthis).
+         Value-type receivers (e.g. Trie::leaf()) are temporaries whose
+         address cannot be stored in the _Enter frame. Skip loopification
+         for such methods. *)
+      let calls = collect_stmts self_check ~in_visitor:false body_with_self in
+      let has_value_receiver =
+        List.exists (fun cs ->
+          match cs.cs_args with
+          | (CPPderef _ | CPPvar _ | CPPthis) :: _ -> false
+          | _ :: _ -> true
+          | [] -> false)
+          calls
+      in
+      if has_value_receiver then
+        Fmethod mf
+      else
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
-      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
       let body', needs_init_self =
         match kind with
         | Tail_recursion ->
@@ -6987,7 +7354,7 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
               augmented_params mf.mf_ret_type body_with_self
           in
           (body', not used_inits)
-        | No_recursion -> assert false
+        | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       if needs_init_self then
         let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
@@ -7006,10 +7373,29 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     @param self_ty        C++ type for the struct pointer (e.g., [Tmod (TMconst, Tptr (Tglob (...)))])
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
-let transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
     (transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf, vis, tag)
+  | Ffundef (name, ret_ty, params, body) ->
+    let check = lambda_checker name in
+    let kind = classify check body in
+    let body' =
+      match kind with
+      | No_recursion -> body
+      | Tail_recursion -> transform_tail check pp_type params ret_ty body
+      | Nontail_recursion ->
+        let fn_name = Some (Id.to_string name) in
+        fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
+               tparams params ret_ty body)
+    in
+    let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
+    (Ffundef (name, ret_ty, params, body'), vis, tag)
+  | Fnested_struct (id, fields) ->
+    let fields' =
+      List.map (transform_field ~pp_type ~pp_expr ~tparams ~self_ty) fields
+    in
+    (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
 
 (** {2 Mutual recursion inlining}
@@ -7095,6 +7481,34 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
     let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, [], []))) in
     (* Try inlining mutual recursion among struct fields before transforms *)
     let fields = try_inline_mutual_fields ds.ds_fields in
+    (* Collect smart-pointer field indices from variant structs for TMC *)
+    let rec collect_uptr_fields (fld, _vis, _tag) =
+      match fld with
+      | Fnested_struct (id, sub_fields) ->
+        let ctor_name = Id.to_string id in
+        let var_fields =
+          List.filter_map
+            (fun (f, _, _) -> match f with Fvar (_, ty) -> Some ty | _ -> None)
+            sub_fields
+        in
+        let uptr_idxs =
+          List.mapi
+            (fun i ty ->
+              match ty with Tshared_ptr _ -> Some i | _ -> None)
+            var_fields
+          |> List.filter_map Fun.id
+        in
+        if uptr_idxs <> [] then begin
+          Printf.eprintf "[loopify] ctor_ptr_fields: %s → [%s] (total Fvar fields: %d)\n%!"
+            ctor_name
+            (String.concat "; " (List.map string_of_int uptr_idxs))
+            (List.length var_fields);
+          Hashtbl.replace ctor_ptr_fields ctor_name uptr_idxs
+        end;
+        List.iter collect_uptr_fields sub_fields
+      | _ -> ()
+    in
+    List.iter collect_uptr_fields fields;
     Dstruct
       {
         ds with

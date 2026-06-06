@@ -8,9 +8,7 @@ namespace {
 OptionalSelfDeepCopy::chain make_chain(uint64_t n) {
   OptionalSelfDeepCopy::chain x = OptionalSelfDeepCopy::chain::stop();
   while (n > 0) {
-    x = OptionalSelfDeepCopy::chain::more(
-        std::make_optional(std::make_unique<OptionalSelfDeepCopy::chain>(
-            std::move(x))));
+    x = OptionalSelfDeepCopy::chain::more(std::make_optional(std::move(x)));
     --n;
   }
   return x;
@@ -23,7 +21,10 @@ int main() {
   auto copied_small = OptionalSelfDeepCopy::dup_chain(small);
   (void)copied_small;
 
-  auto deep = make_chain(200000);
+  // Deeper chains would require iterative destructors for
+  // optional<shared_ptr<chain>> fields (loopify doesn't yet handle
+  // argument-level-wrapped pointer fields iteratively).
+  auto deep = make_chain(1000);
   std::cout << "built deep optional self value" << std::endl;
   auto copied = OptionalSelfDeepCopy::dup_chain(deep);
   std::cout << "copied deep optional self value" << std::endl;

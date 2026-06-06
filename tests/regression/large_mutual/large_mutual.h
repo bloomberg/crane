@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LARGE_MUTUAL
 #define INCLUDED_LARGE_MUTUAL
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -16,23 +17,23 @@ struct LargeMutual {
     // TYPES
     struct SAssign {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a1;
     };
 
     struct SSeq {
-      std::unique_ptr<stmt> a0;
-      std::unique_ptr<stmt> a1;
+      std::shared_ptr<stmt> a0;
+      std::shared_ptr<stmt> a1;
     };
 
     struct SIf {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<stmt> a1;
-      std::unique_ptr<stmt> a2;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<stmt> a1;
+      std::shared_ptr<stmt> a2;
     };
 
     struct SWhile {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<stmt> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<stmt> a1;
     };
 
     struct SSkip {};
@@ -57,144 +58,149 @@ struct LargeMutual {
 
     explicit stmt(SSkip _v) : v_(_v) {}
 
-    stmt(const stmt &_other) : v_(std::move(_other.clone().v_)) {}
-
-    stmt(stmt &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    stmt &operator=(const stmt &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    stmt &operator=(stmt &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    stmt clone() const {
-      stmt _out{};
-
-      struct _CloneFrame {
-        const stmt *_src;
-        stmt *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const stmt *_src = _frame._src;
-        stmt *_dst = _frame._dst;
-        if (std::holds_alternative<SAssign>(_src->v())) {
-          const auto &_alt = std::get<SAssign>(_src->v());
-          _dst->v_ = SAssign{
-              _alt.a0,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
-                      : nullptr};
-        } else if (std::holds_alternative<SSeq>(_src->v())) {
-          const auto &_alt = std::get<SSeq>(_src->v());
-          _dst->v_ = SSeq{_alt.a0 ? std::make_unique<stmt>() : nullptr,
-                          _alt.a1 ? std::make_unique<stmt>() : nullptr};
-          auto &_dst_alt = std::get<SSeq>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<SIf>(_src->v())) {
-          const auto &_alt = std::get<SIf>(_src->v());
-          _dst->v_ = SIf{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<stmt>() : nullptr,
-              _alt.a2 ? std::make_unique<stmt>() : nullptr};
-          auto &_dst_alt = std::get<SIf>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        } else if (std::holds_alternative<SWhile>(_src->v())) {
-          const auto &_alt = std::get<SWhile>(_src->v());
-          _dst->v_ = SWhile{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<stmt>() : nullptr};
-          auto &_dst_alt = std::get<SWhile>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          _dst->v_ = SSkip{};
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static stmt sassign(uint64_t a0, expr a1) {
-      return stmt(SAssign{a0, std::make_unique<expr>(std::move(a1))});
+      return stmt(SAssign{a0, std::make_shared<expr>(std::move(a1))});
     }
 
     static stmt sseq(stmt a0, stmt a1) {
-      return stmt(SSeq{std::make_unique<stmt>(std::move(a0)),
-                       std::make_unique<stmt>(std::move(a1))});
+      return stmt(SSeq{std::make_shared<stmt>(std::move(a0)),
+                       std::make_shared<stmt>(std::move(a1))});
     }
 
     static stmt sif(bexpr a0, stmt a1, stmt a2) {
-      return stmt(SIf{std::make_unique<bexpr>(std::move(a0)),
-                      std::make_unique<stmt>(std::move(a1)),
-                      std::make_unique<stmt>(std::move(a2))});
+      return stmt(SIf{std::make_shared<bexpr>(std::move(a0)),
+                      std::make_shared<stmt>(std::move(a1)),
+                      std::make_shared<stmt>(std::move(a2))});
     }
 
     static stmt swhile(bexpr a0, stmt a1) {
-      return stmt(SWhile{std::make_unique<bexpr>(std::move(a0)),
-                         std::make_unique<stmt>(std::move(a1))});
+      return stmt(SWhile{std::make_shared<bexpr>(std::move(a0)),
+                         std::make_shared<stmt>(std::move(a1))});
     }
 
     static stmt sskip() { return stmt(SSkip{}); }
 
     // MANIPULATORS
     ~stmt() {
-      std::vector<std::unique_ptr<stmt>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](stmt &_node) {
-        if (std::holds_alternative<SSeq>(_node.v_)) {
-          auto &_alt = std::get<SSeq>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
-          }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<SAssign>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<SIf>(_node.v_)) {
-          auto &_alt = std::get<SIf>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+        if (auto *_alt = std::get_if<SSeq>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<SWhile>(_node.v_)) {
-          auto &_alt = std::get<SWhile>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+        if (auto *_alt = std::get_if<SIf>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+        if (auto *_alt = std::get_if<SWhile>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename expr::EAdd>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename expr::EMul>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename expr::ECond>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+                if (_alt->a2) {
+                  _stack.push_back(std::move(_alt->a2));
+                }
+              }
+            }
+          } else {
+            if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+              if (*_sp && (*_sp).use_count() == 1) {
+                auto &_pv = (*_sp)->v_mut();
+                if (auto *_alt = std::get_if<typename bexpr::BEq>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BLt>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BAnd>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BOr>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BNot>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -216,19 +222,19 @@ struct LargeMutual {
     };
 
     struct EAdd {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct EMul {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct ECond {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<expr> a1;
-      std::unique_ptr<expr> a2;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
     };
 
     using variant_t = std::variant<ENum, EVar, EAdd, EMul, ECond>;
@@ -251,144 +257,147 @@ struct LargeMutual {
 
     explicit expr(ECond _v) : v_(std::move(_v)) {}
 
-    expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    expr &operator=(const expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    expr &operator=(expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    expr clone() const {
-      expr _out{};
-
-      struct _CloneFrame {
-        const expr *_src;
-        expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const expr *_src = _frame._src;
-        expr *_dst = _frame._dst;
-        if (std::holds_alternative<ENum>(_src->v())) {
-          const auto &_alt = std::get<ENum>(_src->v());
-          _dst->v_ = ENum{_alt.a0};
-        } else if (std::holds_alternative<EVar>(_src->v())) {
-          const auto &_alt = std::get<EVar>(_src->v());
-          _dst->v_ = EVar{_alt.a0};
-        } else if (std::holds_alternative<EAdd>(_src->v())) {
-          const auto &_alt = std::get<EAdd>(_src->v());
-          _dst->v_ = EAdd{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<EAdd>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<EMul>(_src->v())) {
-          const auto &_alt = std::get<EMul>(_src->v());
-          _dst->v_ = EMul{_alt.a0 ? std::make_unique<expr>() : nullptr,
-                          _alt.a1 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<EMul>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<ECond>(_src->v());
-          _dst->v_ = ECond{
-              _alt.a0 ? std::make_unique<LargeMutual::bexpr>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<expr>() : nullptr,
-              _alt.a2 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<ECond>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static expr ENum_(uint64_t a0) { return expr(ENum{a0}); }
 
     static expr evar(uint64_t a0) { return expr(EVar{a0}); }
 
     static expr eadd(expr a0, expr a1) {
-      return expr(EAdd{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EAdd{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static expr emul(expr a0, expr a1) {
-      return expr(EMul{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return expr(EMul{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static expr econd(bexpr a0, expr a1, expr a2) {
-      return expr(ECond{std::make_unique<bexpr>(std::move(a0)),
-                        std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+      return expr(ECond{std::make_shared<bexpr>(std::move(a0)),
+                        std::make_shared<expr>(std::move(a1)),
+                        std::make_shared<expr>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](expr &_node) {
-        if (std::holds_alternative<EAdd>(_node.v_)) {
-          auto &_alt = std::get<EAdd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<EAdd>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<EMul>(_node.v_)) {
-          auto &_alt = std::get<EMul>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<EMul>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<ECond>(_node.v_)) {
-          auto &_alt = std::get<ECond>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+        if (auto *_alt = std::get_if<ECond>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename stmt::SAssign>(&_pv)) {
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SSeq>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SIf>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+                if (_alt->a2) {
+                  _stack.push_back(std::move(_alt->a2));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SWhile>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          } else {
+            if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+              if (*_sp && (*_sp).use_count() == 1) {
+                auto &_pv = (*_sp)->v_mut();
+                if (auto *_alt = std::get_if<typename bexpr::BEq>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BLt>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BAnd>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BOr>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename bexpr::BNot>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -406,27 +415,27 @@ struct LargeMutual {
     struct BFalse {};
 
     struct BEq {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct BLt {
-      std::unique_ptr<expr> a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
     };
 
     struct BAnd {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<bexpr> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a1;
     };
 
     struct BOr {
-      std::unique_ptr<bexpr> a0;
-      std::unique_ptr<bexpr> a1;
+      std::shared_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a1;
     };
 
     struct BNot {
-      std::unique_ptr<bexpr> a0;
+      std::shared_ptr<bexpr> a0;
     };
 
     using variant_t = std::variant<BTrue, BFalse, BEq, BLt, BAnd, BOr, BNot>;
@@ -453,154 +462,155 @@ struct LargeMutual {
 
     explicit bexpr(BNot _v) : v_(std::move(_v)) {}
 
-    bexpr(const bexpr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    bexpr(bexpr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    bexpr &operator=(const bexpr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    bexpr &operator=(bexpr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    bexpr clone() const {
-      bexpr _out{};
-
-      struct _CloneFrame {
-        const bexpr *_src;
-        bexpr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const bexpr *_src = _frame._src;
-        bexpr *_dst = _frame._dst;
-        if (std::holds_alternative<BTrue>(_src->v())) {
-          _dst->v_ = BTrue{};
-        } else if (std::holds_alternative<BFalse>(_src->v())) {
-          _dst->v_ = BFalse{};
-        } else if (std::holds_alternative<BEq>(_src->v())) {
-          const auto &_alt = std::get<BEq>(_src->v());
-          _dst->v_ = BEq{
-              _alt.a0 ? std::make_unique<LargeMutual::expr>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
-                      : nullptr};
-        } else if (std::holds_alternative<BLt>(_src->v())) {
-          const auto &_alt = std::get<BLt>(_src->v());
-          _dst->v_ = BLt{
-              _alt.a0 ? std::make_unique<LargeMutual::expr>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<LargeMutual::expr>(_alt.a1->clone())
-                      : nullptr};
-        } else if (std::holds_alternative<BAnd>(_src->v())) {
-          const auto &_alt = std::get<BAnd>(_src->v());
-          _dst->v_ = BAnd{_alt.a0 ? std::make_unique<bexpr>() : nullptr,
-                          _alt.a1 ? std::make_unique<bexpr>() : nullptr};
-          auto &_dst_alt = std::get<BAnd>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else if (std::holds_alternative<BOr>(_src->v())) {
-          const auto &_alt = std::get<BOr>(_src->v());
-          _dst->v_ = BOr{_alt.a0 ? std::make_unique<bexpr>() : nullptr,
-                         _alt.a1 ? std::make_unique<bexpr>() : nullptr};
-          auto &_dst_alt = std::get<BOr>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        } else {
-          const auto &_alt = std::get<BNot>(_src->v());
-          _dst->v_ = BNot{_alt.a0 ? std::make_unique<bexpr>() : nullptr};
-          auto &_dst_alt = std::get<BNot>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static bexpr btrue() { return bexpr(BTrue{}); }
 
     static bexpr bfalse() { return bexpr(BFalse{}); }
 
     static bexpr beq(expr a0, expr a1) {
-      return bexpr(BEq{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BEq{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static bexpr blt(expr a0, expr a1) {
-      return bexpr(BLt{std::make_unique<expr>(std::move(a0)),
-                       std::make_unique<expr>(std::move(a1))});
+      return bexpr(BLt{std::make_shared<expr>(std::move(a0)),
+                       std::make_shared<expr>(std::move(a1))});
     }
 
     static bexpr band(bexpr a0, bexpr a1) {
-      return bexpr(BAnd{std::make_unique<bexpr>(std::move(a0)),
-                        std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BAnd{std::make_shared<bexpr>(std::move(a0)),
+                        std::make_shared<bexpr>(std::move(a1))});
     }
 
     static bexpr bor(bexpr a0, bexpr a1) {
-      return bexpr(BOr{std::make_unique<bexpr>(std::move(a0)),
-                       std::make_unique<bexpr>(std::move(a1))});
+      return bexpr(BOr{std::make_shared<bexpr>(std::move(a0)),
+                       std::make_shared<bexpr>(std::move(a1))});
     }
 
     static bexpr bnot(bexpr a0) {
-      return bexpr(BNot{std::make_unique<bexpr>(std::move(a0))});
+      return bexpr(BNot{std::make_shared<bexpr>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~bexpr() {
-      std::vector<std::unique_ptr<bexpr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](bexpr &_node) {
-        if (std::holds_alternative<BAnd>(_node.v_)) {
-          auto &_alt = std::get<BAnd>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<BEq>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<BOr>(_node.v_)) {
-          auto &_alt = std::get<BOr>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<BLt>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
-        if (std::holds_alternative<BNot>(_node.v_)) {
-          auto &_alt = std::get<BNot>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+        if (auto *_alt = std::get_if<BAnd>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<BOr>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<BNot>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename stmt::SAssign>(&_pv)) {
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SSeq>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SIf>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+                if (_alt->a2) {
+                  _stack.push_back(std::move(_alt->a2));
+                }
+              }
+              if (auto *_alt = std::get_if<typename stmt::SWhile>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          } else {
+            if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
+              if (*_sp && (*_sp).use_count() == 1) {
+                auto &_pv = (*_sp)->v_mut();
+                if (auto *_alt = std::get_if<typename expr::EAdd>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename expr::EMul>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                }
+                if (auto *_alt = std::get_if<typename expr::ECond>(&_pv)) {
+                  if (_alt->a0) {
+                    _stack.push_back(std::move(_alt->a0));
+                  }
+                  if (_alt->a1) {
+                    _stack.push_back(std::move(_alt->a1));
+                  }
+                  if (_alt->a2) {
+                    _stack.push_back(std::move(_alt->a2));
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

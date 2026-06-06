@@ -47,7 +47,8 @@ List<std::string> EffectGetlineStress::read_lines(uint64_t n,
     uint64_t n_ = n - 1;
     std::string line;
     std::getline(std::cin, line);
-    return read_lines(n_, List<std::string>::cons(line, std::move(acc)));
+    return read_lines(n_,
+                      List<std::string>::cons(std::move(line), std::move(acc)));
   }
 }
 
@@ -55,7 +56,7 @@ List<std::string> EffectGetlineStress::read_lines(uint64_t n,
 void EffectGetlineStress::read_and_echo() {
   std::string line;
   std::getline(std::cin, line);
-  std::cout << line << '\n';
+  std::cout << std::move(line) << '\n';
   return;
 }
 
@@ -63,7 +64,7 @@ void EffectGetlineStress::read_and_echo() {
 int64_t EffectGetlineStress::get_line_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>(std::move(line).length());
   return len;
 }
 

@@ -30,32 +30,6 @@ struct ForwardSpecAscii {
 
     explicit node(BNode _v) : v_(std::move(_v)) {}
 
-    node(const node &_other) : v_(std::move(_other.clone().v_)) {}
-
-    node(node &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    node &operator=(const node &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    node &operator=(node &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    node clone() const {
-      if (std::holds_alternative<ANode>(this->v())) {
-        const auto &[a0] = std::get<ANode>(this->v());
-        return node(ANode{a0});
-      } else {
-        const auto &[a0] = std::get<BNode>(this->v());
-        return node(BNode{a0});
-      }
-    }
-
-    // CREATORS
     static node anode(uint64_t a0) { return node(ANode{a0}); }
 
     static node bnode(uint64_t a0) { return node(BNode{a0}); }

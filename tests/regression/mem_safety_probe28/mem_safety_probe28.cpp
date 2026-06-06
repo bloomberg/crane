@@ -44,7 +44,7 @@ uint64_t MemSafetyProbe28::tree_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -65,14 +65,14 @@ uint64_t MemSafetyProbe28::tree_depth(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe28::tree *a0;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     uint64_t _result;
-    decltype(UINT64_C(1)) _s1;
+    std::decay_t<decltype(UINT64_C(1))> _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -98,7 +98,7 @@ uint64_t MemSafetyProbe28::tree_depth(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -125,7 +125,7 @@ uint64_t MemSafetyProbe28::zip_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -136,7 +136,9 @@ uint64_t MemSafetyProbe28::zip_trees(
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
     uint64_t a1;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -152,7 +154,9 @@ uint64_t MemSafetyProbe28::zip_trees(
     uint64_t _result;
     uint64_t a10;
     uint64_t a1;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -168,7 +172,7 @@ uint64_t MemSafetyProbe28::zip_trees(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe28::tree &t2 = _f.t2;
+      const MemSafetyProbe28::tree &t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {
@@ -185,16 +189,17 @@ uint64_t MemSafetyProbe28::zip_trees(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), a10, a1, tree_sum(t2)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
       auto _f = std::move(std::get<_After_Leaf>(_frame));
-      _stack.emplace_back(_Combine_Leaf{_result, _f.a1});
+      _stack.emplace_back(_Combine_Leaf{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a10, _f.a1, _f.t2});
+      _stack.emplace_back(
+          _Combine_Node{std::move(_result), _f.a10, _f.a1, _f.t2});
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
@@ -223,7 +228,7 @@ uint64_t MemSafetyProbe28::zip_depth(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -232,7 +237,9 @@ uint64_t MemSafetyProbe28::zip_depth(
   struct _After_Node {
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
-    decltype(tree_depth(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_depth(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -246,7 +253,9 @@ uint64_t MemSafetyProbe28::zip_depth(
   /// call.
   struct _Combine_Node {
     uint64_t _result;
-    decltype(tree_depth(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_depth(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -262,7 +271,7 @@ uint64_t MemSafetyProbe28::zip_depth(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe28::tree &t2 = _f.t2;
+      const MemSafetyProbe28::tree &t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {
@@ -278,16 +287,16 @@ uint64_t MemSafetyProbe28::zip_depth(
           const auto &[a00, a10, a20] =
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(_After_Node{*a00, a0.get(), tree_depth(t2)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
       auto _f = std::move(std::get<_After_Leaf>(_frame));
-      _stack.emplace_back(_Combine_Leaf{_result, _f.a1});
+      _stack.emplace_back(_Combine_Leaf{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.t2});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.t2});
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
@@ -314,7 +323,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -325,10 +334,12 @@ uint64_t MemSafetyProbe28::zip_and_sum(
     MemSafetyProbe28::tree a00;
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
-    decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s3;
-    decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s4;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s3;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s4;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -343,10 +354,12 @@ uint64_t MemSafetyProbe28::zip_and_sum(
   struct _Combine_Node {
     uint64_t _result;
     uint64_t a10;
-    decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s2;
-    decltype(tree_sum(
-        *(std::declval<std::unique_ptr<MemSafetyProbe28::tree> &>()))) _s3;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s2;
+    std::decay_t<decltype(tree_sum(
+        *(std::declval<std::shared_ptr<MemSafetyProbe28::tree> &>())))>
+        _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -362,7 +375,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const MemSafetyProbe28::tree &t2 = _f.t2;
+      const MemSafetyProbe28::tree &t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {
@@ -379,16 +392,17 @@ uint64_t MemSafetyProbe28::zip_and_sum(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), a10, tree_sum(*a00), tree_sum(*a20)});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
       auto _f = std::move(std::get<_After_Leaf>(_frame));
-      _stack.emplace_back(_Combine_Leaf{_result, _f.a1});
+      _stack.emplace_back(_Combine_Leaf{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a10, _f._s3, _f._s4});
+      _stack.emplace_back(
+          _Combine_Node{std::move(_result), _f.a10, _f._s3, _f._s4});
       _stack.emplace_back(_Enter{std::move(_f.a00), _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
@@ -427,7 +441,9 @@ uint64_t MemSafetyProbe28::double_zip(
     const MemSafetyProbe28::tree *a00;
     const MemSafetyProbe28::tree *a0;
     uint64_t a10;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   /// _Combine_Leaf: receives partial results, combines with _result from final
@@ -442,7 +458,9 @@ uint64_t MemSafetyProbe28::double_zip(
   struct _Combine_Node {
     uint64_t _result;
     uint64_t a10;
-    decltype(tree_sum(std::declval<const MemSafetyProbe28::tree &>())) t2;
+    std::decay_t<decltype(tree_sum(
+        std::declval<const MemSafetyProbe28::tree &>()))>
+        t2;
   };
 
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
@@ -480,11 +498,11 @@ uint64_t MemSafetyProbe28::double_zip(
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {
       auto _f = std::move(std::get<_After_Leaf>(_frame));
-      _stack.emplace_back(_Combine_Leaf{_result, _f.a1});
+      _stack.emplace_back(_Combine_Leaf{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.t2, _f.a0});
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a10, _f.t2});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a10, _f.t2});
       _stack.emplace_back(_Enter{_f.a00, _f.a0});
     } else if (std::holds_alternative<_Combine_Leaf>(_frame)) {
       auto _f = std::move(std::get<_Combine_Leaf>(_frame));
@@ -513,7 +531,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
 
   /// _Resume_Leaf: saves [_s0, a0], resumes after recursive call with _result.
   struct _Resume_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
   };
 
@@ -540,7 +558,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, t2, &t1});
+  _stack.emplace_back(_Enter{std::move(acc), t2, &t1});
   /// Loopified zip_collect: _Enter -> _Resume_Leaf -> _Resume_Leaf_1 ->
   /// _Resume_Node -> _Resume_Node_1.
   while (!_stack.empty()) {
@@ -549,7 +567,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       List<uint64_t> acc = std::move(_f.acc);
-      const MemSafetyProbe28::tree &t2 = _f.t2;
+      const MemSafetyProbe28::tree &t2 = std::move(_f.t2);
       const MemSafetyProbe28::tree &t1 = *_f.t1;
       if (std::holds_alternative<typename MemSafetyProbe28::tree::Leaf>(
               t1.v())) {
@@ -567,8 +585,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v());
           _stack.emplace_back(_Resume_Node{*a00, a0.get()});
           _stack.emplace_back(_Resume_Node_1{a1, a10});
-          _stack.emplace_back(
-              _Enter{std::move(acc), std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{std::move(acc), *a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_Resume_Leaf>(_frame)) {
@@ -576,14 +593,14 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
       _stack.emplace_back(_Enter{std::move(_result), std::move(_f._s0), _f.a0});
     } else if (std::holds_alternative<_Resume_Leaf_1>(_frame)) {
       auto _f = std::move(std::get<_Resume_Leaf_1>(_frame));
-      _result = List<uint64_t>::cons(_f.a1, _result);
+      _result = List<uint64_t>::cons(_f.a1, std::move(_result));
     } else if (std::holds_alternative<_Resume_Node>(_frame)) {
       auto _f = std::move(std::get<_Resume_Node>(_frame));
       _stack.emplace_back(_Enter{std::move(_result), std::move(_f.a00), _f.a0});
     } else {
       auto _f = std::move(std::get<_Resume_Node_1>(_frame));
-      _result =
-          List<uint64_t>::cons(_f.a1, List<uint64_t>::cons(_f.a10, _result));
+      _result = List<uint64_t>::cons(
+          _f.a1, List<uint64_t>::cons(_f.a10, std::move(_result)));
     }
   }
   return _result;
@@ -623,7 +640,7 @@ uint64_t MemSafetyProbe28::list_sum(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -642,7 +659,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    decltype(tree::leaf()) _s0;
+    std::decay_t<decltype(tree::leaf())> _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -673,7 +690,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
   MemSafetyProbe28::tree _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t2, &t1});
+  _stack.emplace_back(_Enter{std::move(t2), &t1});
   /// Loopified merge_trees: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
   while (!_stack.empty()) {
@@ -698,7 +715,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
               std::get<typename MemSafetyProbe28::tree::Node>(t2.v_mut());
           _stack.emplace_back(
               _After_Node{*a00, a0.get(), (a1 + std::move(a10))});
-          _stack.emplace_back(_Enter{std::move(*a20), a2.get()});
+          _stack.emplace_back(_Enter{*a20, a2.get()});
         }
       }
     } else if (std::holds_alternative<_After_Leaf>(_frame)) {

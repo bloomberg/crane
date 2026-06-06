@@ -15,10 +15,10 @@ MergesortFuel::split(const List<uint64_t> &l) {
       const auto &[a00, a10] =
           std::get<typename List<uint64_t>::Cons>(_sv0.v());
       auto _cs = split(*a10);
-      const List<uint64_t> &l1 = _cs.first;
-      const List<uint64_t> &l2 = _cs.second;
-      return std::make_pair(List<uint64_t>::cons(a0, l1),
-                            List<uint64_t>::cons(a00, l2));
+      List<uint64_t> l1 = std::move(_cs.first);
+      List<uint64_t> l2 = std::move(_cs.second);
+      return std::make_pair(List<uint64_t>::cons(a0, std::move(l1)),
+                            List<uint64_t>::cons(a00, std::move(l2)));
     }
   }
 } /// * Merge
@@ -65,9 +65,10 @@ List<uint64_t> MergesortFuel::msort_go(uint64_t fuel, List<uint64_t> l) {
         return List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
       } else {
         auto _cs = split(l);
-        const List<uint64_t> &l1 = _cs.first;
-        const List<uint64_t> &l2 = _cs.second;
-        return merge(msort_go(fuel_, l1), msort_go(fuel_, l2));
+        List<uint64_t> l1 = std::move(_cs.first);
+        List<uint64_t> l2 = std::move(_cs.second);
+        return merge(msort_go(fuel_, std::move(l1)),
+                     msort_go(fuel_, std::move(l2)));
       }
     }
   }

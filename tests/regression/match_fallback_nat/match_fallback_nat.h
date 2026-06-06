@@ -28,31 +28,6 @@ struct MatchFallbackNat {
 
     explicit maybe_nat(NoneNat _v) : v_(_v) {}
 
-    maybe_nat(const maybe_nat &_other) : v_(std::move(_other.clone().v_)) {}
-
-    maybe_nat(maybe_nat &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    maybe_nat &operator=(const maybe_nat &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    maybe_nat &operator=(maybe_nat &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    maybe_nat clone() const {
-      if (std::holds_alternative<SomeNat>(this->v())) {
-        const auto &[a0] = std::get<SomeNat>(this->v());
-        return maybe_nat(SomeNat{a0});
-      } else {
-        return maybe_nat(NoneNat{});
-      }
-    }
-
-    // CREATORS
     static maybe_nat somenat(uint64_t a0) { return maybe_nat(SomeNat{a0}); }
 
     static maybe_nat nonenat() { return maybe_nat(NoneNat{}); }

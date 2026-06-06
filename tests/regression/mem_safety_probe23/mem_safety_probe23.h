@@ -24,9 +24,9 @@ struct MemSafetyProbe23 {
     struct Leaf {};
 
     struct Node {
-      std::unique_ptr<tree> a0;
+      std::shared_ptr<tree> a0;
       uint64_t a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -43,84 +43,32 @@ struct MemSafetyProbe23 {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          _dst->v_ = Leaf{};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)), a1,
-                       std::make_unique<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -185,8 +133,8 @@ struct MemSafetyProbe23 {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            f0(_f.a0, std::move(_result), _f.a1, _f.a2, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
+                     std::move(_f.a2), std::move(_f._result));
       }
     }
     return _result;
@@ -246,8 +194,8 @@ struct MemSafetyProbe23 {
         _stack.emplace_back(_Enter{_f.a0_0});
       } else {
         auto _f = std::move(std::get<_Combine_Node>(_frame));
-        _result =
-            f0(_f.a0, std::move(_result), _f.a1, _f.a2, std::move(_f._result));
+        _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
+                     std::move(_f.a2), std::move(_f._result));
       }
     }
     return _result;
@@ -284,11 +232,13 @@ struct MemSafetyProbe23 {
     std::pair<std::pair<tree, tree>, uint64_t> r = collect_children(tree::node(
         tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
         tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
-    const std::pair<tree, tree> &p = r.first;
-    const uint64_t &s = r.second;
-    const tree &left_child = p.first;
-    const tree &right_child = p.second;
-    return ((tree_sum(left_child) + tree_sum(right_child)) + s);
+    std::pair<tree, tree> p = std::move(r.first);
+    uint64_t s = std::move(r.second);
+    tree left_child = std::move(p.first);
+    tree right_child = std::move(p.second);
+    return (
+        (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +
+        s);
   }();
   /// TEST 4: Recursive function that rebuilds tree with an
   /// ACCUMULATOR that captures the original tree. The accumulator

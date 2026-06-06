@@ -15,6 +15,39 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir any_cast_nested
+ (rule
+  (targets any_cast_nested.t.exe)
+  (deps AnyCastNested.vo any_cast_nested.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested.t.exe any_cast_nested.cpp any_cast_nested.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps any_cast_nested.t.exe)
+  (action (run ./any_cast_nested.t.exe))))
+
+(subdir any_cast_nested_pair
+ (rule
+  (targets any_cast_nested_pair.t.exe)
+  (deps AnyCastNestedPair.vo any_cast_nested_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested_pair.t.exe any_cast_nested_pair.cpp any_cast_nested_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps any_cast_nested_pair.t.exe)
+  (action (run ./any_cast_nested_pair.t.exe))))
+
+(subdir app_doublecall
+ (rule
+  (targets app_doublecall.t.exe)
+  (deps AppDoublecall.vo app_doublecall.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} app_doublecall.t.exe app_doublecall.cpp app_doublecall.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps app_doublecall.t.exe)
+  (action (run ./app_doublecall.t.exe))))
+
 (subdir dependent_elim_stdexcept_probe
  (rule
   (targets dependent_elim_stdexcept_probe.t.exe)
@@ -2514,6 +2547,17 @@
   (deps loopify_search.t.exe)
   (action (run ./loopify_search.t.exe))))
 
+(subdir loopify_switch_break
+ (rule
+  (targets loopify_switch_break.t.exe)
+  (deps LoopifySwitchBreak.vo loopify_switch_break.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_switch_break.t.exe loopify_switch_break.cpp loopify_switch_break.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_switch_break.t.exe)
+  (action (run ./loopify_switch_break.t.exe))))
+
 (subdir loopify_sequences
  (rule
   (targets loopify_sequences.t.exe)
@@ -2535,6 +2579,17 @@
   (alias runtest)
   (deps loopify_sorting.t.exe)
   (action (run ./loopify_sorting.t.exe))))
+
+(subdir loopify_conditional_recursion
+ (rule
+  (targets loopify_conditional_recursion.t.exe)
+  (deps LoopifyConditionalRecursion.vo loopify_conditional_recursion.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_conditional_recursion.t.exe loopify_conditional_recursion.cpp loopify_conditional_recursion.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_conditional_recursion.t.exe)
+  (action (run ./loopify_conditional_recursion.t.exe))))
 
 (subdir loopify_special_recursion
  (rule

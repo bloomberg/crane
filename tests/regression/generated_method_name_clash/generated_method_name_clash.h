@@ -38,33 +38,6 @@ struct GeneratedMethodNameClash {
 
     explicit token(Other _v) : v_(std::move(_v)) {}
 
-    token(const token &_other) : v_(std::move(_other.clone().v_)) {}
-
-    token(token &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    token &operator=(const token &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    token &operator=(token &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    token clone() const {
-      if (std::holds_alternative<Clone>(this->v())) {
-        return token(Clone{});
-      } else if (std::holds_alternative<V>(this->v())) {
-        return token(V{});
-      } else {
-        const auto &[a0] = std::get<Other>(this->v());
-        return token(Other{a0});
-      }
-    }
-
-    // CREATORS
     static token Clone_() { return token(Clone{}); }
 
     static token V_() { return token(V{}); }

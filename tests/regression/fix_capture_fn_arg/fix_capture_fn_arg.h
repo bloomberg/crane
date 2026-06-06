@@ -38,16 +38,16 @@ struct FixCaptureFnArg {
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs = make_transform([](uint64_t x) { return (x * UINT64_C(2)); },
                               UINT64_C(5));
-    const uint64_t &n = _cs.first;
-    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    uint64_t n = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> g = std::move(_cs.second);
     return (n + g(UINT64_C(3)));
   }();
   /// test2: make_transform(S, 10) = (11, go).
   /// go(5) = S(10) + 5 = 16. Total = 11 + 16 = 27.
   static inline const uint64_t test2 = []() -> uint64_t {
     auto _cs = make_transform([](uint64_t x) { return (x + 1); }, UINT64_C(10));
-    const uint64_t &n = _cs.first;
-    const std::function<uint64_t(uint64_t)> &g = _cs.second;
+    uint64_t n = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> g = std::move(_cs.second);
     return (n + g(UINT64_C(5)));
   }();
 };

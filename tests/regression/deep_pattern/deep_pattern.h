@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_PATTERN
 #define INCLUDED_DEEP_PATTERN
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -15,8 +16,8 @@ struct DeepPattern {
     };
 
     struct Node {
-      std::unique_ptr<tree> a0;
-      std::unique_ptr<tree> a1;
+      std::shared_ptr<tree> a0;
+      std::shared_ptr<tree> a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -33,85 +34,32 @@ struct DeepPattern {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->v_ = Leaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<tree>() : nullptr,
-                          _alt.a1 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_unique<tree>(std::move(a0)),
-                       std::make_unique<tree>(std::move(a1))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)),
+                       std::make_shared<tree>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -400,7 +348,7 @@ struct DeepPattern {
 
     struct Cons {
       A a0;
-      std::unique_ptr<list<A>> a1;
+      std::shared_ptr<list<A>> a1;
     };
 
     using variant_t = std::variant<Nil, Cons>;
@@ -417,59 +365,43 @@ struct DeepPattern {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    list(const list<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    list(list<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    list<A> &operator=(const list<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    list<A> &operator=(list<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    list<A> clone() const {
-      list<A> _out{};
-
-      struct _CloneFrame {
-        const list<A> *_src;
-        list<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const list<A> *_src = _frame._src;
-        list<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Nil>(_src->v())) {
-          _dst->v_ = Nil{};
-        } else {
-          const auto &_alt = std::get<Cons>(_src->v());
-          _dst->v_ =
-              Cons{_alt.a0, _alt.a1 ? std::make_unique<list<A>>() : nullptr};
-          auto &_dst_alt = std::get<Cons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit list(const list<_U> &_other) {
       if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
         this->v_ = Nil{};
       } else {
         const auto &[a0, a1] = std::get<typename list<_U>::Cons>(_other.v());
-        this->v_ = Cons{A(a0), a1 ? std::make_unique<list<A>>(*a1) : nullptr};
+        this->v_ = Cons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<list<A>>(*a1) : nullptr};
       }
     }
 
@@ -477,27 +409,25 @@ struct DeepPattern {
 
     static list<A> cons(A a0, list<A> a1) {
       return list(
-          Cons{std::move(a0), std::make_unique<list<A>>(std::move(a1))});
+          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::unique_ptr<list<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](list<A> &_node) {
-        if (std::holds_alternative<Cons>(_node.v_)) {
-          auto &_alt = std::get<Cons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Cons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -533,6 +463,7 @@ struct DeepPattern {
   static uint64_t list_deep_match(const list<tree> &l);
   static inline const uint64_t test1 =
       tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))).deep_match();
+
   static inline const uint64_t test2 =
       tree::leaf(UINT64_C(5)).multi_constructor(tree::leaf(UINT64_C(10)));
 };

@@ -46,11 +46,11 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
     @param env The current variable environment
     @param ns
       Set of inductive references that should be treated as local (no namespace
-      wrapper)
+      wrapper). Defaults to empty; most callers omit it.
     @param tvars Type variable names for substitution
     @param ml_type The ML type to convert *)
 val convert_ml_type_to_cpp_type :
-  env -> Refset'.t -> Id.t list -> ml_type -> cpp_type
+  env -> ?ns:Refset'.t -> Id.t list -> ml_type -> cpp_type
 
 (** Check if a C++ type is erased to std::any (for indexed inductive methods).
     Returns true if the type is Tany or contains an unnamed Tvar. *)
@@ -148,15 +148,6 @@ val gen_record_cpp :
 val gen_typeclass_cpp :
   GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
 
-(** Generate C++ header for an inductive type (older style).
-    @param consarg_names  see {!gen_ind_cpp} *)
-val gen_ind_header :
-  ?consarg_names:Id.t option list array ->
-  variable list ->
-  GlobRef.t ->
-  GlobRef.t array ->
-  ml_type list array ->
-  cpp_decl
 
 (** Generate C++ header for an inductive type (v2 style: encapsulated struct
     with methods).
@@ -210,3 +201,7 @@ val gen_instance_struct :
 (** Check if a term is a type class instance (constructs a type class record).
 *)
 val is_typeclass_instance : ml_ast -> ml_type -> bool
+
+(** [is_list_global g] returns true iff [g] is the Coq list inductive.
+    Exposed so that cpp_print.ml can detect list types in any_cast contexts. *)
+val is_list_global : GlobRef.t -> bool

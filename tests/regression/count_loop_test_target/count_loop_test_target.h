@@ -29,31 +29,6 @@ struct CountLoopTestTarget {
 
     explicit instruction(NOP _v) : v_(_v) {}
 
-    instruction(const instruction &_other) : v_(std::move(_other.clone().v_)) {}
-
-    instruction(instruction &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    instruction &operator=(const instruction &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    instruction &operator=(instruction &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    instruction clone() const {
-      if (std::holds_alternative<ISZ>(this->v())) {
-        const auto &[a0, a1] = std::get<ISZ>(this->v());
-        return instruction(ISZ{a0, a1});
-      } else {
-        return instruction(NOP{});
-      }
-    }
-
-    // CREATORS
     static instruction isz(uint64_t a0, uint64_t a1) {
       return instruction(ISZ{a0, a1});
     }

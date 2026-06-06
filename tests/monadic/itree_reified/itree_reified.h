@@ -1,9 +1,11 @@
 #ifndef INCLUDED_ITREE_REIFIED
 #define INCLUDED_ITREE_REIFIED
 
+#include <any>
 #include <crane_itree.h>
 #include <memory>
 #include <string>
+#include <utility>
 #include <variant>
 
 using namespace std::string_literals;
@@ -30,30 +32,29 @@ struct ITreeReified {
     } else if (std::holds_alternative<typename ITree<T2>::Tau>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
       auto t_ = _itf.next;
-      return itree_vis(
-          [&]() -> std::any {
-            std::cout << "[tau]"s << '\n';
-            return std::any{};
-          },
-          [=](const auto &) mutable {
-            return [&]() {
-              auto t = rec(t_);
-              return ITree<decltype(t->run())>::tau(t);
-            }();
-          });
+      return itree_vis(std::any([&]() -> std::any {
+                         std::cout << "[tau]"s << '\n';
+                         return std::any{};
+                       }),
+                       [=](const auto &) mutable {
+                         return [&]() {
+                           auto t = rec(t_);
+                           return ITree<decltype(t->run())>::tau(t);
+                         }();
+                       });
     } else {
       const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
       auto e = _itf.effect;
       auto k = _itf.cont;
-      return itree_vis(
-          [&]() -> std::any {
-            std::cout << "[vis]"s << '\n';
-            return std::any{};
-          },
-          [=](const auto &) mutable {
-            return itree_vis(e,
+      return itree_vis(std::any([&]() -> std::any {
+                         std::cout << "[vis]"s << '\n';
+                         return std::any{};
+                       }),
+                       [=](const auto &) mutable {
+                         return itree_vis(
+                             std::any(e),
                              [=](const auto &x) mutable { return rec(k(x)); });
-          });
+                       });
     }
   }
 

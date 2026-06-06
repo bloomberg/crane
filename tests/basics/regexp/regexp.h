@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REGEXP
 #define INCLUDED_REGEXP
 
+#include <any>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
@@ -14,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -31,85 +32,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -135,19 +118,19 @@ struct Matcher {
     struct Eps {};
 
     struct Cat {
-      std::unique_ptr<regexp> r1;
-      std::unique_ptr<regexp> r2;
+      std::shared_ptr<regexp> r1;
+      std::shared_ptr<regexp> r2;
     };
 
     struct Alt {
-      std::unique_ptr<regexp> r1;
-      std::unique_ptr<regexp> r2;
+      std::shared_ptr<regexp> r1;
+      std::shared_ptr<regexp> r2;
     };
 
     struct Zero {};
 
     struct Star {
-      std::unique_ptr<regexp> r;
+      std::shared_ptr<regexp> r;
     };
 
     using variant_t = std::variant<Any, Char, Eps, Cat, Alt, Zero, Star>;
@@ -174,81 +157,6 @@ struct Matcher {
 
     explicit regexp(Star _v) : v_(std::move(_v)) {}
 
-    regexp(const regexp &_other) : v_(std::move(_other.clone().v_)) {}
-
-    regexp(regexp &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    regexp &operator=(const regexp &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    regexp &operator=(regexp &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    regexp clone() const {
-      regexp _out{};
-
-      struct _CloneFrame {
-        const regexp *_src;
-        regexp *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const regexp *_src = _frame._src;
-        regexp *_dst = _frame._dst;
-        if (std::holds_alternative<Any>(_src->v())) {
-          _dst->v_ = Any{};
-        } else if (std::holds_alternative<Char>(_src->v())) {
-          const auto &_alt = std::get<Char>(_src->v());
-          _dst->v_ = Char{_alt.c};
-        } else if (std::holds_alternative<Eps>(_src->v())) {
-          _dst->v_ = Eps{};
-        } else if (std::holds_alternative<Cat>(_src->v())) {
-          const auto &_alt = std::get<Cat>(_src->v());
-          _dst->v_ = Cat{_alt.r1 ? std::make_unique<regexp>() : nullptr,
-                         _alt.r2 ? std::make_unique<regexp>() : nullptr};
-          auto &_dst_alt = std::get<Cat>(_dst->v_);
-          if (_alt.r1) {
-            _stack.push_back({_alt.r1.get(), _dst_alt.r1.get()});
-          }
-          if (_alt.r2) {
-            _stack.push_back({_alt.r2.get(), _dst_alt.r2.get()});
-          }
-        } else if (std::holds_alternative<Alt>(_src->v())) {
-          const auto &_alt = std::get<Alt>(_src->v());
-          _dst->v_ = Alt{_alt.r1 ? std::make_unique<regexp>() : nullptr,
-                         _alt.r2 ? std::make_unique<regexp>() : nullptr};
-          auto &_dst_alt = std::get<Alt>(_dst->v_);
-          if (_alt.r1) {
-            _stack.push_back({_alt.r1.get(), _dst_alt.r1.get()});
-          }
-          if (_alt.r2) {
-            _stack.push_back({_alt.r2.get(), _dst_alt.r2.get()});
-          }
-        } else if (std::holds_alternative<Zero>(_src->v())) {
-          _dst->v_ = Zero{};
-        } else {
-          const auto &_alt = std::get<Star>(_src->v());
-          _dst->v_ = Star{_alt.r ? std::make_unique<regexp>() : nullptr};
-          auto &_dst_alt = std::get<Star>(_dst->v_);
-          if (_alt.r) {
-            _stack.push_back({_alt.r.get(), _dst_alt.r.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static regexp any() { return regexp(Any{}); }
 
     static regexp Char_(int64_t c) { return regexp(Char{c}); }
@@ -256,57 +164,53 @@ struct Matcher {
     static regexp eps() { return regexp(Eps{}); }
 
     static regexp cat(regexp r1, regexp r2) {
-      return regexp(Cat{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Cat{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp alt(regexp r1, regexp r2) {
-      return regexp(Alt{std::make_unique<regexp>(std::move(r1)),
-                        std::make_unique<regexp>(std::move(r2))});
+      return regexp(Alt{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp zero() { return regexp(Zero{}); }
 
     static regexp star(regexp r) {
-      return regexp(Star{std::make_unique<regexp>(std::move(r))});
+      return regexp(Star{std::make_shared<regexp>(std::move(r))});
     }
 
     // MANIPULATORS
     ~regexp() {
-      std::vector<std::unique_ptr<regexp>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](regexp &_node) {
-        if (std::holds_alternative<Cat>(_node.v_)) {
-          auto &_alt = std::get<Cat>(_node.v_);
-          if (_alt.r1) {
-            _stack.push_back(std::move(_alt.r1));
+      std::vector<std::shared_ptr<regexp>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Cat>(&_v)) {
+          if (_alt->r1) {
+            _stack.push_back(std::move(_alt->r1));
           }
-          if (_alt.r2) {
-            _stack.push_back(std::move(_alt.r2));
+          if (_alt->r2) {
+            _stack.push_back(std::move(_alt->r2));
           }
         }
-        if (std::holds_alternative<Alt>(_node.v_)) {
-          auto &_alt = std::get<Alt>(_node.v_);
-          if (_alt.r1) {
-            _stack.push_back(std::move(_alt.r1));
+        if (auto *_alt = std::get_if<Alt>(&_v)) {
+          if (_alt->r1) {
+            _stack.push_back(std::move(_alt->r1));
           }
-          if (_alt.r2) {
-            _stack.push_back(std::move(_alt.r2));
+          if (_alt->r2) {
+            _stack.push_back(std::move(_alt->r2));
           }
         }
-        if (std::holds_alternative<Star>(_node.v_)) {
-          auto &_alt = std::get<Star>(_node.v_);
-          if (_alt.r) {
-            _stack.push_back(std::move(_alt.r));
+        if (auto *_alt = std::get_if<Star>(&_v)) {
+          if (_alt->r) {
+            _stack.push_back(std::move(_alt->r));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

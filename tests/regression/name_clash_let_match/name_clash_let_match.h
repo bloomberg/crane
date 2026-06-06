@@ -31,32 +31,6 @@ struct NameClashLetMatch {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    either(const either &_other) : v_(std::move(_other.clone().v_)) {}
-
-    either(either &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    either &operator=(const either &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    either &operator=(either &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    either clone() const {
-      if (std::holds_alternative<Left>(this->v())) {
-        const auto &[a0] = std::get<Left>(this->v());
-        return either(Left{a0});
-      } else {
-        const auto &[a0] = std::get<Right>(this->v());
-        return either(Right{a0});
-      }
-    }
-
-    // CREATORS
     static either left(uint64_t a0) { return either(Left{a0}); }
 
     static either right(uint64_t a0) { return either(Right{a0}); }

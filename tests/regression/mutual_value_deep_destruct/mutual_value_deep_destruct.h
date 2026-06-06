@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
 #define INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -22,7 +23,7 @@ struct MutualValueDeepDestruct {
 
     struct ANode {
       bool a0;
-      std::unique_ptr<b> a1;
+      std::shared_ptr<b> a1;
     };
 
     using variant_t = std::variant<AEnd, ANode>;
@@ -39,96 +40,41 @@ struct MutualValueDeepDestruct {
 
     explicit a(ANode _v) : v_(std::move(_v)) {}
 
-    a(const a &_other) : v_(std::move(_other.clone().v_)) {}
-
-    a(a &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    a &operator=(const a &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    a &operator=(a &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    a clone() const {
-      a _out{};
-
-      struct _CloneFrame {
-        const a *_src;
-        a *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const a *_src = _frame._src;
-        a *_dst = _frame._dst;
-        if (std::holds_alternative<AEnd>(_src->v())) {
-          _dst->v_ = AEnd{};
-        } else {
-          const auto &_alt = std::get<ANode>(_src->v());
-          _dst->v_ = ANode{_alt.a0, _alt.a1 ? std::make_unique<b>() : nullptr};
-          auto &_dst_alt = std::get<ANode>(_dst->v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<
-                    typename MutualValueDeepDestruct::b::BNode>(_alt.a1->v())) {
-              const auto &_psrc =
-                  std::get<typename MutualValueDeepDestruct::b::BNode>(
-                      _alt.a1->v());
-              auto &_pdst =
-                  std::get<typename MutualValueDeepDestruct::b::BNode>(
-                      _dst_alt.a1->v_mut());
-              if (_psrc.a0) {
-                _pdst.a0 = std::make_unique<a>();
-                _stack.push_back({_psrc.a0.get(), _pdst.a0.get()});
-              }
-            }
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static a aend() { return a(AEnd{}); }
 
     static a anode(bool a0, b a1) {
-      return a(ANode{a0, std::make_unique<b>(std::move(a1))});
+      return a(ANode{a0, std::make_shared<b>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~a() {
-      std::vector<std::unique_ptr<a>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](a &_node) {
-        if (std::holds_alternative<ANode>(_node.v_)) {
-          auto &_alt = std::get<ANode>(_node.v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<
-                    typename MutualValueDeepDestruct::b::BNode>(_alt.a1->v())) {
-              auto &_palt =
-                  std::get<typename MutualValueDeepDestruct::b::BNode>(
-                      _alt.a1->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<ANode>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<a>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<b>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename b::BNode>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -142,7 +88,7 @@ struct MutualValueDeepDestruct {
   struct b {
     // TYPES
     struct BNode {
-      std::unique_ptr<a> a0;
+      std::shared_ptr<a> a0;
     };
 
     using variant_t = std::variant<BNode>;
@@ -157,59 +103,39 @@ struct MutualValueDeepDestruct {
 
     explicit b(BNode _v) : v_(std::move(_v)) {}
 
-    b(const b &_other) : v_(std::move(_other.clone().v_)) {}
-
-    b(b &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    b &operator=(const b &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    b &operator=(b &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    b clone() const {
-      const auto &[a0] = std::get<BNode>(this->v());
-      return b(
-          BNode{a0 ? std::make_unique<MutualValueDeepDestruct::a>(a0->clone())
-                   : nullptr});
-    }
-
-    // CREATORS
     static b bnode(a a0) {
-      return b(BNode{std::make_unique<a>(std::move(a0))});
+      return b(BNode{std::make_shared<a>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~b() {
-      std::vector<std::unique_ptr<b>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](b &_node) {
-        if (std::holds_alternative<BNode>(_node.v_)) {
-          auto &_alt = std::get<BNode>(_node.v_);
-          if (_alt.a0) {
-            if (std::holds_alternative<
-                    typename MutualValueDeepDestruct::a::ANode>(_alt.a0->v())) {
-              auto &_palt =
-                  std::get<typename MutualValueDeepDestruct::a::ANode>(
-                      _alt.a0->v_mut());
-              if (_palt.a1) {
-                _stack.push_back(std::move(_palt.a1));
-              }
-            }
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<BNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<b>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<a>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename a::ANode>(&_pv)) {
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
         }
       }
     }

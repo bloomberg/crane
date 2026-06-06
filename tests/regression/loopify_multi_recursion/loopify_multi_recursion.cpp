@@ -70,15 +70,15 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(
       }
     } else if (std::holds_alternative<_After1>(_frame)) {
       auto _f = std::move(std::get<_After1>(_frame));
-      _stack.emplace_back(_After2{_result, _f._s2, _f.fuel__1});
+      _stack.emplace_back(_After2{std::move(_result), _f._s2, _f.fuel__1});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel__0});
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine3{_f._result, _result});
+      _stack.emplace_back(_Combine3{_f._result, std::move(_result)});
       _stack.emplace_back(_Enter{_f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine3>(_frame));
-      _result = ((_result * _f._result_1) + _f._result_0);
+      _result = ((std::move(_result) * _f._result_1) + _f._result_0);
     }
   }
   return _result;
@@ -100,19 +100,24 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
 
   /// _After2: saves [_s0, fuel_, _s2], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
     uint64_t fuel_;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s2;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s2;
   };
 
   /// _Combine1: receives partial results, combines with _result from final
   /// call.
   struct _Combine1 {
     bool _result;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s1;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s1;
   };
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
@@ -144,7 +149,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result, _f._s2});
+      _stack.emplace_back(_Combine1{std::move(_result), _f._s2});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -174,10 +179,11 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
 
   /// _After2: saves [_s0, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
     uint64_t fuel_;
   };
 
@@ -215,7 +221,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -296,19 +302,22 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0});
+      _stack.emplace_back(_After_QQuad_1{std::move(_result), _f.a1, _f.a0});
       _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0});
+      _stack.emplace_back(
+          _After_QQuad_2{_f._result, std::move(_result), _f.a0});
       _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
-      _stack.emplace_back(_Combine_QQuad{_f._result_0, _f._result_1, _result});
+      _stack.emplace_back(
+          _Combine_QQuad{_f._result_0, _f._result_1, std::move(_result)});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
-      _result = (((_result + _f._result_2) + _f._result_1) + _f._result_0);
+      _result =
+          (((std::move(_result) + _f._result_2) + _f._result_1) + _f._result_0);
     }
   }
   return _result;
@@ -327,7 +336,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     const LoopifyMultiRecursion::quadtree *a2;
     const LoopifyMultiRecursion::quadtree *a1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _After_QQuad_1: saves [_result, a1, a0, _s3], dispatches next recursive
@@ -336,7 +345,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result;
     const LoopifyMultiRecursion::quadtree *a1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _After_QQuad_2: saves [_result_0, _result_1, a0, _s3], dispatches next
@@ -345,7 +354,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result_0;
     uint64_t _result_1;
     const LoopifyMultiRecursion::quadtree *a0;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   /// _Combine_QQuad: receives partial results, combines with _result from final
@@ -354,7 +363,7 @@ uint64_t LoopifyMultiRecursion::quad_depth(
     uint64_t _result_0;
     uint64_t _result_1;
     uint64_t _result_2;
-    decltype(UINT64_C(1)) _s3;
+    std::decay_t<decltype(UINT64_C(1))> _s3;
   };
 
   using _Frame = std::variant<_Enter, _After_QQuad, _After_QQuad_1,
@@ -383,20 +392,22 @@ uint64_t LoopifyMultiRecursion::quad_depth(
       }
     } else if (std::holds_alternative<_After_QQuad>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad>(_frame));
-      _stack.emplace_back(_After_QQuad_1{_result, _f.a1, _f.a0, _f._s3});
+      _stack.emplace_back(
+          _After_QQuad_1{std::move(_result), _f.a1, _f.a0, _f._s3});
       _stack.emplace_back(_Enter{_f.a2});
     } else if (std::holds_alternative<_After_QQuad_1>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_1>(_frame));
-      _stack.emplace_back(_After_QQuad_2{_f._result, _result, _f.a0, _f._s3});
+      _stack.emplace_back(
+          _After_QQuad_2{_f._result, std::move(_result), _f.a0, _f._s3});
       _stack.emplace_back(_Enter{_f.a1});
     } else if (std::holds_alternative<_After_QQuad_2>(_frame)) {
       auto _f = std::move(std::get<_After_QQuad_2>(_frame));
-      _stack.emplace_back(
-          _Combine_QQuad{_f._result_0, _f._result_1, _result, _f._s3});
+      _stack.emplace_back(_Combine_QQuad{_f._result_0, _f._result_1,
+                                         std::move(_result), _f._s3});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_QQuad>(_frame));
-      _result = (_f._s3 + std::max(std::max(_result, _f._result_2),
+      _result = (_f._s3 + std::max(std::max(std::move(_result), _f._result_2),
                                    std::max(_f._result_1, _f._result_0)));
     }
   }
@@ -415,11 +426,12 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
 
   /// _After4: saves [_s0, fuel_], dispatches next recursive call.
   struct _After4 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - std::declval<uint64_t &>()) >
                  std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - std::declval<uint64_t &>())))) _s0;
+             : (std::declval<uint64_t &>() - std::declval<uint64_t &>()))))>
+        _s0;
     uint64_t fuel_;
   };
 
@@ -480,7 +492,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       }
     } else if (std::holds_alternative<_After4>(_frame)) {
       auto _f = std::move(std::get<_After4>(_frame));
-      _stack.emplace_back(_Combine3{_result});
+      _stack.emplace_back(_Combine3{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.fuel_});
     } else if (std::holds_alternative<_Combine3>(_frame)) {
       auto _f = std::move(std::get<_Combine3>(_frame));
@@ -489,7 +501,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
-      uint64_t q1 = _result;
+      uint64_t q1 = std::move(_result);
       _stack.emplace_back(_Cont2{fuel_, n, q1});
       _stack.emplace_back(
           _Enter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
@@ -498,7 +510,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(
       uint64_t fuel_ = _f.fuel_;
       uint64_t n = _f.n;
       uint64_t q1 = _f.q1;
-      uint64_t q2 = _result;
+      uint64_t q2 = std::move(_result);
       _stack.emplace_back(_After4{(((n - q1) > n ? 0 : (n - q1))), fuel_});
       _stack.emplace_back(_Enter{(((n - q2) > n ? 0 : (n - q2))), fuel_});
     }

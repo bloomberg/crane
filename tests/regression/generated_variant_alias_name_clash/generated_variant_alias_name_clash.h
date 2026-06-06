@@ -33,31 +33,6 @@ struct GeneratedVariantAliasNameClash {
 
     explicit variant_t(Flag _v) : v_(std::move(_v)) {}
 
-    variant_t(const variant_t &_other) : v_(std::move(_other.clone().v_)) {}
-
-    variant_t(variant_t &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    variant_t &operator=(const variant_t &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    variant_t &operator=(variant_t &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    variant_t clone() const {
-      if (std::holds_alternative<Empty>(this->v())) {
-        return variant_t(Empty{});
-      } else {
-        const auto &[a0] = std::get<Flag>(this->v());
-        return variant_t(Flag{a0});
-      }
-    }
-
-    // CREATORS
     static variant_t empty() { return variant_t(Empty{}); }
 
     static variant_t flag(bool a0) { return variant_t(Flag{a0}); }

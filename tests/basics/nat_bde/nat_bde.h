@@ -10,6 +10,8 @@
 #include <bsl_string.h>
 #include <bsl_type_traits.h>
 #include <bsl_variant.h>
+#include <bsl_vector.h>
+#include <utility>
 
 using namespace BloombergLP;
 template <class From, class To>
@@ -22,7 +24,7 @@ struct Nat {
   // TYPES
   struct O {};
   struct S {
-    bsl::unique_ptr<Nat> d_n;
+    bsl::shared_ptr<Nat> d_n;
   };
   using variant_t = bsl::variant<O, S>;
 
@@ -35,65 +37,24 @@ public:
   Nat() {}
   explicit Nat(O _v) : d_v_(_v) {}
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
-  Nat(const Nat &_other) : d_v_(bsl::move(_other.clone().d_v_)) {}
-  Nat(Nat &&_other) noexcept : d_v_(bsl::move(_other.d_v_)) {}
-  Nat &operator=(const Nat &_other) {
-    d_v_ = bsl::move(_other.clone().d_v_);
-    return *this;
-  }
-  Nat &operator=(Nat &&_other) noexcept {
-    d_v_ = bsl::move(_other.d_v_);
-    return *this;
-  }
-  // ACCESSORS
-  Nat clone() const {
-    Nat _out{};
-    struct _CloneFrame {
-      const Nat *_src;
-      Nat *_dst;
-    };
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Nat *_src = _frame._src;
-      Nat *_dst = _frame._dst;
-      if (bsl::holds_alternative<O>(_src->v())) {
-        _dst->d_v_ = O{};
-      } else {
-        const auto &_alt = bsl::get<S>(_src->v());
-        _dst->d_v_ = S{_alt.d_n ? bsl::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = bsl::get<S>(_dst->d_v_);
-        if (_alt.d_n) {
-          _stack.push_back({_alt.d_n.get(), _dst_alt.d_n.get()});
-        }
-      }
-    }
-    return _out;
-  }
-  // CREATORS
   static Nat o() { return Nat(O{}); }
-  static Nat s(Nat n) { return Nat(S{bsl::make_unique<Nat>(bsl::move(n))}); }
+  static Nat s(Nat n) { return Nat(S{bsl::make_shared<Nat>(bsl::move(n))}); }
   // MANIPULATORS
   ~Nat() {
-    std::vector<bsl::unique_ptr<Nat>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Nat &_node) {
-      if (bsl::holds_alternative<S>(_node.d_v_)) {
-        auto &_alt = bsl::get<S>(_node.d_v_);
-        if (_alt.d_n) {
-          _stack.push_back(bsl::move(_alt.d_n));
+    bsl::vector<bsl::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = bsl::get_if<S>(&_v)) {
+        if (_alt->d_n) {
+          _stack.push_back(bsl::move(_alt->d_n));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = bsl::move(_stack.back());
+      auto _cur = bsl::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }

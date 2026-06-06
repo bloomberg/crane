@@ -17,7 +17,7 @@ struct Nat {
   struct O {};
 
   struct S {
-    std::unique_ptr<Nat> a0;
+    std::shared_ptr<Nat> a0;
   };
 
   using variant_t = std::variant<O, S>;
@@ -34,74 +34,26 @@ public:
 
   explicit Nat(S _v) : v_(std::move(_v)) {}
 
-  Nat(const Nat &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Nat(Nat &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Nat &operator=(const Nat &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Nat &operator=(Nat &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Nat clone() const {
-    Nat _out{};
-
-    struct _CloneFrame {
-      const Nat *_src;
-      Nat *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Nat *_src = _frame._src;
-      Nat *_dst = _frame._dst;
-      if (std::holds_alternative<O>(_src->v())) {
-        _dst->v_ = O{};
-      } else {
-        const auto &_alt = std::get<S>(_src->v());
-        _dst->v_ = S{_alt.a0 ? std::make_unique<Nat>() : nullptr};
-        auto &_dst_alt = std::get<S>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_unique<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::unique_ptr<Nat>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Nat &_node) {
-      if (std::holds_alternative<S>(_node.v_)) {
-        auto &_alt = std::get<S>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+    std::vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -134,35 +86,38 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  Option(const Option<A> &_other) : v_(_other.v_) {}
-
-  Option(Option<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Option<A> &operator=(const Option<A> &_other) {
-    v_ = _other.v_;
-    return *this;
-  }
-
-  Option<A> &operator=(Option<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Option<A> clone() const {
-    if (std::holds_alternative<Some>(this->v())) {
-      const auto &[a] = std::get<Some>(this->v());
-      return Option<A>(Some{a});
-    } else {
-      return Option<A>(None{});
-    }
-  }
-
-  // CREATORS
   template <typename _U> explicit Option(const Option<_U> &_other) {
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
-      this->v_ = Some{A(a)};
+      this->v_ = Some{[&]() -> A {
+        if constexpr (std::is_same_v<_U, std::any>) {
+          if (a.type() == typeid(A))
+            return std::any_cast<A>(a);
+          if constexpr (requires {
+                          typename A::first_type;
+                          typename A::second_type;
+                        }) {
+            const auto &[_k, _v] =
+                std::any_cast<std::pair<std::any, std::any>>(a);
+            return A{[&]() -> typename A::first_type {
+                       if constexpr (std::is_same_v<typename A::first_type,
+                                                    std::any>)
+                         return _k;
+                       else
+                         return std::any_cast<typename A::first_type>(_k);
+                     }(),
+                     [&]() -> typename A::second_type {
+                       if constexpr (std::is_same_v<typename A::second_type,
+                                                    std::any>)
+                         return _v;
+                       else
+                         return std::any_cast<typename A::second_type>(_v);
+                     }()};
+          }
+          return std::any_cast<A>(a);
+        } else
+          return A(a);
+      }()};
     } else {
       this->v_ = None{};
     }
@@ -191,12 +146,12 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    const auto &[a0, a1] = *this;
+    auto &[a0, a1] = *this;
     return a0;
   }
 
   B snd() const {
-    const auto &[a0, a1] = *this;
+    auto &[a0, a1] = *this;
     return a1;
   }
 };
@@ -275,35 +230,38 @@ public:
 
   explicit Sumor(Inright _v) : v_(_v) {}
 
-  Sumor(const Sumor<A> &_other) : v_(_other.v_) {}
-
-  Sumor(Sumor<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Sumor<A> &operator=(const Sumor<A> &_other) {
-    v_ = _other.v_;
-    return *this;
-  }
-
-  Sumor<A> &operator=(Sumor<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Sumor<A> clone() const {
-    if (std::holds_alternative<Inleft>(this->v())) {
-      const auto &[a0] = std::get<Inleft>(this->v());
-      return Sumor<A>(Inleft{a0});
-    } else {
-      return Sumor<A>(Inright{});
-    }
-  }
-
-  // CREATORS
   template <typename _U> explicit Sumor(const Sumor<_U> &_other) {
     if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
       const auto &[a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
-      this->v_ = Inleft{A(a0)};
+      this->v_ = Inleft{[&]() -> A {
+        if constexpr (std::is_same_v<_U, std::any>) {
+          if (a0.type() == typeid(A))
+            return std::any_cast<A>(a0);
+          if constexpr (requires {
+                          typename A::first_type;
+                          typename A::second_type;
+                        }) {
+            const auto &[_k, _v] =
+                std::any_cast<std::pair<std::any, std::any>>(a0);
+            return A{[&]() -> typename A::first_type {
+                       if constexpr (std::is_same_v<typename A::first_type,
+                                                    std::any>)
+                         return _k;
+                       else
+                         return std::any_cast<typename A::first_type>(_k);
+                     }(),
+                     [&]() -> typename A::second_type {
+                       if constexpr (std::is_same_v<typename A::second_type,
+                                                    std::any>)
+                         return _v;
+                       else
+                         return std::any_cast<typename A::second_type>(_v);
+                     }()};
+          }
+          return std::any_cast<A>(a0);
+        } else
+          return A(a0);
+      }()};
     } else {
       this->v_ = Inright{};
     }
@@ -692,35 +650,38 @@ struct RocqBug14174 {
 
       explicit sumor(Inright _v) : v_(_v) {}
 
-      sumor(const sumor<A> &_other) : v_(_other.v_) {}
-
-      sumor(sumor<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-      sumor<A> &operator=(const sumor<A> &_other) {
-        v_ = _other.v_;
-        return *this;
-      }
-
-      sumor<A> &operator=(sumor<A> &&_other) noexcept {
-        v_ = std::move(_other.v_);
-        return *this;
-      }
-
-      // ACCESSORS
-      sumor<A> clone() const {
-        if (std::holds_alternative<Inleft>(this->v())) {
-          const auto &[a0] = std::get<Inleft>(this->v());
-          return sumor<A>(Inleft{a0});
-        } else {
-          return sumor<A>(Inright{});
-        }
-      }
-
-      // CREATORS
       template <typename _U> explicit sumor(const sumor<_U> &_other) {
         if (std::holds_alternative<typename sumor<_U>::Inleft>(_other.v())) {
           const auto &[a0] = std::get<typename sumor<_U>::Inleft>(_other.v());
-          this->v_ = Inleft{A(a0)};
+          this->v_ = Inleft{[&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a0.type() == typeid(A))
+                return std::any_cast<A>(a0);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a0);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a0);
+            } else
+              return A(a0);
+          }()};
         } else {
           this->v_ = Inright{};
         }

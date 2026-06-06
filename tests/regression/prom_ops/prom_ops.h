@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PROM_OPS
 #define INCLUDED_PROM_OPS
 
+#include <any>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -12,7 +13,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -29,85 +30,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -162,11 +145,6 @@ struct PromOps {
   struct state1 {
     uint64_t prom_data1;
     bool prom_enable1;
-
-    // ACCESSORS
-    state1 clone() const {
-      return state1{this->prom_data1, this->prom_enable1};
-    }
   };
 
   static uint64_t prom_data_or_zero(const state1 &s);
@@ -178,12 +156,6 @@ struct PromOps {
     uint64_t prom_addr2;
     uint64_t prom_data2;
     bool prom_enable2;
-
-    // ACCESSORS
-    state2 clone() const {
-      return state2{this->acc2, this->prom_addr2, this->prom_data2,
-                    this->prom_enable2};
-    }
   };
 
   static uint64_t flagged_sum(const state2 &s);
@@ -206,16 +178,6 @@ struct PromOps {
     uint64_t prom_addr3;
     uint64_t prom_data3;
     bool prom_enable3;
-
-    // ACCESSORS
-    state3 clone() const {
-      return state3{
-          this->acc3,       this->regs3.clone(),  this->carry3,
-          this->pc3,        this->stack3.clone(), this->ram_sys3.clone(),
-          this->cur_bank3,  this->sel_ram3,       this->rom_ports3.clone(),
-          this->sel_rom3,   this->rom3.clone(),   this->test_pin3,
-          this->prom_addr3, this->prom_data3,     this->prom_enable3};
-    }
   };
 
   static state3 set_prom_params3(const state3 &s, uint64_t addr, uint64_t data,
@@ -286,12 +248,6 @@ struct PromOps {
     uint64_t prom_addr5;
     uint64_t prom_data5;
     bool prom_enable5;
-
-    // ACCESSORS
-    state5 clone() const {
-      return state5{this->acc5,       this->regs5.clone(), this->rom5.clone(),
-                    this->prom_addr5, this->prom_data5,    this->prom_enable5};
-    }
   };
 
   static state5 set_prom_params5(const state5 &s, uint64_t addr, uint64_t data,
@@ -323,12 +279,6 @@ struct PromOps {
     uint64_t prom_addr6;
     uint64_t prom_data6;
     bool prom_enable6;
-
-    // ACCESSORS
-    state6 clone() const {
-      return state6{this->rom6.clone(), this->prom_addr6, this->prom_data6,
-                    this->prom_enable6};
-    }
   };
 
   static state6 set_prom_params6(const state6 &s, uint64_t addr, uint64_t data,
@@ -352,12 +302,6 @@ struct PromOps {
     uint64_t prom_addr7;
     uint64_t prom_data7;
     bool prom_enable7;
-
-    // ACCESSORS
-    state7 clone() const {
-      return state7{this->regs7.clone(), this->ram_sys7.clone(),
-                    this->prom_addr7, this->prom_data7, this->prom_enable7};
-    }
   };
 
   static state7 set_prom_params7(const state7 &s, uint64_t addr, uint64_t data,
@@ -384,12 +328,6 @@ struct PromOps {
     uint64_t prom_addr8;
     uint64_t prom_data8;
     bool prom_enable8;
-
-    // ACCESSORS
-    state8 clone() const {
-      return state8{this->regs8.clone(), this->ram_sys8.clone(),
-                    this->prom_addr8, this->prom_data8, this->prom_enable8};
-    }
   };
 
   static state8 set_prom_params8(const state8 &s, uint64_t addr, uint64_t data,
@@ -413,12 +351,6 @@ struct PromOps {
     uint64_t prom_addr9;
     uint64_t prom_data9;
     bool prom_enable9;
-
-    // ACCESSORS
-    state9 clone() const {
-      return state9{this->rom9.clone(), this->prom_addr9, this->prom_data9,
-                    this->prom_enable9};
-    }
   };
 
   static state9 set_prom_params9(const state9 &s, uint64_t addr, uint64_t data,
@@ -448,21 +380,6 @@ struct PromOps {
     uint64_t prom_addr10;
     uint64_t prom_data10;
     bool prom_enable10;
-
-    // ACCESSORS
-    state10 clone() const {
-      return state10{this->regs10.clone(),
-                     this->rom10.clone(),
-                     this->acc10,
-                     this->pc10,
-                     this->stack10.clone(),
-                     this->cur_bank10,
-                     this->rom_ports10.clone(),
-                     this->sel_rom10,
-                     this->prom_addr10,
-                     this->prom_data10,
-                     this->prom_enable10};
-    }
   };
 
   static state10 set_prom_params10(const state10 &s, uint64_t addr,
@@ -575,12 +492,6 @@ struct PromOps {
     uint64_t prom_addr11;
     uint64_t prom_data11;
     bool prom_enable11;
-
-    // ACCESSORS
-    state11 clone() const {
-      return state11{this->rom11.clone(), this->prom_addr11, this->prom_data11,
-                     this->prom_enable11};
-    }
   };
 
   static state11 execute_wpm11(state11 s);

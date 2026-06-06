@@ -188,8 +188,42 @@ let escapes ?(refined = false) k t =
     This is identical to escape analysis — a parameter "escapes" when the caller
     needs to pass ownership rather than just lend a reference. *)
 
+(** Check if sub-bindings of a parameter used as scrutinee escape.
+    When param [k] appears only in scrutinee position but the extracted
+    pattern variables are consumed (returned, stored in constructors),
+    the parameter should be owned so sub-bindings can be moved. *)
+let sub_bindings_escape k body =
+  let rec check k = function
+    | MLcase (_, MLrel i, branches) when i = k ->
+      Array.exists (fun (ids, _, _, branch_body) ->
+        let n = List.length ids in
+        List.exists (fun j ->
+          escapes ~refined:true (j + 1) branch_body
+        ) (List.init n Fun.id)
+      ) branches
+    | MLcase (_, scrut, branches) ->
+      check k scrut
+      || Array.exists (fun (ids, _, _, body) ->
+           check (k + List.length ids) body
+         ) branches
+    | MLletin (_, _, rhs, cont) ->
+      check k rhs || check (k + 1) cont
+    | MLmagic a -> check k a
+    | _ -> false
+  in
+  check k body
+
 let infer_owned_params n_params body =
-  List.init n_params (fun i -> escapes ~refined:true (i + 1) body)
+  List.init n_params (fun i ->
+    let k = i + 1 in
+    escapes ~refined:true k body)
+
+(** Like [infer_owned_params] but returns only the [sub_bindings_escape]
+    contribution.  Callers can OR this into the base owned flags selectively
+    (e.g., only for value-typed parameters, not shared_ptr-backed lists). *)
+let infer_sub_bindings_escape_params n_params body =
+  List.init n_params (fun i ->
+    sub_bindings_escape (i + 1) body)
 
 (** {2 Utility functions} *)
 

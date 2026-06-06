@@ -15,9 +15,9 @@ struct VisitMatchBug {
     };
 
     struct Node {
-      std::unique_ptr<Tree> a0;
+      std::shared_ptr<Tree> a0;
       uint64_t a1;
-      std::unique_ptr<Tree> a2;
+      std::shared_ptr<Tree> a2;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -34,85 +34,32 @@ struct VisitMatchBug {
 
     explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-    Tree(const Tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Tree(Tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Tree &operator=(const Tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Tree &operator=(Tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Tree clone() const {
-      Tree _out{};
-
-      struct _CloneFrame {
-        const Tree *_src;
-        Tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Tree *_src = _frame._src;
-        Tree *_dst = _frame._dst;
-        if (std::holds_alternative<Leaf>(_src->v())) {
-          const auto &_alt = std::get<Leaf>(_src->v());
-          _dst->v_ = Leaf{_alt.a0};
-        } else {
-          const auto &_alt = std::get<Node>(_src->v());
-          _dst->v_ = Node{_alt.a0 ? std::make_unique<Tree>() : nullptr, _alt.a1,
-                          _alt.a2 ? std::make_unique<Tree>() : nullptr};
-          auto &_dst_alt = std::get<Node>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_unique<Tree>(std::move(a0)), a1,
-                       std::make_unique<Tree>(std::move(a2))});
+      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
+                       std::make_shared<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::unique_ptr<Tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<Tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -162,9 +109,6 @@ struct VisitMatchBug {
   struct State {
     uint64_t value;
     uint64_t data;
-
-    // ACCESSORS
-    State clone() const { return State{this->value, this->data}; }
   };
 
   static uint64_t match_extract_field(const State &s);

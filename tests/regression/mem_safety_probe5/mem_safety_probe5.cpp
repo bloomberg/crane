@@ -40,7 +40,7 @@ uint64_t MemSafetyProbe5::sum_left_vals(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = _f.a0.get_left_val(_result);
+      _result = std::move(_f.a0).get_left_val(std::move(_result));
     }
   }
   return _result;
@@ -50,42 +50,52 @@ uint64_t MemSafetyProbe5::sum_left_vals(
 /// Each partial app captures a tree with nested structure.
 MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>>
 MemSafetyProbe5::build_getters(
-    const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l) {
-  std::unique_ptr<MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>>>
-      _head{};
-  std::unique_ptr<MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>>>
-      *_write = &_head;
-  MemSafetyProbe5::mylist<MemSafetyProbe5::tree> _loop_l = l;
-  while (true) {
-    if (std::holds_alternative<
-            typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
-            _loop_l.v())) {
-      *_write = std::make_unique<
-          MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>>>(
-          mylist<std::function<uint64_t(uint64_t)>>::mynil());
-      break;
+    const MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    std::function<uint64_t(uint64_t)> _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified build_getters: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
+              l.v())) {
+        _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1] = std::get<
+            typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
+            l.v());
+        const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
+        _stack.emplace_back(
+            _Resume_Mycons{[=](uint64_t _x0) mutable -> uint64_t {
+              return a0.get_left_val(_x0);
+            }});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
-          _loop_l.v());
-      const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
-      auto _cell = std::make_unique<
-          MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>>>(
-          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
-              [=](uint64_t _x0) mutable -> uint64_t {
-                return a0.get_left_val(_x0);
-              },
-              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
-               (*_write)->v_mut())
-               .a1;
-      _loop_l = a1_value;
-      continue;
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s0), std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe5::apply_all(
@@ -126,7 +136,7 @@ uint64_t MemSafetyProbe5::apply_all(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = _f.a0(_result);
+      _result = std::move(_f.a0)(std::move(_result));
     }
   }
   return _result;
@@ -152,7 +162,7 @@ MemSafetyProbe5::collect_left_vals(
   MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, t});
+  _stack.emplace_back(_Enter{std::move(acc), std::move(t)});
   /// Loopified collect_left_vals: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -188,35 +198,50 @@ MemSafetyProbe5::collect_left_vals(
 }
 
 /// TEST 6: Stress test with very large list of trees.
-MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
-MemSafetyProbe5::make_tree_list(uint64_t n) {
-  std::unique_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _head{};
-  std::unique_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
-      &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write =
-          std::make_unique<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              mylist<MemSafetyProbe5::tree>::mynil());
-      break;
+MemSafetyProbe5::mylist<MemSafetyProbe5::tree> MemSafetyProbe5::make_tree_list(
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    std::decay_t<decltype(tree::node(
+        tree::node(tree::leaf(), std::declval<uint64_t &>(), tree::leaf()),
+        (std::declval<uint64_t &>() * UINT64_C(2)), tree::leaf()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  MemSafetyProbe5::mylist<MemSafetyProbe5::tree> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified make_tree_list: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = mylist<MemSafetyProbe5::tree>::mynil();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(
+            _Resume_n_{tree::node(tree::node(tree::leaf(), n, tree::leaf()),
+                                  (n * UINT64_C(2)), tree::leaf())});
+        _stack.emplace_back(_Enter{n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell =
-          std::make_unique<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              typename mylist<MemSafetyProbe5::tree>::Mycons(
-                  tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
-                             (_loop_n * UINT64_C(2)), tree::leaf()),
-                  nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename mylist<MemSafetyProbe5::tree>::Mycons>(
-                    (*_write)->v_mut())
-                    .a1;
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result =
+          mylist<MemSafetyProbe5::tree>::mycons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe5::sum_getters(
@@ -257,7 +282,7 @@ uint64_t MemSafetyProbe5::sum_getters(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.x + _result);
+      _result = (_f.x + std::move(_result));
     }
   }
   return _result;

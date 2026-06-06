@@ -58,37 +58,53 @@ LoopifyOptionMaybe::lookup(uint64_t key,
   }
 }
 
-List<uint64_t>
-LoopifyOptionMaybe::lookup_all(uint64_t key,
-                               const List<std::pair<uint64_t, uint64_t>> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<
-            typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-              _loop_l->v());
-      const uint64_t &k = a0.first;
-      const uint64_t &v = a0.second;
-      if (key == k) {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(v, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+List<uint64_t> LoopifyOptionMaybe::lookup_all(
+    uint64_t key,
+    const List<std::pair<uint64_t, uint64_t>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<std::pair<uint64_t, uint64_t>> *l;
+  };
+
+  /// _Resume1: saves [v], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t v;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified lookup_all: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<std::pair<uint64_t, uint64_t>> &l = *_f.l;
+      if (std::holds_alternative<
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] =
+            std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(l.v());
+        const uint64_t &k = a0.first;
+        const uint64_t &v = a0.second;
+        if (key == k) {
+          _stack.emplace_back(_Resume1{v});
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.v, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 std::optional<uint64_t> LoopifyOptionMaybe::safe_head(const List<uint64_t> &l) {
@@ -110,34 +126,51 @@ LoopifyOptionMaybe::safe_tail(const List<uint64_t> &l) {
   }
 }
 
-List<uint64_t>
-LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<std::optional<uint64_t>> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<std::optional<uint64_t>>::Nil>(
-            _loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::optional<uint64_t>>::Cons>(_loop_l->v());
-      if (a0.has_value()) {
-        const uint64_t &x = *a0;
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(x, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+List<uint64_t> LoopifyOptionMaybe::catMaybes(
+    const List<std::optional<uint64_t>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<std::optional<uint64_t>> *l;
+  };
+
+  /// _Resume_x: saves [x], resumes after recursive call with _result.
+  struct _Resume_x {
+    uint64_t x;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_x>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified catMaybes: _Enter -> _Resume_x.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<std::optional<uint64_t>> &l = *_f.l;
+      if (std::holds_alternative<typename List<std::optional<uint64_t>>::Nil>(
+              l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] =
+            std::get<typename List<std::optional<uint64_t>>::Cons>(l.v());
+        if (a0.has_value()) {
+          const uint64_t &x = *a0;
+          _stack.emplace_back(_Resume_x{x});
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume_x>(_frame));
+      _result = List<uint64_t>::cons(_f.x, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 std::optional<uint64_t>

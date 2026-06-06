@@ -10,7 +10,7 @@
 
    MiniML (miniml.ml) handles type erasure, signature computation, and ML-level
    optimizations on a language-agnostic functional AST. MiniCpp (this file)
-   captures C++-specific idioms: shared_ptr/unique_ptr memory management,
+   captures C++-specific idioms: shared_ptr memory management,
    std::variant, templates, concepts, namespaces, structs with visibility, move
    semantics, enum classes, and constructors.
 
@@ -108,7 +108,6 @@ type cpp_type =
   | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
-  | Tunique_ptr of cpp_type  (** std::unique_ptr<T> for unique ownership *)
   | Tvoid  (** void type *)
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
@@ -153,6 +152,9 @@ and cpp_stmt =
           optimization) *)
   | Sif_then of cpp_expr * cpp_stmt list
       (** Conditional without an else branch *)
+  | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
+      (** C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
+          The declaration doubles as the condition (pointer truthiness). *)
   | Sraw of string  (** Raw C++ code printed verbatim *)
   | Scomment of string  (** Documentation comment, printed as [/// text] *)
   | Sstruct_def of Id.t * (Id.t * cpp_type) list
@@ -280,9 +282,6 @@ and cpp_expr =
   | CPPnew of cpp_type * cpp_expr list  (** Heap allocation: new Type(args) *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr
       (** Direct std::shared_ptr<T>(expr) construction *)
-  | CPPunique_ptr_ctor of cpp_type * cpp_expr
-      (** Direct std::unique_ptr<T>(expr) construction *)
-  | CPPmk_unique of cpp_type  (** std::make_unique<T> factory function *)
   | CPPthis  (** this pointer in method context *)
   | CPPshared_from_this of cpp_type
       (** std::const_pointer_cast<T>(shared_from_this()) *)
@@ -313,6 +312,8 @@ and cpp_expr =
   | CPPraw of string  (** Raw C++ expression code *)
   | CPPbinop of string * cpp_expr * cpp_expr
       (** Binary operator for reuse optimization conditions *)
+  | CPPpair of cpp_expr * cpp_expr
+      (** Loopify-internal pair; never reaches the printer *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
       (** Ternary conditional: cond ? then_expr : else_expr *)
   | CPPbool of bool  (** Boolean literal: true/false *)
@@ -321,6 +322,9 @@ and cpp_expr =
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
       (** std::any_cast<T>(expr) — recovers typed value from std::any *)
+  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
+      (** std::get_if<T>(&variant) — pointer-returning variant accessor.
+          Uses [(sn()).get_if] for BDE compatibility. *)
 
 (** Alias for constraint expressions in requires clauses. *)
 and cpp_constraint = cpp_expr
@@ -363,7 +367,6 @@ and cpp_field =
       * cpp_stmt list
       (** Template converting constructor: template params, explicit flag,
           constructor params, body statements *)
-  | Fraw of string  (** Raw C++ field declaration *)
 
 (** Method descriptor record. *)
 and method_field = {
@@ -527,11 +530,8 @@ type cpp_decl =
       ds_needs_shared_from_this : bool;
           (** True if inherits enable_shared_from_this *)
     }
-  | Dstruct_decl of GlobRef.t  (** Forward struct declaration *)
-  | Dusing of GlobRef.t * cpp_type  (** Type alias: using name = type *)
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
       (** Global variable definition with initializer *)
-  | Ddecl of GlobRef.t * cpp_type  (** Global variable declaration *)
   | Dconcept of GlobRef.t * cpp_expr
       (** Concept definition (template params from outer Dtemplate) *)
   | Dstatic_assert of cpp_expr * string option

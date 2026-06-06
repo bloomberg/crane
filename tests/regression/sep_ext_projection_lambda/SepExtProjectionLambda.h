@@ -17,9 +17,6 @@ template <Sig S> struct Worker {
   struct item {
     uint64_t label;
     typename S::A payload;
-
-    // ACCESSORS
-    item clone() const { return item{this->label, this->payload}; }
   };
 
   static uint64_t get_label(const item &x) { return x.label; }

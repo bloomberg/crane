@@ -23,13 +23,13 @@ struct MutualRecursion {
 
     struct BinOp {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
-      std::unique_ptr<expr> a2;
+      std::shared_ptr<expr> a1;
+      std::shared_ptr<expr> a2;
     };
 
     struct UnOp {
       uint64_t a0;
-      std::unique_ptr<expr> a1;
+      std::shared_ptr<expr> a1;
     };
 
     using variant_t = std::variant<Val, BinOp, UnOp>;
@@ -48,104 +48,41 @@ struct MutualRecursion {
 
     explicit expr(UnOp _v) : v_(std::move(_v)) {}
 
-    expr(const expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    expr(expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    expr &operator=(const expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    expr &operator=(expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    expr clone() const {
-      expr _out{};
-
-      struct _CloneFrame {
-        const expr *_src;
-        expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const expr *_src = _frame._src;
-        expr *_dst = _frame._dst;
-        if (std::holds_alternative<Val>(_src->v())) {
-          const auto &_alt = std::get<Val>(_src->v());
-          _dst->v_ = Val{_alt.a0};
-        } else if (std::holds_alternative<BinOp>(_src->v())) {
-          const auto &_alt = std::get<BinOp>(_src->v());
-          _dst->v_ =
-              BinOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr,
-                    _alt.a2 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<BinOp>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        } else {
-          const auto &_alt = std::get<UnOp>(_src->v());
-          _dst->v_ =
-              UnOp{_alt.a0, _alt.a1 ? std::make_unique<expr>() : nullptr};
-          auto &_dst_alt = std::get<UnOp>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static expr val(uint64_t a0) { return expr(Val{a0}); }
 
     static expr binop(uint64_t a0, expr a1, expr a2) {
-      return expr(BinOp{a0, std::make_unique<expr>(std::move(a1)),
-                        std::make_unique<expr>(std::move(a2))});
+      return expr(BinOp{a0, std::make_shared<expr>(std::move(a1)),
+                        std::make_shared<expr>(std::move(a2))});
     }
 
     static expr unop(uint64_t a0, expr a1) {
-      return expr(UnOp{a0, std::make_unique<expr>(std::move(a1))});
+      return expr(UnOp{a0, std::make_shared<expr>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::unique_ptr<expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](expr &_node) {
-        if (std::holds_alternative<BinOp>(_node.v_)) {
-          auto &_alt = std::get<BinOp>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<BinOp>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
-        if (std::holds_alternative<UnOp>(_node.v_)) {
-          auto &_alt = std::get<UnOp>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+        if (auto *_alt = std::get_if<UnOp>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

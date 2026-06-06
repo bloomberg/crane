@@ -47,10 +47,11 @@ LoopifyPairs::unzip(
       auto _f = std::move(std::get<_Cont_x>(_frame));
       uint64_t x = _f.x;
       uint64_t y = _f.y;
-      const LoopifyPairs::list<uint64_t> &xs = _result.first;
-      const LoopifyPairs::list<uint64_t> &ys = _result.second;
-      _result = std::make_pair(list<uint64_t>::cons(x, xs),
-                               list<uint64_t>::cons(y, ys));
+      auto _cs = std::move(_result);
+      LoopifyPairs::list<uint64_t> xs = std::move(_cs.first);
+      LoopifyPairs::list<uint64_t> ys = std::move(_cs.second);
+      _result = std::make_pair(list<uint64_t>::cons(x, std::move(xs)),
+                               list<uint64_t>::cons(y, std::move(ys)));
     }
   }
   return _result;
@@ -105,21 +106,26 @@ LoopifyPairs::partition3(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t pivot = _f.pivot;
-      const LoopifyPairs::list<uint64_t> &lt = _result.first;
-      const std::pair<LoopifyPairs::list<uint64_t>,
-                      LoopifyPairs::list<uint64_t>> &p = _result.second;
-      const LoopifyPairs::list<uint64_t> &eq = p.first;
-      const LoopifyPairs::list<uint64_t> &gt = p.second;
+      auto _cs = std::move(_result);
+      LoopifyPairs::list<uint64_t> lt = std::move(_cs.first);
+      std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>> p =
+          std::move(_cs.second);
+      LoopifyPairs::list<uint64_t> eq = std::move(p.first);
+      LoopifyPairs::list<uint64_t> gt = std::move(p.second);
       if (a0 < pivot) {
-        _result = std::make_pair(list<uint64_t>::cons(a0, lt),
-                                 std::make_pair(eq, gt));
+        _result = std::make_pair(list<uint64_t>::cons(a0, std::move(lt)),
+                                 std::make_pair(std::move(eq), std::move(gt)));
       } else {
         if (a0 == pivot) {
           _result = std::make_pair(
-              lt, std::make_pair(list<uint64_t>::cons(a0, eq), gt));
+              std::move(lt),
+              std::make_pair(list<uint64_t>::cons(a0, std::move(eq)),
+                             std::move(gt)));
         } else {
           _result = std::make_pair(
-              lt, std::make_pair(eq, list<uint64_t>::cons(a0, gt)));
+              std::move(lt),
+              std::make_pair(std::move(eq),
+                             list<uint64_t>::cons(a0, std::move(gt))));
         }
       }
     }
@@ -171,8 +177,9 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::min_max(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &mn = _result.first;
-      const uint64_t &mx = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t mn = std::move(_cs.first);
+      uint64_t mx = std::move(_cs.second);
       _result = std::make_pair((a0 <= mn ? a0 : mn), (mx <= a0 ? a0 : mx));
     }
   }
@@ -217,8 +224,9 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::sum_and_count(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &s = _result.first;
-      const uint64_t &c = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t s = std::move(_cs.first);
+      uint64_t c = std::move(_cs.second);
       _result = std::make_pair((a0 + s), (c + 1));
     }
   }
@@ -264,10 +272,11 @@ std::pair<uint64_t, std::pair<uint64_t, uint64_t>> LoopifyPairs::sum_prod_count(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      const uint64_t &s = _result.first;
-      const std::pair<uint64_t, uint64_t> &p0 = _result.second;
-      const uint64_t &p = p0.first;
-      const uint64_t &c = p0.second;
+      auto _cs = std::move(_result);
+      uint64_t s = std::move(_cs.first);
+      std::pair<uint64_t, uint64_t> p0 = std::move(_cs.second);
+      uint64_t p = std::move(p0.first);
+      uint64_t c = std::move(p0.second);
       _result = std::make_pair((a0 + s), std::make_pair((a0 * p), (c + 1)));
     }
   }
@@ -276,71 +285,102 @@ std::pair<uint64_t, std::pair<uint64_t, uint64_t>> LoopifyPairs::sum_prod_count(
 
 /// lookup_all key l finds all values associated with key.
 LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
-    uint64_t key, const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l) {
-  std::unique_ptr<LoopifyPairs::list<uint64_t>> _head{};
-  std::unique_ptr<LoopifyPairs::list<uint64_t>> *_write = &_head;
-  const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<
-            typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
-            _loop_l->v())) {
-      *_write =
-          std::make_unique<LoopifyPairs::list<uint64_t>>(list<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] = std::get<
-          typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons>(
-          _loop_l->v());
-      const uint64_t &k = a0.first;
-      const uint64_t &v = a0.second;
-      if (k == key) {
-        auto _cell = std::make_unique<LoopifyPairs::list<uint64_t>>(
-            typename list<uint64_t>::Cons(v, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+    uint64_t key,
+    const LoopifyPairs::list<std::pair<uint64_t, uint64_t>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *l;
+  };
+
+  /// _Resume1: saves [v], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t v;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  LoopifyPairs::list<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified lookup_all: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l = *_f.l;
+      if (std::holds_alternative<
+              typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
+              l.v())) {
+        _result = list<uint64_t>::nil();
       } else {
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<
+            typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons>(
+            l.v());
+        const uint64_t &k = a0.first;
+        const uint64_t &v = a0.second;
+        if (k == key) {
+          _stack.emplace_back(_Resume1{v});
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = list<uint64_t>::cons(_f.v, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// swap_pairs l swaps elements in each pair.
 LoopifyPairs::list<std::pair<uint64_t, uint64_t>> LoopifyPairs::swap_pairs(
-    const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l) {
-  std::unique_ptr<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>> *_write =
-      &_head;
-  const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<
-            typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
-            _loop_l->v())) {
-      *_write =
-          std::make_unique<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
-              list<std::pair<uint64_t, uint64_t>>::nil());
-      break;
+    const LoopifyPairs::list<std::pair<uint64_t, uint64_t>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> *l;
+  };
+
+  /// _Resume_a: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_a {
+    std::decay_t<decltype(std::make_pair(std::declval<uint64_t &>(),
+                                         std::declval<uint64_t &>()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_a>;
+  LoopifyPairs::list<std::pair<uint64_t, uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified swap_pairs: _Enter -> _Resume_a.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l = *_f.l;
+      if (std::holds_alternative<
+              typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
+              l.v())) {
+        _result = list<std::pair<uint64_t, uint64_t>>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<
+            typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons>(
+            l.v());
+        const uint64_t &a = a0.first;
+        const uint64_t &b = a0.second;
+        _stack.emplace_back(_Resume_a{std::make_pair(b, a)});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] = std::get<
-          typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Cons>(
-          _loop_l->v());
-      const uint64_t &a = a0.first;
-      const uint64_t &b = a0.second;
-      auto _cell =
-          std::make_unique<LoopifyPairs::list<std::pair<uint64_t, uint64_t>>>(
-              typename list<std::pair<uint64_t, uint64_t>>::Cons(
-                  std::make_pair(b, a), nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename list<std::pair<uint64_t, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
-                    .l;
-      _loop_l = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_a>(_frame));
+      _result =
+          list<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }

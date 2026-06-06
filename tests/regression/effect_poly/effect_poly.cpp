@@ -17,9 +17,12 @@ bool EffectPoly::test_lift_bool() {
   return lift_pure<bool>(true);
 } /// 3. Monadic when / guard
 
-void EffectPoly::when_(bool b, std::monostate) {
+void EffectPoly::when_(bool b, std::monostate action) {
   if (b) {
-    return;
+    {
+      std::move(action);
+      return;
+    }
   } else {
     return;
   }
@@ -33,11 +36,14 @@ void EffectPoly::test_when() {
   return;
 } /// 4. Monadic unless
 
-void EffectPoly::unless(bool b, std::monostate) {
+void EffectPoly::unless(bool b, std::monostate action) {
   if (b) {
     return;
   } else {
-    return;
+    {
+      std::move(action);
+      return;
+    }
   }
 }
 
@@ -106,6 +112,6 @@ int64_t EffectPoly::chain_types() {
   std::cout << "enter a number:"s << '\n';
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>(std::move(line).length());
   return len;
 }

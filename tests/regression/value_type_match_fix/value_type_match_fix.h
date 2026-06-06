@@ -76,6 +76,7 @@ struct ValueTypeMatchFix {
   /// Direct capture of pattern fields (no intermediate let binding).
   static std::optional<std::function<uint64_t(uint64_t)>>
   make_field_adder(const triple &t);
+
   /// test3: MkTriple 42 0 0 -> a=42, go(3) = 42+3 = 45.
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs = make_field_adder(

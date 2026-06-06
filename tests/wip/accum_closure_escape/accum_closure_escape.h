@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ACCUM_CLOSURE_ESCAPE
 #define INCLUDED_ACCUM_CLOSURE_ESCAPE
 
+#include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -23,7 +24,7 @@ struct AccumClosureEscape {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -40,61 +41,44 @@ struct AccumClosureEscape {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist<A> &operator=(const mylist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist<A> &operator=(mylist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist<A> clone() const {
-      mylist<A> _out{};
-
-      struct _CloneFrame {
-        const mylist<A> *_src;
-        mylist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist<A> *_src = _frame._src;
-        mylist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->v_ = Mynil{};
-        } else {
-          const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
         this->v_ = Mynil{};
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -102,27 +86,25 @@ struct AccumClosureEscape {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist<A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.v_)) {
-          auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Mycons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -170,9 +152,9 @@ struct AccumClosureEscape {
     struct TLeaf {};
 
     struct TNode {
-      std::unique_ptr<tree> a0;
+      std::shared_ptr<tree> a0;
       uint64_t a1;
-      std::unique_ptr<tree> a2;
+      std::shared_ptr<tree> a2;
     };
 
     using variant_t = std::variant<TLeaf, TNode>;
@@ -189,85 +171,32 @@ struct AccumClosureEscape {
 
     explicit tree(TNode _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      tree _out{};
-
-      struct _CloneFrame {
-        const tree *_src;
-        tree *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const tree *_src = _frame._src;
-        tree *_dst = _frame._dst;
-        if (std::holds_alternative<TLeaf>(_src->v())) {
-          _dst->v_ = TLeaf{};
-        } else {
-          const auto &_alt = std::get<TNode>(_src->v());
-          _dst->v_ =
-              TNode{_alt.a0 ? std::make_unique<tree>() : nullptr, _alt.a1,
-                    _alt.a2 ? std::make_unique<tree>() : nullptr};
-          auto &_dst_alt = std::get<TNode>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-          if (_alt.a2) {
-            _stack.push_back({_alt.a2.get(), _dst_alt.a2.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static tree tleaf() { return tree(TLeaf{}); }
 
     static tree tnode(tree a0, uint64_t a1, tree a2) {
-      return tree(TNode{std::make_unique<tree>(std::move(a0)), a1,
-                        std::make_unique<tree>(std::move(a2))});
+      return tree(TNode{std::make_shared<tree>(std::move(a0)), a1,
+                        std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<TNode>(_node.v_)) {
-          auto &_alt = std::get<TNode>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<TNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
-          if (_alt.a2) {
-            _stack.push_back(std::move(_alt.a2));
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

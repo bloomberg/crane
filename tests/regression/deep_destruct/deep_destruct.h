@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_DESTRUCT
 #define INCLUDED_DEEP_DESTRUCT
 
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -14,7 +15,7 @@ struct DeepDestruct {
 
     struct Mycons {
       A a0;
-      std::unique_ptr<mylist<A>> a1;
+      std::shared_ptr<mylist<A>> a1;
     };
 
     using variant_t = std::variant<Mynil, Mycons>;
@@ -31,61 +32,44 @@ struct DeepDestruct {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    mylist(const mylist<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-    mylist(mylist<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    mylist<A> &operator=(const mylist<A> &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    mylist<A> &operator=(mylist<A> &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    mylist<A> clone() const {
-      mylist<A> _out{};
-
-      struct _CloneFrame {
-        const mylist<A> *_src;
-        mylist<A> *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const mylist<A> *_src = _frame._src;
-        mylist<A> *_dst = _frame._dst;
-        if (std::holds_alternative<Mynil>(_src->v())) {
-          _dst->v_ = Mynil{};
-        } else {
-          const auto &_alt = std::get<Mycons>(_src->v());
-          _dst->v_ = Mycons{_alt.a0,
-                            _alt.a1 ? std::make_unique<mylist<A>>() : nullptr};
-          auto &_dst_alt = std::get<Mycons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     template <typename _U> explicit mylist(const mylist<_U> &_other) {
       if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
         this->v_ = Mynil{};
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ =
-            Mycons{A(a0), a1 ? std::make_unique<mylist<A>>(*a1) : nullptr};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
       }
     }
 
@@ -93,27 +77,25 @@ struct DeepDestruct {
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
       return mylist(
-          Mycons{std::move(a0), std::make_unique<mylist<A>>(std::move(a1))});
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::unique_ptr<mylist<A>>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](mylist<A> &_node) {
-        if (std::holds_alternative<Mycons>(_node.v_)) {
-          auto &_alt = std::get<Mycons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Mycons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }
@@ -164,7 +146,8 @@ struct DeepDestruct {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;
@@ -210,7 +193,8 @@ struct DeepDestruct {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = _f.f0(_f.a0, _f.a1, _result);
+        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
+                                   std::move(_result));
       }
     }
     return _result;

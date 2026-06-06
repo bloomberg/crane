@@ -88,8 +88,8 @@ CraneMoveHunt::state effect_frame(const CraneMoveHunt::state &s0) {
 CraneMoveHunt::state effect_pair_frame(const CraneMoveHunt::state &s0) {
   std::pair<bool, CraneMoveHunt::state> handled =
       CraneMoveHunt::handle_state(s0);
-  const bool &quit = handled.first;
-  const CraneMoveHunt::state &s1 = handled.second;
+  bool quit = std::move(handled.first);
+  CraneMoveHunt::state s1 = std::move(handled.second);
   tick(s1);
   tick(s1);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
@@ -105,10 +105,10 @@ CraneMoveHunt::state effect_pair_frame(const CraneMoveHunt::state &s0) {
 CraneMoveHunt::state pure_pair_frame(const CraneMoveHunt::state &s0) {
   std::pair<bool, CraneMoveHunt::state> handled =
       CraneMoveHunt::handle_state(s0);
-  const bool &quit = handled.first;
-  const CraneMoveHunt::state &s1 = handled.second;
+  bool quit = std::move(handled.first);
+  CraneMoveHunt::state s1 = std::move(handled.second);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
-  CraneMoveHunt::state s3 = CraneMoveHunt::render_state(s1);
+  CraneMoveHunt::state s3 = CraneMoveHunt::render_state(std::move(s1));
   if (quit) {
     return s2;
   } else {
@@ -127,8 +127,8 @@ CraneMoveHunt::state exported_effect_pair_frame() {
 CraneMoveHunt::state axiom_pair_frame(const CraneMoveHunt::state &s0) {
   std::pair<bool, CraneMoveHunt::state> handled =
       CraneMoveHunt::handle_state(s0);
-  const bool &quit = handled.first;
-  const CraneMoveHunt::state &s1 = handled.second;
+  bool quit = std::move(handled.first);
+  CraneMoveHunt::state s1 = std::move(handled.second);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
   if (quit) {
     return s2;
@@ -140,8 +140,8 @@ CraneMoveHunt::state axiom_pair_frame(const CraneMoveHunt::state &s0) {
 CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0) {
   std::pair<bool, CraneMoveHunt::state> handled =
       CraneMoveHunt::handle_state(s0);
-  const bool &quit = handled.first;
-  const CraneMoveHunt::state &s1 = handled.second;
+  bool quit = std::move(handled.first);
+  CraneMoveHunt::state s1 = std::move(handled.second);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
   uint64_t n = toy_tick_nat(s1);
   if ((quit || n == UINT64_C(0))) {

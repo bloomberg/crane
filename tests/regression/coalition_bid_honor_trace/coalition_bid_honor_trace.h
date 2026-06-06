@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COALITION_BID_HONOR_TRACE
 #define INCLUDED_COALITION_BID_HONOR_TRACE
 
+#include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -14,7 +15,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::unique_ptr<List<A>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -31,85 +32,67 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  List(const List<A> &_other) : v_(std::move(_other.clone().v_)) {}
-
-  List(List<A> &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  List<A> &operator=(const List<A> &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  List<A> &operator=(List<A> &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  List<A> clone() const {
-    List<A> _out{};
-
-    struct _CloneFrame {
-      const List<A> *_src;
-      List<A> *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const List<A> *_src = _frame._src;
-      List<A> *_dst = _frame._dst;
-      if (std::holds_alternative<Nil>(_src->v())) {
-        _dst->v_ = Nil{};
-      } else {
-        const auto &_alt = std::get<Cons>(_src->v());
-        _dst->v_ = Cons{_alt.a, _alt.l ? std::make_unique<List<A>>() : nullptr};
-        auto &_dst_alt = std::get<Cons>(_dst->v_);
-        if (_alt.l) {
-          _stack.push_back({_alt.l.get(), _dst_alt.l.get()});
-        }
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   template <typename _U> explicit List(const List<_U> &_other) {
     if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{A(a), l ? std::make_unique<List<A>>(*l) : nullptr};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_unique<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::unique_ptr<List<A>>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](List<A> &_node) {
-      if (std::holds_alternative<Cons>(_node.v_)) {
-        auto &_alt = std::get<Cons>(_node.v_);
-        if (_alt.l) {
-          _stack.push_back(std::move(_alt.l));
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -185,11 +168,11 @@ public:
 struct Positive {
   // TYPES
   struct XI {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XO {
-    std::unique_ptr<Positive> a0;
+    std::shared_ptr<Positive> a0;
   };
 
   struct XH {};
@@ -210,93 +193,37 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  Positive(const Positive &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Positive(Positive &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Positive &operator=(const Positive &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Positive &operator=(Positive &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Positive clone() const {
-    Positive _out{};
-
-    struct _CloneFrame {
-      const Positive *_src;
-      Positive *_dst;
-    };
-
-    std::vector<_CloneFrame> _stack{};
-    _stack.reserve(8);
-    _stack.push_back({this, &_out});
-    while (!_stack.empty()) {
-      auto _frame = _stack.back();
-      _stack.pop_back();
-      const Positive *_src = _frame._src;
-      Positive *_dst = _frame._dst;
-      if (std::holds_alternative<XI>(_src->v())) {
-        const auto &_alt = std::get<XI>(_src->v());
-        _dst->v_ = XI{_alt.a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XI>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      } else if (std::holds_alternative<XO>(_src->v())) {
-        const auto &_alt = std::get<XO>(_src->v());
-        _dst->v_ = XO{_alt.a0 ? std::make_unique<Positive>() : nullptr};
-        auto &_dst_alt = std::get<XO>(_dst->v_);
-        if (_alt.a0) {
-          _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-        }
-      } else {
-        _dst->v_ = XH{};
-      }
-    }
-    return _out;
-  }
-
-  // CREATORS
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_unique<Positive>(std::move(a0))});
+    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xh() { return Positive(XH{}); }
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::unique_ptr<Positive>> _stack{};
-    _stack.reserve(8);
-    auto _drain = [&](Positive &_node) {
-      if (std::holds_alternative<XI>(_node.v_)) {
-        auto &_alt = std::get<XI>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+    std::vector<std::shared_ptr<Positive>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<XI>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
-      if (std::holds_alternative<XO>(_node.v_)) {
-        auto &_alt = std::get<XO>(_node.v_);
-        if (_alt.a0) {
-          _stack.push_back(std::move(_alt.a0));
+      if (auto *_alt = std::get_if<XO>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
         }
       }
     };
-    _drain(*this);
+    _drain(v_mut());
     while (!_stack.empty()) {
-      auto _node = std::move(_stack.back());
+      auto _cur = std::move(_stack.back());
       _stack.pop_back();
-      if (_node) {
-        _drain(*_node);
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
       }
     }
   }
@@ -335,34 +262,6 @@ public:
 
   explicit Z(Zneg _v) : v_(std::move(_v)) {}
 
-  Z(const Z &_other) : v_(std::move(_other.clone().v_)) {}
-
-  Z(Z &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-  Z &operator=(const Z &_other) {
-    v_ = std::move(_other.clone().v_);
-    return *this;
-  }
-
-  Z &operator=(Z &&_other) noexcept {
-    v_ = std::move(_other.v_);
-    return *this;
-  }
-
-  // ACCESSORS
-  Z clone() const {
-    if (std::holds_alternative<Z0>(this->v())) {
-      return Z(Z0{});
-    } else if (std::holds_alternative<Zpos>(this->v())) {
-      const auto &[a0] = std::get<Zpos>(this->v());
-      return Z(Zpos{a0.clone()});
-    } else {
-      const auto &[a0] = std::get<Zneg>(this->v());
-      return Z(Zneg{a0.clone()});
-    }
-  }
-
-  // CREATORS
   static Z z0() { return Z(Z0{}); }
 
   static Z zpos(Positive a0) { return Z(Zpos{std::move(a0)}); }
@@ -477,12 +376,6 @@ struct CoalitionBidHonorTraceCase {
     Clan cmd_clan;
     Rank cmd_rank;
     bool cmd_bloodnamed;
-
-    // ACCESSORS
-    Commander clone() const {
-      return Commander{this->cmd_id, this->cmd_clan, this->cmd_rank,
-                       this->cmd_bloodnamed};
-    }
   };
 
   static bool may_issue_batchall(const Commander &c);
@@ -569,13 +462,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t unit_piloting;
     bool unit_is_elite;
     bool unit_is_clan;
-
-    // ACCESSORS
-    Unit clone() const {
-      return Unit{this->unit_id,       this->unit_class,   this->unit_weight,
-                  this->unit_tonnage,  this->unit_gunnery, this->unit_piloting,
-                  this->unit_is_elite, this->unit_is_clan};
-    }
   };
 
   static uint64_t unit_skill(const Unit &u);
@@ -593,13 +479,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t fm_clan_count;
     uint64_t fm_total_bv;
     uint64_t fm_total_ecr;
-
-    // ACCESSORS
-    ForceMetrics clone() const {
-      return ForceMetrics{this->fm_count,       this->fm_tonnage,
-                          this->fm_elite_count, this->fm_clan_count,
-                          this->fm_total_bv,    this->fm_total_ecr};
-    }
   };
 
   static inline const ForceMetrics empty_metrics =
@@ -642,12 +521,6 @@ struct CoalitionBidHonorTraceCase {
     Clan cm_clan;
     Commander cm_commander;
     Force cm_force;
-
-    // ACCESSORS
-    CoalitionMember clone() const {
-      return CoalitionMember{this->cm_clan, this->cm_commander.clone(),
-                             this->cm_force};
-    }
   };
 
   using Coalition = List<CoalitionMember>;
@@ -661,12 +534,6 @@ struct CoalitionBidHonorTraceCase {
     uint64_t cmb_member_index;
     Force cmb_new_force;
     Side cmb_side;
-
-    // ACCESSORS
-    CoalitionMemberBid clone() const {
-      return CoalitionMemberBid{this->cmb_member_index, this->cmb_new_force,
-                                this->cmb_side};
-    }
   };
 
   static Coalition update_coalition_force(const List<CoalitionMember> &c,
@@ -676,12 +543,6 @@ struct CoalitionBidHonorTraceCase {
     Force bid_force;
     Side bid_side;
     Commander bid_commander;
-
-    // ACCESSORS
-    ForceBid clone() const {
-      return ForceBid{this->bid_force, this->bid_side,
-                      this->bid_commander.clone()};
-    }
   };
 
   static ForceMetrics bid_metrics(const ForceBid &b);
@@ -743,31 +604,6 @@ struct CoalitionBidHonorTraceCase {
 
     explicit Prize(PrizeEnclave _v) : v_(std::move(_v)) {}
 
-    Prize(const Prize &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Prize(Prize &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Prize &operator=(const Prize &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Prize &operator=(Prize &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Prize clone() const {
-      if (std::holds_alternative<PrizeHonor>(this->v())) {
-        return Prize(PrizeHonor{});
-      } else {
-        const auto &[enclave_id] = std::get<PrizeEnclave>(this->v());
-        return Prize(PrizeEnclave{enclave_id});
-      }
-    }
-
-    // CREATORS
     static Prize prizehonor() { return Prize(PrizeHonor{}); }
 
     static Prize prizeenclave(uint64_t enclave_id) {
@@ -830,33 +666,6 @@ struct CoalitionBidHonorTraceCase {
 
     explicit Location(LocEnclave _v) : v_(std::move(_v)) {}
 
-    Location(const Location &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Location(Location &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Location &operator=(const Location &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Location &operator=(Location &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Location clone() const {
-      if (std::holds_alternative<LocPlanetSurface>(this->v())) {
-        const auto &[world_id, region_id] =
-            std::get<LocPlanetSurface>(this->v());
-        return Location(LocPlanetSurface{world_id, region_id});
-      } else {
-        const auto &[enclave_id] = std::get<LocEnclave>(this->v());
-        return Location(LocEnclave{enclave_id});
-      }
-    }
-
-    // CREATORS
     static Location locplanetsurface(uint64_t world_id, uint64_t region_id) {
       return Location(LocPlanetSurface{world_id, region_id});
     }
@@ -907,11 +716,6 @@ struct CoalitionBidHonorTraceCase {
   struct BattleContext {
     bool ctx_hegira_allowed;
     bool ctx_circle_present;
-
-    // ACCESSORS
-    BattleContext clone() const {
-      return BattleContext{this->ctx_hegira_allowed, this->ctx_circle_present};
-    }
   };
 
   static inline const BattleContext standard_possession_context =
@@ -925,27 +729,12 @@ struct CoalitionBidHonorTraceCase {
     Location chal_location;
     TrialType chal_trial_type;
     BattleContext chal_context;
-
-    // ACCESSORS
-    BatchallChallenge clone() const {
-      return BatchallChallenge{
-          this->chal_challenger.clone(), this->chal_clan,
-          this->chal_prize.clone(),      this->chal_initial_force,
-          this->chal_location.clone(),   this->chal_trial_type,
-          this->chal_context.clone()};
-    }
   };
 
   struct BatchallResponse {
     Commander resp_defender;
     Clan resp_clan;
     Force resp_force;
-
-    // ACCESSORS
-    BatchallResponse clone() const {
-      return BatchallResponse{this->resp_defender.clone(), this->resp_clan,
-                              this->resp_force};
-    }
   };
 
   struct RefusalReason {
@@ -970,32 +759,6 @@ struct CoalitionBidHonorTraceCase {
 
     explicit RefusalReason(RefusalOther _v) : v_(std::move(_v)) {}
 
-    RefusalReason(const RefusalReason &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    RefusalReason(RefusalReason &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    RefusalReason &operator=(const RefusalReason &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    RefusalReason &operator=(RefusalReason &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    RefusalReason clone() const {
-      if (std::holds_alternative<RefusalInsufficientRank>(this->v())) {
-        return RefusalReason(RefusalInsufficientRank{});
-      } else {
-        const auto &[note] = std::get<RefusalOther>(this->v());
-        return RefusalReason(RefusalOther{note});
-      }
-    }
-
-    // CREATORS
     static RefusalReason refusalinsufficientrank() {
       return RefusalReason(RefusalInsufficientRank{});
     }
@@ -1103,54 +866,6 @@ struct CoalitionBidHonorTraceCase {
 
     explicit ProtocolAction(ActBreakBid _v) : v_(std::move(_v)) {}
 
-    ProtocolAction(const ProtocolAction &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    ProtocolAction(ProtocolAction &&_other) noexcept
-        : v_(std::move(_other.v_)) {}
-
-    ProtocolAction &operator=(const ProtocolAction &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    ProtocolAction &operator=(ProtocolAction &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    ProtocolAction clone() const {
-      if (std::holds_alternative<ActChallenge>(this->v())) {
-        const auto &[chal] = std::get<ActChallenge>(this->v());
-        return ProtocolAction(ActChallenge{chal.clone()});
-      } else if (std::holds_alternative<ActRespond>(this->v())) {
-        const auto &[resp] = std::get<ActRespond>(this->v());
-        return ProtocolAction(ActRespond{resp.clone()});
-      } else if (std::holds_alternative<ActRefuse>(this->v())) {
-        const auto &[reason] = std::get<ActRefuse>(this->v());
-        return ProtocolAction(ActRefuse{reason.clone()});
-      } else if (std::holds_alternative<ActBid>(this->v())) {
-        const auto &[bid] = std::get<ActBid>(this->v());
-        return ProtocolAction(ActBid{bid.clone()});
-      } else if (std::holds_alternative<ActCoalitionBid>(this->v())) {
-        const auto &[cbid] = std::get<ActCoalitionBid>(this->v());
-        return ProtocolAction(ActCoalitionBid{cbid.clone()});
-      } else if (std::holds_alternative<ActPass>(this->v())) {
-        const auto &[side] = std::get<ActPass>(this->v());
-        return ProtocolAction(ActPass{side});
-      } else if (std::holds_alternative<ActClose>(this->v())) {
-        return ProtocolAction(ActClose{});
-      } else if (std::holds_alternative<ActWithdraw>(this->v())) {
-        const auto &[side] = std::get<ActWithdraw>(this->v());
-        return ProtocolAction(ActWithdraw{side});
-      } else {
-        const auto &[side] = std::get<ActBreakBid>(this->v());
-        return ProtocolAction(ActBreakBid{side});
-      }
-    }
-
-    // CREATORS
     static ProtocolAction actchallenge(BatchallChallenge chal) {
       return ProtocolAction(ActChallenge{std::move(chal)});
     }
@@ -1420,56 +1135,6 @@ struct CoalitionBidHonorTraceCase {
 
     explicit BatchallPhase(PhaseAborted _v) : v_(std::move(_v)) {}
 
-    BatchallPhase(const BatchallPhase &_other)
-        : v_(std::move(_other.clone().v_)) {}
-
-    BatchallPhase(BatchallPhase &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    BatchallPhase &operator=(const BatchallPhase &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    BatchallPhase &operator=(BatchallPhase &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    BatchallPhase clone() const {
-      if (std::holds_alternative<PhaseIdle>(this->v())) {
-        return BatchallPhase(PhaseIdle{});
-      } else if (std::holds_alternative<PhaseChallenged>(this->v())) {
-        const auto &[challenge] = std::get<PhaseChallenged>(this->v());
-        return BatchallPhase(PhaseChallenged{challenge.clone()});
-      } else if (std::holds_alternative<PhaseResponded>(this->v())) {
-        const auto &[challenge, response] = std::get<PhaseResponded>(this->v());
-        return BatchallPhase(
-            PhaseResponded{challenge.clone(), response.clone()});
-      } else if (std::holds_alternative<PhaseBidding>(this->v())) {
-        const auto &[challenge, response, attacker_bid, defender_bid,
-                     attacker_coalition, defender_coalition, bid_history,
-                     ready] = std::get<PhaseBidding>(this->v());
-        return BatchallPhase(PhaseBidding{
-            challenge.clone(), response.clone(), attacker_bid.clone(),
-            defender_bid.clone(), attacker_coalition, defender_coalition,
-            bid_history.clone(), ready});
-      } else if (std::holds_alternative<PhaseAgreed>(this->v())) {
-        const auto &[challenge, response, final_attacker, final_defender] =
-            std::get<PhaseAgreed>(this->v());
-        return BatchallPhase(PhaseAgreed{challenge.clone(), response.clone(),
-                                         final_attacker.clone(),
-                                         final_defender.clone()});
-      } else if (std::holds_alternative<PhaseRefused>(this->v())) {
-        const auto &[challenge, reason] = std::get<PhaseRefused>(this->v());
-        return BatchallPhase(PhaseRefused{challenge.clone(), reason.clone()});
-      } else {
-        const auto &[reason] = std::get<PhaseAborted>(this->v());
-        return BatchallPhase(PhaseAborted{reason.clone()});
-      }
-    }
-
-    // CREATORS
     static BatchallPhase phaseidle() { return BatchallPhase(PhaseIdle{}); }
 
     static BatchallPhase phasechallenged(BatchallChallenge challenge) {
@@ -1769,11 +1434,6 @@ struct CoalitionBidHonorTraceCase {
   struct BatchallState {
     BatchallPhase bs_phase;
     HonorLedger bs_honor;
-
-    // ACCESSORS
-    BatchallState clone() const {
-      return BatchallState{this->bs_phase.clone(), this->bs_honor};
-    }
   };
 
   static inline const HonorLedger empty_ledger =

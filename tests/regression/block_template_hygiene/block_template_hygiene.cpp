@@ -94,7 +94,7 @@ std::string BlockTemplateHygiene::let_after_block() {
   std::getline(std::cin, first);
   std::string last;
   std::getline(std::cin, last);
-  std::string full = first + " "s + last;
+  std::string full = std::move(first) + " "s + std::move(last);
   return full;
 }
 

@@ -36,7 +36,7 @@ std::optional<std::string> EffectComplexArgs::round_trip(std::string prefix,
   std::string key = prefix + suffix;
   setenv(key.c_str(), value.c_str(), 1);
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(key.c_str());
+    auto *v = std::getenv(std::move(key).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }

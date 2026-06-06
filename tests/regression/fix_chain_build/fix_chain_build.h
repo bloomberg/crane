@@ -23,8 +23,8 @@ struct FixChainBuild {
   /// Pair first + step1(2) = 1 + 3 = 4.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs = build_chain(UINT64_C(1));
-    const uint64_t &base = _cs.first;
-    const std::function<uint64_t(uint64_t)> &f = _cs.second;
+    uint64_t base = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> f = std::move(_cs.second);
     return (base + f(UINT64_C(2)));
   }();
   /// test2: build_chain(2).
@@ -32,16 +32,16 @@ struct FixChainBuild {
   /// step2(0) = 2. Result: 2 + step2(0) = 2 + 2 = 4.
   static inline const uint64_t test2 = []() -> uint64_t {
     auto _cs = build_chain(UINT64_C(2));
-    const uint64_t &base = _cs.first;
-    const std::function<uint64_t(uint64_t)> &f = _cs.second;
+    uint64_t base = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> f = std::move(_cs.second);
     return (base + f(UINT64_C(0)));
   }();
   /// test3: build_chain(3). More nesting = more dangling frames.
   /// step3(0) = 3. Result: 3 + 3 = 6.
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs = build_chain(UINT64_C(3));
-    const uint64_t &base = _cs.first;
-    const std::function<uint64_t(uint64_t)> &f = _cs.second;
+    uint64_t base = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> f = std::move(_cs.second);
     return (base + f(UINT64_C(0)));
   }();
 };

@@ -12,12 +12,6 @@ struct OppositePropertyTransferTraceCase {
     std::function<uint64_t(uint64_t)> ps_Loop;
     std::function<uint64_t(uint64_t)> ps_eta;
     std::function<uint64_t(uint64_t)> ps_epsilon;
-
-    // ACCESSORS
-    PreStableCategory clone() const {
-      return PreStableCategory{this->ps_tag,  this->ps_shift, this->ps_Susp,
-                               this->ps_Loop, this->ps_eta,   this->ps_epsilon};
-    }
   };
 
   static PreStableCategory
@@ -26,41 +20,21 @@ struct OppositePropertyTransferTraceCase {
   struct LeftStableWitness {
     uint64_t lsw_seed;
     uint64_t lsw_value;
-
-    // ACCESSORS
-    LeftStableWitness clone() const {
-      return LeftStableWitness{this->lsw_seed, this->lsw_value};
-    }
   };
 
   struct RightStableWitness {
     uint64_t rsw_seed;
     uint64_t rsw_value;
-
-    // ACCESSORS
-    RightStableWitness clone() const {
-      return RightStableWitness{this->rsw_seed, this->rsw_value};
-    }
   };
 
   struct Triangle1Witness {
     uint64_t t1_seed;
     uint64_t t1_value;
-
-    // ACCESSORS
-    Triangle1Witness clone() const {
-      return Triangle1Witness{this->t1_seed, this->t1_value};
-    }
   };
 
   struct Triangle2Witness {
     uint64_t t2_seed;
     uint64_t t2_value;
-
-    // ACCESSORS
-    Triangle2Witness clone() const {
-      return Triangle2Witness{this->t2_seed, this->t2_value};
-    }
   };
 
   using is_left_semi_stable = LeftStableWitness;
@@ -74,22 +48,12 @@ struct OppositePropertyTransferTraceCase {
     uint64_t lp_seed;
     uint64_t lp_value;
     uint64_t lp_tag;
-
-    // ACCESSORS
-    LeftProperty clone() const {
-      return LeftProperty{this->lp_seed, this->lp_value, this->lp_tag};
-    }
   };
 
   struct RightProperty {
     uint64_t rp_seed;
     uint64_t rp_value;
     uint64_t rp_tag;
-
-    // ACCESSORS
-    RightProperty clone() const {
-      return RightProperty{this->rp_seed, this->rp_value, this->rp_tag};
-    }
   };
 
   static is_left_semi_stable
@@ -109,8 +73,8 @@ struct OppositePropertyTransferTraceCase {
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
     std::pair<std::function<T2(T1)>, std::function<T1(T2)>> e =
         h_dual(opposite_prestable_category(pS));
-    const std::function<T2(T1)> &q = e.first;
-    const std::function<T1(T2)> &_x = e.second;
+    std::function<T2(T1)> q = std::move(e.first);
+    std::function<T1(T2)> _x = std::move(e.second);
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
@@ -125,8 +89,10 @@ struct OppositePropertyTransferTraceCase {
           std::pair<std::function<Triangle2Witness(Triangle1Witness)>,
                     std::function<Triangle1Witness(Triangle2Witness)>>
               e = triangle_identity_duality(opposite_prestable_category(pS));
-          const std::function<Triangle2Witness(Triangle1Witness)> &_x = e.first;
-          const std::function<Triangle1Witness(Triangle2Witness)> &s = e.second;
+          std::function<Triangle2Witness(Triangle1Witness)> _x =
+              std::move(e.first);
+          std::function<Triangle1Witness(Triangle2Witness)> s =
+              std::move(e.second);
           return s(h_tri2);
         }());
   }

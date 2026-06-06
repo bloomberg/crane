@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe9::sum_fns(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;
@@ -65,7 +65,7 @@ MemSafetyProbe9::collect_subtree_sums(
   MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, &t});
+  _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_subtree_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -122,7 +122,7 @@ MemSafetyProbe9::collect_left_sums(
   MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{acc, &t});
+  _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_left_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());

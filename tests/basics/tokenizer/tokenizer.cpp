@@ -15,7 +15,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
     } else {
       if (fuel <= 0) {
         return std::make_pair(
-            std::make_optional<std::basic_string_view<char>>(s),
+            std::make_optional<std::basic_string_view<char>>(std::move(s)),
             std::string_view(nullptr, 0));
       } else {
         uint64_t fuel_ = fuel - 1;
@@ -31,10 +31,10 @@ Tokenizer::next_token(std::basic_string_view<char> input,
         } else {
           if (soft.contains(c)) {
             if (index == INT64_C(0)) {
-              return _self_aux(
-                  _self_aux, fuel_, INT64_C(0),
-                  s.substr(INT64_C(1), ((input.length() - INT64_C(1)) &
-                                        0x7FFFFFFFFFFFFFFFLL)));
+              return _self_aux(_self_aux, fuel_, INT64_C(0),
+                               std::move(s).substr(
+                                   INT64_C(1), ((input.length() - INT64_C(1)) &
+                                                0x7FFFFFFFFFFFFFFFLL)));
             } else {
               return std::make_pair(
                   std::make_optional<std::basic_string_view<char>>(
@@ -46,7 +46,8 @@ Tokenizer::next_token(std::basic_string_view<char> input,
             }
           } else {
             return _self_aux(_self_aux, fuel_,
-                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL), s);
+                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
+                             std::move(s));
           }
         }
       }
@@ -78,7 +79,7 @@ Tokenizer::list_tokens(std::basic_string_view<char> input,
       if (_cs.has_value()) {
         const std::basic_string_view<char> &t_ = *_cs;
         return List<std::basic_string_view<char>>::cons(
-            t_, _self_aux(_self_aux, fuel_, t.second));
+            t_, _self_aux(_self_aux, fuel_, std::move(t).second));
       } else {
         return List<std::basic_string_view<char>>::nil();
       }

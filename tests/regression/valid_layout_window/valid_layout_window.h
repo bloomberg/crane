@@ -5,9 +5,6 @@ struct ValidLayoutWindow {
   struct layout {
     uint64_t base_addr;
     uint64_t code_size;
-
-    // ACCESSORS
-    layout clone() const { return layout{this->base_addr, this->code_size}; }
   };
 
   static bool valid_layoutb(const layout &l);

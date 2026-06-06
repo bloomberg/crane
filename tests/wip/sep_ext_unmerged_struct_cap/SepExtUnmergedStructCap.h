@@ -18,7 +18,7 @@ struct Exprs {
     };
 
     struct Neg {
-      std::unique_ptr<Expr> a0;
+      std::shared_ptr<Expr> a0;
     };
 
     using variant_t = std::variant<Lit, Neg>;
@@ -35,77 +35,28 @@ struct Exprs {
 
     explicit Expr(Neg _v) : v_(std::move(_v)) {}
 
-    Expr(const Expr &_other) : v_(std::move(_other.clone().v_)) {}
-
-    Expr(Expr &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    Expr &operator=(const Expr &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    Expr &operator=(Expr &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    Expr clone() const {
-      Expr _out{};
-
-      struct _CloneFrame {
-        const Expr *_src;
-        Expr *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const Expr *_src = _frame._src;
-        Expr *_dst = _frame._dst;
-        if (std::holds_alternative<Lit>(_src->v())) {
-          const auto &_alt = std::get<Lit>(_src->v());
-          _dst->v_ = Lit{_alt.a0.clone()};
-        } else {
-          const auto &_alt = std::get<Neg>(_src->v());
-          _dst->v_ = Neg{_alt.a0 ? std::make_unique<Expr>() : nullptr};
-          auto &_dst_alt = std::get<Neg>(_dst->v_);
-          if (_alt.a0) {
-            _stack.push_back({_alt.a0.get(), _dst_alt.a0.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static Expr lit(Datatypes::Nat a0) { return Expr(Lit{std::move(a0)}); }
 
     static Expr neg(Expr a0) {
-      return Expr(Neg{std::make_unique<Expr>(std::move(a0))});
+      return Expr(Neg{std::make_shared<Expr>(std::move(a0))});
     }
 
     // MANIPULATORS
     ~Expr() {
-      std::vector<std::unique_ptr<Expr>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](Expr &_node) {
-        if (std::holds_alternative<Neg>(_node.v_)) {
-          auto &_alt = std::get<Neg>(_node.v_);
-          if (_alt.a0) {
-            _stack.push_back(std::move(_alt.a0));
+      std::vector<std::shared_ptr<Expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Neg>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
           }
         }
       };
-      _drain(*this);
+      _drain(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
         }
       }
     }

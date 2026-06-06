@@ -13,8 +13,8 @@ struct MutualFixEscape {
   static inline const uint64_t test1 = []() {
     return []() -> uint64_t {
       auto _cs = make_even_odd(UINT64_C(0));
-      const std::function<bool(uint64_t)> &ev = _cs.first;
-      const std::function<bool(uint64_t)> &od = _cs.second;
+      std::function<bool(uint64_t)> ev = std::move(_cs.first);
+      std::function<bool(uint64_t)> od = std::move(_cs.second);
       return ((ev(UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)) +
               (od(UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)));
     }();
@@ -23,8 +23,8 @@ struct MutualFixEscape {
   static inline const uint64_t test2 = []() {
     return []() -> uint64_t {
       auto _cs = make_even_odd(UINT64_C(0));
-      const std::function<bool(uint64_t)> &ev = _cs.first;
-      const std::function<bool(uint64_t)> &od = _cs.second;
+      std::function<bool(uint64_t)> ev = std::move(_cs.first);
+      std::function<bool(uint64_t)> od = std::move(_cs.second);
       return ((ev(UINT64_C(5)) ? UINT64_C(1) : UINT64_C(0)) +
               (od(UINT64_C(6)) ? UINT64_C(1) : UINT64_C(0)));
     }();
@@ -39,8 +39,8 @@ struct MutualFixEscape {
   /// Total = 10 + 23 = 33.
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs = make_count_pair(UINT64_C(10));
-    const std::function<uint64_t(uint64_t)> &ce = _cs.first;
-    const std::function<uint64_t(uint64_t)> &_x = _cs.second;
+    std::function<uint64_t(uint64_t)> ce = std::move(_cs.first);
+    std::function<uint64_t(uint64_t)> _x = std::move(_cs.second);
     return (ce(UINT64_C(0)) + ce(UINT64_C(3)));
   }();
   /// test4: with noise. count_odd(1) = 1+count_even(0) = 1+5 = 6.
@@ -48,7 +48,7 @@ struct MutualFixEscape {
     std::pair<std::function<uint64_t(uint64_t)>,
               std::function<uint64_t(uint64_t)>>
         p = make_count_pair(UINT64_C(5));
-    return p.second(UINT64_C(1));
+    return std::move(p).second(UINT64_C(1));
   }();
 };
 

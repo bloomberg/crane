@@ -81,6 +81,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
           const auto &[x1, a11] = _sv1;
           return SigT<Nat, Levenshtein::chain>::existt(
               x1, a11.aux_eq_char(s, t, a0, *a1, a00, *a10, x1));
+          break;
         }
         case Sumbool::RIGHT: {
           const auto &_sv2 =
@@ -98,6 +99,7 @@ SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
               SigT<Nat, Levenshtein::chain>::existt(Nat::s(x3), std::move(r2_)),
               SigT<Nat, Levenshtein::chain>::existt(Nat::s(x4), std::move(r3_)),
               [](const auto &_x) { return _x.projT1(); });
+          break;
         }
         default:
           std::unreachable();
@@ -133,6 +135,7 @@ Sumbool Bool::bool_dec(Bool0 b1, Bool0 b2) {
     default:
       std::unreachable();
     }
+    break;
   }
   case Bool0::FALSE_: {
     switch (b2) {
@@ -145,6 +148,7 @@ Sumbool Bool::bool_dec(Bool0 b1, Bool0 b2) {
     default:
       std::unreachable();
     }
+    break;
   }
   default:
     std::unreachable();

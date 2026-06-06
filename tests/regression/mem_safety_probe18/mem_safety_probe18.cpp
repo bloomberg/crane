@@ -37,7 +37,7 @@ uint64_t MemSafetyProbe18::sum_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;
@@ -66,32 +66,48 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
 /// TEST 8: Nested constructor building: build a list of trees
 /// using the same tree in different positions.
 MemSafetyProbe18::mylist<MemSafetyProbe18::tree>
-MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t, uint64_t n) {
-  std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> _head{};
-  std::unique_ptr<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>> *_write =
-      &_head;
-  uint64_t _loop_n = std::move(n);
-  while (true) {
-    if (_loop_n <= 0) {
-      *_write =
-          std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
-              mylist<MemSafetyProbe18::tree>::mynil());
-      break;
+MemSafetyProbe18::build_tree_list(
+    MemSafetyProbe18::tree t,
+    uint64_t
+        n) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_n_: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_n_ {
+    std::decay_t<decltype(tree::node(std::declval<MemSafetyProbe18::tree &>(),
+                                     std::declval<uint64_t &>(), tree::leaf()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_n_>;
+  MemSafetyProbe18::mylist<MemSafetyProbe18::tree> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified build_tree_list: _Enter -> _Resume_n_.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = mylist<MemSafetyProbe18::tree>::mynil();
+      } else {
+        uint64_t n_ = n - 1;
+        _stack.emplace_back(_Resume_n_{tree::node(t, n, tree::leaf())});
+        _stack.emplace_back(_Enter{n_});
+      }
     } else {
-      uint64_t n_ = _loop_n - 1;
-      auto _cell =
-          std::make_unique<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
-              typename mylist<MemSafetyProbe18::tree>::Mycons(
-                  tree::node(t, _loop_n, tree::leaf()), nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename mylist<MemSafetyProbe18::tree>::Mycons>(
-                    (*_write)->v_mut())
-                    .a1;
-      _loop_n = n_;
-      continue;
+      auto _f = std::move(std::get<_Resume_n_>(_frame));
+      _result =
+          mylist<MemSafetyProbe18::tree>::mycons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 uint64_t MemSafetyProbe18::sum_tree_list(
@@ -104,7 +120,8 @@ uint64_t MemSafetyProbe18::sum_tree_list(
 
   /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    decltype(std::declval<MemSafetyProbe18::tree &>().tree_sum()) a0;
+    std::decay_t<decltype(std::declval<MemSafetyProbe18::tree &>().tree_sum())>
+        a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -132,7 +149,7 @@ uint64_t MemSafetyProbe18::sum_tree_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-      _result = (_f.a0 + _result);
+      _result = (_f.a0 + std::move(_result));
     }
   }
   return _result;

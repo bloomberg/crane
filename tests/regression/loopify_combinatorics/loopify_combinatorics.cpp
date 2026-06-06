@@ -2,60 +2,95 @@
 
 /// Consolidated combinatorial algorithms.
 /// remove x l removes first occurrence of x from list.
-List<uint64_t> LoopifyCombinatorics::remove(uint64_t x,
-                                            const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (x == a0) {
-        *_write = std::make_unique<List<uint64_t>>(*a1);
-        break;
+List<uint64_t> LoopifyCombinatorics::remove(
+    uint64_t x,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified remove: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (x == a0) {
+          _result = *a1;
+        } else {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// Helper: prepend x to each list in lsts.
-List<List<uint64_t>>
-LoopifyCombinatorics::map_cons(uint64_t x, const List<List<uint64_t>> &lsts) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
-  const List<List<uint64_t>> *_loop_lsts = &lsts;
-  while (true) {
-    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-            _loop_lsts->v())) {
-      *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
-      break;
+List<List<uint64_t>> LoopifyCombinatorics::map_cons(
+    uint64_t x,
+    const List<List<uint64_t>> &
+        lsts) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<List<uint64_t>> *lsts;
+  };
+
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    std::decay_t<decltype(List<uint64_t>::cons(
+        std::declval<uint64_t &>(), std::declval<List<uint64_t> &>()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<List<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&lsts});
+  /// Loopified map_cons: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<List<uint64_t>> &lsts = *_f.lsts;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
+              lsts.v())) {
+        _result = List<List<uint64_t>>::nil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(lsts.v());
+        _stack.emplace_back(_Resume_Cons{List<uint64_t>::cons(x, a0)});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
-                                              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
-      _loop_lsts = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// perms_choices_fuel fuel choices orig generates permutations by iterating
@@ -92,10 +127,11 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
 
   /// _Resume_Nil: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Nil {
-    decltype(map_cons(
+    std::decay_t<decltype(map_cons(
         std::declval<uint64_t &>(),
         List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                   List<List<uint64_t>>::nil()))) _s0;
+                                   List<List<uint64_t>>::nil())))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
@@ -110,8 +146,8 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &orig = _f.orig;
-      const List<uint64_t> &choices = _f.choices;
+      const List<uint64_t> &orig = std::move(_f.orig);
+      const List<uint64_t> &choices = std::move(_f.choices);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
         _result = List<List<uint64_t>>::nil();
@@ -128,10 +164,10 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
             _stack.emplace_back(_Resume_Nil{map_cons(
                 a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
                                                List<List<uint64_t>>::nil()))});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           } else {
             _stack.emplace_back(_After_Cons{remaining, remaining, f, a0});
-            _stack.emplace_back(_Enter{orig, std::move(*a1), f});
+            _stack.emplace_back(_Enter{orig, *a1, f});
           }
         }
       }
@@ -145,7 +181,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
       _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
-      _result = _f._s0.app(_result);
+      _result = _f._s0.app(std::move(_result));
     }
   }
   return _result;
@@ -195,7 +231,7 @@ uint64_t LoopifyCombinatorics::len_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_result + 1);
+      _result = (std::move(_result) + 1);
     }
   }
   return _result;
@@ -235,7 +271,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = (_f.n * _result);
+      _result = (_f.n * std::move(_result));
     }
   }
   return _result;
@@ -283,7 +319,7 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto map_prepend_impl =
           [&](auto &_self_map_prepend,
               const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
@@ -309,31 +345,48 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
 }
 
 /// Helper for cartesian product.
-List<std::pair<uint64_t, uint64_t>>
-LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> _head{};
-  std::unique_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
-          List<std::pair<uint64_t, uint64_t>>::nil());
-      break;
+List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::map_pairs(
+    uint64_t y,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    std::decay_t<decltype(std::make_pair(std::declval<uint64_t &>(),
+                                         std::declval<uint64_t &>()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<std::pair<uint64_t, uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified map_pairs: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<std::pair<uint64_t, uint64_t>>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(_Resume_Cons{std::make_pair(a0, y)});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto _cell = std::make_unique<List<std::pair<uint64_t, uint64_t>>>(
-          typename List<std::pair<uint64_t, uint64_t>>::Cons(
-              std::make_pair(a0, y), nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                    (*_write)->v_mut())
-                    .l;
-      _loop_l = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result =
+          List<std::pair<uint64_t, uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// cartesian l1 l2 Cartesian product of two lists.
@@ -348,8 +401,9 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(map_pairs(std::declval<uint64_t &>(),
-                       std::declval<const List<uint64_t> &>())) _s0;
+    std::decay_t<decltype(map_pairs(std::declval<uint64_t &>(),
+                                    std::declval<const List<uint64_t> &>()))>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -373,7 +427,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = _f._s0.app(_result);
+      _result = _f._s0.app(std::move(_result));
     }
   }
   return _result;
@@ -416,7 +470,7 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto map_add_x_impl =
           [&](auto &_self_map_add_x,
               const List<List<uint64_t>> &lst) -> List<List<uint64_t>> {
@@ -463,7 +517,7 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
   List<List<uint64_t>> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l});
+  _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified insert_everywhere: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -478,14 +532,14 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
       } else {
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
         _stack.emplace_back(_Cont_Cons{a0, l, x});
-        _stack.emplace_back(_Enter{std::move(*a1)});
+        _stack.emplace_back(_Enter{*a1});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<uint64_t> l = std::move(_f.l);
       uint64_t x = _f.x;
-      List<List<uint64_t>> rest = _result;
+      List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y_impl =
           [&](auto &_self_prepend_y,
               const List<List<uint64_t>> &lsts) -> List<List<uint64_t>> {
@@ -523,7 +577,9 @@ bool LoopifyCombinatorics::elem(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s0;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -547,7 +603,7 @@ bool LoopifyCombinatorics::elem(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_f._s0 || _result);
+      _result = (_f._s0 || std::move(_result));
     }
   }
   return _result;
@@ -586,7 +642,7 @@ uint64_t LoopifyCombinatorics::len_impl(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = (_result + 1);
+      _result = (std::move(_result) + 1);
     }
   }
   return _result;
@@ -636,7 +692,7 @@ List<uint64_t> LoopifyCombinatorics::dedup_fuel(
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      List<uint64_t> rest = _result;
+      List<uint64_t> rest = std::move(_result);
       if (elem(a0, rest)) {
         _result = std::move(rest);
       } else {

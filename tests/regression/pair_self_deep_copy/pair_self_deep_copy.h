@@ -5,7 +5,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PairSelfDeepCopy {
   /// Like the option case, but the recursive occurrence is hidden under
@@ -18,7 +17,7 @@ struct PairSelfDeepCopy {
     struct Stop {};
 
     struct Link {
-      std::unique_ptr<std::pair<std::unique_ptr<chain>, bool>> a0;
+      std::shared_ptr<std::pair<chain, bool>> a0;
     };
 
     using variant_t = std::variant<Stop, Link>;
@@ -35,89 +34,14 @@ struct PairSelfDeepCopy {
 
     explicit chain(Link _v) : v_(std::move(_v)) {}
 
-    chain(const chain &_other) : v_(std::move(_other.clone().v_)) {}
-
-    chain(chain &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    chain &operator=(const chain &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    chain &operator=(chain &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    chain clone() const {
-      chain _out{};
-
-      struct _CloneFrame {
-        const chain *_src;
-        chain *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const chain *_src = _frame._src;
-        chain *_dst = _frame._dst;
-        if (std::holds_alternative<Stop>(_src->v())) {
-          _dst->v_ = Stop{};
-        } else {
-          const auto &_alt = std::get<Link>(_src->v());
-          _dst->v_ = Link{
-              _alt.a0
-                  ? std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
-                        std::make_pair(_alt.a0->first
-                                           ? std::make_unique<chain>()
-                                           : nullptr,
-                                       _alt.a0->second))
-                  : nullptr};
-          auto &_dst_alt = std::get<Link>(_dst->v_);
-          if (_alt.a0 && _alt.a0->first) {
-            _stack.push_back({_alt.a0->first.get(), _dst_alt.a0->first.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static chain stop() { return chain(Stop{}); }
 
-    static chain link(std::pair<std::unique_ptr<chain>, bool> a0) {
+    static chain link(std::pair<chain, bool> a0) {
       return chain(
-          Link{std::make_unique<std::pair<std::unique_ptr<chain>, bool>>(
-              std::move(a0))});
+          Link{std::make_shared<std::pair<chain, bool>>(std::move(a0))});
     }
 
     // MANIPULATORS
-    ~chain() {
-      std::vector<std::unique_ptr<chain>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](chain &_node) {
-        if (std::holds_alternative<Link>(_node.v_)) {
-          auto &_alt = std::get<Link>(_node.v_);
-          if (_alt.a0 && _alt.a0->first) {
-            _stack.push_back(std::move(_alt.a0->first));
-          }
-        }
-      };
-      _drain(*this);
-      while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
-        _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
-        }
-      }
-    }
-
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

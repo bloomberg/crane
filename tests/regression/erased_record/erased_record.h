@@ -8,12 +8,6 @@ struct ErasedRecord {
     uint64_t field2;
     uint64_t field3;
     uint64_t field4;
-
-    // ACCESSORS
-    ManyProps clone() const {
-      return ManyProps{this->field0, this->field1, this->field2, this->field3,
-                       this->field4};
-    }
   };
 
   static uint64_t complex_match(const ManyProps &r);
@@ -23,11 +17,6 @@ struct ErasedRecord {
     uint64_t real1;
     uint64_t real2;
     uint64_t real3;
-
-    // ACCESSORS
-    MostlyProps clone() const {
-      return MostlyProps{this->real1, this->real2, this->real3};
-    }
   };
 
   static uint64_t access_mostly_props(const MostlyProps &r);

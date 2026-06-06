@@ -10,4 +10,9 @@ uint64_t UnitType::match_unit(std::monostate) {
   }
 }
 
-void UnitType::unit_to_unit(std::monostate) { return; }
+void UnitType::unit_to_unit(std::monostate u) {
+  {
+    std::move(u);
+    return;
+  }
+}

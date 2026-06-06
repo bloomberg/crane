@@ -6,9 +6,6 @@
 struct StepsCounterUnroll {
   struct state {
     uint64_t pc;
-
-    // ACCESSORS
-    state clone() const { return state{this->pc}; }
   };
 
   static state step(const state &s);

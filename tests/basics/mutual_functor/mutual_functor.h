@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include <any>
 #include <concepts>
 #include <memory>
 #include <type_traits>
@@ -32,7 +33,7 @@ template <Elem E> struct MutualTree {
 
     struct Node {
       uint64_t a0;
-      std::unique_ptr<forest> a1;
+      std::shared_ptr<forest> a1;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -49,65 +50,44 @@ template <Elem E> struct MutualTree {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    tree(const tree &_other) : v_(std::move(_other.clone().v_)) {}
-
-    tree(tree &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    tree &operator=(const tree &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    tree &operator=(tree &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    tree clone() const {
-      if (std::holds_alternative<Leaf>(this->v())) {
-        const auto &[a0] = std::get<Leaf>(this->v());
-        return tree(Leaf{a0});
-      } else {
-        const auto &[a0, a1] = std::get<Node>(this->v());
-        return tree(
-            Node{a0, a1 ? std::make_unique<MutualTree::forest>(a1->clone())
-                        : nullptr});
-      }
-    }
-
-    // CREATORS
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(uint64_t a0, forest a1) {
-      return tree(Node{a0, std::make_unique<forest>(std::move(a1))});
+      return tree(Node{a0, std::make_shared<forest>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::unique_ptr<tree>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](tree &_node) {
-        if (std::holds_alternative<Node>(_node.v_)) {
-          auto &_alt = std::get<Node>(_node.v_);
-          if (_alt.a1) {
-            if (std::holds_alternative<typename MutualTree::forest::FCons>(
-                    _alt.a1->v())) {
-              auto &_palt = std::get<typename MutualTree::forest::FCons>(
-                  _alt.a1->v_mut());
-              if (_palt.a0) {
-                _stack.push_back(std::move(_palt.a0));
-              }
-            }
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<tree>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<forest>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename forest::FCons>(&_pv)) {
+                if (_alt->a0) {
+                  _stack.push_back(std::move(_alt->a0));
+                }
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
         }
       }
     }
@@ -123,8 +103,8 @@ template <Elem E> struct MutualTree {
     struct FNil {};
 
     struct FCons {
-      std::unique_ptr<tree> a0;
-      std::unique_ptr<forest> a1;
+      std::shared_ptr<tree> a0;
+      std::shared_ptr<forest> a1;
     };
 
     using variant_t = std::variant<FNil, FCons>;
@@ -141,80 +121,45 @@ template <Elem E> struct MutualTree {
 
     explicit forest(FCons _v) : v_(std::move(_v)) {}
 
-    forest(const forest &_other) : v_(std::move(_other.clone().v_)) {}
-
-    forest(forest &&_other) noexcept : v_(std::move(_other.v_)) {}
-
-    forest &operator=(const forest &_other) {
-      v_ = std::move(_other.clone().v_);
-      return *this;
-    }
-
-    forest &operator=(forest &&_other) noexcept {
-      v_ = std::move(_other.v_);
-      return *this;
-    }
-
-    // ACCESSORS
-    forest clone() const {
-      forest _out{};
-
-      struct _CloneFrame {
-        const forest *_src;
-        forest *_dst;
-      };
-
-      std::vector<_CloneFrame> _stack{};
-      _stack.reserve(8);
-      _stack.push_back({this, &_out});
-      while (!_stack.empty()) {
-        auto _frame = _stack.back();
-        _stack.pop_back();
-        const forest *_src = _frame._src;
-        forest *_dst = _frame._dst;
-        if (std::holds_alternative<FNil>(_src->v())) {
-          _dst->v_ = FNil{};
-        } else {
-          const auto &_alt = std::get<FCons>(_src->v());
-          _dst->v_ = FCons{
-              _alt.a0 ? std::make_unique<MutualTree::tree>(_alt.a0->clone())
-                      : nullptr,
-              _alt.a1 ? std::make_unique<forest>() : nullptr};
-          auto &_dst_alt = std::get<FCons>(_dst->v_);
-          if (_alt.a1) {
-            _stack.push_back({_alt.a1.get(), _dst_alt.a1.get()});
-          }
-        }
-      }
-      return _out;
-    }
-
-    // CREATORS
     static forest fnil() { return forest(FNil{}); }
 
     static forest fcons(tree a0, forest a1) {
-      return forest(FCons{std::make_unique<tree>(std::move(a0)),
-                          std::make_unique<forest>(std::move(a1))});
+      return forest(FCons{std::make_shared<tree>(std::move(a0)),
+                          std::make_shared<forest>(std::move(a1))});
     }
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::unique_ptr<forest>> _stack{};
-      _stack.reserve(8);
-      auto _drain = [&](forest &_node) {
-        if (std::holds_alternative<FCons>(_node.v_)) {
-          auto &_alt = std::get<FCons>(_node.v_);
-          if (_alt.a1) {
-            _stack.push_back(std::move(_alt.a1));
+      std::vector<std::any> _stack = {};
+      auto _drain_self = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<FCons>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
           }
         }
       };
-      _drain(*this);
+      _drain_self(v_mut());
       while (!_stack.empty()) {
-        auto _node = std::move(_stack.back());
+        auto _cur = std::move(_stack.back());
         _stack.pop_back();
-        if (_node) {
-          _drain(*_node);
+        if (auto *_sp = std::any_cast<std::shared_ptr<forest>>(&_cur)) {
+          if (*_sp && (*_sp).use_count() == 1) {
+            _drain_self((*_sp)->v_mut());
+          }
+        } else {
+          if (auto *_sp = std::any_cast<std::shared_ptr<tree>>(&_cur)) {
+            if (*_sp && (*_sp).use_count() == 1) {
+              auto &_pv = (*_sp)->v_mut();
+              if (auto *_alt = std::get_if<typename tree::Node>(&_pv)) {
+                if (_alt->a1) {
+                  _stack.push_back(std::move(_alt->a1));
+                }
+              }
+            }
+          }
         }
       }
     }

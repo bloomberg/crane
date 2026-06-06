@@ -89,7 +89,7 @@ struct MemSafetyProbe12 {
   /// TEST 7: Wrap a pair of nats.
   static inline const uint64_t test_wrap_pair = []() {
     std::pair<uint64_t, uint64_t> p = std::make_pair(UINT64_C(3), UINT64_C(7));
-    wrap w = wrap::wrap0(p);
+    wrap w = wrap::wrap0(std::move(p));
     std::pair<uint64_t, uint64_t> p2 =
         unwrap<std::pair<uint64_t, uint64_t>>(std::move(w));
     return (p2.first + p2.second);

@@ -234,15 +234,21 @@ let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 let get_ind_nparams_opt kn =
   try Some (unsafe_lookup_ind kn).ind_nparams with Not_found -> None
 
-(* Get the number of parameter type vars for an inductive (via ip_sign). This
-   counts how many Keep entries are in the first nparams positions of
-   ip_sign. *)
+let ind_param_vars ind p =
+  let sign_len = List.length p.Miniml.ip_sign in
+  let nparams = min ind.Miniml.ind_nparams sign_len in
+  let param_sign = List.firstn nparams p.Miniml.ip_sign in
+  let num_param_vars =
+    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
+  in
+  (List.firstn num_param_vars p.Miniml.ip_vars, num_param_vars)
+
+(* Get the number of parameter type vars for an inductive (via ip_sign). *)
 let get_ind_num_param_vars_opt kn =
   try
     let ind = unsafe_lookup_ind kn in
-    let packet = ind.ind_packets.(0) in
-    let param_sign = List.firstn ind.ind_nparams packet.ip_sign in
-    Some (List.length (List.filter (fun x -> x == Miniml.Keep) param_sign))
+    let (_, n) = ind_param_vars ind ind.ind_packets.(0) in
+    Some n
   with Not_found | Invalid_argument _ -> None
 
 let inductive_kinds = ref (Mindmap_env.empty : inductive_kind Mindmap_env.t)
@@ -415,7 +421,6 @@ let rec is_typeclass_type_cpp = function
     is_typeclass_type_cpp t (* Unwrap const/static/extern *)
   | Minicpp.Tref t -> is_typeclass_type_cpp t (* Unwrap references *)
   | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)
-  | Minicpp.Tunique_ptr t -> is_typeclass_type_cpp t (* Unwrap unique_ptr *)
   | _ -> false
 
 (** {2 Flat inductives table} *)
@@ -433,12 +438,7 @@ let is_flat_inductive_packet kn ind i =
     if n_ctors <> 1 then false
     else
       let is_mutual = Array.length ind.ind_packets > 1 in
-      let sign_len = List.length p.ip_sign in
-      let nparams = min ind.ind_nparams sign_len in
-      let param_sign = List.firstn nparams p.ip_sign in
-      let num_param_vars =
-        List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-      in
+      let (_, num_param_vars) = ind_param_vars ind p in
       let is_coinductive_ind =
         match Mindmap_env.find_opt kn !inductive_kinds with
         | Some Coinductive -> true
@@ -484,10 +484,7 @@ let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
 let is_enum_inductive_packet ind i =
   let p = ind.ind_packets.(i) in
   let all_nullary = Array.for_all (fun tys_list -> tys_list = []) p.ip_types in
-  let param_sign = List.firstn ind.ind_nparams p.ip_sign in
-  let num_param_vars =
-    List.length (List.filter (fun x -> x == Miniml.Keep) param_sign)
-  in
+  let (_, num_param_vars) = ind_param_vars ind p in
   all_nullary && num_param_vars = 0 && Array.length p.ip_types > 0
 
 let is_enum_inductive r =
@@ -1462,6 +1459,38 @@ let reset_loopify : unit -> obj =
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
+(* --- Guard Compare --------------------------------------------------- *)
+
+let guard_compare_table =
+  Summary.ref Label.Map.empty ~name:"CraneGuardCompare"
+
+let add_guard_compare fn_ref ctor_ref =
+  let lbl = label_of_r fn_ref in
+  guard_compare_table := Label.Map.add lbl ctor_ref !guard_compare_table
+
+let find_guard_compare r =
+  let lbl = label_of_r r in
+  Label.Map.find_opt lbl !guard_compare_table
+
+let guard_compare_obj : GlobRef.t * GlobRef.t -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Guard Compare"
+       ~cache:(fun (fn_ref, ctor_ref) -> add_guard_compare fn_ref ctor_ref)
+       ~subst:
+         (Some
+            (fun (s, (fn_ref, ctor_ref)) ->
+              (fst (subst_global s fn_ref), fst (subst_global s ctor_ref)) ))
+
+let extract_guard_compare fn_qualid ctor_qualid =
+  check_inside_section ();
+  let fn_ref = Smartlocate.global_with_alias fn_qualid in
+  let ctor_ref = Smartlocate.global_with_alias ctor_qualid in
+  ( match fn_ref with
+  | GlobRef.ConstRef _ -> ()
+  | _ -> error_constant ?loc:fn_qualid.CAst.loc fn_ref );
+  Lib.add_leaf (guard_compare_obj (fn_ref, ctor_ref))
+
 (* Allows to print a comment at the beginning of the output files *)
 let {Goptions.get = file_comment} =
   declare_string_option_and_ref
@@ -1793,7 +1822,9 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
 (** {2 Crane Extract Constant/Inductive} *)
 
-(* UGLY HACK: to be defined in [extraction.ml] *)
+(* Forward reference: the hook body is installed in [extraction.ml] after that
+   module is loaded.  This breaks the build-time circular dependency between
+   [table.ml] and the extraction pipeline. *)
 let use_type_scheme_nb_args, type_scheme_nb_args_hook = Hook.make ()
 
 (* Track which custom GlobRefs are actually used during extraction. *)
@@ -1911,6 +1942,93 @@ let find_custom_match pv =
   mark_custom_used r;
   Refmap'.find r !custom_matchs
 
+let find_custom_match_by_ref r =
+  mark_custom_used r;
+  Refmap'.find_opt r !custom_matchs
+
+(** How a single type-argument binding is projected from the scrutinee in a
+    custom match template. *)
+type accessor = AccMember of string | AccDeref
+
+(** [find_between s prefix suffix] returns the substring of [s] that lies
+    between the first occurrence of [prefix] and the nearest following
+    [suffix].  Returns [None] if either delimiter is absent. *)
+let find_between s prefix suffix =
+  let plen = String.length prefix in
+  let slen = String.length suffix in
+  let rec find_pref i =
+    if i + plen > String.length s then None
+    else if String.sub s i plen = prefix then
+      let start = i + plen in
+      let rec find_suf j =
+        if j + slen > String.length s then None
+        else if String.sub s j slen = suffix then
+          Some (String.sub s start (j - start))
+        else find_suf (j + 1)
+      in
+      find_suf start
+    else find_pref (i + 1)
+  in
+  find_pref 0
+
+(** Parse an accessor expression from a binding RHS in a match template.
+    Recognizes two forms:
+    - ["%scrut.FIELD"] → [Some (AccMember "FIELD")]
+    - ["*%scrut"]      → [Some AccDeref]
+
+    Returns [None] if the expression doesn't match either pattern. *)
+let parse_accessor rhs =
+  let scrut = "%scrut" in
+  let slen = String.length scrut in
+  let rlen = String.length rhs in
+  if rlen > slen + 1 && String.sub rhs 0 slen = scrut && rhs.[slen] = '.'
+  then Some (AccMember (String.sub rhs (slen + 1) (rlen - slen - 1)))
+  else if rlen = slen + 1 && rhs.[0] = '*' && String.sub rhs 1 slen = scrut
+  then Some AccDeref
+  else None
+
+(** Extract accessors from a single-constructor match template by finding
+    binding assignments of the form [%b0a{j} = <expr>;] and parsing each
+    RHS.  Returns [Some accessors] if all bindings parse, [None] if the
+    template structure is unrecognized or any binding fails to parse. *)
+let parse_single_branch_accessors tmpl =
+  let rec go j acc =
+    let pat = Printf.sprintf "%%b0a%d = " j in
+    match find_between tmpl pat ";" with
+    | None -> if j = 0 then None else Some (List.rev acc)
+    | Some rhs ->
+      (match parse_accessor (String.trim rhs) with
+       | None -> None
+       | Some a -> go (j + 1) (a :: acc))
+  in
+  go 0 []
+
+(** For a single-constructor custom inductive, extract the list of field
+    accessors from its match template.  Returns [None] for multi-constructor
+    types or when the template structure is not recognized.
+
+    Used by {!Translation.gen_custom_type_conversion} to inline pair-like
+    conversions as pure expressions without IIFEs. *)
+let find_custom_accessors g =
+  match g with
+  | GlobRef.IndRef (kn, i) ->
+    (match Refmap'.find_opt g !custom_matchs with
+     | None -> None
+     | Some tmpl ->
+       let mib = Global.lookup_mind kn in
+       let n = Array.length mib.mind_packets.(i).mind_consnames in
+       if n = 1 then parse_single_branch_accessors tmpl else None)
+  | _ -> None
+
+let find_custom_ctor_templates (ip : Names.inductive) =
+  let mib = Global.lookup_mind (fst ip) in
+  let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
+  List.init n (fun j ->
+    let g = GlobRef.ConstructRef (ip, succ j) in
+    match Refmap'.find_opt g !customs with
+    | Some (_, s) -> s
+    | None -> "")
+
 (* Printing entries *)
 
 (** Prints the custom extraction mappings for all ConstRef entries in [ref_set],
@@ -1997,6 +2115,11 @@ let ref_imports_object : GlobRef.t * string -> obj =
        "Crane Ref Imports"
        ~cache:(fun (r, s) -> add_ref_import r s)
        ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
+
+let get_ref_import_list r =
+  match Refmap'.find_opt r !ref_imports with
+  | Some imports -> StringSet.elements imports
+  | None -> []
 
 (* Legacy global custom imports (kept for backward compatibility with
    [add_custom_import] which is called directly in some places). *)

@@ -34,7 +34,7 @@ LoopifyClassics::factorial(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = (_f.n * _result);
+      _result = (_f.n * std::move(_result));
     }
   }
   return _result;
@@ -85,7 +85,7 @@ LoopifyClassics::fib(uint64_t n) { /// _Enter: captures varying parameters for
       }
     } else if (std::holds_alternative<_After_n__>(_frame)) {
       auto _f = std::move(std::get<_After_n__>(_frame));
-      _stack.emplace_back(_Combine_n__{_result});
+      _stack.emplace_back(_Combine_n__{std::move(_result)});
       _stack.emplace_back(_Enter{_f.n_});
     } else {
       auto _f = std::move(std::get<_Combine_n__>(_frame));
@@ -149,7 +149,7 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
       auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t fuel_ = _f.fuel_;
       uint64_t m = _f.m;
-      uint64_t inner = _result;
+      uint64_t inner = std::move(_result);
       _stack.emplace_back(_Enter{
           inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }
@@ -175,14 +175,16 @@ uint64_t LoopifyClassics::binomial_fuel(
 
   /// _After2: saves [_s0, _s1, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
-    decltype((
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s1;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s1;
     uint64_t fuel_;
   };
 
@@ -222,7 +224,7 @@ uint64_t LoopifyClassics::binomial_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -249,14 +251,16 @@ uint64_t LoopifyClassics::pascal_fuel(
 
   /// _After2: saves [_s0, _s1, fuel_], dispatches next recursive call.
   struct _After2 {
-    decltype((
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s0;
-    decltype((
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s0;
+    std::decay_t<decltype((
         ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
              ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1))))) _s1;
+             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+        _s1;
     uint64_t fuel_;
   };
 
@@ -297,7 +301,7 @@ uint64_t LoopifyClassics::pascal_fuel(
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f._s1, _f.fuel_});
     } else {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -372,7 +376,7 @@ LoopifyClassics::power(uint64_t base,
       }
     } else {
       auto _f = std::move(std::get<_Resume_exp_>(_frame));
-      _result = (_f.base * _result);
+      _result = (_f.base * std::move(_result));
     }
   }
   return _result;
@@ -412,7 +416,7 @@ LoopifyClassics::sum_to(uint64_t n) { /// _Enter: captures varying parameters
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = (_f.n + _result);
+      _result = (_f.n + std::move(_result));
     }
   }
   return _result;
@@ -452,7 +456,7 @@ uint64_t LoopifyClassics::sum_squares(
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = (_f._s0 + _result);
+      _result = (_f._s0 + std::move(_result));
     }
   }
   return _result;

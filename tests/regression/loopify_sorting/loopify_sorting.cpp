@@ -1,32 +1,49 @@
 #include "loopify_sorting.h"
 
 /// Consolidated UNIQUE sorting algorithms and related operations.
-List<uint64_t> LoopifySorting::insert(uint64_t x, List<uint64_t> l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_l = std::move(l);
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v_mut())) {
-      *_write = std::make_unique<List<uint64_t>>(
-          List<uint64_t>::cons(x, List<uint64_t>::nil()));
-      break;
-    } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-      if (x <= a0) {
-        *_write =
-            std::make_unique<List<uint64_t>>(List<uint64_t>::cons(x, _loop_l));
-        break;
+List<uint64_t> LoopifySorting::insert(
+    uint64_t x,
+    List<uint64_t>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{std::move(l)});
+  /// Loopified insert: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      List<uint64_t> l = std::move(_f.l);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+        _result = List<uint64_t>::cons(x, List<uint64_t>::nil());
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = std::move(*a1);
-        continue;
+        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+        if (x <= a0) {
+          _result = List<uint64_t>::cons(x, l);
+        } else {
+          _stack.emplace_back(_Resume1{std::move(a0)});
+          _stack.emplace_back(_Enter{*a1});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySorting::insertion_sort(
@@ -63,63 +80,80 @@ List<uint64_t> LoopifySorting::insertion_sort(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = insert(_f.a0, _result);
+      _result = insert(_f.a0, std::move(_result));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_fuel(uint64_t fuel, List<uint64_t> l1,
-                                          List<uint64_t> l2) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
-  uint64_t _loop_fuel = std::move(fuel);
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      uint64_t f = _loop_fuel - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l1.v_mut())) {
-        *_write = std::make_unique<List<uint64_t>>(std::move(_loop_l2));
-        break;
+List<uint64_t> LoopifySorting::merge_fuel(
+    uint64_t fuel, List<uint64_t> l1,
+    List<uint64_t>
+        l2) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> l2;
+    List<uint64_t> l1;
+    uint64_t fuel;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  /// _Resume2: saves [a00], resumes after recursive call with _result.
+  struct _Resume2 {
+    uint64_t a00;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{std::move(l2), std::move(l1), fuel});
+  /// Loopified merge_fuel: _Enter -> _Resume1 -> _Resume2.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      List<uint64_t> l2 = std::move(_f.l2);
+      List<uint64_t> l1 = std::move(_f.l1);
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = List<uint64_t>::nil();
       } else {
-        auto &[a0, a1] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v_mut())) {
-          *_write = std::make_unique<List<uint64_t>>(_loop_l1);
-          break;
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v_mut())) {
+          _result = std::move(l2);
         } else {
-          auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
-          if (a0 <= a00) {
-            auto _cell = std::make_unique<List<uint64_t>>(
-                typename List<uint64_t>::Cons(std::move(a0), nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_l1 = std::move(*a1);
-            _loop_fuel = f;
-            continue;
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v_mut());
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                  l2.v_mut())) {
+            _result = std::move(l1);
           } else {
-            auto _cell = std::make_unique<List<uint64_t>>(
-                typename List<uint64_t>::Cons(std::move(a00), nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_l2 = std::move(*a10);
-            _loop_fuel = f;
-            continue;
+            auto &[a00, a10] =
+                std::get<typename List<uint64_t>::Cons>(l2.v_mut());
+            if (a0 <= a00) {
+              _stack.emplace_back(_Resume1{std::move(a0)});
+              _stack.emplace_back(_Enter{l2, *a1, f});
+            } else {
+              _stack.emplace_back(_Resume2{std::move(a00)});
+              _stack.emplace_back(_Enter{*a10, l1, f});
+            }
           }
         }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = List<uint64_t>::cons(_f.a00, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
@@ -137,9 +171,9 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_l1: saves [l1, f], dispatches next recursive call.
+  /// _After_l1: saves [_s0, f], dispatches next recursive call.
   struct _After_l1 {
-    List<uint64_t> l1;
+    List<uint64_t> _s0;
     uint64_t f;
   };
 
@@ -153,7 +187,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_l1 -> _Combine_l1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -175,17 +209,17 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto _cs = split<uint64_t>(l);
-            const List<uint64_t> &l1 = _cs.first;
-            const List<uint64_t> &l2 = _cs.second;
-            _stack.emplace_back(_After_l1{l1, f});
-            _stack.emplace_back(_Enter{l2, f});
+            List<uint64_t> l1 = std::move(_cs.first);
+            List<uint64_t> l2 = std::move(_cs.second);
+            _stack.emplace_back(_After_l1{std::move(std::move(l1)), f});
+            _stack.emplace_back(_Enter{std::move(l2), f});
           }
         }
       }
     } else if (std::holds_alternative<_After_l1>(_frame)) {
       auto _f = std::move(std::get<_After_l1>(_frame));
       _stack.emplace_back(_Combine_l1{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f.l1), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_l1>(_frame));
       _result = merge(std::move(_result), std::move(_f._result));
@@ -237,12 +271,15 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       uint64_t pivot = _f.pivot;
-      const List<uint64_t> &lo = _result.first;
-      const List<uint64_t> &hi = _result.second;
+      auto _cs = std::move(_result);
+      List<uint64_t> lo = std::move(_cs.first);
+      List<uint64_t> hi = std::move(_cs.second);
       if (a0 <= pivot) {
-        _result = std::make_pair(List<uint64_t>::cons(a0, lo), hi);
+        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(lo)),
+                                 std::move(hi));
       } else {
-        _result = std::make_pair(lo, List<uint64_t>::cons(a0, hi));
+        _result = std::make_pair(std::move(lo),
+                                 List<uint64_t>::cons(a0, std::move(hi)));
       }
     }
   }
@@ -259,9 +296,9 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_lo: saves [lo, f, a0], dispatches next recursive call.
+  /// _After_lo: saves [_s0, f, a0], dispatches next recursive call.
   struct _After_lo {
-    List<uint64_t> lo;
+    List<uint64_t> _s0;
     uint64_t f;
     uint64_t a0;
   };
@@ -277,7 +314,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{l, fuel});
+  _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_lo -> _Combine_lo.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -295,16 +332,17 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           auto _cs = partition(a0, *a1);
-          const List<uint64_t> &lo = _cs.first;
-          const List<uint64_t> &hi = _cs.second;
-          _stack.emplace_back(_After_lo{lo, f, std::move(a0)});
-          _stack.emplace_back(_Enter{hi, f});
+          List<uint64_t> lo = std::move(_cs.first);
+          List<uint64_t> hi = std::move(_cs.second);
+          _stack.emplace_back(
+              _After_lo{std::move(std::move(lo)), f, std::move(a0)});
+          _stack.emplace_back(_Enter{std::move(hi), f});
         }
       }
     } else if (std::holds_alternative<_After_lo>(_frame)) {
       auto _f = std::move(std::get<_After_lo>(_frame));
       _stack.emplace_back(_Combine_lo{std::move(_result), _f.a0});
-      _stack.emplace_back(_Enter{std::move(_f.lo), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_lo>(_frame));
       _result = std::move(_result).app(
@@ -347,88 +385,118 @@ bool LoopifySorting::is_sorted(const List<uint64_t> &l) {
 }
 
 /// remove_duplicates removes consecutive duplicates from sorted list.
-List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        *_write = std::make_unique<List<uint64_t>>(
-            List<uint64_t>::cons(a0, List<uint64_t>::nil()));
-        break;
+List<uint64_t> LoopifySorting::remove_duplicates(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified remove_duplicates: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        const auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        if (a0 == a00) {
-          _loop_l = a1.get();
-          continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        auto &&_sv0 = *a1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+          _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
         } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
-              typename List<uint64_t>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = a1.get();
-          continue;
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_sv0.v());
+          if (a0 == a00) {
+            _stack.emplace_back(_Enter{a1.get()});
+          } else {
+            _stack.emplace_back(_Resume1{a0});
+            _stack.emplace_back(_Enter{a1.get()});
+          }
         }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// uniq_sorted variant that preserves order.
-List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
-                                               const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  bool _loop_seen = std::move(seen);
-  uint64_t _loop_prev = std::move(prev);
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (_loop_seen) {
-        if (_loop_prev == a0) {
-          _loop_l = a1.get();
-          _loop_seen = true;
-          _loop_prev = a0;
-          continue;
-        } else {
-          auto _cell = std::make_unique<List<uint64_t>>(
-              typename List<uint64_t>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write =
-              &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = a1.get();
-          _loop_seen = true;
-          _loop_prev = a0;
-          continue;
-        }
+List<uint64_t> LoopifySorting::uniq_sorted_aux(
+    uint64_t prev, bool seen,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+    bool seen;
+    uint64_t prev;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  /// _Resume2: saves [a0], resumes after recursive call with _result.
+  struct _Resume2 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l, seen, prev});
+  /// Loopified uniq_sorted_aux: _Enter -> _Resume1 -> _Resume2.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      bool seen = _f.seen;
+      uint64_t prev = _f.prev;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        _loop_seen = true;
-        _loop_prev = a0;
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (seen) {
+          if (prev == a0) {
+            _stack.emplace_back(_Enter{a1.get(), true, a0});
+          } else {
+            _stack.emplace_back(_Resume1{a0});
+            _stack.emplace_back(_Enter{a1.get(), true, a0});
+          }
+        } else {
+          _stack.emplace_back(_Resume2{a0});
+          _stack.emplace_back(_Enter{a1.get(), true, a0});
+        }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifySorting::uniq_sorted(const List<uint64_t> &l) {

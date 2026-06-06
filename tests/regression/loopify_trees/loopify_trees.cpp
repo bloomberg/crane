@@ -45,7 +45,7 @@ uint64_t LoopifyTrees::tree_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f.a1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -124,11 +124,11 @@ uint64_t LoopifyTrees::leaf_sum(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result});
+      _stack.emplace_back(_Combine_Node{std::move(_result)});
       _stack.emplace_back(_Enter{_f.a0});
     } else if (std::holds_alternative<_After_Node_1>(_frame)) {
       auto _f = std::move(std::get<_After_Node_1>(_frame));
-      _stack.emplace_back(_Combine_Node_1{_result});
+      _stack.emplace_back(_Combine_Node_1{std::move(_result)});
       _stack.emplace_back(_Enter{_f.a0});
     } else if (std::holds_alternative<_Combine_Node>(_frame)) {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
@@ -192,10 +192,12 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::insert_bst(
       }
     } else if (std::holds_alternative<_Resume1>(_frame)) {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = tree<uint64_t>::node(_result, _f.a1, _f.a2);
+      _result =
+          tree<uint64_t>::node(std::move(_result), _f.a1, std::move(_f.a2));
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result = tree<uint64_t>::node(_f.a0, _f.a1, _result);
+      _result =
+          tree<uint64_t>::node(std::move(_f.a0), _f.a1, std::move(_result));
     }
   }
   return _result;
@@ -214,7 +216,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
 
   /// _After2: saves [_s0, a0], dispatches next recursive call.
   struct _After2 {
-    decltype(UINT64_C(0)) _s0;
+    std::decay_t<decltype(UINT64_C(0))> _s0;
     const LoopifyTrees::tree<uint64_t> *a0;
   };
 
@@ -275,11 +277,11 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
       }
     } else if (std::holds_alternative<_After2>(_frame)) {
       auto _f = std::move(std::get<_After2>(_frame));
-      _stack.emplace_back(_Combine1{_result});
+      _stack.emplace_back(_Combine1{std::move(_result)});
       _stack.emplace_back(_Enter{_f._s0, _f.a0});
     } else if (std::holds_alternative<_After4>(_frame)) {
       auto _f = std::move(std::get<_After4>(_frame));
-      _stack.emplace_back(_Combine3{_result});
+      _stack.emplace_back(_Combine3{std::move(_result)});
       _stack.emplace_back(_Enter{_f.remaining, _f.a0});
     } else if (std::holds_alternative<_Combine1>(_frame)) {
       auto _f = std::move(std::get<_Combine1>(_frame));
@@ -340,14 +342,14 @@ uint64_t LoopifyTrees::sum_of_max_branches(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      uint64_t lsum = _result;
+      uint64_t lsum = std::move(_result);
       _stack.emplace_back(_Cont_Node_1{a1, lsum});
       _stack.emplace_back(_Enter{&a2});
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
       uint64_t lsum = _f.lsum;
-      uint64_t rsum = _result;
+      uint64_t rsum = std::move(_result);
       _result = (a1 + (lsum <= rsum ? rsum : lsum));
     }
   }
@@ -411,7 +413,7 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(
       }
     } else if (std::holds_alternative<_After_RNode>(_frame)) {
       auto _f = std::move(std::get<_After_RNode>(_frame));
-      _stack.emplace_back(_Combine_RNode{_result, _f.a00});
+      _stack.emplace_back(_Combine_RNode{std::move(_result), _f.a00});
       _stack.emplace_back(_Enter{_f.a10, _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_RNode>(_frame));
@@ -546,13 +548,13 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
       auto _f = std::move(std::get<_Cont_RNode>(_frame));
       const List<LoopifyTrees::rose> &a1 = *_f.a1;
       uint64_t f = _f.f;
-      uint64_t d = (_result + 1);
+      uint64_t d = (std::move(_result) + 1);
       _stack.emplace_back(_Cont_RNode_1{d});
       _stack.emplace_back(_Enter{&a1, f});
     } else {
       auto _f = std::move(std::get<_Cont_RNode_1>(_frame));
       uint64_t d = _f.d;
-      uint64_t rest_max = _result;
+      uint64_t rest_max = std::move(_result);
       if (d <= rest_max) {
         _result = std::move(rest_max);
       } else {
@@ -592,7 +594,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
   LoopifyTrees::tree<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
-  _stack.emplace_back(_Enter{t2, t1});
+  _stack.emplace_back(_Enter{std::move(t2), std::move(t1)});
   /// Loopified tree_max: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
@@ -625,7 +627,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
             max_val = a1;
           }
           _stack.emplace_back(_After_Node{*a00, *a0, max_val});
-          _stack.emplace_back(_Enter{std::move(*a20), std::move(*a2)});
+          _stack.emplace_back(_Enter{*a20, *a2});
         }
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
@@ -643,119 +645,159 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
 
 /// Helper: extract values from trees.
 List<uint64_t> LoopifyTrees::extract_tree_values(
-    const List<LoopifyTrees::tree<uint64_t>> &ts) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
-  while (true) {
-    if (std::holds_alternative<
-            typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
-      *_write = std::make_unique<List<uint64_t>>(List<uint64_t>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-              _loop_ts->v());
-      if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
-              a0.v())) {
-        _loop_ts = a1.get();
-        continue;
+    const List<LoopifyTrees::tree<uint64_t>>
+        &ts) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<LoopifyTrees::tree<uint64_t>> *ts;
+  };
+
+  /// _Resume_Node: saves [a10], resumes after recursive call with _result.
+  struct _Resume_Node {
+    uint64_t a10;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Node>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&ts});
+  /// Loopified extract_tree_values: _Enter -> _Resume_Node.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyTrees::tree<uint64_t>> &ts = *_f.ts;
+      if (std::holds_alternative<
+              typename List<LoopifyTrees::tree<uint64_t>>::Nil>(ts.v())) {
+        _result = List<uint64_t>::nil();
       } else {
-        const auto &[a00, a10, a20] =
-            std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a10, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_ts = a1.get();
-        continue;
+        const auto &[a0, a1] =
+            std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(ts.v());
+        if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
+                a0.v())) {
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          const auto &[a00, a10, a20] =
+              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
+          _stack.emplace_back(_Resume_Node{a10});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume_Node>(_frame));
+      _result = List<uint64_t>::cons(_f.a10, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// Helper: extract children from trees.
 List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
-    const List<LoopifyTrees::tree<uint64_t>> &ts) {
-  std::unique_ptr<List<LoopifyTrees::tree<uint64_t>>> _head{};
-  std::unique_ptr<List<LoopifyTrees::tree<uint64_t>>> *_write = &_head;
-  const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
-  while (true) {
-    if (std::holds_alternative<
-            typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
-      *_write = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
-          List<LoopifyTrees::tree<uint64_t>>::nil());
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-              _loop_ts->v());
-      if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
-              a0.v())) {
-        _loop_ts = a1.get();
-        continue;
+    const List<LoopifyTrees::tree<uint64_t>>
+        &ts) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<LoopifyTrees::tree<uint64_t>> *ts;
+  };
+
+  /// _Resume_Node: saves [a00, a20], resumes after recursive call with _result.
+  struct _Resume_Node {
+    LoopifyTrees::tree<uint64_t> a00;
+    LoopifyTrees::tree<uint64_t> a20;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Node>;
+  List<LoopifyTrees::tree<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&ts});
+  /// Loopified extract_tree_children: _Enter -> _Resume_Node.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyTrees::tree<uint64_t>> &ts = *_f.ts;
+      if (std::holds_alternative<
+              typename List<LoopifyTrees::tree<uint64_t>>::Nil>(ts.v())) {
+        _result = List<LoopifyTrees::tree<uint64_t>>::nil();
       } else {
-        const auto &[a00, a10, a20] =
-            std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
-        auto _cell = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
-            typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a00, nullptr));
-        auto _cell1 = std::make_unique<List<LoopifyTrees::tree<uint64_t>>>(
-            typename List<LoopifyTrees::tree<uint64_t>>::Cons(*a20, nullptr));
-        std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-            _cell->v_mut())
-            .l = std::move(_cell1);
-        *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-                 std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-                     (*_write)->v_mut())
-                     .l->v_mut())
-                 .l;
-        _loop_ts = a1.get();
-        continue;
+        const auto &[a0, a1] =
+            std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(ts.v());
+        if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
+                a0.v())) {
+          _stack.emplace_back(_Enter{a1.get()});
+        } else {
+          const auto &[a00, a10, a20] =
+              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(a0.v());
+          _stack.emplace_back(_Resume_Node{*a00, *a20});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume_Node>(_frame));
+      _result = List<LoopifyTrees::tree<uint64_t>>::cons(
+          std::move(_f.a00), List<LoopifyTrees::tree<uint64_t>>::cons(
+                                 std::move(_f.a20), std::move(_result)));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// tree_levels t returns list of lists, one per level (breadth-first).
 List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
-    uint64_t fuel, const List<LoopifyTrees::tree<uint64_t>> &trees) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
-  List<LoopifyTrees::tree<uint64_t>> _loop_trees = trees;
-  uint64_t _loop_fuel = std::move(fuel);
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
-      break;
-    } else {
-      uint64_t f = _loop_fuel - 1;
-      List<uint64_t> values = extract_tree_values(_loop_trees);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              values.v_mut())) {
-        *_write =
-            std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
-        break;
+    uint64_t fuel,
+    const List<LoopifyTrees::tree<uint64_t>>
+        &trees) { /// _Enter: captures varying parameters for each recursive
+                  /// call.
+
+  struct _Enter {
+    List<LoopifyTrees::tree<uint64_t>> trees;
+    uint64_t fuel;
+  };
+
+  /// _Resume_Cons: saves [values], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    List<uint64_t> values;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<List<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{trees, fuel});
+  /// Loopified tree_levels_fuel: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<LoopifyTrees::tree<uint64_t>> &trees = std::move(_f.trees);
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = List<List<uint64_t>>::nil();
       } else {
-        List<LoopifyTrees::tree<uint64_t>> children =
-            extract_tree_children(_loop_trees);
-        auto _cell = std::make_unique<List<List<uint64_t>>>(
-            typename List<List<uint64_t>>::Cons(values, nullptr));
-        *_write = std::move(_cell);
-        _write =
-            &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut())
-                 .l;
-        _loop_trees = std::move(children);
-        _loop_fuel = f;
-        continue;
+        uint64_t f = fuel - 1;
+        List<uint64_t> values = extract_tree_values(trees);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                values.v_mut())) {
+          _result = List<List<uint64_t>>::nil();
+        } else {
+          List<LoopifyTrees::tree<uint64_t>> children =
+              extract_tree_children(trees);
+          _stack.emplace_back(_Resume_Cons{values});
+          _stack.emplace_back(_Enter{std::move(children), f});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result =
+          List<List<uint64_t>>::cons(std::move(_f.values), std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<List<uint64_t>> LoopifyTrees::tree_levels(LoopifyTrees::tree<uint64_t> t) {
@@ -814,8 +856,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      const uint64_t &lc = _result.first;
-      const uint64_t &ls = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t lc = std::move(_cs.first);
+      uint64_t ls = std::move(_cs.second);
       _stack.emplace_back(_Cont_lc{a1, lc, ls});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -823,8 +866,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
       uint64_t a1 = _f.a1;
       uint64_t lc = _f.lc;
       uint64_t ls = _f.ls;
-      const uint64_t &rc = _result.first;
-      const uint64_t &rs = _result.second;
+      auto _cs1 = std::move(_result);
+      uint64_t rc = std::move(_cs1.first);
+      uint64_t rs = std::move(_cs1.second);
       _result = std::make_pair(((lc + rc) + 1), (a1 + (ls + rs)));
     }
   }
@@ -832,59 +876,95 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
 }
 
 /// Helper: append two lists of lists.
-List<List<uint64_t>>
-LoopifyTrees::append_list_lists(const List<List<uint64_t>> &l1,
-                                List<List<uint64_t>> l2) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
-  List<List<uint64_t>> _loop_l2 = std::move(l2);
-  const List<List<uint64_t>> *_loop_l1 = &l1;
-  while (true) {
-    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-            _loop_l1->v())) {
-      *_write = std::make_unique<List<List<uint64_t>>>(std::move(_loop_l2));
-      break;
+List<List<uint64_t>> LoopifyTrees::append_list_lists(
+    const List<List<uint64_t>> &l1,
+    List<List<uint64_t>>
+        l2) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<List<uint64_t>> l2;
+    const List<List<uint64_t>> *l1;
+  };
+
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    List<uint64_t> a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<List<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{std::move(l2), &l1});
+  /// Loopified append_list_lists: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      List<List<uint64_t>> l2 = std::move(_f.l2);
+      const List<List<uint64_t>> &l1 = *_f.l1;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(l1.v())) {
+        _result = std::move(l2);
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(l1.v());
+        _stack.emplace_back(_Resume_Cons{a0});
+        _stack.emplace_back(_Enter{std::move(l2), a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<List<uint64_t>>::Cons>(_loop_l1->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
-      _loop_l1 = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result =
+          List<List<uint64_t>>::cons(std::move(_f.a0), std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// Helper: prepend value to all lists in a list of lists.
-List<List<uint64_t>>
-LoopifyTrees::map_cons_to_all(uint64_t x, const List<List<uint64_t>> &lsts) {
-  std::unique_ptr<List<List<uint64_t>>> _head{};
-  std::unique_ptr<List<List<uint64_t>>> *_write = &_head;
-  const List<List<uint64_t>> *_loop_lsts = &lsts;
-  while (true) {
-    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-            _loop_lsts->v())) {
-      *_write =
-          std::make_unique<List<List<uint64_t>>>(List<List<uint64_t>>::nil());
-      break;
+List<List<uint64_t>> LoopifyTrees::map_cons_to_all(
+    uint64_t x,
+    const List<List<uint64_t>> &
+        lsts) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<List<uint64_t>> *lsts;
+  };
+
+  /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    std::decay_t<decltype(List<uint64_t>::cons(
+        std::declval<uint64_t &>(), std::declval<List<uint64_t> &>()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  List<List<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&lsts});
+  /// Loopified map_cons_to_all: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<List<uint64_t>> &lsts = *_f.lsts;
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
+              lsts.v())) {
+        _result = List<List<uint64_t>>::nil();
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(lsts.v());
+        _stack.emplace_back(_Resume_Cons{List<uint64_t>::cons(x, a0)});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<List<uint64_t>>::Cons>(_loop_lsts->v());
-      auto _cell = std::make_unique<List<List<uint64_t>>>(
-          typename List<List<uint64_t>>::Cons(List<uint64_t>::cons(x, a0),
-                                              nullptr));
-      *_write = std::move(_cell);
-      _write =
-          &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
-      _loop_lsts = a1.get();
-      continue;
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result = List<List<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 /// paths t returns all root-to-leaf paths in tree.
@@ -1004,34 +1084,49 @@ List<uint64_t> LoopifyTrees::collect_unsorted(
 }
 
 /// Simple insertion sort for collect_sorted.
-List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
-                                           const List<uint64_t> &l) {
-  std::unique_ptr<List<uint64_t>> _head{};
-  std::unique_ptr<List<uint64_t>> *_write = &_head;
-  const List<uint64_t> *_loop_l = &l;
-  while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_unique<List<uint64_t>>(
-          List<uint64_t>::cons(x, List<uint64_t>::nil()));
-      break;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-      if (x <= a0) {
-        *_write = std::make_unique<List<uint64_t>>(
-            List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1)));
-        break;
+List<uint64_t> LoopifyTrees::insert_sorted(
+    uint64_t x,
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified insert_sorted: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<uint64_t>::cons(x, List<uint64_t>::nil());
       } else {
-        auto _cell = std::make_unique<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = a1.get();
-        continue;
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        if (x <= a0) {
+          _result = List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1));
+        } else {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.a0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 List<uint64_t> LoopifyTrees::sort_list(
@@ -1068,7 +1163,7 @@ List<uint64_t> LoopifyTrees::sort_list(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = insert_sorted(_f.a0, _result);
+      _result = insert_sorted(_f.a0, std::move(_result));
     }
   }
   return _result;
@@ -1180,8 +1275,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       auto _f = std::move(std::get<_Cont_Node>(_frame));
       uint64_t a1 = _f.a1;
       const LoopifyTrees::tree<uint64_t> &a2 = *_f.a2;
-      const uint64_t &lmin = _result.first;
-      const uint64_t &lmax = _result.second;
+      auto _cs = std::move(_result);
+      uint64_t lmin = std::move(_cs.first);
+      uint64_t lmax = std::move(_cs.second);
       _stack.emplace_back(_Cont_lmin{a1, lmax, lmin});
       _stack.emplace_back(_Enter{&a2});
     } else {
@@ -1189,8 +1285,9 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
       uint64_t a1 = _f.a1;
       uint64_t lmax = _f.lmax;
       uint64_t lmin = _f.lmin;
-      const uint64_t &rmin = _result.first;
-      const uint64_t &rmax = _result.second;
+      auto _cs1 = std::move(_result);
+      uint64_t rmin = std::move(_cs1.first);
+      uint64_t rmax = std::move(_cs1.second);
       _result = std::make_pair(min3((lmin == UINT64_C(0) ? a1 : lmin),
                                     (rmin == UINT64_C(0) ? a1 : rmin), a1),
                                max3(lmax, rmax, a1));
@@ -1235,14 +1332,18 @@ bool LoopifyTrees::tree_contains(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyTrees::tree<uint64_t> *a0;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s1;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     bool _result;
-    decltype(std::declval<uint64_t &>() == std::declval<uint64_t &>()) _s1;
+    std::decay_t<decltype(std::declval<uint64_t &>() ==
+                          std::declval<uint64_t &>())>
+        _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -1268,7 +1369,7 @@ bool LoopifyTrees::tree_contains(
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
-      _stack.emplace_back(_Combine_Node{_result, _f._s1});
+      _stack.emplace_back(_Combine_Node{std::move(_result), _f._s1});
       _stack.emplace_back(_Enter{_f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));

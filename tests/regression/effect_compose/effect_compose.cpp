@@ -6,7 +6,7 @@ uint64_t EffectCompose::par_double(uint64_t n) {
     return (x + x);
   };
   std::future<uint64_t> t = std::async(std::launch::async, double0, n);
-  return t.get();
+  return std::move(t).get();
 }
 
 /// Use parE to compute two values in parallel and add them.
