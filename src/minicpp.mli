@@ -367,7 +367,6 @@ and cpp_field =
       * cpp_stmt list
       (** Template converting constructor: template params, explicit flag,
           constructor params, body statements *)
-  | Fraw of string  (** Raw C++ field declaration *)
 
 (** Method descriptor record. *)
 and method_field = {
@@ -531,11 +530,8 @@ type cpp_decl =
       ds_needs_shared_from_this : bool;
           (** True if inherits enable_shared_from_this *)
     }
-  | Dstruct_decl of GlobRef.t  (** Forward struct declaration *)
-  | Dusing of GlobRef.t * cpp_type  (** Type alias: using name = type *)
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
       (** Global variable definition with initializer *)
-  | Ddecl of GlobRef.t * cpp_type  (** Global variable declaration *)
   | Dconcept of GlobRef.t * cpp_expr
       (** Concept definition (template params from outer Dtemplate) *)
   | Dstatic_assert of cpp_expr * string option

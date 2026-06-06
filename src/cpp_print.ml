@@ -3248,14 +3248,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ h (explicit_s ++ sname ++ pp_par true params_s ++ str " {")
     ++ fnl ()
     ++ body_s ++ str "}"
-  | Fraw s ->
-    let s =
-      match struct_name with
-      | Some sn ->
-        Common.render_template [("%SELF%", Pp.string_of_ppcmds sn)] s
-      | None -> s
-    in
-    str s
 
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
@@ -3769,20 +3761,6 @@ and pp_cpp_decl_raw env = function
     ++ f_s
     ++ fnl ()
     ++ str "};"
-  | Dstruct_decl id -> str "struct " ++ pp_global Type id ++ str ";"
-  | Dusing (_, Tglob (GlobRef.VarRef dummy_id, _, _))
-    when (let n = Id.to_string dummy_id in
-          n = "dummy_prop" || n = "dummy_type" || n = "dummy_implicit") ->
-    mt () (* Skip erased type aliases *)
-  | Dusing (id, ty) ->
-    if is_any_type ty then
-      any_type_aliases :=
-        Id.Set.add (Id.of_string (Common.pp_global_name Type id)) !any_type_aliases;
-    str "using "
-    ++ pp_global Type id
-    ++ str " = "
-    ++ pp_type ty
-    ++ str ";"
   | Dasgn (id, ty, e) ->
     (* Special handling for CPPabort: generate lambda with correct return
        type *)
@@ -3836,8 +3814,6 @@ and pp_cpp_decl_raw env = function
         ++ str " = "
         ++ wrapped_expr
         ++ str ";" )
-  | Ddecl (id, ty) ->
-    h (pp_type ty ++ str " " ++ pp_global Type id ++ str ";")
   | Dconcept (id, cstr) ->
     (* For hoisted concepts, use only the simple base name without module
        qualification *)

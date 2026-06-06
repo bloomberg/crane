@@ -369,8 +369,6 @@ and cpp_field =
       * bool (* explicit *)
       * (Id.t * cpp_type) list
       * cpp_stmt list
-  (* Raw C++ field declaration (e.g., converting constructors) *)
-  | Fraw of string
 
 (** Method field descriptor for struct methods. *)
 and method_field = {
@@ -735,10 +733,7 @@ type cpp_decl =
       ds_needs_shared_from_this : bool;
           (* inherit enable_shared_from_this when a method returns this *)
     }
-  | Dstruct_decl of GlobRef.t
-  | Dusing of GlobRef.t * cpp_type
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
-  | Ddecl of GlobRef.t * cpp_type
   | Dconcept of
       GlobRef.t
       * cpp_expr (* template params are provided by an outer Dtemplate *)
