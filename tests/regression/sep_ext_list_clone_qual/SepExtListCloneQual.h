@@ -5,6 +5,7 @@
 #include <memory>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include "Datatypes.h"
 
@@ -84,6 +85,38 @@ public:
   }
 
   // MANIPULATORS
+  ~Forest() {
+    std::vector<std::shared_ptr<Forest<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Node>(&_v)) {
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          auto *_lp = _alt->a1.get();
+          while (
+              std::holds_alternative<typename Datatypes::List<Forest<A>>::Cons>(
+                  _lp->v())) {
+            auto &_lc = std::get<typename Datatypes::List<Forest<A>>::Cons>(
+                _lp->v_mut());
+            _stack.push_back(std::make_shared<Forest<A>>(std::move(_lc.a)));
+            if (_lc.l) {
+              _lp = _lc.l.get();
+            } else {
+              break;
+            }
+          }
+          _alt->a1.reset();
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

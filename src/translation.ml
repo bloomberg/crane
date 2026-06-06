@@ -1199,6 +1199,15 @@ let is_list_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "list"
 
+let list_ctor_struct_names (g : GlobRef.t) : string * string =
+  match g with
+  | GlobRef.IndRef (kn, i) ->
+    let nil_ref = GlobRef.ConstructRef ((kn, i), 1) in
+    let cons_ref = GlobRef.ConstructRef ((kn, i), 2) in
+    ( ctor_struct_name_of_ref nil_ref,
+      ctor_struct_name_of_ref cons_ref )
+  | _ -> ("Nil", "Cons")
+
 (** Render a simple C++ expression to a string for use in raw C++ fragments.
     Returns [None] for compound expressions that cannot be reduced to a
     simple identifier or dereference chain. *)
@@ -14035,7 +14044,14 @@ let gen_ind_header_v2
               (fun (pname, _, _, _) -> is_ref_to pname vars ty)
               mutual_partners
           in
-          let is_recursive_ref ty = is_direct_self_ref ty || is_mutual_ref ty in
+          let rec classify_ml_self_ref = function
+            | ml_ty when is_direct_self_ref ml_ty -> `Direct
+            | Miniml.Tglob (g, [arg], _)
+              when is_list_global g && is_direct_self_ref arg ->
+              `List g
+            | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
+            | _ -> `None
+          in
           let has_mutual =
             Array.exists (fun tys_list ->
               List.exists is_mutual_ref tys_list) tys
@@ -14049,44 +14065,96 @@ let gen_ind_header_v2
           let _pv_id = Id.of_string "_pv" in
           let variant_t_ty = Tid (Id.of_string "variant_t", []) in
           let self_ty = Tglob (name, ty_vars, []) in
-          (** Build [Sif_then] statements that push each recursive field of a
-              constructor onto [_stack]:
-              [if (_alt->field) _stack.push_back(std::move(_alt->field));] *)
-          let mk_field_pushes fields =
-            List.map (fun field_id ->
-              Sif_then (
-                CPParrow (CPPvar _alt_id, field_id),
-                [Sexpr (CPPdot_method_call (
-                   CPPvar _stack_id,
-                   Id.of_string "push_back",
-                   [CPPmove (CPParrow (CPPvar _alt_id, field_id))]))]
-              )) fields
+          let render_q_destr ty =
+            let skip g = globref_equal g name in
+            render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
-          (** For each constructor, collect recursive [shared_ptr] fields and
-              build an [Sif_decl] that uses [get_if] to test the variant
-              alternative and push recursive fields onto the stack.  Returns
-              [Some stmt] for constructors with recursive fields, [None]
-              otherwise.
+          (** Build drain statements for classified fields.  [Direct] fields get
+              a simple [push_back(std::move(field))].  [List g] fields walk the
+              list spine and push each element. *)
+          let mk_classified_field_stmts classified_fields =
+            List.concat_map (fun (field_id, cls) ->
+              let fe = CPParrow (CPPvar _alt_id, field_id) in
+              match cls with
+              | `Direct ->
+                [Sif_then (fe,
+                  [Sexpr (CPPdot_method_call (
+                     CPPvar _stack_id,
+                     Id.of_string "push_back",
+                     [CPPmove fe]))])]
+              | `List list_g ->
+                let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
+                let ss = render_q_destr self_ty in
+                let fes =
+                  Id.to_string _alt_id ^ "->"
+                  ^ Id.to_string field_id
+                in
+                let (_nil_s, cons_s) = list_ctor_struct_names list_g in
+                let elem_field =
+                  Id.to_string
+                    (Common.lookup_ctor_field_name cons_s 0)
+                in
+                let tail_field =
+                  Id.to_string
+                    (Common.lookup_ctor_field_name cons_s 1)
+                in
+                [Sif_then (
+                  CPPbinop ("&&", fe,
+                    CPPbinop ("==",
+                      CPPraw (fes ^ ".use_count()"),
+                      CPPint 1)),
+                  [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
+                    Swhile (
+                      CPPraw (
+                        "std::holds_alternative<typename "
+                        ^ ls ^ "::" ^ cons_s
+                        ^ ">(_lp->v())"),
+                      [ Sraw (
+                          "auto& _lc = std::get<typename "
+                          ^ ls ^ "::" ^ cons_s
+                          ^ ">(_lp->v_mut());");
+                        Sexpr (CPPdot_method_call (
+                          CPPvar _stack_id,
+                          Id.of_string "push_back",
+                          [CPPraw (
+                             "std::make_shared<" ^ ss
+                             ^ ">(std::move(_lc." ^ elem_field ^ "))")]));
+                        Sraw (
+                          "if (_lc." ^ tail_field ^ ") {"
+                          ^ " _lp = _lc." ^ tail_field ^ ".get();"
+                          ^ " } else { break; }") ]);
+                    Sraw (fes ^ ".reset();") ])]
+              | `None -> []) classified_fields
+          in
+          (** For each constructor, classify recursive fields and build an
+              [Sif_decl] that uses [get_if] to test the variant alternative
+              and drain recursive fields onto the stack.  Returns [Some stmt]
+              for constructors with recursive fields, [None] otherwise.
 
               @param parent_ty    type to qualify the constructor in [get_if]
               @param ctor_opt     [Some ctor_id] for qualified access
                                   ([typename Parent::Ctor]), [None] for bare
               @param variant_var  identifier of the variant to test *)
           let mk_ctor_drain parent_ty ctor_opt variant_var i tys_list cnames_arr =
-            let recursive_fields =
+            let classified_fields =
               List.filter_map
                 (fun (j, ty) ->
-                  if is_recursive_ref ty then
+                  let cls = classify_ml_self_ref ty in
+                  let is_mutual = is_mutual_ref ty in
+                  if cls <> `None || is_mutual then
                     let cname_str =
                       ctor_struct_name_of_ref ~fallback_idx:i cnames_arr.(i)
                     in
-                    Some (Common.lookup_ctor_field_name cname_str j)
+                    let field_id =
+                      Common.lookup_ctor_field_name cname_str j
+                    in
+                    Some (field_id, if is_mutual then `Direct else cls)
                   else None)
                 (List.mapi (fun j ty -> (j, ty)) tys_list)
             in
-            match recursive_fields with
+            match classified_fields with
             | [] -> None
-            | fields ->
+            | _ ->
               let ctor_id =
                 ctor_struct_id_of_ref ~fallback_idx:i cnames_arr.(i)
               in
@@ -14098,7 +14166,7 @@ let gen_ind_header_v2
                 _alt_id, Tptr Tauto,
                 CPPstd_get_if (fst ctor_arg, snd ctor_arg,
                   CPPunop ("&", CPPvar variant_var)),
-                mk_field_pushes fields,
+                mk_classified_field_stmts classified_fields,
                 []))
           in
           let drain_stmts =

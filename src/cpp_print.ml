@@ -2543,6 +2543,7 @@ and is_concrete_cpp_type = function
   | Tvar _ -> false
   | Tunknown | Ttodo | Tany | Tauto -> false
   | Tmod (_, inner) -> is_concrete_cpp_type inner
+  | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true
 
 (** Check if an expression is a method call whose return type is [std::any]. *)
@@ -3628,10 +3629,11 @@ and pp_cpp_decl_raw env = function
        (out-of-line) or inline in a template struct (in-struct + in-template).
        constexpr requires the definition visible in the header, so only use
        it for inline template struct definitions. *)
+    let throws = body_is_throw body in
     let qualifier =
       fun_qualifier
         ~can_constexpr:(render_ctx.rc_in_struct && not is_out_of_struct_def)
-        ~throws:(body_is_throw body)
+        ~throws
         ~no_pure
         ret_ty params
     in

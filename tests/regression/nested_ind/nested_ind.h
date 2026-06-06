@@ -397,6 +397,52 @@ struct NestedInd {
     }
 
     // MANIPULATORS
+    ~expr() {
+      std::vector<std::shared_ptr<expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Add>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            auto *_lp = _alt->a0.get();
+            while (
+                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
+              if (_lc.l) {
+                _lp = _lc.l.get();
+              } else {
+                break;
+              }
+            }
+            _alt->a0.reset();
+          }
+        }
+        if (auto *_alt = std::get_if<Mul>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            auto *_lp = _alt->a0.get();
+            while (
+                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
+              if (_lc.l) {
+                _lp = _lc.l.get();
+              } else {
+                break;
+              }
+            }
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -31,7 +31,7 @@
   (targets any_cast_nested_pair.t.exe)
   (deps AnyCastNestedPair.vo any_cast_nested_pair.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested_pair.t.exe any_cast_nested_pair.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_nested_pair.t.exe any_cast_nested_pair.cpp any_cast_nested_pair.t.cpp)))
  (rule
   (alias runtest)
   (deps any_cast_nested_pair.t.exe)
