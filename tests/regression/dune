@@ -5541,3 +5541,14 @@
   (alias runtest)
   (deps sep_ext_nullary_modparam.t.exe)
   (action (run ./sep_ext_nullary_modparam.t.exe))))
+
+(subdir stmonad_nth_repro
+ (rule
+  (targets stmonad_nth_repro.t.exe)
+  (deps STMonadNthRepro.vo stmonad_nth_repro.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stmonad_nth_repro.t.exe stmonad_nth_repro.cpp stmonad_nth_repro.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stmonad_nth_repro.t.exe)
+  (action (run ./stmonad_nth_repro.t.exe))))

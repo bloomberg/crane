@@ -13161,16 +13161,20 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
     | Some (Miniml.Tglob (_, tvar_args, _)) ->
-      (* Extract Tvar indices from the Tglob args, paired with their position *)
-      List.concat
-        (List.mapi
-           (fun pos t ->
-             match t with
-             | Miniml.Tvar i | Miniml.Tvar' i -> [(i, pos + 1)]
-             | _ -> [] )
-           tvar_args )
+      (* Extract Tvar indices from the Tglob args, paired with their position.
+         Only include entries whose destination position is within the actual
+         inductive type vars (1..num_ind_vars).  Type parameters killed during
+         extraction (e.g., phantom params) produce Tglob args that map beyond
+         the available vars — treat those as extra method tvars instead. *)
+      List.filter (fun (_, dst) -> dst <= num_ind_vars)
+        (List.concat
+          (List.mapi
+             (fun pos t ->
+               match t with
+               | Miniml.Tvar i | Miniml.Tvar' i -> [(i, pos + 1)]
+               | _ -> [] )
+             tvar_args ))
     | _ ->
-      (* Fallback for non-template types: assume positions 1..num_ind_vars *)
       List.init num_ind_vars (fun i -> (i + 1, i + 1))
   in
   let ind_tvar_set = IntSet.of_list (List.map fst ind_tvar_map) in
@@ -13496,11 +13500,14 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      extended_vars at that remapped position. *)
   let extended_vars = vars @ extra_tvar_names in
   let all_method_type_args =
-    List.map
+    List.filter_map
       (fun orig_tvar_idx ->
         let remapped = remap_ml_tvar orig_tvar_idx in
-        let name = List.nth extended_vars (remapped - 1) in
-        Tvar (remapped - 1, Some name) )
+        if remapped - 1 >= List.length extended_vars then
+          None
+        else
+          let name = List.nth extended_vars (remapped - 1) in
+          Some (Tvar (remapped - 1, Some name)) )
       all_tvars
   in
   let stmts =
