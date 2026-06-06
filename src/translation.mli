@@ -46,11 +46,11 @@ val ml_codomain : Miniml.ml_type -> Miniml.ml_type
     @param env The current variable environment
     @param ns
       Set of inductive references that should be treated as local (no namespace
-      wrapper)
+      wrapper). Defaults to empty; most callers omit it.
     @param tvars Type variable names for substitution
     @param ml_type The ML type to convert *)
 val convert_ml_type_to_cpp_type :
-  env -> Refset'.t -> Id.t list -> ml_type -> cpp_type
+  env -> ?ns:Refset'.t -> Id.t list -> ml_type -> cpp_type
 
 (** Check if a C++ type is erased to std::any (for indexed inductive methods).
     Returns true if the type is Tany or contains an unnamed Tvar. *)

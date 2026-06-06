@@ -260,8 +260,8 @@ and cpp_expr =
   | CPPvisit
   | CPPmk_shared of cpp_type
   | CPPoverloaded of cpp_expr list
-    (* cpp_expressions in list should only be lambdas. TODO: enforce in the AST?
-       split up to a funcall *)
+    (* Invariant: all elements must be CPPlambda. Enforced at construction
+       in make_visit_expr (loopify.ml). *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
   | CPPstruct of
       GlobRef.t

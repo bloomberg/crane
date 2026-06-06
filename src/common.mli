@@ -22,6 +22,8 @@ open Miniml
 *)
 val contains_substring : string -> string -> bool
 
+val render_template : (string * string) list -> string -> string
+
 (** [last lst] returns the last element of a non-empty list.
     @raise Failure if the list is empty. *)
 val last : 'a list -> 'a
@@ -152,6 +154,8 @@ type kind =
   | Type
   | Cons
   | Mod  (** Kind of global identifier: term, type, constructor, or module. *)
+
+val label_of_r : GlobRef.t -> Label.t
 
 (** Print a reference using a specific kernel name key. *)
 val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string

@@ -840,7 +840,6 @@ let compute_returns_any tbl (s : ml_structure) =
           let ret_cpp =
             Translation.convert_ml_type_to_cpp_type
               env
-              Refset'.empty
               param_vars
               ret_ml
           in

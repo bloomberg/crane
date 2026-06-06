@@ -174,7 +174,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
     in
     let args, ret_ty = get_function_parts t in
     let cpp_ret =
-      convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] ret_ty
+      convert_ml_type_to_cpp_type (empty_env ()) [] ret_ty
     in
     let stdlib_ns = (sn ()).ns ^ "::" in
     let same_as = (sn ()).same_as in
@@ -274,7 +274,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
     else
       let cpp_args =
         List.map
-          (convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [])
+          (convert_ml_type_to_cpp_type (empty_env ()) [])
           args
       in
       let declvals =
@@ -1070,7 +1070,6 @@ let rec pp_structure_elem ~is_header f = function
                       ty_vars
                       (convert_ml_type_to_cpp_type
                          (empty_env ())
-                         Refset'.empty
                          ty_vars
                          field_ty )
                   in

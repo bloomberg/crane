@@ -33,6 +33,10 @@ open Cpp_names
 (** Memoized regex for matching the [::] C++ scope-resolution operator. *)
 let re_double_colon = Str.regexp_string "::"
 
+(* Global mutable state in this file:
+   - axiom_type_refs: accumulates across the full extraction session; never cleared
+     because axiom classifications are global to a Rocq session. *)
+
 (** Registry of GlobRefs that are axiom types (extracted as std::any). Functions
     whose return type involves an axiom type should not be marked
     __attribute__((pure)) because they may transitively call axiom stubs that
@@ -966,7 +970,7 @@ and pp_cpp_expr env args t =
       try
         let ml_ty = Table.find_type ref_name in
         Translation.convert_ml_type_to_cpp_type
-          env Refset'.empty [] (Translation.ml_codomain ml_ty)
+          env [] (Translation.ml_codomain ml_ty)
       with _ -> Tauto
     in
     let result_str = "_r" in
@@ -1292,7 +1296,7 @@ and pp_cpp_expr env args t =
           in
           let ml_arg_types = extract_arg_types ml_ty in
           List.map
-            (Translation.convert_ml_type_to_cpp_type env Refset'.empty [])
+            (Translation.convert_ml_type_to_cpp_type env [])
             ml_arg_types
         with _ -> []
       in
@@ -1701,7 +1705,9 @@ and pp_cpp_expr env args t =
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
-  | CPPstructmk (id, tys, es) ->
+  | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
+    let suffix = match e with CPPstructmk _ -> "::make(" | _ -> "{" in
+    let closing = match e with CPPstructmk _ -> str ")" | _ -> str "}" in
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
       match tys with
@@ -1716,23 +1722,7 @@ and pp_cpp_expr env args t =
     in
     let name_str = string_of_ppcmds struct_name in
     typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str "::make(" ++ es_s ++ str ")"
-  | CPPstruct (id, tys, es) ->
-    let es_s = pp_list (pp_cpp_expr env args) es in
-    let templates =
-      match tys with
-      | [] -> mt ()
-      | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
-    in
-    let struct_name =
-      match id with
-      | GlobRef.IndRef _ when is_eponymous_record_cached id ->
-        str (Common.pp_type_name_capitalized id)
-      | _ -> pp_global Type id
-    in
-    let name_str = string_of_ppcmds struct_name in
-    typename_prefix_for name_str
-    ++ struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
+    ++ struct_name ++ templates ++ str suffix ++ es_s ++ closing
   | CPPstruct_id (id, tys, es) ->
     let es_s = pp_list (pp_cpp_expr env args) es in
     let templates =
@@ -3262,10 +3252,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     let s =
       match struct_name with
       | Some sn ->
-        Str.global_replace
-          (Str.regexp_string "%SELF%")
-          (Pp.string_of_ppcmds sn)
-          s
+        Common.render_template [("%SELF%", Pp.string_of_ppcmds sn)] s
       | None -> s
     in
     str s
@@ -3916,7 +3903,7 @@ and pp_cpp_decl_raw env = function
     @param vl   type variable names for de Bruijn index lookup
     @param t    the MiniML type to convert and render *)
 let pp_type par vl t =
-  let cty = convert_ml_type_to_cpp_type (empty_env ()) Refset'.empty [] t in
+  let cty = convert_ml_type_to_cpp_type (empty_env ()) [] t in
   pp_cpp_type par vl cty
 
 (** {2 Pretty-printing of expressions. [par] indicates whether parentheses are

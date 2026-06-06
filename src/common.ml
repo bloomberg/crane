@@ -36,6 +36,12 @@ let contains_substring haystack needle =
     true
   with Not_found -> false
 
+let render_template (substs : (string * string) list) (tmpl : string) : string =
+  List.fold_left
+    (fun s (placeholder, value) ->
+      Str.global_replace (Str.regexp_string placeholder) value s)
+    tmpl substs
+
 (** [last lst] returns the last element of a non-empty list.
     @raise Failure if the list is empty. *)
 let last lst =
@@ -1120,6 +1126,12 @@ let pp_cpp_gen k mp rls olab =
       unquote (last rls)
     else
       pp_ocaml_extern k base rls
+
+let label_of_r : GlobRef.t -> Label.t = function
+  | GlobRef.ConstRef c -> Constant.label c
+  | GlobRef.IndRef (ind, _) -> MutInd.label ind
+  | GlobRef.ConstructRef ((ind, _), _) -> MutInd.label ind
+  | GlobRef.VarRef v -> Label.of_id v
 
 (** Main name printing function for a reference, using a kernel name key.
     Registers the reference's short name in the current visible scope and

@@ -108,6 +108,7 @@ let id_stack        = Id.of_string "_stack"
 let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
 let id_frame        = Id.of_string "_frame"
+let id_Frame        = Id.of_string "_Frame"
 let id_self         = Id.of_string "_self"
 
 (* Method names used with CPPmethod_call / CPPmember *)
@@ -235,6 +236,11 @@ let rec worthwhile_move_type = function
   | Tvar _ -> true
   | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
 
+(* Global mutable state in this file and their reset granularity:
+   - mutual_fn_table : reset between extraction units (clear_mutual_table)
+   - ctor_ptr_fields : accumulates across the full session; never cleared because
+     struct shapes don't change within a Rocq session *)
+
 (** {2 Mutual recursion table}
 
     Functions register their bodies here so mutual pairs can be detected and
@@ -317,16 +323,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
    | CPPfun_call (CPPvar id, args) ->
      let matches_name =
        List.exists
-         (fun (r, _) ->
-           let label =
-             match r with
-             | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-             | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-             | GlobRef.ConstructRef ((ind, _), _) ->
-               Label.to_id (MutInd.label ind)
-             | GlobRef.VarRef v -> v
-           in
-           Id.equal id label )
+         (fun (r, _) -> Id.equal id (Label.to_id (Common.label_of_r r)))
          fn_refs
      in
      if matches_name then
@@ -398,13 +395,7 @@ let method_checker
      else
        Some {cs_args = args_normal; cs_is_tail = false}
    | CPPfun_call (CPPglob (r, _, _), args) ->
-     let label =
-       match r with
-       | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-       | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-       | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
-       | GlobRef.VarRef v -> v
-     in
+     let label = Label.to_id (Common.label_of_r r) in
      if Id.equal label method_name then
        let args_normal = List.rev args in
        if has_self_param then
@@ -865,6 +856,10 @@ let filter_by_mask mask lst =
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
 let make_visit_expr scrut lambdas =
+  List.iter (function
+    | CPPlambda _ -> ()
+    | _ -> CErrors.anomaly (Pp.str "make_visit_expr: CPPoverloaded requires lambda elements"))
+    lambdas;
   CPPfun_call (CPPvisit, [scrut; CPPoverloaded lambdas])
 
 (** Wrap a [std::visit] dispatch into a single-statement list. *)
@@ -5959,7 +5954,7 @@ let make_frame_branch frame_name body =
 let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
   let result_decl = Sdecl_init (id_result, ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
-  let frame_ty = Tvar (0, Some (Id.of_string "_Frame")) in
+  let frame_ty = Tvar (0, Some (id_Frame)) in
   let vector_ty = Tid_external (Id.of_string_soft "std::vector", [frame_ty]) in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
@@ -6412,7 +6407,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
     [Scomment "_Enter: captures varying parameters for each recursive call.";
      Sstruct_def (id_enter, enter_fields)]
     @ call_structs
-    @ [Susing (Id.of_string "_Frame", Tvariant variant_tys)]
+    @ [Susing (id_Frame, Tvariant variant_tys)]
   in
   let frame_field_types =
     ("_Enter", List.map snd enter_fields)

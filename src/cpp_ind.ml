@@ -489,7 +489,6 @@ let pp_cpp_ind_header kn ind =
               let ret_cpp =
                 Translation.convert_ml_type_to_cpp_type
                   (empty_env ())
-                  Refset'.empty
                   param_vars
                   ret_ml
               in
@@ -679,7 +678,6 @@ let pp_hdecl d =
                      []
                      (convert_ml_type_to_cpp_type
                         (empty_env ())
-                        Refset'.empty
                         []
                         ty ) )
                  args

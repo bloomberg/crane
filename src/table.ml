@@ -1822,7 +1822,9 @@ let reset_extraction_blacklist () = Lib.add_leaf (reset_blacklist ())
 
 (** {2 Crane Extract Constant/Inductive} *)
 
-(* UGLY HACK: to be defined in [extraction.ml] *)
+(* Forward reference: the hook body is installed in [extraction.ml] after that
+   module is loaded.  This breaks the build-time circular dependency between
+   [table.ml] and the extraction pipeline. *)
 let use_type_scheme_nb_args, type_scheme_nb_args_hook = Hook.make ()
 
 (* Track which custom GlobRefs are actually used during extraction. *)
