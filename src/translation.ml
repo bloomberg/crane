@@ -10107,8 +10107,16 @@ let gen_record_cpp name fields ind =
    which will be pretty-printed in cpp.ml.
 *)
 let gen_typeclass_cpp name fields ind =
-  let inst_id = Id.of_string "I" in
   let nb_keep = count_keep_params ind.ip_sign in
+  let inst_id =
+    let param_names =
+      List.mapi (fun i x -> if i < nb_keep
+                            then Id.to_string (Common.tparam_name x)
+                            else "") ind.ip_vars
+    in
+    if List.mem "I" param_names then Id.of_string "_Inst"
+    else Id.of_string "I"
+  in
   (* Split ip_vars into param vars (real type params) and promoted vars
      (associated types). Prefix param vars with t_ for BDE convention. *)
   let prefixed_ip_vars =
@@ -10267,7 +10275,8 @@ let gen_typeclass_cpp name fields ind =
         (* Filter out type class instance arguments (they're passed via
            template) *)
         let args =
-          List.filter (fun t -> not (Table.is_typeclass_type t)) args
+          List.filter (fun t ->
+            not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t)) args
         in
         let ret_cpp =
           convert_ml_type_to_cpp_type
@@ -10576,6 +10585,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           let rec extract_params ml_acc cpp_acc body =
             match body with
+            | MLlam (_id, ty, rest) when Mlutil.isTdummy ty ->
+              extract_params ml_acc cpp_acc rest
             | MLlam (id, ty, rest) ->
               let param_name = id_of_mlid id in
               let resolved_ty = subst_promoted_tvars ty in
@@ -10624,10 +10635,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             if ml_params = [] then
               (* No lambdas in the body — either a function reference that needs
                  eta-expansion, or a non-function value field. *)
-              let arg_types, _ret_type = get_args_and_ret [] subst_ty in
-              (* Filter out type class instance args *)
+              let all_arg_types, _ret_type = get_args_and_ret [] subst_ty in
+              (* Filter out type class instance and erased args *)
               let arg_types =
-                List.filter (fun t -> not (Table.is_typeclass_type t)) arg_types
+                List.filter (fun t ->
+                  not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t))
+                  all_arg_types
               in
               if arg_types = [] then
                 (* Non-function field (like m_id : carrier) — generate as a
@@ -10637,8 +10650,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 in
                 ([], method_ret_ty, stmts)
               else
-                (* Function reference — eta-expand based on the field type's
-                   args *)
+                (* Function reference — eta-expand.  Build C++ params only for
+                   real args, but supply MLdummy for erased args in the ML
+                   application so the body receives all expected arguments. *)
                 let params =
                   List.mapi
                     (fun i arg_ty ->
@@ -10654,18 +10668,73 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 in
                 let nparams = List.length params in
                 let ml_rels =
-                  List.mapi (fun i _ -> MLrel (nparams - i)) params
+                  let real_idx = ref nparams in
+                  List.map (fun t ->
+                    if Mlutil.isTdummy t || Table.is_typeclass_type t then
+                      MLdummy Ktype
+                    else begin
+                      let r = MLrel !real_idx in
+                      decr real_idx; r
+                    end
+                  ) all_arg_types
                 in
                 (* Lift the body's de Bruijn indices to account for the new eta
                    params *)
                 let lifted_body = Mlutil.ast_lift nparams inner_body in
                 let call_expr = MLapp (lifted_body, ml_rels) in
+                (* Look up body function's types to detect mismatches from
+                   inlined constants (e.g. Ref => "%t0" makes Ref A -> std::any
+                   but refToIxNat expects RefNat).  Use the concrete types for
+                   the env so method dispatch works, then prepend any_cast
+                   bindings for params whose signature type is std::any. *)
+                let body_arg_types =
+                  match inner_body with
+                  | MLglob (r, _) -> (
+                    try
+                      let bty = Table.find_type r in
+                      let bargs, _ = get_args_and_ret [] bty in
+                      let bargs = List.filter (fun t ->
+                        not (Mlutil.isTdummy t)
+                        && not (Table.is_typeclass_type t)) bargs in
+                      if List.length bargs = List.length params then
+                        Some bargs
+                      else None
+                    with Not_found -> None )
+                  | _ -> None
+                in
+                let cast_info =
+                  List.filter_map (fun (i, (name, ml_ty, _cpp_ty)) ->
+                    match body_arg_types with
+                    | Some bargs ->
+                      let body_ty = List.nth bargs i in
+                      let sig_cpp = convert_ml_type_to_cpp_type
+                        base_env type_var_names ml_ty in
+                      let body_cpp = convert_ml_type_to_cpp_type
+                        base_env type_var_names body_ty in
+                      if sig_cpp = Tany && body_cpp <> Tany then
+                        Some (name, body_ty, body_cpp)
+                      else None
+                    | None -> None
+                  ) (List.mapi (fun i x -> (i, x)) params)
+                in
                 let ml_vars =
-                  List.rev_map (fun (name, ml_ty, _) -> (name, ml_ty)) params
+                  List.rev (List.map (fun (name, ml_ty, _cpp_ty) ->
+                    match List.find_opt (fun (n, _, _) -> Id.equal n name) cast_info with
+                    | Some (_, body_ty, _) -> (name, body_ty)
+                    | None -> (name, ml_ty)
+                  ) params)
                 in
                 let renamed_eta, env = push_vars' ml_vars base_env in
                 let stmts =
                   gen_stmts env (fun x -> Sreturn (Some x)) call_expr
+                in
+                let stmts =
+                  List.fold_left (fun acc (name, _body_ty, body_cpp) ->
+                    let param_name =
+                      Id.of_string ("_p_" ^ Id.to_string name) in
+                    Sasgn (name, Some body_cpp,
+                           CPPany_cast (body_cpp, CPPvar param_name)) :: acc
+                  ) stmts (List.rev cast_info)
                 in
                 (* Sync param names with push_vars' output (lowercased
                    and uniquified) so signatures match bodies.  ml_vars
@@ -10673,7 +10742,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                    reversed order — reverse back to align with params. *)
                 let cpp_params =
                   List.map2
-                    (fun (new_name, _) (_, cpp_ty) -> (new_name, cpp_ty))
+                    (fun (new_name, _) (_, cpp_ty) ->
+                      let needs_cast =
+                        List.exists (fun (n, _, _) ->
+                          Id.equal n new_name) cast_info in
+                      if needs_cast then
+                        (Id.of_string ("_p_" ^ Id.to_string new_name), cpp_ty)
+                      else
+                        (new_name, cpp_ty))
                     (List.rev renamed_eta)
                     (List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params)
                 in
@@ -13591,6 +13667,32 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let stmts = List.map (tvar_subst_stmt extended_vars) stmts in
 
   let no_pure = is_monadic_ml_type ret_ty in
+  (* Filter out phantom extra template params: if an extra tvar name doesn't
+     appear in any param type or the return type, it's phantom (e.g., a killed
+     inductive type arg) and shouldn't be a template param. *)
+  let rec cpp_type_has_tvar name = function
+    | Tvar (_, Some n) -> Id.equal n name
+    | Tglob (_, args, _) | Tid (_, args) | Tid_external (_, args)
+    | Tvariant args ->
+      List.exists (cpp_type_has_tvar name) args
+    | Tfun (args, ret) ->
+      List.exists (cpp_type_has_tvar name) args || cpp_type_has_tvar name ret
+    | Tref t | Tptr t | Tshared_ptr t | Tdecay t -> cpp_type_has_tvar name t
+    | Tmod (_, t) | Tnamespace (_, t) -> cpp_type_has_tvar name t
+    | Tqualified (base, _) -> cpp_type_has_tvar name base
+    | _ -> false
+  in
+  let extra_tvar_name_set =
+    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names
+  in
+  let template_params =
+    List.filter (fun (_tt, tname) ->
+      if not (Id.Set.mem tname extra_tvar_name_set) then true
+      else
+        cpp_type_has_tvar tname ret_cpp
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params)
+    template_params
+  in
   ( Fmethod
       {
         mf_name = func_name;

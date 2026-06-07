@@ -15,20 +15,21 @@ struct RefNat {
   // CREATORS
   static RefNat mkrefnat(uint64_t a) { return {a}; }
 
-  template <typename T1> uint64_t refToIxNat() const {
+  uint64_t refToIxNat() const {
     const auto &[a] = *this;
     return a;
   }
 };
 
-template <typename I, typename I>
-concept RefClass = requires(std::any a0, std::any a1) {
-  { I::refToIx(a0, a1) } -> std::convertible_to<I>;
+template <typename _Inst, typename I>
+concept RefClass = requires(std::any a0) {
+  { _Inst::refToIx(a0) } -> std::convertible_to<I>;
 };
 
 struct nat_ref {
-  static uint64_t refToIx(std::any) {
-    return [](const auto &_x) { return _x.refToIxNat(); };
+  static uint64_t refToIx(std::any _p_a0) {
+    RefNat a0 = std::any_cast<RefNat>(_p_a0);
+    return a0.refToIxNat();
   }
 };
 
