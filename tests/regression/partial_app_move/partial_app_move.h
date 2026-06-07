@@ -91,7 +91,7 @@ struct PartialAppMove {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T1 _result;
+      std::decay_t<T1> _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -152,7 +152,7 @@ struct PartialAppMove {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T1 _result;
+      std::decay_t<T1> _result;
       tree a2;
       uint64_t a1;
       tree a0;

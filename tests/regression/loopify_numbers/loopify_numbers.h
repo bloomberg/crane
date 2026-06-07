@@ -171,10 +171,8 @@ struct LoopifyNumbers {
       uint64_t n;
     };
 
-    /// _Resume__x: saves [f], resumes after recursive call with _result.
-    struct _Resume__x {
-      F1 f;
-    };
+    /// _Resume__x: resumes after recursive call with _result.
+    struct _Resume__x {};
 
     using _Frame = std::variant<_Enter, _Resume__x>;
     uint64_t _result{};
@@ -196,13 +194,13 @@ struct LoopifyNumbers {
             _result = f(x);
           } else {
             uint64_t _x = n_ - 1;
-            _stack.emplace_back(_Resume__x{f});
+            _stack.emplace_back(_Resume__x{});
             _stack.emplace_back(_Enter{n_});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume__x>(_frame));
-        _result = std::move(_f.f)(std::move(_result));
+        _result = f(std::move(_result));
       }
     }
     return _result;

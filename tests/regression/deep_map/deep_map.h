@@ -127,16 +127,16 @@ struct DeepMap {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -190,16 +190,16 @@ struct DeepMap {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -256,14 +256,14 @@ struct DeepMap {
     /// _After_Node: saves [a0, a1], dispatches next recursive call.
     struct _After_Node {
       const tree<T1> *a0;
-      T2 a1;
+      std::decay_t<T2> a1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
       tree<T2> _result;
-      T2 a1;
+      std::decay_t<T2> a1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

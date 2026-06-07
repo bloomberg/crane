@@ -115,6 +115,7 @@ type cpp_type =
   | Tauto
       (** auto for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
+  | Tdecay of cpp_type  (** std::decay_t<T> - strips references/cv from template params *)
 
 (** Type metavariable for unification. *)
 and cpp_meta = {

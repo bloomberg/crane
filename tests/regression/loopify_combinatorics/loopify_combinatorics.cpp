@@ -505,12 +505,11 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
     List<uint64_t> l;
   };
 
-  /// _Cont_Cons: saves [a0, l, x], resumes after recursive call, then processes
+  /// _Cont_Cons: saves [a0, l], resumes after recursive call, then processes
   /// rest.
   struct _Cont_Cons {
     uint64_t a0;
     List<uint64_t> l;
-    uint64_t x;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -531,14 +530,13 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
             List<List<uint64_t>>::nil());
       } else {
         auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-        _stack.emplace_back(_Cont_Cons{a0, l, x});
+        _stack.emplace_back(_Cont_Cons{a0, l});
         _stack.emplace_back(_Enter{*a1});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<uint64_t> l = std::move(_f.l);
-      uint64_t x = _f.x;
       List<List<uint64_t>> rest = std::move(_result);
       auto prepend_y_impl =
           [&](auto &_self_prepend_y,

@@ -203,7 +203,7 @@ struct LoopifySpecialRecursion {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T1 _result;
+      std::decay_t<T1> _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -264,7 +264,7 @@ struct LoopifySpecialRecursion {
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T1 _result;
+      std::decay_t<T1> _result;
       tree a2;
       uint64_t a1;
       tree a0;
@@ -322,10 +322,8 @@ struct LoopifySpecialRecursion {
       uint64_t n;
     };
 
-    /// _Resume_n_: saves [f], resumes after recursive call with _result.
-    struct _Resume_n_ {
-      F1 f;
-    };
+    /// _Resume_n_: resumes after recursive call with _result.
+    struct _Resume_n_ {};
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
     uint64_t _result{};
@@ -343,12 +341,12 @@ struct LoopifySpecialRecursion {
           _result = std::move(x);
         } else {
           uint64_t n_ = n - 1;
-          _stack.emplace_back(_Resume_n_{f});
+          _stack.emplace_back(_Resume_n_{});
           _stack.emplace_back(_Enter{n_});
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = std::move(_f.f)(std::move(_result));
+        _result = f(std::move(_result));
       }
     }
     return _result;

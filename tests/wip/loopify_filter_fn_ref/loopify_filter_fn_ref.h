@@ -128,16 +128,16 @@ struct LoopifyFilterFnRef {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -191,16 +191,16 @@ struct LoopifyFilterFnRef {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -254,19 +254,17 @@ struct LoopifyFilterFnRef {
       const tree<T1> *t;
     };
 
-    /// _Cont_Node: saves [a1, a2, f], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Node {
-      T1 a1;
+      std::decay_t<T1> a1;
       const tree<T1> *a2;
-      F0 f;
     };
 
-    /// _Cont_Node_1: saves [a1, f, l_], resumes after recursive call, then
+    /// _Cont_Node_1: saves [a1, l_], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Node_1 {
-      T1 a1;
-      F0 f;
+      std::decay_t<T1> a1;
       tree<T1> l_;
     };
 
@@ -286,21 +284,19 @@ struct LoopifyFilterFnRef {
           _result = tree<T1>::leaf();
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Cont_Node{a1, a2.get(), f});
+          _stack.emplace_back(_Cont_Node{a1, a2.get()});
           _stack.emplace_back(_Enter{a0.get()});
         }
       } else if (std::holds_alternative<_Cont_Node>(_frame)) {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        auto f = std::move(_f.f);
         tree<T1> l_ = std::move(_result);
-        _stack.emplace_back(_Cont_Node_1{a1, f, std::move(l_)});
+        _stack.emplace_back(_Cont_Node_1{a1, std::move(l_)});
         _stack.emplace_back(_Enter{&a2});
       } else {
         auto _f = std::move(std::get<_Cont_Node_1>(_frame));
         auto a1 = std::move(_f.a1);
-        auto f = std::move(_f.f);
         tree<T1> l_ = std::move(_f.l_);
         tree<T1> r_ = std::move(_result);
         if (f(a1)) {

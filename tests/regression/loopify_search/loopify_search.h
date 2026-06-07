@@ -181,11 +181,10 @@ struct LoopifySearch {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, cmp], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 cmp;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -208,14 +207,13 @@ struct LoopifySearch {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, cmp});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto cmp = std::move(_f.cmp);
         uint64_t m = std::move(_result);
         if (cmp(a0, m) == UINT64_C(1)) {
           _result = std::move(a0);
@@ -481,7 +479,7 @@ struct LoopifySearch {
     /// _Combine_BNode: receives partial results, combines with _result from
     /// final call.
     struct _Combine_BNode {
-      T1 _result;
+      std::decay_t<T1> _result;
       btree a1;
       btree a0;
     };
@@ -541,7 +539,7 @@ struct LoopifySearch {
     /// _Combine_BNode: receives partial results, combines with _result from
     /// final call.
     struct _Combine_BNode {
-      T1 _result;
+      std::decay_t<T1> _result;
       btree a1;
       btree a0;
     };

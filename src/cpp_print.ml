@@ -879,6 +879,9 @@ let rec pp_cpp_type par vl t =
          decay_t converts function types to function pointers and array types
          to pointers, which is necessary when storing values in frame structs. *)
       str "std::decay_t<decltype(" ++ pp_cpp_expr ([], Id.Set.empty) [] e ++ str ")>"
+    | Tdecay t ->
+      require_header "type_traits";
+      str "std::decay_t<" ++ pp_rec false t ++ str ">"
   in
   h (pp_rec par t)
 
@@ -1051,9 +1054,27 @@ and pp_cpp_expr env args t =
           ++ str "(" ++ str (sn ()).any_cast ++ str "<"
           ++ pp_cpp_type false [] list_any_ty
           ++ str ">(" ++ Id.print id ++ str "))"
-        else
-          str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
-          ++ str ">(" ++ Id.print id ++ str ")"
+        else begin
+          match ty with
+          | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
+            (* Qualified member type (e.g. typename Ty::sym_semty) or opaque
+               type alias (e.g. ConstRef for sym_semty) — might be std::any
+               at instantiation time.
+               any_cast<std::any>(v) throws when v holds a concrete type
+               because std::any copy-constructs without double-wrapping.
+               Use if constexpr to handle both cases. *)
+            require_header "type_traits";
+            let ty_pp = pp_cpp_type false [] ty in
+            str "[&]() -> " ++ ty_pp
+            ++ str " { if constexpr (std::is_same_v<" ++ ty_pp
+            ++ str ", std::any>) return " ++ Id.print id
+            ++ str "; else return " ++ str (sn ()).any_cast
+            ++ str "<" ++ ty_pp ++ str ">("
+            ++ Id.print id ++ str "); }()"
+          | _ ->
+            str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
+            ++ str ">(" ++ Id.print id ++ str ")"
+        end
       | None -> Id.print id )
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in
@@ -2488,7 +2509,7 @@ and is_constexpr_type = function
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
-  | Tdecltype _ -> false
+  | Tdecltype _ | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tglob (GlobRef.IndRef _ as r, tys, _) ->
     (* Crane-generated non-enum inductives have user-provided constructors

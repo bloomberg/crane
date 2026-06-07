@@ -167,8 +167,8 @@ struct LoopifySorting {
     /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      T1 a0;
-      T1 a00;
+      std::decay_t<T1> a0;
+      std::decay_t<T1> a00;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;

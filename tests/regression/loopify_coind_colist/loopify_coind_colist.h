@@ -206,7 +206,7 @@ struct LoopifyCoindColist {
 
     /// _Resume_Cocons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cocons {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cocons>;

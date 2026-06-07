@@ -116,12 +116,10 @@ struct LoopifyPairs {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F1 f0;
       list<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -140,13 +138,12 @@ struct LoopifyPairs {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Cons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
@@ -163,12 +160,10 @@ struct LoopifyPairs {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F1 f0;
       list<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -187,13 +182,12 @@ struct LoopifyPairs {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Cons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
@@ -211,11 +205,10 @@ struct LoopifyPairs {
       const list<T1> *l;
     };
 
-    /// _Cont_Cons: saves [a0, p], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      T1 a0;
-      F0 p;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -234,13 +227,12 @@ struct LoopifyPairs {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, p});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         list<T1> yes = std::move(_cs.first);
         list<T1> no = std::move(_cs.second);
@@ -388,7 +380,7 @@ struct LoopifyPairs {
     /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -442,8 +434,8 @@ struct LoopifyPairs {
     /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
     /// processes rest.
     struct _Cont_Cons {
-      T1 a0;
-      T1 a00;
+      std::decay_t<T1> a0;
+      std::decay_t<T1> a00;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -501,7 +493,7 @@ struct LoopifyPairs {
 
     /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
     struct _Cont1 {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont1>;

@@ -643,16 +643,16 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -706,16 +706,16 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T1> *a0_0;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0_1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
+      std::decay_t<T2> _result;
       tree<T1> a2;
-      T1 a1;
+      std::decay_t<T1> a1;
       tree<T1> a0;
     };
 
@@ -769,14 +769,14 @@ struct HofTreeLoopify {
     /// _After_Node: saves [a0, a1], dispatches next recursive call.
     struct _After_Node {
       const tree<T1> *a0;
-      T2 a1;
+      std::decay_t<T2> a1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
       tree<T2> _result;
-      T2 a1;
+      std::decay_t<T2> a1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -826,14 +826,14 @@ struct HofTreeLoopify {
     /// _After_Node: saves [a0, a1], dispatches next recursive call.
     struct _After_Node {
       const tree<T1> *a0;
-      T1 a1;
+      std::decay_t<T1> a1;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
-      T2 _result;
-      T1 a1;
+      std::decay_t<T2> _result;
+      std::decay_t<T1> a1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -885,14 +885,14 @@ struct HofTreeLoopify {
     struct _After_Node {
       const tree<T2> *a00;
       const tree<T1> *a0;
-      T3 _s2;
+      std::decay_t<T3> _s2;
     };
 
     /// _Combine_Node: receives partial results, combines with _result from
     /// final call.
     struct _Combine_Node {
       tree<T3> _result;
-      T3 _s1;
+      std::decay_t<T3> _s1;
     };
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -947,19 +947,18 @@ struct HofTreeLoopify {
       T3 acc;
     };
 
-    /// _Cont_Node: saves [a1, a2, f], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Node {
-      T1 a1;
+      std::decay_t<T1> a1;
       const tree<T1> *a2;
-      F0 f;
     };
 
     /// _Cont_acc2: saves [l_, x_], resumes after recursive call, then processes
     /// rest.
     struct _Cont_acc2 {
       tree<T2> l_;
-      T2 x_;
+      std::decay_t<T2> x_;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_acc2>;
@@ -979,14 +978,13 @@ struct HofTreeLoopify {
           _result = std::make_pair(std::move(acc), tree<T2>::leaf());
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
-          _stack.emplace_back(_Cont_Node{a1, a2.get(), f});
+          _stack.emplace_back(_Cont_Node{a1, a2.get()});
           _stack.emplace_back(_Enter{a0.get(), std::move(acc)});
         }
       } else if (std::holds_alternative<_Cont_Node>(_frame)) {
         auto _f = std::move(std::get<_Cont_Node>(_frame));
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
-        auto f = std::move(_f.f);
         auto _cs = std::move(_result);
         T3 acc1 = std::move(_cs.first);
         tree<T2> l_ = std::move(_cs.second);

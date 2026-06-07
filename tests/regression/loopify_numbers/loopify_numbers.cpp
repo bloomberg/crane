@@ -1043,10 +1043,8 @@ LoopifyNumbers::power(uint64_t b,
     uint64_t e;
   };
 
-  /// _Resume_e_: saves [b], resumes after recursive call with _result.
-  struct _Resume_e_ {
-    uint64_t b;
-  };
+  /// _Resume_e_: resumes after recursive call with _result.
+  struct _Resume_e_ {};
 
   using _Frame = std::variant<_Enter, _Resume_e_>;
   uint64_t _result{};
@@ -1064,12 +1062,12 @@ LoopifyNumbers::power(uint64_t b,
         _result = UINT64_C(1);
       } else {
         uint64_t e_ = e - 1;
-        _stack.emplace_back(_Resume_e_{b});
+        _stack.emplace_back(_Resume_e_{});
         _stack.emplace_back(_Enter{e_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_e_>(_frame));
-      _result = (_f.b * std::move(_result));
+      _result = (b * std::move(_result));
     }
   }
   return _result;
@@ -1086,16 +1084,11 @@ uint64_t LoopifyNumbers::power_mod_fuel(
     uint64_t fuel;
   };
 
-  /// _Cont1: saves [m], resumes after recursive call, then processes rest.
-  struct _Cont1 {
-    uint64_t m;
-  };
+  /// _Cont1: resumes after recursive call, then processes rest.
+  struct _Cont1 {};
 
-  /// _Cont2: saves [b, m], resumes after recursive call, then processes rest.
-  struct _Cont2 {
-    uint64_t b;
-    uint64_t m;
-  };
+  /// _Cont2: resumes after recursive call, then processes rest.
+  struct _Cont2 {};
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   uint64_t _result{};
@@ -1118,23 +1111,20 @@ uint64_t LoopifyNumbers::power_mod_fuel(
           _result = UINT64_C(1);
         } else {
           if ((UINT64_C(2) ? e % UINT64_C(2) : e) == UINT64_C(0)) {
-            _stack.emplace_back(_Cont1{m});
+            _stack.emplace_back(_Cont1{});
             _stack.emplace_back(_Enter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           } else {
-            _stack.emplace_back(_Cont2{b, m});
+            _stack.emplace_back(_Cont2{});
             _stack.emplace_back(_Enter{(UINT64_C(2) ? e / UINT64_C(2) : 0), f});
           }
         }
       }
     } else if (std::holds_alternative<_Cont1>(_frame)) {
       auto _f = std::move(std::get<_Cont1>(_frame));
-      uint64_t m = _f.m;
       uint64_t half = std::move(_result);
       _result = (m ? (half * half) % m : (half * half));
     } else {
       auto _f = std::move(std::get<_Cont2>(_frame));
-      uint64_t b = _f.b;
-      uint64_t m = _f.m;
       uint64_t half = std::move(_result);
       _result = (m ? (b * (half * half)) % m : (b * (half * half)));
     }

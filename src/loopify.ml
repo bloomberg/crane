@@ -234,6 +234,7 @@ let rec worthwhile_move_type = function
   | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
     worthwhile_move_type t
   | Tvar _ -> true
+  | Tdecay t -> worthwhile_move_type t
   | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
 
 (* Global mutable state in this file and their reset granularity:
@@ -4233,7 +4234,32 @@ type enter_rewrite_ctx = {
       (** Constructor name when inside a match branch, for frame naming *)
   er_seen_frame_names : (string, int) Hashtbl.t;
       (** Deduplication table for context-derived frame names *)
+  er_invariant_params : Id.Set.t;
+      (** Invariant parameter ids — referenced directly from function scope,
+          not stored in continuation frames *)
 }
+
+let partition_saved_invariant invariant_params saved_exprs saved_types =
+  let analysis = List.map2 (fun e ty ->
+    match e with
+    | CPPvar id when Id.Set.mem id invariant_params -> `Inv (id, ty)
+    | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> `Inv (id, ty)
+    | _ -> `Store (e, ty)
+  ) saved_exprs saved_types in
+  let must_store_exprs = List.filter_map (function
+    | `Store (e, _) -> Some e | `Inv _ -> None) analysis in
+  let must_store_types = List.filter_map (function
+    | `Store (_, ty) -> Some ty | `Inv _ -> None) analysis in
+  let rebuild stored_fields =
+    let si = ref 0 in
+    List.map (function
+      | `Inv (id, _) -> CPPvar id
+      | `Store _ ->
+        let r = List.nth stored_fields !si in
+        incr si; r
+    ) analysis
+  in
+  (must_store_exprs, must_store_types, rebuild)
 
 (** Generate chained [_AfterN]/[_CombineN] frames for an N-call decomposition within the
     nontail frame-based transformation.
@@ -4266,18 +4292,21 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_varying_param_types = varying_param_types;
         er_branch_ctx = branch_ctx;
-        er_seen_frame_names = seen } = ctx
+        er_seen_frame_names = seen;
+        er_invariant_params = invariant_params } = ctx
   in
   let n_calls = List.length acd.acd_calls in
-  let n_saved = List.length acd.acd_saved in
-  let saved_types = infer_saved_types tparams env acd.acd_saved in
-  let saved_exprs_conv = move_for_frame_list saved_types acd.acd_saved in
+  let all_acd_saved_types = infer_saved_types tparams env acd.acd_saved in
+  let (must_store, must_store_types, rebuild) =
+    partition_saved_invariant invariant_params acd.acd_saved all_acd_saved_types in
+  let n_must_store = List.length must_store in
+  let saved_exprs_conv = move_for_frame_list must_store_types must_store in
   let rec gen_frames call_idx =
     if call_idx = n_calls - 1 then (
       let call_name = make_call_frame_name "_Combine" call_counter seen ?branch_ctx () in
       let n_partials = call_idx in
       let partial_types = List.init n_partials (fun _ -> ret_ty) in
-      let all_saved_types = partial_types @ saved_types in
+      let all_saved_types = partial_types @ must_store_types in
       let all_saved_exprs =
         List.init n_partials (fun _ -> CPPvar (id_result))
         @ saved_exprs_conv
@@ -4285,7 +4314,8 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
       let all_field_names = derive_field_names all_saved_exprs in
       let handler =
         let partials = frame_fields_named all_field_names n_partials in
-        let saved_vars = frame_fields_named ~offset:n_partials all_field_names n_saved in
+        let stored_fields = frame_fields_named ~offset:n_partials all_field_names n_must_store in
+        let saved_vars = rebuild stored_fields in
         let all_results = partials @ [CPPmove (CPPvar (id_result))] in
         let combined = acd.acd_combine saved_vars all_results in
         assign_result combined
@@ -4315,7 +4345,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
       (* Move/copy args for frame storage *)
       let remaining_args_conv =
         move_for_frame_list remaining_arg_types remaining_args in
-      let all_saved_types = partial_types @ remaining_arg_types @ saved_types in
+      let all_saved_types = partial_types @ remaining_arg_types @ must_store_types in
       let all_saved_exprs =
         List.init n_partials (fun _ -> CPPvar (id_result))
         @ remaining_args_conv
@@ -4339,7 +4369,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
             (n_remaining_total - n_remaining_args_for_next)
         in
         let saved_from_f =
-          frame_fields_named ~offset:(n_partials + n_remaining_total) all_field_names n_saved
+          frame_fields_named ~offset:(n_partials + n_remaining_total) all_field_names n_must_store
         in
         let next_push_args =
           next_partials
@@ -4432,18 +4462,22 @@ let lift_recursive_calls check ret_ty env expr =
 let emit_single_call_frame ctx (d : decomposed) ~make_handler =
   let { er_tparams = tparams; er_env = env; er_call_counter = call_counter;
         er_frames_ref = frames_ref; er_varying = varying;
-        er_branch_ctx = branch_ctx; er_seen_frame_names = seen; _ } = ctx
+        er_branch_ctx = branch_ctx; er_seen_frame_names = seen;
+        er_invariant_params = invariant_params; _ } = ctx
   in
   let call_name = make_call_frame_name "_Resume" call_counter seen ?branch_ctx () in
-  let n_saved = List.length d.d_saved in
-  let saved_types = infer_saved_types tparams env d.d_saved in
-  let saved_exprs_conv = move_for_frame_list saved_types d.d_saved in
+  let all_saved_types = infer_saved_types tparams env d.d_saved in
+  let (must_store, must_store_types, rebuild) =
+    partition_saved_invariant invariant_params d.d_saved all_saved_types in
+  let n_must_store = List.length must_store in
+  let saved_exprs_conv = move_for_frame_list must_store_types must_store in
   let field_names = derive_field_names saved_exprs_conv in
   let handler =
-    let saved_vars = frame_fields_named field_names n_saved in
+    let stored_fields = frame_fields_named field_names n_must_store in
+    let saved_vars = rebuild stored_fields in
     make_handler saved_vars (CPPvar (id_result))
   in
-  register_frame frames_ref ~name:call_name ~saved_types
+  register_frame frames_ref ~name:call_name ~saved_types:must_store_types
     ~saved_exprs:saved_exprs_conv ~env ~handler;
   [
     make_stack_push (CPPstruct_id (Id.of_string call_name, [], saved_exprs_conv));
@@ -4487,22 +4521,27 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
   let { er_tparams = tparams; er_env = env; er_ret_ty = ret_ty;
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_varying = varying;
-        er_branch_ctx = branch_ctx; er_seen_frame_names = seen; _ } = ctx
+        er_branch_ctx = branch_ctx; er_seen_frame_names = seen;
+        er_invariant_params = invariant_params; _ } = ctx
   in
-  let n_dd_saved = List.length dd.dd_saved in
+  let dd_saved_types = infer_saved_types tparams env dd.dd_saved in
+  let (dd_must_store, dd_must_store_types, dd_rebuild) =
+    partition_saved_invariant invariant_params dd.dd_saved dd_saved_types in
+  let n_dd_must_store = List.length dd_must_store in
   let n_extra = List.length extra_saved in
   (* Combiner: receives left result, combines with right result *)
   let call2_name = make_call_frame_name "_Combine" call_counter seen ?branch_ctx () in
   let call2_saved_exprs =
-    (CPPvar (id_result) :: dd.dd_saved) @ extra_saved
+    (CPPvar (id_result) :: dd_must_store) @ extra_saved
   in
   let call2_saved_types =
-    (ret_ty :: infer_saved_types tparams env dd.dd_saved) @ extra_types
+    (ret_ty :: dd_must_store_types) @ extra_types
   in
   let call2_field_names = derive_field_names call2_saved_exprs in
   let call2_handler =
     let left = CPPmove (frame_field_named call2_field_names 0) in
-    let saved_vars = frame_fields_named ~offset:1 call2_field_names n_dd_saved in
+    let stored_fields = frame_fields_named ~offset:1 call2_field_names n_dd_must_store in
+    let saved_vars = dd_rebuild stored_fields in
     make_final_handler ~field_names:call2_field_names saved_vars left (CPPmove (CPPvar (id_result)))
   in
   register_frame frames_ref ~name:call2_name
@@ -4511,9 +4550,9 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
   (* After: receives first result, pushes Combine + Enter for second call *)
   let call1_name = make_call_frame_name "_After" call_counter seen ?branch_ctx () in
   let second_varying = filter_by_mask varying dd.dd_second_args in
-  let call1_saved_exprs = second_varying @ dd.dd_saved @ extra_saved in
+  let call1_saved_exprs = second_varying @ dd_must_store @ extra_saved in
   let call1_saved_types =
-    infer_saved_types tparams env (second_varying @ dd.dd_saved) @ extra_types
+    infer_saved_types tparams env second_varying @ dd_must_store_types @ extra_types
   in
   let call1_saved_exprs_conv =
     move_for_frame_list call1_saved_types call1_saved_exprs
@@ -4522,10 +4561,10 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
   let n_second = List.length second_varying in
   let call1_handler =
     let second_args = frame_fields_named call1_field_names n_second in
-    let dd_saved_from_f = frame_fields_named ~offset:n_second call1_field_names n_dd_saved in
-    let extra_from_f = frame_fields_named ~offset:(n_second + n_dd_saved) call1_field_names n_extra in
+    let dd_stored_from_f = frame_fields_named ~offset:n_second call1_field_names n_dd_must_store in
+    let extra_from_f = frame_fields_named ~offset:(n_second + n_dd_must_store) call1_field_names n_extra in
     let call2_push_args =
-      (CPPvar (id_result) :: dd_saved_from_f) @ extra_from_f
+      (CPPvar (id_result) :: dd_stored_from_f) @ extra_from_f
     in
     [
       make_stack_push
@@ -5147,7 +5186,8 @@ and rewrite_enter_stmts ctx stmts =
        [saved/types] are the frame's saved values (decomposed + continuation).
        [enter_args] are the arguments for the _Enter push. *)
     let make_cont_handler ~offset ~make_assign_expr ~saved ~types ~enter_args =
-      let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
+      let cont_vars = filter_cont_vars ~exclude_id:id rest_free
+        |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params)) in
       let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
       let cont_types = infer_saved_types tparams env cont_saved in
       let call_name = make_call_frame_name "_Cont" call_counter seen ?branch_ctx () in
@@ -5211,16 +5251,20 @@ and rewrite_enter_stmts ctx stmts =
       (* Multiple recursive calls in Sasgn *)
         match decompose_double_call check e with
       | Some dd ->
-        let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
+        let cont_vars = filter_cont_vars ~exclude_id:id rest_free
+          |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params)) in
         let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
         let cont_types = infer_saved_types tparams env cont_saved in
-        let n_dd_saved = List.length dd.dd_saved in
+        let dd_saved_types_for_offset = infer_saved_types tparams env dd.dd_saved in
+        let (dd_must_store_for_offset, _, _) =
+          partition_saved_invariant ctx.er_invariant_params dd.dd_saved dd_saved_types_for_offset in
+        let n_dd_must_store = List.length dd_must_store_for_offset in
         emit_double_call_frames ctx dd
           ~extra_saved:cont_saved ~extra_types:cont_types
           ~make_final_handler:(fun ~field_names svs l r ->
             let combined = dd.dd_combine svs l r in
             let bindings =
-              make_cont_bindings ~offset:(1 + n_dd_saved)
+              make_cont_bindings ~offset:(1 + n_dd_must_store)
                 ~field_names cont_vars cont_types
             in
             let rest_env = make_cont_env cont_vars cont_types env in
@@ -5232,7 +5276,8 @@ and rewrite_enter_stmts ctx stmts =
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
       | Some acd when List.length acd.acd_calls >= 2 ->
-        let cont_vars = filter_cont_vars ~exclude_id:id rest_free in
+        let cont_vars = filter_cont_vars ~exclude_id:id rest_free
+          |> List.filter (fun cid -> not (Id.Set.mem cid ctx.er_invariant_params)) in
         let cont_saved = List.map (fun cid -> CPPvar cid) cont_vars in
         let cont_types = infer_saved_types tparams env cont_saved in
         let n_orig_calls = List.length acd.acd_calls in
@@ -6231,12 +6276,18 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   (* Rewrite body for Enter handler and collect call frame info *)
   let call_counter = ref 1 in
   let frames_ref = ref [] in
+  let invariant_params =
+    List.fold_left2 (fun acc (id, _) v ->
+      if not v then Id.Set.add id acc else acc)
+      Id.Set.empty params varying
+  in
   let ctx = { er_check = check; er_varying = varying; er_tparams = tparams;
                er_env = env; er_ret_ty = ret_ty; er_pp_type = pp_type;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_varying_param_types = varying_param_types;
                er_branch_ctx = None;
-               er_seen_frame_names = Hashtbl.create 16 }
+               er_seen_frame_names = Hashtbl.create 16;
+               er_invariant_params = invariant_params }
   in
   let rewritten_body = List.map (rewrite_enter_stmt ctx) body in
   (* Sort frames by name to ensure consistent ordering *)
@@ -6375,7 +6426,11 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
                   | None -> make_decltype_ty pp_type cf.cf_env expr)
                | _ -> make_decltype_ty pp_type cf.cf_env expr)
             | ty -> ty)
-          | _ -> strip_ref_and_const_type ty)
+          | _ ->
+            let stripped = strip_ref_and_const_type ty in
+            (match stripped with
+             | Tvar _ -> Tdecay stripped
+             | _ -> stripped))
       cf.cf_saved_types
   in
   let frame_ps_for cf =

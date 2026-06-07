@@ -119,11 +119,10 @@ struct LoopifyExtrema {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -146,14 +145,13 @@ struct LoopifyExtrema {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max < fx) {
@@ -177,11 +175,10 @@ struct LoopifyExtrema {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -204,14 +201,13 @@ struct LoopifyExtrema {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         uint64_t rest_min = std::move(_result);
         uint64_t fx = f(a0);
         if (fx < rest_min) {
@@ -235,11 +231,10 @@ struct LoopifyExtrema {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -262,14 +257,13 @@ struct LoopifyExtrema {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         uint64_t rest_best = std::move(_result);
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);
@@ -294,11 +288,10 @@ struct LoopifyExtrema {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -321,14 +314,13 @@ struct LoopifyExtrema {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         uint64_t rest_best = std::move(_result);
         uint64_t fx = f(a0);
         uint64_t f_rest = f(rest_best);

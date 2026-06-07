@@ -337,6 +337,7 @@ type translation_ctx = {
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
      Reset per-file via clear_seen_lifted_refs. *)
   mutable seen_lifted_refs : GlobRef.t list;
+  mutable last_pair_accessor_any_cast : bool;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -368,6 +369,7 @@ let tctx =
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
+    last_pair_accessor_any_cast = false;
   }
 
 let set_current_type_vars (tvars : Id.t list) = tctx.current_type_vars <- tvars
@@ -6010,6 +6012,10 @@ and eta_fun env f args =
                 List.exists has_magic inner_args
               else false
             | MLapp (MLmagic _, _) -> true
+            | MLrel i ->
+              (match get_env_type_opt i with
+               | Some ty -> is_erased_ml_type (resolve_tmeta ty)
+               | None -> false)
             | _ -> false
           in
           if List.length regular_ml_args > 0 then
@@ -6033,6 +6039,7 @@ and eta_fun env f args =
           in
           ( match prod_g_opt with
           | Some g ->
+            tctx.last_pair_accessor_any_cast <- true;
             CPPfun_call (cglob',
               [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)])
           | None -> primary_result )
@@ -7560,9 +7567,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                        CPPany_cast (list_any_ty, CPPvar name)
                      else
                        CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
-                   | Tvar _ | Tglob (GlobRef.ConstRef _, _, _) ->
-                     (* Opaque type alias (e.g. nt_semty = std::any): the
-                        stored value IS the concrete payload, NOT a std::any
+                   | Tvar _ | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
+                     (* Opaque type alias (e.g. nt_semty = std::any) or
+                        qualified member type (e.g. typename Ty::sym_semty):
+                        the stored value IS the concrete payload, NOT a std::any
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      CPPvar name
@@ -7641,6 +7649,12 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                                  CPPany_cast (list_any_ty, CPPvar name)
                                else
                                  CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
+                             | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
+                               (* Qualified member type or opaque type alias
+                                  (e.g. sym_semty): might be std::any at
+                                  instantiation. Pass as-is; cpp_print.ml
+                                  CCbody generates a safe if constexpr cast. *)
+                               CPPvar name
                              | _ -> CPPany_cast (cpp_ty, CPPvar name)
                            in
                            let body'' =
@@ -8605,9 +8619,18 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
       end else
         let afun v = Sasgn (x_renamed, None, v) in
+        tctx.last_pair_accessor_any_cast <- false;
         let asgn = gen_stmts env afun a in
+        (* When the RHS was a pair accessor on an erased argument (e.g.
+           snd vs where vs : std::any), the result is std::any at runtime
+           even though the ML type says prod(...).  Override to Tdummy so
+           downstream pair accessor calls (fst tail) detect erasure. *)
+        let t_for_env =
+          if tctx.last_pair_accessor_any_cast then Miniml.Tdummy Ktype else t
+        in
+        tctx.last_pair_accessor_any_cast <- false;
         (* Push env_types AFTER generating the value expression [a]. *)
-        push_env_types [(x_renamed, t)];
+        push_env_types [(x_renamed, t_for_env)];
         let tvars = get_current_type_vars () in
         (* Phase 2: shift owned vars and dead-after for lambda let binding.
            The body [b] has one more de Bruijn binder, so all indices must
@@ -9146,13 +9169,18 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         end
       in
       tctx.expected_ml_type_for_arg <- Some t_effective;
+      tctx.last_pair_accessor_any_cast <- false;
       let asgn = gen_stmts env afun a in
       tctx.expected_ml_type_for_arg <- saved_expected_letin;
       tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
-      push_env_types [(x_renamed, t)];
+      let t_for_env =
+        if tctx.last_pair_accessor_any_cast then Miniml.Tdummy Ktype else t
+      in
+      tctx.last_pair_accessor_any_cast <- false;
+      push_env_types [(x_renamed, t_for_env)];
       tctx.move_suppress_tail <- saved_suppress;
       (* Shift saved_dead +1 for the body [b]: the new let binding adds one
          de Bruijn level, so all parent-scope indices must be shifted to stay

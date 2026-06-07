@@ -211,7 +211,7 @@ struct LoopifyPolymorphic {
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -272,7 +272,7 @@ struct LoopifyPolymorphic {
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -360,7 +360,7 @@ struct LoopifyPolymorphic {
 
     /// _Resume1: saves [a0], resumes after recursive call with _result.
     struct _Resume1 {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -407,7 +407,7 @@ struct LoopifyPolymorphic {
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      T2 a0;
+      std::decay_t<T2> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -500,8 +500,8 @@ struct LoopifyPolymorphic {
     /// _Cont_a: saves [a, b], resumes after recursive call, then processes
     /// rest.
     struct _Cont_a {
-      T1 a;
-      T2 b;
+      std::decay_t<T1> a;
+      std::decay_t<T2> b;
     };
 
     using _Frame = std::variant<_Enter, _Cont_a>;
@@ -552,11 +552,10 @@ struct LoopifyPolymorphic {
       const List<T1> *l;
     };
 
-    /// _Cont_Cons: saves [a0, p], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
-      T1 a0;
-      F0 p;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -575,13 +574,12 @@ struct LoopifyPolymorphic {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, p});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<T1> trues = std::move(_cs.first);
         List<T1> falses = std::move(_cs.second);
@@ -624,10 +622,8 @@ struct LoopifyPolymorphic {
       uint64_t n;
     };
 
-    /// _Resume_n_: saves [x], resumes after recursive call with _result.
-    struct _Resume_n_ {
-      T1 x;
-    };
+    /// _Resume_n_: resumes after recursive call with _result.
+    struct _Resume_n_ {};
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
     List<T1> _result{};
@@ -645,12 +641,12 @@ struct LoopifyPolymorphic {
           _result = List<T1>::nil();
         } else {
           uint64_t n_ = n - 1;
-          _stack.emplace_back(_Resume_n_{x});
+          _stack.emplace_back(_Resume_n_{});
           _stack.emplace_back(_Enter{n_});
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = List<T1>::cons(std::move(_f.x), std::move(_result));
+        _result = List<T1>::cons(x, std::move(_result));
       }
     }
     return _result;

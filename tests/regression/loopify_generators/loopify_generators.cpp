@@ -11,10 +11,8 @@ List<uint64_t> LoopifyGenerators::cycle(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [l], resumes after recursive call with _result.
-  struct _Resume_m {
-    List<uint64_t> l;
-  };
+  /// _Resume_m: resumes after recursive call with _result.
+  struct _Resume_m {};
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
@@ -32,12 +30,12 @@ List<uint64_t> LoopifyGenerators::cycle(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{l});
+        _stack.emplace_back(_Resume_m{});
         _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = std::move(_f.l).app(std::move(_result));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -300,10 +298,8 @@ LoopifyGenerators::repeat(uint64_t x,
     uint64_t n;
   };
 
-  /// _Resume_m: saves [x], resumes after recursive call with _result.
-  struct _Resume_m {
-    uint64_t x;
-  };
+  /// _Resume_m: resumes after recursive call with _result.
+  struct _Resume_m {};
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
@@ -321,12 +317,12 @@ LoopifyGenerators::repeat(uint64_t x,
         _result = List<uint64_t>::nil();
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{x});
+        _stack.emplace_back(_Resume_m{});
         _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = List<uint64_t>::cons(_f.x, std::move(_result));
+      _result = List<uint64_t>::cons(x, std::move(_result));
     }
   }
   return _result;
@@ -342,10 +338,8 @@ List<uint64_t> LoopifyGenerators::replicate_single(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [x], resumes after recursive call with _result.
-  struct _Resume_m {
-    uint64_t x;
-  };
+  /// _Resume_m: resumes after recursive call with _result.
+  struct _Resume_m {};
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
@@ -363,12 +357,12 @@ List<uint64_t> LoopifyGenerators::replicate_single(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{x});
+        _stack.emplace_back(_Resume_m{});
         _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = List<uint64_t>::cons(_f.x, std::move(_result));
+      _result = List<uint64_t>::cons(x, std::move(_result));
     }
   }
   return _result;

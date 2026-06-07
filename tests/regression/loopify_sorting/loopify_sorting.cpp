@@ -241,11 +241,9 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
     const List<uint64_t> *l;
   };
 
-  /// _Cont_Cons: saves [a0, pivot], resumes after recursive call, then
-  /// processes rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
     uint64_t a0;
-    uint64_t pivot;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -264,13 +262,12 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0, pivot});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t pivot = _f.pivot;
       auto _cs = std::move(_result);
       List<uint64_t> lo = std::move(_cs.first);
       List<uint64_t> hi = std::move(_cs.second);

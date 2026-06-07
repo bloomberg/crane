@@ -38,8 +38,9 @@ int main() {
   auto r1 = D::swap_pair(x, y, {}, vs);
   (void)r1;
 
-  // Bug B: won't compile (std::any has no .first)
-  // auto r2 = D::use_both(x, y, {}, vs);
+  // Bug B: was compile error (std::any has no .first), now fixed
+  auto r2 = D::use_both(x, y, {}, vs);
+  (void)r2;
 
   std::cout << "any_cast_dangling_pair_ref: passed" << std::endl;
   return 0;

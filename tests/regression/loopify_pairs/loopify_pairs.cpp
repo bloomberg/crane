@@ -69,11 +69,9 @@ LoopifyPairs::partition3(
     const LoopifyPairs::list<uint64_t> *l;
   };
 
-  /// _Cont_Cons: saves [a0, pivot], resumes after recursive call, then
-  /// processes rest.
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
   struct _Cont_Cons {
     uint64_t a0;
-    uint64_t pivot;
   };
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -99,13 +97,12 @@ LoopifyPairs::partition3(
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyPairs::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0, pivot});
+        _stack.emplace_back(_Cont_Cons{a0});
         _stack.emplace_back(_Enter{a1.get()});
       }
     } else {
       auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      uint64_t pivot = _f.pivot;
       auto _cs = std::move(_result);
       LoopifyPairs::list<uint64_t> lt = std::move(_cs.first);
       std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>> p =

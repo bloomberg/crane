@@ -10,10 +10,8 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume_Cons: saves [l], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    List<uint64_t> l;
-  };
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
@@ -39,14 +37,14 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
             _result = List<uint64_t>::nil();
           } else {
-            _stack.emplace_back(_Resume_Cons{l});
+            _stack.emplace_back(_Resume_Cons{});
             _stack.emplace_back(_Enter{n_, fuel_});
           }
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f.l).app(std::move(_result));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -109,10 +107,8 @@ List<uint64_t> LoopifyListGenerators::replicate_elem(
     uint64_t n;
   };
 
-  /// _Resume_n_: saves [x], resumes after recursive call with _result.
-  struct _Resume_n_ {
-    uint64_t x;
-  };
+  /// _Resume_n_: resumes after recursive call with _result.
+  struct _Resume_n_ {};
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<uint64_t> _result{};
@@ -130,12 +126,12 @@ List<uint64_t> LoopifyListGenerators::replicate_elem(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_Resume_n_{x});
+        _stack.emplace_back(_Resume_n_{});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, std::move(_result));
+      _result = List<uint64_t>::cons(x, std::move(_result));
     }
   }
   return _result;

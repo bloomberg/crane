@@ -187,10 +187,8 @@ List<uint64_t> LoopifySequences::repeat_string(
     uint64_t n;
   };
 
-  /// _Resume_m: saves [s], resumes after recursive call with _result.
-  struct _Resume_m {
-    List<uint64_t> s;
-  };
+  /// _Resume_m: resumes after recursive call with _result.
+  struct _Resume_m {};
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
@@ -208,12 +206,12 @@ List<uint64_t> LoopifySequences::repeat_string(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(_Resume_m{s});
+        _stack.emplace_back(_Resume_m{});
         _stack.emplace_back(_Enter{m});
       }
     } else {
       auto _f = std::move(std::get<_Resume_m>(_frame));
-      _result = std::move(_f.s).app(std::move(_result));
+      _result = s.app(std::move(_result));
     }
   }
   return _result;
@@ -229,11 +227,8 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
     uint64_t n;
   };
 
-  /// _Resume__x: saves [s, sep], resumes after recursive call with _result.
-  struct _Resume__x {
-    List<uint64_t> s;
-    List<uint64_t> sep;
-  };
+  /// _Resume__x: resumes after recursive call with _result.
+  struct _Resume__x {};
 
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<uint64_t> _result{};
@@ -255,13 +250,13 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
           _result = std::move(s);
         } else {
           uint64_t _x = m - 1;
-          _stack.emplace_back(_Resume__x{s, sep});
+          _stack.emplace_back(_Resume__x{});
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume__x>(_frame));
-      _result = std::move(_f.s).app(std::move(_f.sep).app(std::move(_result)));
+      _result = s.app(sep.app(std::move(_result)));
     }
   }
   return _result;
@@ -279,13 +274,11 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
     uint64_t fuel;
   };
 
-  /// _Resume1: saves [s, sep, _s2], resumes after recursive call with _result.
+  /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    List<uint64_t> s;
-    List<uint64_t> sep;
     std::decay_t<decltype(std::declval<const List<uint64_t> &>().app(
         std::declval<const List<uint64_t> &>()))>
-        _s2;
+        _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -308,15 +301,14 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
         if (n <= UINT64_C(0)) {
           _result = List<uint64_t>::nil();
         } else {
-          _stack.emplace_back(_Resume1{s, sep, sep.app(end_marker)});
+          _stack.emplace_back(_Resume1{sep.app(end_marker)});
           _stack.emplace_back(
               _Enter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = std::move(_f.s).app(
-          std::move(_f.sep).app(std::move(_result).app(_f._s2)));
+      _result = s.app(sep.app(std::move(_result).app(_f._s0)));
     }
   }
   return _result;
@@ -467,10 +459,8 @@ List<uint64_t> LoopifySequences::cycle(
     uint64_t n;
   };
 
-  /// _Resume_Cons: saves [l], resumes after recursive call with _result.
-  struct _Resume_Cons {
-    List<uint64_t> l;
-  };
+  /// _Resume_Cons: resumes after recursive call with _result.
+  struct _Resume_Cons {};
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
@@ -491,13 +481,13 @@ List<uint64_t> LoopifySequences::cycle(
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          _stack.emplace_back(_Resume_Cons{l});
+          _stack.emplace_back(_Resume_Cons{});
           _stack.emplace_back(_Enter{m});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = std::move(_f.l).app(std::move(_result));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;

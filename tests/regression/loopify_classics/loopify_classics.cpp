@@ -350,10 +350,8 @@ LoopifyClassics::power(uint64_t base,
     uint64_t exp;
   };
 
-  /// _Resume_exp_: saves [base], resumes after recursive call with _result.
-  struct _Resume_exp_ {
-    uint64_t base;
-  };
+  /// _Resume_exp_: resumes after recursive call with _result.
+  struct _Resume_exp_ {};
 
   using _Frame = std::variant<_Enter, _Resume_exp_>;
   uint64_t _result{};
@@ -371,12 +369,12 @@ LoopifyClassics::power(uint64_t base,
         _result = UINT64_C(1);
       } else {
         uint64_t exp_ = exp - 1;
-        _stack.emplace_back(_Resume_exp_{base});
+        _stack.emplace_back(_Resume_exp_{});
         _stack.emplace_back(_Enter{exp_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_exp_>(_frame));
-      _result = (_f.base * std::move(_result));
+      _result = (base * std::move(_result));
     }
   }
   return _result;

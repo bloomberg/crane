@@ -452,10 +452,8 @@ struct MemSafetyProbe3 {
       uint64_t n;
     };
 
-    /// _Resume_n_: saves [f], resumes after recursive call with _result.
-    struct _Resume_n_ {
-      F0 f;
-    };
+    /// _Resume_n_: resumes after recursive call with _result.
+    struct _Resume_n_ {};
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
     uint64_t _result{};
@@ -473,12 +471,12 @@ struct MemSafetyProbe3 {
           _result = std::move(x);
         } else {
           uint64_t n_ = n - 1;
-          _stack.emplace_back(_Resume_n_{f});
+          _stack.emplace_back(_Resume_n_{});
           _stack.emplace_back(_Enter{n_});
         }
       } else {
         auto _f = std::move(std::get<_Resume_n_>(_frame));
-        _result = std::move(_f.f)(std::move(_result));
+        _result = f(std::move(_result));
       }
     }
     return _result;

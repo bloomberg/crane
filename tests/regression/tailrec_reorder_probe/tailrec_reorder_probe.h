@@ -118,12 +118,11 @@ struct TailrecReorderProbe {
       const mylist<T1> *m;
     };
 
-    /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+    /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Mycons {
-      F1 f0;
       mylist<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -142,13 +141,12 @@ struct TailrecReorderProbe {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Mycons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
@@ -165,12 +163,11 @@ struct TailrecReorderProbe {
       const mylist<T1> *m;
     };
 
-    /// _Resume_Mycons: saves [f0, a1, a0], resumes after recursive call with
+    /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
     /// _result.
     struct _Resume_Mycons {
-      F1 f0;
       mylist<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
@@ -189,13 +186,12 @@ struct TailrecReorderProbe {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(_Resume_Mycons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Mycons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Mycons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;

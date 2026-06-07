@@ -9,10 +9,8 @@ List<uint64_t> LoopifyListGeneration::replicate(
     uint64_t n;
   };
 
-  /// _Resume_n_: saves [x], resumes after recursive call with _result.
-  struct _Resume_n_ {
-    uint64_t x;
-  };
+  /// _Resume_n_: resumes after recursive call with _result.
+  struct _Resume_n_ {};
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<uint64_t> _result{};
@@ -30,12 +28,12 @@ List<uint64_t> LoopifyListGeneration::replicate(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_Resume_n_{x});
+        _stack.emplace_back(_Resume_n_{});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = List<uint64_t>::cons(_f.x, std::move(_result));
+      _result = List<uint64_t>::cons(x, std::move(_result));
     }
   }
   return _result;
@@ -93,10 +91,8 @@ List<uint64_t> LoopifyListGeneration::cycle(
     uint64_t n;
   };
 
-  /// _Resume_n_: saves [l], resumes after recursive call with _result.
-  struct _Resume_n_ {
-    List<uint64_t> l;
-  };
+  /// _Resume_n_: resumes after recursive call with _result.
+  struct _Resume_n_ {};
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<uint64_t> _result{};
@@ -114,12 +110,12 @@ List<uint64_t> LoopifyListGeneration::cycle(
         _result = List<uint64_t>::nil();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_Resume_n_{l});
+        _stack.emplace_back(_Resume_n_{});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));
-      _result = std::move(_f.l).app(std::move(_result));
+      _result = l.app(std::move(_result));
     }
   }
   return _result;
@@ -222,11 +218,8 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(
     uint64_t n;
   };
 
-  /// _Resume__x: saves [x, sep], resumes after recursive call with _result.
-  struct _Resume__x {
-    uint64_t x;
-    uint64_t sep;
-  };
+  /// _Resume__x: resumes after recursive call with _result.
+  struct _Resume__x {};
 
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<uint64_t> _result{};
@@ -248,14 +241,14 @@ List<uint64_t> LoopifyListGeneration::repeat_with_sep(
           _result = List<uint64_t>::cons(x, List<uint64_t>::nil());
         } else {
           uint64_t _x = n_ - 1;
-          _stack.emplace_back(_Resume__x{x, sep});
+          _stack.emplace_back(_Resume__x{});
           _stack.emplace_back(_Enter{n_});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume__x>(_frame));
       _result = List<uint64_t>::cons(
-          _f.x, List<uint64_t>::cons(_f.sep, std::move(_result)));
+          x, List<uint64_t>::cons(sep, std::move(_result)));
     }
   }
   return _result;

@@ -140,9 +140,8 @@ struct LoopifyFolds {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F0 f;
       uint64_t a0;
     };
 
@@ -162,12 +161,12 @@ struct LoopifyFolds {
           _result = std::move(acc);
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f, a0});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f)(_f.a0, std::move(_result));
+        _result = f(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -282,9 +281,8 @@ struct LoopifyFolds {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F0 f;
       uint64_t a0;
     };
 
@@ -308,13 +306,13 @@ struct LoopifyFolds {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Resume_Cons{f, a0});
+            _stack.emplace_back(_Resume_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f)(_f.a0, std::move(_result));
+        _result = f(_f.a0, std::move(_result));
       }
     }
     return _result;

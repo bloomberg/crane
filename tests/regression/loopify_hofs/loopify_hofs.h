@@ -220,7 +220,7 @@ struct LoopifyHofs {
 
     /// _Resume1: saves [a0], resumes after recursive call with _result.
     struct _Resume1 {
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume1>;
@@ -591,9 +591,8 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F0 f;
       uint64_t a0;
     };
 
@@ -617,13 +616,13 @@ struct LoopifyHofs {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Resume_Cons{f, a0});
+            _stack.emplace_back(_Resume_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f)(_f.a0, std::move(_result));
+        _result = f(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -644,12 +643,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, acc, f], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      uint64_t acc;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -668,14 +665,12 @@ struct LoopifyHofs {
           _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, acc, f});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        uint64_t acc = _f.acc;
-        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(acc, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -695,11 +690,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -722,14 +716,13 @@ struct LoopifyHofs {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(a0, rest);
         _result = List<uint64_t>::cons(f(a0, h), std::move(rest));
@@ -794,11 +787,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -817,13 +809,12 @@ struct LoopifyHofs {
           _result = List<uint64_t>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, f});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         List<uint64_t> rest = std::move(_result);
         auto _cs = f(a0);
         if (_cs.has_value()) {
@@ -975,11 +966,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, f], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 f;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -1002,14 +992,13 @@ struct LoopifyHofs {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = f(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, f});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto f = std::move(_f.f);
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
         if (rest_max <= fx) {
@@ -1080,11 +1069,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, cmp], resumes after recursive call, then
-    /// processes rest.
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 cmp;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -1107,14 +1095,13 @@ struct LoopifyHofs {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{a0, cmp});
+            _stack.emplace_back(_Cont_Cons{a0});
             _stack.emplace_back(_Enter{a1.get()});
           }
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto cmp = std::move(_f.cmp);
         uint64_t m = std::move(_result);
         if (UINT64_C(0) <= cmp(a0, m)) {
           _result = std::move(a0);
@@ -1138,9 +1125,8 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [f, a0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F0 f;
       uint64_t a0;
     };
 
@@ -1160,12 +1146,12 @@ struct LoopifyHofs {
           _result = std::move(acc);
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f, a0});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f)(_f.a0, std::move(_result));
+        _result = f(_f.a0, std::move(_result));
       }
     }
     return _result;
@@ -1183,11 +1169,10 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Cont_Cons: saves [a0, p], resumes after recursive call, then processes
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
     struct _Cont_Cons {
       uint64_t a0;
-      F0 p;
     };
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
@@ -1207,13 +1192,12 @@ struct LoopifyHofs {
               std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, p});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Cont_Cons>(_frame));
         uint64_t a0 = _f.a0;
-        auto p = std::move(_f.p);
         auto _cs = std::move(_result);
         List<uint64_t> yes = std::move(_cs.first);
         List<uint64_t> no = std::move(_cs.second);

@@ -1997,10 +1997,9 @@ LoopifyLists::intercalate(const LoopifyLists::list<uint64_t> &sep,
     const LoopifyLists::list<LoopifyLists::list<uint64_t>> *lists;
   };
 
-  /// _Resume_Cons: saves [a0, sep], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
     LoopifyLists::list<uint64_t> a0;
-    LoopifyLists::list<uint64_t> sep;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -2029,14 +2028,14 @@ LoopifyLists::intercalate(const LoopifyLists::list<uint64_t> &sep,
                 _sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Resume_Cons{a0, sep});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = app_helper(std::move(_f.a0),
-                           app_helper(std::move(_f.sep), std::move(_result)));
+      _result =
+          app_helper(std::move(_f.a0), app_helper(sep, std::move(_result)));
     }
   }
   return _result;

@@ -116,12 +116,10 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F1 f0;
       list<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -140,13 +138,12 @@ struct LoopifyOption {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Cons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
@@ -163,12 +160,10 @@ struct LoopifyOption {
       const list<T1> *l;
     };
 
-    /// _Resume_Cons: saves [f0, a1, a0], resumes after recursive call with
-    /// _result.
+    /// _Resume_Cons: saves [a1, a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      F1 f0;
       list<T1> a1;
-      T1 a0;
+      std::decay_t<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -187,13 +182,12 @@ struct LoopifyOption {
           _result = std::move(f);
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{f0, *a1, a0});
+          _stack.emplace_back(_Resume_Cons{*a1, a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f.f0)(std::move(_f.a0), std::move(_f.a1),
-                                   std::move(_result));
+        _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
@@ -275,7 +269,7 @@ struct LoopifyOption {
 
     /// _Resume_y: saves [y], resumes after recursive call with _result.
     struct _Resume_y {
-      T2 y;
+      std::decay_t<T2> y;
     };
 
     using _Frame = std::variant<_Enter, _Resume_y>;

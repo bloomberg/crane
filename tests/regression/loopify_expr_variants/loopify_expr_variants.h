@@ -1035,10 +1035,8 @@ List<T1> ListDef::repeat(T1 x,
     uint64_t n;
   };
 
-  /// _Resume_k: saves [x], resumes after recursive call with _result.
-  struct _Resume_k {
-    T1 x;
-  };
+  /// _Resume_k: resumes after recursive call with _result.
+  struct _Resume_k {};
 
   using _Frame = std::variant<_Enter, _Resume_k>;
   List<T1> _result{};
@@ -1056,12 +1054,12 @@ List<T1> ListDef::repeat(T1 x,
         _result = List<T1>::nil();
       } else {
         uint64_t k = n - 1;
-        _stack.emplace_back(_Resume_k{x});
+        _stack.emplace_back(_Resume_k{});
         _stack.emplace_back(_Enter{k});
       }
     } else {
       auto _f = std::move(std::get<_Resume_k>(_frame));
-      _result = List<T1>::cons(std::move(_f.x), std::move(_result));
+      _result = List<T1>::cons(x, std::move(_result));
     }
   }
   return _result;

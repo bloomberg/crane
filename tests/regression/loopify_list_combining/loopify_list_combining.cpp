@@ -52,10 +52,9 @@ List<uint64_t> LoopifyListCombining::intersperse(
     const List<uint64_t> *l;
   };
 
-  /// _Resume_Cons: saves [a0, sep], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
     uint64_t a0;
-    uint64_t sep;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -78,14 +77,14 @@ List<uint64_t> LoopifyListCombining::intersperse(
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
         } else {
-          _stack.emplace_back(_Resume_Cons{a0, sep});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = List<uint64_t>::cons(
-          _f.a0, List<uint64_t>::cons(_f.sep, std::move(_result)));
+          _f.a0, List<uint64_t>::cons(sep, std::move(_result)));
     }
   }
   return _result;
@@ -100,10 +99,9 @@ List<uint64_t> LoopifyListCombining::intercalate(
     const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [a0, sep], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
     List<uint64_t> a0;
-    List<uint64_t> sep;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -128,14 +126,13 @@ List<uint64_t> LoopifyListCombining::intercalate(
                 _sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Resume_Cons{a0, sep});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(std::move(_f.a0),
-                       append(std::move(_f.sep), std::move(_result)));
+      _result = append(std::move(_f.a0), append(sep, std::move(_result)));
     }
   }
   return _result;
@@ -287,10 +284,9 @@ List<uint64_t> LoopifyListCombining::concat_sep(
     const List<List<uint64_t>> *ll;
   };
 
-  /// _Resume_Cons: saves [a0, sep], resumes after recursive call with _result.
+  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
     List<uint64_t> a0;
-    uint64_t sep;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -315,14 +311,14 @@ List<uint64_t> LoopifyListCombining::concat_sep(
                 _sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Resume_Cons{a0, sep});
+          _stack.emplace_back(_Resume_Cons{a0});
           _stack.emplace_back(_Enter{a1.get()});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = append(std::move(_f.a0),
-                       List<uint64_t>::cons(_f.sep, std::move(_result)));
+                       List<uint64_t>::cons(sep, std::move(_result)));
     }
   }
   return _result;
