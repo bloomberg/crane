@@ -12,9 +12,9 @@ int main() {
         return 1;
     }
     if (ms > 5000) {
-        fprintf(stderr, "FAIL: took %lldms (>5s), likely due to deep-copy in lambda capture\n", ms);
+        fprintf(stderr, "FAIL: took %lldms (>5s), likely due to deep-copy in lambda capture\n", (long long)ms);
         return 1;
     }
-    printf("OK: result=%d, time=%lldms\n", result, ms);
+    printf("OK: result=%d, time=%lldms\n", result, (long long)ms);
     return 0;
 }
