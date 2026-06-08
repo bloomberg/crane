@@ -2,7 +2,6 @@
 #define INCLUDED_ANYCASTDANGLINGPAIRREF
 
 #include <any>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -26,17 +25,10 @@ template <SymTypes Ty> struct Destruct {
     auto _cs = std::any_cast<std::pair<std::any, std::any>>(vs);
     const auto &a = _cs.first;
     const auto &t = _cs.second;
-    const std::any &b = std::any_cast<std::pair<std::any, std::any>>(t).first;
-    const std::any &_x2 =
-        std::any_cast<std::pair<std::any, std::any>>(t).second;
-    return std::make_pair(
-        [&]() -> typename Ty::sym_semty {
-          if constexpr (std::is_same_v<typename Ty::sym_semty, std::any>)
-            return b;
-          else
-            return std::any_cast<typename Ty::sym_semty>(b);
-        }(),
-        a);
+    auto _cs1 = std::any_cast<std::pair<std::any, std::any>>(t);
+    const typename Ty::sym_semty &b = _cs1.first;
+    const auto &_x2 = _cs1.second;
+    return std::make_pair(b, a);
   }
 
   static std::pair<typename Ty::sym_semty, typename Ty::sym_semty>

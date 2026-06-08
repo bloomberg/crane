@@ -7370,14 +7370,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
        (let Fix A handle it).  For non-pair scrut_is_magic matches (e.g., Obj.magic
        on an option or variant), pair_g_opt = None so we fall through to the
        concrete-type branch below. *)
-    if scrut_is_magic && pair_g_opt <> None then
+    if scrut_is_magic && pair_g_opt <> None then begin
       match pair_g_opt with
       | Some g -> (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
       | None -> CErrors.anomaly (Pp.str "gen_cpp_case: pair inductive not found")
-    else if scrut_is_magic && not (is_erased_type concrete_match_type) then
+    end
+    else if scrut_is_magic && not (is_erased_type concrete_match_type) then begin
       (CPPany_cast (concrete_match_type, t), false)
-    else if is_erased_type typ then
-      match pair_g_opt with
+    end
+    else if is_erased_type typ then begin
+      (match pair_g_opt with
       | Some g ->
         (* Scrutinee is erased (std::any) and the pair is encoded at runtime
            as std::pair<std::any, std::any> (because the whole tuple/symbols_semty
@@ -7390,19 +7392,24 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
            stored type is the concrete pair, not std::pair<std::any,std::any>. *)
         (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
       | None ->
-        (t, false)
+        (t, false))
+    end
     else if pair_g_opt <> None && is_all_erased typ then begin
       (* Scrutinee type is an all-erased pair (e.g. pair<any, pair<any, …>> or
          pair<any, pair<List<any>, …>>) — the runtime encoding of symbols_semty,
-         where concat_tuple builds pair<any,any> at every level.  Leave [t]
-         unchanged; wrap_any_cast_if_needed in cpp_print.ml will add
-         any_cast<pair<any,any>>(t) when printing %scrut.
+         where concat_tuple builds pair<any,any> at every level.
+         Wrap with CPPany_cast so the scrutinee is non-trivial and caching fires,
+         avoiding dangling references from any_cast temporaries.
          Set fix_a_fired = true so that: (1) bound variables use Tauto, and
          (2) intermediate pair-typed variables are re-typed as Tany in gen_cases
          so that inner pair matches also trigger this path recursively. *)
-      (t, true)
+      match pair_g_opt with
+      | Some g -> (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
+      | None -> (t, true)
     end
-    else (t, false)
+    else begin
+      (t, false)
+    end
   in
   (* When fix_a_fired, pass pair<any,any> as the Scustom_case typ so that
      wrap_any_cast_if_needed in cpp_print.ml generates any_cast<pair<any,any>>
@@ -7601,20 +7608,17 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             Id.Set.empty br_ids
         in
         let rec go retyped_vars stmts =
-          List.map (fun s ->
+          List.concat_map (fun s ->
             match s with
-            | Scustom_case (ty, CPPvar scrut_id, tyargs, branches, err)
-              when Id.Set.mem scrut_id retyped_vars ->
-              (* The scrutinee is std::any at runtime (pair<any,any> chain).
-                 Apply Fix C to each branch's params:
-                 - Pair-typed params: the printer's CCscrut/CCbody mechanism already
-                   handles any_cast for them, so don't substitute in the body.
-                   But add them to retyped_vars so we can recurse into their inner
-                   Scustom_case nodes.
-                 - Non-pair non-erased params (e.g. prs : List<any>): substitute
-                   with any_cast<T>(param) in the body so uses compile correctly.
-                 - Erased params: already std::any, no cast needed; add to
-                   retyped_vars. *)
+            | Scustom_case (ty, scrut_expr, tyargs, branches, err)
+              when (match scrut_expr with
+                    | CPPany_cast (_, CPPvar _) -> true
+                    | CPPvar scrut_id -> Id.Set.mem scrut_id retyped_vars
+                    | _ -> false) ->
+              let pair_g_opt_inner = match ty with
+                | Tglob (g, _, _) when is_prod_global g -> Some g
+                | _ -> None
+              in
               let branches' = List.map (fun (params, ret_ty, body) ->
                 let (body', new_retyped_vars) =
                   List.fold_left
@@ -7633,8 +7637,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                            let cast_expr =
                              match strip_ns_tglob cpp_ty with
                              | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
-                               (* Same as Fix A: List<T> vars are stored as
-                                  List<any> from grammar productions. *)
                                let list_any_ty =
                                  match cpp_ty with
                                  | Tnamespace (ns_g, _) ->
@@ -7650,10 +7652,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                                else
                                  CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
                              | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
-                               (* Qualified member type or opaque type alias
-                                  (e.g. sym_semty): might be std::any at
-                                  instantiation. Pass as-is; cpp_print.ml
-                                  CCbody generates a safe if constexpr cast. *)
                                CPPvar name
                              | _ -> CPPany_cast (cpp_ty, CPPvar name)
                            in
@@ -7668,7 +7666,25 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                 in
                 (params, ret_ty, go new_retyped_vars body')
               ) branches in
-              Scustom_case (ty, CPPvar scrut_id, tyargs, branches', err)
+              (* Cache the any_cast<pair<any,any>> result in a named local so
+                 that .first/.second bind to fields of a live object. *)
+              (match pair_g_opt_inner with
+               | Some g ->
+                 let n = tctx.cs_counter in
+                 tctx.cs_counter <- n + 1;
+                 let cache_id =
+                   Id.of_string (if n = 0 then "_cs" else "_cs" ^ string_of_int n)
+                 in
+                 let cast_ty = Tglob (g, [Tany; Tany], []) in
+                 let cast_expr = match scrut_expr with
+                   | CPPany_cast _ -> scrut_expr
+                   | CPPvar scrut_id -> CPPany_cast (cast_ty, CPPvar scrut_id)
+                   | _ -> scrut_expr
+                 in
+                 [ Sasgn (cache_id, Some Ttodo, cast_expr);
+                   Scustom_case (ty, CPPvar cache_id, tyargs, branches', err) ]
+               | None ->
+                 [ Scustom_case (ty, scrut_expr, tyargs, branches', err) ])
             | _ ->
               let rec fix_expr e = match e with
                 | CPPlambda (lparams, ret_ty, lstmts, capture) ->
@@ -7677,7 +7693,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                   map_expr fix_expr
                     (fun s' -> List.hd (go retyped_vars [s'])) Fun.id e
               in
-              map_stmt fix_expr (fun s' -> List.hd (go retyped_vars [s'])) Fun.id s
+              [map_stmt fix_expr (fun s' -> List.hd (go retyped_vars [s'])) Fun.id s]
           ) stmts
         in
         go initial_retyped_vars br_stmts

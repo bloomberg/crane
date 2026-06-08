@@ -4,9 +4,9 @@ uint64_t AnyCastNestedPair::apply_pred(AnyCastNestedPair::symbols_semty input) {
   auto _cs = std::any_cast<std::pair<std::any, std::any>>(input);
   const auto &v1 = _cs.first;
   const auto &rest = _cs.second;
-  const std::any &v2 = std::any_cast<std::pair<std::any, std::any>>(rest).first;
-  const std::any &_x =
-      std::any_cast<std::pair<std::any, std::any>>(rest).second;
+  auto _cs1 = std::any_cast<std::pair<std::any, std::any>>(rest);
+  const AnyCastNestedPair::SemVal &v2 = _cs1.first;
+  const auto &_x = _cs1.second;
   return (std::any_cast<uint64_t>(v1) + std::any_cast<uint64_t>(v2));
 }
 
