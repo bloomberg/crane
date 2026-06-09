@@ -84,7 +84,7 @@ struct DequeAnyCast {
       }(std::any(UINT64_C(2)), [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(std::any(UINT64_C(3)), std::deque<auto>{})))));
+        }(std::any(UINT64_C(3)), std::deque<std::any>{})))));
 };
 
 #endif // INCLUDED_DEQUE_ANY_CAST

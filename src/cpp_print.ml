@@ -2863,7 +2863,7 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
       else
         ( match List.nth_opt tyargs i with
           | Some ty -> pp_cpp_type false vl ty
-          | None -> pp_cpp_type false vl Tauto
+          | None -> pp_cpp_type false vl Tany
         )
     | CCbr_var (i, j) ->
       ( try

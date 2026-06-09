@@ -40,6 +40,28 @@ struct DequeDeepTreeStackoverflow {
     }
 
     // MANIPULATORS
+    ~rose() {
+      std::vector<std::shared_ptr<rose>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<RNode>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            for (auto &_elem : *_alt->a0) {
+              _stack.push_back(std::make_shared<rose>(std::move(_elem)));
+            }
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

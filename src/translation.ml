@@ -14219,12 +14219,12 @@ let gen_ind_header_v2
           let variant_t_ty = Tid (Id.of_string "variant_t", []) in
           let self_ty = Tglob (name, ty_vars, []) in
           let render_q_destr ty =
-            let skip g = globref_equal g name in
+            let skip g = GlobRef.CanOrd.equal g name in
             render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
           (** Build drain statements for classified fields.  [Direct] fields get
-              a simple [push_back(std::move(field))].  [List g] fields walk the
-              list spine and push each element. *)
+              a simple [push_back(std::move(field))].  [List g] fields with a
+              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
               let fe = CPParrow (CPPvar _alt_id, field_id) in
@@ -14236,48 +14236,64 @@ let gen_ind_header_v2
                      Id.of_string "push_back",
                      [CPPmove fe]))])]
               | `List list_g ->
-                let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
                 let ss = render_q_destr self_ty in
                 let fes =
                   Id.to_string _alt_id ^ "->"
                   ^ Id.to_string field_id
                 in
-                let (_nil_s, cons_s) = list_ctor_struct_names list_g in
-                let elem_field =
-                  Id.to_string
-                    (Common.lookup_ctor_field_name cons_s 0)
-                in
-                let tail_field =
-                  Id.to_string
-                    (Common.lookup_ctor_field_name cons_s 1)
-                in
-                [Sif_then (
-                  CPPbinop ("&&", fe,
-                    CPPbinop ("==",
-                      CPPraw (fes ^ ".use_count()"),
-                      CPPint 1)),
-                  [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
-                    Swhile (
-                      CPPraw (
-                        "std::holds_alternative<typename "
-                        ^ ls ^ "::" ^ cons_s
-                        ^ ">(_lp->v())"),
-                      [ Sraw (
-                          "auto& _lc = std::get<typename "
+                if Table.is_custom list_g then
+                  [Sif_then (
+                    CPPbinop ("&&", fe,
+                      CPPbinop ("==",
+                        CPPraw (fes ^ ".use_count()"),
+                        CPPint 1)),
+                    [ Sraw ("for (auto& _elem : *" ^ fes ^ ") {");
+                      Sexpr (CPPdot_method_call (
+                        CPPvar _stack_id,
+                        Id.of_string "push_back",
+                        [CPPraw (
+                           "std::make_shared<" ^ ss
+                           ^ ">(std::move(_elem))")]));
+                      Sraw "}";
+                      Sraw (fes ^ ".reset();") ])]
+                else
+                  let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
+                  let (_nil_s, cons_s) = list_ctor_struct_names list_g in
+                  let elem_field =
+                    Id.to_string
+                      (Common.lookup_ctor_field_name cons_s 0)
+                  in
+                  let tail_field =
+                    Id.to_string
+                      (Common.lookup_ctor_field_name cons_s 1)
+                  in
+                  [Sif_then (
+                    CPPbinop ("&&", fe,
+                      CPPbinop ("==",
+                        CPPraw (fes ^ ".use_count()"),
+                        CPPint 1)),
+                    [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
+                      Swhile (
+                        CPPraw (
+                          "std::holds_alternative<typename "
                           ^ ls ^ "::" ^ cons_s
-                          ^ ">(_lp->v_mut());");
-                        Sexpr (CPPdot_method_call (
-                          CPPvar _stack_id,
-                          Id.of_string "push_back",
-                          [CPPraw (
-                             "std::make_shared<" ^ ss
-                             ^ ">(std::move(_lc." ^ elem_field ^ "))")]));
-                        Sraw (
-                          "if (_lc." ^ tail_field ^ ") {"
-                          ^ " _lp = _lc." ^ tail_field ^ ".get();"
-                          ^ " } else { break; }") ]);
-                    Sraw (fes ^ ".reset();") ])]
-              | `None -> []) classified_fields
+                          ^ ">(_lp->v())"),
+                        [ Sraw (
+                            "auto& _lc = std::get<typename "
+                            ^ ls ^ "::" ^ cons_s
+                            ^ ">(_lp->v_mut());");
+                          Sexpr (CPPdot_method_call (
+                            CPPvar _stack_id,
+                            Id.of_string "push_back",
+                            [CPPraw (
+                               "std::make_shared<" ^ ss
+                               ^ ">(std::move(_lc." ^ elem_field ^ "))")]));
+                          Sraw (
+                            "if (_lc." ^ tail_field ^ ") {"
+                            ^ " _lp = _lc." ^ tail_field ^ ".get();"
+                            ^ " } else { break; }") ]);
+                      Sraw (fes ^ ".reset();") ])]
+              | _ -> []) classified_fields
           in
           (** For each constructor, classify recursive fields and build an
               [Sif_decl] that uses [get_if] to test the variant alternative
@@ -14301,7 +14317,13 @@ let gen_ind_header_v2
                     let field_id =
                       Common.lookup_ctor_field_name cname_str j
                     in
-                    Some (field_id, if is_mutual then `Direct else cls)
+                    let effective_cls =
+                      if is_mutual then `Direct else cls
+                    in
+                    match effective_cls with
+                    | `Direct -> Some (field_id, `Direct)
+                    | `List g -> Some (field_id, `List g)
+                    | _ -> None
                   else None)
                 (List.mapi (fun j ty -> (j, ty)) tys_list)
             in

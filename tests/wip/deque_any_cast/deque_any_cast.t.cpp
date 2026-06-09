@@ -3,14 +3,13 @@
 //
 // Test: demonstrate DequeList + type erasure incompatibility.
 //
-// The bug manifests in multiple ways:
-// 1. Compile error: Crane generates std::deque<auto>{} for nil when the
-//    element type is erased (auto is not valid in template arguments).
-// 2. Runtime bad_any_cast (in more complex cases like parse-a-lot PPM):
-//    Crane generates any_cast<Datatypes::List<T>> but the runtime value
-//    is actually std::deque<T> due to the DequeList mapping.
+// The bug: cons calls wrap elements in std::any() because the carrier
+// type is erased, but mfold<nat_monoid> is monomorphized and expects
+// deque<uint64_t>. The type mismatch causes a compile error.
+// A related issue: Crane previously generated std::deque<auto>{} for
+// nil (now fixed to std::deque<std::any>{}).
 //
-// Expected: compile error on std::deque<auto>
+// Expected: compile error (deque<std::any> vs deque<uint64_t> mismatch)
 
 #include "deque_any_cast.h"
 #include <cassert>
