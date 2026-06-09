@@ -135,6 +135,28 @@
   (deps sep_ext_any_nested_match.t.exe)
   (action (run ./sep_ext_any_nested_match.t.exe))))
 
+(subdir deque_deep_tree_stackoverflow
+ (rule
+  (targets deque_deep_tree_stackoverflow.t.exe)
+  (deps DequeDeepTreeStackoverflow.vo deque_deep_tree_stackoverflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_deep_tree_stackoverflow.t.exe deque_deep_tree_stackoverflow.cpp deque_deep_tree_stackoverflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_deep_tree_stackoverflow.t.exe)
+  (action (run ./deque_deep_tree_stackoverflow.t.exe))))
+
+(subdir deque_any_cast
+ (rule
+  (targets deque_any_cast.t.exe)
+  (deps DequeAnyCast.vo deque_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast.t.exe deque_any_cast.cpp deque_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_any_cast.t.exe)
+  (action (run ./deque_any_cast.t.exe))))
+
 (subdir any_cast_dangling_pair_ref
  (rule
   (targets any_cast_dangling_pair_ref.t.exe)
