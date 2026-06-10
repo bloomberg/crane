@@ -390,10 +390,10 @@ Crane Extract Skip max.
 Crane Extract Skip zero.
 Crane Extract Skip mkSTRef.
 Crane Extract Skip STRefToIx.
-(* NOTE: skipping STRefClass seems to drop typing
-  information extraction need to infer value types inside references. *)
+(* NOTE: skipping STRefClass seems to drop too much typing information,
+ and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)
-Crane Extract Inlined Constant STRef => "%t3".
+Crane Extract Inlined Constant STRef => "%t2".
 Crane Extract Inlined Constant newSTRef => "%result = %a1".
 Crane Extract Inlined Constant readSTRef => "%a1".
 Crane Extract Inlined Constant writeSTRef => "%a1 = %a2".

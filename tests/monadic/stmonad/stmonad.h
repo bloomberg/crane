@@ -16,9 +16,9 @@ concept STRefClass = requires(T a0) {
 
 template <typename _tcI0, typename T1 = void, typename T2 = void>
 std::pair<uint64_t, uint64_t> newAndReadBoth() {
-  std::any r1;
+  uint64_t r1;
   r1 = UINT64_C(5);
-  std::any r2;
+  uint64_t r2;
   r2 = UINT64_C(6);
   uint64_t x1 = r1;
   uint64_t x2 = r2;
@@ -27,14 +27,14 @@ std::pair<uint64_t, uint64_t> newAndReadBoth() {
 
 template <typename _tcI0, typename T1 = void, typename T2 = void>
 uint64_t tree_simp() {
-  std::any v;
+  uint64_t v;
   v = UINT64_C(5);
-  return v;
+  return std::move(v);
 }
 
 template <typename _tcI0, typename T1 = void, typename T2 = void>
 uint64_t tree_simp_another() {
-  std::any v;
+  uint64_t v;
   v = UINT64_C(5);
   v = UINT64_C(6);
   uint64_t val = v;
