@@ -235,10 +235,8 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
       } else {
         const auto &[a0, a1] = std::get<typename List<
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
-        const std::pair<uint64_t, uint64_t> &p0 = a0.first;
-        const uint64_t &c = a0.second;
-        const uint64_t &a = p0.first;
-        const uint64_t &b = p0.second;
+        const auto &[p0, c] = a0;
+        const auto &[a, b] = p0;
         _stack.emplace_back(_Resume_a{((a + b) + c)});
         _stack.emplace_back(_Enter{a1.get()});
       }
@@ -395,64 +393,29 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
 
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
 LoopifyAdvancedPatterns::count_by_shape(
-    const List<LoopifyAdvancedPatterns::shape>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<LoopifyAdvancedPatterns::shape> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    LoopifyAdvancedPatterns::shape a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified count_by_shape: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<LoopifyAdvancedPatterns::shape> &l = *_f.l;
-      if (std::holds_alternative<
-              typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
-        _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
-                                 UINT64_C(0));
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(
-                l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
+    const List<LoopifyAdvancedPatterns::shape> &l) {
+  if (std::holds_alternative<
+          typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
+    return std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
+                          UINT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename List<LoopifyAdvancedPatterns::shape>::Cons>(l.v());
+    auto [p, triangles] = count_by_shape(*a1);
+    auto [circles, squares] = std::move(p);
+    if (std::holds_alternative<typename LoopifyAdvancedPatterns::shape::Circle>(
+            a0.v())) {
+      return std::make_pair(std::make_pair((circles + UINT64_C(1)), squares),
+                            triangles);
+    } else if (std::holds_alternative<
+                   typename LoopifyAdvancedPatterns::shape::Square>(a0.v())) {
+      return std::make_pair(std::make_pair(circles, (squares + UINT64_C(1))),
+                            triangles);
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
-      auto _cs = std::move(_result);
-      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
-      uint64_t triangles = std::move(_cs.second);
-      uint64_t circles = std::move(p.first);
-      uint64_t squares = std::move(p.second);
-      if (std::holds_alternative<
-              typename LoopifyAdvancedPatterns::shape::Circle>(a0.v())) {
-        _result = std::make_pair(
-            std::make_pair((circles + UINT64_C(1)), squares), triangles);
-      } else if (std::holds_alternative<
-                     typename LoopifyAdvancedPatterns::shape::Square>(a0.v())) {
-        _result = std::make_pair(
-            std::make_pair(circles, (squares + UINT64_C(1))), triangles);
-      } else {
-        _result = std::make_pair(std::make_pair(circles, squares),
-                                 (triangles + UINT64_C(1)));
-      }
+      return std::make_pair(std::make_pair(circles, squares),
+                            (triangles + UINT64_C(1)));
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifyAdvancedPatterns::replace_at(

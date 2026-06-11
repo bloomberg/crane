@@ -166,8 +166,7 @@ struct FetchOps {
         UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *_cs;
-      const uint64_t &_x = p.first;
-      const uint64_t &next = p.second;
+      const auto &[_x, next] = p;
       return next;
     } else {
       return UINT64_C(0);

@@ -25,7 +25,7 @@ Crane Extract Inductive option =>
 Crane Extract Inductive prod =>
   "bsl::pair<%t0, %t1>"
   [ "bsl::make_pair(%a0, %a1)" ]
-  "%t0 %b0a0 = %scrut.first; %t1 %b0a1 = %scrut.second; %br0"
+  "auto [%b0a0, %b0a1] = %scrut; %br0"
   From "bsl_utility.h".
 Crane Extract Inlined Constant fst => "%a0.first" From "bsl_utility.h".
 Crane Extract Inlined Constant snd => "%a0.second" From "bsl_utility.h".

@@ -22,8 +22,7 @@ uint64_t LoopifySwitchBreak::eval_ops(
       const auto &[a0, a1] = std::get<
           typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Cons>(
           _loop_ops->v());
-      const LoopifySwitchBreak::Tag &t = a0.first;
-      const uint64_t &v = a0.second;
+      const auto &[t, v] = a0;
       switch (t) {
       case Tag::ADD: {
         _loop_acc = (_loop_acc + v);
@@ -96,8 +95,7 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
         const auto &[a0, a1] = std::get<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Cons>(
             ops.v());
-        const LoopifySwitchBreak::Tag &t = a0.first;
-        const uint64_t &v = a0.second;
+        const auto &[t, v] = a0;
         switch (t) {
         case Tag::ADD: {
           _stack.emplace_back(_Resume_t{acc});
@@ -173,8 +171,7 @@ uint64_t LoopifySwitchBreak::count_tag(
         const auto &[a0, a1] = std::get<
             typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Cons>(
             ops.v());
-        const LoopifySwitchBreak::Tag &t_ = a0.first;
-        const uint64_t &_x = a0.second;
+        const auto &[t_, _x] = a0;
         switch (t) {
         case Tag::ADD: {
           switch (t_) {

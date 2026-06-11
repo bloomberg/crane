@@ -91,8 +91,7 @@ LoopifyListAccess::lookup(uint64_t key,
       const auto &[a0, a1] =
           std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _loop_l->v());
-      const uint64_t &k = a0.first;
-      const uint64_t &v = a0.second;
+      const auto &[k, v] = a0;
       if (k == key) {
         return v;
       } else {
@@ -134,8 +133,7 @@ List<uint64_t> LoopifyListAccess::lookup_all(
       } else {
         const auto &[a0, a1] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(l.v());
-        const uint64_t &k = a0.first;
-        const uint64_t &v = a0.second;
+        const auto &[k, v] = a0;
         if (k == key) {
           _stack.emplace_back(_Resume1{v});
           _stack.emplace_back(_Enter{a1.get()});

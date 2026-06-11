@@ -17,8 +17,7 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       const auto &[a0, a1] =
           std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               items.v());
-      const uint64_t &weight = a0.first;
-      const uint64_t &value = a0.second;
+      const auto &[weight, value] = a0;
       if (capacity < weight) {
         return knapsack_fuel(f, capacity, *a1);
       } else {
@@ -50,58 +49,24 @@ LoopifySearch::knapsack(uint64_t capacity,
 
 /// majority l finds majority element using Boyer-Moore algorithm.
 /// Returns (candidate, count).
-std::pair<uint64_t, uint64_t> LoopifySearch::majority(
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified majority: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(UINT64_C(0), UINT64_C(0));
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
+std::pair<uint64_t, uint64_t> LoopifySearch::majority(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::make_pair(UINT64_C(0), UINT64_C(0));
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto [cand, count] = majority(*a1);
+    if (a0 == cand) {
+      return std::make_pair(cand, (count + 1));
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      uint64_t cand = std::move(_cs.first);
-      uint64_t count = std::move(_cs.second);
-      if (a0 == cand) {
-        _result = std::make_pair(cand, (count + 1));
+      if (UINT64_C(0) < count) {
+        return std::make_pair(
+            cand,
+            (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
       } else {
-        if (UINT64_C(0) < count) {
-          _result = std::make_pair(
-              cand,
-              (((count - UINT64_C(1)) > count ? 0 : (count - UINT64_C(1)))));
-        } else {
-          _result = std::make_pair(a0, UINT64_C(1));
-        }
+        return std::make_pair(a0, UINT64_C(1));
       }
     }
   }
-  return _result;
 }
 
 /// longest_increasing_subseq l finds a longest increasing subsequence (greedy).
@@ -805,61 +770,24 @@ List<uint64_t> LoopifySearch::quicksort(const List<uint64_t> &l) {
 }
 
 /// Helper: split list into two roughly equal parts.
-std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then processes
-  /// rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-    uint64_t a00;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified split_list: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        auto &&_sv0 = *a1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-          _result =
-              std::make_pair(List<uint64_t>::cons(a0, List<uint64_t>::nil()),
-                             List<uint64_t>::nil());
-        } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_sv0.v());
-          _stack.emplace_back(_Cont_Cons{a0, a00});
-          _stack.emplace_back(_Enter{a10.get()});
-        }
-      }
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifySearch::split_list(const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
+      return std::make_pair(List<uint64_t>::cons(a0, List<uint64_t>::nil()),
+                            List<uint64_t>::nil());
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      uint64_t a00 = _f.a00;
-      auto _cs = std::move(_result);
-      List<uint64_t> a = std::move(_cs.first);
-      List<uint64_t> b = std::move(_cs.second);
-      _result = std::make_pair(List<uint64_t>::cons(a0, std::move(a)),
-                               List<uint64_t>::cons(a00, std::move(b)));
+      const auto &[a00, a10] =
+          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      auto [a, b] = split_list(*a10);
+      return std::make_pair(List<uint64_t>::cons(a0, std::move(a)),
+                            List<uint64_t>::cons(a00, std::move(b)));
     }
   }
-  return _result;
 }
 
 /// Helper: merge two sorted lists with fuel.
@@ -987,9 +915,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(l);
           } else {
-            auto _cs = split_list(l);
-            List<uint64_t> a = std::move(_cs.first);
-            List<uint64_t> b = std::move(_cs.second);
+            auto [a, b] = split_list(l);
             _stack.emplace_back(_After_a{std::move(std::move(a)), f});
             _stack.emplace_back(_Enter{std::move(b), f});
           }

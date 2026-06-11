@@ -196,70 +196,32 @@ List<uint64_t> LoopifyGrouping::remove_elem(
 }
 
 std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-LoopifyGrouping::partition3(
-    uint64_t pivot,
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-      _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified partition3: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(
-            std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil()),
-            List<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
+LoopifyGrouping::partition3(uint64_t pivot, const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::make_pair(
+        std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil()),
+        List<uint64_t>::nil());
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto [p, greater] = partition3(pivot, *a1);
+    auto [less, equal] = std::move(p);
+    if (a0 < pivot) {
+      return std::make_pair(
+          std::make_pair(List<uint64_t>::cons(a0, std::move(less)),
+                         std::move(equal)),
+          std::move(greater));
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      std::pair<List<uint64_t>, List<uint64_t>> p = std::move(_cs.first);
-      List<uint64_t> greater = std::move(_cs.second);
-      List<uint64_t> less = std::move(p.first);
-      List<uint64_t> equal = std::move(p.second);
-      if (a0 < pivot) {
-        _result = std::make_pair(
-            std::make_pair(List<uint64_t>::cons(a0, std::move(less)),
-                           std::move(equal)),
-            std::move(greater));
+      if (pivot < a0) {
+        return std::make_pair(std::make_pair(std::move(less), std::move(equal)),
+                              List<uint64_t>::cons(a0, std::move(greater)));
       } else {
-        if (pivot < a0) {
-          _result =
-              std::make_pair(std::make_pair(std::move(less), std::move(equal)),
-                             List<uint64_t>::cons(a0, std::move(greater)));
-        } else {
-          _result = std::make_pair(
-              std::make_pair(std::move(less),
-                             List<uint64_t>::cons(a0, std::move(equal))),
-              std::move(greater));
-        }
+        return std::make_pair(
+            std::make_pair(std::move(less),
+                           List<uint64_t>::cons(a0, std::move(equal))),
+            std::move(greater));
       }
     }
   }
-  return _result;
 }
 
 uint64_t LoopifyGrouping::count_elem(

@@ -23,7 +23,7 @@ Crane Extract Inductive option =>
 Crane Extract Inductive prod =>
   "std::pair<%t0, %t1>"
   [ "std::make_pair(%a0, %a1)" ]
-  "const %t0& %b0a0 = %scrut.first; const %t1& %b0a1 = %scrut.second; %br0"
+  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
   From "utility".
 Crane Extract Inlined Constant fst => "%a0.first" From "utility".
 Crane Extract Inlined Constant snd => "%a0.second" From "utility".

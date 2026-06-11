@@ -7273,7 +7273,14 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
-  let scrut_is_magic = match t with MLmagic _ -> true | _ -> false in
+  let scrut_is_magic = match t with
+    | MLmagic _ -> true
+    | MLrel i ->
+      (match get_env_type_opt i with
+       | Some ty -> is_erased_ml_type ty
+       | None -> false)
+    | _ -> false
+  in
   let typ = convert_ml_type_to_cpp_type env tvars typ in
   let concrete_match_type =
     if is_erased_type typ then
@@ -7462,7 +7469,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   let cmatch =
     if scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired then
-      "%t0 %b0a0 = std::move(%scrut.first); %t1 %b0a1 = std::move(%scrut.second); %br0"
+      "auto [%b0a0, %b0a1] = %scrut; %br0"
     else cmatch
   in
   let rec gen_cases = function
@@ -7494,8 +7501,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           List.map (fun (x, ty) ->
             let cpp_ty = convert_ml_type_to_cpp_type env tvars ty in
             if (match cpp_ty with
-                | Tglob (g, (_ :: _), _) when is_prod_global g ->
-                  is_all_erased cpp_ty
+                | Tglob (g, (_ :: _), _) when is_prod_global g -> true
                 | _ -> false) then
               (* Tdummy Ktype is the ML representation of __ / std::any *)
               (x, Tdummy Ktype)
@@ -7574,7 +7580,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                        CPPany_cast (list_any_ty, CPPvar name)
                      else
                        CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
-                   | Tvar _ | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
+                   | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
                      (* Opaque type alias (e.g. nt_semty = std::any) or
                         qualified member type (e.g. typename Ty::sym_semty):
                         the stored value IS the concrete payload, NOT a std::any
@@ -7666,25 +7672,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                 in
                 (params, ret_ty, go new_retyped_vars body')
               ) branches in
-              (* Cache the any_cast<pair<any,any>> result in a named local so
-                 that .first/.second bind to fields of a live object. *)
-              (match pair_g_opt_inner with
+              (let scrut_expr' = match pair_g_opt_inner with
                | Some g ->
-                 let n = tctx.cs_counter in
-                 tctx.cs_counter <- n + 1;
-                 let cache_id =
-                   Id.of_string (if n = 0 then "_cs" else "_cs" ^ string_of_int n)
-                 in
                  let cast_ty = Tglob (g, [Tany; Tany], []) in
-                 let cast_expr = match scrut_expr with
-                   | CPPany_cast _ -> scrut_expr
-                   | CPPvar scrut_id -> CPPany_cast (cast_ty, CPPvar scrut_id)
-                   | _ -> scrut_expr
-                 in
-                 [ Sasgn (cache_id, Some Ttodo, cast_expr);
-                   Scustom_case (ty, CPPvar cache_id, tyargs, branches', err) ]
-               | None ->
-                 [ Scustom_case (ty, scrut_expr, tyargs, branches', err) ])
+                 (match scrut_expr with
+                  | CPPany_cast _ -> scrut_expr
+                  | CPPvar scrut_id -> CPPany_cast (cast_ty, CPPvar scrut_id)
+                  | _ -> scrut_expr)
+               | None -> scrut_expr
+              in
+              [ Scustom_case (ty, scrut_expr', tyargs, branches', err) ])
             | _ ->
               let rec fix_expr e = match e with
                 | CPPlambda (lparams, ret_ty, lstmts, capture) ->

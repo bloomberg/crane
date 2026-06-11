@@ -188,9 +188,7 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
                               List<BinomialHeap::tree>::nil());
       } else {
         if (a00 < m) {
-          auto _cs = delete_max_aux(m, *a1);
-          List<BinomialHeap::tree> j = std::move(_cs.first);
-          List<BinomialHeap::tree> k = std::move(_cs.second);
+          auto [j, k] = delete_max_aux(m, *a1);
           return std::make_pair(
               List<BinomialHeap::tree>::cons(
                   tree::node(a00, *a10, tree::leaf()), std::move(j)),
@@ -202,9 +200,7 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
         }
       }
     } else {
-      auto _cs = delete_max_aux(m, *a1);
-      List<BinomialHeap::tree> j = std::move(_cs.first);
-      List<BinomialHeap::tree> k = std::move(_cs.second);
+      auto [j, k] = delete_max_aux(m, *a1);
       return std::make_pair(
           List<BinomialHeap::tree>::cons(tree::leaf(), std::move(j)),
           std::move(k));
@@ -217,9 +213,7 @@ BinomialHeap::delete_max(const List<BinomialHeap::tree> &q) {
   auto _cs = find_max(q);
   if (_cs.has_value()) {
     const uint64_t &m = *_cs;
-    auto _cs1 = delete_max_aux(m, q);
-    List<BinomialHeap::tree> p_ = std::move(_cs1.first);
-    List<BinomialHeap::tree> q_ = std::move(_cs1.second);
+    auto [p_, q_] = delete_max_aux(m, q);
     return std::make_optional<std::pair<uint64_t, List<BinomialHeap::tree>>>(
         std::make_pair(m, join(std::move(p_), std::move(q_), tree::leaf())));
   } else {
@@ -260,8 +254,7 @@ BinomialHeap::key BinomialHeap::help(const List<BinomialHeap::tree> &c) {
   auto _cs = delete_max(c);
   if (_cs.has_value()) {
     const std::pair<uint64_t, List<BinomialHeap::tree>> &p = *_cs;
-    const uint64_t &k = p.first;
-    const List<BinomialHeap::tree> &_x = p.second;
+    const auto &[k, _x] = p;
     return k;
   } else {
     return UINT64_C(0);

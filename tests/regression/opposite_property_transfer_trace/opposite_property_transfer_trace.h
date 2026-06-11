@@ -73,8 +73,7 @@ struct OppositePropertyTransferTraceCase {
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
     std::pair<std::function<T2(T1)>, std::function<T1(T2)>> e =
         h_dual(opposite_prestable_category(pS));
-    std::function<T2(T1)> q = std::move(e.first);
-    std::function<T1(T2)> _x = std::move(e.second);
+    auto [q, _x] = std::move(e);
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
@@ -89,10 +88,7 @@ struct OppositePropertyTransferTraceCase {
           std::pair<std::function<Triangle2Witness(Triangle1Witness)>,
                     std::function<Triangle1Witness(Triangle2Witness)>>
               e = triangle_identity_duality(opposite_prestable_category(pS));
-          std::function<Triangle2Witness(Triangle1Witness)> _x =
-              std::move(e.first);
-          std::function<Triangle1Witness(Triangle2Witness)> s =
-              std::move(e.second);
+          auto [_x, s] = std::move(e);
           return s(h_tri2);
         }());
   }

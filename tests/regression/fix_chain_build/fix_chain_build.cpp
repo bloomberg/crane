@@ -15,9 +15,7 @@ FixChainBuild::build_chain(uint64_t n) {
     return std::make_pair(UINT64_C(0), [](uint64_t x) { return x; });
   } else {
     uint64_t n_ = n - 1;
-    auto _cs = build_chain(n_);
-    uint64_t _x = std::move(_cs.first);
-    std::function<uint64_t(uint64_t)> prev = std::move(_cs.second);
+    auto [_x, prev] = build_chain(n_);
     auto step_impl = [=](auto &_self_step, uint64_t x) mutable -> uint64_t {
       if (x <= 0) {
         return n;

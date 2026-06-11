@@ -2,6 +2,7 @@
 #define INCLUDED_ANYCASTDANGLINGPAIRREF
 
 #include <any>
+#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -22,13 +23,21 @@ template <SymTypes Ty> struct Destruct {
   swap_pair(typename Ty::sym, typename Ty::sym,
             const typename Datatypes::template List<typename Ty::sym> &,
             symbols_semty vs) {
-    auto _cs = std::any_cast<std::pair<std::any, std::any>>(vs);
-    const auto &a = _cs.first;
-    const auto &t = _cs.second;
-    auto _cs1 = std::any_cast<std::pair<std::any, std::any>>(t);
-    const typename Ty::sym_semty &b = _cs1.first;
-    const auto &_x2 = _cs1.second;
-    return std::make_pair(b, a);
+    const auto &[a, t] = std::any_cast<std::pair<std::any, std::any>>(vs);
+    const auto &[b, _x2] = std::any_cast<std::pair<std::any, std::any>>(t);
+    return std::make_pair(
+        [&]() -> typename Ty::sym_semty {
+          if constexpr (std::is_same_v<typename Ty::sym_semty, std::any>)
+            return b;
+          else
+            return std::any_cast<typename Ty::sym_semty>(b);
+        }(),
+        [&]() -> typename Ty::sym_semty {
+          if constexpr (std::is_same_v<typename Ty::sym_semty, std::any>)
+            return a;
+          else
+            return std::any_cast<typename Ty::sym_semty>(a);
+        }());
   }
 
   static std::pair<typename Ty::sym_semty, typename Ty::sym_semty>

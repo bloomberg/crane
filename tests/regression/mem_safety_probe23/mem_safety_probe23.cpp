@@ -328,23 +328,16 @@ MemSafetyProbe23::collect_children(
       std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>,
                 uint64_t>
           pr = std::move(_result);
-      uint64_t s =
-          (([&]() -> uint64_t {
-             std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> p =
-                 std::move(pl.first);
-             uint64_t n = std::move(pl.second);
-             MemSafetyProbe23::tree _x = std::move(p.first);
-             MemSafetyProbe23::tree _x0 = std::move(p.second);
-             return n;
-           }() + a1) +
-               [&]() -> uint64_t {
-            std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> p =
-                std::move(pr.first);
-            uint64_t n = std::move(pr.second);
-            MemSafetyProbe23::tree _x = std::move(p.first);
-            MemSafetyProbe23::tree _x0 = std::move(p.second);
-            return n;
-          }());
+      uint64_t s = (([&]() -> uint64_t {
+                      auto [p, n] = std::move(pl);
+                      auto [_x, _x0] = std::move(p);
+                      return n;
+                    }() + a1) +
+                        [&]() -> uint64_t {
+        auto [p, n] = std::move(pr);
+        auto [_x, _x0] = std::move(p);
+        return n;
+      }());
       _result = std::make_pair(std::make_pair(*a0, a2), s);
     }
   }

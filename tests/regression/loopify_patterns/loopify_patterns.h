@@ -524,71 +524,32 @@ struct LoopifyPatterns {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
              std::is_invocable_r_v<bool, F1 &, uint64_t &>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-  partition_by(
-      F0 &&p, F1 &&q,
-      const list<uint64_t>
-          &l) { /// _Enter: captures varying parameters for each recursive call.
-
-    struct _Enter {
-      const list<uint64_t> *l;
-    };
-
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
-      uint64_t a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
-    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-        _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified partition_by: _Enter -> _Cont_Cons.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const list<uint64_t> &l = *_f.l;
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
-              list<uint64_t>::nil());
-        } else {
-          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{a1.get()});
-        }
+  partition_by(F0 &&p, F1 &&q, const list<uint64_t> &l) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+      return std::make_pair(
+          std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
+          list<uint64_t>::nil());
+    } else {
+      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
+      auto [p0, cs] = partition_by(p, q, *a1);
+      auto [as_, bs] = std::move(p0);
+      if (p(a0)) {
+        return std::make_pair(
+            std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
+                           std::move(bs)),
+            std::move(cs));
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        uint64_t a0 = _f.a0;
-        auto _cs = std::move(_result);
-        std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
-        list<uint64_t> cs = std::move(_cs.second);
-        list<uint64_t> as_ = std::move(p0.first);
-        list<uint64_t> bs = std::move(p0.second);
-        if (p(a0)) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)),
+        if (q(a0)) {
+          return std::make_pair(
+              std::make_pair(std::move(as_),
+                             list<uint64_t>::cons(a0, std::move(bs))),
               std::move(cs));
         } else {
-          if (q(a0)) {
-            _result = std::make_pair(
-                std::make_pair(std::move(as_),
-                               list<uint64_t>::cons(a0, std::move(bs))),
-                std::move(cs));
-          } else {
-            _result =
-                std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
-                               list<uint64_t>::cons(a0, std::move(cs)));
-          }
+          return std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
+                                list<uint64_t>::cons(a0, std::move(cs)));
         }
       }
     }
-    return _result;
   }
 
   /// merge_alternating l1 l2 merges two lists by alternating elements.

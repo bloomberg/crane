@@ -5728,3 +5728,14 @@
   (alias runtest)
   (deps todo_iota_complex_pattern.t.exe)
   (action (run ./todo_iota_complex_pattern.t.exe))))
+
+(subdir any_cast_dangling_pair_ref
+ (rule
+  (targets any_cast_dangling_pair_ref.t.exe)
+  (deps AnyCastDanglingPairRef.vo any_cast_dangling_pair_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_dangling_pair_ref.t.exe AnyCastDanglingPairRef.cpp any_cast_dangling_pair_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps any_cast_dangling_pair_ref.t.exe)
+  (action (run ./any_cast_dangling_pair_ref.t.exe))))

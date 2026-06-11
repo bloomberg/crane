@@ -6,9 +6,8 @@ FixStateThreading::reverse_count(const List<uint64_t> &l, List<uint64_t> acc) {
     return std::make_pair(std::move(acc), UINT64_C(0));
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    auto _cs = reverse_count(*a1, List<uint64_t>::cons(a0, std::move(acc)));
-    List<uint64_t> acc_ = std::move(_cs.first);
-    uint64_t n = std::move(_cs.second);
+    auto [acc_, n] =
+        reverse_count(*a1, List<uint64_t>::cons(a0, std::move(acc)));
     return std::make_pair(std::move(acc_), (n + UINT64_C(1)));
   }
 }
@@ -35,10 +34,8 @@ FixStateThreading::sum_with_acc(const List<uint64_t> &l, uint64_t acc) {
     return std::make_pair(std::move(acc), UINT64_C(0));
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    auto _cs = sum_with_acc(*a1, (std::move(acc) + a0));
-    uint64_t acc_ = std::move(_cs.first);
-    uint64_t s = std::move(_cs.second);
-    return std::make_pair(std::move(acc_), (s + UINT64_C(1)));
+    auto [acc_, s] = sum_with_acc(*a1, (std::move(acc) + a0));
+    return std::make_pair(acc_, (s + UINT64_C(1)));
   }
 }
 

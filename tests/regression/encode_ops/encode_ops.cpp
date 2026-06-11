@@ -1,8 +1,7 @@
 #include "encode_ops.h"
 
 bool EncodeOps::pair_in_range(const std::pair<uint64_t, uint64_t> &p) {
-  const uint64_t &b1 = p.first;
-  const uint64_t &b2 = p.second;
+  const auto &[b1, b2] = p;
   return (b1 < UINT64_C(256) && b2 < UINT64_C(256));
 }
 
@@ -14,9 +13,7 @@ EncodeOps::encode_list2(const List<EncodeOps::instruction2> &prog) {
   } else {
     const auto &[a0, a1] =
         std::get<typename List<EncodeOps::instruction2>::Cons>(prog.v());
-    auto _cs = a0.encode2();
-    uint64_t b1 = std::move(_cs.first);
-    uint64_t b2 = std::move(_cs.second);
+    auto [b1, b2] = a0.encode2();
     return List<uint64_t>::cons(b1,
                                 List<uint64_t>::cons(b2, encode_list2(*a1)));
   }

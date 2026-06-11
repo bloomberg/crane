@@ -1095,8 +1095,7 @@ LoopifySequences::run_length_encode_fuel(uint64_t fuel,
           const auto &[a01, a11] =
               std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                   _sv1.v());
-          const uint64_t &y = a01.first;
-          const uint64_t &n = a01.second;
+          const auto &[y, n] = a01;
           if (a0 == y) {
             return List<std::pair<uint64_t, uint64_t>>::cons(
                 std::make_pair(y, (n + 1)), *a11);

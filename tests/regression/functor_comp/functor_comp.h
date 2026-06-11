@@ -196,8 +196,7 @@ struct FunctorComp {
           auto _cs = C::pop(c0);
           if (_cs.has_value()) {
             const std::pair<uint64_t, typename C::t> &p = *_cs;
-            const uint64_t &x = p.first;
-            const typename C::t &c_ = p.second;
+            const auto &[x, c_] = p;
             return _self_go(_self_go, f,
                             List<uint64_t>::cons(x, std::move(acc)), c_);
           } else {

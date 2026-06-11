@@ -54,8 +54,7 @@ uint64_t HistoricalEventSafetyTraceCase::stage_from_table(
   } else {
     const auto &[a0, a1] =
         std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(tbl.v());
-    const uint64_t &q = a0.first;
-    const uint64_t &s = a0.second;
+    const auto &[q, s] = a0;
     uint64_t tail = stage_from_table(*a1, base_stage, out);
     if (out <= q) {
       return s;

@@ -132,8 +132,7 @@ LoopifyAlgorithms::run_length_encode(const List<uint64_t> &l) {
       const auto &[a00, a10] =
           std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _sv0.v());
-      const uint64_t &y = a00.first;
-      const uint64_t &n = a00.second;
+      const auto &[y, n] = a00;
       if (a0 == y) {
         return List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(y, (n + 1)), *a10);

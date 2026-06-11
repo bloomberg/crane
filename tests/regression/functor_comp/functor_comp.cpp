@@ -22,16 +22,14 @@ uint64_t FunctorComp::Stack::size(FunctorComp::Stack::t _x0) {
 FunctorComp::Queue::t
 FunctorComp::Queue::push(uint64_t x,
                          std::pair<List<uint64_t>, List<uint64_t>> q) {
-  List<uint64_t> front = std::move(q.first);
-  List<uint64_t> back = std::move(q.second);
+  auto [front, back] = std::move(q);
   return std::make_pair(std::move(front),
                         List<uint64_t>::cons(x, std::move(back)));
 }
 
 std::optional<std::pair<uint64_t, FunctorComp::Queue::t>>
 FunctorComp::Queue::pop(std::pair<List<uint64_t>, List<uint64_t>> q) {
-  List<uint64_t> front = std::move(q.first);
-  List<uint64_t> back = std::move(q.second);
+  auto [front, back] = std::move(q);
   if (std::holds_alternative<typename List<uint64_t>::Nil>(front.v_mut())) {
     auto &&_sv0 = back.rev();
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
@@ -54,7 +52,6 @@ FunctorComp::Queue::pop(std::pair<List<uint64_t>, List<uint64_t>> q) {
 
 uint64_t
 FunctorComp::Queue::size(const std::pair<List<uint64_t>, List<uint64_t>> &q) {
-  const List<uint64_t> &front = q.first;
-  const List<uint64_t> &back = q.second;
+  const auto &[front, back] = q;
   return (front.length() + back.length());
 }

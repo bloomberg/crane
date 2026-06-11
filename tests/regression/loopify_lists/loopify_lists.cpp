@@ -791,8 +791,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::lookup_all(
         const auto &[a0, a1] = std::get<
             typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Cons>(
             l.v());
-        const uint64_t &k = a0.first;
-        const uint64_t &v = a0.second;
+        const auto &[k, v] = a0;
         if (k == key) {
           _stack.emplace_back(_Resume1{v});
           _stack.emplace_back(_Enter{a1.get()});
@@ -1140,52 +1139,17 @@ LoopifyLists::list<std::pair<uint64_t, uint64_t>> LoopifyLists::group_pairs(
 
 /// swizzle l separates elements by position: 1,2,3,4 -> (1,3,2,4).
 std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-LoopifyLists::swizzle(
-    const LoopifyLists::list<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const LoopifyLists::list<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-      _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified swizzle: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyLists::list<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v())) {
-        _result = std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
-    } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      LoopifyLists::list<uint64_t> odds = std::move(_cs.first);
-      LoopifyLists::list<uint64_t> evens = std::move(_cs.second);
-      _result = std::make_pair(list<uint64_t>::cons(a0, std::move(evens)),
-                               std::move(odds));
-    }
+LoopifyLists::swizzle(const LoopifyLists::list<uint64_t> &l) {
+  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+          l.v())) {
+    return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
+    auto [odds, evens] = swizzle(*a1);
+    return std::make_pair(list<uint64_t>::cons(a0, std::move(evens)),
+                          std::move(odds));
   }
-  return _result;
 }
 
 /// index_of_aux x l i finds first index of x in l starting from i.
@@ -1284,8 +1248,7 @@ uint64_t LoopifyLists::lookup(
       const auto &[a0, a1] = std::get<
           typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Cons>(
           _loop_l->v());
-      const uint64_t &k = a0.first;
-      const uint64_t &v = a0.second;
+      const auto &[k, v] = a0;
       if (k == key) {
         return v;
       } else {
@@ -1562,116 +1525,41 @@ LoopifyLists::list<uint64_t> LoopifyLists::remove_if_sum_even(
 
 /// split_at n l splits list at index n into (prefix, suffix).
 std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-LoopifyLists::split_at(
-    uint64_t n,
-    LoopifyLists::list<uint64_t>
-        l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    LoopifyLists::list<uint64_t> l;
-    uint64_t n;
-  };
-
-  /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont1 {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont1>;
-  std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-      _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{std::move(l), n});
-  /// Loopified split_at: _Enter -> _Cont1.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      LoopifyLists::list<uint64_t> l = std::move(_f.l);
-      uint64_t n = _f.n;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v_mut())) {
-        _result = std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-      } else {
-        auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v_mut());
-        if (n == UINT64_C(0)) {
-          _result = std::make_pair(list<uint64_t>::nil(), l);
-        } else {
-          _stack.emplace_back(_Cont1{a0});
-          _stack.emplace_back(
-              _Enter{*a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
-        }
-      }
+LoopifyLists::split_at(uint64_t n, LoopifyLists::list<uint64_t> l) {
+  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+          l.v_mut())) {
+    return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+  } else {
+    auto &[a0, a1] =
+        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v_mut());
+    if (n == UINT64_C(0)) {
+      return std::make_pair(list<uint64_t>::nil(), l);
     } else {
-      auto _f = std::move(std::get<_Cont1>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      LoopifyLists::list<uint64_t> a = std::move(_cs.first);
-      LoopifyLists::list<uint64_t> b = std::move(_cs.second);
-      _result = std::make_pair(
-          list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
+      auto [a, b] =
+          split_at((((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), *a1);
+      return std::make_pair(list<uint64_t>::cons(std::move(a0), std::move(a)),
+                            std::move(b));
     }
   }
-  return _result;
 }
 
 /// unzip l splits list of pairs into two lists.
 std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
 LoopifyLists::unzip(
-    const LoopifyLists::list<std::pair<uint64_t, uint64_t>>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const LoopifyLists::list<std::pair<uint64_t, uint64_t>> *l;
-  };
-
-  /// _Cont_a: saves [a, b], resumes after recursive call, then processes rest.
-  struct _Cont_a {
-    uint64_t a;
-    uint64_t b;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_a>;
-  std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-      _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified unzip: _Enter -> _Cont_a.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyLists::list<std::pair<uint64_t, uint64_t>> &l = *_f.l;
-      if (std::holds_alternative<
-              typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Nil>(
-              l.v())) {
-        _result = std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<
-            typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Cons>(
-            l.v());
-        const uint64_t &a = a0.first;
-        const uint64_t &b = a0.second;
-        _stack.emplace_back(_Cont_a{a, b});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
-    } else {
-      auto _f = std::move(std::get<_Cont_a>(_frame));
-      uint64_t a = _f.a;
-      uint64_t b = _f.b;
-      auto _cs = std::move(_result);
-      LoopifyLists::list<uint64_t> xs = std::move(_cs.first);
-      LoopifyLists::list<uint64_t> ys = std::move(_cs.second);
-      _result = std::make_pair(list<uint64_t>::cons(a, std::move(xs)),
-                               list<uint64_t>::cons(b, std::move(ys)));
-    }
+    const LoopifyLists::list<std::pair<uint64_t, uint64_t>> &l) {
+  if (std::holds_alternative<
+          typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Nil>(
+          l.v())) {
+    return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+  } else {
+    const auto &[a0, a1] = std::get<
+        typename LoopifyLists::list<std::pair<uint64_t, uint64_t>>::Cons>(
+        l.v());
+    const auto &[a, b] = a0;
+    auto [xs, ys] = unzip(*a1);
+    return std::make_pair(list<uint64_t>::cons(a, std::move(xs)),
+                          list<uint64_t>::cons(b, std::move(ys)));
   }
-  return _result;
 }
 
 /// nth n l default returns nth element or default if out of bounds.
@@ -1893,56 +1781,23 @@ uint64_t LoopifyLists::maximum(
 }
 
 /// minmax l finds both minimum and maximum in one pass.
-std::pair<uint64_t, uint64_t> LoopifyLists::minmax(
-    const LoopifyLists::list<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const LoopifyLists::list<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified minmax: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyLists::list<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v())) {
-        _result = std::make_pair(UINT64_C(0), UINT64_C(0));
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        auto &&_sv = *a1;
-        if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-                _sv.v())) {
-          _result = std::make_pair(a0, a0);
-        } else {
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{a1.get()});
-        }
-      }
+std::pair<uint64_t, uint64_t>
+LoopifyLists::minmax(const LoopifyLists::list<uint64_t> &l) {
+  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+          l.v())) {
+    return std::make_pair(UINT64_C(0), UINT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
+    auto &&_sv = *a1;
+    if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+            _sv.v())) {
+      return std::make_pair(a0, a0);
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      uint64_t lo = std::move(_cs.first);
-      uint64_t hi = std::move(_cs.second);
-      _result = std::make_pair((a0 <= lo ? a0 : lo), (hi <= a0 ? a0 : hi));
+      auto [lo, hi] = minmax(*a1);
+      return std::make_pair((a0 <= lo ? a0 : lo), (hi <= a0 ? a0 : hi));
     }
   }
-  return _result;
 }
 
 /// Helper for rotate_left.
@@ -2043,65 +1898,32 @@ LoopifyLists::intercalate(const LoopifyLists::list<uint64_t> &sep,
 
 /// majority l finds majority element using Boyer-Moore voting algorithm.
 /// Returns (candidate, count).
-std::pair<uint64_t, uint64_t> LoopifyLists::majority(
-    const LoopifyLists::list<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const LoopifyLists::list<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified majority: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyLists::list<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v())) {
-        _result = std::make_pair(UINT64_C(0), UINT64_C(0));
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        auto &&_sv = *a1;
-        if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-                _sv.v())) {
-          _result = std::make_pair(a0, UINT64_C(1));
-        } else {
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{a1.get()});
-        }
-      }
+std::pair<uint64_t, uint64_t>
+LoopifyLists::majority(const LoopifyLists::list<uint64_t> &l) {
+  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+          l.v())) {
+    return std::make_pair(UINT64_C(0), UINT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
+    auto &&_sv = *a1;
+    if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+            _sv.v())) {
+      return std::make_pair(a0, UINT64_C(1));
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      uint64_t cand = std::move(_cs.first);
-      uint64_t cnt = std::move(_cs.second);
+      auto [cand, cnt] = majority(*a1);
       if (a0 == cand) {
-        _result = std::make_pair(cand, (cnt + 1));
+        return std::make_pair(cand, (cnt + 1));
       } else {
         if (cnt == UINT64_C(0)) {
-          _result = std::make_pair(a0, UINT64_C(1));
+          return std::make_pair(a0, UINT64_C(1));
         } else {
-          _result = std::make_pair(
+          return std::make_pair(
               cand, (((cnt - UINT64_C(1)) > cnt ? 0 : (cnt - UINT64_C(1)))));
         }
       }
     }
   }
-  return _result;
 }
 
 /// zip3 l1 l2 l3 zips three lists into triples.
@@ -2178,50 +2000,17 @@ LoopifyLists::zip3(
 }
 
 /// sum_and_count l returns both sum and count in one pass.
-std::pair<uint64_t, uint64_t> LoopifyLists::sum_and_count(
-    const LoopifyLists::list<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const LoopifyLists::list<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_and_count: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyLists::list<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              l.v())) {
-        _result = std::make_pair(UINT64_C(0), UINT64_C(0));
-      } else {
-        const auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
-    } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      uint64_t s = std::move(_cs.first);
-      uint64_t c = std::move(_cs.second);
-      _result = std::make_pair((a0 + s), (c + 1));
-    }
+std::pair<uint64_t, uint64_t>
+LoopifyLists::sum_and_count(const LoopifyLists::list<uint64_t> &l) {
+  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+          l.v())) {
+    return std::make_pair(UINT64_C(0), UINT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
+    auto [s, c] = sum_and_count(*a1);
+    return std::make_pair((a0 + s), (c + 1));
   }
-  return _result;
 }
 
 /// elem_at n l returns element at index n (like nth but with different name).

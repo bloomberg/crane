@@ -146,9 +146,7 @@ struct Monadic {
     requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
   static State<T1, T3> state_bind(State<T1, T2> ma, F1 &&f) {
     return [=](const T1 &s) mutable {
-      auto _cs = ma(s);
-      T2 a = std::move(_cs.first);
-      T1 s_ = std::move(_cs.second);
+      auto [a, s_] = ma(s);
       return f(a)(s_);
     };
   }

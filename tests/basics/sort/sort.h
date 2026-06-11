@@ -160,9 +160,7 @@ struct Sort {
                               List<T1>::nil());
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(_sv0.v());
-        auto _cs = split<T1>(*a10);
-        List<T1> ls1 = std::move(_cs.first);
-        List<T1> ls2 = std::move(_cs.second);
+        auto [ls1, ls2] = split<T1>(*a10);
         return std::make_pair(List<T1>::cons(a0, std::move(ls1)),
                               List<T1>::cons(a00, std::move(ls2)));
       }
@@ -204,9 +202,7 @@ struct Sort {
       return std::make_pair(List<T1>::nil(), List<T1>::nil());
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto _cs = split_pivot<T1>(le_dec0, pivot, *a1);
-      List<T1> l1 = std::move(_cs.first);
-      List<T1> l2 = std::move(_cs.second);
+      auto [l1, l2] = split_pivot<T1>(le_dec0, pivot, *a1);
       if (le_dec0(a0, pivot)) {
         return std::make_pair(List<T1>::cons(a0, std::move(l1)), std::move(l2));
       } else {
