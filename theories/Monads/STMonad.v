@@ -69,23 +69,32 @@ Definition failwith
 (* Modeled after Ix type in https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix *)
 Class Ix (T : Type)
   (ltu : T -> T -> Prop) (* lte *)
-  {CD : CmpDec eq ltu}
   : Type :=
   {
-    (* The list of values defined in the range *)
-    range : prod T T -> list T; 
+    (* The list of values defined in the range, defined inclusively *)
+    range : T -> T -> list T; 
 
     (* diverge from haskell in using error type *)
-    index : prod T T -> T -> option nat; 
+    index : T -> T -> T -> option nat; 
 
     (* decidable equality over the range *)
-    inRange : prod T T -> T -> Prop; (* NOTE: bool here? *)
+    inRange : T -> T -> T -> Prop; (* NOTE: bool here? *)
 
     (* the size of the elements in the range *)
-    rangeSize : prod T T -> nat;
+    rangeSize : T -> T -> nat;
 
+    (* conversion to nats *)
+    toNat : T -> nat;
+
+    (* conversion from nats *)
+    fromNat : nat -> T;
+
+    (* TODO: remove the others once we have a mapping to nats? *)
     (* a constructor for an index plus one. *)
     suc : T -> T;
+
+    (* subtraction of two indices *)
+    sub: T -> T -> T;
 
     (* function that gives max between indices. *)
     max : T -> T -> T;
@@ -118,19 +127,22 @@ Class Ix (T : Type)
 
 #[export] Instance nat_ix : Ix nat Nat.le :=
   {|
-    range := fun p : nat * nat => seq (fst p) ((1 + snd p) - fst p);
-    index := fun (p : nat * nat) (i : nat) =>
-               if andb (Nat.leb (fst p) i) (Nat.leb i (snd p))
-               then Some (i - fst p)
+    range := fun fp sp : nat => seq fp ((1 + sp) - fp);
+    index := fun (fp sp : nat) (i : nat) =>
+               if andb (Nat.leb fp i) (Nat.leb i (sp))
+               then Some (i - fp)
                else None;
     inRange := 
-      fun (p : nat * nat) (i : nat) => Nat.le (fst p) i /\ Nat.le i (snd p);
-    rangeSize := fun p : nat * nat => (1 + snd p) - fst p;
+      fun (fp sp : nat) (i : nat) => Nat.le fp i /\ Nat.le i sp;
+    rangeSize := fun fp sp : nat => (1 + sp) - fp;
     
     (* needed to generate new indices *)
     suc := Datatypes.S; 
+    sub := Nat.sub;
     max := Nat.max; 
     zero := 0;
+    toNat := fun n : nat => n;
+    fromNat := fun n : nat => n;
   |}.
 
 
@@ -151,30 +163,31 @@ Class Ix_Correct (T : Type)
   (ltu : T -> T -> Prop) 
   {CD : @CmpDec T eq ltu}
   {CDC : @CmpDec_Correct T eq ltu CD}
-  {HI : @Ix T ltu CD}
+  {EQD : EqDec T eq} 
+  {HI : @Ix T ltu}
   {RD : @RelDec.RelDec T eq}
   : Type := 
   { 
     inRange_implies_elem : forall (l u i : T),
-      inRange (l,u) i <-> (In i (range (l,u))); 
+      inRange l u i <-> (In i (range l u)); 
 
     (* range (l,u) !! index (l,u) i == i, when inRange (l,u) i *)
     inRange_elems_are_indexable: forall (l u v : T) (i : nat),
-      index (l,u) v = Some i ->
-      inRange (l,u) v -> (* TODO: superflous precond?*)
-      List.nth_error (range (l,u)) i = Some v;
+      index l u v = Some i ->
+      inRange l u v -> (* TODO: superflous precond?*)
+      List.nth_error (range l u) i = Some v;
 
 
     (* map (index (l,u)) (range (l,u))) == [0..rangeSize (l,u)-1] *)
-    map_over_indices_makes_incr_seq: forall (p : T * T),
-      List.map (index p) (range p)
+    map_over_indices_makes_incr_seq: forall (fp sp : T),
+      List.map (index fp sp) (range fp sp)
       =
-      List.map Some (seq 0 (rangeSize p));
+      List.map Some (seq 0 (rangeSize fp sp));
 
 
     (* rangeSize (l,u) == length (range (l,u)) *)
-    rangeSize_is_length_of_range : forall (p : T * T),
-      rangeSize p = length (range p);
+    rangeSize_is_length_of_range : forall (fp sp : T),
+      rangeSize fp sp = length (range fp sp);
       
   }.
 
@@ -213,7 +226,7 @@ Qed.
   replace ((v - l <? 1 + u - l)%nat) with true
     by (symmetry; apply Nat.ltb_lt; lia).
   f_equal. apply add_sub_le. lia.
-- intros [l u]. unfold index, range, rangeSize, nat_ix. simpl fst. simpl snd.
+- intros l u. unfold index, range, rangeSize, nat_ix. simpl fst. simpl snd.
   set (n := 1 + u - l).
   erewrite List.map_ext_in.
   2: { intros a Ha. apply in_seq in Ha.
@@ -228,7 +241,7 @@ Qed.
   + simpl. f_equal.
     * f_equal. lia.
     * replace (S (l + k)) with (l + S k) by lia. apply IHn'.
-- intros [l u]. unfold rangeSize, range, nat_ix. simpl.
+- intros l u. unfold rangeSize, range, nat_ix. simpl.
   rewrite length_seq. reflexivity.
 Qed.
 
@@ -254,6 +267,15 @@ Section STRefNatDefs.
    | MkSTRef _ _ idx => idx
    end. 
 
+  Variant STArray (S A : Type) : Type :=
+    | MkSTArray (base lo hi : T) : STArray S A.
+
+  Definition stArrayBase {S A} (arr : STArray S A) : T :=
+    match arr with MkSTArray _ _ base _ _ => base end.
+
+  Definition stArrayBounds {S A} (arr : STArray S A) : T * T :=
+    match arr with MkSTArray _ _ _ lo hi => (lo, hi) end.
+
 End STRefNatDefs.
 
 #[export] Instance nat_ix_stref : STRefClass nat :=
@@ -261,49 +283,41 @@ End STRefNatDefs.
     mkSTRef := MkSTRef ;
     STRefToIx := STRefToIdxNat |}.
 
-
-
-
 Section STEventDefine.  
   Variable (T : Type).
-  Variable (ltu : T -> T -> Prop).
   Context `{STRefClass T}.
 
   Variant STEvent (S : Type) (V : T -> Type) : Type -> Type :=
     | NewSTRef (idx : T) (v : V idx) : STEvent S V (STRef S (V idx))
     | ReadSTRef (idx : T) : STRef S (V idx) -> STEvent S V (V idx)
     | WriteSTRef (idx : T) : STRef S (V idx) -> (V idx) -> STEvent S V unit
+    | NewArray (idx : T) (lo hi : T) (def : V idx) 
+      : STEvent S V (STArray T S (V idx))
+    | NewListArray (idx : T) (lo hi : T) (elems : list (V idx))
+      : STEvent S V (STArray T S (V idx))
+    | ReadArray (idx : T) : STArray T S (V idx) -> T -> STEvent S V (V idx)
+    | WriteArray (idx : T) : STArray T S (V idx) -> T -> V idx -> STEvent S V unit
+    | GetElems (idx : T) : STArray T S (V idx) -> STEvent S V (list (V idx))
   .
 
 End STEventDefine.
-
-(* Arrays! *)
-
-Section STArrayDef.
-
-  (* TODO: Array event definition goes here. *)
-  (* Events in Haskell *)
-(* newArray :: Ix i => (i, i) -> e -> ST s (STArray s i e)
- * newListArray :: (MArray a e m, Ix i) => (i, i) -> [e] -> m (a i e) 
- * readArray :: (MArray a e m, Ix i) => a i e -> i -> m e 
- * writeArray :: (MArray a e m, Ix i) => a i e -> i -> e -> m () 
- * getElems :: (MArray a e m, Ix i) => a i e -> m [e]  *)
-
-End STArrayDef.
+  
   
 Section Translation.
 
   Context {E : Type -> Type}.
   Context {T S : Type}.
-  Variable (ltu : T -> T -> Prop).
+  Context {ltu : T -> T -> Prop}.
   Context `{Ix_Correct T ltu}.
-  Context `{EqDec T eq}. (* TODO: add as hint based on Ix_Correct *)
   Context `{STRefClass T}.
   Context {V : T -> Type}.
   Context `{STEvent T S V -< E}. 
   Context `{exceptE Err -< E}.
   
 
+  (* Smart constructors  *)
+
+  (* NOTE: explicit index here because we cannot infer it automatically, yet. *)
   Definition newSTRef (idx : T) (v : (V idx)) : itree E (STRef S (V idx)) :=
     trigger (NewSTRef T S V idx v).
 
@@ -313,8 +327,30 @@ Section Translation.
   Definition writeSTRef {idx : T} (ref : STRef S (V idx)) (a : (V idx)) : itree E unit :=
     trigger (WriteSTRef T S V idx ref a).
 
+  Definition newArray (idx : T) (lo hi : T) (def : V idx)
+    : itree E (STArray T S (V idx)) :=
+    trigger (NewArray T S V idx lo hi def).
+
+  (* NOTE: explicit index here because we cannot infer it. *)
+  Definition newListArray (idx : T) (lo hi : T) (elems : list (V idx))
+    : itree E (STArray T S (V idx)) :=
+    trigger (NewListArray T S V idx lo hi elems).
+
+  Definition readArray {idx : T} (arr : STArray T S (V idx)) (i : T)
+    : itree E (V idx) :=
+    trigger (ReadArray T S V idx arr i).
+
+  Definition writeArray {idx : T} (arr : STArray T S (V idx)) (i : T) (v : V idx)
+    : itree E unit :=
+    trigger (WriteArray T S V idx arr i v).
+
+  Definition getElems {idx : T} (arr : STArray T S (V idx))
+    : itree E (list (V idx)) :=
+    trigger (GetElems T S V idx arr).
 
   
+  (* key type definitions *)
+
   Definition pkey (J K : Type) := (J * K)%type.
   Definition pkey_type {J K} (V : K -> Type) (pk : pkey J K) := V (snd pk).
   Definition idx_key := pkey T. 
@@ -325,7 +361,30 @@ Section Translation.
   Context `{HMap (idx_key T) (idx_key_type V) M}.
   Context `{Foldable M (sigT (idx_key_type V))}.
 
+  Fixpoint suc_n (n : nat) (t : T) : T :=
+    match n with
+    | O => t
+    | Datatypes.S n' => suc (suc_n n' t)
+    end.
 
+  (* TODO: cleanup *)
+  Definition arr_key (idx : T) (arr : STArray T S (V idx)) (i : T)
+    : option T :=
+    let base := stArrayBase T arr in
+    let '(fb, sb) := stArrayBounds T arr in
+    match index fb sb i with
+    | Some n => Some (suc_n n base)
+    | None => None
+    end.
+
+  Definition arr_lookup (idx : T) (arr : STArray T S (V idx)) (i : T) (mem : M)
+    : option (V idx) :=
+    match arr_key idx arr i with
+    | Some key => lookup (key, idx) mem
+    | None => None
+    end.
+
+  (* The handler for STEvents itself *)
   Definition handle_STEvent `{EqDec T eq} 
     : forall (A : Type), STEvent T S V A -> stateT M (itree E) A :=
     fun _ e mem =>
@@ -339,6 +398,55 @@ Section Translation.
         | None => failwith "Lookup failed!"
         end
     | WriteSTRef _ _ _ idx s v => Ret (add (STRefToIx S (V idx) s, idx) v mem, tt)
+    | NewArray _ _ _ idx lo hi def =>
+        let base := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem) in
+        let positions := range lo hi in
+        let fix fill (ps : list T) (m : M) (key : T) {struct ps} : M * T :=
+        match ps with
+        | nil => (m, key) 
+        | _ :: rest => fill rest (add (key, idx) def m) (suc key)
+        end in
+        let (mem', _ ) := fill positions mem base in
+        Ret (mem', MkSTArray T S (V idx) base lo hi)
+    | NewListArray _ _ _ idx lo hi elems =>
+        let base := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem) in
+        let fix fill (es : list (V idx)) (m : M) (key : T) {struct es} : M * T :=
+          match es with
+          | nil => (m, key)
+          | v :: rest => fill rest (add (key, idx) v m) (suc key)
+          end in
+        let '(mem', _) := fill elems mem base in
+        Ret (mem', MkSTArray T S (V idx) base lo hi)
+    | ReadArray _ _ _ idx arr i =>
+        match arr_lookup idx arr i mem with
+        | Some v => Ret (mem, v)
+        | None => failwith "Array read failed"
+        end
+    | WriteArray _ _ _ idx arr i v =>
+      match arr_key idx arr i with
+      | Some key => Ret (add (key, idx) v mem, tt)
+      | None => failwith "Array index out of range"
+      end
+    | GetElems _ _ _ idx arr =>
+        let '(fb,sb) := stArrayBounds T arr in
+        let positions := range fb sb in
+        let fix collect (ps : list T) : option (list (V idx)) :=
+          match ps with
+          | nil => Some nil
+          | p :: rest =>
+            match arr_lookup idx arr p mem with
+            | Some v =>
+              match collect rest with
+              | Some elems => Some (v :: elems)
+              | None => None
+              end
+            | None => None
+            end
+          end in
+        match collect positions with
+        | Some elems => Ret (mem, elems)
+        | None => failwith "Array getElems failed"
+        end
     end.
 
 (* Interpretation in Rocq *)
@@ -353,7 +461,7 @@ Section Translation.
     end.
   
   #[export] Instance hmap_from_idx :
-    HMap T V (halist T V) := @HMap_halist (T) V eq_equivalence H0.
+    HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
   Global Instance map_idx_correct :
     HMapOk hmap_from_idx := HMapOk_halist T V.
@@ -375,7 +483,7 @@ Definition runSt {A : Type}
   {V : T -> Type} `{exceptE Err -< E}
   (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
   : itree E A :=
-  fmap snd (interp_st ltu _ (f unit) HMap.empty).
+  fmap snd (interp_st _ (f unit) HMap.empty).
 
 (* CPP Bindings *)
 
@@ -384,10 +492,7 @@ Crane Extract Skip Ix_Correct.
 Crane Extract Skip CmpDec_Correct.
 Crane Extract Skip STEvent.
 Crane Extract Skip CmpDec.
-Crane Extract Skip Ix.
-Crane Extract Skip suc.
 Crane Extract Skip max.
-Crane Extract Skip zero.
 Crane Extract Skip mkSTRef.
 Crane Extract Skip STRefToIx.
 (* NOTE: skipping STRefClass seems to drop too much typing information,
@@ -397,5 +502,11 @@ Crane Extract Inlined Constant STRef => "%t2".
 Crane Extract Inlined Constant newSTRef => "%result = %a1".
 Crane Extract Inlined Constant readSTRef => "%a1".
 Crane Extract Inlined Constant writeSTRef => "%a1 = %a2".
+(* array extraction *)
 
+Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ].
+Crane Extract Inlined Constant newArray =>
+"%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1, %a3)".
+Crane Extract Inlined Constant readArray => "(*%a1)[%a2]".
+Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
 

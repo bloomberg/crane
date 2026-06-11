@@ -29,40 +29,36 @@ void aSsErT(bool condition, const char *message, int line) {
 
 #define ASSERT(X) aSsErT(!(X), #X, __LINE__);
 
-int natToInt(const Nat &n) {
-  int count = 0;
-  const Nat *cur = &n;
-  while (std::holds_alternative<Nat::S>(cur->v())) {
-    ++count;
-    cur = std::get<Nat::S>(cur->v()).d_a0.get();
-  }
-  return count;
-}
-
 int main() {
   // Test 1: newAndReadBoth returns (5, 6)
   {
-    auto result = newAndReadBoth<Nat, Nat>();
-    const auto &[fst, snd] = std::get<Prod<Nat, Nat>::Pair>(result.v());
-    ASSERT(natToInt(fst) == 5);
-    ASSERT(natToInt(snd) == 6);
-    std::cout << "Test 1 (newAndReadBoth): (" << natToInt(fst) << ", "
-              << natToInt(snd) << ") PASSED" << std::endl;
+    auto result = newAndReadBoth<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    ASSERT(result.first == 5);
+    ASSERT(result.second == 6);
+    std::cout << "Test 1 (newAndReadBoth): (" << result.first << ", "
+              << result.second << ") PASSED" << std::endl;
   }
 
   // Test 2: tree_simp returns 5
   {
-    auto result = tree_simp<Nat, Nat>();
-    ASSERT(natToInt(result) == 5);
-    std::cout << "Test 2 (tree_simp): " << natToInt(result) << " PASSED"
+    auto result = tree_simp<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    ASSERT(result == 5);
+    std::cout << "Test 2 (tree_simp): " << result << " PASSED"
               << std::endl;
   }
 
   // Test 3: tree_simp_another returns 6
   {
-    auto result = tree_simp_another<Nat, Nat>();
-    ASSERT(natToInt(result) == 6);
-    std::cout << "Test 3 (tree_simp_another): " << natToInt(result)
+    auto result = tree_simp_another<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
+    ASSERT(result == 6);
+    std::cout << "Test 3 (tree_simp_another): " << result
+              << " PASSED" << std::endl;
+  }
+
+  {
+    auto result = array_simp_fixed_init<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
+    ASSERT(result == 5);
+    std::cout << "Test 4 (array_simp_fixed_init): " << result
               << " PASSED" << std::endl;
   }
 

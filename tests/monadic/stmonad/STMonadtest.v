@@ -12,10 +12,12 @@ From Stdlib Require Import
   Setoid
   Strings.String
   Classes.EquivDec
+  Basics
 .
 
 From Crane Require Import Monads.ITree.
 From ExtLib Require Import
+  CmpDec
   Data.Bool
   Data.List
   Data.Map.FMapAList
@@ -25,6 +27,7 @@ From ExtLib Require Import
   Structures.Functor
   Structures.Maps
   Structures.Traversable
+  Structures.Reducible
 .
 
 
@@ -52,15 +55,14 @@ Local Open Scope string_scope.
 Section ExampleTrees.
 
   Context {E : Type -> Type}.
-  Context {S : Type}.
-  (* Variable (ltu : T -> T -> Prop). *)
-  Context `{Ix_Correct nat Nat.le}.
-  Context {HST: STRefClass nat}.
+  Context {T : Type}.
+  Context {ltu : T -> T -> Prop}.
+  Context `{Ix_Correct T ltu}.
+  Context {HST: STRefClass T}.
 
-  Let V : nat -> Type := fun _ => nat. (* Nats only for this example. *)
-  Context {HSEv: STEvent nat S V -< E}. 
-  Context `{exceptE Err -< E}.
-  Let E0 := (STEvent nat S V) +' E.
+  Let V : T -> Type := fun _ => nat. (* Nats only for this example. *)
+  Let S := unit.
+  Let E0 := (STEvent T S V) +' exceptE Err.
 
 
   Definition newAndReadBoth : itree E0 (nat * nat) :=
@@ -89,8 +91,8 @@ Section ExampleTrees.
 
 
    Definition swap' (v w : STRef S nat) : itree E0 unit :=
-    a <- @readSTRef E0 nat S  _ V  _ (STRefToIx _ _ v) v;;
-    b <- @readSTRef E0 nat S _ V _ (STRefToIx _ _ w) w;;
+    a <- @readSTRef E0 T S  _ V  _ (STRefToIx _ _ v) v;;
+    b <- @readSTRef E0 T S _ V _ (STRefToIx _ _ w) w;;
     writeSTRef v b;;
     writeSTRef w a.
 
@@ -103,63 +105,68 @@ Section ExampleTrees.
     writeSTRef w a.
 
 
+  Definition array_simp_fixed_init : itree E0 nat :=
+    arr <- newArray zero zero (suc (suc (suc (suc (suc zero))))) 5;;
+    elem <- @readArray E0 T _ _ _ _ _ arr (suc (zero));;
+    Ret elem. 
+  
+  Definition array_simp_list : itree E0 nat :=
+    arr <- newListArray zero zero (suc (suc (suc zero))) [4;2;3;1];;
+    elem <- @readArray E0 T _ _ _ _ zero arr (suc zero);;
+    Ret elem. 
 
-  (* TODO: Quicksort Example in haskell. *)
 
-(* import Control.Monad.ST
- * import Data.Array.ST
- * import Data.Foldable
- * import Control.Monad
- * 
- * -- wiki-copied code starts here
- * partition arr left right pivotIndex = do
- *     pivotValue <- readArray arr pivotIndex
- *     swap arr pivotIndex right
- *     storeIndex <- foreachWith [left..right-1] left (\i storeIndex -> do
- *         val <- readArray arr i
- *         if (val <= pivotValue)
- *             then do
- *                  swap arr i storeIndex
- *                  return (storeIndex + 1)
- *             else do
- *                  return storeIndex )
- *     swap arr storeIndex right
- *     return storeIndex
- * 
- * qsort arr left right = when (right > left) $ do
- *     let pivotIndex = left + ((right-left) `div` 2)
- *     newPivot <- partition arr left right pivotIndex
- * 
- *     qsort arr left (newPivot - 1)
- *     qsort arr (newPivot + 1) right
- * 
- * -- wrapper to sort a list as an array
- * sortList xs = runST $ do
- *     let lastIndex = length xs - 1
- *     arr <- newListArray (0,lastIndex) xs :: ST s (STUArray s Int Int)
- *     qsort arr 0 lastIndex
- *     newXs <- getElems arr
- *     return newXs
- * 
- * -- test example
- * main = print $ sortList [212498,127,5981,2749812,74879,126,4,51,2412]
- * 
- * -- helpers
- * swap arr left right = do
- *     leftVal <- readArray arr left
- *     rightVal <- readArray arr right
- *     writeArray arr left rightVal
- *     writeArray arr right leftVal
- * 
- * -- foreachWith takes a list, and a value that can be modified by the function, and
- * -- it returns the modified value after mapping the function over the list.  
- * foreachWith xs v f = foldlM (flip f) v xs *)
+  Section QSort. 
+
+  Definition swap_arr (arr : STArray T S nat) (left : T) (right : T) : itree E0 unit :=
+    leftVal <- readArray arr left;;
+    rightVal <- readArray arr right;;
+    @writeArray E0 T S _ _ _ zero arr left rightVal;;
+    @writeArray E0 T S _ _ _ (suc zero) arr right leftVal.
+
+  Definition forEachWith {A B} (xs : list A) (v : B) (f : B -> A -> itree E0 B)
+    : itree E0 B := foldM (flip f) (Ret v) xs.
+
+
+  Definition partition (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) (pivotIndex : T) : itree E0 T :=
+    pivotValue <- @readArray _ _ _ _ _ _ arr_idx arr pivotIndex;;
+    swap_arr arr pivotIndex right;;
+    storeIndex <- forEachWith (range left (sub right (suc zero))) left (fun i storeIndex =>
+        val <- @readArray _ _ _ _ _ _ arr_idx arr i;;
+        if (Nat.leb val pivotValue)
+            then swap_arr arr i storeIndex;;
+                 Ret (suc storeIndex)
+            else Ret storeIndex );;
+    swap_arr arr storeIndex right;;
+    Ret storeIndex.
+
+
+  (* TODO: define with equations. *)
+  Fail Fixpoint qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 (STArray T S nat) :=
+    let leftn := toNat left in
+    let rightn := toNat right in 
+    let pivotIndexn := leftn + ((rightn - leftn) / 2) in
+    newPivot <- partition arr arr_idx left right (fromNat pivotIndexn);;
+    qsort arr arr_idx left (fromNat ((toNat newPivot) + 1));;
+    qsort arr arr_idx (fromNat ((toNat newPivot) + 1)) right.
+
+    
+  End QSort.
+
   
 End ExampleTrees.
 
 
 
-(* Crane Extract Skip Ix. *)
+Module STMonadTests. 
+  (* Re-exporting instances so they're available to call in the exported file. *)
+  (* Just referring to them does not work to extract them here, they must be   *)
+  (* unfolded. *)
+  Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
+  Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
+End STMonadTests.
+
+
 Require Import Crane.Mapping.NatIntStd.
-Crane Extraction "stmonad" newAndReadBoth tree_simp tree_simp_another.
+Crane Extraction "stmonad" STMonadTests newAndReadBoth tree_simp tree_simp_another array_simp_fixed_init.
 
