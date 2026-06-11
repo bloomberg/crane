@@ -752,7 +752,7 @@ let is_eponymous_record_projection r =
     if Table.is_projection r then
       let ip, _arity = Table.projection_info r in
       (* Check if this projection's inductive matches the eponymous record *)
-      Environ.QGlobRef.equal Environ.empty_env (GlobRef.IndRef ip) epon_ref
+      globref_equal (GlobRef.IndRef ip) epon_ref
     else
       false
 
@@ -773,7 +773,7 @@ let is_suppressed_projection r =
 let filter_dfix rv defs typs =
   let is_method_candidate x =
     List.exists
-      (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r')
+      (fun (r', _, _, _) -> globref_equal x r')
       !method_candidates
   in
   let is_global_method x = is_registered_method x <> None in

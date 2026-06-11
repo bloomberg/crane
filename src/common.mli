@@ -18,10 +18,15 @@ open Miniml
 
 (** {2 Generic utility functions (string, list)} *)
 
+(** [globref_equal r1 r2] tests equality of two global references. *)
+val globref_equal : Names.GlobRef.t -> Names.GlobRef.t -> bool
+
 (** [contains_substring haystack needle] checks if [haystack] contains [needle].
 *)
 val contains_substring : string -> string -> bool
 
+(** [render_template substs tmpl] replaces each [(placeholder, value)] pair
+    in [substs] within [tmpl].  Used for numeric literal formatting templates. *)
 val render_template : (string * string) list -> string -> string
 
 (** [last lst] returns the last element of a non-empty list.

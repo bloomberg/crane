@@ -25,6 +25,9 @@ open Mlutil
 
 (** {2 Generic utility functions} *)
 
+(** [globref_equal r1 r2] tests equality of two global references. *)
+let globref_equal = Environ.QGlobRef.equal Environ.empty_env
+
 (** [contains_substring haystack needle] checks if [haystack] contains [needle].
     Note: String.contains checks for a char; this checks for a substring.
     @param haystack The string to search in
@@ -36,6 +39,9 @@ let contains_substring haystack needle =
     true
   with Not_found -> false
 
+(** [render_template substs tmpl] replaces each [(placeholder, value)] pair
+    in [substs] within [tmpl].  Used for numeric literal formatting templates
+    (e.g. ["%n"] → ["42"]). *)
 let render_template (substs : (string * string) list) (tmpl : string) : string =
   List.fold_left
     (fun s (placeholder, value) ->

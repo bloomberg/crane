@@ -1975,7 +1975,7 @@ let try_ref name = try Some (Rocqlib.lib_ref name) with _ -> None
 (** Tests whether a global reference [gr] corresponds to the Rocq library
     reference with the given name. *)
 let is_ref name gr =
-  try Environ.QGlobRef.equal Environ.empty_env gr (Rocqlib.lib_ref name)
+  try globref_equal gr (Rocqlib.lib_ref name)
   with _ -> false
 
 (* Check if a term's head is a specific global reference *)

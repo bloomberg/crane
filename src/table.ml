@@ -1130,7 +1130,6 @@ let error_singleton_become_prop ind =
 let error_unknown_module ?loc m =
   err ?loc (str "Module" ++ spc () ++ pr_qualid m ++ spc () ++ str "not found.")
 
-let error_scheme () = err (str "No Scheme modular extraction available yet.")
 
 let error_not_visible r =
   err

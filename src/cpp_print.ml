@@ -742,7 +742,7 @@ let rec pp_cpp_type par vl t =
       let name, _needs_ns = inductive_name_info r in
       ( match (r, t) with
       | GlobRef.IndRef _, Tglob (r', args, _)
-        when Environ.QGlobRef.equal Environ.empty_env r r' ->
+        when globref_equal r r' ->
         let templates =
           match args with
           | [] -> mt ()
@@ -822,7 +822,7 @@ let rec pp_cpp_type par vl t =
         | Tqualified (inner_ty, id) ->
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
         | Tnamespace (r, Tglob (r', args, _))
-          when Environ.QGlobRef.equal Environ.empty_env r r' ->
+          when globref_equal r r' ->
           let templates =
             match args with
             | [] -> mt ()

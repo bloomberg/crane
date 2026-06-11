@@ -119,20 +119,6 @@ let rec pp_specif = function
     | None -> Pp.mt ()
     | Some ren -> fnl () ++ str ("module type " ^ ren ^ " = ") ++ name )
 
-(** Check if a ML type contains type variables (for module signature
-    requirements).
-
-    This enables compile-time checking that modules satisfy their type
-    signatures. *)
-and ml_type_has_tvar = function
-  | Miniml.Tvar _ | Miniml.Tvar' _ -> true
-  | Miniml.Tunknown -> true
-  | Miniml.Tarr (t1, t2) -> ml_type_has_tvar t1 || ml_type_has_tvar t2
-  | Miniml.Tglob (_, args, _) -> List.exists ml_type_has_tvar args
-  | Miniml.Tmeta {contents = Some t} -> ml_type_has_tvar t
-  | Miniml.Tmeta {contents = None} -> true
-  | _ -> false
-
 (** Convert a signature spec element to a C++20 [requires] clause requirement.
     Used for module type -> concept conversion.
 
@@ -163,7 +149,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sind (kn, i) ->
     let name = pp_global_name Type (GlobRef.IndRef (kn, 0)) in
     str "typename M::" ++ name ++ str ";" ++ fnl ()
-  | Sval (r, _, t) when ml_type_has_tvar t -> mt ()
+  | Sval (r, _, t) when has_tvar t -> mt ()
   | Sval (r, b, t) ->
     let name = pp_global_name Term r in
     let rec get_function_parts = function
@@ -694,7 +680,7 @@ let rec pp_structure_elem ~is_header f = function
                 Array.iteri
                   (fun j _p ->
                     let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
-                    if Environ.QGlobRef.equal Environ.empty_env fwd_ref epon_ref
+                    if globref_equal fwd_ref epon_ref
                     then
                       seen_epon := true
                     else if !seen_epon then
@@ -707,7 +693,7 @@ let rec pp_structure_elem ~is_header f = function
             match ty with
             | Miniml.Tglob (r, args, _) ->
               List.exists
-                (Environ.QGlobRef.equal Environ.empty_env r)
+                (globref_equal r)
                 excluded_refs
               || List.exists refs_excluded args
             | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
@@ -911,7 +897,7 @@ let rec pp_structure_elem ~is_header f = function
                       if
                         Option.map
                           (fun r ->
-                            Environ.QGlobRef.equal Environ.empty_env r ind_ref )
+                            globref_equal r ind_ref )
                           !eponymous_type_ref
                         = Some true
                       then
@@ -1466,7 +1452,7 @@ let dedup_lifted_decls ds =
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
-      (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env x r')
+      (fun (r', _, _, _) -> globref_equal x r')
       !method_candidates
   in
   let process_sel (_l, se) =
@@ -1482,7 +1468,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
         let reg = get_method_registry () in
         let already =
           List.exists
-            (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r')
+            (fun (r', _, _, _) -> globref_equal r r')
             (Method_registry.get_candidates reg epon_ref)
         in
         if not already then
@@ -1515,7 +1501,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
             let already =
               List.exists
                 (fun (r', _, _, _) ->
-                  Environ.QGlobRef.equal Environ.empty_env r r' )
+                  globref_equal r r' )
                 (Method_registry.get_candidates reg epon_ref)
             in
             if not already then

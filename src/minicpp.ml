@@ -109,8 +109,8 @@ type cpp_type =
   | Tvariant of cpp_type list
   | Tshared_ptr of cpp_type
   | Tvoid
-  | Ttodo
-  | Tunknown
+  | Ttodo (* placeholder for types inferred later by C++ (e.g. cache var decls) *)
+  | Tunknown (* unresolved type from ML AST — should not reach the printer *)
   | Tany (* std::any - for type-erased storage of existential types *)
   | Tauto (* auto - for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr (* decltype(expr) *)

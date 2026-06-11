@@ -26,7 +26,7 @@ struct AnyCastNested {
     if (x0 <= 0) {
       const auto &[_x, rest] = std::any_cast<std::pair<std::any, std::any>>(a1);
       const auto &[_x0, v] = std::any_cast<std::pair<std::any, std::any>>(rest);
-      return std::any_cast<T1>(std::any_cast<T1>(std::any_cast<T1>(v)));
+      return std::any_cast<T1>(std::any_cast<T1>(v));
     } else {
       uint64_t _x = x0 - 1;
       return std::any_cast<T1>(a1);

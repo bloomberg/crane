@@ -13,7 +13,6 @@ open Table
 open Str
 open Util
 
-let globref_equal = Environ.QGlobRef.equal Environ.empty_env
 
 (** Compute the factory method name for a constructor.
     Factory names are the lowercase of the constructor struct name
@@ -1897,19 +1896,21 @@ let is_cpp_dummy_type = function
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
-(** True if a C++ type represents an erased parameter — either Tany (from an
-    unresolved Tmeta in the ML AST) or a dummy_type glob (from Tdummy). When any
-    type arg in a template argument list is erased, ALL explicit type args must
-    be dropped (see filter_erased_type_args). *)
+(** [is_erased_type t] — true if [t] represents a type-erased position:
+    either [Tany] ([std::any]) or a dummy glob (from proof/type erasure).
+    At runtime these values are stored as [std::any] and need [any_cast]
+    to recover the concrete type. *)
 let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
 
-(** [is_all_erased t] — true iff [t] is erased (Tany / dummy) or ALL of its
-    type arguments are recursively all-erased.  [Tglob] with no type arguments
-    (e.g. nat, bool) returns false — they are concrete ground types.
-    This detects the symbols_semty encoding where concat_tuple produces
-    pair<any,any> at every level even when semantic types include List<any>,
-    SigT<nat,any>, etc. — i.e. every leaf is Tany but intermediate wrappers
-    like List or SigT may appear as long as their own args are Tany. *)
+(** [is_all_erased t] — true iff [t] is directly erased OR all of its type
+    arguments are recursively all-erased.  Ground types without arguments
+    (e.g. [nat], [bool]) return false.  Examples:
+    - [pair<any, any>] → true (both args erased)
+    - [pair<any, pair<any, any>>] → true (nested, all leaves erased)
+    - [pair<any, List<any>>] → true ([List<any>] has all-erased args)
+    - [pair<uint64_t, any>] → false ([uint64_t] is concrete)
+    Used to detect fully-erased tuple chains where the runtime encoding
+    stores [pair<any,any>] at every level regardless of the static type. *)
 let rec is_all_erased = function
   | ty when is_erased_type ty -> true
   | Tglob (_, args, _) when args <> [] -> List.for_all is_all_erased args
@@ -5985,7 +5986,8 @@ and eta_fun env f args =
     (* Wrap pair-accessor inline custom arguments in any_cast when the
        argument's ML type is erased.  E.g. [fst vs] where [vs : std::any]
        generates [any_cast<pair<any,any>>(vs).first] instead of [vs.first].
-       This is the inline-custom analog of Fix A for match scrutinees. *)
+       This is the inline-custom analog of the scrutinee any_cast in
+       [gen_custom_cpp_case]. *)
     let primary_result =
       match primary_result with
       | CPPfun_call (CPPglob (n, _, Some ci) as cglob', [single_arg])
@@ -7273,6 +7275,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   (* Save the ML type for temps computation after fix_a_fired is known. *)
   let ml_typ = typ in
+  (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
+     [std::any]) even though the ML AST may carry a concrete type annotation.
+     Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
+     by an outer [fix_a_fired] pair match (detected via [env_types]). *)
   let scrut_is_magic = match t with
     | MLmagic _ -> true
     | MLrel i ->
@@ -7282,6 +7288,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | _ -> false
   in
   let typ = convert_ml_type_to_cpp_type env tvars typ in
+  (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
+     actual inductive type from the first branch's pattern constructor and
+     its field types.  Used for non-pair matches (e.g. option, variant) where
+     we need to emit [any_cast<ConcreteType>(scrut)]. *)
   let concrete_match_type =
     if is_erased_type typ then
       try
@@ -7323,6 +7333,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | Tglob (g, _, _) when is_prod_global g -> Some g
     | _ -> None
   in
+  (* [scrut_is_owned_pair]: true when the scrutinee is a pair whose binding
+     is dead after destructuring — enables by-value structured binding to move
+     the fields out instead of taking a const reference. *)
   let scrut_is_owned_pair = match t with
     | MLrel i | MLmagic (MLrel i) ->
       Escape.IntSet.mem i tctx.move_owned_vars
@@ -7366,63 +7379,34 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | Tglob (g, _, _) when is_prod_global g -> Some g
     | _ -> None
   in
+  (* Insert [any_cast] on the scrutinee when the runtime value is [std::any]
+     but the template needs a typed expression.
+
+     For pair matches: the runtime encoding is always [pair<any,any>] at every
+     nesting level (built by [concat_tuple]/[rev_tuple_cons_case]).  Cast to
+     [pair<any,any>] regardless of the static type and set [fix_a_fired=true]
+     so downstream passes know the fields are [std::any].
+
+     For non-pair matches (option, variant, etc.) when [scrut_is_magic]: cast
+     to [concrete_match_type] recovered from the branch pattern.
+
+     Otherwise: no cast needed; the scrutinee already has the correct type. *)
   let t, fix_a_fired =
-    (* When the scrutinee comes from Obj.magic and the match is on a product
-       (pair) type, the runtime encoding uses pair<std::any, std::any> at every
-       level (because symbols_semty is stored as std::any wrapping pair<any,any>).
-       Using concrete_match_type — which may be a deeply nested concrete pair like
-       pair<any, pair<concrete, pair<...>>> — produces a wrong any_cast that fails
-       at runtime because the stored type is pair<any,any>, not the nested type.
-       Fix: when scrut_is_magic and it's a pair match, always use pair<any,any>
-       (let Fix A handle it).  For non-pair scrut_is_magic matches (e.g., Obj.magic
-       on an option or variant), pair_g_opt = None so we fall through to the
-       concrete-type branch below. *)
-    if scrut_is_magic && pair_g_opt <> None then begin
-      match pair_g_opt with
-      | Some g -> (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
-      | None -> CErrors.anomaly (Pp.str "gen_cpp_case: pair inductive not found")
-    end
-    else if scrut_is_magic && not (is_erased_type concrete_match_type) then begin
+    let needs_pair_any_cast =
+      pair_g_opt <> None &&
+      (scrut_is_magic || is_erased_type typ || is_all_erased typ)
+    in
+    if needs_pair_any_cast then
+      let g = Option.get pair_g_opt in
+      (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
+    else if scrut_is_magic && not (is_erased_type concrete_match_type) then
       (CPPany_cast (concrete_match_type, t), false)
-    end
-    else if is_erased_type typ then begin
-      (match pair_g_opt with
-      | Some g ->
-        (* Scrutinee is erased (std::any) and the pair is encoded at runtime
-           as std::pair<std::any, std::any> (because the whole tuple/symbols_semty
-           type erased to std::any).  Cast it back so .first/.second compile.
-           Note: [has_tany_in_type] is intentionally NOT checked here.  A pair
-           whose OUTER type is concrete (e.g. std::pair<optional<SigT<…>>, bool>)
-           but contains std::any in nested positions is a concrete std::pair at
-           runtime and must NOT be cast via any_cast<pair<any,any>>; doing so
-           would convert the value to std::any and then fail the cast because the
-           stored type is the concrete pair, not std::pair<std::any,std::any>. *)
-        (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
-      | None ->
-        (t, false))
-    end
-    else if pair_g_opt <> None && is_all_erased typ then begin
-      (* Scrutinee type is an all-erased pair (e.g. pair<any, pair<any, …>> or
-         pair<any, pair<List<any>, …>>) — the runtime encoding of symbols_semty,
-         where concat_tuple builds pair<any,any> at every level.
-         Wrap with CPPany_cast so the scrutinee is non-trivial and caching fires,
-         avoiding dangling references from any_cast temporaries.
-         Set fix_a_fired = true so that: (1) bound variables use Tauto, and
-         (2) intermediate pair-typed variables are re-typed as Tany in gen_cases
-         so that inner pair matches also trigger this path recursively. *)
-      match pair_g_opt with
-      | Some g -> (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
-      | None -> (t, true)
-    end
-    else begin
+    else
       (t, false)
-    end
   in
-  (* When fix_a_fired, pass pair<any,any> as the Scustom_case typ so that
-     wrap_any_cast_if_needed in cpp_print.ml generates any_cast<pair<any,any>>
-     instead of the concrete nested pair type.  Applies to all fix_a_fired
-     cases (existing Fix A via any_cast already added to t, new erased-chain
-     case where wrap_any_cast_if_needed handles the cast). *)
+  (* When [fix_a_fired], pass [pair<any,any>] as the [Scustom_case] type so
+     that [wrap_any_cast_if_needed] in [cpp_print.ml] generates
+     [any_cast<pair<any,any>>] instead of using the concrete nested pair type. *)
   let case_typ =
     if fix_a_fired then
       match pair_g_opt with
@@ -7430,22 +7414,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       | None -> typ
     else typ
   in
-  (* Compute temps after fix_a_fired: when Fix A fires, the scrutinee is cast
-     to pair<any,any>, so ALL .first/.second fields are std::any regardless of
-     the original field types.  Force Tauto for every position so the template
-     generates [const auto& var = _cs.first] — Fix C then inserts any_cast<T>
-     at each use site in the body.  Without this, a concrete %t0 like
-     [String::String] would generate [const String::String& s = _cs.first]
-     which fails because _cs.first is std::any after the pair cast. *)
+  (* Compute template type parameters ([%t0], [%t1], ...) after [fix_a_fired]
+     is known.  When [fix_a_fired], the scrutinee is cast to [pair<any,any>],
+     so all fields are [std::any] regardless of the original field types.
+     Force [Tauto] so the binding uses [auto] and C++ deduces the type.
+     Also force [Tauto] when a type contains erased positions ([Tany]),
+     since an explicit type annotation would block valid concrete-type calls. *)
   let temps =
     match ml_typ with
     | Tglob (_, tys, _) ->
       let raw = build_template_params env tvars tys in
-      (* In match binding context, a %t0 whose type contains erased positions
-         (Tany / unnamed Tvar) would generate [const std::any& prs = scrut.fst]
-         which blocks valid concrete-type calls.  Substitute Tauto so the
-         template generates [const auto& prs = ...] and C++ deduces the type.
-         Also force Tauto when Fix A fired — see comment above. *)
       List.map (fun ty ->
         if fix_a_fired || has_tany_in_type ty then Tauto else ty) raw
     | _ -> []
@@ -7467,11 +7445,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       (t, [])
     end
   in
+  (* When the scrutinee is an owned pair (last use), override the template
+     with a by-value structured binding to move the fields out. *)
   let cmatch =
     if scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired then
       "auto [%b0a0, %b0a1] = %scrut; %br0"
     else cmatch
   in
+  (* Generate [(params, ret_ty, body)] triples for each branch.  Handles env
+     retyping for [fix_a_fired], move tracking for owned pairs, use-site
+     [any_cast] insertion, and template-arg stripping for erased arguments. *)
   let rec gen_cases = function
     | [] -> []
     | (ids, rty, p, t) :: cs ->
@@ -7484,17 +7467,15 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              ids )
           env
       in
-      (* When fix_a_fired, the match is on pair<any,any>, so each field is
-         std::any.  Variables whose ML type converts to an erased pair chain
-         C++ type (e.g. pair<any,pair<any,…>>) are ALSO std::any at runtime
-         — they are the .second of a pair<any,any>.  Re-type them as Tany so:
-         (1) inner pair matches on these variables see Tany → Fix A fires,
-             generating any_cast<pair<any,any>>, and
-         (2) CCbody in cpp_print.ml registers them as any-typed, enabling
-             wrap_any_cast_if_needed at the inner scrutinee site.
-         Non-chain leaf types (e.g. List<any>, Tany) are left unchanged so
-         Fix C can still insert any_cast<List<any>> at their use sites.
-         Use Miniml.Tany as the replacement (ids' holds ml_type values). *)
+      (* When [fix_a_fired], all pair fields are [std::any] at runtime.
+         Variables whose C++ type is a pair (e.g. [pair<any,pair<any,…>>]) are
+         also [std::any] — they came from [.second] of a [pair<any,any>].
+         Re-type them as [Tany] so that:
+         (1) inner pair matches see an erased scrutinee and emit [any_cast],
+         (2) [cpp_print.ml] registers them as any-typed for
+             [wrap_any_cast_if_needed].
+         Non-pair leaf types (e.g. [List<any>]) are left unchanged so the
+         use-site [any_cast] pass can still insert the correct cast. *)
       let ids' =
         if fix_a_fired then
           let tvars = get_current_type_vars () in
@@ -7537,16 +7518,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       in
       tctx.env_types <- saved_env_types;
       tctx.move_owned_vars <- saved_owned;
-      (* When Fix A fired, pair fields are all std::any at the binding site.
-         Pattern variables whose actual ML type is concrete need any_cast<T>
-         at each use site so the body compiles (e.g. List<any>::cons needs
-         a List<any>, not std::any).
-         Special case: pair-typed pattern variables (e.g. y0, y1) are ALSO
-         std::any at runtime — they're the .second of a pair<any,any> cast.
-         The concrete pair type from the branch types (e.g. pair<any,pair<...>>)
-         is wrong for the cast; the stored value is pair<any,any> (built by
-         concat_tuple/rev_tuple_cons_case).  Use pair<any,any> so that inner
-         destructurings correctly chain. *)
+      (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
+         [std::any] at the binding site.  Pattern variables whose C++ type is
+         concrete need [any_cast<T>] at each use site so the body compiles.
+         Special cases:
+         - Pair-typed vars use [pair<any,any>] (not the static type) because
+           the runtime encoding always nests [pair<any,any>].
+         - List vars use a converting constructor [List<T>(any_cast<List<any>>)]
+           so element types are cast correctly.
+         - Opaque type aliases / qualified member types are passed through
+           as-is (the stored value IS the payload, not wrapped in [any]). *)
       let br_stmts =
         if fix_a_fired then
           List.fold_left
@@ -7597,155 +7578,30 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             br_ids
         else br_stmts
       in
-      (* Recursive Fix-C: [fix_a_fired] may be false for inner pair matches even
-         when the inner scrutinee (e.g. [y1]) is std::any at runtime, because the
-         ML AST type of [y1] is the original concrete pair type — the [env_types]
-         retyping only affects de Bruijn lookups, not the [MLcase] AST node's [typ].
-         Fix: collect the vars that were retyped to Tany in [ids'] (these are the
-         ones that will be std::any at runtime, so their inner matches need Fix C
-         applied to their branch params too).  Walk [br_stmts] and for any
-         [Scustom_case] whose scrutinee is one of these retyped vars, apply Fix C
-         to that node's branch params in its body, then recurse. *)
-      let apply_fixc_to_nested br_stmts =
-        let initial_retyped_vars =
-          List.fold_left
-            (fun acc (x, cpp_ty) ->
-               if is_erased_type cpp_ty then Id.Set.add x acc else acc)
-            Id.Set.empty br_ids
-        in
-        let rec go retyped_vars stmts =
-          List.concat_map (fun s ->
-            match s with
-            | Scustom_case (ty, scrut_expr, tyargs, branches, err)
-              when (match scrut_expr with
-                    | CPPany_cast (_, CPPvar _) -> true
-                    | CPPvar scrut_id -> Id.Set.mem scrut_id retyped_vars
-                    | _ -> false) ->
-              let pair_g_opt_inner = match ty with
-                | Tglob (g, _, _) when is_prod_global g -> Some g
-                | _ -> None
-              in
-              let branches' = List.map (fun (params, ret_ty, body) ->
-                let (body', new_retyped_vars) =
-                  List.fold_left
-                    (fun (body', rvs) (name, cpp_ty) ->
-                       if is_erased_type cpp_ty then
-                         (body', Id.Set.add name rvs)
-                       else
-                         match cpp_ty with
-                         | Tglob (g2, _, _) when is_prod_global g2 ->
-                           (body', Id.Set.add name rvs)
-                         | _ ->
-                           let strip_ns_tglob = function
-                             | Tnamespace (_, (Tglob _ as inner)) -> inner
-                             | t -> t
-                           in
-                           let cast_expr =
-                             match strip_ns_tglob cpp_ty with
-                             | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
-                               let list_any_ty =
-                                 match cpp_ty with
-                                 | Tnamespace (ns_g, _) ->
-                                   Tnamespace (ns_g, Tglob (g, [Tany], []))
-                                 | _ -> Tglob (g, [Tany], [])
-                               in
-                               CPPconverting_ctor (cpp_ty,
-                                 [CPPany_cast (list_any_ty, CPPvar name)])
-                             | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
-                               let list_any_ty = Tglob (g, [Tany], []) in
-                               if is_erased_type elem_ty then
-                                 CPPany_cast (list_any_ty, CPPvar name)
-                               else
-                                 CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
-                             | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
-                               CPPvar name
-                             | _ -> CPPany_cast (cpp_ty, CPPvar name)
-                           in
-                           let body'' =
-                             List.map
-                               (local_var_subst_stmt name cast_expr)
-                               body'
-                           in
-                           (body'', rvs))
-                    (body, retyped_vars)
-                    params
-                in
-                (params, ret_ty, go new_retyped_vars body')
-              ) branches in
-              (let scrut_expr' = match pair_g_opt_inner with
-               | Some g ->
-                 let cast_ty = Tglob (g, [Tany; Tany], []) in
-                 (match scrut_expr with
-                  | CPPany_cast _ -> scrut_expr
-                  | CPPvar scrut_id -> CPPany_cast (cast_ty, CPPvar scrut_id)
-                  | _ -> scrut_expr)
-               | None -> scrut_expr
-              in
-              [ Scustom_case (ty, scrut_expr', tyargs, branches', err) ])
-            | _ ->
-              let rec fix_expr e = match e with
-                | CPPlambda (lparams, ret_ty, lstmts, capture) ->
-                  CPPlambda (lparams, ret_ty, go retyped_vars lstmts, capture)
-                | _ ->
-                  map_expr fix_expr
-                    (fun s' -> List.hd (go retyped_vars [s'])) Fun.id e
-              in
-              [map_stmt fix_expr (fun s' -> List.hd (go retyped_vars [s'])) Fun.id s]
-          ) stmts
-        in
-        go initial_retyped_vars br_stmts
-      in
-      let br_stmts = if fix_a_fired then apply_fixc_to_nested br_stmts else br_stmts in
-      (* Post-Fix-C: strip explicit template type args from function calls
-         where any argument is any_cast<T_with_Tany>.  After Fix C, erased
-         pattern variables are substituted with any_cast<T> at use sites.
-         Explicit Coq type applications (e.g. nodupKeys<Json_value>) then
-         conflict with the erased argument type (List<pair<String,any>>).
-         Stripping the template args lets C++ deduce the correct erased type
-         (std::any) from the argument instead of using the concrete one. *)
+      (* Strip explicit template type args from function calls where any
+         argument has erased-type content (either wrapped in [any_cast<T>]
+         with [Tany] inside, or a pattern var whose C++ type contains [Tany]).
+         Lets C++ deduce the correct type from the argument itself instead of
+         using a stale concrete annotation that conflicts with the erased
+         runtime type. *)
       let br_stmts =
-        if fix_a_fired then
-          let rec fix_expr e =
-            match e with
+        let tany_pat_var_names =
+          if not fix_a_fired then
+            List.fold_left (fun acc (name, cpp_ty) ->
+              if has_tany_in_type cpp_ty then Id.Set.add name acc else acc)
+              Id.Set.empty br_ids
+          else Id.Set.empty
+        in
+        let should_strip args =
+          List.exists (function
+            | CPPany_cast (ty, _) -> has_tany_in_type ty
+            | CPPvar name -> Id.Set.mem name tany_pat_var_names
+            | _ -> false) args
+        in
+        if fix_a_fired || not (Id.Set.is_empty tany_pat_var_names) then
+          let rec fix_expr e = match e with
             | CPPfun_call (CPPglob (r, _ :: _, ci), args)
-              when List.exists
-                     (function
-                       | CPPany_cast (ty, _) -> has_tany_in_type ty
-                       | _ -> false)
-                     args ->
-              CPPfun_call (CPPglob (r, [], ci), List.map fix_expr args)
-            | _ -> map_expr fix_expr fix_stmt Fun.id e
-          and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
-          List.map fix_stmt br_stmts
-        else br_stmts
-      in
-      (* Post-fix-D: strip explicit template type args from function calls
-         where a pattern variable whose ML type contains erased positions
-         (e.g. prs : List<pair<string,any>>) is used directly as an arg.
-         This handles the case where fix_a_fired is false (concrete outer
-         type, erased inner), so Fix C did not run and prs keeps the erased
-         element type.  Example: nodupKeys<Json_value>(prs) where
-         prs: List<pair<string,any>> → nodupKeys(prs) lets C++ deduce
-         T1=std::any from the argument. *)
-      let tany_pat_var_names =
-        if not fix_a_fired then
-          List.fold_left
-            (fun acc (name, cpp_ty) ->
-               if has_tany_in_type cpp_ty then Id.Set.add name acc
-               else acc)
-            Id.Set.empty br_ids
-        else Id.Set.empty
-      in
-      let br_stmts =
-        if not (Id.Set.is_empty tany_pat_var_names) then
-          let rec fix_expr e =
-            match e with
-            | CPPfun_call (CPPglob (r, _ :: _, ci), args)
-              when List.exists
-                     (function
-                       | CPPvar name -> Id.Set.mem name tany_pat_var_names
-                       | _ -> false)
-                     args ->
+              when should_strip args ->
               CPPfun_call (CPPglob (r, [], ci), List.map fix_expr args)
             | _ -> map_expr fix_expr fix_stmt Fun.id e
           and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
@@ -14174,7 +14030,7 @@ let gen_ind_header_v2
               mutual recursive occurrence). *)
           let rec is_ref_to ref_name ref_vars = function
             | Miniml.Tglob (r, args, _) ->
-              Environ.QGlobRef.equal Environ.empty_env r ref_name
+              globref_equal r ref_name
               && List.length args = List.length ref_vars
               && List.for_all
                    (fun (j, arg) ->

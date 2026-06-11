@@ -125,7 +125,7 @@ let is_record_inductive r =
     List::list vs just list). *)
 let is_local_inductive r =
   List.exists
-    (Environ.QGlobRef.equal Environ.empty_env r)
+    (globref_equal r)
     (Translation.get_local_inductives ())
 
 (** Get the appropriate name for an inductive reference.
@@ -540,7 +540,7 @@ let lookup_method_this_pos n =
   let local_result =
     List.find_map
       (fun (r', _, _, pos) ->
-        if Environ.QGlobRef.equal Environ.empty_env n r' then
+        if globref_equal n r' then
           Some pos
         else
           None )

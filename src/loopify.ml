@@ -303,7 +303,7 @@ type call_checker = cpp_expr -> call_site option
 (** Check whether a [GlobRef.t] matches any of the given function refs. *)
 let ref_matches fn_refs r =
   List.exists
-    (fun (fn_r, _) -> Environ.QGlobRef.equal Environ.empty_env r fn_r)
+    (fun (fn_r, _) -> Common.globref_equal r fn_r)
     fn_refs
 
 (** Build a call checker for top-level function definitions. Matches both
@@ -6598,7 +6598,7 @@ let body_calls_id target_id stmts =
     @param body The statement list (function body) to search
     @return [true] if any call to a ref in [refs] is found *)
 let body_calls_any_ref refs body =
-  let eq r sr = Environ.QGlobRef.equal Environ.empty_env r sr in
+  let eq r sr = Common.globref_equal r sr in
   let label_of = function
     | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
     | GlobRef.VarRef v -> Some v
@@ -6730,7 +6730,7 @@ let try_inline_mutual_into names body =
   let find_registered_callee_by_ref r =
     if
       List.exists
-        (fun sr -> Environ.QGlobRef.equal Environ.empty_env r sr)
+        (fun sr -> Common.globref_equal r sr)
         self_refs
     then
       None
@@ -6751,7 +6751,7 @@ let try_inline_mutual_into names body =
         | None ->
           if
             List.exists
-              (fun sr -> Environ.QGlobRef.equal Environ.empty_env r sr)
+              (fun sr -> Common.globref_equal r sr)
               self_refs
           then
             None
@@ -6901,7 +6901,7 @@ let try_inline_mutual_into names body =
     in
     let is_callee_call = function
       | CPPfun_call (CPPglob (r, _, _), _)
-        when Environ.QGlobRef.equal Environ.empty_env r callee_ref -> true
+        when Common.globref_equal r callee_ref -> true
       | CPPfun_call (CPPvar id, _) when Id.equal id callee_label -> true
       | _ -> false
     in
