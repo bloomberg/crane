@@ -65,25 +65,25 @@ Section NatExampleTrees.
   Let E0 := (STEvent T S V) +' exceptE Err.
 
 
-  Definition newAndReadBoth : itree E0 (nat * nat) :=
+  Definition new_and_read_both_nat : itree E0 (nat * nat) :=
       r1 <- newSTRef zero 5 ;;
       r2 <- newSTRef (suc zero) 6 ;; (* TODO: autogenerate successive indices? *)
       x1 <- readSTRef r1 ;;
       x2 <- readSTRef r2 ;;
       Ret (x1, x2).
 
-  Definition tree_simp : itree E0 nat :=
+  Definition tree_simp_nat : itree E0 nat :=
     v <- newSTRef zero 5;;
     readSTRef v.
 
   (* NOTE: this failing definition is intentional.
     The intent is to test that we don't allow reference indices to escape. *)
-  Fail Definition tree_escape_example : itree E0 nat :=
+  Fail Definition tree_escape_nat : itree E0 nat :=
     v <- newSTRef 5;;
     writeSTRef v (match v with mkSTRef _ _ idx => idx end);;
     readSTRef v.
 
-  Definition tree_simp_another : itree E0 nat :=
+  Definition tree_simp_another_nat : itree E0 nat :=
     v <- newSTRef zero 5;;
     writeSTRef v 6;;
     val <- readSTRef v;;
@@ -166,6 +166,33 @@ Module STMonadTests.
 End STMonadTests.
 
 
+Section BoolExampleTrees.
+
+  Context {E : Type -> Type}.
+  Context {T : Type}.
+  Context {ltu : T -> T -> Prop}.
+  Context `{Ix_Correct T ltu}.
+  Context {HST: STRefClass T}.
+
+  Let V : T -> Type := fun _ => bool. (* bools only for this example. *)
+  Let S := unit.
+  Let E0 := (STEvent T S V) +' exceptE Err.
+
+
+  Definition new_and_read_both_bool : itree E0 (bool * bool) :=
+      r1 <- newSTRef zero false ;;
+      r2 <- newSTRef (suc zero) true ;; 
+      x1 <- readSTRef r1 ;;
+      x2 <- readSTRef r2 ;;
+      Ret (x1, x2).
+
+  Definition tree_simp_bool : itree E0 bool :=
+    v <- newSTRef zero true;;
+    readSTRef v.
+
+End BoolExampleTrees.
+
+
 Require Import Crane.Mapping.NatIntStd.
-Crane Extraction "stmonad" STMonadTests newAndReadBoth tree_simp tree_simp_another array_simp_fixed_init.
+Crane Extraction "stmonad" STMonadTests new_and_read_both_nat tree_simp_nat tree_simp_another_nat array_simp_fixed_init new_and_read_both_bool tree_simp_bool.
 

@@ -32,33 +32,52 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   // Test 1: newAndReadBoth returns (5, 6)
   {
-    auto result = newAndReadBoth<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    auto result = new_and_read_both_nat<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
     ASSERT(result.first == 5);
     ASSERT(result.second == 6);
-    std::cout << "Test 1 (newAndReadBoth): (" << result.first << ", "
+    std::cout << "Test 1 (new_and_read_both_nat): (" << result.first << ", "
               << result.second << ") PASSED" << std::endl;
   }
 
   // Test 2: tree_simp returns 5
   {
-    auto result = tree_simp<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    auto result = tree_simp_nat<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
     ASSERT(result == 5);
-    std::cout << "Test 2 (tree_simp): " << result << " PASSED"
+    std::cout << "Test 2 (tree_simp_nast): " << result << " PASSED"
               << std::endl;
   }
 
   // Test 3: tree_simp_another returns 6
   {
-    auto result = tree_simp_another<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
+    auto result = tree_simp_another_nat<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
     ASSERT(result == 6);
-    std::cout << "Test 3 (tree_simp_another): " << result
+    std::cout << "Test 3 (tree_simp_another_nat): " << result
               << " PASSED" << std::endl;
   }
 
+  // Test 4: newAndReadBoth returns (false, true)
+  {
+    auto result = new_and_read_both_bool<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    ASSERT(result.first == false);
+    ASSERT(result.second == true);
+    std::cout << "Test 4 (new_and_read_both_bool): (" << result.first << ", "
+              << result.second << ") PASSED" << std::endl;
+  }
+
+  // Test 5: tree_simp_bool returns true
+  {
+    auto result = tree_simp_bool<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
+    ASSERT(result == true);
+    std::cout << "Test 5 (tree_simp_bool): " << result << " PASSED"
+              << std::endl;
+  }
+
+
+  // Test 6: array_simp_fixed_init returns 5
   {
     auto result = array_simp_fixed_init<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
     ASSERT(result == 5);
-    std::cout << "Test 4 (array_simp_fixed_init): " << result
+    std::cout << "Test 6 (array_simp_fixed_init): " << result
               << " PASSED" << std::endl;
   }
 

@@ -242,7 +242,7 @@ struct STRefNat {
 };
 
 template <typename _tcI0, typename _tcI1, typename T1>
-std::pair<uint64_t, uint64_t> newAndReadBoth() {
+std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
   uint64_t r1;
   r1 = UINT64_C(5);
   uint64_t r2;
@@ -252,14 +252,15 @@ std::pair<uint64_t, uint64_t> newAndReadBoth() {
   return std::make_pair(x1, x2);
 }
 
-template <typename _tcI0, typename _tcI1, typename T1> uint64_t tree_simp() {
+template <typename _tcI0, typename _tcI1, typename T1>
+uint64_t tree_simp_nat() {
   uint64_t v;
   v = UINT64_C(5);
   return std::move(v);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t tree_simp_another() {
+uint64_t tree_simp_another_nat() {
   uint64_t v;
   v = UINT64_C(5);
   v = UINT64_C(6);
@@ -329,5 +330,22 @@ struct STMonadTests {
 
   static_assert(STRefClass<nat_stref, uint64_t>);
 };
+
+template <typename _tcI0, typename _tcI1, typename T1>
+std::pair<bool, bool> new_and_read_both_bool() {
+  bool r1;
+  r1 = false;
+  bool r2;
+  r2 = true;
+  bool x1 = r1;
+  bool x2 = r2;
+  return std::make_pair(x1, x2);
+}
+
+template <typename _tcI0, typename _tcI1, typename T1> bool tree_simp_bool() {
+  bool v;
+  v = true;
+  return std::move(v);
+}
 
 #endif // INCLUDED_STMONAD
