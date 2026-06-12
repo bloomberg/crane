@@ -83,7 +83,7 @@ public:
 };
 
 struct UseTrie {
-  using memo = Trie::Trie<std::optional<Datatypes::Nat>>;
+  using memo = Trie<std::optional<Datatypes::Nat>>;
 };
 
 } // namespace SepExtEponymousModuleInd

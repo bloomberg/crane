@@ -69,9 +69,7 @@ public:
             } else
               return A(a0);
           }(),
-          a1 ? std::make_shared<
-                   Datatypes::List<SepExtListCloneQual::Forest<A>>>(*a1)
-             : nullptr};
+          a1 ? std::make_shared<Datatypes::List<Forest<A>>>(*a1) : nullptr};
     }
   }
 

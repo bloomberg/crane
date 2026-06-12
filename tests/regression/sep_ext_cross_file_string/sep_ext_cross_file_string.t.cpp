@@ -5,7 +5,7 @@
 
 #include "SepExtCrossFileString.h"
 #include "Datatypes.h"
-#include "String.h"
+#include "String_.h"
 
 int main() {
   const auto r = SepExtCrossFileString::ShowNat::show(Datatypes::Nat::s(Datatypes::Nat::o()));

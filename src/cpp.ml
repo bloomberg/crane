@@ -1376,9 +1376,11 @@ and pp_module_expr ~is_header f params = function
       (fun (_l, se) ->
         match se with
         | SEdecl (Dind (kn, ind)) ->
-          Array.iteri
-            (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
-            ind.ind_packets
+          let ind_mp = Names.MutInd.modpath kn in
+          if (not (modular ())) || Names.ModPath.equal ind_mp mp then
+            Array.iteri
+              (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
+              ind.ind_packets
         | _ -> () )
       sel;
     let try_pp_structure_elem l x =
@@ -1678,6 +1680,25 @@ let do_struct_with_decl_tracking ~is_header f s =
          ~eponymous_records:global_eponymous_record_registry
          ~unmerged:unmerged_wrappers
          s );
+  let old_local_inductives = get_local_inductives () in
+  if modular () then begin
+    let rec collect_inductives sel =
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | SEdecl (Dind (kn, ind)) ->
+            Array.iteri
+              (fun i _p -> add_local_inductive (GlobRef.IndRef (kn, i)))
+              ind.ind_packets
+          | SEmodule { ml_mod_expr = MEstruct (_, sub_sel); _ } ->
+            collect_inductives sub_sel
+          | _ -> () )
+        sel
+    in
+    List.iter
+      (fun ((_mp, sel), _wrapper_name) -> collect_inductives sel)
+      wrapper_names
+  end;
   let ppl ((mp, sel), wrapper_name) =
     let old_decls = !current_structure_decls in
     current_structure_decls := sel;
@@ -1948,6 +1969,10 @@ let do_struct_with_decl_tracking ~is_header f s =
     p
   in
   let rendered = List.map (fun wn -> (wn, ppl wn)) wrapper_names in
+  if modular () then begin
+    clear_local_inductives ();
+    List.iter add_local_inductive old_local_inductives
+  end;
   let remaining_wrappers =
     if is_header then
       Hashtbl.fold

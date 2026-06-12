@@ -5739,3 +5739,80 @@
   (alias runtest)
   (deps any_cast_dangling_pair_ref.t.exe)
   (action (run ./any_cast_dangling_pair_ref.t.exe))))
+
+(subdir sep_ext_any_fun_call
+ (rule
+  (targets sep_ext_any_fun_call.t.exe)
+  (deps SepExtAnyFunCall.vo sep_ext_any_fun_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_fun_call.t.exe SepExtAnyFunCall.cpp sep_ext_any_fun_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_fun_call.t.exe)
+  (action (run ./sep_ext_any_fun_call.t.exe))))
+
+(subdir sep_ext_any_list_collect
+ (rule
+  (targets sep_ext_any_list_collect.t.exe)
+  (deps SepExtAnyListCollect.vo sep_ext_any_list_collect.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_list_collect.t.exe SepExtAnyListCollect.cpp sep_ext_any_list_collect.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_list_collect.t.exe)
+  (action (run ./sep_ext_any_list_collect.t.exe))))
+
+(subdir sep_ext_any_nested_match
+ (rule
+  (targets sep_ext_any_nested_match.t.exe)
+  (deps SepExtAnyNestedMatch.vo sep_ext_any_nested_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_nested_match.t.exe SepExtAnyNestedMatch.cpp sep_ext_any_nested_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_any_nested_match.t.exe)
+  (action (run ./sep_ext_any_nested_match.t.exe))))
+
+(subdir sep_ext_eponymous_module_ind
+ (rule
+  (targets sep_ext_eponymous_module_ind.t.exe)
+  (deps SepExtEponymousModuleInd.vo sep_ext_eponymous_module_ind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_eponymous_module_ind.t.exe SepExtEponymousModuleInd.cpp sep_ext_eponymous_module_ind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_eponymous_module_ind.t.exe)
+  (action (run ./sep_ext_eponymous_module_ind.t.exe))))
+
+(subdir sep_ext_cross_file_string
+ (rule
+  (targets sep_ext_cross_file_string.t.exe)
+  (deps SepExtCrossFileString.vo sep_ext_cross_file_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_file_string.t.exe SepExtCrossFileString.cpp sep_ext_cross_file_string.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_cross_file_string.t.exe)
+  (action (run ./sep_ext_cross_file_string.t.exe))))
+
+(subdir sep_ext_unmerged_struct_cap
+ (rule
+  (targets sep_ext_unmerged_struct_cap.t.exe)
+  (deps SepExtUnmergedStructCap.vo sep_ext_unmerged_struct_cap.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_unmerged_struct_cap.t.exe SepExtUnmergedStructCap.cpp sep_ext_unmerged_struct_cap.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_unmerged_struct_cap.t.exe)
+  (action (run ./sep_ext_unmerged_struct_cap.t.exe))))
+
+(subdir sep_ext_tuple_any
+ (rule
+  (targets sep_ext_tuple_any.t.exe)
+  (deps SepExtTupleAny.vo sep_ext_tuple_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_tuple_any.t.exe SepExtTupleAny.cpp sep_ext_tuple_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_tuple_any.t.exe)
+  (action (run ./sep_ext_tuple_any.t.exe))))

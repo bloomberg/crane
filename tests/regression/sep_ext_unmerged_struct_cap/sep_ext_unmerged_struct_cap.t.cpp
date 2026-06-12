@@ -10,7 +10,7 @@
 
 int main() {
   const auto e = SepExtUnmergedStructCap::UseExprs::make_neg(
-      SepExtUnmergedStructCap::Exprs::expr::lit(Datatypes::Nat::o()));
+      SepExtUnmergedStructCap::Exprs::Expr::lit(Datatypes::Nat::o()));
   (void)e;
   return 0;
 }
