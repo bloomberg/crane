@@ -52,7 +52,7 @@ Local Open Scope string_scope.
 
   
 
-Section ExampleTrees.
+Section NatExampleTrees.
 
   Context {E : Type -> Type}.
   Context {T : Type}.
@@ -154,14 +154,13 @@ Section ExampleTrees.
   End QSort.
 
   
-End ExampleTrees.
+End NatExampleTrees.
 
 
 
 Module STMonadTests. 
   (* Re-exporting instances so they're available to call in the exported file. *)
-  (* Just referring to them does not work to extract them here, they must be   *)
-  (* unfolded. *)
+  (* Just referring to them does not seem to work to extract them here, unfolding does *)
   Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
   Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
 End STMonadTests.

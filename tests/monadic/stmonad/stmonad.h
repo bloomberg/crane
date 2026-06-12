@@ -235,7 +235,7 @@ struct STRefNat {
   // CREATORS
   static STRefNat mkstref(uint64_t s) { return {s}; }
 
-  uint64_t STRefToIdxNat() const {
+  uint64_t STRefToIxNat() const {
     const auto &[s] = *this;
     return s;
   }
@@ -323,7 +323,7 @@ struct STMonadTests {
 
     static uint64_t STRefToIx(std::any _p_a0) {
       STRefNat a0 = std::any_cast<STRefNat>(_p_a0);
-      return a0.STRefToIdxNat();
+      return a0.STRefToIxNat();
     }
   };
 

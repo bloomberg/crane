@@ -59,9 +59,11 @@ Section InterpSTTheorems.
   Context `{STEvent T S V -< E}. 
   Context `{exceptE Err -< E}.
 
+
   Definition mem := halist (@idx_key T T) (idx_key_type V).
 
-  Context `{Foldable mem (sigT (@idx_key_type T T V))}.
+  
+  Context `{HMap (@idx_key T T) (idx_key_type V) mem}.
 
 
 
@@ -71,7 +73,7 @@ Section InterpSTTheorems.
     : itree E (mem * R) :=
     match ot with
     | RetF r => ret (l, r)
-    | TauF t => Tau (interp_st _ _ t l)
+    | TauF t => Tau (interp_st ltu _ t l)
     | @VisF _ _ _ X e k =>
         x <- handle_STEvent_leave_rest ltu X e l;;
         Tau (interp_st _ _ (k (snd x)) (fst x))
@@ -100,19 +102,19 @@ Section InterpSTTheorems.
 
   (* TODO: cleanup following 3 to remove @. *)
   Lemma interp_st_ret:  forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ _ (ret val) l ≅ ret (l, val).
+      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (ret val) l ≅ ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
 
   Lemma interp_st_Ret: forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ _ (Ret val) l ≅ Ret (l, val).
+      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≅ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
 
   Lemma interp_st_Ret_eutt: forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ _ (Ret val) l ≈ Ret (l, val).
+      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≈ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
@@ -296,13 +298,6 @@ Section STLookupErr.
   Context {R : Type}.
   Context {map : Type}.
   Context {V : T -> Type}.
-
-  (* Context {E : Type -> Type}.
-   * Context {S : Type}.
-   * Context {V : (Idx S) -> Type}.
-   * Context `{@STEvent S V -< E}. 
-   * Context `{exceptE Err -< E}.
-   * Context `{IdxGenE -< E}. *)
 
   Context {hmap : HMap T V map}.
   Context {MOK : HMapOk hmap}.

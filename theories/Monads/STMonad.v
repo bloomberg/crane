@@ -51,10 +51,6 @@ Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
 
-(* TODO: canonicalize on style, according to https://github.com/bloomberg/game-trees/blob/main/theories/Eval.v *)
-(* TODO: canonicalize map -> mem. *)
-(* TODO: canonicalize STRef, no other capitalization! *)
-(* TODO: canonicalize Idx -> Ix. *)
 
 (* Used for runtime checks, though an ideal impl won't need these. *)
 
@@ -89,7 +85,6 @@ Class Ix (T : Type)
     (* conversion from nats *)
     fromNat : nat -> T;
 
-    (* TODO: remove the others once we have a mapping to nats? *)
     (* a constructor for an index plus one. *)
     suc : T -> T;
 
@@ -161,10 +156,10 @@ fold (fun (next : option A) (acc : option B) => match next with
 
 Class Ix_Correct (T : Type)
   (ltu : T -> T -> Prop) 
+  (HI : @Ix T ltu)
   {CD : @CmpDec T eq ltu}
   {CDC : @CmpDec_Correct T eq ltu CD}
   {EQD : EqDec T eq} 
-  {HI : @Ix T ltu}
   {RD : @RelDec.RelDec T eq}
   : Type := 
   { 
@@ -208,7 +203,7 @@ Proof.
     split; [tauto | lia].
 Qed.
 
-#[export,refine] Instance nat_ix_correct : Ix_Correct nat Nat.le :=
+#[export,refine] Instance nat_ix_correct : Ix_Correct nat Nat.le nat_ix :=
   {|
     inRange_implies_elem := _;
     inRange_elems_are_indexable := _;
@@ -247,7 +242,7 @@ Qed.
 
 Class STRefClass (T : Type) : Type :=
   {
-    STRef : forall S A : Type, Type; 
+    STRef : forall S A : Type, Type;
     mkSTRef : forall S A : Type, T -> STRef S A;
     STRefToIx : forall S A : Type, STRef S A -> T;
   }.
@@ -262,7 +257,7 @@ Section STRefNatDefs.
   | MkSTRef (S A : Type) (idx : nat) : STRefNat S A.
 
   
-  Definition STRefToIdxNat (S A : Type) (ref : STRefNat S A) : nat :=
+  Definition STRefToIxNat (S A : Type) (ref : STRefNat S A) : nat :=
    match ref with
    | MkSTRef _ _ idx => idx
    end. 
@@ -281,7 +276,7 @@ End STRefNatDefs.
 #[export] Instance nat_ix_stref : STRefClass nat :=
   {| STRef := STRefNat;
     mkSTRef := MkSTRef ;
-    STRefToIx := STRefToIdxNat |}.
+    STRefToIx := STRefToIxNat |}.
 
 Section STEventDefine.  
   Variable (T : Type).
@@ -307,7 +302,7 @@ Section Translation.
 
   Context {E : Type -> Type}.
   Context {T S : Type}.
-  Context {ltu : T -> T -> Prop}.
+  Context (ltu : T -> T -> Prop).
   Context `{Ix_Correct T ltu}.
   Context `{STRefClass T}.
   Context {V : T -> Type}.
@@ -367,11 +362,9 @@ Section Translation.
     | Datatypes.S n' => suc (suc_n n' t)
     end.
 
-  (* TODO: cleanup *)
   Definition arr_key (idx : T) (arr : STArray T S (V idx)) (i : T)
     : option T :=
-    let base := stArrayBase T arr in
-    let '(fb, sb) := stArrayBounds T arr in
+    let 'MkSTArray _ _ _ base fb sb := arr in 
     match index fb sb i with
     | Some n => Some (suc_n n base)
     | None => None
@@ -451,7 +444,6 @@ Section Translation.
 
 (* Interpretation in Rocq *)
 
-  (* TODO: better name perhaps *)
   Definition handle_STEvent_leave_rest
     (A : Type) (e : (STEvent T S V +' E) A)
     : stateT M (itree (E)) A :=
@@ -460,10 +452,10 @@ Section Translation.
     | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
     end.
   
-  #[export] Instance hmap_from_idx :
+  #[local] Instance hmap_from_idx :
     HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
-  Global Instance map_idx_correct :
+  #[local] Instance map_idx_correct :
     HMapOk hmap_from_idx := HMapOk_halist T V.
 
   Definition interp_st
@@ -483,7 +475,7 @@ Definition runSt {A : Type}
   {V : T -> Type} `{exceptE Err -< E}
   (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
   : itree E A :=
-  fmap snd (interp_st _ (f unit) HMap.empty).
+  fmap snd (interp_st ltu _ (f unit) HMap.empty).
 
 (* CPP Bindings *)
 
