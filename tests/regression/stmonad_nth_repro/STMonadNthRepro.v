@@ -43,10 +43,10 @@ Section Ops.
 End Ops.
 
 Crane Extract Inlined Constant Ref => "%t0".
-Crane Extract Inlined Constant myNew => "%result = %a0".
+Crane Extract Inlined Constant myNew => "%a0".
 
 Definition newOnly : itree (MyEvent nat) nat :=
-  r1 <- myNew 5 ;;
+  myNew 5 ;;
   Ret 0.
 
 Crane Extraction "stmonad_nth_repro" newOnly.
