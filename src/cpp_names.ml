@@ -194,15 +194,44 @@ let capitalize_enum_qualified s r =
   else
     Common.capitalize_last_component s
 
+(** Compute the C++ name for a promoted inductive (one that IS its module
+    struct) from the fully-qualified Rocq path [base] = [str_global Type r].
+    Strips the inductive's own lowercase label when it matches the parent
+    module name (case-insensitively), so that e.g. ["Foo::foo"] → ["Foo"] and
+    ["Ns::Trie::trie"] → ["Ns::Trie"].  Falls back to capitalizing the last
+    component for bare strings (["foo"] → ["Foo"]). *)
+let cpp_name_of_promoted (base : string) : string =
+  match String.rindex_opt base ':' with
+  | Some last_colon when last_colon > 0 ->
+    let last = String.sub base (last_colon + 1) (String.length base - last_colon - 1) in
+    let prev_start =
+      if last_colon > 1 then
+        match String.rindex_from_opt base (last_colon - 2) ':' with
+        | Some j -> j + 1
+        | None -> 0
+      else 0
+    in
+    let parent =
+      if last_colon > 1 then
+        String.sub base prev_start (last_colon - 1 - prev_start)
+      else ""
+    in
+    if String.equal (String.lowercase_ascii parent) (String.lowercase_ascii last) then
+      let prefix =
+        if prev_start > 2 then String.sub base 0 (prev_start - 2) ^ "::"
+        else ""
+      in
+      prefix ^ String.capitalize_ascii parent
+    else
+      Common.capitalize_last_component base
+  | _ ->
+    String.capitalize_ascii base
+
 (** Deduplicate trailing A::A in a qualified C++ name.  When the last two
     "::" components are equal and [allow_bare] is false, collapse only if
     there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
     is true, also collapse bare "A::A" → "A".  Returns the (possibly
-    shortened) string unchanged if no dedup applies.
-    @param allow_bare when [true], also deduplicate names with no outer
-                      prefix (e.g. ["A::A"] → ["A"]); defaults to [false]
-    @param cap        the fully-qualified C++ name to deduplicate
-    @return the deduplicated name, or [cap] if no deduplication applied *)
+    shortened) string unchanged if no dedup applies. *)
 let dedup_qualified_tail ?(allow_bare = false) cap =
   match String.rindex_opt cap ':' with
   | Some last_colon when last_colon < String.length cap - 1 ->
@@ -247,11 +276,7 @@ let pp_inductive_type_name r =
       if is_local_inductive r then
         str (String.capitalize_ascii (Common.pp_global_name Type r))
       else
-        let s = str_global Type r in
-        let cap = if Common.get_force_qualified_capitalization ()
-                  then Common.capitalize_last_component s
-                  else String.capitalize_ascii s in
-        str cap
+        str (cpp_name_of_promoted (str_global Type r))
     | GlobRef.IndRef _ when is_record_inductive r ->
       pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
@@ -276,11 +301,10 @@ let pp_inductive_type_name r =
       let is_merged = is_merged_inductive r in
       if is_qual then
         if Common.get_force_qualified_capitalization () then
-          let cap = Common.capitalize_last_component base in
           if is_merged then
-            str (dedup_qualified_tail ~allow_bare:true cap)
+            str (cpp_name_of_promoted base)
           else
-            str cap
+            str (Common.capitalize_last_component base)
         else
           str base
       else if is_merged then
