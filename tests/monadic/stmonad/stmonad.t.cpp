@@ -43,7 +43,7 @@ int main() {
   {
     auto result = tree_simp_nat<STMonadTests::nat_idx, STMonadTests::nat_stref, void>();
     ASSERT(result == 5);
-    std::cout << "Test 2 (tree_simp_nast): " << result << " PASSED"
+    std::cout << "Test 2 (tree_simp_nat): " << result << " PASSED"
               << std::endl;
   }
 
