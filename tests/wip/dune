@@ -69,6 +69,17 @@
   (deps deque_deep_tree_stackoverflow.t.exe)
   (action (run ./deque_deep_tree_stackoverflow.t.exe))))
 
+(subdir loopify_nested_calls
+ (rule
+  (targets loopify_nested_calls.t.exe)
+  (deps LoopifyNestedCalls.vo loopify_nested_calls.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nested_calls.t.exe loopify_nested_calls.cpp loopify_nested_calls.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_nested_calls.t.exe)
+  (action (run ./loopify_nested_calls.t.exe))))
+
 (subdir deque_any_cast
  (rule
   (targets deque_any_cast.t.exe)
