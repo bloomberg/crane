@@ -81,6 +81,22 @@ int main() {
               << " PASSED" << std::endl;
   }
 
+  // Test 7: fibST 5 returns 5
+  {
+    auto result = fibST<STMonadTests::nat_stref, STMonadTests::nat_idx, uint64_t>(5);
+    ASSERT(result == 5);
+    std::cout << "Test 7 (fibSt 5): " << result
+              << " PASSED" << std::endl;
+  }
+
+  // Test 8: fibFun 5 returns 5
+  {
+    auto result = fibFun(5);
+    ASSERT(result == 5);
+    std::cout << "Test 8 (fibFun 5): " << result
+              << " PASSED" << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll stmonad tests passed!" << std::endl;
   } else {
@@ -88,4 +104,3 @@ int main() {
   }
   return testStatus;
 }
-

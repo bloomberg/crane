@@ -116,6 +116,35 @@ Section NatExampleTrees.
     Ret elem. 
 
 
+  (* source: https://wiki.haskell.org/Monad/ST *)
+  (* TODO: should not have to manually place indices as arguments here? *)
+  Definition fibST (n : nat) : itree E0 nat :=
+    let fix fibST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+      match n with
+      | 0 => @readSTRef _ _ _ _ _ _ idx_x x
+      | Datatypes.S n =>
+          x' <- @readSTRef _ _ _  _ _ _ idx_x x;;
+          y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
+          @writeSTRef _ _ _ _ _ _ idx_x x y';;
+          @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
+          fibST' n x y idx_x idx_y
+      end in
+    if (Nat.leb n 2)
+    then Ret n
+    else
+      x <- newSTRef zero 0;;
+      y <- newSTRef (suc zero) 1;;
+      fibST' n x y zero (suc zero).
+
+  Definition fibFun (n : nat) : nat :=
+    let fix fib' (n : nat) :=
+      match n with
+      | 0 => 0
+      | 1 => 1
+      | Datatypes.S (Datatypes.S m as m0) => fib' m0 + fib' m
+      end in
+    fib' n.
+
   Section QSort. 
 
   Definition swap_arr (arr : STArray T S nat) (left : T) (right : T) : itree E0 unit :=
@@ -194,5 +223,5 @@ End BoolExampleTrees.
 
 
 Require Import Crane.Mapping.NatIntStd.
-Crane Extraction "stmonad" STMonadTests new_and_read_both_nat tree_simp_nat tree_simp_another_nat array_simp_fixed_init new_and_read_both_bool tree_simp_bool.
+Crane Extraction "stmonad" STMonadTests new_and_read_both_nat tree_simp_nat tree_simp_another_nat array_simp_fixed_init new_and_read_both_bool tree_simp_bool fibST fibFun.
 
