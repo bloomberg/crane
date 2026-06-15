@@ -5838,3 +5838,14 @@
   (alias runtest)
   (deps loopify_nested_calls.t.exe)
   (action (run ./loopify_nested_calls.t.exe))))
+
+(subdir nested_type_scope
+ (rule
+  (targets nested_type_scope.t.exe)
+  (deps NestedTypeScope.vo nested_type_scope.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_type_scope.t.exe NestedTypeScope.cpp Datatypes.cpp nested_type_scope.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_type_scope.t.exe)
+  (action (run ./nested_type_scope.t.exe))))

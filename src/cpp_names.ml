@@ -280,16 +280,12 @@ let pp_inductive_type_name r =
     | GlobRef.IndRef _ when is_record_inductive r ->
       pp_global Type r
     | GlobRef.IndRef _ when is_enum_inductive r ->
-      if is_local_inductive r then
+      let base = str_global Type r in
+      if is_qualified_name base then
+        str (capitalize_enum_qualified base r)
+      else
         let base_name = Common.pp_global_name Type r in
         str (capitalize_enum_name base_name r)
-      else
-        let base = str_global Type r in
-        if is_qualified_name base then
-          str (capitalize_enum_qualified base r)
-        else
-          let base_name = Common.pp_global_name Type r in
-          str (capitalize_enum_name base_name r)
     | GlobRef.IndRef _ when is_local_inductive r ->
       if Common.get_force_qualified_capitalization () then
         let s = str_global Type r in
