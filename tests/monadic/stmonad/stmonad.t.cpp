@@ -81,19 +81,27 @@ int main() {
               << " PASSED" << std::endl;
   }
 
-  // Test 7: fibST 5 returns 5
+  // Test 7: array_simp_list returns 5
   {
-    auto result = fibST<STMonadTests::nat_stref, STMonadTests::nat_idx, uint64_t>(5);
+    auto result = array_simp_list<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
     ASSERT(result == 5);
-    std::cout << "Test 7 (fibSt 5): " << result
+    std::cout << "Test 7 (array_simp_list): " << result
               << " PASSED" << std::endl;
   }
 
-  // Test 8: fibFun 5 returns 5
+  // Test 8: fibST 5 returns 5
+  {
+    auto result = fibST<STMonadTests::nat_stref, STMonadTests::nat_idx, uint64_t>(5);
+    ASSERT(result == 5);
+    std::cout << "Test 8 (fibSt 5): " << result
+              << " PASSED" << std::endl;
+  }
+
+  // Test 9: fibFun 5 returns 5
   {
     auto result = fibFun(5);
     ASSERT(result == 5);
-    std::cout << "Test 8 (fibFun 5): " << result
+    std::cout << "Test 9 (fibFun 5): " << result
               << " PASSED" << std::endl;
   }
 

@@ -111,13 +111,13 @@ Section NatExampleTrees.
     Ret elem. 
   
   Definition array_simp_list : itree E0 nat :=
-    arr <- newListArray zero zero (suc (suc (suc zero))) [4;2;3;1];;
-    elem <- @readArray E0 T _ _ _ _ zero arr (suc zero);;
+    arr <- newListArray zero zero (suc (suc (suc zero))) [5;4;3;2];;
+    elem <- @readArray E0 T _ _ _ _ zero arr zero;;
     Ret elem. 
 
 
   (* source: https://wiki.haskell.org/Monad/ST *)
-  (* TODO: should not have to manually place indices as arguments here? *)
+  (* TODO: should not have to manually place indices as arguments. *)
   Definition fibST (n : nat) : itree E0 nat :=
     let fix fibST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
       match n with
@@ -223,5 +223,14 @@ End BoolExampleTrees.
 
 
 Require Import Crane.Mapping.NatIntStd.
-Crane Extraction "stmonad" STMonadTests new_and_read_both_nat tree_simp_nat tree_simp_another_nat array_simp_fixed_init new_and_read_both_bool tree_simp_bool fibST fibFun.
-
+Crane Extraction "stmonad"
+  STMonadTests
+  new_and_read_both_nat
+  tree_simp_nat
+  tree_simp_another_nat
+  array_simp_fixed_init
+  array_simp_list
+  new_and_read_both_bool
+  tree_simp_bool
+  fibST
+  fibFun.

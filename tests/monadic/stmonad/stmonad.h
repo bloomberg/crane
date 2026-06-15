@@ -281,6 +281,35 @@ uint64_t array_simp_fixed_init() {
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
+uint64_t array_simp_list() {
+  std::vector<uint64_t> *arr;
+  arr = new std::remove_pointer_t<decltype(arr)>(
+      _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))) - _tcI1::zero() + 1);
+  {
+    auto _xs = List<uint64_t>::cons(
+        UINT64_C(5),
+        List<uint64_t>::cons(
+            UINT64_C(4),
+            List<uint64_t>::cons(
+                UINT64_C(3),
+                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
+    for (size_t _i = 0; _i < arr->size(); _i++) {
+      if (std::holds_alternative<
+              typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
+        auto &[_a, _l] =
+            std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
+                _xs.v_mut());
+        (*arr)[_i] = _a;
+        if (_l)
+          _xs = *_l;
+      }
+    }
+  };
+  uint64_t elem = (*arr)[_tcI1::zero()];
+  return elem;
+}
+
+template <typename _tcI0, typename _tcI1, typename T1>
 uint64_t fibST(uint64_t n) {
   auto fibST__impl = [](auto &_self_fibST_, uint64_t n0, uint64_t x, uint64_t y,
                         const T1 &idx_x, const T1 &idx_y) -> uint64_t {
