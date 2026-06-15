@@ -1024,6 +1024,8 @@ and mlt_env env r =
   match r with
   | IndRef _ | ConstructRef _ | VarRef _ -> None
   | ConstRef kn ->
+    if Table.is_custom r then None
+    else
     let cb = Environ.lookup_constant kn env in
     ( match cb.const_body with
     | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> None

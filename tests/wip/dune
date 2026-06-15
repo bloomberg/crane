@@ -79,3 +79,14 @@
   (alias runtest)
   (deps deque_any_cast.t.exe)
   (action (run ./deque_any_cast.t.exe))))
+
+(subdir concept_param_mismatch
+ (rule
+  (targets concept_param_mismatch.t.exe)
+  (deps ConceptParamMismatch.vo concept_param_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_param_mismatch.t.exe concept_param_mismatch.cpp concept_param_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_param_mismatch.t.exe)
+  (action (run ./concept_param_mismatch.t.exe))))

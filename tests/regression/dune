@@ -521,6 +521,17 @@
   (deps cps.t.exe)
   (action (run ./cps.t.exe))))
 
+(subdir custom_typeclass_type
+ (rule
+  (targets custom_typeclass_type.t.exe)
+  (deps CustomTypeclassType.vo custom_typeclass_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} custom_typeclass_type.t.exe custom_typeclass_type.cpp custom_typeclass_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps custom_typeclass_type.t.exe)
+  (action (run ./custom_typeclass_type.t.exe))))
+
 (subdir higher_kinded
  (rule
   (targets higher_kinded.t.exe)
