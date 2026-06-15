@@ -506,5 +506,5 @@ Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
 Crane Extract Inlined Constant newListArray =>
   "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (std::holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { auto& [_a, _l] = std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v_mut()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }".
 Crane Extract Inlined Constant getElems =>
-  "[&]() { List<%t2> _r = List<%t2>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<%t2>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()".
+  "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()".
 

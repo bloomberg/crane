@@ -81,11 +81,22 @@ int main() {
               << " PASSED" << std::endl;
   }
 
-  // Test 7: array_simp_list returns 5
+  // Test 7: array_simp_list returns 5,4
   {
     auto result = array_simp_list<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
-    ASSERT(result == 5);
-    std::cout << "Test 7 (array_simp_list): " << result
+    ASSERT(result.first.first == 5);
+    ASSERT(result.first.second == 4);
+    ASSERT(result.second.hd(0) == 5);
+    ASSERT(result.second.tl().hd(0) == 4);
+    ASSERT(result.second.tl().tl().hd(0) == 3);
+    ASSERT(result.second.tl().tl().tl().hd(0) == 2);
+    std::cout << "Test 7 (array_simp_list): " 
+              << result.first.first  << "," 
+              << result.first.second << ", ["
+              << result.second.hd(0) << ","  
+              << result.second.tl().hd(0) << ","  
+              << result.second.tl().tl().hd(0) << ","  
+              << result.second.tl().tl().tl().hd(0) << "]"  
               << " PASSED" << std::endl;
   }
 

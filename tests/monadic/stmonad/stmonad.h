@@ -102,6 +102,33 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+
+  List<A> tl() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return List<A>::nil();
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return *a1;
+    }
+  }
+
+  A hd(A default0) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return default0;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return a0;
+    }
+  }
+
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
+    }
+  }
 };
 
 template <typename Err> struct ExceptE {
@@ -281,7 +308,7 @@ uint64_t array_simp_fixed_init() {
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t array_simp_list() {
+std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>> array_simp_list() {
   std::vector<uint64_t> *arr;
   arr = new std::remove_pointer_t<decltype(arr)>(
       _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))) - _tcI1::zero() + 1);
@@ -306,7 +333,16 @@ uint64_t array_simp_list() {
     }
   };
   uint64_t elem = (*arr)[_tcI1::zero()];
-  return elem;
+  List<uint64_t> lst = [&]() {
+    using _E = typename std::remove_pointer_t<
+        std::remove_cvref_t<decltype(arr)>>::value_type;
+    List<_E> _r = List<_E>::nil();
+    for (size_t _i = arr->size(); _i > 0; _i--) {
+      _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
+    }
+    return _r;
+  }();
+  return std::make_pair(std::make_pair(elem, lst.length()), lst);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
@@ -408,6 +444,14 @@ template <typename _tcI0, typename _tcI1, typename T1> bool tree_simp_bool() {
   bool v;
   v = true;
   return std::move(v);
+}
+
+template <typename T1> T1 list_hd(const T1 &_x0, const List<T1> &_x1) {
+  return _x1.hd(_x0);
+}
+
+template <typename T1> List<T1> list_tl(const List<T1> &_x0) {
+  return _x0.tl();
 }
 
 #endif // INCLUDED_STMONAD

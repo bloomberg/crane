@@ -110,10 +110,11 @@ Section NatExampleTrees.
     elem <- @readArray E0 T _ _ _ _ _ arr (suc (zero));;
     Ret elem. 
   
-  Definition array_simp_list : itree E0 nat :=
+  Definition array_simp_list : itree E0 (nat * nat * list nat) :=
     arr <- newListArray zero zero (suc (suc (suc zero))) [5;4;3;2];;
-    elem <- @readArray E0 T _ _ _ _ zero arr zero;;
-    Ret elem. 
+    elem <- @readArray _ _ _ _ _ _ zero arr zero;;
+    lst <- @getElems _ _ _ _ _ _ zero arr;;
+    Ret (elem, length lst, lst). 
 
 
   (* source: https://wiki.haskell.org/Monad/ST *)
@@ -221,6 +222,8 @@ Section BoolExampleTrees.
 
 End BoolExampleTrees.
 
+Definition list_hd {A} := @List.hd A.
+Definition list_tl {A} := @List.tl A.
 
 Require Import Crane.Mapping.NatIntStd.
 Crane Extraction "stmonad"
@@ -229,6 +232,8 @@ Crane Extraction "stmonad"
   tree_simp_nat
   tree_simp_another_nat
   array_simp_fixed_init
+  list_hd
+  list_tl
   array_simp_list
   new_and_read_both_bool
   tree_simp_bool
