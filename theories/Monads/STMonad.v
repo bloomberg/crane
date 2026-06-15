@@ -465,7 +465,7 @@ Section Translation.
   
 End Translation.
 
-Definition runSt {A : Type}
+Definition runST {A : Type}
   {T S : Type} {ltu : T -> T -> Prop}
   `{Ix T ltu}
   `{Ix_Correct T}
