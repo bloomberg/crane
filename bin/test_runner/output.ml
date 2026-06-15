@@ -1,3 +1,9 @@
+(** Terminal output formatting for test results.
+
+    Produces coloured output when stdout is a TTY, plain text otherwise.
+    Results are grouped by category in a fixed order: basics, monadic,
+    regression, wip.  The summary line includes wall-clock elapsed time. *)
+
 open Types
 
 let is_tty = Unix.isatty Unix.stdout
@@ -14,14 +20,17 @@ let bold = if is_tty then "\027[1m" else ""
 
 let reset = if is_tty then "\027[0m" else ""
 
+(** A full-width separator using the Unicode box-drawing character ━. *)
 let separator = String.concat "" (List.init 59 (fun _ -> "\xE2\x94\x81"))
 
+(** Print the banner shown before any test results. *)
 let print_header () =
   print_newline ();
   Printf.printf "%sRunning Crane Tests%s\n" bold reset;
   print_endline separator;
   print_newline ()
 
+(** Print a single test result as a line with a pass/fail indicator. *)
 let print_result result =
   let status =
     if result.passed then
@@ -31,10 +40,12 @@ let print_result result =
   in
   Printf.printf "  %-25s %s\n" result.test.name status
 
+(** Print all results for one category, preceded by the category name. *)
 let print_category_results category results =
   Printf.printf "%s%s/%s\n" cyan category reset;
   List.iter print_result results
 
+(** Print all results grouped by category in display order. *)
 let print_results results =
   let by_category = Hashtbl.create 4 in
   List.iter
@@ -59,17 +70,20 @@ let print_results results =
         print_category_results cat sorted )
     categories
 
-let print_summary results =
+(** [print_summary results elapsed] prints the final pass/fail counts
+    and total wall-clock time for the run.  [elapsed] is in seconds. *)
+let print_summary results elapsed =
   let total = List.length results in
   let passed = List.length (List.filter (fun r -> r.passed) results) in
   let failed = total - passed in
   print_newline ();
   print_endline separator;
+  let time_str = Printf.sprintf " (%.1fs)" elapsed in
   if failed = 0 then
-    Printf.printf "%s%sAll %d tests passed%s\n" bold green total reset
+    Printf.printf "%s%sAll %d tests passed%s%s\n" bold green total reset time_str
   else
     Printf.printf
-      "%sResults: %s%d passed%s, %s%d failed%s, %d total\n"
+      "%sResults: %s%d passed%s, %s%d failed%s, %d total%s\n"
       bold
       green
       passed
@@ -77,9 +91,12 @@ let print_summary results =
       red
       failed
       reset
-      total;
+      total
+      time_str;
   print_newline ()
 
+(** [print_verbose_errors results verbose_lines] prints the captured
+    stdout/stderr for each failed test, truncated to [verbose_lines]. *)
 let print_verbose_errors results verbose_lines =
   let failed = List.filter (fun r -> not r.passed) results in
   if failed <> [] then (

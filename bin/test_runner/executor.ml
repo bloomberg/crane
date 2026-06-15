@@ -1,5 +1,16 @@
+(** Single-test executor using [dune build].
+
+    This module provides a simple one-at-a-time executor that invokes
+    [dune build @tests/<category>/<name>/runtest] for each test.  It is
+    used by the legacy sequential runner ({!run_test}) but is {b not} used
+    by the parallel runner in {!Parallel}, which builds all executables in
+    a single dune invocation and then runs them directly. *)
+
 open Types
 
+(** [run_command cmd args] forks a child that execs [cmd] with [args],
+    capturing both stdout and stderr into a single string.
+    Returns [(exit_code, captured_output)].  Signals map to exit code 128. *)
 let run_command cmd args =
   let read_fd, write_fd = Unix.pipe () in
   let pid = Unix.fork () in
@@ -30,6 +41,9 @@ let run_command cmd args =
     in
     (exit_code, Buffer.contents buffer) )
 
+(** [run_test _config test] builds and runs a single test via its dune
+    [runtest] alias.  The returned {!test_result.duration} covers the
+    entire dune invocation (extraction + C++ compilation + execution). *)
 let run_test _config test =
   let target = test_to_dune_target test in
   let start_time = Unix.gettimeofday () in
