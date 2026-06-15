@@ -19,7 +19,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
             std::string_view(nullptr, 0));
       } else {
         uint64_t fuel_ = fuel - 1;
-        int64_t c = s[index];
+        char c = s[index];
         if (hard.contains(c)) {
           return std::make_pair(
               std::make_optional<std::basic_string_view<char>>(

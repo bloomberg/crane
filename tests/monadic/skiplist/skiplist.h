@@ -1079,13 +1079,13 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename T1, typename T2>
-  static T1 key(std::shared_ptr<SkipNode<T1, T2>> _x0) {
-    return _x0->key;
+  static T1 key(std::shared_ptr<SkipNode<T1, T2>> pair) {
+    return pair->key;
   }
 
   template <typename T1, typename T2>
-  static T2 data(std::shared_ptr<SkipNode<T1, T2>> _x0) {
-    return stm::readTVar<T2>(_x0->value);
+  static T2 data(std::shared_ptr<SkipNode<T1, T2>> pair) {
+    return stm::readTVar<T2>(pair->value);
   }
 
   static inline const uint64_t e_SUCCESS = UINT64_C(0);
