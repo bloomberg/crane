@@ -384,7 +384,7 @@ Section Translation.
     match e with
     | NewSTRef _ _ _ idx v =>
         let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
-        in Ret (add (n, idx) v mem, mkSTRef S (V idx) idx)
+        in Ret (add (n, idx) v mem, mkSTRef S (V idx) n)
     | ReadSTRef _ _ _ idx s =>
         match lookup (STRefToIx S (V idx) s, idx) mem with
         | Some v => Ret (mem, v)

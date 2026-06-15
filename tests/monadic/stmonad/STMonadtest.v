@@ -172,6 +172,8 @@ Section NatExampleTrees.
 
 
   (* TODO: define with equations. *)
+  (* Measure will be distance of the two pivots. *)
+  (* Try cofix! *)
   Fail Fixpoint qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 (STArray T S nat) :=
     let leftn := toNat left in
     let rightn := toNat right in 
@@ -226,6 +228,9 @@ Definition list_hd {A} := @List.hd A.
 Definition list_tl {A} := @List.tl A.
 
 Require Import Crane.Mapping.NatIntStd.
+
+Set Crane Loopify.
+
 Crane Extraction "stmonad"
   STMonadTests
   new_and_read_both_nat

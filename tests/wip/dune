@@ -339,3 +339,14 @@
   (alias runtest)
   (deps concept_param_mismatch.t.exe)
   (action (run ./concept_param_mismatch.t.exe))))
+
+(subdir fibst_cofix_repro
+ (rule
+  (targets fibst_cofix_repro.t.exe)
+  (deps FibstCofixRepro.vo fibst_cofix_repro.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fibst_cofix_repro.t.exe fibst_cofix_repro.cpp fibst_cofix_repro.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fibst_cofix_repro.t.exe)
+  (action (run ./fibst_cofix_repro.t.exe))))

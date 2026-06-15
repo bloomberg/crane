@@ -47,6 +47,7 @@ Import ProperNotations.
 Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
+
 (* TODO: refactor for new world of generalized indices. *)
 Section InterpSTTheorems.
 
@@ -289,6 +290,9 @@ Qed.
 
 End InterpSTTheorems.
 
+Lemma IdxRefSameIdx : forall (n : nat) S A,
+  STRefToIx S A (mkSTRef S A n) = n.
+Proof. reflexivity. Qed.
 
 Section STLookupErr.
 
