@@ -203,7 +203,7 @@ struct TypeApp {
       return v;
     }
 
-    constexpr static typename M::T triple(typename M::T x) {
+    static typename M::T triple(typename M::T x) {
       return M::append(x, M::append(x, x));
     }
   };

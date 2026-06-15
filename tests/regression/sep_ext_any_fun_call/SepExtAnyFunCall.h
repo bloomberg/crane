@@ -34,7 +34,7 @@ template <SymTypes Ty> struct Actions {
         std::function<bool(std::any)>>::existt(std::move(gamma), f);
   }
 
-  constexpr static bool apply_entry(entry _x0, symbols_semty _x1) {
+  static bool apply_entry(entry _x0, symbols_semty _x1) {
     return _x0.projT2()(_x1);
   }
 };

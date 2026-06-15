@@ -2513,7 +2513,9 @@ and is_pure_return_type = function
     The check is recursive for container types ([Tvariant], [Tglob], [Tid],
     [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
     if both [A] and [B] are. *)
-and is_constexpr_type = function
+and is_constexpr_type ty =
+  if is_any_type ty then false else
+  match ty with
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
@@ -2527,7 +2529,9 @@ and is_constexpr_type = function
     Table.is_enum_inductive r && List.for_all is_constexpr_type tys
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
+  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
+  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
   | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t

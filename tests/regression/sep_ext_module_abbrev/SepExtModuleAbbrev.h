@@ -12,11 +12,9 @@ concept WS = requires {
 };
 
 template <OrderedType X, WS M> struct OrdFacts {
-  constexpr static bool key_eq(typename M::key, typename M::key) {
-    return true;
-  }
+  static bool key_eq(typename M::key, typename M::key) { return true; }
 
-  constexpr static bool ord_eq(typename X::t, typename X::t) { return true; }
+  static bool ord_eq(typename X::t, typename X::t) { return true; }
 };
 
 template <WS M> struct KeyFacts {

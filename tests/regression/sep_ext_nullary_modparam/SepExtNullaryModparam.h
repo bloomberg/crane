@@ -53,13 +53,9 @@ template <IntLike I> struct Counter {
     return v;
   }
 
-  constexpr static typename I::t step(typename I::t x) {
-    return I::add(x, I::one());
-  }
+  static typename I::t step(typename I::t x) { return I::add(x, I::one()); }
 
-  constexpr static bool is_zero(typename I::t x) {
-    return I::eqb(x, I::zero());
-  }
+  static bool is_zero(typename I::t x) { return I::eqb(x, I::zero()); }
 };
 
 using NatCounter = Counter<NatAsIntLike>;

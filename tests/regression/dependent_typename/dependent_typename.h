@@ -24,7 +24,7 @@ struct DependentTypename {
       return v;
     }
 
-    constexpr static typename M::t identity(typename M::t x) { return x; }
+    static typename M::t identity(typename M::t x) { return x; }
 
     static const typename M::t &make_default() {
       static const typename M::t v = M::default_;

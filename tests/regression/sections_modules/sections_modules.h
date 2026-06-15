@@ -51,13 +51,9 @@ struct SectionsModules {
       TransparentMod::op(UINT64_C(5), UINT64_C(10));
 
   template <Semigroup M> struct MakeDoubleOp {
-    constexpr static typename M::T double_(typename M::T x) {
-      return M::op(x, x);
-    }
+    static typename M::T double_(typename M::T x) { return M::op(x, x); }
 
-    constexpr static typename M::T quad(typename M::T x) {
-      return double_(double_(x));
-    }
+    static typename M::T quad(typename M::T x) { return double_(double_(x)); }
   };
 
   using NatDoubleOp = MakeDoubleOp<NatMonoid>;

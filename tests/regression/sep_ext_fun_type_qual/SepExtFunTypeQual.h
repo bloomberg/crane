@@ -25,7 +25,7 @@ concept S = requires {
 };
 
 template <S M> struct MyModule {
-  constexpr static typename M::t test(typename M::t x) { return x; }
+  static typename M::t test(typename M::t x) { return x; }
 };
 
 } // namespace SepExtFunTypeQual
