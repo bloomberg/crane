@@ -3523,7 +3523,10 @@ let rec rewrite_returns_to_result = function
 let compute_rest_free_vars rest =
   let rest_defined =
     List.filter_map
-      (function Sasgn (vid, _, _) -> Some vid | _ -> None)
+      (function
+        | Sasgn (vid, _, _) -> Some vid
+        | Sdecl (vid, _) -> Some vid
+        | _ -> None)
       rest
   in
   List.concat_map free_vars_stmt rest
@@ -3999,11 +4002,30 @@ let rec find_inner_iife check = function
     @param base_case          Fallback for true base cases (no inner calls) *)
 let rewrite_base_with_inner_calls check e ~rewrite_visit_body ~rewrite_iife_body
     ~base_case =
-  let wrap_returns_with rebuild body =
+  let rec wrap_returns_with rebuild body =
     List.map
       (fun stmt ->
         match stmt with
         | Sreturn (Some result) -> Sreturn (Some (rebuild result))
+        | Sif (cond, t, e) ->
+          Sif (cond, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
+        | Sif_then (cond, t) ->
+          Sif_then (cond, wrap_returns_with rebuild t)
+        | Sif_decl (id, ty, init, t, e) ->
+          Sif_decl (id, ty, init, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
+        | Sblock stmts -> Sblock (wrap_returns_with rebuild stmts)
+        | Sswitch (scrut, r, branches, default) ->
+          Sswitch (scrut, r,
+            List.map (fun (lbl, b) -> (lbl, wrap_returns_with rebuild b)) branches,
+            Option.map (wrap_returns_with rebuild) default)
+        | Smatch (branches, default) ->
+          Smatch (
+            List.map (fun br -> { br with smb_body = wrap_returns_with rebuild br.smb_body }) branches,
+            Option.map (wrap_returns_with rebuild) default)
+        | Scustom_case (ty, scrut, tyargs, branches, err) ->
+          Scustom_case (ty, scrut, tyargs,
+            List.map (fun (pats, ret_ty, b) -> (pats, ret_ty, wrap_returns_with rebuild b)) branches,
+            err)
         | s -> s )
       body
   in

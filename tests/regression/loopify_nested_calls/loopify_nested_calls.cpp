@@ -11,10 +11,8 @@ uint64_t sum_signum(uint64_t n) { /// _Enter: captures varying parameters for
     uint64_t n;
   };
 
-  /// _Cont_n_: saves [here, n_], resumes after recursive call, then processes
-  /// rest.
+  /// _Cont_n_: saves [n_], resumes after recursive call, then processes rest.
   struct _Cont_n_ {
-    uint64_t here;
     uint64_t n_;
   };
 
@@ -34,12 +32,11 @@ uint64_t sum_signum(uint64_t n) { /// _Enter: captures varying parameters for
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(_Cont_n_{here, n_});
+        _stack.emplace_back(_Cont_n_{n_});
         _stack.emplace_back(_Enter{n_});
       }
     } else {
       auto _f = std::move(std::get<_Cont_n_>(_frame));
-      uint64_t here = _f.here;
       uint64_t n_ = _f.n_;
       uint64_t rest = std::move(_result);
       uint64_t here;
@@ -123,26 +120,37 @@ List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
     uint64_t n;
   };
 
-  using _Frame = std::variant<_Enter>;
+  /// _Resume1: saves [n_], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t n_;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n});
-  /// Loopified down_inline: _Enter.
+  /// Loopified down_inline: _Enter -> _Resume1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
-    uint64_t n = _f.n;
-    if (n <= 0) {
-      _result = List<uint64_t>::nil();
-    } else {
-      uint64_t n_ = n - 1;
-      if (n_ == UINT64_C(0)) {
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
         _result = List<uint64_t>::nil();
       } else {
-        _stack.emplace_back(_Enter{n_});
+        uint64_t n_ = n - 1;
+        if (n_ == UINT64_C(0)) {
+          _result = List<uint64_t>::cons(n_, List<uint64_t>::nil());
+        } else {
+          _stack.emplace_back(_Resume1{n_});
+          _stack.emplace_back(_Enter{n_});
+        }
       }
+    } else {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.n_, std::move(_result));
     }
   }
   return _result;
