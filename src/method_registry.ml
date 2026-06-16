@@ -246,13 +246,19 @@ let find_epon_arg_pos epon_ref ty =
   let rec aux pos = function
     | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
       when globref_equal arg_ref epon_ref ->
+      let nparams = match epon_ref with
+        | GlobRef.IndRef (kn, _) ->
+          (match get_ind_nparams_opt kn with Some n -> n | None -> List.length tvar_args)
+        | _ -> List.length tvar_args
+      in
+      let param_tvar_args = List.firstn (min nparams (List.length tvar_args)) tvar_args in
       let ind_tvar_positions =
         List.filter_map
           (fun t ->
             match t with
             | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
             | _ -> None )
-          tvar_args
+          param_tvar_args
       in
       Some (pos, ind_tvar_positions)
     | Miniml.Tarr (_, rest) -> aux (pos + 1) rest

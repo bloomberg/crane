@@ -977,6 +977,20 @@ let rec contains_tvar = function
   | Tvariant ts -> List.exists contains_tvar ts
   | _ -> false
 
+let rec has_unbound_tvar bound_names = function
+  | Tvar (_, Some name) -> not (List.exists (Id.equal name) bound_names)
+  | Tvar (_, None) -> true
+  | Tauto -> true
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists (has_unbound_tvar bound_names) ts
+  | Tshared_ptr t | Tref t | Tptr t
+  | Tmod (_, t) | Tnamespace (_, t) ->
+    has_unbound_tvar bound_names t
+  | Tfun (args, ret) ->
+    List.exists (has_unbound_tvar bound_names) args || has_unbound_tvar bound_names ret
+  | Tvariant ts -> List.exists (has_unbound_tvar bound_names) ts
+  | _ -> false
+
 (** Return [true] if [g] is the Coq [option] inductive (rendered as
     [std::optional]).  Used to detect [optional<shared_ptr<T>>] patterns
     that need special inline cloning instead of copy construction. *)
@@ -4720,15 +4734,12 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           build_template_params env tvars tys_filt
         | _ -> []
       in
-      let field_types = match Table.get_ctor_ip_types_opt r with
-        | Some ft ->
-          (* Filter out killed (Tdummy) entries — these are erased type/prop
-             parameters that make_mlargs skips during extraction, so they
-             don't appear in MLcons args.  Filtering aligns the field type
-             indices with the actual constructor arguments in ts_updated. *)
-          List.filter (fun t -> not (Mlutil.isTdummy t)) ft
+      let field_types_raw = match Table.get_ctor_ip_types_opt r with
+        | Some ft -> ft
         | None -> [] in
-      let wrap_if_needed_for_field ft expr =
+      let field_types =
+        List.filter (fun t -> not (Mlutil.isTdummy t)) field_types_raw in
+      let wrap_if_needed_for_field ft ml_e expr =
         match ft with
         | Miniml.Tvar i | Miniml.Tvar' i ->
           ( try match List.nth ctor_temps (i - 1) with
@@ -4817,7 +4828,105 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
                 in
                 CPPconverting_ctor (Tfun (param_types, ret_ty), [expr])
               | _ -> expr )
-        | _ -> expr
+        | ft ->
+          (* Handle arrow types containing erased type variables.
+             E.g. field type Tarr(Tvar 1, Tglob(nat)) where Tvar 1 is erased:
+             the concrete lambda [](uint64_t x){return x*x;} must become
+             [](std::any _a0){return any_cast<uint64_t>(_a0) * any_cast<uint64_t>(_a0);}
+             so it matches the factory param std::function<uint64_t(std::any)>. *)
+          let tvar_is_erased i =
+            try match List.nth ctor_temps (i - 1) with
+              | Tany -> true | _ -> false
+            with Failure _ | Invalid_argument _ -> true
+          in
+          let rec ft_has_erased_tvar = function
+            | Miniml.Tvar i | Miniml.Tvar' i -> tvar_is_erased i
+            | Miniml.Tunknown -> true
+            | Miniml.Tarr (a, b) -> ft_has_erased_tvar a || ft_has_erased_tvar b
+            | _ -> false
+          in
+          ( match ft, expr with
+          | Miniml.Tarr _, CPPlambda (params, ret_ty_opt, body_stmts, cap)
+            when ft_has_erased_tvar ft ->
+            let tvars = get_current_type_vars () in
+            let rec collect_tarr = function
+              | Miniml.Tarr (a, rest) ->
+                let (ps, r) = collect_tarr rest in (a :: ps, r)
+              | t -> ([], t)
+            in
+            let (ml_param_tys, ml_ret_ty) = collect_tarr ft in
+            let erase_ml_ty t =
+              match t with
+              | Miniml.Tvar i | Miniml.Tvar' i when tvar_is_erased i -> Tany
+              | Miniml.Tunknown -> Tany
+              | _ -> convert_ml_type_to_cpp_type env tvars t
+            in
+            let erased_param_tys = List.map erase_ml_ty ml_param_tys in
+            let erased_ret_ty = erase_ml_ty ml_ret_ty in
+            let n_params = List.length params in
+            (* Build new params with std::any for erased positions, and add
+               any_cast let-bindings for each erased parameter at the start
+               of the body. *)
+            let new_params = List.mapi (fun j (orig_ty, orig_id) ->
+              let erased_ty =
+                if j < List.length erased_param_tys
+                   && List.nth erased_param_tys j = Tany
+                   && strip_cpp_ref_const orig_ty <> Tany
+                then
+                  (* Replace concrete type with std::any, preserving const ref *)
+                  Tmod (TMconst, Tref Tany)
+                else orig_ty
+              in
+              (erased_ty, orig_id)
+            ) params in
+            (* Extract concrete parameter types from the MiniML lambda *)
+            let ml_concrete_param_tys =
+              let rec collect_lam_tys = function
+                | MLlam (_, ty, body) -> ty :: collect_lam_tys body
+                | MLmagic inner -> collect_lam_tys inner
+                | _ -> []
+              in
+              collect_lam_tys ml_e
+            in
+            let cast_bindings = List.filter_map (fun (j, (_orig_ty, orig_id)) ->
+              if j < List.length erased_param_tys
+                 && List.nth erased_param_tys j = Tany then
+                match orig_id with
+                | Some id ->
+                  (* Get concrete type from ML lambda param, not C++ lambda *)
+                  let concrete_ty =
+                    match List.nth_opt ml_concrete_param_tys j with
+                    | Some ml_ty ->
+                      let ct = convert_ml_type_to_cpp_type env tvars ml_ty in
+                      strip_cpp_ref_const ct
+                    | None -> strip_cpp_ref_const (fst (List.nth params j))
+                  in
+                  if concrete_ty <> Tany && concrete_ty <> Tauto then
+                    let any_param_id = Id.of_string
+                      ("_any_" ^ Id.to_string id) in
+                    Some (j, id, any_param_id, concrete_ty)
+                  else None
+                | None -> None
+              else None
+            ) (List.mapi (fun j p -> (j, p)) params) in
+            let new_params = List.mapi (fun j (ty, id) ->
+              match List.find_opt (fun (j', _, _, _) -> j = j') cast_bindings with
+              | Some (_, _, any_id, _) -> (ty, Some any_id)
+              | None -> (ty, id)
+            ) new_params in
+            let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
+              Sasgn (orig_id, Some concrete_ty,
+                CPPany_cast (concrete_ty, CPPvar any_id))
+            ) cast_bindings in
+            let new_body = cast_stmts @ body_stmts in
+            let new_ret_ty = match ret_ty_opt with
+              | Some _ -> ret_ty_opt
+              | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
+            in
+            let new_lambda = CPPlambda (new_params, new_ret_ty, new_body, cap) in
+            let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
+            CPPconverting_ctor (func_ty, [new_lambda])
+          | _ -> expr )
       in
       let gen_and_wrap i e =
         let expr = gen_ctor_arg e in
@@ -4826,7 +4935,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
           with Failure _ | Invalid_argument _ -> None
         in
         match ft_opt with
-        | Some ft -> wrap_if_needed_for_field ft expr
+        | Some ft -> wrap_if_needed_for_field ft e expr
         | None -> expr
       in
       gen_ctor_call (List.rev (List.mapi gen_and_wrap ts_updated))
@@ -13561,6 +13670,39 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         cpp_type_has_tvar tname ret_cpp
         || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params)
     template_params
+  in
+  let surviving_names =
+    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty template_params
+  in
+  let phantom_positions =
+    List.filter_map (fun (orig_idx, name) ->
+      if Id.Set.mem name extra_tvar_name_set
+         && not (Id.Set.mem name surviving_names) then
+        Some (orig_idx - 1)
+      else None)
+      (List.combine extra_tvars_orig extra_tvar_names)
+  in
+  if phantom_positions <> [] then
+    Table.set_phantom_tvars func_ref phantom_positions;
+  let phantom_name_set =
+    List.fold_left (fun s (_, n) -> Id.Set.add n s) Id.Set.empty
+      (List.filter (fun (_, n) ->
+        Id.Set.mem n extra_tvar_name_set && not (Id.Set.mem n surviving_names))
+        (List.combine extra_tvars_orig extra_tvar_names))
+  in
+  let rec strip_phantom_any_cast_expr e =
+    let e = match e with
+      | CPPany_cast (Tvar (_, Some name), inner) when Id.Set.mem name phantom_name_set ->
+        strip_phantom_any_cast_expr inner
+      | _ -> e
+    in
+    Minicpp.map_expr strip_phantom_any_cast_expr strip_phantom_any_cast_stmt (fun t -> t) e
+  and strip_phantom_any_cast_stmt s =
+    Minicpp.map_stmt strip_phantom_any_cast_expr strip_phantom_any_cast_stmt (fun t -> t) s
+  in
+  let stmts =
+    if Id.Set.is_empty phantom_name_set then stmts
+    else List.map strip_phantom_any_cast_stmt stmts
   in
   ( Fmethod
       {

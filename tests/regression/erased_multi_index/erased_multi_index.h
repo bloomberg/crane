@@ -42,20 +42,20 @@ struct ErasedMultiIndex {
       requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
     T1 tagged_rec(F0 &&f) const {
       const auto &[k0, v0] = *this;
-      return f(std::any_cast<T2>(k0), std::any_cast<T3>(v0));
+      return f(k0, v0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
     T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v0] = *this;
-      return f(std::any_cast<T2>(k0), std::any_cast<T3>(v0));
+      return f(k0, v0);
     }
   };
 
   static inline const uint64_t test_tagged = []() {
     tagged t = tagged::mktagged(UINT64_C(42), true);
-    return std::move(t).get_key();
+    return std::move(t).template get_key<uint64_t>();
   }();
 
   /// Heterogeneous list using type-indexed existential

@@ -91,27 +91,6 @@
   (deps concept_param_mismatch.t.exe)
   (action (run ./concept_param_mismatch.t.exe))))
 
-(subdir erased_field_dangle
- (rule
-  (targets erased_field_dangle.t.exe)
-  (deps ErasedFieldDangle.vo erased_field_dangle.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_field_dangle.t.exe erased_field_dangle.cpp erased_field_dangle.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_field_dangle.t.exe)
-  (action (run ./erased_field_dangle.t.exe))))
-
-(subdir erased_multi_index
- (rule
-  (targets erased_multi_index.t.exe)
-  (deps ErasedMultiIndex.vo erased_multi_index.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_multi_index.t.exe erased_multi_index.cpp erased_multi_index.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_multi_index.t.exe)
-  (action (run ./erased_multi_index.t.exe))))
 
 (subdir pair_deref_value
  (rule

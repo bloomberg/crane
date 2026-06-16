@@ -43,14 +43,14 @@ struct ErasedFieldDangle {
       requires std::is_invocable_r_v<T1, F0 &, std::any &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
-      return f(std::any_cast<T2>(a0));
+      return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, std::any &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
-      return f(std::any_cast<T2>(a0));
+      return f(a0);
     }
   };
 
@@ -58,29 +58,33 @@ struct ErasedFieldDangle {
   static inline const box nested_box =
       box::mkbox(std::make_pair(UINT64_C(42), UINT64_C(58)));
   static inline const uint64_t test_unbox_nested = []() {
-    std::pair<uint64_t, uint64_t> p = nested_box.unbox();
+    std::pair<uint64_t, uint64_t> p =
+        nested_box.template unbox<std::pair<uint64_t, uint64_t>>();
     return (p.first + p.second);
   }();
   /// Use unboxed value in a computation
   static inline const uint64_t test_unbox_compute = []() {
-    uint64_t x = box::mkbox(UINT64_C(10)).unbox();
-    uint64_t y = box::mkbox(UINT64_C(20)).unbox();
+    uint64_t x = box::mkbox(UINT64_C(10)).template unbox<uint64_t>();
+    uint64_t y = box::mkbox(UINT64_C(20)).template unbox<uint64_t>();
     return (x + y);
   }();
   /// Chain unbox through multiple let bindings
   static inline const uint64_t test_chain_unbox = []() {
     box b1 = box::mkbox(UINT64_C(5));
     box b2 = box::mkbox(
-        (std::any_cast<uint64_t>(std::move(b1).unbox()) + UINT64_C(10)));
+        (std::any_cast<uint64_t>(std::move(b1).template unbox<uint64_t>()) +
+         UINT64_C(10)));
     box b3 = box::mkbox(
-        (std::any_cast<uint64_t>(std::move(b2).unbox()) + UINT64_C(20)));
-    return std::move(b3).unbox();
+        (std::any_cast<uint64_t>(std::move(b2).template unbox<uint64_t>()) +
+         UINT64_C(20)));
+    return std::move(b3).template unbox<uint64_t>();
   }();
   /// Pass unboxed value to a higher-order function
   static inline const uint64_t test_hof_unbox = []() {
     box b = box::mkbox(std::function<uint64_t(uint64_t)>(
         [](uint64_t x) { return (x * UINT64_C(2)); }));
-    return std::move(b).unbox()(UINT64_C(21));
+    return std::move(b).template unbox<std::function<uint64_t(uint64_t)>>()(
+        UINT64_C(21));
   }();
 
   /// Existential container: hide the type
@@ -120,8 +124,11 @@ struct ErasedFieldDangle {
   };
 
   static inline const uint64_t test_exists = []() {
-    exists_box e =
-        exists_box::pack(UINT64_C(7), [](const auto &x) { return (x * x); });
+    exists_box e = exists_box::pack(
+        UINT64_C(7),
+        std::function<uint64_t(std::any)>([](const std::any &x) -> uint64_t {
+          return (std::any_cast<uint64_t>(x) * std::any_cast<uint64_t>(x));
+        }));
     return std::move(e).run_exists();
   }();
 };
