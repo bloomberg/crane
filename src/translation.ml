@@ -6603,13 +6603,12 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                inductive (e.g. element List<T> inside List<List<T>>): the element
                field's def-site type is a bare Tvar (not self-ref), but at the
                use site it resolves to List<T> which ns-wraps to shared_ptr. *)
-            match storage_field_cpp_ty with
-            | (Tshared_ptr _) when
-                non_erased_def_site_field_tys <> []
-                && not (field_is_self_or_mutual_ref_at_def i)
-                && not (field_has_nested_self_ref_at_def i) ->
-              bare_field_cpp_ty
-            | _ -> storage_field_cpp_ty
+            if non_erased_def_site_field_tys <> []
+               && not (field_is_self_or_mutual_ref_at_def i)
+               && not (field_has_nested_self_ref_at_def i)
+               && contains_shared_ptr storage_field_cpp_ty
+            then bare_field_cpp_ty
+            else storage_field_cpp_ty
         in
         (* For coinductive types, fields with nested self-refs are stored
            as shared_ptr to break circular template dependencies (e.g.

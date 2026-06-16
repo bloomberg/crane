@@ -382,10 +382,7 @@ struct TopologicalSort {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, List<T1>>>::Cons>(graph0.v());
-      auto [e, _x0] = [](const auto &__cv) -> bsl::pair<T1, List<T1>> {
-        auto [_cv0_0, _cv0_1] = __cv;
-        return bsl::make_pair(_cv0_0, (*_cv0_1));
-      }(d_a0);
+      auto [e, _x0] = d_a0;
       return bsl::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }

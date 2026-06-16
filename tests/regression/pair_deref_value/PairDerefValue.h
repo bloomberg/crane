@@ -71,12 +71,7 @@ template <HasKey K> struct Collector {
           const auto &[a0, a1] = std::get<typename Datatypes::template List<
               std::pair<typename K::key, typename Datatypes::template List<
                                              typename K::key>>>::Cons>(ps.v());
-          const auto &[x_, gamma] = [](const auto &__cv)
-              -> std::pair<typename K::key,
-                           typename Datatypes::template List<typename K::key>> {
-            const auto &[_cv0_0, _cv0_1] = __cv;
-            return std::make_pair(_cv0_0, (*_cv0_1));
-          }(a0);
+          const auto &[x_, gamma] = a0;
           if (K::key_eq_dec(x_, x)) {
             _stack.emplace_back(_Resume1{gamma});
             _stack.emplace_back(_Enter{a1.get()});

@@ -91,14 +91,3 @@
   (deps concept_param_mismatch.t.exe)
   (action (run ./concept_param_mismatch.t.exe))))
 
-
-(subdir pair_deref_value
- (rule
-  (targets pair_deref_value.t.exe)
-  (deps PairDerefValue.vo pair_deref_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_deref_value.t.exe PairDerefValue.cpp Datatypes.cpp pair_deref_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps pair_deref_value.t.exe)
-  (action (run ./pair_deref_value.t.exe))))
