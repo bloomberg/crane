@@ -268,116 +268,6 @@ struct STRefNat {
   }
 };
 
-template <typename _tcI0, typename _tcI1, typename T1>
-std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-  uint64_t r1;
-  r1 = UINT64_C(5);
-  uint64_t r2;
-  r2 = UINT64_C(6);
-  uint64_t x1 = r1;
-  uint64_t x2 = r2;
-  return std::make_pair(x1, x2);
-}
-
-template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t tree_simp_nat() {
-  uint64_t v;
-  v = UINT64_C(5);
-  return std::move(v);
-}
-
-template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t tree_simp_another_nat() {
-  uint64_t v;
-  v = UINT64_C(5);
-  v = UINT64_C(6);
-  uint64_t val = v;
-  return val;
-}
-
-template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t array_simp_fixed_init() {
-  std::vector<uint64_t> *arr;
-  arr = new std::remove_pointer_t<decltype(arr)>(
-      _tcI1::suc(
-          _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))))) -
-          _tcI1::zero() + 1,
-      UINT64_C(5));
-  uint64_t elem = (*arr)[_tcI1::suc(_tcI1::zero())];
-  return elem;
-}
-
-template <typename _tcI0, typename _tcI1, typename T1>
-std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>> array_simp_list() {
-  std::vector<uint64_t> *arr;
-  arr = new std::remove_pointer_t<decltype(arr)>(
-      _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))) - _tcI1::zero() + 1);
-  {
-    auto _xs = List<uint64_t>::cons(
-        UINT64_C(5),
-        List<uint64_t>::cons(
-            UINT64_C(4),
-            List<uint64_t>::cons(
-                UINT64_C(3),
-                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
-    for (size_t _i = 0; _i < arr->size(); _i++) {
-      if (std::holds_alternative<
-              typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
-        auto &[_a, _l] =
-            std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
-                _xs.v_mut());
-        (*arr)[_i] = _a;
-        if (_l)
-          _xs = *_l;
-      }
-    }
-  };
-  uint64_t elem = (*arr)[_tcI1::zero()];
-  List<uint64_t> lst = [&]() {
-    using _E = typename std::remove_pointer_t<
-        std::remove_cvref_t<decltype(arr)>>::value_type;
-    List<_E> _r = List<_E>::nil();
-    for (size_t _i = arr->size(); _i > 0; _i--) {
-      _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
-    }
-    return _r;
-  }();
-  return std::make_pair(std::make_pair(elem, lst.length()), lst);
-}
-
-template <typename _tcI0, typename _tcI1, typename T1>
-uint64_t fibST(uint64_t n) {
-  auto fibST__impl = [](auto &_self_fibST_, uint64_t n0, uint64_t x, uint64_t y,
-                        const T1 &idx_x, const T1 &idx_y) -> uint64_t {
-    if (n0 <= 0) {
-      return x;
-    } else {
-      uint64_t n1 = n0 - 1;
-      uint64_t x_ = x;
-      uint64_t y_ = y;
-      x = y_;
-      y = (x_ + y_);
-      return _self_fibST_(_self_fibST_, n1, x, y, idx_x, idx_y);
-    }
-  };
-  auto fibST_ = [&](uint64_t n0, uint64_t x, uint64_t y, const T1 &idx_x,
-                    const T1 &idx_y) -> uint64_t {
-    return fibST__impl(fibST__impl, n0, x, y, idx_x, idx_y);
-  };
-  if (n <= UINT64_C(2)) {
-    return n;
-  } else {
-    uint64_t x;
-    x = UINT64_C(0);
-    uint64_t y;
-    y = UINT64_C(1);
-    return fibST_(n, std::move(x), std::move(y), _tcI1::zero(),
-                  _tcI1::suc(_tcI1::zero()));
-  }
-}
-
-uint64_t fibFun(uint64_t n);
-
 struct STMonadTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
@@ -427,31 +317,140 @@ struct STMonadTests {
   };
 
   static_assert(STRefClass<nat_stref, uint64_t>);
+
+  template <typename _tcI0, typename _tcI1>
+  static uint64_t array_simp_fixed_init() {
+    std::vector<uint64_t> *arr;
+    arr = new std::remove_pointer_t<decltype(arr)>(
+        _tcI1::suc(
+            _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))))) -
+            _tcI1::zero() + 1,
+        UINT64_C(5));
+    uint64_t elem = (*arr)[_tcI1::suc(_tcI1::zero())];
+    return elem;
+  }
+
+  template <typename _tcI0, typename _tcI1>
+  static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
+  array_simp_list() {
+    std::vector<uint64_t> *arr;
+    arr = new std::remove_pointer_t<decltype(arr)>(
+        _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))) - _tcI1::zero() + 1);
+    {
+      auto _xs = List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
+      for (size_t _i = 0; _i < arr->size(); _i++) {
+        if (std::holds_alternative<
+                typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
+          auto &[_a, _l] =
+              std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
+                  _xs.v_mut());
+          (*arr)[_i] = _a;
+          if (_l)
+            _xs = *_l;
+        }
+      }
+    };
+    uint64_t elem = (*arr)[_tcI1::zero()];
+    List<uint64_t> lst = [&]() {
+      using _E = typename std::remove_pointer_t<
+          std::remove_cvref_t<decltype(arr)>>::value_type;
+      List<_E> _r = List<_E>::nil();
+      for (size_t _i = arr->size(); _i > 0; _i--) {
+        _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
+      }
+      return _r;
+    }();
+    return std::make_pair(std::make_pair(elem, lst.length()), lst);
+  }
+
+  template <typename _tcI0, typename _tcI1> static uint64_t fibST(uint64_t n) {
+    if (n <= UINT64_C(2)) {
+      return n;
+    } else {
+      uint64_t x;
+      x = UINT64_C(0);
+      uint64_t y;
+      y = UINT64_C(1);
+      auto fibST__impl = [](auto &_self_fibST_, uint64_t n0, uint64_t x0,
+                            uint64_t y0, uint64_t idx_x,
+                            uint64_t idx_y) -> uint64_t {
+        if (n0 <= 0) {
+          return x0;
+        } else {
+          uint64_t n1 = n0 - 1;
+          uint64_t x_ = x0;
+          uint64_t y_ = y0;
+          x0 = y_;
+          y0 = (x_ + y_);
+          return _self_fibST_(_self_fibST_, n1, x0, y0, idx_x, idx_y);
+        }
+      };
+      auto fibST_ = [&](uint64_t n0, uint64_t x0, uint64_t y0, uint64_t idx_x,
+                        uint64_t idx_y) -> uint64_t {
+        return fibST__impl(fibST__impl, n0, x0, y0, idx_x, idx_y);
+      };
+      return fibST_(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+    }
+  }
+
+  static uint64_t fibFun(uint64_t n);
+
+  template <typename T1> static T1 list_hd(const T1 &_x0, const List<T1> &_x1) {
+    return _x1.hd(_x0);
+  }
+
+  template <typename T1> static List<T1> list_tl(const List<T1> &_x0) {
+    return _x0.tl();
+  }
+
+  template <typename _tcI0, typename _tcI1>
+  static std::pair<bool, bool> new_and_read_both_bool() {
+    bool r1;
+    r1 = false;
+    bool r2;
+    r2 = true;
+    bool x1 = r1;
+    bool x2 = r2;
+    return std::make_pair(x1, x2);
+  }
+
+  template <typename _tcI0, typename _tcI1>
+  static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
+    uint64_t r1;
+    r1 = UINT64_C(5);
+    uint64_t r2;
+    r2 = UINT64_C(6);
+    uint64_t x1 = r1;
+    uint64_t x2 = r2;
+    return std::make_pair(x1, x2);
+  }
+
+  template <typename _tcI0, typename _tcI1>
+  static uint64_t tree_simp_another_nat() {
+    uint64_t v;
+    v = UINT64_C(5);
+    v = UINT64_C(6);
+    uint64_t val = v;
+    return val;
+  }
+
+  template <typename _tcI0, typename _tcI1> static bool tree_simp_bool() {
+    bool v;
+    v = true;
+    return std::move(v);
+  }
+
+  template <typename _tcI0, typename _tcI1> static uint64_t tree_simp_nat() {
+    uint64_t v;
+    v = UINT64_C(5);
+    return std::move(v);
+  }
 };
-
-template <typename _tcI0, typename _tcI1, typename T1>
-std::pair<bool, bool> new_and_read_both_bool() {
-  bool r1;
-  r1 = false;
-  bool r2;
-  r2 = true;
-  bool x1 = r1;
-  bool x2 = r2;
-  return std::make_pair(x1, x2);
-}
-
-template <typename _tcI0, typename _tcI1, typename T1> bool tree_simp_bool() {
-  bool v;
-  v = true;
-  return std::move(v);
-}
-
-template <typename T1> T1 list_hd(const T1 &_x0, const List<T1> &_x1) {
-  return _x1.hd(_x0);
-}
-
-template <typename T1> List<T1> list_tl(const List<T1> &_x0) {
-  return _x0.tl();
-}
 
 #endif // INCLUDED_STMONAD

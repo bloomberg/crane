@@ -502,7 +502,6 @@ Crane Extract Inlined Constant newArray =>
 Crane Extract Inlined Constant readArray => "(*%a1)[%a2]".
 Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
 
-(* TODO: do we need remove_cvref_t below? *)
 Crane Extract Inlined Constant newListArray =>
   "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (std::holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { auto& [_a, _l] = std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v_mut()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }".
 Crane Extract Inlined Constant getElems =>
