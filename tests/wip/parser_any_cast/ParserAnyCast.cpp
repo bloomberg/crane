@@ -23,7 +23,7 @@ uint64_t ParserAnyCast::get_a_value(
   const auto &[x0, a1] = e;
   switch (x0) {
   case Tag::A: {
-    return a1;
+    return std::any_cast<uint64_t>(a1);
   }
   case Tag::B: {
     return UINT64_C(0);

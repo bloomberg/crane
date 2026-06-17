@@ -6714,6 +6714,45 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             has_unnamed_tvar cpp_ty
           | None -> false)
   in
+  (* A field whose def-site type is a type variable (Tvar) that, at this
+     particular instantiation, resolves to [std::any].  This happens when
+     a parameterised inductive like [sigT A P] is instantiated with a
+     type-level function (e.g. [P = sem_ty : tag -> Type]) that erases to
+     [std::any].  The struct field has C++ type [P = std::any] but the
+     ML pattern variable carries the resolved concrete type (e.g. [nat]).
+     We need [any_cast<T>] to recover the concrete value. *)
+  let field_instantiated_as_any =
+    let scrutinee_cpp_targs =
+      match typ with
+      | Tglob (r, tys, _) ->
+        let tys = List.map type_simpl tys in
+        let param_tys = match r with
+          | GlobRef.IndRef (kn, _) ->
+            ( match Table.get_ind_num_param_vars_opt kn with
+              | Some n -> safe_firstn n tys
+              | None -> tys )
+          | _ -> tys
+        in
+        List.map (fun ty ->
+          convert_ml_type_to_cpp_type (empty_env ()) [] ty) param_tys
+      | _ -> []
+    in
+    fun i ->
+      not (field_is_self_or_mutual_ref_at_def i)
+      && not (field_has_nested_self_ref_at_def i)
+      && (match List.nth_opt non_erased_def_site_field_tys i with
+          | Some def_ty ->
+            let rec ml_resolves_to_any = function
+              | Miniml.Tvar k | Miniml.Tvar' k ->
+                ( match List.nth_opt scrutinee_cpp_targs (k - 1) with
+                  | Some Tany -> true
+                  | _ -> false )
+              | Miniml.Tmeta {contents = Some t} -> ml_resolves_to_any t
+              | _ -> false
+            in
+            ml_resolves_to_any def_ty
+          | None -> false)
+  in
   (* Substitute pattern variable references with the structured-binding
      names.  For non-coinductive self-ref fields (stored as shared_ptr),
      the structured binding gives [const shared_ptr<T>& d_field]; we
@@ -6749,7 +6788,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                     && contains_shared_ptr field_ty then
               gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
-            else if field_is_wholesale_erased i
+            else if (field_is_wholesale_erased i || field_instantiated_as_any i)
                     && not (is_erased_type bare_ty) then
               (* For list types, grammar productions store List<std::any> at
                  runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -6823,6 +6862,46 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
   let body_stmts = uptr_value_bindings @ body_stmts in
+  (* When a field is stored as [std::any] at this instantiation (e.g. the
+     payload of [sigT tag sem_ty] where [sem_ty] erases), but the branch
+     returns a concrete type, insert [any_cast<return_ty>] around the
+     returned expression.  This handles the [MLmagic] coercion that Coq's
+     extraction inserts for dependent eliminations. *)
+  let any_field_names =
+    List.fold_left (fun acc (i, (_var_name, _ml_ty)) ->
+      if dummies_arr.(i) && field_instantiated_as_any i then
+        let (binding_name, _, _, _) = field_bindings_arr.(i) in
+        Id.Set.add binding_name acc
+      else acc)
+    Id.Set.empty (List.mapi (fun i x -> (i, x)) rev_ids)
+  in
+  let body_stmts =
+    if Id.Set.is_empty any_field_names then body_stmts
+    else
+      let expr_refs_any_field = function
+        | CPPvar id -> Id.Set.mem id any_field_names
+        | _ -> false
+      in
+      let rec wrap_return_with_any_cast ret_ty stmts =
+        List.map (fun s -> wrap_stmt ret_ty s) stmts
+      and wrap_stmt ret_ty = function
+        | Sreturn (Some e) when expr_refs_any_field e ->
+          Sreturn (Some (CPPany_cast (ret_ty, e)))
+        | Sswitch (scrut, ty, branches, default) ->
+          Sswitch (scrut, ty,
+            List.map (fun (lbl, body) -> (lbl, wrap_return_with_any_cast ret_ty body)) branches,
+            Option.map (wrap_return_with_any_cast ret_ty) default)
+        | Sif (c, t, f) ->
+          Sif (c, wrap_return_with_any_cast ret_ty t, wrap_return_with_any_cast ret_ty f)
+        | Sblock body ->
+          Sblock (wrap_return_with_any_cast ret_ty body)
+        | s -> s
+      in
+      match tctx.current_cpp_return_type with
+      | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
+        wrap_return_with_any_cast ty body_stmts
+      | _ -> body_stmts
+  in
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
