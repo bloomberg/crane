@@ -59,7 +59,7 @@ val type_is_erased : cpp_type -> bool
 (** {2 Expression Generation} *)
 
 (** Generate a C++ expression from an ML AST. *)
-val gen_expr : env -> ml_ast -> cpp_expr
+val gen_expr : ?expected_ty:cpp_type -> env -> ml_ast -> cpp_expr
 
 (** Generate pattern matching as a C++ expression using std::visit. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr

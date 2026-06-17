@@ -3779,10 +3779,40 @@ and try_fold_num_int expr =
     | _ -> None )
   | _ -> None
 
+(** Check whether an ML expression's C++ type is erased ([std::any]).
+    Used by the [MLmagic] handler to decide whether [any_cast] is needed. *)
+and ml_expr_is_erased env (t : ml_ast) : bool =
+  let tvars = get_current_type_vars () in
+  match t with
+  | MLrel i -> is_env_var_erased env tvars i
+  | MLapp (f, args) ->
+    let n_value_args =
+      List.length (List.filter (fun a ->
+        match a with MLdummy _ -> false | _ -> true) args)
+    in
+    let ml_ty_opt = match f with
+      | MLglob (r, _) -> find_type_opt r
+      | MLrel i -> get_env_type_opt i
+      | _ -> None
+    in
+    ( match ml_ty_opt with
+      | Some ml_ty -> ml_codomain_erases_to_any n_value_args ml_ty
+      | None -> false )
+  | MLglob (r, _) ->
+    ( match find_type_opt r with
+      | Some ml_ty -> is_erased_type (convert_ml_type_to_cpp_type env tvars ml_ty)
+      | None -> false )
+  | MLmagic inner -> ml_expr_is_erased env inner
+  | MLcase (case_ty, _, _) ->
+    ( match case_ty with
+      | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+      | _ -> false )
+  | _ -> false
+
 (** Generate C++ expression from ML AST. Main expression compiler - handles
     lambdas, applications, constructors, pattern matching, etc. Monadic
     non-function globals are wrapped in CPPfun_call by the MLglob case below. *)
-and gen_expr env (ml_e : ml_ast) : cpp_expr =
+and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
   match ml_e with
   | MLrel i ->
     let var_expr =
@@ -3809,7 +3839,7 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     in
     if move_candidate then CPPmove var_expr
     else var_expr
-  | MLapp (MLmagic t, args) -> gen_expr env (MLapp (t, args))
+  | MLapp (MLmagic t, args) -> gen_expr ?expected_ty env (MLapp (t, args))
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
@@ -5239,7 +5269,16 @@ and gen_expr env (ml_e : ml_ast) : cpp_expr =
     let elems = Array.map (gen_expr env) elems in
     let def = gen_expr env def in
     CPPparray (elems, def)
-  | MLmagic t -> gen_expr env t
+  | MLmagic t ->
+    let inner = gen_expr env t in
+    ( match expected_ty with
+      | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
+        if ml_expr_is_erased env t then
+          ( match inner with
+            | CPPany_cast _ -> inner
+            | _ -> CPPany_cast (ty, inner) )
+        else inner
+      | _ -> inner )
   | MLdummy _ ->
     (* Erased proof or type argument.  [CPPabort] is safe here because this
        case only fires in dead code positions (absurd match branches).
@@ -6714,45 +6753,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             has_unnamed_tvar cpp_ty
           | None -> false)
   in
-  (* A field whose def-site type is a type variable (Tvar) that, at this
-     particular instantiation, resolves to [std::any].  This happens when
-     a parameterised inductive like [sigT A P] is instantiated with a
-     type-level function (e.g. [P = sem_ty : tag -> Type]) that erases to
-     [std::any].  The struct field has C++ type [P = std::any] but the
-     ML pattern variable carries the resolved concrete type (e.g. [nat]).
-     We need [any_cast<T>] to recover the concrete value. *)
-  let field_instantiated_as_any =
-    let scrutinee_cpp_targs =
-      match typ with
-      | Tglob (r, tys, _) ->
-        let tys = List.map type_simpl tys in
-        let param_tys = match r with
-          | GlobRef.IndRef (kn, _) ->
-            ( match Table.get_ind_num_param_vars_opt kn with
-              | Some n -> safe_firstn n tys
-              | None -> tys )
-          | _ -> tys
-        in
-        List.map (fun ty ->
-          convert_ml_type_to_cpp_type (empty_env ()) [] ty) param_tys
-      | _ -> []
-    in
-    fun i ->
-      not (field_is_self_or_mutual_ref_at_def i)
-      && not (field_has_nested_self_ref_at_def i)
-      && (match List.nth_opt non_erased_def_site_field_tys i with
-          | Some def_ty ->
-            let rec ml_resolves_to_any = function
-              | Miniml.Tvar k | Miniml.Tvar' k ->
-                ( match List.nth_opt scrutinee_cpp_targs (k - 1) with
-                  | Some Tany -> true
-                  | _ -> false )
-              | Miniml.Tmeta {contents = Some t} -> ml_resolves_to_any t
-              | _ -> false
-            in
-            ml_resolves_to_any def_ty
-          | None -> false)
-  in
   (* Substitute pattern variable references with the structured-binding
      names.  For non-coinductive self-ref fields (stored as shared_ptr),
      the structured binding gives [const shared_ptr<T>& d_field]; we
@@ -6788,7 +6788,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                     && contains_shared_ptr field_ty then
               gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
-            else if (field_is_wholesale_erased i || field_instantiated_as_any i)
+            else if field_is_wholesale_erased i
                     && not (is_erased_type bare_ty) then
               (* For list types, grammar productions store List<std::any> at
                  runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -6862,46 +6862,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       (List.mapi (fun i x -> (i, x)) rev_ids)
   in
   let body_stmts = uptr_value_bindings @ body_stmts in
-  (* When a field is stored as [std::any] at this instantiation (e.g. the
-     payload of [sigT tag sem_ty] where [sem_ty] erases), but the branch
-     returns a concrete type, insert [any_cast<return_ty>] around the
-     returned expression.  This handles the [MLmagic] coercion that Coq's
-     extraction inserts for dependent eliminations. *)
-  let any_field_names =
-    List.fold_left (fun acc (i, (_var_name, _ml_ty)) ->
-      if dummies_arr.(i) && field_instantiated_as_any i then
-        let (binding_name, _, _, _) = field_bindings_arr.(i) in
-        Id.Set.add binding_name acc
-      else acc)
-    Id.Set.empty (List.mapi (fun i x -> (i, x)) rev_ids)
-  in
-  let body_stmts =
-    if Id.Set.is_empty any_field_names then body_stmts
-    else
-      let expr_refs_any_field = function
-        | CPPvar id -> Id.Set.mem id any_field_names
-        | _ -> false
-      in
-      let rec wrap_return_with_any_cast ret_ty stmts =
-        List.map (fun s -> wrap_stmt ret_ty s) stmts
-      and wrap_stmt ret_ty = function
-        | Sreturn (Some e) when expr_refs_any_field e ->
-          Sreturn (Some (CPPany_cast (ret_ty, e)))
-        | Sswitch (scrut, ty, branches, default) ->
-          Sswitch (scrut, ty,
-            List.map (fun (lbl, body) -> (lbl, wrap_return_with_any_cast ret_ty body)) branches,
-            Option.map (wrap_return_with_any_cast ret_ty) default)
-        | Sif (c, t, f) ->
-          Sif (c, wrap_return_with_any_cast ret_ty t, wrap_return_with_any_cast ret_ty f)
-        | Sblock body ->
-          Sblock (wrap_return_with_any_cast ret_ty body)
-        | s -> s
-      in
-      match tctx.current_cpp_return_type with
-      | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
-        wrap_return_with_any_cast ty body_stmts
-      | _ -> body_stmts
-  in
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
@@ -9720,7 +9680,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         (* Void-returning function: discard the value and return. *)
         [Sreturn None]
       else
-        [k (gen_expr env t)]
+        [k (gen_expr ?expected_ty:tctx.current_cpp_return_type env t)]
     end
   | MLcase (typ, t, pv) when is_custom_match pv ->
     (* Set up dead-after for owned variables at their last use, same as the
@@ -9789,7 +9749,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           in
           tctx.move_dead_after <-
             Escape.IntSet.union tctx.move_dead_after tail_dead );
-      let result = inline_iife k (gen_expr env ast) in
+      let result = inline_iife k (gen_expr ?expected_ty:tctx.current_cpp_return_type env ast) in
       tctx.move_dead_after <- saved_dead;
       result
     else
@@ -9894,7 +9854,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_tail_expr env t in
+      let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
       tctx.move_dead_after <- saved_dead;
       if tctx.current_cpp_return_type = Some Tvoid then
         [Sexpr e; Sreturn None]
@@ -9909,22 +9869,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           [Sexpr e] @ inline_iife k (mk_tt_expr ())
     end
     else begin
-      let e = gen_tail_expr env t in
-      (* Wrap erased coerced variables with any_cast when the return type is a Tvar. *)
-      let e =
-        let i_opt = match t with
-          | MLmagic (MLrel i) -> Some i
-          | _ -> None
-        in
-        match i_opt with
-        | Some i ->
-          (match tctx.current_cpp_return_type with
-           | Some (Tvar _ as ret_ty) when ret_ty <> Tany ->
-             let tvars = get_current_type_vars () in
-             if is_env_var_erased env tvars i then CPPany_cast (ret_ty, e) else e
-           | _ -> e)
-        | None -> e
-      in
+      let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result
@@ -9937,7 +9882,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
 
     Used by the default tail case and by reified-mode bind/ret handlers
     (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
-and gen_tail_expr env t =
+and gen_tail_expr ?expected_ty env t =
   ( if not tctx.move_suppress_tail then
       let tail_dead =
         Escape.IntSet.filter
@@ -9946,7 +9891,7 @@ and gen_tail_expr env t =
       in
       tctx.move_dead_after <-
         Escape.IntSet.union tctx.move_dead_after tail_dead );
-  gen_expr env t
+  gen_expr ?expected_ty env t
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual
