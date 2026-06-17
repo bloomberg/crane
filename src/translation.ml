@@ -7549,7 +7549,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     if needs_pair_any_cast then
       let g = Option.get pair_g_opt in
       (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
-    else if scrut_is_magic && not (is_erased_type concrete_match_type) then
+    else if (scrut_is_mlmagic || (scrut_is_magic && is_erased_type typ))
+            && not (is_erased_type concrete_match_type) then
       (CPPany_cast (concrete_match_type, t), false)
     else
       (t, false)
