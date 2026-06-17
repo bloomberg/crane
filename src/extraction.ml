@@ -2313,7 +2313,12 @@ let extract_constant access env kn cb =
       with Retyping.RetypeError _ -> false
     in
     if is_logical then Dtype (r, vl, Tdummy Ktype)
-    else Dtype (r, vl, t)
+    else begin
+      (match t with
+       | Tunknown | Taxiom -> add_erased_type_const r
+       | _ -> ());
+      Dtype (r, vl, t)
+    end
   in
   let mk_ax () =
     let t = extract_axiom env sg kn typ in

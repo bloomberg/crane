@@ -5272,7 +5272,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
   | MLmagic t ->
     let inner = gen_expr env t in
     ( match expected_ty with
-      | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
+      | Some ty when not (is_erased_type ty) && ty <> Tvoid
+                    && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         if ml_expr_is_erased env t then
           ( match inner with
             | CPPany_cast _ -> inner
@@ -12832,7 +12833,8 @@ let gen_spec n b ty =
       let is_concrete_target =
         match ty with
         | Tany | Tvar _ | Tunknown | Tvoid | Ttodo | Tauto -> false
-        | _ -> true
+        | Tglob (g, _, _) when Table.is_erased_type_const g -> false
+        | _ -> not (type_is_erased ty)
       in
       let needs_any_cast =
         is_concrete_target
