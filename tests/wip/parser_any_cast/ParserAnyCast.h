@@ -74,6 +74,34 @@ struct ParserAnyCast {
     static const uint64_t v = sum_a_entries(test_entries());
     return v;
   }
+  enum class Label { NUML, STRL, UNITL };
+  using label_sem = std::any;
+
+  static const Label &def_label() {
+    static const Label v = Label::UNITL;
+    return v;
+  }
+
+  static const label_sem &def_literal() {
+    static const label_sem v = std::any_cast<label_sem>(std::monostate{});
+    return v;
+  }
+
+  using labeled_entry = Specif::SigT<Label, label_sem>;
+
+  static const labeled_entry &make_default_entry() {
+    static const labeled_entry v =
+        Specif::template SigT<Label, std::any>::existt(def_label(),
+                                                       def_literal());
+    return v;
+  }
+
+  static Label get_entry_label(labeled_entry _x0);
+
+  static const Label &test_default_label() {
+    static const Label v = get_entry_label(make_default_entry());
+    return v;
+  }
 };
 
 } // namespace ParserAnyCast

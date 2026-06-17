@@ -40,4 +40,9 @@ uint64_t ParserAnyCast::sum_a_entries(
       UINT64_C(0));
 }
 
+ParserAnyCast::Label
+ParserAnyCast::get_entry_label(ParserAnyCast::labeled_entry _x0) {
+  return _x0.projT1();
+}
+
 } // namespace ParserAnyCast

@@ -51,9 +51,41 @@ Definition sum_a_entries (es : list entry) : nat :=
 
 Definition test_sum : nat := sum_a_entries test_entries.
 
+(** Second bug: when a non-uniform type family is erased to std::any,
+    Crane generates any_cast<std::any>(value) for branches that return unit.
+    This crashes because monostate is stored, not std::any.
+    Reproduces defLiteral in parse-a-lot's Semantic module. *)
+
+Inductive label := NumL | StrL | UnitL.
+
+(** Non-uniform type family: different types per branch -> erased to std::any *)
+Definition label_sem (l : label) : Type :=
+  match l with
+  | NumL => nat
+  | StrL => string
+  | UnitL => unit
+  end.
+
+Definition def_label : label := UnitL.
+
+(** This is the problematic definition: it has type [label_sem UnitL = unit]
+    and the value [tt]. Crane will generate any_cast<std::any>(monostate). *)
+Definition def_literal : label_sem def_label := tt.
+
+(** A sigT entry using label_sem — forces actual use of the erased type *)
+Definition labeled_entry := { l : label & label_sem l }.
+
+Definition make_default_entry : labeled_entry :=
+  existT _ def_label def_literal.
+
+Definition get_entry_label (e : labeled_entry) : label := projT1 e.
+
+Definition test_default_label : label := get_entry_label make_default_entry.
+
 End ParserAnyCast.
 
 Set Crane Loopify.
 Crane Separate Extraction
   ParserAnyCast.test_result
-  ParserAnyCast.test_sum.
+  ParserAnyCast.test_sum
+  ParserAnyCast.test_default_label.
