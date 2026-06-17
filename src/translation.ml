@@ -7427,6 +7427,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via [env_types]). *)
+  let scrut_is_mlmagic = match t with MLmagic _ -> true | _ -> false in
   let scrut_is_magic = match t with
     | MLmagic _ -> true
     | MLrel i ->
@@ -7542,7 +7543,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let t, fix_a_fired =
     let needs_pair_any_cast =
       pair_g_opt <> None &&
-      (scrut_is_magic || is_erased_type typ || is_all_erased typ)
+      (is_erased_type typ || is_all_erased typ ||
+       scrut_is_mlmagic)
     in
     if needs_pair_any_cast then
       let g = Option.get pair_g_opt in

@@ -24,7 +24,8 @@ template <SymTypes Ty> struct Destruct {
             const typename Datatypes::template List<typename Ty::sym> &,
             symbols_semty vs) {
     const auto &[a, t] = std::any_cast<std::pair<std::any, std::any>>(vs);
-    const auto &[b, _x2] = std::any_cast<std::pair<std::any, std::any>>(t);
+    const auto &[b, _x2] =
+        std::any_cast<std::pair<typename Ty::sym_semty, std::any>>(t);
     return std::make_pair(
         [&]() -> typename Ty::sym_semty {
           if constexpr (std::is_same_v<typename Ty::sym_semty, std::any>)
