@@ -102,3 +102,14 @@
   (deps parser_any_cast.t.exe)
   (action (run ./parser_any_cast.t.exe))))
 
+
+(subdir sll_pair_cast
+ (rule
+  (targets sll_pair_cast.t.exe)
+  (deps SllPairCast.vo sll_pair_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sll_pair_cast.t.exe SllPairCast.cpp Datatypes.cpp sll_pair_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sll_pair_cast.t.exe)
+  (action (run ./sll_pair_cast.t.exe))))
