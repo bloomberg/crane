@@ -91,3 +91,14 @@
   (deps concept_param_mismatch.t.exe)
   (action (run ./concept_param_mismatch.t.exe))))
 
+(subdir parser_any_cast
+ (rule
+  (targets parser_any_cast.t.exe)
+  (deps ParserAnyCast.vo parser_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} parser_any_cast.t.exe ParserAnyCast.cpp Datatypes.cpp Ascii.cpp List.cpp ListDef.cpp Specif.cpp String_.cpp parser_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps parser_any_cast.t.exe)
+  (action (run ./parser_any_cast.t.exe))))
+
