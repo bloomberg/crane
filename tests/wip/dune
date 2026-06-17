@@ -91,3 +91,14 @@
   (deps concept_param_mismatch.t.exe)
   (action (run ./concept_param_mismatch.t.exe))))
 
+
+(subdir sll_pair_cast_deque
+ (rule
+  (targets sll_pair_cast_deque.t.exe)
+  (deps SllPairCastDeque.vo sll_pair_cast_deque.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sll_pair_cast_deque.t.exe SllPairCastDeque.cpp sll_pair_cast_deque.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sll_pair_cast_deque.t.exe)
+  (action (run ./sll_pair_cast_deque.t.exe))))
