@@ -1355,11 +1355,14 @@ and pp_cpp_expr env args t =
       let obj_s = pp_cpp_expr env args this_arg in
       let args_s = pp_list (pp_cpp_expr env args) other_args in
       let ind_tvar_positions = lookup_method_ind_tvar_positions n in
+      let phantom_positions = Table.get_phantom_tvars n in
       let filtered_tys =
         match tys with
         | [] -> []
         | _ ->
-          List.filteri (fun i _ty -> not (List.mem i ind_tvar_positions)) tys
+          List.filteri (fun i _ty ->
+            not (List.mem i ind_tvar_positions)
+            && not (List.mem i phantom_positions)) tys
       in
       let template_kw, ty_args_s =
         match filtered_tys with

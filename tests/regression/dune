@@ -1941,6 +1941,28 @@
   (deps erased_record.t.exe)
   (action (run ./erased_record.t.exe))))
 
+(subdir erased_field_dangle
+ (rule
+  (targets erased_field_dangle.t.exe)
+  (deps ErasedFieldDangle.vo erased_field_dangle.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_field_dangle.t.exe erased_field_dangle.cpp erased_field_dangle.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_field_dangle.t.exe)
+  (action (run ./erased_field_dangle.t.exe))))
+
+(subdir erased_multi_index
+ (rule
+  (targets erased_multi_index.t.exe)
+  (deps ErasedMultiIndex.vo erased_multi_index.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_multi_index.t.exe erased_multi_index.cpp erased_multi_index.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_multi_index.t.exe)
+  (action (run ./erased_multi_index.t.exe))))
+
 (subdir inductive_in_module
  (rule
   (targets inductive_in_module.t.exe)
@@ -5838,3 +5860,58 @@
   (alias runtest)
   (deps loopify_nested_calls.t.exe)
   (action (run ./loopify_nested_calls.t.exe))))
+
+(subdir nested_type_scope
+ (rule
+  (targets nested_type_scope.t.exe)
+  (deps NestedTypeScope.vo nested_type_scope.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_type_scope.t.exe NestedTypeScope.cpp nested_type_scope.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_type_scope.t.exe)
+  (action (run ./nested_type_scope.t.exe))))
+
+(subdir pair_deref_value
+ (rule
+  (targets pair_deref_value.t.exe)
+  (deps PairDerefValue.vo pair_deref_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_deref_value.t.exe PairDerefValue.cpp pair_deref_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_deref_value.t.exe)
+  (action (run ./pair_deref_value.t.exe))))
+
+(subdir parser_any_cast
+ (rule
+  (targets parser_any_cast.t.exe)
+  (deps ParserAnyCast.vo parser_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} parser_any_cast.t.exe ParserAnyCast.cpp parser_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps parser_any_cast.t.exe)
+  (action (run ./parser_any_cast.t.exe))))
+
+(subdir sll_pair_cast
+ (rule
+  (targets sll_pair_cast.t.exe)
+  (deps SllPairCast.vo sll_pair_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sll_pair_cast.t.exe SllPairCast.cpp sll_pair_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sll_pair_cast.t.exe)
+  (action (run ./sll_pair_cast.t.exe))))
+
+(subdir sll_pair_cast_deque
+ (rule
+  (targets sll_pair_cast_deque.t.exe)
+  (deps SllPairCastDeque.vo sll_pair_cast_deque.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sll_pair_cast_deque.t.exe SllPairCastDeque.cpp sll_pair_cast_deque.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sll_pair_cast_deque.t.exe)
+  (action (run ./sll_pair_cast_deque.t.exe))))
