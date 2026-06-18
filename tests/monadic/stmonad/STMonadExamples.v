@@ -114,8 +114,8 @@ Section NatExampleTrees.
 
 
   (* source: https://wiki.haskell.org/Monad/ST *)
-  Definition fibST (n : nat) : itree E0 nat :=
-    let fix fibST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+  Definition fib_ST (n : nat) : itree E0 nat :=
+    let fix fib_ST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
       match n with
       | 0 => @readSTRef _ _ _ _ _ _ idx_x x
       | Datatypes.S n =>
@@ -123,16 +123,16 @@ Section NatExampleTrees.
           y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
           @writeSTRef _ _ _ _ _ _ idx_x x y';;
           @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
-          fibST' n x y idx_x idx_y
+          fib_ST' n x y idx_x idx_y
       end in
     if (Nat.leb n 2)
     then Ret n
     else
       x <- newSTRef zero 0;;
       y <- newSTRef (suc zero) 1;;
-      fibST' n x y zero (suc zero).
+      fib_ST' n x y zero (suc zero).
 
-  Definition fibFun (n : nat) : nat :=
+  Definition fib_fun (n : nat) : nat :=
     let fix fib' (n : nat) :=
       match n with
       | 0 => 0

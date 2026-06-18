@@ -100,19 +100,19 @@ int main() {
               << " PASSED" << std::endl;
   }
 
-  // Test 8: fibST 5 returns 5
+  // Test 8: fib_ST 5 returns 5
   {
-    auto result = STMonadTests::fibST<STMonadTests::nat_stref, STMonadTests::nat_idx>(5);
+    auto result = STMonadTests::fib_ST<STMonadTests::nat_stref, STMonadTests::nat_idx>(5);
     ASSERT(result == 5);
     std::cout << "Test 8 (fibSt 5): " << result
               << " PASSED" << std::endl;
   }
 
-  // Test 9: fibFun 5 returns 5
+  // Test 9: fib_fun 5 returns 5
   {
-    auto result = STMonadTests::fibFun(5);
+    auto result = STMonadTests::fib_fun(5);
     ASSERT(result == 5);
-    std::cout << "Test 9 (fibFun 5): " << result
+    std::cout << "Test 9 (fib_fun 5): " << result
               << " PASSED" << std::endl;
   }
 

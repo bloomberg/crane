@@ -369,7 +369,7 @@ struct STMonadTests {
     return std::make_pair(std::make_pair(elem, lst.length()), lst);
   }
 
-  template <typename _tcI0, typename _tcI1> static uint64_t fibST(uint64_t n) {
+  template <typename _tcI0, typename _tcI1> static uint64_t fib_ST(uint64_t n) {
     if (n <= UINT64_C(2)) {
       return n;
     } else {
@@ -377,9 +377,9 @@ struct STMonadTests {
       x = UINT64_C(0);
       uint64_t y;
       y = UINT64_C(1);
-      auto fibST__impl = [](auto &_self_fibST_, uint64_t n0, uint64_t x0,
-                            uint64_t y0, uint64_t idx_x,
-                            uint64_t idx_y) -> uint64_t {
+      auto fib_ST__impl = [](auto &_self_fib_ST_, uint64_t n0, uint64_t x0,
+                             uint64_t y0, uint64_t idx_x,
+                             uint64_t idx_y) -> uint64_t {
         if (n0 <= 0) {
           return x0;
         } else {
@@ -388,18 +388,18 @@ struct STMonadTests {
           uint64_t y_ = y0;
           x0 = y_;
           y0 = (x_ + y_);
-          return _self_fibST_(_self_fibST_, n1, x0, y0, idx_x, idx_y);
+          return _self_fib_ST_(_self_fib_ST_, n1, x0, y0, idx_x, idx_y);
         }
       };
-      auto fibST_ = [&](uint64_t n0, uint64_t x0, uint64_t y0, uint64_t idx_x,
-                        uint64_t idx_y) -> uint64_t {
-        return fibST__impl(fibST__impl, n0, x0, y0, idx_x, idx_y);
+      auto fib_ST_ = [&](uint64_t n0, uint64_t x0, uint64_t y0, uint64_t idx_x,
+                         uint64_t idx_y) -> uint64_t {
+        return fib_ST__impl(fib_ST__impl, n0, x0, y0, idx_x, idx_y);
       };
-      return fibST_(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+      return fib_ST_(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
     }
   }
 
-  static uint64_t fibFun(uint64_t n);
+  static uint64_t fib_fun(uint64_t n);
 
   template <typename T1> static T1 list_hd(const T1 &_x0, const List<T1> &_x1) {
     return _x1.hd(_x0);

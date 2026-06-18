@@ -53,8 +53,8 @@ Module STMonadTests.
 
   Definition array_simp_fixed_init := Eval unfold array_simp_fixed_init in (@array_simp_fixed_init nat unit Nat.le).
   Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le).
-  Definition fibST := Eval unfold fibST in (@fibST nat unit Nat.le).
-  Definition fibFun := Eval unfold fibFun in fibFun.
+  Definition fib_ST := Eval unfold fib_ST in (@fib_ST nat unit Nat.le).
+  Definition fib_fun := Eval unfold fib_fun in fib_fun.
   Definition list_hd := List.hd.
   Definition list_tl := List.tl.
   Definition new_and_read_both_bool := Eval unfold new_and_read_both_bool in (@new_and_read_both_bool nat unit Nat.le).

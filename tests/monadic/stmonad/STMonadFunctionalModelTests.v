@@ -46,7 +46,7 @@ Local Open Scope monad_scope.
 From Corelib Require Derive.
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
-Section DeriveProofs.
+Section NatProgramProofs.
 
 
   Let T := nat.
@@ -251,5 +251,15 @@ Section DeriveProofs.
     = Ret [1;2;3;4;5;6;7;8;9].
   Proof using Type. lazy. reflexivity. Qed.
 
+  Lemma fib_ST_eq_fib_fun : forall (n : nat),
+      Ret (fib_fun n) ≈ runST (S := S) (fun S => fib_ST n).
+  Proof.
+    (* TODO: finish this proof! Do not edit the specification! *)
+  Abort.
 
-End DeriveProofs.
+
+
+End NatProgramProofs.
+
+
+

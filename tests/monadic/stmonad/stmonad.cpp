@@ -1,6 +1,6 @@
 #include "stmonad.h"
 
-uint64_t STMonadTests::fibFun(uint64_t n) {
+uint64_t STMonadTests::fib_fun(uint64_t n) {
   if (n <= 0) {
     return UINT64_C(0);
   } else {
@@ -9,7 +9,7 @@ uint64_t STMonadTests::fibFun(uint64_t n) {
       return UINT64_C(1);
     } else {
       uint64_t m = m0 - 1;
-      return (fibFun(m0) + fibFun(m));
+      return (fib_fun(m0) + fib_fun(m));
     }
   }
 }
