@@ -42,3 +42,7 @@ Require Crane.Mapping.Std.
 Require Crane.Mapping.NatIntStd.
 
 Crane Extraction "mutual_mod" test_even_len test_odd_len.
+
+(* OCaml extraction for differential testing *)
+From Stdlib Require Extraction ExtrOcamlBasic ExtrOcamlNatInt.
+Extraction "mutual_mod_ocaml.ml" test_even_len test_odd_len.
