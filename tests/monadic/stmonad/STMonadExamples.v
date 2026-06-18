@@ -1,4 +1,4 @@
-From Crane Require Import Monads.STMonad.   
+From Crane Require Import Monads.STMonad Monads.ITree.   
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -14,7 +14,6 @@ From Stdlib Require Import
   Basics
 .
 
-From Crane Require Import Monads.ITree.
 From ExtLib Require Import
   CmpDec
   Data.Bool
@@ -41,11 +40,13 @@ From ITree Require Import
   ITreeFacts
 .
 
+
 Import Monads.
 Import ListNotations.
 Import ProperNotations.
 Local Open Scope monad_scope.
 Local Open Scope string_scope.
+
 
 Section NatExampleTrees.
 
@@ -58,9 +59,10 @@ Section NatExampleTrees.
   Let E0 := (STEvent T S V) +' exceptE Err.
 
 
+  (* TODO: autogenerate successive indices here? *)
   Definition new_and_read_both_nat : itree E0 (nat * nat) :=
       r1 <- newSTRef zero 5 ;;
-      r2 <- newSTRef (suc zero) 6 ;; (* TODO: autogenerate successive indices? *)
+      r2 <- newSTRef (suc zero) 6 ;; 
       x1 <- readSTRef r1 ;;
       x2 <- readSTRef r2 ;;
       Ret (x1, x2).
@@ -90,7 +92,7 @@ Section NatExampleTrees.
     writeSTRef w a.
 
   (* "swap" function from "Lazy Functional State Threads", by John Launchbury and Simon L Peyton Jones. *)
-  (* TODO: would be good for indices here to be inferrable. *)
+  (* TODO: would be good for indices here (and everywhere in the file) to be inferrable. *)
   Fail Definition swap (v w : STRef S nat) : itree E0 unit :=
     a <- readSTRef v;;
     b <- readSTRef w;;
@@ -112,7 +114,6 @@ Section NatExampleTrees.
 
 
   (* source: https://wiki.haskell.org/Monad/ST *)
-  (* TODO: should not have to manually place indices as arguments. *)
   Definition fibST (n : nat) : itree E0 nat :=
     let fix fibST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
       match n with
@@ -165,7 +166,7 @@ Section NatExampleTrees.
       newXs <- getElems arr;;
       Ret newXs.
 
-    Definition forEachWith {A B}
+    Definition for_each_with {A B}
        {E' : Type -> Type}
       `{STEvent T S V -< E'}
       `{exceptE Err -< E'}
@@ -181,7 +182,7 @@ Section NatExampleTrees.
       (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) (pivotIndex : T) : itree E' T :=
       pivotValue <- @readArray _ _ _ _ _ _ arr_idx arr pivotIndex;;
       swap_arr arr arr_idx pivotIndex right;;
-      storeIndex <- forEachWith (range left (sub right (suc zero))) left (fun storeIndex i =>
+      storeIndex <- for_each_with (range left (sub right (suc zero))) left (fun storeIndex i =>
           val <- @readArray _ _ _ _ _ _ arr_idx arr i;;
           if (Nat.leb val pivotValue)
               then swap_arr arr arr_idx i storeIndex;;
@@ -191,7 +192,16 @@ Section NatExampleTrees.
       Ret storeIndex.
 
 
-    (* NOTE: could define totally with equations, using a measure of the distance between pivots. *)
+    (* For quicksort, we found it easiest to use the `rec` (internally, a call
+       to `mrec`) function from the ITree library, which uses "call" events to
+       represent recursive calls, and then interprets them in a context with the body (ala fixpoint combinators)
+       to produce a tree representing the recursive behavior.
+       It might seem possible to define this recursive function directly using CoFixpoint,
+       replacing the `call` below with Tau wrapping the recursive call, but this is not possible because
+       we have to sequence *two* recursive calls here, and it is not possible to
+       to define this admissably for Rocq's syntactic guard condition. If we define quicksort with
+       two recursive calls, we cannot admissably place `Tau (qsort ...<args>...)` on the left side of a bind.
+     *)
     Definition qsort_body 
       (args : (STArray T S nat * T * T * T))
       : itree ((callE (STArray T S nat * T * T * T) unit) +' E0) unit :=
@@ -209,9 +219,8 @@ Section NatExampleTrees.
     Definition qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
       rec qsort_body (arr, arr_idx, left, right).
 
-
-      (* arr <- newListArray zero zero (suc (suc (suc zero))) [5;4;3;2];; *)
-    Definition sortList (xs : list nat) : itree E0 (list nat) :=
+    
+    Definition sort_list (xs : list nat) : itree E0 (list nat) :=
       let lastIndex := fromNat (length xs - 1) in 
       arr <- newListArray zero zero lastIndex xs;;
       qsort arr zero zero lastIndex;;

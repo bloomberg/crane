@@ -308,14 +308,51 @@ Section DeriveProofs.
     reflexivity.
     Defined.
 
+  Derive (sort_list12 : itree (exceptE Err) (list nat)) in
+    ( runST (S := S) (fun S => sortList [1;2])
+        ≈
+      sort_list12
+    ) as tree_simplification6.
+  Proof.
+    unfold runST, sort_list12.
+    etransitivity.
+    { eapply eutt_fmap.
+      eapply (eutt_eq_bind_interp_st ltu ltac:(refine_prod)).
+      {
+        unfold newListArray. rewrite interp_st_trigger. cbn. reflexivity.
+      }
+      intros ? ?.
+      eapply (eutt_eq_bind_interp_st ltu ltac:(refine_prod)).
+      {
+        unfold qsort.
+        unfold rec.
+        unfold mrec.
+        give_up. (* TODO: finish this part *)
+      }
+      intros ? ?.
+      eapply (eutt_eq_bind_interp_st ltu ltac:(refine_prod)).
+      {
+        unfold getElems. rewrite interp_st_trigger. cbn. reflexivity.
+      }
+      intros ? ?.
+      rewrite interp_st_Ret. reflexivity.
+    }
+    (* NOTE: simplifies and rewrites the result. *)
+    setoid_rewrite map_bind.
+    repeat setoid_rewrite bind_Ret_l.
+    simpl.
+    reflexivity.
+    Abort.
+
+  
 
   Lemma sort_list2154 :
-    burn 10000 (runST (S := S) (fun S0 => sortList (S := S0) [2;1;5;4]))
+    burn 10000 (runST (S := S) (fun S0 => sort_list (S := S0) [2;1;5;4]))
     = Ret [1;2;4;5].
   Proof using Type. lazy. reflexivity. Qed.
 
   Lemma sort_list__long :
-    burn 10000 (runST (S := S) (fun S0 => sortList (S := S0) [8;4;6;9;7;3;1;2;5]))
+    burn 10000 (runST (S := S) (fun S0 => sort_list (S := S0) [8;4;6;9;7;3;1;2;5]))
     = Ret [1;2;3;4;5;6;7;8;9].
   Proof using Type. lazy. reflexivity. Qed.
 
