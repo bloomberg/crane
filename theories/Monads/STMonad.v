@@ -384,7 +384,7 @@ Section Translation.
     match e with
     | NewSTRef _ _ _ idx v =>
         let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
-        in Ret (add (n, idx) v mem, mkSTRef S (V idx) idx)
+        in Ret (add (n, idx) v mem, mkSTRef S (V idx) n)
     | ReadSTRef _ _ _ idx s =>
         match lookup (STRefToIx S (V idx) s, idx) mem with
         | Some v => Ret (mem, v)
@@ -465,7 +465,7 @@ Section Translation.
   
 End Translation.
 
-Definition runSt {A : Type}
+Definition runST {A : Type}
   {T S : Type} {ltu : T -> T -> Prop}
   `{Ix T ltu}
   `{Ix_Correct T}
@@ -501,4 +501,10 @@ Crane Extract Inlined Constant newArray =>
 "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1, %a3)".
 Crane Extract Inlined Constant readArray => "(*%a1)[%a2]".
 Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
+
+(* TODO: do we need remove_cvref_t below? *)
+Crane Extract Inlined Constant newListArray =>
+  "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (std::holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { auto& [_a, _l] = std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v_mut()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }".
+Crane Extract Inlined Constant getElems =>
+  "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()".
 

@@ -110,11 +110,41 @@ Section NatExampleTrees.
     elem <- @readArray E0 T _ _ _ _ _ arr (suc (zero));;
     Ret elem. 
   
-  Definition array_simp_list : itree E0 nat :=
-    arr <- newListArray zero zero (suc (suc (suc zero))) [4;2;3;1];;
-    elem <- @readArray E0 T _ _ _ _ zero arr (suc zero);;
-    Ret elem. 
+  Definition array_simp_list : itree E0 (nat * nat * list nat) :=
+    arr <- newListArray zero zero (suc (suc (suc zero))) [5;4;3;2];;
+    elem <- @readArray _ _ _ _ _ _ zero arr zero;;
+    lst <- @getElems _ _ _ _ _ _ zero arr;;
+    Ret (elem, length lst, lst). 
 
+
+  (* source: https://wiki.haskell.org/Monad/ST *)
+  (* TODO: should not have to manually place indices as arguments. *)
+  Definition fibST (n : nat) : itree E0 nat :=
+    let fix fibST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+      match n with
+      | 0 => @readSTRef _ _ _ _ _ _ idx_x x
+      | Datatypes.S n =>
+          x' <- @readSTRef _ _ _  _ _ _ idx_x x;;
+          y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
+          @writeSTRef _ _ _ _ _ _ idx_x x y';;
+          @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
+          fibST' n x y idx_x idx_y
+      end in
+    if (Nat.leb n 2)
+    then Ret n
+    else
+      x <- newSTRef zero 0;;
+      y <- newSTRef (suc zero) 1;;
+      fibST' n x y zero (suc zero).
+
+  Definition fibFun (n : nat) : nat :=
+    let fix fib' (n : nat) :=
+      match n with
+      | 0 => 0
+      | 1 => 1
+      | Datatypes.S (Datatypes.S m as m0) => fib' m0 + fib' m
+      end in
+    fib' n.
 
   Section QSort. 
 
@@ -142,6 +172,8 @@ Section NatExampleTrees.
 
 
   (* TODO: define with equations. *)
+  (* Measure will be distance of the two pivots. *)
+  (* Try cofix! *)
   Fail Fixpoint qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 (STArray T S nat) :=
     let leftn := toNat left in
     let rightn := toNat right in 
@@ -192,7 +224,23 @@ Section BoolExampleTrees.
 
 End BoolExampleTrees.
 
+Definition list_hd {A} := @List.hd A.
+Definition list_tl {A} := @List.tl A.
 
 Require Import Crane.Mapping.NatIntStd.
-Crane Extraction "stmonad" STMonadTests new_and_read_both_nat tree_simp_nat tree_simp_another_nat array_simp_fixed_init new_and_read_both_bool tree_simp_bool.
 
+Set Crane Loopify.
+
+Crane Extraction "stmonad"
+  STMonadTests
+  new_and_read_both_nat
+  tree_simp_nat
+  tree_simp_another_nat
+  array_simp_fixed_init
+  list_hd
+  list_tl
+  array_simp_list
+  new_and_read_both_bool
+  tree_simp_bool
+  fibST
+  fibFun.

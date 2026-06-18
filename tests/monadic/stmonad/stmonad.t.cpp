@@ -81,6 +81,41 @@ int main() {
               << " PASSED" << std::endl;
   }
 
+  // Test 7: array_simp_list returns 5,4
+  {
+    auto result = array_simp_list<STMonadTests::nat_stref, STMonadTests::nat_idx, void>();
+    ASSERT(result.first.first == 5);
+    ASSERT(result.first.second == 4);
+    ASSERT(result.second.hd(0) == 5);
+    ASSERT(result.second.tl().hd(0) == 4);
+    ASSERT(result.second.tl().tl().hd(0) == 3);
+    ASSERT(result.second.tl().tl().tl().hd(0) == 2);
+    std::cout << "Test 7 (array_simp_list): " 
+              << result.first.first  << "," 
+              << result.first.second << ", ["
+              << result.second.hd(0) << ","  
+              << result.second.tl().hd(0) << ","  
+              << result.second.tl().tl().hd(0) << ","  
+              << result.second.tl().tl().tl().hd(0) << "]"  
+              << " PASSED" << std::endl;
+  }
+
+  // Test 8: fibST 5 returns 5
+  {
+    auto result = fibST<STMonadTests::nat_stref, STMonadTests::nat_idx, uint64_t>(5);
+    ASSERT(result == 5);
+    std::cout << "Test 8 (fibSt 5): " << result
+              << " PASSED" << std::endl;
+  }
+
+  // Test 9: fibFun 5 returns 5
+  {
+    auto result = fibFun(5);
+    ASSERT(result == 5);
+    std::cout << "Test 9 (fibFun 5): " << result
+              << " PASSED" << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll stmonad tests passed!" << std::endl;
   } else {
@@ -88,4 +123,3 @@ int main() {
   }
   return testStatus;
 }
-
