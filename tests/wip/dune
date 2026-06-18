@@ -113,17 +113,6 @@
   (deps local_fixpoint.t.exe)
   (action (run ./local_fixpoint.t.exe))))
 
-(subdir deque_element_cast
- (rule
-  (targets deque_element_cast.t.exe)
-  (deps DequeElementCast.vo deque_element_cast.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_element_cast.t.exe DequeElementCast.cpp deque_element_cast.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_element_cast.t.exe)
-  (action (run ./deque_element_cast.t.exe))))
-
 (subdir type_args_extraction
  (rule
   (targets type_args_extraction.t.exe)

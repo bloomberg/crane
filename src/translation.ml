@@ -5662,7 +5662,18 @@ and eta_fun env f args =
           | None -> (ml_arg, None) )
         | _ -> (ml_arg, None)
       in
-      let expr = gen_expr env ml_arg in
+      let arg_expected_ty =
+        match ml_arg with
+        | MLmagic _ ->
+          (match List.nth_opt fn_param_ml_tys i with
+           | Some ml_ty ->
+             let tvars = get_current_type_vars () in
+             let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+             if is_erased_type cpp_ty then None else Some cpp_ty
+           | None -> None)
+        | _ -> None
+      in
+      let expr = gen_expr ?expected_ty:arg_expected_ty env ml_arg in
       (* Annotate the outer lambda with the explicit return type computed
          during the split, so that C++ concept checking sees the concrete
          [std::function<...>] return type instead of the raw closure type. *)
@@ -6216,10 +6227,28 @@ and eta_fun env f args =
           | _ -> true )
         args
     in
-    let args = List.map (fun x ->
+    let callee_param_tys =
+      let rec extract_params = function
+        | Miniml.Tarr (t, rest) ->
+          (match resolve_tmeta t with Miniml.Tdummy _ -> extract_params rest | t -> t :: extract_params rest)
+        | Miniml.Tmeta {contents = Some t} -> extract_params t
+        | _ -> []
+      in
+      match infer_ml_body_type f with Some fty -> extract_params fty | None -> []
+    in
+    let args = List.mapi (fun i x ->
       match x with
       | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
         wrap_void_call_as_value (gen_expr env x)
+      | MLmagic _ ->
+        let expected = match List.nth_opt callee_param_tys i with
+          | Some ml_ty ->
+            let tvars = get_current_type_vars () in
+            let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+            if is_erased_type cpp_ty then None else Some cpp_ty
+          | None -> None
+        in
+        gen_expr ?expected_ty:expected env x
       | _ -> gen_expr env x) args in
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
@@ -6954,6 +6983,25 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | None -> typ )
     | _ -> typ
   in
+  (* When the type is still unresolved (Tunknown / Tdummy / non-Tglob) but the
+     scrutinee is MLmagic (erased at runtime), recover the inductive type from
+     the first branch's constructor pattern.  This handles dependent fields
+     (e.g. sigT's second projection) stored as std::any. *)
+  let scrut_is_mlmagic_case = match t with MLmagic _ -> true | _ -> false in
+  let typ =
+    match typ with
+    | Miniml.Tglob _ -> typ
+    | _ when scrut_is_mlmagic_case ->
+      ( try
+          let _, _, pat0, _ = pv.(0) in
+          match pat0 with
+          | Pusual (GlobRef.ConstructRef (ip, _))
+          | Pcons (GlobRef.ConstructRef (ip, _), _) ->
+            Miniml.Tglob (GlobRef.IndRef ip, [], [])
+          | _ -> typ
+        with _ -> typ )
+    | _ -> typ
+  in
   (* Check if this is an enum inductive type *)
   let is_enum =
     match typ with
@@ -7067,6 +7115,17 @@ and gen_cpp_case (typ : ml_type) t env pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
     let scrut_expr = gen_expr env t in
     tctx.move_dead_after <- saved_dead_visit;
+    (* When the scrutinee is MLmagic (runtime std::any) and we recovered a
+       concrete inductive type from branch patterns, wrap with any_cast. *)
+    let scrut_expr =
+      if scrut_is_mlmagic_case then
+        let tvars = get_current_type_vars () in
+        let cpp_ty = convert_ml_type_to_cpp_type env tvars typ in
+        if not (is_erased_type cpp_ty) then
+          CPPany_cast (cpp_ty, scrut_expr)
+        else scrut_expr
+      else scrut_expr
+    in
     (* Methodification rewrites the receiver parameter to [this] (or [*this]
        when the value is needed).  Ownership analysis may still mark the
        original parameter as owned, but a const method cannot decompose the
