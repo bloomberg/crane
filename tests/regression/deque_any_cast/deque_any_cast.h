@@ -78,13 +78,13 @@ struct DequeAnyCast {
       std::any_cast<uint64_t>(mfold<nat_monoid>([](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(std::any(UINT64_C(1)), [](auto _a0, auto _a1) {
+      }(UINT64_C(1), [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(std::any(UINT64_C(2)), [](auto _a0, auto _a1) {
+      }(UINT64_C(2), [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(std::any(UINT64_C(3)), std::deque<std::any>{})))));
+        }(UINT64_C(3), std::deque<uint64_t>{})))));
 };
 
 #endif // INCLUDED_DEQUE_ANY_CAST

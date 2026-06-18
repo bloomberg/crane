@@ -69,17 +69,6 @@
   (deps deque_deep_tree_stackoverflow.t.exe)
   (action (run ./deque_deep_tree_stackoverflow.t.exe))))
 
-(subdir deque_any_cast
- (rule
-  (targets deque_any_cast.t.exe)
-  (deps DequeAnyCast.vo deque_any_cast.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast.t.exe deque_any_cast.cpp deque_any_cast.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_any_cast.t.exe)
-  (action (run ./deque_any_cast.t.exe))))
-
 (subdir concept_param_mismatch
  (rule
   (targets concept_param_mismatch.t.exe)
@@ -101,3 +90,14 @@
   (alias runtest)
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
+
+(subdir deque_any_cast_element
+ (rule
+  (targets deque_any_cast_element.t.exe)
+  (deps DequeAnyCastElement.vo deque_any_cast_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast_element.t.exe DequeAnyCastElement.cpp deque_any_cast_element.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_any_cast_element.t.exe)
+  (action (run ./deque_any_cast_element.t.exe))))
