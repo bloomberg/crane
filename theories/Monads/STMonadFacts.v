@@ -329,3 +329,71 @@ Section STLookupErr.
 
 
 End STLookupErr.
+
+
+Section EquationalTheory.
+  
+  Context {E : Type -> Type}.
+
+  Lemma eutt_fmap {R U : Type} {t1 t2 : itree E R} {f : R -> U} :
+    t1 ≈ t2 ->
+    fmap f t1 ≈ fmap f t2.
+    Proof using Type.
+      intros t_eq. apply eqit_map with (RR := eq).
+      + intros.
+        f_equal. assumption.
+      + apply t_eq.
+    Qed.
+
+  Lemma eutt_eq_bind {U R} (t : itree E U) (k1 k2: U -> itree E R):
+    (forall u, (k1 u) ≈ (k2 u)) ->
+    (ITree.bind t k1) ≈ (ITree.bind t k2).
+  Proof using Type. apply eutt_eq_bind. Qed.
+
+  Lemma eutt_eq_bind' {U R}
+    (k1 k2: U -> itree E R)
+    (t1 t2: itree E U):
+    t1 ≈ t2 ->
+    (forall u, (k1 u) ≈ (k2 u)) ->
+    (ITree.bind t1 k1) ≈ (ITree.bind t2 k2).
+  Proof. apply eutt_eq_bind'. Qed.
+
+
+Theorem bind_Ret_l : forall A B (f : A -> itree E B) (x : A), bind (Ret x) f ≈ f x.
+  setoid_rewrite Ret_is_ret.
+  setoid_rewrite Monad.bind_ret_l.
+  reflexivity.
+  Qed.
+          
+
+Theorem bind_Ret_r : forall A (x : itree E A), bind x (fun y => Ret y) ≈ x.
+  intros A x. setoid_rewrite Monad.bind_ret_r. reflexivity. Qed.
+
+End EquationalTheory.
+
+
+Ltac refine_prod :=
+  (refine (fun '(a,b) => _)).
+
+Ltac refine_arg :=
+  (refine (fun arg => _)).
+
+Ltac refine_arg2 :=
+  (refine (fun arg1 arg2 => _)).
+
+
+Ltac monad_simpl_inner :=
+  repeat (repeat setoid_rewrite Monad.bind_bind;
+          repeat setoid_rewrite bind_Ret_l;
+          repeat setoid_rewrite bind_Ret_r).
+
+
+
+(* Useful for lifting ITree's back to a monad instance. *)
+Ltac change_to_monad :=
+  change (@ITree.bind ?E) with (@Monad.bind (itree E) _);
+  try setoid_rewrite Ret_is_ret.
+
+Ltac bind_split_refl_intros split_tactic :=
+  split_tactic ;[ reflexivity | intros]
+  ;cbv beta match.
