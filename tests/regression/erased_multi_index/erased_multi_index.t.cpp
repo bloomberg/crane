@@ -3,13 +3,14 @@
 
 #include "erased_multi_index.h"
 #include <cassert>
+#include <cinttypes>
 #include <cstdio>
 
 int main() {
-    printf("test_tagged = %llu\n", ErasedMultiIndex::test_tagged);
+    printf("test_tagged = %" PRIu64 "\n", ErasedMultiIndex::test_tagged);
     assert(ErasedMultiIndex::test_tagged == 42);
 
-    printf("test_hlist = %llu\n", ErasedMultiIndex::test_hlist);
+    printf("test_hlist = %" PRIu64 "\n", ErasedMultiIndex::test_hlist);
     assert(ErasedMultiIndex::test_hlist == 3);
 
     printf("All erased_multi_index tests passed!\n");
