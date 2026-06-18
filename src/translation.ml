@@ -3506,7 +3506,18 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           | None -> raw_tys)
         | _ -> raw_tys
       in
-      build_template_params env [] tys
+      let temps = build_template_params env [] tys in
+      (* When all type args are erased and promoted_var_map is active, use
+         concrete promoted types so elements don't get wrapped in std::any. *)
+      if List.for_all is_erased_type temps && tctx.promoted_var_map <> [] then
+        let promoted_tys =
+          List.filter_map (fun (_, cpp_ty) ->
+            if is_erased_type cpp_ty then None else Some cpp_ty
+          ) tctx.promoted_var_map
+        in
+        if List.length promoted_tys = List.length tys then promoted_tys
+        else temps
+      else temps
     | _ -> []
   in
   (* When a pair/tuple constructor has at least one erased (Tany) type parameter,
@@ -3612,7 +3623,6 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
          extract the type args from there. *)
       let temps =
         if temps = [] && tys <> []
-           && List.exists (function Miniml.Tmeta {contents = None} -> true | _ -> false) tys
         then
           let from_ret =
             match tctx.current_cpp_return_type with
@@ -3628,14 +3638,29 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           in
           if from_ret <> [] then from_ret
           else
-            (* Fallback: try expected_ml_type_for_arg (set by enclosing ctor/let) *)
-            match tctx.expected_ml_type_for_arg with
-            | Some (Miniml.Tglob (exp_r, exp_tys, _))
-              when Names.GlobRef.CanOrd.equal exp_r n
-                   && List.length exp_tys = List.length tys ->
-              let exp_temps = build_template_params env [] exp_tys in
-              filter_erased_type_args exp_temps
-            | _ -> temps
+            let from_expected =
+              match tctx.expected_ml_type_for_arg with
+              | Some (Miniml.Tglob (exp_r, exp_tys, _))
+                when Names.GlobRef.CanOrd.equal exp_r n
+                     && List.length exp_tys = List.length tys ->
+                let exp_temps = build_template_params env [] exp_tys in
+                let r = filter_erased_type_args exp_temps in
+                if r <> [] && not (List.exists (function Tvar (_, None) -> true | _ -> false) r)
+                then r
+                else []
+              | _ -> []
+            in
+            if from_expected <> [] then from_expected
+            else if tctx.promoted_var_map <> [] then
+              let promoted_tys =
+                List.filter_map (fun (_, cpp_ty) ->
+                  if is_erased_type cpp_ty then None else Some cpp_ty
+                ) tctx.promoted_var_map
+              in
+              if List.length promoted_tys = List.length tys then
+                promoted_tys
+              else temps
+            else temps
         else temps
       in
       app (mk_cppglob r temps)
@@ -5589,6 +5614,27 @@ and eta_fun env f args =
                 None
             | _ -> None )
     in
+    (* When the function is typeclass-parameterized and call-site args include
+       concrete instances, compute a promoted-var→concrete-type map so that
+       custom constructors (nil/cons) inside arg expressions use concrete
+       element types instead of std::any.  E.g., [mfold nat_monoid [1;2;3]]
+       resolves m_carrier → uint64_t for the list construction. *)
+    let instance_promoted_map =
+      List.concat_map (fun tc_arg ->
+        match tc_arg with
+        | MLglob (r, _) ->
+          List.filter_map (fun (var_name, ml_ty) ->
+            let tvars = get_current_type_vars () in
+            let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+            if is_erased_type cpp_ty then None
+            else Some (var_name, cpp_ty)
+          ) (Table.get_instance_promoted_types r)
+        | _ -> []
+      ) typeclass_ml_args
+    in
+    let saved_promoted_map = tctx.promoted_var_map in
+    if instance_promoted_map <> [] then
+      tctx.promoted_var_map <- instance_promoted_map @ tctx.promoted_var_map;
     let args = List.mapi (fun i ml_arg ->
       (* {b Lambda arity limiting.}  When a lambda argument has more binders
          than the callee's parameter type has top-level arrows, the extra
@@ -5673,7 +5719,14 @@ and eta_fun env f args =
            | None -> None)
         | _ -> None
       in
+      let saved_expected_for_arg = tctx.expected_ml_type_for_arg in
+      ( match List.nth_opt fn_param_ml_tys i with
+        | Some ml_ty ->
+          if not (ml_type_contains_erased ml_ty) then
+            tctx.expected_ml_type_for_arg <- Some ml_ty
+        | _ -> () );
       let expr = gen_expr ?expected_ty:arg_expected_ty env ml_arg in
+      tctx.expected_ml_type_for_arg <- saved_expected_for_arg;
       (* Annotate the outer lambda with the explicit return type computed
          during the split, so that C++ concept checking sees the concrete
          [std::function<...>] return type instead of the raw closure type. *)
@@ -5795,6 +5848,7 @@ and eta_fun env f args =
         CPPlambda (List.rev params, None, body, false)
       | _ -> as_value ()
     ) regular_ml_args in
+    tctx.promoted_var_map <- saved_promoted_map;
     let ty = fn_ml_ty_subst in
     let ty = convert_ml_type_to_cpp_type env tvars ty in
     (* Combine: instance types first, then regular type args. If any regular
