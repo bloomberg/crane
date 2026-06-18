@@ -5915,3 +5915,14 @@
   (alias runtest)
   (deps sll_pair_cast_deque.t.exe)
   (action (run ./sll_pair_cast_deque.t.exe))))
+
+(subdir deque_element_cast
+ (rule
+  (targets deque_element_cast.t.exe)
+  (deps DequeElementCast.vo deque_element_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_element_cast.t.exe DequeElementCast.cpp deque_element_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_element_cast.t.exe)
+  (action (run ./deque_element_cast.t.exe))))
