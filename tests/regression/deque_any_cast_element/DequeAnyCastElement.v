@@ -45,6 +45,5 @@ Definition get_length (r : { t : tag & output_ty t }) : nat :=
 
 Definition test_result : nat := get_length (apply_entry my_action).
 
-Set Crane Extraction Output Directory "tests/wip/deque_any_cast_element".
 Set Crane Loopify.
-Crane Separate Extraction test_result.
+Crane Extraction "deque_any_cast_element" test_result.

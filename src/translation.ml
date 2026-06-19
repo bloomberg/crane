@@ -4,6 +4,8 @@
 
 (** MiniML to MiniCpp translation: converts ML-style AST to C++-oriented AST. *)
 
+module IntMap = Map.Make(Int)
+
 open Common
 open Miniml
 open Minicpp
@@ -337,6 +339,27 @@ type translation_ctx = {
      Reset per-file via clear_seen_lifted_refs. *)
   mutable seen_lifted_refs : GlobRef.t list;
   mutable last_pair_accessor_any_cast : bool;
+  (** When true, constructor expressions wrap each non-recursive field in
+      [std::any] and force template args to [Tany].  Active while generating
+      arguments for a call whose parameter type is erased to [std::any],
+      so the constructed value's runtime type matches what the erased
+      function body expects from [any_cast]. *)
+  mutable wrap_for_any_param : bool;
+  (** De Bruijn indices of pattern variables whose C++ struct field is
+      stored as [std::any] due to type erasure.  Populated by
+      {!populate_erased_field_env} during pattern-match branch setup;
+      consulted by the [MLrel] and [MLmagic] handlers to emit
+      [std::any_cast] when such a variable is used at a concrete type.
+      Indices are shifted by {!push_env_types} and cleared by
+      {!reset_env_types}. *)
+  mutable cpp_erased_env : Escape.IntSet.t;
+  (** Maps de Bruijn indices of [Tvar]-typed pattern variables to the
+      concrete C++ type from the scrutinee's template arguments.
+      For example, when matching [SigT<Tag, std::function<any(any)>>],
+      the function field maps to [Tfun(\[Tany\], Tany)].  Used by
+      [eta_fun] to detect that the callee's parameters are [std::any].
+      Shifted and cleared together with {!cpp_erased_env}. *)
+  mutable cpp_erased_type_env : cpp_type IntMap.t;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -369,6 +392,9 @@ let tctx =
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
     last_pair_accessor_any_cast = false;
+    wrap_for_any_param = false;
+    cpp_erased_env = Escape.IntSet.empty;
+    cpp_erased_type_env = IntMap.empty;
   }
 
 let set_current_type_vars (tvars : Id.t list) = tctx.current_type_vars <- tvars
@@ -416,8 +442,16 @@ let take_lifted_decls () =
     new output file so identical helpers in different files are not suppressed. *)
 let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
-(** Prepend bindings to the de Bruijn environment type stack. *)
+(** Prepend bindings to the de Bruijn environment type stack.
+    Also shifts all indices in {!cpp_erased_env} and {!cpp_erased_type_env}
+    upward by [n] to account for the new bindings, keeping de Bruijn
+    references consistent. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
+  let n = List.length ids in
+  if n > 0 && not (Escape.IntSet.is_empty tctx.cpp_erased_env) then begin
+    tctx.cpp_erased_env <- Escape.IntSet.map (fun i -> i + n) tctx.cpp_erased_env;
+    tctx.cpp_erased_type_env <- IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) tctx.cpp_erased_type_env IntMap.empty
+  end;
   tctx.env_types <- ids @ tctx.env_types
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
@@ -429,8 +463,12 @@ let get_env_type_opt (i : int) : ml_type option =
        | Some (_, ty) -> Some ty
        | None -> None
 
-(** Reset the environment type stack to empty. *)
-let reset_env_types () = tctx.env_types <- []
+(** Reset the environment type stack to empty.
+    Also clears {!cpp_erased_env} and {!cpp_erased_type_env}. *)
+let reset_env_types () =
+  tctx.env_types <- [];
+  tctx.cpp_erased_env <- Escape.IntSet.empty;
+  tctx.cpp_erased_type_env <- IntMap.empty
 
 (** Resolve a chain of [Tmeta] indirections to the underlying type. *)
 let rec resolve_tmeta = function
@@ -1930,6 +1968,42 @@ let rec is_all_erased = function
   | Tglob (_, args, _) when args <> [] -> List.for_all is_all_erased args
   | _ -> false
 
+(** [extract_template_args ty] — unwrap namespace and shared_ptr wrappers
+    to extract the template arguments from the innermost [Tglob].
+    Returns [\[\]] if no [Tglob] is found.
+
+    For example, [Tnamespace(ns, Tglob(g, \[T1; T2\], _))] returns [\[T1; T2\]]. *)
+let rec extract_template_args = function
+  | Tglob (_, args, _) -> args
+  | Tnamespace (_, inner) -> extract_template_args inner
+  | Tshared_ptr inner -> extract_template_args inner
+  | _ -> []
+
+(** [erase_type_to_any ty] — recursively replace leaf types with [Tany],
+    preserving the structure of container types ([Tglob] with args) and
+    namespace wrappers.  Used to build the cast type for [any_cast] on
+    erased container fields—e.g. [deque<pair<nat, bool>>] becomes
+    [deque<any>].
+
+    Note: the variant in {!eta_fun} that preserves bare [Tglob(_,\[\],_)]
+    has intentionally different semantics and remains local. *)
+and erase_type_to_any = function
+  | Tglob (g, args, ns) when args <> [] ->
+    Tglob (g, List.map erase_type_to_any args, ns)
+  | Tnamespace (ns_g, inner) ->
+    Tnamespace (ns_g, erase_type_to_any inner)
+  | _ -> Tany
+
+(** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
+    ML AST: a bare type variable, [Tunknown], or an empty [Tmeta].  These
+    arise from type-level parameters that were erased during extraction
+    and correspond to [std::any] in the C++ representation. *)
+and is_ml_erased_ty = function
+  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+  | Miniml.Tmeta {contents = None} -> true
+  | Miniml.Tmeta {contents = Some t} -> is_ml_erased_ty t
+  | _ -> false
+
 (** Check if a C++ type is a skipped type (inline custom with empty string).
     Such types arise from [Crane Extract Skip] and represent infrastructure
     (e.g. ReSum) that should be completely erased. *)
@@ -3314,6 +3388,83 @@ let rec convert_ml_type_to_cpp_type
     @param tvars Type variables in scope (C++ typename parameters)
     @param tys   ML type arguments to convert
     @return List of C++ types, with out-of-scope Tvars marked as dummy_type *)
+
+(** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
+    [std::any].  Handles direct [Tany], erased-type constants (aliases for
+    [std::any] registered via {!Table.is_erased_type_const}), and type
+    aliases that expand to an erased type.  Used to decide whether a
+    scrutinee's template argument makes a constructor field store its
+    value as [std::any] at runtime. *)
+and resolves_to_any_type = function
+  | Tany -> true
+  | Tglob (g, [], _) when Table.is_erased_type_const g -> true
+  | Tglob (g, [], _) ->
+    (match find_type_opt g with
+     | Some ml_ty ->
+       let tvars = get_current_type_vars () in
+       resolves_to_any_type (convert_ml_type_to_cpp_type (empty_env ()) tvars ml_ty)
+     | None -> false)
+  | t when is_erased_type t -> true
+  | _ -> false
+
+(** [populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
+    ~non_erased_def_site_field_tys] populates {!cpp_erased_env} and
+    {!cpp_erased_type_env} for a pattern-match branch.  For each
+    constructor field whose definition-site type is a type variable that
+    resolves to [std::any] via the scrutinee's template arguments, marks
+    the corresponding de Bruijn index as erased and records its concrete
+    C++ type from the template arguments.
+
+    @param cname  constructor reference (to look up parameter count)
+    @param typ    ML type of the scrutinee
+    @param env    translation environment
+    @param n_pat_vars  number of pattern variables in this branch
+    @param n_fields    number of non-erased constructor fields
+    @param non_erased_def_site_field_tys  definition-site field types
+           with erased (dummy) entries filtered out *)
+and populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
+    ~non_erased_def_site_field_tys =
+  let scrut_cpp_ty =
+    let tvars = get_current_type_vars () in
+    convert_ml_type_to_cpp_type env tvars typ
+  in
+  let scrut_template_args = extract_template_args scrut_cpp_ty in
+  let num_pv = Table.get_ctor_num_param_vars cname in
+  let check_tvar k =
+    match List.nth_opt scrut_template_args (k - 1) with
+    | Some t -> resolves_to_any_type t
+    | None -> false
+  in
+  let is_field_stored_as_any field_i =
+    if num_pv = 0 then false
+    else
+      match List.nth_opt non_erased_def_site_field_tys field_i with
+      | Some (Miniml.Tvar k | Miniml.Tvar' k) -> check_tvar k
+      | Some (Miniml.Tmeta {contents = Some (Miniml.Tvar k | Miniml.Tvar' k)}) ->
+        check_tvar k
+      | _ -> false
+  in
+  List.iteri (fun field_i _ ->
+    let db_idx = n_pat_vars - field_i in
+    if is_field_stored_as_any field_i then
+      tctx.cpp_erased_env <- Escape.IntSet.add db_idx tctx.cpp_erased_env;
+    (match List.nth_opt non_erased_def_site_field_tys field_i with
+     | Some (Miniml.Tvar k | Miniml.Tvar' k) ->
+       (match List.nth_opt scrut_template_args (k - 1) with
+        | Some t -> tctx.cpp_erased_type_env <- IntMap.add db_idx t tctx.cpp_erased_type_env
+        | None -> ())
+     | _ -> ())
+  ) (List.init n_fields Fun.id)
+
+(** Save the current erased-env state for later restoration. *)
+and save_erased_env () =
+  (tctx.cpp_erased_env, tctx.cpp_erased_type_env)
+
+(** Restore erased-env state from a previously saved pair. *)
+and restore_erased_env (saved_env, saved_type_env) =
+  tctx.cpp_erased_env <- saved_env;
+  tctx.cpp_erased_type_env <- saved_type_env
+
 and build_template_params env tvars tys =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
@@ -3575,6 +3726,21 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           | _ -> result)
         | _ -> result
       in
+      let result =
+        if tctx.wrap_for_any_param then
+          let is_recursive_field =
+            match List.nth_opt field_types_for_wrap i with
+            | Some (Miniml.Tglob (field_ind, _, _)) ->
+              (match r with
+              | GlobRef.ConstructRef ((kn, mi), _) ->
+                GlobRef.CanOrd.equal field_ind (GlobRef.IndRef (kn, mi))
+              | _ -> false)
+            | _ -> false
+          in
+          if is_recursive_field then result
+          else CPPconverting_ctor (Tany, [result])
+        else result
+      in
       result) ts)
   in
   (* Helper to wrap expression in function call syntax if it has arguments *)
@@ -3661,6 +3827,11 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
                 promoted_tys
               else temps
             else temps
+        else temps
+      in
+      let temps =
+        if tctx.wrap_for_any_param && temps <> [] then
+          List.map (fun _ -> Tany) temps
         else temps
       in
       app (mk_cppglob r temps)
@@ -3862,8 +4033,15 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       && Escape.IntSet.mem i tctx.move_dead_after
       && Escape.IntSet.mem i tctx.move_owned_vars
     in
-    if move_candidate then CPPmove var_expr
-    else var_expr
+    let result = if move_candidate then CPPmove var_expr else var_expr in
+    if Escape.IntSet.mem i tctx.cpp_erased_env then begin
+      match expected_ty with
+      | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
+        if resolves_to_any_type ty then result
+        else CPPany_cast (ty, result)
+      | _ -> result
+    end
+    else result
   | MLapp (MLmagic t, args) -> gen_expr ?expected_ty env (MLapp (t, args))
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
@@ -5299,7 +5477,23 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
-        if ml_expr_is_erased env t then
+        let is_cpp_erased_var = match t with
+          | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
+          | _ -> false
+        in
+        if is_cpp_erased_var then
+          let erase_top_args = function
+            | Tglob (g, args, ns) when args <> [] ->
+              Tglob (g, List.map erase_type_to_any args, ns)
+            | Tnamespace (ns_g, inner_ty) ->
+              Tnamespace (ns_g, erase_type_to_any inner_ty)
+            | t -> t
+          in
+          let cast_ty = erase_top_args ty in
+          ( match inner with
+            | CPPany_cast _ -> inner
+            | _ -> CPPany_cast (cast_ty, inner) )
+        else if ml_expr_is_erased env t then
           ( match inner with
             | CPPany_cast _ -> inner
             | _ -> CPPany_cast (ty, inner) )
@@ -6286,6 +6480,41 @@ and eta_fun env f args =
       in
       match infer_ml_body_type f with Some fty -> extract_params fty | None -> []
     in
+    let callee_rel_idx = match f with
+      | MLrel i | MLmagic (MLrel i) -> Some i
+      | _ -> None
+    in
+    let callee_env_ty =
+      match callee_rel_idx with
+      | Some i -> (try Some (get_env_type i) with _ -> None)
+      | None -> None
+    in
+    let callee_cpp_erased =
+      match callee_rel_idx with
+      | Some i -> Escape.IntSet.mem i tctx.cpp_erased_env
+      | None -> false
+    in
+    let callee_is_bare_any =
+      callee_cpp_erased ||
+      (match callee_env_ty with
+      | Some ty -> is_ml_erased_ty ty
+      | None -> false)
+    in
+    let callee_has_erased_params =
+      callee_is_bare_any ||
+      (match callee_env_ty with
+      | Some (Miniml.Tarr (param, _)) -> is_ml_erased_ty param
+      | _ -> false) ||
+      (match callee_rel_idx with
+       | Some i ->
+         (match IntMap.find_opt i tctx.cpp_erased_type_env with
+          | Some (Tfun (params, _)) -> List.exists (fun p -> p = Tany) params
+          | _ -> false)
+       | None -> false)
+    in
+    let saved_wrap = tctx.wrap_for_any_param in
+    if callee_has_erased_params then
+      tctx.wrap_for_any_param <- true;
     let args = List.mapi (fun i x ->
       match x with
       | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
@@ -6299,7 +6528,29 @@ and eta_fun env f args =
           | None -> None
         in
         gen_expr ?expected_ty:expected env x
+      | MLrel j when Escape.IntSet.mem j tctx.cpp_erased_env ->
+        let inner = gen_expr env x in
+        let expected = match List.nth_opt callee_param_tys i with
+          | Some ml_ty ->
+            let tvars = get_current_type_vars () in
+            let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+            if is_erased_type cpp_ty then None else Some cpp_ty
+          | None -> None
+        in
+        ( match expected with
+          | Some ty ->
+            let rec erase_type_to_any = function
+              | Tglob (g, args, ns) when args <> [] ->
+                Tglob (g, List.map erase_type_to_any args, ns)
+              | Tglob (_, [], _) as t -> t
+              | Tnamespace (ns_g, inner) ->
+                Tnamespace (ns_g, erase_type_to_any inner)
+              | _ -> Tany
+            in
+            CPPany_cast (erase_type_to_any ty, inner)
+          | None -> inner )
       | _ -> gen_expr env x) args in
+    tctx.wrap_for_any_param <- saved_wrap;
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
        into a primary call and a chained application of excess args. Example: [f
@@ -6391,30 +6642,11 @@ and eta_fun env f args =
          default to std::any since the original types are erased.
          The MLmagic wrapper is transparent — peel it to find the MLrel. *)
       let callee_expr =
-        let rel_idx = match f with
-          | MLrel i | MLmagic (MLrel i) -> Some i
-          | _ -> None
-        in
-        match rel_idx with
-        | Some i ->
-          let callee_is_any =
-            try
-              let ty = get_env_type i in
-              let rec is_erased_type = function
-                | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
-                | Miniml.Tmeta {contents = None} -> true
-                | Miniml.Tmeta {contents = Some t} -> is_erased_type t
-                | _ -> false
-              in
-              is_erased_type ty
-            with _ -> false
-          in
-          if callee_is_any then
-            let arg_tys = List.init n_args (fun _ -> Tany) in
-            CPPany_cast (Tfun (arg_tys, Tany), gen_expr env f)
-          else
-            gen_expr env f
-        | None -> gen_expr env f
+        if callee_is_bare_any then
+          let arg_tys = List.init n_args (fun _ -> Tany) in
+          CPPany_cast (Tfun (arg_tys, Tany), gen_expr env f)
+        else
+          gen_expr env f
       in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
@@ -6646,6 +6878,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       let saved_return_type = tctx.current_cpp_return_type in
       ( if tctx.current_cpp_return_type = Some Tvoid then
           tctx.current_cpp_return_type <- None );
+      populate_erased_field_env ~cname ~typ ~env ~n_pat_vars
+        ~n_fields:(List.length rev_ids)
+        ~non_erased_def_site_field_tys;
       let body_stmts = gen_stmts env_for_body (fun x -> Sreturn (Some x)) body in
       tctx.current_cpp_return_type <- saved_return_type;
       tctx.match_param_counter <- saved_match_counter;
@@ -6874,9 +7109,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                 (CPPvar binding_name)
             else if field_is_wholesale_erased i
                     && not (is_erased_type bare_ty) then
-              (* For list types, grammar productions store List<std::any> at
-                 runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
-                 so each element is recovered via std::any_cast by the converting ctor. *)
               let strip_ns_tg = function
                 | Tnamespace (_, (Tglob _ as inner)) -> inner
                 | t -> t
@@ -6890,7 +7122,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  in
                  CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
                | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
-                 let list_any_ty = Tglob (g, [Tany], []) in
+                 let erased_elem = erase_type_to_any elem_ty in
+                 let list_any_ty = Tglob (g, [erased_elem], []) in
                  if is_erased_type elem_ty || elem_ty = Tauto then
                    CPPany_cast (list_any_ty, CPPvar binding_name)
                  else
@@ -7230,6 +7463,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       match p with
       | Pusual r | Pcons (r, _) ->
         let saved_env_types = tctx.env_types in
+        let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
@@ -7240,6 +7474,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             ~is_flat:is_flat_match
         in
         tctx.env_types <- saved_env_types;
+        restore_erased_env saved_erased;
         let rest, wild = gen_branches cs in
         (br :: rest, wild)
       | Pwild | Prel _ ->
@@ -7506,8 +7741,10 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
     | Tvar _ ->
       let body_is_erased =
         match body with
-        | MLrel i -> is_env_var_erased env tvars i
-        | Miniml.MLmagic (MLrel i) -> is_env_var_erased env tvars i
+        | MLrel i ->
+          not (Escape.IntSet.mem i tctx.cpp_erased_env) && is_env_var_erased env tvars i
+        | Miniml.MLmagic (MLrel i) ->
+          not (Escape.IntSet.mem i tctx.cpp_erased_env) && is_env_var_erased env tvars i
         | _ -> false
       in
       if body_is_erased then (fun e -> k (CPPany_cast (ret, e)))
@@ -7759,6 +7996,16 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
       push_env_types ids';
+      let non_erased_def_tys =
+        let def_site_field_tys =
+          match Table.get_ctor_ip_types_opt r with
+          | Some tys -> tys | None -> []
+        in
+        List.filter (fun t -> not (isTdummy t)) def_site_field_tys
+      in
+      populate_erased_field_env ~cname:r ~typ:ml_typ ~env ~n_pat_vars
+        ~n_fields:(List.length ids)
+        ~non_erased_def_site_field_tys:non_erased_def_tys;
       let pat_owned =
         if scrut_is_owned_pair && pair_g_opt <> None && not fix_a_fired then
           let ids_rev = List.rev ids in
@@ -7819,12 +8066,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                      in
                      CPPconverting_ctor (cpp_ty,
                        [CPPany_cast (list_any_ty, CPPvar name)])
-                   | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
-                     let list_any_ty = Tglob (g, [Tany], []) in
-                     if is_erased_type elem_ty then
-                       CPPany_cast (list_any_ty, CPPvar name)
-                     else
-                       CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, CPPvar name)])
+                   | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
+                     CPPvar name
                    | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
                      (* Opaque type alias (e.g. nt_semty = std::any) or
                         qualified member type (e.g. typename Ty::sym_semty):
