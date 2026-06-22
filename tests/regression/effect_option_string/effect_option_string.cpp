@@ -89,7 +89,7 @@ void EffectOptionString::option_then_effect(std::string name) {
   } else {
     msg = "not_set";
   }
-  std::cout << msg << '\n';
+  std::cout << std::move(msg) << '\n';
   return;
 }
 

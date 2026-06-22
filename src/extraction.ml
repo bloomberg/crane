@@ -1876,6 +1876,45 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
       (* The extraction of the head. *)
       let type_head = Tglob (GlobRef.IndRef ip, Array.to_list metas, []) in
       let a = extract_term env sg mle type_head c [] in
+      let has_unresolved_meta =
+        Array.exists (fun m -> match m with
+          | Tmeta {contents = None} -> true
+          | _ -> false) metas
+      in
+      ( if has_unresolved_meta then try
+          let coq_ty = whd_all env sg (Retyping.get_type_of env sg c) in
+          match EConstr.kind sg coq_ty with
+          | App (hd, args) ->
+            let kept_args =
+              let rec filter_keep sign args =
+                match sign, args with
+                | Keep :: s, a :: aa -> a :: filter_keep s aa
+                | _ :: s, _ :: aa -> filter_keep s aa
+                | _ -> []
+              in
+              filter_keep oi.ip_sign (Array.to_list args)
+            in
+            List.iter2 (fun meta coq_arg ->
+              match meta with
+              | Tmeta ({contents = None} as r) ->
+                let ml_ty =
+                  try extract_type env sg [] 0 coq_arg []
+                  with _ -> Tunknown
+                in
+                let rec has_unknown = function
+                  | Tunknown -> true
+                  | Tmeta {contents = None} -> true
+                  | Tmeta {contents = Some t} -> has_unknown t
+                  | Tglob (_, args, _) -> List.exists has_unknown args
+                  | Tarr (a, b) -> has_unknown a || has_unknown b
+                  | _ -> false
+                in
+                if not (has_unknown ml_ty) then
+                  r.contents <- Some ml_ty
+              | _ -> ()
+            ) (Array.to_list metas) kept_args
+          | _ -> ()
+        with _ -> () );
       (* The extraction of each branch. *)
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in
