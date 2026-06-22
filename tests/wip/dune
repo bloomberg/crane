@@ -350,3 +350,14 @@
   (alias runtest)
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
+
+(subdir local_fixpoint
+ (rule
+  (targets local_fixpoint.t.exe)
+  (deps LocalFixpoint.vo local_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fixpoint.t.exe local_fixpoint.cpp local_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fixpoint.t.exe)
+  (action (run ./local_fixpoint.t.exe))))
