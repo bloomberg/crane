@@ -1324,9 +1324,14 @@ and pp_cpp_expr env args t =
             | _ -> []
           in
           let ml_arg_types = extract_arg_types ml_ty in
-          List.map
+          let raw = List.map
             (Translation.convert_ml_type_to_cpp_type env [])
             ml_arg_types
+          in
+          List.map (Minicpp.map_cpp_type (function
+            | Tvar (i, None) when i >= 1 && i - 1 < List.length tys ->
+              erase_type_to_any (List.nth tys (i - 1))
+            | t -> t)) raw
         with _ -> []
       in
       pp_custom
@@ -1969,10 +1974,6 @@ and pp_cpp_expr env args t =
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
   | CPPany_cast (ty, e) ->
-    (* When the target type resolves to [std::any] (either [Tany] directly, or
-       an axiom/unknown ConstRef like [SemVal = std::any]), the value is already
-       the right type — [any_cast<std::any>(x)] fails if [x] holds a concrete
-       type (e.g. uint64_t). *)
     if is_any_type ty then
       pp_cpp_expr env args e
     else begin
@@ -2598,6 +2599,16 @@ and expr_is_any_typed_param = function
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
+(** Erase leaf types to [Tany], preserving container structure.
+    E.g. [pair<uint64_t, uint64_t>] → [pair<any, any>],
+    [deque<pair<uint64_t, uint64_t>>] → [deque<pair<any, any>>]. *)
+and erase_type_to_any = function
+  | Tglob (g, args, ns) when args <> [] ->
+    Tglob (g, List.map erase_type_to_any args, ns)
+  | Tnamespace (ns_g, inner) ->
+    Tnamespace (ns_g, erase_type_to_any inner)
+  | _ -> Tany
+
 (** Replace unresolved type variables ([Tvar(_, None)]) with [Tany] so that
     [any_cast] targets render as [std::any] instead of invalid placeholders. *)
 and resolve_tvars_to_any = function
@@ -2620,9 +2631,9 @@ and resolve_tvars_to_any = function
     @param vl           type variable names in scope for rendering [expected_ty]
     @return [expr_printed] unchanged, or wrapped in [any_cast<expected_ty>(...)] *)
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
-  if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
-     && is_concrete_cpp_type expected_ty
-  then
+  let fires = (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
+     && is_concrete_cpp_type expected_ty in
+  if fires then
     let resolved_ty = resolve_tvars_to_any expected_ty in
     (* For List<T> where T ≠ std::any, the grammar framework stores List<std::any>
        at runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -2635,22 +2646,32 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
       | _ -> false
     in
     if is_list_with_concrete_elem resolved_ty then
-      let list_any_ty =
+      let erased_elem_ty, list_any_ty =
         match resolved_ty with
-        | Tnamespace (ns_g, Tglob (g, _, _)) ->
-          Tnamespace (ns_g, Tglob (g, [Tany], []))
-        | Tglob (g, _, _) ->
-          Tglob (g, [Tany], [])
+        | Tnamespace (ns_g, Tglob (g, [elem], _)) ->
+          let e = erase_type_to_any elem in
+          (e, Tnamespace (ns_g, Tglob (g, [e], [])))
+        | Tglob (g, [elem], _) ->
+          let e = erase_type_to_any elem in
+          (e, Tglob (g, [e], []))
         | _ -> CErrors.anomaly (Pp.str "pp_cpp_type Tshared_ptr: expected list type")
       in
-      pp_cpp_type false vl resolved_ty
-      ++ str "("
-      ++ str (sn ()).any_cast
-      ++ str "<"
-      ++ pp_cpp_type false vl list_any_ty
-      ++ str ">("
-      ++ expr_printed
-      ++ str "))"
+      if is_any_type erased_elem_ty then
+        pp_cpp_type false vl resolved_ty
+        ++ str "("
+        ++ str (sn ()).any_cast
+        ++ str "<"
+        ++ pp_cpp_type false vl list_any_ty
+        ++ str ">("
+        ++ expr_printed
+        ++ str "))"
+      else
+        str (sn ()).any_cast
+        ++ str "<"
+        ++ pp_cpp_type false vl list_any_ty
+        ++ str ">("
+        ++ expr_printed
+        ++ str ")"
     else
       str (sn ()).any_cast
       ++ str "<"
@@ -2850,21 +2871,9 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
           in
           let saved_concrete_params = !concrete_typed_any_params in
           if !outer_any_pair_overrode || scrut_is_any_cast_pair then
-            List.iter (fun (id, ty) ->
-              let is_pair_ty = match ty with
-                | Tglob (g, _ :: _, _) ->
-                  let n = Common.pp_global_name Type g in
-                  String.equal n "prod" || String.equal n "Prod"
-                | _ -> false
-              in
-              if is_any_type ty || is_pair_ty then
-                current_any_typed_params :=
-                  Id.Set.add id !current_any_typed_params
-              else if not (is_any_type ty) then begin
-                (* Concrete non-pair: needs explicit any_cast at every use. *)
-                concrete_typed_any_params :=
-                  Id.Map.add id ty !concrete_typed_any_params
-              end
+            List.iter (fun (id, _ty) ->
+              current_any_typed_params :=
+                Id.Set.add id !current_any_typed_params
             ) ids;
           let result = pp_list_stmt (pp_cpp_stmt env []) ss in
           current_any_typed_params := saved_any_params;
@@ -2903,6 +2912,14 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
+      (match arg_expr with
+       | CPPvar id ->
+         let at = match List.nth_opt arg_types i with Some t -> (match t with Tany -> "Tany" | Tglob _ -> "Tglob" | _ -> "other") | None -> "None" in
+         Format.eprintf "DEBUG CCarg[%d] CPPvar %s arg_type=%s@." i (Id.to_string id) at
+       | CPPany_cast (_, CPPvar id) ->
+         let at = match List.nth_opt arg_types i with Some t -> (match t with Tany -> "Tany" | Tglob _ -> "Tglob" | _ -> "other") | None -> "None" in
+         Format.eprintf "DEBUG CCarg[%d] CPPany_cast(var %s) arg_type=%s@." i (Id.to_string id) at
+       | _ -> ());
       (* When the expected type (from arg_types) is a concrete custom list AND
          the argument is a grammar any-typed variable, generate the IIFE using
          the expected element type rather than the stored type from
@@ -2960,10 +2977,12 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
             | _ -> arg
           else arg
       in
-      match List.nth_opt arg_types i with
+      let result = match List.nth_opt arg_types i with
       | Some expected_ty when custom_list_iife_opt = None ->
         wrap_any_cast_if_needed arg_expr arg expected_ty vl
       | _ -> arg
+      in
+      result
     with Failure _ ->
       CErrors.anomaly
         Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)

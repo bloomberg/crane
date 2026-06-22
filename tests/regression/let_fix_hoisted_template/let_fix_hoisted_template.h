@@ -101,16 +101,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1>
-List<T1> _reverse_onto_go(const List<T1> xs, const List<T1> acc) {
-  if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-    return acc;
-  } else {
-    const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
-    return _reverse_onto_go<T1>(*a1, List<T1>::cons(a0, std::move(acc)));
-  }
-}
-
 struct LetFixHoistedTemplate {
   static List<uint64_t> reverse_onto(const List<uint64_t> &l);
   static inline const List<uint64_t> test_rev =

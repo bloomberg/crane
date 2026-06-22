@@ -101,28 +101,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1>
-uint64_t _count_nested_outer(const List<List<T1>> xss, const uint64_t acc) {
-  if (std::holds_alternative<typename List<List<T1>>::Nil>(xss.v())) {
-    return acc;
-  } else {
-    const auto &[a0, a1] = std::get<typename List<List<T1>>::Cons>(xss.v());
-    auto inner_impl = [](auto &_self_inner, const List<T1> &ys,
-                         uint64_t n) -> uint64_t {
-      if (std::holds_alternative<typename List<T1>::Nil>(ys.v())) {
-        return n;
-      } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(ys.v());
-        return _self_inner(_self_inner, *a10, (UINT64_C(1) + n));
-      }
-    };
-    auto inner = [&](const List<T1> &ys, uint64_t n) -> uint64_t {
-      return inner_impl(inner_impl, ys, n);
-    };
-    return _count_nested_outer<T1>(*a1, (inner(a0, UINT64_C(0)) + acc));
-  }
-}
-
 struct LetFixNestedClone {
   static uint64_t sum_nested(const List<List<uint64_t>> &ll);
   static uint64_t count_nested(const List<List<uint64_t>> &ll);

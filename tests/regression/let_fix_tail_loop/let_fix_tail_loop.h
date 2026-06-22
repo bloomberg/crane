@@ -101,16 +101,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1>
-uint64_t _length_list_go(const List<T1> xs, const uint64_t n) {
-  if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-    return n;
-  } else {
-    const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
-    return _length_list_go<T1>(*a1, (UINT64_C(1) + n));
-  }
-}
-
 struct LetFixTailLoop {
   static uint64_t sum_list(const List<uint64_t> &l);
   static uint64_t length_list(const List<uint64_t> &l);

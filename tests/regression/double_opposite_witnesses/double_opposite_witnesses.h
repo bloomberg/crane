@@ -157,12 +157,14 @@ struct DoubleOppositeWitnessesCase {
                            typename _tcI0::base_category::Obj)>>>>::
         existt(
             into_double_opposite_functor<typename _tcI0::base_category>(),
-            SigT<Functor,
-                 std::pair<
-                     std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>,
-                     std::function<Path<typename _tcI0::base_category::Obj>(
-                         typename _tcI0::base_category::Obj)>>>::
+            SigT<
+                Functor,
+                SigT<Functor,
+                     std::pair<
+                         std::function<Path<typename _tcI0::base_category::Obj>(
+                             typename _tcI0::base_category::Obj)>,
+                         std::function<Path<typename _tcI0::base_category::Obj>(
+                             typename _tcI0::base_category::Obj)>>>>::
                 existt(
                     out_of_double_opposite_functor<
                         typename _tcI0::base_category>(),

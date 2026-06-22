@@ -33,16 +33,7 @@ const action_entry my_action =
           return [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
-          }(std::make_pair(std::any(x), std::any(y)), [&]() {
-            std::deque<std::pair<std::any, std::any>> _r;
-            for (const auto &_e : std::any_cast<std::deque<std::any>>(xs))
-              _r.push_back([&]() {
-                const auto &_p =
-                    std::any_cast<std::pair<std::any, std::any>>(_e);
-                return std::make_pair(_p.first, _p.second);
-              }());
-            return _r;
-          }());
+          }(std::make_pair(std::any_cast<uint64_t>(x), y), xs);
         });
 SigT<Tag, output_ty>
 apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e);
