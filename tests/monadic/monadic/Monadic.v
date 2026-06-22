@@ -3,6 +3,7 @@
 (* Test: Monadic code — bind/return, Option/State monads. *)
 
 From Stdlib Require Import List Nat Bool.
+From ExtLib Require Import Structures.Functor.
 Import ListNotations.
 
 Module Monadic.
@@ -57,6 +58,26 @@ Definition count_elements {A : Type} (l : list A) : State nat nat :=
       state_return n))))
     l (state_return 0).
 
+
+
+(* rewritten version of stateful version from here, https://wiki.haskell.org/The_Fibonacci_sequence *)
+Definition fib_state (n : nat) : State (nat * nat) unit :=
+  List.fold_left
+    (fun acc _ => state_bind acc (fun _ =>
+      state_bind state_get (fun '(a, b) =>
+      state_put (b, a + b))))
+    (seq 0 n)
+    (state_return tt)
+.
+
+
+Definition fib (n : nat) : nat :=
+  if n <=? 2
+  then n
+  else
+    let '(_, (a, _)) := (fib_state n (0, 1))
+    in a.
+
 (* === Test values === *)
 
 Definition test_return : option nat := option_return 42.
@@ -67,6 +88,7 @@ Definition test_safe_div_zero : option nat := safe_div 10 0.
 Definition test_chain_ok : option nat := div_then_sub 20 4 2.
 Definition test_chain_fail : option nat := div_then_sub 20 0 2.
 Definition test_state : nat * nat := count_elements [1; 2; 3; 4; 5] 0.
+Definition test_state_fib : nat := fib 5.
 
 End Monadic.
 

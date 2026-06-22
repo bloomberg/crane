@@ -115,6 +115,10 @@ public:
   }
 };
 
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
 struct Monadic {
   template <typename T1> static std::optional<T1> option_return(T1 x) {
     return std::make_optional<T1>(x);
@@ -184,6 +188,9 @@ struct Monadic {
         state_return<uint64_t, uint64_t>(UINT64_C(0)));
   }
 
+  static State<std::pair<uint64_t, uint64_t>, std::monostate>
+  fib_state(uint64_t n);
+  static uint64_t fib(uint64_t n);
   static inline const std::optional<uint64_t> test_return =
       option_return<uint64_t>(UINT64_C(42));
   static inline const std::optional<uint64_t> test_bind_some =
@@ -215,6 +222,8 @@ struct Monadic {
                       UINT64_C(4), List<uint64_t>::cons(
                                        UINT64_C(5), List<uint64_t>::nil()))))))(
           UINT64_C(0));
+
+  static inline const uint64_t test_state_fib = fib(UINT64_C(5));
 };
 
 #endif // INCLUDED_MONADIC
