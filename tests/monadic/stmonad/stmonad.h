@@ -370,32 +370,32 @@ struct STMonadTests {
   }
 
   template <typename _tcI0, typename _tcI1> static uint64_t fib_ST(uint64_t n) {
-    if (n <= UINT64_C(2)) {
+    if (n < UINT64_C(2)) {
       return n;
     } else {
       uint64_t x;
       x = UINT64_C(0);
       uint64_t y;
       y = UINT64_C(1);
-      auto fib_ST__impl = [](auto &_self_fib_ST_, uint64_t n0, uint64_t x0,
-                             uint64_t y0, uint64_t idx_x,
-                             uint64_t idx_y) -> uint64_t {
-        if (n0 <= 0) {
+      auto fib_loop_impl = [](auto &_self_fib_loop, uint64_t k, uint64_t x0,
+                              uint64_t y0, uint64_t idx_x,
+                              uint64_t idx_y) -> uint64_t {
+        if (k <= 0) {
           return x0;
         } else {
-          uint64_t n1 = n0 - 1;
+          uint64_t k_ = k - 1;
           uint64_t x_ = x0;
           uint64_t y_ = y0;
           x0 = y_;
           y0 = (x_ + y_);
-          return _self_fib_ST_(_self_fib_ST_, n1, x0, y0, idx_x, idx_y);
+          return _self_fib_loop(_self_fib_loop, k_, x0, y0, idx_x, idx_y);
         }
       };
-      auto fib_ST_ = [&](uint64_t n0, uint64_t x0, uint64_t y0, uint64_t idx_x,
-                         uint64_t idx_y) -> uint64_t {
-        return fib_ST__impl(fib_ST__impl, n0, x0, y0, idx_x, idx_y);
+      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0, uint64_t idx_x,
+                          uint64_t idx_y) -> uint64_t {
+        return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
       };
-      return fib_ST_(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+      return fib_loop(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
     }
   }
 

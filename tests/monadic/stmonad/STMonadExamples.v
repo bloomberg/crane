@@ -114,23 +114,25 @@ Section NatExampleTrees.
 
 
   (* source: https://wiki.haskell.org/Monad/ST *)
+
+  Fixpoint fib_loop (k : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
+    match k with
+    | 0 => @readSTRef _ _ _ _ _ _ idx_x x
+    | Datatypes.S k' =>
+        x' <- @readSTRef _ _ _ _ _ _ idx_x x;;
+        y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
+        @writeSTRef _ _ _ _ _ _ idx_x x y';;
+        @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
+        fib_loop k' x y idx_x idx_y
+    end.
+
   Definition fib_ST (n : nat) : itree E0 nat :=
-    let fix fib_ST' (n : nat) (x y : STRef S nat) (idx_x idx_y : T) : itree E0 nat :=
-      match n with
-      | 0 => @readSTRef _ _ _ _ _ _ idx_x x
-      | Datatypes.S n =>
-          x' <- @readSTRef _ _ _  _ _ _ idx_x x;;
-          y' <- @readSTRef _ _ _ _ _ _ idx_y y;;
-          @writeSTRef _ _ _ _ _ _ idx_x x y';;
-          @writeSTRef _ _ _ _ _ _ idx_y y (x' + y');;
-          fib_ST' n x y idx_x idx_y
-      end in
-    if (Nat.leb n 2)
+    if (Nat.ltb n 2)
     then Ret n
     else
       x <- newSTRef zero 0;;
       y <- newSTRef (suc zero) 1;;
-      fib_ST' n x y zero (suc zero).
+      fib_loop n x y zero (suc zero).
 
   Definition fib_fun (n : nat) : nat :=
     let fix fib' (n : nat) :=
