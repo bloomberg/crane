@@ -452,10 +452,10 @@ Section Translation.
     | inr1 e0 => fun st : M => r <- trigger e0;; Ret (st, r)
     end.
   
-  #[local] Instance hmap_from_idx :
+  #[export] Instance hmap_from_idx :
     HMap T V (halist T V) := @HMap_halist T V eq_equivalence _.
 
-  #[local] Instance map_idx_correct :
+  #[export] Instance map_idx_correct :
     HMapOk hmap_from_idx := HMapOk_halist T V.
 
   Definition interp_st
