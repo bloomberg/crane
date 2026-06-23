@@ -487,6 +487,7 @@ Crane Extract Skip CmpDec.
 Crane Extract Skip max.
 Crane Extract Skip mkSTRef.
 Crane Extract Skip STRefToIx.
+
 (* NOTE: skipping STRefClass seems to drop too much typing information,
  and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)

@@ -25,3 +25,7 @@ Crane Extract Inlined Constant observe => "".
 Definition Ret {E : Type -> Type} {R : Type} (x : R) : itree E R := Ret x.
 
 Crane Extract Monad itree [ bind := ITree.bind , ret := Ret ] => "%t1".
+
+(* TODO: remove before commit! *)
+Inductive Dbg {T : Type} : T -> Type :=
+  |Lift x : Dbg x.

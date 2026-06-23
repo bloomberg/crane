@@ -45,12 +45,13 @@ From ITree Require Import
 
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
+
 Module STMonadTests. 
   (* Re-exporting instances so they're available to call in the exported file. *)
   (* Just referring to them does not seem to work to extract them here, unfolding does *)
   Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
   Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
-
+  
   Definition array_simp_fixed_init := Eval unfold array_simp_fixed_init in (@array_simp_fixed_init nat unit Nat.le).
   Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le).
   Definition fib_ST := Eval unfold fib_ST,fib_loop in (@fib_ST nat unit Nat.le).
@@ -62,10 +63,40 @@ Module STMonadTests.
   Definition tree_simp_another_nat := Eval unfold tree_simp_another_nat in (@tree_simp_another_nat nat unit Nat.le).
   Definition tree_simp_bool := Eval unfold tree_simp_bool in (@tree_simp_bool nat unit Nat.le).
   Definition tree_simp_nat := Eval unfold tree_simp_nat in (@tree_simp_nat nat unit Nat.le).
+
+  Definition double_n (n : nat) : itree (STEvent nat unit (fun _ : nat => nat) +' exceptE Err) nat
+    := Eval unfold double_n in (rec double_n n).
+
   (* qsort TODO: extract qsort! *)
 
 End STMonadTests.
 
+
+Arguments rec : clear implicits.
+
+(* TODO: should be importing functional! *)
+(* TODO: all type arguments become auto below, uint64_t below is hackery for this, it
+ does not infer properly without explicit types *)
+(* TODO: static storage seems unideal, but its to compensate for lambdas being compiled to not capture variables outside of them. *)
+Crane Extract Inlined Constant rec =>
+        "
+         [&]() -> %t2 {
+         static  std::function<decltype(%a1)(uint64_t)> __self;
+         __self = %a0;
+         return __self(%a1);;
+ }()
+" From "functional".
+
+Crane Extract Inlined Constant call => "__self(%a0)".
+
+(* Crane Extract Inlined Constant rec =>
+ *         "types=%t0,%t1,%t2,%t3;
+ *          args0=%a0,
+ *          args1=%a1;
+ *          static thread_local std::function<%t1(%t2)> __self;
+ *          %result = %a0;
+ *          __self = %result;
+ *          return %result" From "functional". *)
 
 Require Import Crane.Mapping.NatIntStd.
 

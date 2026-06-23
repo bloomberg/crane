@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <any>
 #include <concepts>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -451,6 +452,8 @@ struct STMonadTests {
     v = UINT64_C(5);
     return std::move(v);
   }
+
+  static uint64_t double_n(uint64_t n);
 };
 
 #endif // INCLUDED_STMONAD

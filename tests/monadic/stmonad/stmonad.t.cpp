@@ -116,6 +116,14 @@ int main() {
               << " PASSED" << std::endl;
   }
 
+  // Test 10: foo returns 1
+  {
+    auto result = STMonadTests::double_n(2);
+    ASSERT(result == 4);
+    std::cout << "Test 10 (double_n 2 is 4): " << result
+              << " PASSED" << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll stmonad tests passed!" << std::endl;
   } else {
