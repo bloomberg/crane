@@ -1047,16 +1047,9 @@ and pp_cpp_expr env args t =
           in
           if Table.is_custom g_of_list then begin
             require_header "any";
-            let bare_ety = bare_elem_ty elem_ty_of_list in
-            let elem_s = pp_cpp_type false [] bare_ety in
-            let src_s =
-              str (sn ()).any_cast ++ str "<"
-              ++ pp_cpp_type false [] list_any_ty
-              ++ str ">(" ++ Id.print id ++ str ")"
-            in
-            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
-            str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
-            ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+            str (sn ()).any_cast ++ str "<"
+            ++ pp_cpp_type false [] resolved_ty
+            ++ str ">(" ++ Id.print id ++ str ")"
           end else
           pp_cpp_type false [] resolved_ty
           ++ str "(" ++ str (sn ()).any_cast ++ str "<"
@@ -1328,10 +1321,11 @@ and pp_cpp_expr env args t =
             (Translation.convert_ml_type_to_cpp_type env [])
             ml_arg_types
           in
-          List.map (Minicpp.map_cpp_type (function
+          let result = List.map (Minicpp.map_cpp_type (function
             | Tvar (i, None) when i >= 1 && i - 1 < List.length tys ->
-              erase_type_to_any (List.nth tys (i - 1))
-            | t -> t)) raw
+              List.nth tys (i - 1)
+            | t -> t)) raw in
+          result
         with _ -> []
       in
       pp_custom
@@ -2416,8 +2410,8 @@ and pp_cpp_stmt env args = function
          No if/else needed. *)
       let br = match branches with br :: _ -> br
         | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt Smatch: empty branch list") in
-      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
+      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       if binding = mt () then body_pp
       else scrut_binding_pp ++ binding ++ fnl () ++ body_pp
     else
@@ -2426,8 +2420,8 @@ and pp_cpp_stmt env args = function
       let is_last_no_wild =
         i = n_branches - 1 && default = None && n_branches > 1
       in
-      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
+      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       (* When the branch has a reuse fast-path, nest the use_count check
          inside the holds_alternative block:
            if (holds_alternative<Ctor>(scrut)) {
@@ -2646,32 +2640,12 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
       | _ -> false
     in
     if is_list_with_concrete_elem resolved_ty then
-      let erased_elem_ty, list_any_ty =
-        match resolved_ty with
-        | Tnamespace (ns_g, Tglob (g, [elem], _)) ->
-          let e = erase_type_to_any elem in
-          (e, Tnamespace (ns_g, Tglob (g, [e], [])))
-        | Tglob (g, [elem], _) ->
-          let e = erase_type_to_any elem in
-          (e, Tglob (g, [e], []))
-        | _ -> CErrors.anomaly (Pp.str "pp_cpp_type Tshared_ptr: expected list type")
-      in
-      if is_any_type erased_elem_ty then
-        pp_cpp_type false vl resolved_ty
-        ++ str "("
-        ++ str (sn ()).any_cast
-        ++ str "<"
-        ++ pp_cpp_type false vl list_any_ty
-        ++ str ">("
-        ++ expr_printed
-        ++ str "))"
-      else
-        str (sn ()).any_cast
-        ++ str "<"
-        ++ pp_cpp_type false vl list_any_ty
-        ++ str ">("
-        ++ expr_printed
-        ++ str ")"
+      str (sn ()).any_cast
+      ++ str "<"
+      ++ pp_cpp_type false vl resolved_ty
+      ++ str ">("
+      ++ expr_printed
+      ++ str ")"
     else
       str (sn ()).any_cast
       ++ str "<"
@@ -2870,11 +2844,28 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
             | _ -> false
           in
           let saved_concrete_params = !concrete_typed_any_params in
-          if !outer_any_pair_overrode || scrut_is_any_cast_pair then
-            List.iter (fun (id, _ty) ->
-              current_any_typed_params :=
-                Id.Set.add id !current_any_typed_params
-            ) ids;
+          if !outer_any_pair_overrode || scrut_is_any_cast_pair then begin
+            List.iter (fun (id, ty) ->
+              let is_pair_ty = match ty with
+                | Tglob (g, _ :: _, _) ->
+                  let n = Common.pp_global_name Type g in
+                  String.equal n "prod" || String.equal n "Prod"
+                | _ -> false
+              in
+              if is_any_type ty || is_pair_ty then
+                current_any_typed_params :=
+                  Id.Set.add id !current_any_typed_params
+              else if not (is_any_type ty) then
+                let erased_ty = match ty with
+                  | Tglob (g, args, ns) when args <> [] ->
+                    Tglob (g, List.map erase_type_to_any args, ns)
+                  | Tnamespace (ns_g, inner) ->
+                    Tnamespace (ns_g, erase_type_to_any inner)
+                  | t -> t
+                in
+                concrete_typed_any_params :=
+                  Id.Map.add id erased_ty !concrete_typed_any_params
+            ) ids end;
           let result = pp_list_stmt (pp_cpp_stmt env []) ss in
           current_any_typed_params := saved_any_params;
           concrete_typed_any_params := saved_concrete_params;
@@ -2892,7 +2883,10 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCbr_var (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
-          let id, _ = List.nth ids j in
+          let id, ty = List.nth ids j in
+          if is_any_type ty then
+            current_any_typed_params :=
+              Id.Set.add id !current_any_typed_params;
           Id.print id
         with Failure _ ->
           CErrors.anomaly
@@ -2912,14 +2906,6 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCarg i ->
     try
       let arg_expr = List.nth args i in
-      (match arg_expr with
-       | CPPvar id ->
-         let at = match List.nth_opt arg_types i with Some t -> (match t with Tany -> "Tany" | Tglob _ -> "Tglob" | _ -> "other") | None -> "None" in
-         Format.eprintf "DEBUG CCarg[%d] CPPvar %s arg_type=%s@." i (Id.to_string id) at
-       | CPPany_cast (_, CPPvar id) ->
-         let at = match List.nth_opt arg_types i with Some t -> (match t with Tany -> "Tany" | Tglob _ -> "Tglob" | _ -> "other") | None -> "None" in
-         Format.eprintf "DEBUG CCarg[%d] CPPany_cast(var %s) arg_type=%s@." i (Id.to_string id) at
-       | _ -> ());
       (* When the expected type (from arg_types) is a concrete custom list AND
          the argument is a grammar any-typed variable, generate the IIFE using
          the expected element type rather than the stored type from

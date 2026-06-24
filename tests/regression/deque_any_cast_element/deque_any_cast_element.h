@@ -25,7 +25,7 @@ using output_ty = std::any;
 using action_entry = SigT<Tag, std::function<output_ty(input_ty)>>;
 const action_entry my_action =
     SigT<Tag, std::function<std::any(std::any)>>::existt(
-        Tag::TAGA, [](const auto &tup) {
+        Tag::TAGA, std::function<std::any(std::any)>([](const std::any &tup) {
           const auto &[x, y0] =
               std::any_cast<std::pair<std::any, std::any>>(tup);
           const auto &[xs, y] =
@@ -33,8 +33,10 @@ const action_entry my_action =
           return [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
-          }(std::make_pair(std::any_cast<uint64_t>(x), y), xs);
-        });
+          }(std::make_pair(std::any_cast<uint64_t>(x),
+                           std::any_cast<uint64_t>(y)),
+                 std::any_cast<std::deque<std::pair<std::any, std::any>>>(xs));
+        }));
 SigT<Tag, output_ty>
 apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e);
 uint64_t get_length(const SigT<Tag, output_ty> &r);

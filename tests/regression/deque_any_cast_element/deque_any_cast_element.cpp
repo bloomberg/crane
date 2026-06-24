@@ -13,14 +13,13 @@ apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e) {
                 std::any([](auto _a0, auto _a1) {
                   _a1.push_front(_a0);
                   return _a1;
-                }(std::any(std::make_pair(std::any(UINT64_C(1)),
-                                          std::any(UINT64_C(2)))),
+                }(std::make_pair(std::any(UINT64_C(1)), std::any(UINT64_C(2))),
                          [](auto _a0, auto _a1) {
                            _a1.push_front(_a0);
                            return _a1;
-                         }(std::any(std::make_pair(std::any(UINT64_C(3)),
-                                                   std::any(UINT64_C(4)))),
-                           std::deque<std::any>{}))),
+                         }(std::make_pair(std::any(UINT64_C(3)),
+                                          std::any(UINT64_C(4))),
+                           std::deque<std::pair<std::any, std::any>>{}))),
                 std::any(UINT64_C(20)))))));
   }
   case Tag::TAGB: {

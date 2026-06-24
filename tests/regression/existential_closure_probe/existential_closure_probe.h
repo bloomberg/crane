@@ -35,7 +35,7 @@ struct ExistentialClosureProbe {
 
   template <typename T1> static T1 unwrap(const wrap &w) {
     const auto &[a] = w;
-    return std::any_cast<T1>(a);
+    return std::any_cast<T1>(std::any_cast<T1>(a));
   }
 
   /// Pack a closure into a type-erased wrapper.

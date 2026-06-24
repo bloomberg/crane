@@ -56,13 +56,13 @@ struct DequeElementCast {
             Nonterm::NT_ITEMS, [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
-            }(Val::vnum(UINT64_C(42)), [](auto _a0, auto _a1) {
+            }(std::any(Val::vnum(UINT64_C(42))), [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
-            }(Val::vstr(UINT64_C(7)), [](auto _a0, auto _a1) {
+            }(std::any(Val::vstr(UINT64_C(7))), [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
-              }(Val::vnum(UINT64_C(3)), std::deque<Val>{}))));
+              }(std::any(Val::vnum(UINT64_C(3))), std::deque<std::any>{}))));
     return v;
   }
 

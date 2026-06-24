@@ -2,13 +2,8 @@
 #define INCLUDED_ANY_CAST_NESTED_PAIR
 
 #include <any>
-#include <stdexcept>
 #include <utility>
 #include <variant>
-
-template <typename T1> std::any _apply_pred_symbols_semty() {
-  throw std::logic_error("unreachable");
-}
 
 struct AnyCastNestedPair {
   using SemVal = std::any /* AXIOM TO BE REALIZED */;
