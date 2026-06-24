@@ -112,3 +112,14 @@
   (alias runtest)
   (deps type_args_extraction.t.exe)
   (action (run ./type_args_extraction.t.exe))))
+
+(subdir deque_any_cast
+ (rule
+  (targets deque_any_cast.t.exe)
+  (deps DequeAnyCast.vo deque_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast.t.exe deque_any_cast.cpp deque_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_any_cast.t.exe)
+  (action (run ./deque_any_cast.t.exe))))

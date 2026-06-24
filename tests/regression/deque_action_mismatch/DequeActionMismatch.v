@@ -69,6 +69,5 @@ Definition get_first (v : { t : tag & sem_ty t }) : nat :=
 Definition test_length : nat := get_length chain.
 Definition test_first : nat := get_first chain.
 
-Set Crane Extraction Output Directory "tests/wip/deque_action_mismatch".
-Set Crane Loopify.
+Set Crane Loopify. (* force regen 11 *)
 Crane Separate Extraction test_length test_first.

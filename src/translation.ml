@@ -1680,14 +1680,12 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
                        && elem_ty <> Tany && elem_ty <> Tauto
                      | _ -> false) ->
       let strip_ns = function Tnamespace (_, t) -> t | t -> t in
-      let g, elem_ty = match strip_ns dst with
-        | Tglob (g, [elem_ty], _) -> g, elem_ty
-        | _ -> CErrors.anomaly (Pp.str "gen_type_conversion_expr: expected list type") in
-      let list_any_ty = Tglob (g, [Tany], []) in
-      let src_expr = match src_ty with
-        | Tany -> CPPany_cast (list_any_ty, expr)
-        | _ -> expr in
-      CPPconverting_ctor (dst, [src_expr])
+      (match strip_ns dst with
+       | Tglob (g, [_], _) ->
+         (match src_ty with
+           | Tany -> CPPany_cast (Tglob (g, [Tany], []), expr)
+           | _ -> expr)
+       | _ -> expr)
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never shared_ptr)
@@ -2035,6 +2033,23 @@ let rec has_tany_in_type = function
     List.exists has_tany_in_type ts
   | Tvariant ts -> List.exists has_tany_in_type ts
   | Tqualified (base, _) -> has_tany_in_type base
+  | _ -> false
+
+(** Like [has_tany_in_type] but also treats [dummy_type]/[dummy_prop]/[dummy_implicit]
+    VarRef markers as erased types.  Used for non-lambda let bindings where [auto]
+    is the right fallback — but NOT for the Tfun+lambda case where we want to
+    preserve the lambda's concrete return type. *)
+let rec has_erased_type_in_type = function
+  | t when has_tany_in_type t -> true
+  | Tglob (GlobRef.VarRef id, [], [])
+    when Id.to_string id = "dummy_type" -> true
+  | Tfun (dom, cod) -> List.exists has_erased_type_in_type dom || has_erased_type_in_type cod
+  | Tmod (_, t) | Tnamespace (_, t) -> has_erased_type_in_type t
+  | Tshared_ptr t | Tref t | Tptr t -> has_erased_type_in_type t
+  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
+    List.exists has_erased_type_in_type ts
+  | Tvariant ts -> List.exists has_erased_type_in_type ts
+  | Tqualified (base, _) -> has_erased_type_in_type base
   | _ -> false
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
@@ -3436,7 +3451,14 @@ and populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
     | None -> false
   in
   let is_field_stored_as_any field_i =
-    if num_pv = 0 then false
+    if num_pv = 0 then
+      match List.nth_opt non_erased_def_site_field_tys field_i with
+      | Some def_ty ->
+        let cpp_ty =
+          convert_ml_type_to_cpp_type (empty_env ()) ~ns:Refset'.empty [] def_ty
+        in
+        has_unnamed_tvar cpp_ty
+      | None -> false
     else
       match List.nth_opt non_erased_def_site_field_tys field_i with
       | Some (Miniml.Tvar k | Miniml.Tvar' k) -> check_tvar k
@@ -3580,12 +3602,12 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   (* Generate constructor arguments with live move_dead_after so the move
      analysis can fire for single-use variables (nb_occur_match = 1 already
      prevents moving variables that appear more than once across all args). *)
-  let gen_ctor_arg e =
+  let gen_ctor_arg ?expected_ty e =
     match e with
     | MLdummy _ -> CPPraw "std::any{}"
     | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
       wrap_void_call_as_value (gen_expr env e)
-    | _ -> gen_expr env e
+    | _ -> gen_expr ?expected_ty env e
   in
   (* Generate args with expected type hints: set expected_ml_type_for_arg to
      the i-th type arg of the constructor's inductive type before generating
@@ -3682,6 +3704,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_expected = tctx.expected_ml_type_for_arg in
+      let saved_ret = tctx.current_cpp_return_type in
       let new_expected =
         match List.nth_opt ty_args_for_expected i with
         | Some _ as x -> x
@@ -3693,7 +3716,20 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           List.nth_opt field_types_for_wrap i
       in
       tctx.expected_ml_type_for_arg <- new_expected;
-      let result = gen_ctor_arg e in
+      tctx.current_cpp_return_type <- None;
+      let expected_cpp_ty =
+        match new_expected with
+        | Some ml_ty ->
+          let tvars = get_current_type_vars () in
+          let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+          if is_erased_type cpp_ty then None
+          else (match cpp_ty with
+            | Tglob (g, _, _) when is_list_global g -> None
+            | _ -> Some cpp_ty)
+        | None -> None
+      in
+      let result = gen_ctor_arg ?expected_ty:expected_cpp_ty e in
+      tctx.current_cpp_return_type <- saved_ret;
       tctx.expected_ml_type_for_arg <- saved_expected;
       let result = match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
@@ -3723,7 +3759,31 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
               | _ -> false)
             | _ -> false
           in
-          if is_recursive_field then result
+          (* Don't wrap in std::any when building a custom LIST cons and the
+             element cpp type is a container (e.g. pair<any,any>).  Storing
+             pair<any,any> directly in deque<pair<any,any>> keeps element types
+             consistent with what gen_match_branch expects via erase_type_to_any.
+             Only apply this for LIST cons: pair/tuple fields must stay as
+             std::any so that any_cast<pair<any,any>> at the consumer works. *)
+          let is_list_cons_ctor =
+            match r with
+            | GlobRef.ConstructRef ((kn, _), _) ->
+              let ind = GlobRef.IndRef (kn, 0) in
+              is_list_global ind && Table.is_custom ind
+            | _ -> false
+          in
+          let is_already_container =
+            is_list_cons_ctor &&
+            match new_expected with
+            | Some ml_fty ->
+              let tvars = get_current_type_vars () in
+              let cpp_fty = convert_ml_type_to_cpp_type env tvars ml_fty in
+              (match cpp_fty with
+               | Tglob (_, _ :: _, _) -> true
+               | _ -> false)
+            | None -> false
+          in
+          if is_recursive_field || is_already_container then result
           else CPPconverting_ctor (Tany, [result])
         else result
       in
@@ -3776,33 +3836,33 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       let temps =
         if temps = [] && tys <> []
         then
-          let from_ret =
-            match tctx.current_cpp_return_type with
-            | Some (Minicpp.Tglob (ret_r, ret_tys, _))
-              when Names.GlobRef.CanOrd.equal n ret_r
-                   && List.length ret_tys = List.length tys ->
-              filter_erased_type_args ret_tys
-            | Some (Minicpp.Tshared_ptr (Minicpp.Tglob (ret_r, ret_tys, _)))
-              when Names.GlobRef.CanOrd.equal n ret_r
-                   && List.length ret_tys = List.length tys ->
-              filter_erased_type_args ret_tys
+          let from_expected =
+            match tctx.expected_ml_type_for_arg with
+            | Some (Miniml.Tglob (exp_r, exp_tys, _))
+              when Names.GlobRef.CanOrd.equal exp_r n
+                   && List.length exp_tys = List.length tys ->
+              let exp_temps = build_template_params env [] exp_tys in
+              let r = filter_erased_type_args exp_temps in
+              if r <> [] && not (List.exists (function Tvar (_, None) -> true | _ -> false) r)
+              then r
+              else []
             | _ -> []
           in
-          if from_ret <> [] then from_ret
+          if from_expected <> [] then from_expected
           else
-            let from_expected =
-              match tctx.expected_ml_type_for_arg with
-              | Some (Miniml.Tglob (exp_r, exp_tys, _))
-                when Names.GlobRef.CanOrd.equal exp_r n
-                     && List.length exp_tys = List.length tys ->
-                let exp_temps = build_template_params env [] exp_tys in
-                let r = filter_erased_type_args exp_temps in
-                if r <> [] && not (List.exists (function Tvar (_, None) -> true | _ -> false) r)
-                then r
-                else []
+            let from_ret =
+              match tctx.current_cpp_return_type with
+              | Some (Minicpp.Tglob (ret_r, ret_tys, _))
+                when Names.GlobRef.CanOrd.equal n ret_r
+                     && List.length ret_tys = List.length tys ->
+                filter_erased_type_args ret_tys
+              | Some (Minicpp.Tshared_ptr (Minicpp.Tglob (ret_r, ret_tys, _)))
+                when Names.GlobRef.CanOrd.equal n ret_r
+                     && List.length ret_tys = List.length tys ->
+                filter_erased_type_args ret_tys
               | _ -> []
             in
-            if from_expected <> [] then from_expected
+            if from_ret <> [] then from_ret
             else if tctx.promoted_var_map <> [] then
               let promoted_tys =
                 List.filter_map (fun (_, cpp_ty) ->
@@ -3817,7 +3877,21 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       in
       let temps =
         if tctx.wrap_for_any_param && temps <> [] then
-          List.map (fun _ -> Tany) temps
+          (* For custom list constructors (e.g., deque nil), preserve the
+             erased element type instead of forcing to Tany. This makes
+             deque<pair<any,any>>{} instead of deque<any>{} for list(nat*nat),
+             keeping the stored element type consistent with consumers. *)
+          let is_custom_list =
+            match r with
+            | GlobRef.ConstructRef ((kn, _), _) ->
+              let ind = GlobRef.IndRef (kn, 0) in
+              is_list_global ind && Table.is_custom ind
+            | _ -> false
+          in
+          if is_custom_list then
+            List.map erase_type_to_any temps
+          else
+            List.map (fun _ -> Tany) temps
         else temps
       in
       app (mk_cppglob r temps)
@@ -4021,12 +4095,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if Escape.IntSet.mem i tctx.cpp_erased_env then begin
-      (match expected_ty, var_expr with
-       | Some ty, CPPvar id when not (is_erased_type ty) ->
-         Format.eprintf "DEBUG cpp_erased var=%s expected=%s@."
-           (Id.to_string id)
-           (match ty with Tglob _ -> "Tglob" | Tany -> "Tany" | Tfun _ -> "Tfun" | _ -> "other")
-       | _ -> ());
       match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
         if resolves_to_any_type ty then result
@@ -4194,13 +4262,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         let cpp_args =
           List.map (fun (ty, id, _) -> (ty, id)) cpp_arg_info
         in
-        (* Thread the lambda's expected return type so that nil constructors
-           (no args to infer element type from) can recover their concrete
-           element type.  When expected_ml_type_for_arg is a function type
-           Tarr(dom1, ..., Tarr(domN, cod)...), strip N arrows and set the
-           codomain cod as the body's expected ML type.  gen_ctor_call then
-           uses it to emit e.g. List<pair<string,any>>::nil() instead of
-           List<std::any>::nil() for action lambdas like [fun _ => []]. *)
         let saved_expected_lam = tctx.expected_ml_type_for_arg in
         let () =
           let rec strip_arrows n ty =
@@ -5071,7 +5132,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               | Some g when Refset'.mem g tctx.method_self_ns ->
                 CPPfun_call (CPPmk_shared inner, [expr])
               | _ -> expr )
-            | Tany -> expr
             | ct when is_erased_type ct
                       || (match ct with
                           | Tglob (g, [], _) -> Table.is_erased_type_const g
@@ -5100,6 +5160,40 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   in
                   Mlutil.type_expand abbrev ml_ty
                 in
+                (* For custom list (deque) types, erase element types preserving
+                   nested structure.  E.g., deque<pair<T1,T2>> → deque<pair<any,any>>,
+                   deque<T> → deque<any>.  This matches the runtime representation:
+                   when stored in any→any lambdas, pair elements are stored as
+                   pair<any,any> (C++ converts T to any for each field). *)
+                let erase_custom_list_elem t =
+                  match t with
+                  | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
+                  | _ -> Tany
+                in
+                let erase_custom_list_elems = function
+                  | Tglob (g, [elem_ty], ns) when is_list_global g && Table.is_custom g ->
+                    Tglob (g, [erase_custom_list_elem elem_ty], ns)
+                  | Tglob (g, _ :: _, ns) when is_list_global g && Table.is_custom g ->
+                    Tglob (g, [Tany], ns)
+                  | t -> t
+                in
+                let ml_body_ret_ty =
+                  let rec get_body = function
+                    | MLlam (_, _, body) -> get_body body
+                    | MLmagic inner -> get_body inner
+                    | body -> infer_ml_body_type body
+                  in
+                  get_body ml_e
+                in
+                let erase_inner_tparams = function
+                  | Tglob (g, args, m) ->
+                    let erase_t = function
+                      | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
+                      | _ -> Tany
+                    in
+                    Tglob (g, List.map erase_t args, m)
+                  | t -> t
+                in
                 let cast_bindings = List.filter_map (fun (j, (_orig_ty, orig_id)) ->
                   match orig_id with
                   | None -> None
@@ -5108,12 +5202,24 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                     if bare = Tany then None
                     else
                       let concrete_ty =
-                        match List.nth_opt ml_concrete_param_tys j with
-                        | Some ml_ty ->
-                          let expanded = expand_ml_type ml_ty in
-                          let ct = convert_ml_type_to_cpp_type env tvars expanded in
-                          strip_cpp_ref_const ct
-                        | None -> bare
+                        let from_annotation =
+                          match List.nth_opt ml_concrete_param_tys j with
+                          | Some ml_ty ->
+                            let expanded = expand_ml_type ml_ty in
+                            let ct = convert_ml_type_to_cpp_type env tvars expanded in
+                            erase_custom_list_elems (strip_cpp_ref_const ct)
+                          | None -> bare
+                        in
+                        if not (resolves_to_any_type from_annotation) then from_annotation
+                        else begin
+                          let ret_ct = match ml_body_ret_ty with
+                            | Some ret_ml ->
+                              let ct = convert_ml_type_to_cpp_type env tvars ret_ml in
+                              strip_cpp_ref_const ct
+                            | None -> Tany
+                          in
+                          erase_inner_tparams ret_ct
+                        end
                       in
                       if resolves_to_any_type concrete_ty then None
                       else
@@ -5154,7 +5260,26 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                 let new_lambda = CPPlambda (renamed_params, new_ret_ty, new_body, cap) in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
                 CPPconverting_ctor (func_ty, [new_lambda])
-              | _ -> expr )
+              | _ ->
+                (* When a custom list literal (e.g. deque<Val>) is stored in a
+                   std::any field, regenerate it with wrap_for_any_param=true so
+                   elements are erased to std::any.  The stored value becomes
+                   deque<any>, matching what any_cast<deque<any>> expects when
+                   consuming through the erased field. *)
+                let rec is_custom_list_cons = function
+                  | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _) ->
+                    let ind = GlobRef.IndRef (kn, 0) in
+                    is_list_global ind && Table.is_custom ind
+                  | MLmagic inner -> is_custom_list_cons inner
+                  | _ -> false
+                in
+                if is_custom_list_cons ml_e then begin
+                  let saved_wrap = tctx.wrap_for_any_param in
+                  tctx.wrap_for_any_param <- true;
+                  let new_expr = gen_ctor_arg ml_e in
+                  tctx.wrap_for_any_param <- saved_wrap;
+                  new_expr
+                end else expr )
             | Tfun (param_tys, _ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
               | CPPlambda (params, ret_ty_opt, body_stmts, cap) ->
@@ -5206,7 +5331,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                           | None -> Tany
                           in
                           let erase_inner_tparams = function
-                            | Tglob (g, _ :: _, m) -> Tglob (g, [Tany], m)
+                            | Tglob (g, args, m) ->
+                              let erase_t = function
+                                | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
+                                | _ -> Tany
+                              in
+                              Tglob (g, List.map erase_t args, m)
                             | t -> t
                           in
                           erase_inner_tparams ret_ct
@@ -5426,7 +5556,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | _ -> expr )
       in
       let gen_and_wrap i e =
+        let saved_ret = tctx.current_cpp_return_type in
+        tctx.current_cpp_return_type <- None;
         let expr = gen_ctor_arg e in
+        tctx.current_cpp_return_type <- saved_ret;
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None
@@ -5738,13 +5871,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     CPPparray (elems, def)
   | MLmagic t ->
     let inner = gen_expr env t in
-    (match expected_ty, inner with
-     | Some ty, CPPvar id when not (is_erased_type ty) ->
-       Format.eprintf "DEBUG MLmagic var=%s expected=%s erased=%b@."
-         (Id.to_string id)
-         (match ty with Tglob _ -> "Tglob" | Tany -> "Tany" | _ -> "other")
-         (match t with MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env | _ -> false)
-     | _ -> ());
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
@@ -5754,6 +5880,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         in
         if is_cpp_erased_var then
           let erase_top_args = function
+            | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
+              let erased_elem = erase_type_to_any elem_ty in
+              Tglob (g, [erased_elem], [])
             | Tglob (g, args, ns) when args <> [] ->
               Tglob (g, List.map erase_type_to_any args, ns)
             | Tnamespace (ns_g, inner_ty) ->
@@ -6013,6 +6142,7 @@ and eta_fun env f args =
        Functor::object_of) but where the parameter expects a concrete type
        (e.g., unsigned int after resolving a promoted type var). *)
     let fn_ml_ty = find_type id in
+    ();
     let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with _ -> fn_ml_ty in
     let fn_param_ml_tys =
       let rec collect = function
@@ -6753,7 +6883,14 @@ and eta_fun env f args =
         | Miniml.Tmeta {contents = Some t} -> extract_params t
         | _ -> []
       in
-      match infer_ml_body_type f with Some fty -> extract_params fty | None -> []
+      let fty_opt = match f with
+        | MLglob (r, tys) when tys <> [] ->
+          (match find_type_opt r with
+           | Some ty -> Some (ml_subst_tvars (Array.of_list tys) ty)
+           | None -> infer_ml_body_type f)
+        | _ -> infer_ml_body_type f
+      in
+      match fty_opt with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
       | MLrel i | MLmagic (MLrel i) -> Some i
@@ -7407,11 +7544,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
                | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
                  let erased_elem = erase_type_to_any elem_ty in
-                 let list_any_ty = Tglob (g, [erased_elem], []) in
-                 if is_erased_type elem_ty || elem_ty = Tauto then
-                   CPPany_cast (list_any_ty, CPPvar binding_name)
-                 else
-                   CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
+                 let cast_ty =
+                   if erased_elem = Tany then bare_ty
+                   else Tglob (g, [erased_elem], [])
+                 in
+                 CPPany_cast (cast_ty, CPPvar binding_name)
                | _ -> CPPany_cast (bare_ty, CPPvar binding_name))
             else
               CPPvar binding_name
@@ -8183,20 +8320,26 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     let needs_pair_any_cast =
       pair_g_opt <> None &&
       (is_erased_type typ || is_all_erased typ ||
-       scrut_is_mlmagic)
+       scrut_is_mlmagic || scrut_is_cpp_erased)
     in
     if needs_pair_any_cast then begin
-      Format.eprintf "DEBUG fix_a_fired=true scrut_mlmagic=%b erased_typ=%b@."
-        scrut_is_mlmagic (is_erased_type typ);
       let g = Option.get pair_g_opt in
       (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
     end
     else if (scrut_is_mlmagic || (scrut_is_magic && is_erased_type typ)
              || scrut_is_cpp_erased)
             && not (is_erased_type concrete_match_type) then
+      (* Erase template args one level deep, preserving nested generic structure.
+         E.g., deque<pair<T1,T2>> → deque<pair<any,any>>, deque<T> → deque<any>.
+         This ensures runtime types match: a deque<pair<any,any>> stored as any
+         must be cast as deque<pair<any,any>>, not deque<any>. *)
+      let erase_tparams = function
+        | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
+        | _ -> Tany
+      in
       let cast_ty = match concrete_match_type with
         | Tglob (g, (_ :: _ as args), ns) when scrut_is_mlmagic ->
-          Tglob (g, List.map (fun _ -> Tany) args, ns)
+          Tglob (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
       (CPPany_cast (cast_ty, t), false)
@@ -8303,6 +8446,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
       push_env_types ids';
+      (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
+         at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
+         ALL fields are [std::any] at runtime.  Mark them in [cpp_erased_env]
+         so that [gen_expr] emits [any_cast<T>] when they're used at concrete
+         types, and so inner pair matches emit [any_cast<pair<any,any>>].
+         Use original [ids] types (not the retyped [ids']) to detect field types. *)
+      if fix_a_fired then begin
+        List.iteri (fun field_i _ ->
+          let db_idx = n_pat_vars - field_i in
+          tctx.cpp_erased_env <- Escape.IntSet.add db_idx tctx.cpp_erased_env)
+          ids
+      end;
       let non_erased_def_tys =
         let def_site_field_tys =
           match Table.get_ctor_ip_types_opt r with
@@ -8364,7 +8519,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         if fix_a_fired then
           List.fold_left
             (fun stmts (name, cpp_ty) ->
-               Format.eprintf "DEBUG NEW br_id name=%s erased=%b@." (Id.to_string name) (is_erased_type cpp_ty);
                if not (is_erased_type cpp_ty) then
                  let strip_ns_tglob = function
                    | Tnamespace (_, (Tglob _ as inner)) -> inner
@@ -9936,8 +10090,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                types. *)
             let cpp_ty =
               match (cpp_ty, e) with
-              | Tfun (_, _), CPPlambda (params, Some ret_ty, _, _)
-                when has_tany_in_type cpp_ty ->
+              | Tfun (dom, _), CPPlambda (params, Some ret_ty, _, _)
+                when List.exists has_tany_in_type dom ->
                 let strip_tmod = function
                   | Tmod (_, t) -> t
                   | t -> t
@@ -9947,13 +10101,15 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
                 in
                 Tfun (param_tys, ret_ty)
               | _, CPPlambda _ -> cpp_ty
-              | _, _ when has_tany_in_type cpp_ty ->
-                (* Type contains erased positions (Tany) but the expression is
-                   not a lambda with inferable types.  Use [auto] so the C++
-                   compiler deduces the concrete type from the RHS — e.g. for
-                   pair-projection bindings like [const auto &prs = tup.first]
-                   where the erased type would be [List<pair<String, any>>] but
-                   the actual type of [tup.first] is [List<pair<String, JV>>]. *)
+              | _, _ when has_erased_type_in_type cpp_ty ->
+                (* Type contains erased positions (Tany or dummy_type marker)
+                   but the expression is not a lambda with inferable types.
+                   Use [auto] so the C++ compiler deduces the concrete type
+                   from the RHS — e.g. for pair-projection bindings like
+                   [const auto &prs = tup.first] where the erased type would
+                   be [List<pair<String, any>>] but the actual type of
+                   [tup.first] is [List<pair<String, JV>>], or for existT nil
+                   constructors where the element type is dummy_type. *)
                 Tauto
               | _ -> cpp_ty
             in

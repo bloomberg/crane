@@ -5916,17 +5916,6 @@
   (deps sll_pair_cast_deque.t.exe)
   (action (run ./sll_pair_cast_deque.t.exe))))
 
-(subdir deque_element_cast
- (rule
-  (targets deque_element_cast.t.exe)
-  (deps DequeElementCast.vo deque_element_cast.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_element_cast.t.exe DequeElementCast.cpp deque_element_cast.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deque_element_cast.t.exe)
-  (action (run ./deque_element_cast.t.exe))))
-
 (subdir deque_any_cast
  (rule
   (targets deque_any_cast.t.exe)
@@ -5938,16 +5927,16 @@
   (deps deque_any_cast.t.exe)
   (action (run ./deque_any_cast.t.exe))))
 
-(subdir deque_any_cast_element
+(subdir deque_element_cast
  (rule
-  (targets deque_any_cast_element.t.exe)
-  (deps DequeAnyCastElement.vo deque_any_cast_element.t.cpp (source_tree .))
+  (targets deque_element_cast.t.exe)
+  (deps DequeElementCast.vo deque_element_cast.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast_element.t.exe deque_any_cast_element.cpp deque_any_cast_element.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_element_cast.t.exe DequeElementCast.cpp deque_element_cast.t.cpp)))
  (rule
   (alias runtest)
-  (deps deque_any_cast_element.t.exe)
-  (action (run ./deque_any_cast_element.t.exe))))
+  (deps deque_element_cast.t.exe)
+  (action (run ./deque_element_cast.t.exe))))
 
 (subdir deque_action_mismatch
  (rule
@@ -5959,3 +5948,14 @@
   (alias runtest)
   (deps deque_action_mismatch.t.exe)
   (action (run ./deque_action_mismatch.t.exe))))
+
+(subdir deque_any_cast_element
+ (rule
+  (targets deque_any_cast_element.t.exe)
+  (deps DequeAnyCastElement.vo deque_any_cast_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast_element.t.exe deque_any_cast_element.cpp deque_any_cast_element.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_any_cast_element.t.exe)
+  (action (run ./deque_any_cast_element.t.exe))))
