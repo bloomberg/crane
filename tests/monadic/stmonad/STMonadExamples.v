@@ -126,6 +126,7 @@ Section NatExampleTrees.
         fib_loop k' x y idx_x idx_y
     end.
 
+
   Definition fib_ST (n : nat) : itree E0 nat :=
     if (Nat.ltb n 2)
     then Ret n
@@ -221,6 +222,15 @@ Section NatExampleTrees.
     Definition qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
       rec qsort_body (arr, arr_idx, left, right).
 
+    Definition double_n (n : nat) : itree ((callE nat nat) +' E0) nat :=
+      match n with
+      | O => Ret 0
+      | Datatypes.S x =>
+          x' <- call x;;
+          Ret (2 + x') 
+      end.
+
+
     
     Definition sort_list (xs : list nat) : itree E0 (list nat) :=
       let lastIndex := fromNat (length xs - 1) in 
@@ -236,6 +246,7 @@ Section NatExampleTrees.
 End NatExampleTrees.
 
 
+(* Crane Extract Inlined Constant call_with_name => "%a0". *)
 
 
 Section BoolExampleTrees.
