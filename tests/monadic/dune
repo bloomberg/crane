@@ -231,7 +231,7 @@
 (subdir stmonad
  (rule
   (targets stmonad.t.exe)
-  (deps STMonadtest.vo stmonad.t.cpp (source_tree .))
+  (deps STMonadExtractionTests.vo stmonad.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} stmonad.t.exe stmonad.cpp stmonad.t.cpp)))
  (rule

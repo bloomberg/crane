@@ -70,6 +70,12 @@ int main() {
     std::cout << "Test 7 (div_then_sub 20 0 2): PASSED" << std::endl;
   }
 
+  // Test 8: fib 5 is correct
+  {
+    ASSERT(Monadic::test_state_fib == 5);
+    std::cout << "Test 8 (fib 5 returns 5): PASSED" << std::endl;
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll monadic tests passed!" << std::endl;
   } else {
