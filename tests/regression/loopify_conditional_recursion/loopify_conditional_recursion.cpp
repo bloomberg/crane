@@ -220,8 +220,7 @@ LoopifyConditionalRecursion::multi_return(
                 std::move(sub).second;
             if (payload.has_value()) {
               const std::pair<uint64_t, uint64_t> &p = *payload;
-              const uint64_t &a = p.first;
-              const uint64_t &b = p.second;
+              const auto &[a, b] = p;
               _result = std::make_pair(
                   (count + UINT64_C(1)),
                   std::make_optional<std::pair<uint64_t, uint64_t>>(
@@ -247,8 +246,7 @@ LoopifyConditionalRecursion::multi_return(
           std::move(sub).second;
       if (payload.has_value()) {
         const std::pair<uint64_t, uint64_t> &p = *payload;
-        const uint64_t &a = p.first;
-        const uint64_t &b = p.second;
+        const auto &[a, b] = p;
         _result =
             std::make_pair((count + UINT64_C(1)),
                            std::make_optional<std::pair<uint64_t, uint64_t>>(

@@ -93,8 +93,7 @@ uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
 /// Matching on a pair where both components are lists.
 uint64_t NameClashScopeLeak::pair_match(
     const std::pair<List<uint64_t>, List<uint64_t>> &p) {
-  const List<uint64_t> &l1 = p.first;
-  const List<uint64_t> &l2 = p.second;
+  const auto &[l1, l2] = p;
   uint64_t h1 = [&]() {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
       return UINT64_C(0);

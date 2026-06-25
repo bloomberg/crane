@@ -272,9 +272,7 @@ struct LoopifyGenerators {
           if (n == UINT64_C(0)) {
             _result = List<uint64_t>::nil();
           } else {
-            auto _cs = f(seed);
-            uint64_t val = std::move(_cs.first);
-            uint64_t next_seed = std::move(_cs.second);
+            auto [val, next_seed] = f(seed);
             _stack.emplace_back(_Resume_val{val});
             _stack.emplace_back(
                 _Enter{next_seed,

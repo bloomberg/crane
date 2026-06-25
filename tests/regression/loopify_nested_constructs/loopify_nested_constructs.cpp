@@ -219,52 +219,17 @@ uint64_t LoopifyNestedConstructs::mod_pattern(uint64_t n) {
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
-LoopifyNestedConstructs::tuple_constr(
-    uint64_t
-        n) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    uint64_t n;
-  };
-
-  /// _Cont_n_: saves [n], resumes after recursive call, then processes rest.
-  struct _Cont_n_ {
-    uint64_t n;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_n_>;
-  std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
-  /// Loopified tuple_constr: _Enter -> _Cont_n_.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
-                                 UINT64_C(0));
-      } else {
-        uint64_t n_ = n - 1;
-        _stack.emplace_back(_Cont_n_{n});
-        _stack.emplace_back(_Enter{n_});
-      }
-    } else {
-      auto _f = std::move(std::get<_Cont_n_>(_frame));
-      uint64_t n = _f.n;
-      auto _cs = std::move(_result);
-      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
-      uint64_t c = std::move(_cs.second);
-      uint64_t a = std::move(p.first);
-      uint64_t b = std::move(p.second);
-      _result = std::make_pair(std::make_pair((a + UINT64_C(1)), (b + n)),
-                               (c + (n * n)));
-    }
+LoopifyNestedConstructs::tuple_constr(uint64_t n) {
+  if (n <= 0) {
+    return std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
+                          UINT64_C(0));
+  } else {
+    uint64_t n_ = n - 1;
+    auto [p, c] = tuple_constr(n_);
+    auto [a, b] = std::move(p);
+    return std::make_pair(std::make_pair((a + UINT64_C(1)), (b + n)),
+                          (c + (n * n)));
   }
-  return _result;
 }
 
 uint64_t LoopifyNestedConstructs::alternating_ops(

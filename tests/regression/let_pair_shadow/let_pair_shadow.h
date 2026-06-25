@@ -160,12 +160,8 @@ struct LetPairShadow {
       return std::make_pair(mylist<T2>::mynil(), acc);
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
-      auto _cs = f(acc, a0);
-      T3 new_acc = std::move(_cs.first);
-      T2 y = std::move(_cs.second);
-      auto _cs1 = map_accum<T1, T2, T3>(f, new_acc, *a1);
-      mylist<T2> rest = std::move(_cs1.first);
-      T3 final_acc = std::move(_cs1.second);
+      auto [new_acc, y] = f(acc, a0);
+      auto [rest, final_acc] = map_accum<T1, T2, T3>(f, new_acc, *a1);
       return std::make_pair(mylist<T2>::mycons(y, std::move(rest)), final_acc);
     }
   }
@@ -175,7 +171,7 @@ struct LetPairShadow {
   /// map_accum f 0 10,20,30 = (0,10,30, 60)
   /// sum(list) + acc = 40 + 60 = 100
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = map_accum<uint64_t, uint64_t, uint64_t>(
+    auto [l, acc] = map_accum<uint64_t, uint64_t, uint64_t>(
         [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
         UINT64_C(0),
         mylist<uint64_t>::mycons(
@@ -183,8 +179,6 @@ struct LetPairShadow {
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))));
-    mylist<uint64_t> l = std::move(_cs.first);
-    uint64_t acc = std::move(_cs.second);
     return (mylist_sum(std::move(l)) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).

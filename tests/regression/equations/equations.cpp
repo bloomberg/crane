@@ -46,8 +46,7 @@ uint64_t Equations::gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine) {
 }
 
 uint64_t Equations::gcd_unfold(std::pair<uint64_t, uint64_t> p) {
-  uint64_t n = std::move(p.first);
-  uint64_t n0 = std::move(p.second);
+  auto [n, n0] = std::move(p);
   if (n <= 0) {
     return n0;
   } else {
@@ -63,8 +62,7 @@ uint64_t Equations::gcd_unfold(std::pair<uint64_t, uint64_t> p) {
 
 Equations::gcd_graph
 Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
-  uint64_t n = std::move(x.first);
-  uint64_t n0 = std::move(x.second);
+  auto [n, n0] = std::move(x);
   if (n <= 0) {
     return gcd_graph::gcd_graph_equation_1(n0);
   } else {

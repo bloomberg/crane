@@ -173,109 +173,39 @@ struct LoopifyPredicates {
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  span(F0 &&p,
-       List<uint64_t>
-           l) { /// _Enter: captures varying parameters for each recursive call.
-
-    struct _Enter {
-      List<uint64_t> l;
-    };
-
-    /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
-    struct _Cont1 {
-      uint64_t a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{std::move(l)});
-    /// Loopified span: _Enter -> _Cont1.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        List<uint64_t> l = std::move(_f.l);
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-          _result =
-              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-        } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-          if (p(a0)) {
-            _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{*a1});
-          } else {
-            _result = std::make_pair(List<uint64_t>::nil(), l);
-          }
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
-        uint64_t a0 = _f.a0;
-        auto _cs = std::move(_result);
-        List<uint64_t> yes = std::move(_cs.first);
-        List<uint64_t> no = std::move(_cs.second);
-        _result = std::make_pair(
+  static std::pair<List<uint64_t>, List<uint64_t>> span(F0 &&p,
+                                                        List<uint64_t> l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+      return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+    } else {
+      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+      if (p(a0)) {
+        auto [yes, no] = span(p, *a1);
+        return std::make_pair(
             List<uint64_t>::cons(std::move(a0), std::move(yes)), std::move(no));
+      } else {
+        return std::make_pair(List<uint64_t>::nil(), l);
       }
     }
-    return _result;
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  break_at(F0 &&p,
-           List<uint64_t> l) { /// _Enter: captures varying parameters for each
-                               /// recursive call.
-
-    struct _Enter {
-      List<uint64_t> l;
-    };
-
-    /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
-    struct _Cont1 {
-      uint64_t a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{std::move(l)});
-    /// Loopified break_at: _Enter -> _Cont1.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        List<uint64_t> l = std::move(_f.l);
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-          _result =
-              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-        } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-          if (p(a0)) {
-            _result = std::make_pair(List<uint64_t>::nil(), l);
-          } else {
-            _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{*a1});
-          }
-        }
+  static std::pair<List<uint64_t>, List<uint64_t>> break_at(F0 &&p,
+                                                            List<uint64_t> l) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+      return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+    } else {
+      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+      if (p(a0)) {
+        return std::make_pair(List<uint64_t>::nil(), l);
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
-        uint64_t a0 = _f.a0;
-        auto _cs = std::move(_result);
-        List<uint64_t> before = std::move(_cs.first);
-        List<uint64_t> after = std::move(_cs.second);
-        _result = std::make_pair(
+        auto [before, after] = break_at(p, *a1);
+        return std::make_pair(
             List<uint64_t>::cons(std::move(a0), std::move(before)),
             std::move(after));
       }
     }
-    return _result;
   }
 
   template <typename F0>

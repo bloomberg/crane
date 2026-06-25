@@ -47,44 +47,6 @@
   (deps z_div_min.t.exe)
   (action (run ./z_div_min.t.exe))))
 
-
-(subdir loopify_unit_void_repro
- (rule
-  (targets loopify_unit_void_repro.t.exe)
-  (deps LoopifyUnitVoidRepro.vo loopify_unit_void_repro.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_unit_void_repro.t.exe loopify_unit_void_repro.cpp loopify_unit_void_repro.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_unit_void_repro.t.exe)
-  (action (run ./loopify_unit_void_repro.t.exe))))
-
-(subdir no_mapping_event_probe
- (rule
-  (targets no_mapping_event_probe.t.exe)
-  (deps NoMappingEventProbe.vo no_mapping_event_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} no_mapping_event_probe.t.exe no_mapping_event_probe.cpp no_mapping_event_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps no_mapping_event_probe.t.exe)
-  (action (run ./no_mapping_event_probe.t.exe))))
-
-
-(subdir dependent_return_unit_probe
- (rule
-  (targets dependent_return_unit_probe.t.exe)
-  (deps DependentReturnUnitProbe.vo dependent_return_unit_probe.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_return_unit_probe.t.exe dependent_return_unit_probe.cpp dependent_return_unit_probe.t.cpp)))
- (rule
-  (alias runtest)
-  (deps dependent_return_unit_probe.t.exe)
-  (action (run ./dependent_return_unit_probe.t.exe))))
-
-
-
-
 (subdir rocq_bug_3287
  (rule
   (targets rocq_bug_3287.t.exe)
@@ -96,238 +58,27 @@
   (deps rocq_bug_3287.t.exe)
   (action (run ./rocq_bug_3287.t.exe))))
 
-(subdir accum_closure_escape
+(subdir deque_deep_tree_stackoverflow
  (rule
-  (targets accum_closure_escape.t.exe)
-  (deps AccumClosureEscape.vo accum_closure_escape.t.cpp (source_tree .))
+  (targets deque_deep_tree_stackoverflow.t.exe)
+  (deps DequeDeepTreeStackoverflow.vo deque_deep_tree_stackoverflow.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} accum_closure_escape.t.exe accum_closure_escape.cpp accum_closure_escape.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_deep_tree_stackoverflow.t.exe deque_deep_tree_stackoverflow.cpp deque_deep_tree_stackoverflow.t.cpp)))
  (rule
   (alias runtest)
-  (deps accum_closure_escape.t.exe)
-  (action (run ./accum_closure_escape.t.exe))))
+  (deps deque_deep_tree_stackoverflow.t.exe)
+  (action (run ./deque_deep_tree_stackoverflow.t.exe))))
 
-(subdir sep_ext_decide_equality
+(subdir deque_any_cast
  (rule
-  (targets sep_ext_decide_equality.t.exe)
-  (deps SepExtDecideEquality.vo sep_ext_decide_equality.t.cpp (source_tree .))
+  (targets deque_any_cast.t.exe)
+  (deps DequeAnyCast.vo deque_any_cast.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_decide_equality.t.exe SepExtDecideEquality.cpp sep_ext_decide_equality.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_any_cast.t.exe deque_any_cast.cpp deque_any_cast.t.cpp)))
  (rule
   (alias runtest)
-  (deps sep_ext_decide_equality.t.exe)
-  (action (run ./sep_ext_decide_equality.t.exe))))
-
-(subdir sep_ext_eponymous_module_ind
- (rule
-  (targets sep_ext_eponymous_module_ind.t.exe)
-  (deps SepExtEponymousModuleInd.vo sep_ext_eponymous_module_ind.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_eponymous_module_ind.t.exe SepExtEponymousModuleInd.cpp sep_ext_eponymous_module_ind.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_eponymous_module_ind.t.exe)
-  (action (run ./sep_ext_eponymous_module_ind.t.exe))))
-
-(subdir sep_ext_tuple_any
- (rule
-  (targets sep_ext_tuple_any.t.exe)
-  (deps SepExtTupleAny.vo sep_ext_tuple_any.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_tuple_any.t.exe SepExtTupleAny.cpp sep_ext_tuple_any.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_tuple_any.t.exe)
-  (action (run ./sep_ext_tuple_any.t.exe))))
-
-
-
-(subdir lambda_capture_perf
- (rule
-  (targets lambda_capture_perf.t.exe)
-  (deps LambdaCapturePerf.vo lambda_capture_perf.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lambda_capture_perf.t.exe lambda_capture_perf.cpp lambda_capture_perf.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lambda_capture_perf.t.exe)
-  (action (run ./lambda_capture_perf.t.exe))))
-
-(subdir sep_ext_cross_file_string
- (rule
-  (targets sep_ext_cross_file_string.t.exe)
-  (deps SepExtCrossFileString.vo sep_ext_cross_file_string.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_cross_file_string.t.exe SepExtCrossFileString.cpp sep_ext_cross_file_string.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_cross_file_string.t.exe)
-  (action (run ./sep_ext_cross_file_string.t.exe))))
-
-(subdir sep_ext_enum_as_value
- (rule
-  (targets sep_ext_enum_as_value.t.exe)
-  (deps SepExtEnumAsValue.vo sep_ext_enum_as_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_enum_as_value.t.exe SepExtEnumAsValue.cpp sep_ext_enum_as_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_enum_as_value.t.exe)
-  (action (run ./sep_ext_enum_as_value.t.exe))))
-
-(subdir sep_ext_unmerged_struct_cap
- (rule
-  (targets sep_ext_unmerged_struct_cap.t.exe)
-  (deps SepExtUnmergedStructCap.vo sep_ext_unmerged_struct_cap.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_unmerged_struct_cap.t.exe SepExtUnmergedStructCap.cpp sep_ext_unmerged_struct_cap.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_unmerged_struct_cap.t.exe)
-  (action (run ./sep_ext_unmerged_struct_cap.t.exe))))
-
-(subdir sep_ext_nullary_nested_access
- (rule
-  (targets sep_ext_nullary_nested_access.t.exe)
-  (deps SepExtNullaryNestedAccess.vo sep_ext_nullary_nested_access.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_nested_access.t.exe SepExtNullaryNestedAccess.cpp sep_ext_nullary_nested_access.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_nullary_nested_access.t.exe)
-  (action (run ./sep_ext_nullary_nested_access.t.exe))))
-
-(subdir sep_ext_nullary_deep_path
- (rule
-  (targets sep_ext_nullary_deep_path.t.exe)
-  (deps SepExtNullaryDeepPath.vo sep_ext_nullary_deep_path.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_deep_path.t.exe SepExtNullaryDeepPath.cpp sep_ext_nullary_deep_path.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_nullary_deep_path.t.exe)
-  (action (run ./sep_ext_nullary_deep_path.t.exe))))
-
-(subdir sep_ext_nullary_module_alias
- (rule
-  (targets sep_ext_nullary_module_alias.t.exe)
-  (deps SepExtNullaryModuleAlias.vo sep_ext_nullary_module_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_nullary_module_alias.t.exe SepExtNullaryModuleAlias.cpp sep_ext_nullary_module_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_nullary_module_alias.t.exe)
-  (action (run ./sep_ext_nullary_module_alias.t.exe))))
-
-(subdir sep_ext_any_fun_call
- (rule
-  (targets sep_ext_any_fun_call.t.exe)
-  (deps SepExtAnyFunCall.vo sep_ext_any_fun_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_fun_call.t.exe SepExtAnyFunCall.cpp sep_ext_any_fun_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_any_fun_call.t.exe)
-  (action (run ./sep_ext_any_fun_call.t.exe))))
-
-(subdir sep_ext_any_list_collect
- (rule
-  (targets sep_ext_any_list_collect.t.exe)
-  (deps SepExtAnyListCollect.vo sep_ext_any_list_collect.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_list_collect.t.exe SepExtAnyListCollect.cpp sep_ext_any_list_collect.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_any_list_collect.t.exe)
-  (action (run ./sep_ext_any_list_collect.t.exe))))
-
-(subdir sep_ext_any_nested_match
- (rule
-  (targets sep_ext_any_nested_match.t.exe)
-  (deps SepExtAnyNestedMatch.vo sep_ext_any_nested_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_any_nested_match.t.exe SepExtAnyNestedMatch.cpp sep_ext_any_nested_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sep_ext_any_nested_match.t.exe)
-  (action (run ./sep_ext_any_nested_match.t.exe))))
-
-(subdir todo_typeclass_requires
- (rule
-  (targets todo_typeclass_requires.t.exe)
-  (deps TodoTypeclassRequires.vo todo_typeclass_requires.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_typeclass_requires.t.exe todo_typeclass_requires.cpp todo_typeclass_requires.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_typeclass_requires.t.exe)
-  (action (run ./todo_typeclass_requires.t.exe))))
-
-(subdir todo_modutil_poly_fix
- (rule
-  (targets todo_modutil_poly_fix.t.exe)
-  (deps TodoModutilPolyFix.vo todo_modutil_poly_fix.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_modutil_poly_fix.t.exe todo_modutil_poly_fix.cpp todo_modutil_poly_fix.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_modutil_poly_fix.t.exe)
-  (action (run ./todo_modutil_poly_fix.t.exe))))
-
-(subdir todo_eta_expansion_taxiom
- (rule
-  (targets todo_eta_expansion_taxiom.t.exe)
-  (deps TodoEtaExpansionTaxiom.vo todo_eta_expansion_taxiom.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_eta_expansion_taxiom.t.exe todo_eta_expansion_taxiom.cpp todo_eta_expansion_taxiom.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_eta_expansion_taxiom.t.exe)
-  (action (run ./todo_eta_expansion_taxiom.t.exe))))
-
-(subdir todo_generalizable_approx
- (rule
-  (targets todo_generalizable_approx.t.exe)
-  (deps TodoGeneralizableApprox.vo todo_generalizable_approx.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_generalizable_approx.t.exe todo_generalizable_approx.cpp todo_generalizable_approx.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_generalizable_approx.t.exe)
-  (action (run ./todo_generalizable_approx.t.exe))))
-
-(subdir todo_iota_complex_pattern
- (rule
-  (targets todo_iota_complex_pattern.t.exe)
-  (deps TodoIotaComplexPattern.vo todo_iota_complex_pattern.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} todo_iota_complex_pattern.t.exe todo_iota_complex_pattern.cpp todo_iota_complex_pattern.t.cpp)))
- (rule
-  (alias runtest)
-  (deps todo_iota_complex_pattern.t.exe)
-  (action (run ./todo_iota_complex_pattern.t.exe))))
-
-(subdir any_cast_dangling_pair_ref
- (rule
-  (targets any_cast_dangling_pair_ref.t.exe)
-  (deps AnyCastDanglingPairRef.vo any_cast_dangling_pair_ref.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} any_cast_dangling_pair_ref.t.exe AnyCastDanglingPairRef.cpp any_cast_dangling_pair_ref.t.cpp)))
- (rule
-  (alias runtest)
-  (deps any_cast_dangling_pair_ref.t.exe)
-  (action (run ./any_cast_dangling_pair_ref.t.exe))))
-
-(subdir loopify_filter_fn_ref
- (rule
-  (targets loopify_filter_fn_ref.t.exe)
-  (deps LoopifyFilterFnRef.vo loopify_filter_fn_ref.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_filter_fn_ref.t.exe loopify_filter_fn_ref.cpp loopify_filter_fn_ref.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_filter_fn_ref.t.exe)
-  (action (run ./loopify_filter_fn_ref.t.exe))))
+  (deps deque_any_cast.t.exe)
+  (action (run ./deque_any_cast.t.exe))))
 
 (subdir concept_param_mismatch
  (rule
@@ -361,3 +112,13 @@
   (alias runtest)
   (deps local_fixpoint.t.exe)
   (action (run ./local_fixpoint.t.exe))))
+(subdir deque_element_cast
+ (rule
+  (targets deque_element_cast.t.exe)
+  (deps DequeElementCast.vo deque_element_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_element_cast.t.exe DequeElementCast.cpp deque_element_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_element_cast.t.exe)
+  (action (run ./deque_element_cast.t.exe))))

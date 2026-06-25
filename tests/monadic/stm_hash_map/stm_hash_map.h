@@ -216,8 +216,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v());
-      const T1 &k_ = a0.first;
-      const T2 &v = a0.second;
+      const auto &[k_, v] = a0;
       if (eqb(k, k_)) {
         return std::make_optional<T2>(v);
       } else {
@@ -237,8 +236,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v());
-      const T1 &k_ = a0.first;
-      const T2 &v_ = a0.second;
+      const auto &[k_, v_] = a0;
       if (eqb(k, k_)) {
         return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), *a1);
       } else {
@@ -260,8 +258,7 @@ template <typename K, typename V> struct CHT {
     } else {
       auto &[a0, a1] =
           std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v_mut());
-      T1 k_ = std::move(a0.first);
-      T2 v_ = std::move(a0.second);
+      auto [k_, v_] = std::move(a0);
       if (eqb(k, k_)) {
         return std::make_pair(std::make_optional<T2>(v_), *a1);
       } else {

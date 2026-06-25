@@ -283,8 +283,7 @@ struct NestedTree {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2> lift(F0 &&f, const std::pair<T1, T1> &p) {
-    const T1 &x = p.first;
-    const T1 &y = p.second;
+    const auto &[x, y] = p;
     return f(x).app(f(y));
   }
 

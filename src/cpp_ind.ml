@@ -124,7 +124,7 @@ let pp_decl = function
     pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs
   | Dterm (r, _, _)
     when List.exists
-           (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r')
+           (fun (r', _, _, _) -> globref_equal r r')
            !method_candidates ->
     (* Skip - this function is generated as a method on the eponymous type *)
     mt ()
@@ -215,7 +215,7 @@ let pp_cpp_ind_header kn ind =
     let ind_ref = names.(0) in
     ( match !eponymous_record with
     | Some (epon_ref, _, _)
-      when Environ.QGlobRef.equal Environ.empty_env ind_ref epon_ref ->
+      when globref_equal ind_ref epon_ref ->
       mt () (* Skip - merged into module struct *)
     | _ ->
       pp_cpp_decl
@@ -294,7 +294,7 @@ let pp_cpp_ind_header kn ind =
             Array.iteri
               (fun j _p ->
                 let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
-                if Environ.QGlobRef.equal Environ.empty_env fwd_ref ind_ref then
+                if globref_equal fwd_ref ind_ref then
                   seen_current := true
                 else if !seen_current then
                   forward_inductives := fwd_ref :: !forward_inductives )
@@ -307,7 +307,7 @@ let pp_cpp_ind_header kn ind =
       let rec refs_excluded ty =
         match ty with
         | Miniml.Tglob (r, args, _) ->
-          List.exists (Environ.QGlobRef.equal Environ.empty_env r) excluded_refs
+          List.exists (globref_equal r) excluded_refs
           || List.exists refs_excluded args
         | Miniml.Tarr (t1, t2) -> refs_excluded t1 || refs_excluded t2
         | Miniml.Tmeta {contents = Some t} -> refs_excluded t
@@ -370,7 +370,7 @@ let pp_cpp_ind_header kn ind =
                           false
                         else
                           let r = GlobRef.IndRef (kn', i') in
-                          Environ.QGlobRef.equal Environ.empty_env r ind_ref
+                          globref_equal r ind_ref
                           || check_packets (i' + 1)
                       in
                       check_packets 0
@@ -390,7 +390,7 @@ let pp_cpp_ind_header kn ind =
           let methods =
             match !eponymous_type_ref with
             | Some epon_ref
-              when Environ.QGlobRef.equal Environ.empty_env ind_ref epon_ref ->
+              when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
               when (not render_ctx.rc_in_struct) && not is_inside_submodule_decl
@@ -446,7 +446,7 @@ let pp_cpp_ind_header kn ind =
                 match ty with
                 | Miniml.Tglob (r, args, _) ->
                   List.exists
-                    (Environ.QGlobRef.equal Environ.empty_env r)
+                    (globref_equal r)
                     fwd_refs
                   || List.exists candidate_refs_fwd args
                 | Miniml.Tarr (t1, t2) ->
@@ -460,7 +460,7 @@ let pp_cpp_ind_header kn ind =
                   (fun (r, _, ty, _) ->
                     (not
                        (List.exists
-                          (Environ.QGlobRef.equal Environ.empty_env r)
+                          (globref_equal r)
                           existing ) )
                     && not (candidate_refs_fwd ty) )
                   reg_candidates
@@ -527,7 +527,7 @@ let pp_cpp_ind_header kn ind =
              module struct provides the wrapper. *)
           let is_promoted =
             match !eponymous_promote_ref with
-            | Some r -> Environ.QGlobRef.equal Environ.empty_env r names.(i)
+            | Some r -> globref_equal r names.(i)
             | None -> false
           in
           if is_promoted then
@@ -632,7 +632,7 @@ let pp_hdecl d =
     pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) defs
   | Dterm (r, _, _)
     when List.exists
-           (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r')
+           (fun (r', _, _, _) -> globref_equal r r')
            !method_candidates ->
     (* Skip - this function will be generated as a method on the eponymous
        type *)
@@ -765,7 +765,7 @@ let pp_hdecl_spec_only = function
     pp_tydef l name def
   | Dterm (r, _, _)
     when List.exists
-           (fun (r', _, _, _) -> Environ.QGlobRef.equal Environ.empty_env r r')
+           (fun (r', _, _, _) -> globref_equal r r')
            !method_candidates -> mt ()
   | Dterm (r, _, _) when is_registered_method r <> None -> mt ()
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->

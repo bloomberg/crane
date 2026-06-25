@@ -88,8 +88,7 @@ ComprehensivePatterns::nested_containers(ComprehensivePatterns::S s) {
 std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>
 ComprehensivePatterns::match_pair(
     std::pair<ComprehensivePatterns::S, uint64_t> p) {
-  ComprehensivePatterns::S s = std::move(p.first);
-  uint64_t n = std::move(p.second);
+  auto [s, n] = std::move(p);
   return std::make_pair(std::make_pair(s, n), s.s_a);
 }
 

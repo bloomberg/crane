@@ -42,31 +42,51 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(
     uint64_t fuel;
   };
 
-  using _Frame = std::variant<_Enter>;
+  /// _Resume1: saves [n], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t n;
+  };
+
+  /// _Resume2: saves [n], resumes after recursive call with _result.
+  struct _Resume2 {
+    uint64_t n;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   List<uint64_t> _result{};
   std::vector<_Frame> _stack;
   _stack.reserve(8);
   _stack.emplace_back(_Enter{n, fuel});
-  /// Loopified collatz_list_fuel: _Enter.
+  /// Loopified collatz_list_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
-    auto _f = std::move(std::get<_Enter>(_frame));
-    uint64_t n = _f.n;
-    uint64_t fuel = _f.fuel;
-    if (fuel <= 0) {
-      _result = List<uint64_t>::nil();
-    } else {
-      uint64_t f = fuel - 1;
-      if (n == UINT64_C(1)) {
-        _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = List<uint64_t>::nil();
       } else {
-        if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-          _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
+        uint64_t f = fuel - 1;
+        if (n == UINT64_C(1)) {
+          _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
-          _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
+          if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
+            _stack.emplace_back(_Resume1{n});
+            _stack.emplace_back(_Enter{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});
+          } else {
+            _stack.emplace_back(_Resume2{n});
+            _stack.emplace_back(_Enter{((UINT64_C(3) * n) + UINT64_C(1)), f});
+          }
         }
       }
+    } else if (std::holds_alternative<_Resume1>(_frame)) {
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result = List<uint64_t>::cons(_f.n, std::move(_result));
     }
   }
   return _result;
@@ -1095,8 +1115,7 @@ LoopifySequences::run_length_encode_fuel(uint64_t fuel,
           const auto &[a01, a11] =
               std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                   _sv1.v());
-          const uint64_t &y = a01.first;
-          const uint64_t &n = a01.second;
+          const auto &[y, n] = a01;
           if (a0 == y) {
             return List<std::pair<uint64_t, uint64_t>>::cons(
                 std::make_pair(y, (n + 1)), *a11);

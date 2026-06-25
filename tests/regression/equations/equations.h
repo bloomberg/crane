@@ -45,8 +45,7 @@ struct Equations {
     requires std::is_invocable_r_v<uint64_t, F1 &,
                                    std::pair<uint64_t, uint64_t> &>
   static uint64_t gcd_functional(std::pair<uint64_t, uint64_t> p, F1 &&gcd0) {
-    uint64_t n = std::move(p.first);
-    uint64_t n0 = std::move(p.second);
+    auto [n, n0] = std::move(p);
     if (n <= 0) {
       return n0;
     } else {
@@ -423,18 +422,15 @@ struct Equations {
         f, f0,
         [=](uint64_t, uint64_t, const gcd_clause_3_graph &,
             const T1 &x) mutable {
-          const uint64_t &_x2 = p.first;
-          const uint64_t &_x3 = p.second;
+          const auto &[_x2, _x3] = p;
           return x;
         },
         [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
-          const uint64_t &_x0 = p.first;
-          const uint64_t &_x1 = p.second;
+          const auto &[_x0, _x1] = p;
           return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
         },
         [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
-          const uint64_t &_x0 = p.first;
-          const uint64_t &_x1 = p.second;
+          const auto &[_x0, _x1] = p;
           return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
         },
         p, gcd(p), gcd_graph_correct(p));

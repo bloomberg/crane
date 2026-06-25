@@ -1977,7 +1977,7 @@ let try_ref name = try Some (Rocqlib.lib_ref name) with _ -> None
 (** Tests whether a global reference [gr] corresponds to the Rocq library
     reference with the given name. *)
 let is_ref name gr =
-  try Environ.QGlobRef.equal Environ.empty_env gr (Rocqlib.lib_ref name)
+  try globref_equal gr (Rocqlib.lib_ref name)
   with _ -> false
 
 (* Check if a term's head is a specific global reference *)
@@ -2313,7 +2313,12 @@ let extract_constant access env kn cb =
       with Retyping.RetypeError _ -> false
     in
     if is_logical then Dtype (r, vl, Tdummy Ktype)
-    else Dtype (r, vl, t)
+    else begin
+      (match t with
+       | Tunknown | Taxiom -> add_erased_type_const r
+       | _ -> ());
+      Dtype (r, vl, t)
+    end
   in
   let mk_ax () =
     let t = extract_axiom env sg kn typ in

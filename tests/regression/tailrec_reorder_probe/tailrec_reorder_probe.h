@@ -285,15 +285,13 @@ struct TailrecReorderProbe {
               UINT64_C(2), mylist<uint64_t>::mycons(
                                UINT64_C(3), mylist<uint64_t>::mynil())))));
   static inline const uint64_t test_dual = []() -> uint64_t {
-    auto _cs = dual_accum(
+    auto [a, b] = dual_accum(
         mylist<uint64_t>::mycons(
             UINT64_C(10),
             mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
                                   UINT64_C(30), mylist<uint64_t>::mynil()))),
         mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
-    mylist<uint64_t> a = std::move(_cs.first);
-    mylist<uint64_t> b = std::move(_cs.second);
     return (mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(a)) +
             mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(b)));
   }();

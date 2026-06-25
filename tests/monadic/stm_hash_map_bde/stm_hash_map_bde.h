@@ -206,8 +206,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
-      T1 k_ = d_a0.first;
-      T2 v = d_a0.second;
+      auto [k_, v] = d_a0;
       if (eqb(k, k_)) {
         return bsl::make_optional<T2>(v);
       } else {
@@ -226,8 +225,7 @@ template <typename K, typename V> struct CHT {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v());
-      T1 k_ = d_a0.first;
-      T2 v_ = d_a0.second;
+      auto [k_, v_] = d_a0;
       if (eqb(k, k_)) {
         return List<bsl::pair<T1, T2>>::cons(bsl::make_pair(k, v), *d_a1);
       } else {
@@ -248,8 +246,7 @@ template <typename K, typename V> struct CHT {
     } else {
       auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, T2>>::Cons>(xs.v_mut());
-      T1 k_ = std::move(d_a0.first);
-      T2 v_ = std::move(d_a0.second);
+      auto [k_, v_] = bsl::move(d_a0);
       if (eqb(k, k_)) {
         return bsl::make_pair(bsl::make_optional<T2>(v_), *d_a1);
       } else {

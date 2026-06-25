@@ -117,7 +117,7 @@ concept HasElements = requires {
 
 struct ConceptQualifyArgs {
   template <HasElements E> struct UseElements {
-    constexpr static typename E::t first_or_default(typename E::t _x0) {
+    static typename E::t first_or_default(typename E::t _x0) {
       return E::head_or(_x0);
     }
   };

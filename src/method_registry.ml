@@ -62,7 +62,7 @@ let ml_return_type_has_ref ref ty =
   let ret = get_return ty in
   let rec contains = function
     | Miniml.Tglob (r, args, _) ->
-      Environ.QGlobRef.equal Environ.empty_env r ref
+      globref_equal r ref
       || List.exists contains args
     | Miniml.Tarr (a, b) -> contains a || contains b
     | Miniml.Tmeta { contents = Some t } -> contains t
@@ -245,14 +245,20 @@ let find_eponymous_inductive module_name_str decls =
 let find_epon_arg_pos epon_ref ty =
   let rec aux pos = function
     | Miniml.Tarr (Miniml.Tglob (arg_ref, tvar_args, _), rest)
-      when Environ.QGlobRef.equal Environ.empty_env arg_ref epon_ref ->
+      when globref_equal arg_ref epon_ref ->
+      let nparams = match epon_ref with
+        | GlobRef.IndRef (kn, _) ->
+          (match get_ind_nparams_opt kn with Some n -> n | None -> List.length tvar_args)
+        | _ -> List.length tvar_args
+      in
+      let param_tvar_args = List.firstn (min nparams (List.length tvar_args)) tvar_args in
       let ind_tvar_positions =
         List.filter_map
           (fun t ->
             match t with
             | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
             | _ -> None )
-          tvar_args
+          param_tvar_args
       in
       Some (pos, ind_tvar_positions)
     | Miniml.Tarr (_, rest) -> aux (pos + 1) rest
@@ -292,7 +298,7 @@ let find_all_module_inductives decls =
 let rec count_type_occurrences ind_ref ty =
   match ty with
   | Miniml.Tglob (r, args, _) ->
-    (if Environ.QGlobRef.equal Environ.empty_env r ind_ref then 1 else 0)
+    (if globref_equal r ind_ref then 1 else 0)
     + List.fold_left (fun acc a -> acc + count_type_occurrences ind_ref a) 0 args
   | Miniml.Tarr (t1, t2) ->
     count_type_occurrences ind_ref t1 + count_type_occurrences ind_ref t2
@@ -428,7 +434,7 @@ let register_methods_for_epon
           Array.iteri
             (fun j _p ->
               let fwd_ref = GlobRef.IndRef (fwd_kn, j) in
-              if Environ.QGlobRef.equal Environ.empty_env fwd_ref epon_ref then
+              if globref_equal fwd_ref epon_ref then
                 seen_epon := true
               else if !seen_epon then
                 forward_inductives := fwd_ref :: !forward_inductives )
@@ -439,7 +445,7 @@ let register_methods_for_epon
     let rec refs_forward ty =
       match ty with
       | Miniml.Tglob (r, args, _) ->
-        List.exists (Environ.QGlobRef.equal Environ.empty_env r) fwd_refs
+        List.exists (globref_equal r) fwd_refs
         || List.exists refs_forward args
       | Miniml.Tarr (t1, t2) -> refs_forward t1 || refs_forward t2
       | Miniml.Tmeta {contents = Some t} -> refs_forward t
@@ -515,7 +521,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
       | SEdecl (Dind (kn, ind)) ->
         Array.iteri (fun j _p ->
           let r = GlobRef.IndRef (kn, j) in
-          if Environ.QGlobRef.equal Environ.empty_env r ind_ref then
+          if globref_equal r ind_ref then
             seen := true
           else if !seen then
             fwd := r :: !fwd
@@ -526,7 +532,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   ) ind_refs in
   let find_forward_refs ind_ref =
     List.find_map (fun (r, fwd) ->
-      if Environ.QGlobRef.equal Environ.empty_env r ind_ref then Some fwd
+      if globref_equal r ind_ref then Some fwd
       else None
     ) forward_sets
   in
@@ -539,7 +545,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     let excluded = module_type_aliases @ fwd_refs in
     let rec check = function
       | Miniml.Tglob (r, args, _) ->
-        List.exists (Environ.QGlobRef.equal Environ.empty_env r) excluded
+        List.exists (globref_equal r) excluded
         || List.exists check args
       | Miniml.Tarr (t1, t2) -> check t1 || check t2
       | Miniml.Tmeta { contents = Some t } -> check t
@@ -561,7 +567,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   let has_concrete_type_args best_ref ty =
     let rec find_arg pos = function
       | Miniml.Tarr (Miniml.Tglob (r, tvar_args, _), _rest)
-        when Environ.QGlobRef.equal Environ.empty_env r best_ref ->
+        when globref_equal r best_ref ->
         (* Check if any type arg is concrete (not Tvar/Tvar') *)
         tvar_args <> [] &&
         List.exists (fun t ->
@@ -812,12 +818,12 @@ let compute_returns_any tbl (s : ml_structure) =
               (fun (_l, se) ->
                 match se with
                 | SEdecl (Dterm (r, _, ty))
-                  when Environ.QGlobRef.equal Environ.empty_env r func_ref ->
+                  when globref_equal r func_ref ->
                   result := Some ty
                 | SEdecl (Dfix (rv, _, typs)) ->
                   Array.iteri
                     (fun i r ->
-                      if Environ.QGlobRef.equal Environ.empty_env r func_ref
+                      if globref_equal r func_ref
                       then
                         result := Some typs.(i) )
                     rv

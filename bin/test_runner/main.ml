@@ -1,5 +1,28 @@
+(** Entry point for the Crane test runner.
+
+    Discovers all tests under [tests/], optionally filters by category
+    or changed-file status, then delegates to {!Parallel.run_tests_parallel}
+    for a two-phase build-then-run execution.  After the run, the timing
+    cache is updated for future load balancing.
+
+    {2 Usage}
+
+    {v
+    crane-test-runner [options]
+
+      -j, --jobs N      Number of parallel workers (default: CPU count)
+      -v, --verbose     Print stdout/stderr for failed tests
+      --folder NAME     Restrict to one category (basics, monadic, regression, wip)
+      --changed         Only run tests whose files differ from HEAD
+    v}
+
+    Typical invocation via Make:
+    - [make test]         — extract all .vo files, then build and run all tests
+    - [make test-one TEST=list] — build and run a single test *)
+
 open Types
 
+(** Detect the number of logical CPUs.  Falls back to 4 on failure. *)
 let get_cpu_count () =
   try
     if Sys.os_type = "Unix" then (
@@ -14,6 +37,7 @@ let get_cpu_count () =
       4
   with _ -> 4
 
+(** Parse command-line arguments into a {!config}. *)
 let parse_args () =
   let jobs = ref (get_cpu_count ()) in
   let verbose = ref false in
@@ -44,6 +68,7 @@ let main () =
   let config = parse_args () in
   let all_tests = Discovery.find_all_tests config.project_root in
 
+  (* Apply optional filters: --folder and --changed *)
   let tests =
     match config.folder with
     | None -> all_tests
@@ -75,10 +100,16 @@ let main () =
 
   Output.print_header ();
 
+  let t0 = Unix.gettimeofday () in
   let results = Parallel.run_tests_parallel config tests in
+  let elapsed = Unix.gettimeofday () -. t0 in
+
+  (* Update the timing cache with results from this run.  [all_tests] is
+     passed so that entries for deleted/renamed tests can be pruned. *)
+  Parallel.save_timing_cache config.project_root results all_tests;
 
   Output.print_results results;
-  Output.print_summary results;
+  Output.print_summary results elapsed;
 
   if config.verbose then
     Output.print_verbose_errors results 40;

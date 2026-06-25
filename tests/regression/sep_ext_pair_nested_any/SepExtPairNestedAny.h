@@ -19,8 +19,7 @@ const std::pair<std::optional<Datatypes::List<token>>, bool> produce =
             Datatypes::List<Specif::SigT<Datatypes::Nat, std::any>>>(),
         true);
 const bool use_it = []() -> bool {
-  auto _x = std::move(produce.first);
-  bool b = std::move(produce.second);
+  auto [_x, b] = produce;
   return b;
 }();
 

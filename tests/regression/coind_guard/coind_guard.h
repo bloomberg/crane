@@ -179,9 +179,7 @@ struct CoindGuard {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<std::pair<T1, T2>, F0 &, T2 &>
   static Stream<T1> unfold(F0 &&f, const T2 &seed) {
-    auto _cs = f(seed);
-    T1 a = std::move(_cs.first);
-    T2 s_ = std::move(_cs.second);
+    auto [a, s_] = f(seed);
     return Stream<T1>::lazy_([=]() mutable -> Stream<T1> {
       return Stream<T1>::cons(a, unfold<T1, T2>(f, s_));
     });
@@ -203,8 +201,7 @@ struct CoindGuard {
   static inline const Stream<uint64_t> fibs =
       unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
           [](std::pair<uint64_t, uint64_t> pat) {
-            const uint64_t &a = pat.first;
-            const uint64_t &b = pat.second;
+            const auto &[a, b] = pat;
             return std::make_pair(a, std::make_pair(b, (a + b)));
           },
           std::make_pair(UINT64_C(0), UINT64_C(1)));

@@ -711,10 +711,6 @@ let rec pp_cpp_type par vl t =
           ++ struct_qualifier_for r name_str
           ++ type_name
         | l ->
-          (* When type_name contains :: (qualified name like "C::t"), we need to
-             insert "template " before the last component for dependent
-             templates. E.g., "C::t" + <unsigned int> -> "C::template t<unsigned
-             int>" *)
           let type_name_with_template =
             insert_template_keyword type_name name_str
           in
@@ -739,10 +735,10 @@ let rec pp_cpp_type par vl t =
          get the prefix. EXCEPTION: Eponymous records are merged into the module
          struct, so we use just the capitalized name without namespace
          qualification (CHT, not CHT::cHT). *)
-      let name, _needs_ns = inductive_name_info r in
+      let name, needs_ns = inductive_name_info r in
       ( match (r, t) with
       | GlobRef.IndRef _, Tglob (r', args, _)
-        when Environ.QGlobRef.equal Environ.empty_env r r' ->
+        when globref_equal r r' ->
         let templates =
           match args with
           | [] -> mt ()
@@ -753,7 +749,7 @@ let rec pp_cpp_type par vl t =
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached r' then
           let cap_name = Common.pp_type_name_capitalized r' in
-          if Common.get_force_qualified_capitalization ()
+          if Common.get_force_qualified_capitalization () && not (is_local_inductive r')
           then str (cap_name ^ "::" ^ cap_name) ++ templates
           else str cap_name ++ templates
         else if is_enum_cached r' then
@@ -785,7 +781,8 @@ let rec pp_cpp_type par vl t =
             then Common.capitalize_last_component type_name_str
             else type_name_str in
           if is_merged_inductive_cached r' then
-            let cap = dedup_qualified_tail cap in
+            let cap = dedup_qualified_tail
+              ~allow_bare:(Table.modular () && not needs_ns) cap in
             let cap_pp =
               if args <> [] && render_ctx.rc_in_template then
                 insert_template_keyword (str cap) cap
@@ -798,9 +795,16 @@ let rec pp_cpp_type par vl t =
               else str cap in
             typename_prefix_for cap ++ cap_pp ++ templates
         else if is_merged_inductive_cached r' then
-          name ++ templates
-        else (* Unmerged: use Wrapper::inner<args> *)
-          name ++ str "::" ++ str type_name_str ++ templates
+          let cap = String.capitalize_ascii type_name_str in
+          if needs_ns && Table.modular () then
+            str (cap ^ "::" ^ cap) ++ templates
+          else
+            str cap ++ templates
+        else
+          if needs_ns then
+            name ++ str "::" ++ str type_name_str ++ templates
+          else
+            str type_name_str ++ templates
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         str "typename " ++ name ++ str "::" ++ pp_rec false t )
@@ -822,7 +826,7 @@ let rec pp_cpp_type par vl t =
         | Tqualified (inner_ty, id) ->
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
         | Tnamespace (r, Tglob (r', args, _))
-          when Environ.QGlobRef.equal Environ.empty_env r r' ->
+          when globref_equal r r' ->
           let templates =
             match args with
             | [] -> mt ()
@@ -834,6 +838,10 @@ let rec pp_cpp_type par vl t =
               if Common.get_force_qualified_capitalization ()
               then Common.capitalize_last_component type_name_str
               else type_name_str in
+            let cap =
+              if is_merged_inductive_cached r' then
+                dedup_qualified_tail ~allow_bare:true cap
+              else cap in
             let cap_pp =
               if args <> [] && render_ctx.rc_in_template then
                 insert_template_keyword (str cap) cap
@@ -1347,11 +1355,14 @@ and pp_cpp_expr env args t =
       let obj_s = pp_cpp_expr env args this_arg in
       let args_s = pp_list (pp_cpp_expr env args) other_args in
       let ind_tvar_positions = lookup_method_ind_tvar_positions n in
+      let phantom_positions = Table.get_phantom_tvars n in
       let filtered_tys =
         match tys with
         | [] -> []
         | _ ->
-          List.filteri (fun i _ty -> not (List.mem i ind_tvar_positions)) tys
+          List.filteri (fun i _ty ->
+            not (List.mem i ind_tvar_positions)
+            && not (List.mem i phantom_positions)) tys
       in
       let template_kw, ty_args_s =
         match filtered_tys with
@@ -2505,7 +2516,9 @@ and is_pure_return_type = function
     The check is recursive for container types ([Tvariant], [Tglob], [Tid],
     [Tnamespace], [Tqualified]) — a [std::variant<A, B>] is constexpr only
     if both [A] and [B] are. *)
-and is_constexpr_type = function
+and is_constexpr_type ty =
+  if is_any_type ty then false else
+  match ty with
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
@@ -2519,7 +2532,9 @@ and is_constexpr_type = function
     Table.is_enum_inductive r && List.for_all is_constexpr_type tys
   | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
+  | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
+  | Tid (_, []) -> false  (* unresolved type alias — conservatively non-literal *)
   | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
@@ -2863,7 +2878,7 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
       else
         ( match List.nth_opt tyargs i with
           | Some ty -> pp_cpp_type false vl ty
-          | None -> pp_cpp_type false vl Tauto
+          | None -> pp_cpp_type false vl Tany
         )
     | CCbr_var (i, j) ->
       ( try
@@ -3705,10 +3720,11 @@ and pp_cpp_decl_raw env = function
        {!fun_qualifier} because [can_constexpr] is unconditionally false
        and the param list has a different shape ([Id.t option] vs [Id.t]). *)
     let qualifier = mt () in
+    let ret_pp = pp_type ret_ty in
     h
       ( qualifier
       ++ static_kw
-      ++ pp_type ret_ty
+      ++ ret_pp
       ++ str " "
       ++ name
       ++ pp_par true params_s )

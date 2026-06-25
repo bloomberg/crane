@@ -1027,12 +1027,12 @@ template <typename K, typename V> struct SkipList {
     }
   }
   template <typename T1, typename T2>
-  static T1 key(bsl::shared_ptr<SkipNode<T1, T2>> _x0) {
-    return _x0->key;
+  static T1 key(bsl::shared_ptr<SkipNode<T1, T2>> pair) {
+    return pair->key;
   }
   template <typename T1, typename T2>
-  static T2 data(bsl::shared_ptr<SkipNode<T1, T2>> _x0) {
-    return stm::readTVar<T2>(_x0->value);
+  static T2 data(bsl::shared_ptr<SkipNode<T1, T2>> pair) {
+    return stm::readTVar<T2>(pair->value);
   }
   static inline const unsigned int e_SUCCESS = 0u;
   static inline const unsigned int e_NOT_FOUND = 1u;

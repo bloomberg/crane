@@ -1124,13 +1124,11 @@ let error_singleton_become_prop ind =
     ++ str "This happens when a sort-polymorphic singleton inductive type\n"
     ++ str "has logical parameters, such as (I,I) : (True * True) : Prop.\n"
     ++ str "Extraction cannot handle this situation yet.\n"
-    ++ str "Instead, use a sort-monomorphic type such as (True /\\ True)\n"
-    ++ str "or extract to Haskell." )
+    ++ str "Instead, use a sort-monomorphic type such as (True /\\ True)" )
 
 let error_unknown_module ?loc m =
   err ?loc (str "Module" ++ spc () ++ pr_qualid m ++ spc () ++ str "not found.")
 
-let error_scheme () = err (str "No Scheme modular extraction available yet.")
 
 let error_not_visible r =
   err

@@ -720,8 +720,7 @@ CoalitionBidHonorTraceCase::Honor CoalitionBidHonorTraceCase::ledger_lookup(
   } else {
     const auto &[a0, a1] =
         std::get<typename List<std::pair<uint64_t, Z>>::Cons>(ledger.v());
-    const uint64_t &id = a0.first;
-    const Z &honor = a0.second;
+    const auto &[id, honor] = a0;
     if (id == warrior_id) {
       return honor;
     } else {
@@ -742,8 +741,7 @@ CoalitionBidHonorTraceCase::ledger_update_by_id(
   } else {
     const auto &[a0, a1] =
         std::get<typename List<std::pair<uint64_t, Z>>::Cons>(ledger.v());
-    const uint64_t &id = a0.first;
-    const Z &honor = a0.second;
+    const auto &[id, honor] = a0;
     if (id == warrior_id) {
       return List<std::pair<uint64_t, Z>>::cons(
           std::make_pair(id, std::move(new_honor)), *a1);

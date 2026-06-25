@@ -72,9 +72,6 @@ val error_singleton_become_prop : inductive -> 'a
 (** Report error for unknown module. *)
 val error_unknown_module : ?loc:Loc.t -> qualid -> 'a
 
-(** Report error for scheme. *)
-val error_scheme : unit -> 'a
-
 (** Report error for non-visible reference. *)
 val error_not_visible : GlobRef.t -> 'a
 

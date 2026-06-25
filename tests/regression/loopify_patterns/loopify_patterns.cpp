@@ -264,51 +264,16 @@ bool LoopifyPatterns::chained_comp(
 
 /// tuple_constr n recursive calls in multiple tuple positions.
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
-LoopifyPatterns::tuple_constr(
-    uint64_t
-        n) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    uint64_t n;
-  };
-
-  /// _Cont_m: saves [n], resumes after recursive call, then processes rest.
-  struct _Cont_m {
-    uint64_t n;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_m>;
-  std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{n});
-  /// Loopified tuple_constr: _Enter -> _Cont_m.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
-                                 UINT64_C(0));
-      } else {
-        uint64_t m = n - 1;
-        _stack.emplace_back(_Cont_m{n});
-        _stack.emplace_back(_Enter{m});
-      }
-    } else {
-      auto _f = std::move(std::get<_Cont_m>(_frame));
-      uint64_t n = _f.n;
-      auto _cs = std::move(_result);
-      std::pair<uint64_t, uint64_t> p = std::move(_cs.first);
-      uint64_t c = std::move(_cs.second);
-      uint64_t a = std::move(p.first);
-      uint64_t b = std::move(p.second);
-      _result = std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
-    }
+LoopifyPatterns::tuple_constr(uint64_t n) {
+  if (n <= 0) {
+    return std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
+                          UINT64_C(0));
+  } else {
+    uint64_t m = n - 1;
+    auto [p, c] = tuple_constr(m);
+    auto [a, b] = std::move(p);
+    return std::make_pair(std::make_pair((a + 1), (b + n)), (c + (n * n)));
   }
-  return _result;
 }
 
 /// sum_prod_count l a_sum a_prod a_count multiple accumulator updates.
@@ -648,10 +613,8 @@ uint64_t LoopifyPatterns::nested_pattern(
       } else {
         const auto &[a0, a1] = std::get<typename LoopifyPatterns::list<
             std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(l.v());
-        const std::pair<uint64_t, uint64_t> &p0 = a0.first;
-        const uint64_t &c = a0.second;
-        const uint64_t &a = p0.first;
-        const uint64_t &b = p0.second;
+        const auto &[p0, c] = a0;
+        const auto &[a, b] = p0;
         _stack.emplace_back(_Resume_a{a, b, c});
         _stack.emplace_back(_Enter{a1.get()});
       }

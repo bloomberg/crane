@@ -208,9 +208,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(l);
           } else {
-            auto _cs = split<uint64_t>(l);
-            List<uint64_t> l1 = std::move(_cs.first);
-            List<uint64_t> l2 = std::move(_cs.second);
+            auto [l1, l2] = split<uint64_t>(l);
             _stack.emplace_back(_After_l1{std::move(std::move(l1)), f});
             _stack.emplace_back(_Enter{std::move(l2), f});
           }
@@ -232,55 +230,21 @@ List<uint64_t> LoopifySorting::merge_sort(const List<uint64_t> &l) {
   return merge_sort_fuel(len_impl<uint64_t>(l), l);
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
-    uint64_t pivot,
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
-    const List<uint64_t> *l;
-  };
-
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
-    uint64_t a0;
-  };
-
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
-  std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified partition: _Enter -> _Cont_Cons.
-  while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
-    _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const List<uint64_t> &l = *_f.l;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-      } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{a1.get()});
-      }
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifySorting::partition(uint64_t pivot, const List<uint64_t> &l) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    auto [lo, hi] = partition(pivot, *a1);
+    if (a0 <= pivot) {
+      return std::make_pair(List<uint64_t>::cons(a0, std::move(lo)),
+                            std::move(hi));
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
-      uint64_t a0 = _f.a0;
-      auto _cs = std::move(_result);
-      List<uint64_t> lo = std::move(_cs.first);
-      List<uint64_t> hi = std::move(_cs.second);
-      if (a0 <= pivot) {
-        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(lo)),
-                                 std::move(hi));
-      } else {
-        _result = std::make_pair(std::move(lo),
-                                 List<uint64_t>::cons(a0, std::move(hi)));
-      }
+      return std::make_pair(std::move(lo),
+                            List<uint64_t>::cons(a0, std::move(hi)));
     }
   }
-  return _result;
 }
 
 List<uint64_t> LoopifySorting::quicksort_fuel(
@@ -328,9 +292,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
           _result = List<uint64_t>::nil();
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-          auto _cs = partition(a0, *a1);
-          List<uint64_t> lo = std::move(_cs.first);
-          List<uint64_t> hi = std::move(_cs.second);
+          auto [lo, hi] = partition(a0, *a1);
           _stack.emplace_back(
               _After_lo{std::move(std::move(lo)), f, std::move(a0)});
           _stack.emplace_back(_Enter{std::move(hi), f});

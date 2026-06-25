@@ -211,8 +211,7 @@ struct ToString {
              std::is_invocable_r_v<std::string, F1 &, T2 &>
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
-    const T1 &a = x.first;
-    const T2 &b = x.second;
+    const auto &[a, b] = x;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 
@@ -267,8 +266,7 @@ struct TopologicalSort {
         const auto &[a0, a1] =
             std::get<typename List<std::pair<T1, T1>>::Cons>(l0.v());
         const List<std::pair<T1, T1>> &a1_value = *a1;
-        const T1 &e1 = a0.first;
-        const T1 &e2 = a0.second;
+        const auto &[e1, e2] = a0;
         std::optional<T1> f1 =
             h.find([=](const T1 &x) mutable { return eqb_node(e1, x); });
         std::optional<T1> f2 =
@@ -345,8 +343,7 @@ struct TopologicalSort {
     });
     if (_cs.has_value()) {
       const std::pair<T1, List<T1>> &p = *_cs;
-      const T1 &_x = p.first;
-      const List<T1> &es = p.second;
+      const auto &[_x, es] = p;
       return es;
     } else {
       return List<T1>::nil();
@@ -400,8 +397,7 @@ struct TopologicalSort {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<std::pair<T1, List<T1>>>::Cons>(graph0.v());
-      const T1 &e = std::make_pair(a0.first, (*a0.second)).first;
-      const List<T1> &_x0 = std::make_pair(a0.first, (*a0.second)).second;
+      const auto &[e, _x0] = a0;
       return std::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }
@@ -524,8 +520,7 @@ struct TopologicalSort {
         .template combine<uint64_t>(ListDef::seq(UINT64_C(0), lorder.length()))
         .template map<List<std::pair<T1, uint64_t>>>(
             [](std::pair<List<T1>, uint64_t> x) {
-              const List<T1> &fs = x.first;
-              const uint64_t &rk = x.second;
+              const auto &[fs, rk] = x;
               return fs.template map<std::pair<T1, uint64_t>>(
                   [=](T1 f) mutable { return std::make_pair(f, rk); });
             })

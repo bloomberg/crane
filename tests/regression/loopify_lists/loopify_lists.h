@@ -1050,73 +1050,34 @@ struct LoopifyLists {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
              std::is_invocable_r_v<bool, F1 &, uint64_t &>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-  partition3(F0 &&p, F1 &&q,
-             const list<uint64_t> &l) { /// _Enter: captures varying parameters
-                                        /// for each recursive call.
-
-    struct _Enter {
-      const list<uint64_t> *l;
-    };
-
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
-      uint64_t a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
-    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-        _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified partition3: _Enter -> _Cont_Cons.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const list<uint64_t> &l = *_f.l;
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
-              list<uint64_t>::nil());
-        } else {
-          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{a1.get()});
-        }
+  partition3(F0 &&p, F1 &&q, const list<uint64_t> &l) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+      return std::make_pair(
+          std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
+          list<uint64_t>::nil());
+    } else {
+      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
+      auto [p0, cs] = partition3(p, q, *a1);
+      auto [as_, bs] = std::move(p0);
+      if (p(a0)) {
+        return std::make_pair(
+            std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
+                           std::move(bs)),
+            std::move(cs));
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        uint64_t a0 = _f.a0;
-        auto _cs = std::move(_result);
-        std::pair<list<uint64_t>, list<uint64_t>> p0 = std::move(_cs.first);
-        list<uint64_t> cs = std::move(_cs.second);
-        list<uint64_t> as_ = std::move(p0.first);
-        list<uint64_t> bs = std::move(p0.second);
-        if (p(a0)) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)),
+        if (q(a0)) {
+          return std::make_pair(
+              std::make_pair(std::move(as_),
+                             list<uint64_t>::cons(a0, std::move(bs))),
               std::move(cs));
         } else {
-          if (q(a0)) {
-            _result = std::make_pair(
-                std::make_pair(std::move(as_),
-                               list<uint64_t>::cons(a0, std::move(bs))),
-                std::move(cs));
-          } else {
-            _result =
-                std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
-                               list<uint64_t>::cons(a0, std::move(cs)));
-          }
+          return std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
+                                list<uint64_t>::cons(a0, std::move(cs)));
         }
       }
     }
-    return _result;
-  }
+  } /// transpose m transposes a matrix (list of lists).
 
-  /// transpose m transposes a matrix (list of lists).
   template <typename T1>
   static list<list<T1>> transpose_fuel(
       uint64_t fuel,
@@ -1225,56 +1186,16 @@ struct LoopifyLists {
   /// map_accum_l f acc l maps with accumulator from left.
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
-  static std::pair<T3, list<T2>>
-  map_accum_l(F0 &&f, T3 acc,
-              const list<T1> &l) { /// _Enter: captures varying parameters for
-                                   /// each recursive call.
-
-    struct _Enter {
-      const list<T1> *l;
-      T3 acc;
-    };
-
-    /// _Cont_acc_: saves [y], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_acc_ {
-      std::decay_t<T2> y;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_acc_>;
-    std::pair<T3, list<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{&l, acc});
-    /// Loopified map_accum_l: _Enter -> _Cont_acc_.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *_f.l;
-        auto acc = std::move(_f.acc);
-        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::make_pair(std::move(acc), list<T2>::nil());
-        } else {
-          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          auto _cs = f(acc, a0);
-          T3 acc_ = std::move(_cs.first);
-          T2 y = std::move(_cs.second);
-          _stack.emplace_back(_Cont_acc_{y});
-          _stack.emplace_back(_Enter{a1.get(), std::move(acc_)});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_acc_>(_frame));
-        auto y = std::move(_f.y);
-        auto _cs1 = std::move(_result);
-        T3 acc__ = std::move(_cs1.first);
-        list<T2> ys = std::move(_cs1.second);
-        _result =
-            std::make_pair(std::move(acc__), list<T2>::cons(y, std::move(ys)));
-      }
+  static std::pair<T3, list<T2>> map_accum_l(F0 &&f, T3 acc,
+                                             const list<T1> &l) {
+    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+      return std::make_pair(std::move(acc), list<T2>::nil());
+    } else {
+      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+      auto [acc_, y] = f(acc, a0);
+      auto [acc__, ys] = map_accum_l<T1, T2, T3>(f, acc_, *a1);
+      return std::make_pair(acc__, list<T2>::cons(y, std::move(ys)));
     }
-    return _result;
   }
 
   /// prefix_sums acc l returns all prefix sums: 1,2,3 -> 0,1,3,6.
@@ -1511,55 +1432,20 @@ struct LoopifyLists {
   /// span p l splits list at first element not satisfying p.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<list<uint64_t>, list<uint64_t>>
-  span(F0 &&p,
-       list<uint64_t>
-           l) { /// _Enter: captures varying parameters for each recursive call.
-
-    struct _Enter {
-      list<uint64_t> l;
-    };
-
-    /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
-    struct _Cont1 {
-      uint64_t a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont1>;
-    std::pair<list<uint64_t>, list<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
-    _stack.emplace_back(_Enter{std::move(l)});
-    /// Loopified span: _Enter -> _Cont1.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        list<uint64_t> l = std::move(_f.l);
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
-          _result =
-              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-        } else {
-          auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
-          if (p(a0)) {
-            _stack.emplace_back(_Cont1{a0});
-            _stack.emplace_back(_Enter{*a1});
-          } else {
-            _result = std::make_pair(list<uint64_t>::nil(), l);
-          }
-        }
+  static std::pair<list<uint64_t>, list<uint64_t>> span(F0 &&p,
+                                                        list<uint64_t> l) {
+    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
+      return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+    } else {
+      auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
+      if (p(a0)) {
+        auto [a, b] = span(p, *a1);
+        return std::make_pair(list<uint64_t>::cons(std::move(a0), std::move(a)),
+                              std::move(b));
       } else {
-        auto _f = std::move(std::get<_Cont1>(_frame));
-        uint64_t a0 = _f.a0;
-        auto _cs = std::move(_result);
-        list<uint64_t> a = std::move(_cs.first);
-        list<uint64_t> b = std::move(_cs.second);
-        _result = std::make_pair(
-            list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
+        return std::make_pair(list<uint64_t>::nil(), l);
       }
     }
-    return _result;
   }
 
   /// unzip l splits list of pairs into two lists.

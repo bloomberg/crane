@@ -124,9 +124,7 @@ let is_record_inductive r =
     scope). Local inductives don't need namespace qualification (e.g.,
     List::list vs just list). *)
 let is_local_inductive r =
-  List.exists
-    (Environ.QGlobRef.equal Environ.empty_env r)
-    (Translation.get_local_inductives ())
+  List.exists (globref_equal r) (Translation.get_local_inductives ())
 
 (** Get the appropriate name for an inductive reference.
     - Local inductives: original name directly (e.g., "list", "EvenTree")
@@ -196,73 +194,44 @@ let capitalize_enum_qualified s r =
   else
     Common.capitalize_last_component s
 
-(** Pretty-print the C++ type name for an inductive reference, handling
-    eponymous records, promoted inductives, enums, locals, and merged/unmerged
-    wrappers. *)
-let pp_inductive_type_name r =
-  let result =
-    match r with
-    | GlobRef.IndRef _ when is_eponymous_record_global r ->
-      let cap_name = Common.pp_type_name_capitalized r in
-      if Common.get_force_qualified_capitalization ()
-      then str (cap_name ^ "::" ^ cap_name)
-      else str cap_name
-    | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
-      let s = str_global Type r in
-      let cap = if Common.get_force_qualified_capitalization ()
-                then Common.capitalize_last_component s
-                else String.capitalize_ascii s in
-      str cap
-    | GlobRef.IndRef _ when is_record_inductive r ->
-      pp_global Type r
-    | GlobRef.IndRef _ when is_enum_inductive r ->
-      if is_local_inductive r then
-        let base_name = Common.pp_global_name Type r in
-        str (capitalize_enum_name base_name r)
-      else
-        let base = str_global Type r in
-        if is_qualified_name base then
-          str (capitalize_enum_qualified base r)
-        else
-          let base_name = Common.pp_global_name Type r in
-          str (capitalize_enum_name base_name r)
-    | GlobRef.IndRef _ when is_local_inductive r ->
-      if Common.get_force_qualified_capitalization ()
-      then str (String.capitalize_ascii (Common.pp_global_name Type r))
-      else pp_global Type r
-    | GlobRef.IndRef _ ->
-      let base = str_global Type r in
-      if is_qualified_name base then
-        if Common.get_force_qualified_capitalization () then
-          str (Common.capitalize_last_component base)
-        else
-          str base
-      else if is_merged_inductive r then
-        str (String.capitalize_ascii base)
-      else
-        let wrapper = String.capitalize_ascii base in
-        str (wrapper ^ "::" ^ base)
-    | _ -> pp_global Type r
-  in
-  result
-
-(** Add typename prefix for dependent types in template contexts. C++ requires
-    'typename' keyword when accessing nested types in templates. *)
-let typename_prefix_for name_str =
-  if render_ctx.rc_in_template && is_qualified_name name_str then
-    str "typename "
-  else
-    mt ()
+(** Compute the C++ name for a promoted inductive (one that IS its module
+    struct) from the fully-qualified Rocq path [base] = [str_global Type r].
+    Strips the inductive's own lowercase label when it matches the parent
+    module name (case-insensitively), so that e.g. ["Foo::foo"] → ["Foo"] and
+    ["Ns::Trie::trie"] → ["Ns::Trie"].  Falls back to capitalizing the last
+    component for bare strings (["foo"] → ["Foo"]). *)
+let cpp_name_of_promoted (base : string) : string =
+  match String.rindex_opt base ':' with
+  | Some last_colon when last_colon > 0 ->
+    let last = String.sub base (last_colon + 1) (String.length base - last_colon - 1) in
+    let prev_start =
+      if last_colon > 1 then
+        match String.rindex_from_opt base (last_colon - 2) ':' with
+        | Some j -> j + 1
+        | None -> 0
+      else 0
+    in
+    let parent =
+      if last_colon > 1 then
+        String.sub base prev_start (last_colon - 1 - prev_start)
+      else ""
+    in
+    if String.equal (String.lowercase_ascii parent) (String.lowercase_ascii last) then
+      let prefix =
+        if prev_start > 2 then String.sub base 0 (prev_start - 2) ^ "::"
+        else ""
+      in
+      prefix ^ String.capitalize_ascii parent
+    else
+      Common.capitalize_last_component base
+  | _ ->
+    String.capitalize_ascii base
 
 (** Deduplicate trailing A::A in a qualified C++ name.  When the last two
     "::" components are equal and [allow_bare] is false, collapse only if
     there is an outer prefix (e.g. "X::A::A" → "X::A").  When [allow_bare]
     is true, also collapse bare "A::A" → "A".  Returns the (possibly
-    shortened) string unchanged if no dedup applies.
-    @param allow_bare when [true], also deduplicate names with no outer
-                      prefix (e.g. ["A::A"] → ["A"]); defaults to [false]
-    @param cap        the fully-qualified C++ name to deduplicate
-    @return the deduplicated name, or [cap] if no deduplication applied *)
+    shortened) string unchanged if no dedup applies. *)
 let dedup_qualified_tail ?(allow_bare = false) cap =
   match String.rindex_opt cap ':' with
   | Some last_colon when last_colon < String.length cap - 1 ->
@@ -287,6 +256,69 @@ let dedup_qualified_tail ?(allow_bare = false) cap =
       prefix ^ last
     else cap
   | _ -> cap
+
+(** Pretty-print the C++ type name for an inductive reference, handling
+    eponymous records, promoted inductives, enums, locals, and merged/unmerged
+    wrappers. *)
+let pp_inductive_type_name r =
+  let result =
+    match r with
+    | GlobRef.IndRef _ when is_eponymous_record_global r ->
+      let cap_name = Common.pp_type_name_capitalized r in
+      if Common.get_force_qualified_capitalization () then
+        let base = str_global Type r in
+        if is_qualified_name base then
+          str (cap_name ^ "::" ^ cap_name)
+        else
+          str cap_name
+      else str cap_name
+    | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
+      if is_local_inductive r then
+        str (String.capitalize_ascii (Common.pp_global_name Type r))
+      else
+        str (cpp_name_of_promoted (str_global Type r))
+    | GlobRef.IndRef _ when is_record_inductive r ->
+      pp_global Type r
+    | GlobRef.IndRef _ when is_enum_inductive r ->
+      let base = str_global Type r in
+      if is_qualified_name base then
+        str (capitalize_enum_qualified base r)
+      else
+        let base_name = Common.pp_global_name Type r in
+        str (capitalize_enum_name base_name r)
+    | GlobRef.IndRef _ when is_local_inductive r ->
+      if Common.get_force_qualified_capitalization () then
+        let s = str_global Type r in
+        str (Common.capitalize_last_component s)
+      else pp_global Type r
+    | GlobRef.IndRef _ ->
+      let base = str_global Type r in
+      let is_qual = is_qualified_name base in
+      let is_merged = is_merged_inductive r in
+      if is_qual then
+        if Common.get_force_qualified_capitalization () then
+          if is_merged then
+            str (cpp_name_of_promoted base)
+          else
+            str (Common.capitalize_last_component base)
+        else
+          str base
+      else if is_merged then
+        str (String.capitalize_ascii base)
+      else
+        let wrapper = String.capitalize_ascii base in
+        str (wrapper ^ "::" ^ base)
+    | _ -> pp_global Type r
+  in
+  result
+
+(** Add typename prefix for dependent types in template contexts. C++ requires
+    'typename' keyword when accessing nested types in templates. *)
+let typename_prefix_for name_str =
+  if render_ctx.rc_in_template && is_qualified_name name_str then
+    str "typename "
+  else
+    mt ()
 
 (** Convert a C++ qualified name ([A::B::C]) to its Rocq dotted form
     ([A.B.C]). *)
@@ -540,7 +572,7 @@ let lookup_method_this_pos n =
   let local_result =
     List.find_map
       (fun (r', _, _, pos) ->
-        if Environ.QGlobRef.equal Environ.empty_env n r' then
+        if globref_equal n r' then
           Some pos
         else
           None )

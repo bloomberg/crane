@@ -132,8 +132,7 @@ struct ToString {
              std::is_invocable_r_v<std::string, F1 &, T2 &>
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
-    const T1 &a = x.first;
-    const T2 &b = x.second;
+    const auto &[a, b] = x;
     return "("s + p1(a) + ", "s + p2(b) + ")"s;
   }
 

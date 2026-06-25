@@ -195,8 +195,7 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
       } else {
         const auto &[a0, a1] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(l.v());
-        const uint64_t &n = a0.first;
-        const uint64_t &x = a0.second;
+        const auto &[n, x] = a0;
         List<uint64_t> rep = replicate(n, x);
         _stack.emplace_back(_Resume_n{std::move(std::move(rep))});
         _stack.emplace_back(_Enter{a1.get()});

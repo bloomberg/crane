@@ -219,8 +219,7 @@ struct DisassembleOps {
         UINT64_C(1));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const instruction &_x = p.first;
-      const uint64_t &next = p.second;
+      const auto &[_x, next] = p;
       return next;
     } else {
       return UINT64_C(0);
@@ -257,8 +256,7 @@ struct DisassembleOps {
         UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const instruction &_x = p.first;
-      const uint64_t &next = p.second;
+      const auto &[_x, next] = p;
       return next;
     } else {
       return UINT64_C(0);
@@ -305,8 +303,7 @@ struct DisassembleOps {
         UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const instruction &_x = p.first;
-      const uint64_t &next = p.second;
+      const auto &[_x, next] = p;
       return next;
     } else {
       return UINT64_C(0);
@@ -324,8 +321,7 @@ struct DisassembleOps {
         UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
-      const instruction &_x = p.first;
-      const uint64_t &next = p.second;
+      const auto &[_x, next] = p;
       return next;
     } else {
       return UINT64_C(0);

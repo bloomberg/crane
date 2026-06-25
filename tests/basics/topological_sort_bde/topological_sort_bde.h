@@ -206,8 +206,7 @@ struct ToString {
              bsl::is_invocable_r_v<bsl::string, F1 &, T2 &>
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const bsl::pair<T1, T2> &x) {
-    T1 a = x.first;
-    T2 b = x.second;
+    auto [a, b] = x;
     return "("_s + p1(a) + ", "_s + p2(b) + ")"_s;
   }
   template <typename T1, typename F0>
@@ -258,8 +257,7 @@ struct TopologicalSort {
         const auto &[d_a0, d_a1] =
             bsl::get<typename List<bsl::pair<T1, T1>>::Cons>(l0.v());
         const List<bsl::pair<T1, T1>> &d_a1_value = *d_a1;
-        T1 e1 = d_a0.first;
-        T1 e2 = d_a0.second;
+        auto [e1, e2] = d_a0;
         bsl::optional<T1> f1 =
             h.find([=](const T1 &x) mutable { return eqb_node(e1, x); });
         bsl::optional<T1> f2 =
@@ -333,8 +331,7 @@ struct TopologicalSort {
     });
     if (_cs.has_value()) {
       bsl::pair<T1, List<T1>> p = *_cs;
-      T1 _x = p.first;
-      List<T1> es = p.second;
+      auto [_x, es] = p;
       return es;
     } else {
       return List<T1>::nil();
@@ -385,8 +382,7 @@ struct TopologicalSort {
     } else {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, List<T1>>>::Cons>(graph0.v());
-      T1 e = bsl::make_pair(d_a0.first, (*d_a0.second)).first;
-      List<T1> _x0 = bsl::make_pair(d_a0.first, (*d_a0.second)).second;
+      auto [e, _x0] = d_a0;
       return bsl::make_optional<T1>(cycle_entry_aux<T1>(
           eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
     }
@@ -502,8 +498,7 @@ struct TopologicalSort {
         .template combine<unsigned int>(ListDef::seq(0u, lorder.length()))
         .template map<List<bsl::pair<T1, unsigned int>>>(
             [](bsl::pair<List<T1>, unsigned int> x) {
-              List<T1> fs = x.first;
-              unsigned int rk = x.second;
+              auto [fs, rk] = x;
               return fs.template map<bsl::pair<T1, unsigned int>>(
                   [=](T1 f) mutable { return bsl::make_pair(f, rk); });
             })

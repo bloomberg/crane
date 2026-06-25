@@ -23,12 +23,9 @@ uint64_t DeepPatterns::deep_option(
 uint64_t
 DeepPatterns::deep_pair(const std::pair<std::pair<uint64_t, uint64_t>,
                                         std::pair<uint64_t, uint64_t>> &p) {
-  const std::pair<uint64_t, uint64_t> &p0 = p.first;
-  const std::pair<uint64_t, uint64_t> &p1 = p.second;
-  const uint64_t &a = p0.first;
-  const uint64_t &b = p0.second;
-  const uint64_t &c = p1.first;
-  const uint64_t &d = p1.second;
+  const auto &[p0, p1] = p;
+  const auto &[a, b] = p0;
+  const auto &[c, d] = p1;
   return (((a + b) + c) + d);
 }
 
@@ -89,8 +86,7 @@ uint64_t DeepPatterns::complex_match(
     const std::optional<std::pair<uint64_t, List<uint64_t>>> &x) {
   if (x.has_value()) {
     const std::pair<uint64_t, List<uint64_t>> &p = *x;
-    const uint64_t &n = p.first;
-    const List<uint64_t> &l = p.second;
+    const auto &[n, l] = p;
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return n;
     } else {
@@ -110,8 +106,7 @@ uint64_t DeepPatterns::complex_match(
 }
 
 uint64_t DeepPatterns::guarded_match(const std::pair<uint64_t, uint64_t> &p) {
-  const uint64_t &a = p.first;
-  const uint64_t &b = p.second;
+  const auto &[a, b] = p;
   if (a <= b) {
     return (((b - a) > b ? 0 : (b - a)));
   } else {
