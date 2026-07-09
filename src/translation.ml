@@ -2044,11 +2044,11 @@ let is_cpp_dummy_prop = function
 
     @param tys List of C++ types (template arguments)
     @return Filtered list: either all concrete types or empty list *)
-let filter_erased_type_args tys =
-  (* Phase 1: Strip proof-erasure markers *)
+let filter_erased_type_args ?(preserve_positions = false) tys =
   let tys = List.filter (fun t -> not (is_cpp_dummy_prop t)) tys in
-  (* Phase 2: Apply all-or-nothing rule for erased types *)
-  if List.exists is_erased_type tys then [] else tys
+  if preserve_positions then
+    List.map (fun t -> if is_erased_type t then Minicpp.Tany else t) tys
+  else if List.exists is_erased_type tys then [] else tys
 
 (** Recursively check whether a C++ type tree contains erased HKT markers (Tany
     or dummy_type globs). These markers arise when a higher-kinded type
@@ -5822,7 +5822,11 @@ and eta_fun env f args =
        This is needed because C++ cannot deduce template type params from lambda
        arguments — lambdas don't participate in template argument deduction. *)
     let regular_type_args =
-      let filtered = filter_erased_type_args regular_type_args in
+      let filtered =
+        filter_erased_type_args
+          ~preserve_positions:(Table.is_inline_custom id)
+          regular_type_args
+      in
       (* Check if the callee's return type is a Tvar pointing to an erased
          (Tdummy Ktype) domain position, and if so, return the position index,
          the concrete C++ type to use, and the full ML domain. *)
