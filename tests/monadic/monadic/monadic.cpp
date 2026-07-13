@@ -42,8 +42,7 @@ Monadic::fib_state(uint64_t n) {
                                 std::pair<uint64_t, uint64_t>, std::monostate>(
                   state_get<std::pair<uint64_t, uint64_t>>(),
                   [](std::pair<uint64_t, uint64_t> pat) {
-                    const uint64_t &a = pat.first;
-                    const uint64_t &b = pat.second;
+                    const auto &[a, b] = pat;
                     return state_put<std::pair<uint64_t, uint64_t>>(
                         std::make_pair(b, (a + b)));
                   });
@@ -57,11 +56,8 @@ uint64_t Monadic::fib(uint64_t n) {
   if (n <= UINT64_C(2)) {
     return n;
   } else {
-    auto _cs = fib_state(n)(std::make_pair(UINT64_C(0), UINT64_C(1)));
-    std::monostate _x = std::move(_cs.first);
-    std::pair<uint64_t, uint64_t> p = std::move(_cs.second);
-    uint64_t a = std::move(p.first);
-    uint64_t _x0 = std::move(p.second);
+    auto [_x, p] = fib_state(n)(std::make_pair(UINT64_C(0), UINT64_C(1)));
+    auto [a, _x0] = std::move(p);
     return a;
   }
 }
