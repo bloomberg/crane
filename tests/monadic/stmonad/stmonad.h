@@ -6,6 +6,7 @@
 #include <concepts>
 #include <memory>
 #include <optional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -103,6 +104,21 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, A &>
+  List<A> filter(F0 &&f) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return List<A>::nil();
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      if (f(a0)) {
+        return List<A>::cons(a0, a1->filter(f));
+      } else {
+        return a1->filter(f);
+      }
+    }
+  }
+
   List<A> tl() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<A>::nil();
@@ -127,6 +143,15 @@ public:
     } else {
       const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
       return (a1->length() + 1);
+    }
+  }
+
+  List<A> app(List<A> m) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return m;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return List<A>::cons(a0, a1->app(std::move(m)));
     }
   }
 };
@@ -165,6 +190,13 @@ struct Ascii {
 
 struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct STMonadExamples {
+  template <typename F1>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
+                                                 F1 &&quicksort_fun0);
 };
 
 struct String {
@@ -457,6 +489,26 @@ struct STMonadTests {
     v = UINT64_C(5);
     return std::move(v);
   }
+
+  static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
 };
+
+template <typename F1>
+  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+List<uint64_t>
+STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
+                                          F1 &&quicksort_fun0) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return List<uint64_t>::nil();
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const List<uint64_t> &a1_value = *a1;
+    return quicksort_fun0(
+               a1_value.filter([=](uint64_t x) mutable { return x < a0; }))
+        .app(List<uint64_t>::cons(a0, List<uint64_t>::nil())
+                 .app(quicksort_fun0(a1_value.filter(
+                     [=](uint64_t x) mutable { return a0 <= x; }))));
+  }
+}
 
 #endif // INCLUDED_STMONAD

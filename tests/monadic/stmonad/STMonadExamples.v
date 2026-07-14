@@ -4,6 +4,7 @@ From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
   Init.Peano
+  Lia
   List
   Morphisms
   RelationClasses
@@ -39,6 +40,9 @@ From ITree Require Import
   ITree
   ITreeFacts
 .
+
+
+From Equations Require Import Equations.
 
 
 Import Monads.
@@ -230,11 +234,32 @@ Section NatExampleTrees.
       Ret newXs.
   
 
+
   End QSort.
 
   
 End NatExampleTrees.
 
+
+
+Lemma filter_length {A} (f : A -> bool) (l : list A) :
+  length (List.filter f l) <= length l.
+Proof. induction l; simpl; [lia | destruct (f a); simpl; lia]. Qed.
+
+Section FunctionalQuicksort.
+
+  Equations? quicksort_fun (l : list nat) : list nat by wf (length l) lt :=
+    quicksort_fun [] => [];
+    quicksort_fun (p :: xs) =>
+      quicksort_fun (List.filter (fun x => Nat.ltb x p) xs)
+        ++ [p] ++
+      quicksort_fun (List.filter (fun x => Nat.leb p x) xs).
+  - specialize (filter_length (fun x => Nat.ltb x p) xs) as H. lia.   
+  - specialize (filter_length (fun x => Nat.leb p x) xs) as H. lia.   
+  Defined.
+
+
+End FunctionalQuicksort.
 
 
 

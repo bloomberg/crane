@@ -62,13 +62,32 @@ Module STMonadTests.
   Definition tree_simp_another_nat := Eval unfold tree_simp_another_nat in (@tree_simp_another_nat nat unit Nat.le).
   Definition tree_simp_bool := Eval unfold tree_simp_bool in (@tree_simp_bool nat unit Nat.le).
   Definition tree_simp_nat := Eval unfold tree_simp_nat in (@tree_simp_nat nat unit Nat.le).
-  (* qsort TODO: extract qsort! *)
+
+  Transparent quicksort_fun.
+  Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
 
 End STMonadTests.
 
+Crane Extract Skip Foldable.
+Crane Extract Skip Foldable_list.
+Crane Extract Skip Monad.
+Crane Extract Skip Monad_itree.
+Crane Extract Skip Reducible.
+Crane Extract Skip swap_first_and_last_list.
+
+Crane Extract Skip Module Recursion.
+Crane Extract Inlined Constant rec =>
+        "
+         [&]() -> %t2 {
+         static  std::function<%t1(%t2)> __self;
+         __self = %a0;
+         return __self(%a1);;
+ }()
+" From "functional".
+Crane Extract Inlined Constant call => "__self(%a0)".
+
 
 Require Import Crane.Mapping.NatIntStd.
-
 
 
 Crane Extraction "stmonad" STMonadTests.

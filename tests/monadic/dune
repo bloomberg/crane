@@ -6,7 +6,7 @@
  (name CraneTestsMonadic)
  (synopsis "Tests for the rocq-crane plugin")
  (modules :standard)
- (theories Stdlib Crane ITree ExtLib Paco)
+ (theories Stdlib Crane ITree Equations ExtLib Paco)
  (flags (:standard -output-directory %{project_root}/tests/monadic)))
 
 ; Test rules - compile C++ and run tests

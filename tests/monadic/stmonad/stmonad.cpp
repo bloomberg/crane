@@ -14,6 +14,11 @@ uint64_t STMonadTests::fib_fun(uint64_t n) {
   }
 }
 
+List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
+  return STMonadExamples::quicksort_fun_functional(
+      x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
+}
+
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
   if (len <= 0) {
     return List<uint64_t>::nil();
