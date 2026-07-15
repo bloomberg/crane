@@ -172,13 +172,17 @@ Section NatExampleTrees.
       newXs <- getElems arr;;
       Ret newXs.
 
-    Definition for_each_with {A B}
+    (* NOTE: would be nice to use following definition, but it does not extract well
+    foldM (flip f) (Ret v) (rev xs). (* reversing so foldM goes left to right. *) *)
+    Fixpoint for_each_with {A B}
        {E' : Type -> Type}
-      `{STEvent T S V -< E'}
-      `{exceptE Err -< E'}
       (xs : list A) (v : B) (f : B -> A -> itree E' B)
       : itree E' B :=
-      foldM (flip f) (Ret v) (rev xs). (* reversing so foldM goes left to right. *)
+      match xs with
+      | nil => Ret v
+      | h::t => v' <- f v h;; for_each_with t v' f
+      end.
+
 
 
     Definition partition 
@@ -258,9 +262,7 @@ Section FunctionalQuicksort.
   - specialize (filter_length (fun x => Nat.leb p x) xs) as H. lia.   
   Defined.
 
-
 End FunctionalQuicksort.
-
 
 
 Section BoolExampleTrees.

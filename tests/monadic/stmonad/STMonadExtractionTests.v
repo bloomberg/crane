@@ -45,14 +45,16 @@ From ITree Require Import
 
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
+Import ListNotations.
+
 Module STMonadTests. 
   (* Re-exporting instances so they're available to call in the exported file. *)
   (* Just referring to them does not seem to work to extract them here, unfolding does *)
   Definition nat_idx : @Ix nat Nat.le := Eval unfold nat_ix in nat_ix.
   Definition nat_stref : STRefClass nat := Eval unfold nat_ix_stref in nat_ix_stref.
 
-  Definition array_simp_fixed_init := Eval unfold array_simp_fixed_init in (@array_simp_fixed_init nat unit Nat.le).
-  Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le).
+  Definition array_simp_fixed_init := Eval unfold array_simp_fixed_init in (@array_simp_fixed_init nat unit Nat.le nat_idx nat_stref).
+  Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le nat_idx nat_stref).
   Definition fib_ST := Eval unfold fib_ST,fib_loop in (@fib_ST nat unit Nat.le).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
   Definition list_hd := List.hd.
@@ -65,6 +67,9 @@ Module STMonadTests.
 
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
+  Definition quicksort :=
+    Eval unfold sort_list,qsort,qsort_body,partition,swap_arr,for_each_with in
+      (@sort_list nat unit Nat.le nat_idx nat_stref).
 
 End STMonadTests.
 
@@ -73,13 +78,12 @@ Crane Extract Skip Foldable_list.
 Crane Extract Skip Monad.
 Crane Extract Skip Monad_itree.
 Crane Extract Skip Reducible.
-Crane Extract Skip swap_first_and_last_list.
 
 Crane Extract Skip Module Recursion.
 Crane Extract Inlined Constant rec =>
         "
          [&]() -> %t2 {
-         static  std::function<%t1(%t2)> __self;
+         static  std::function<%t2(%t1)> __self;
          __self = %a0;
          return __self(%a1);;
  }()

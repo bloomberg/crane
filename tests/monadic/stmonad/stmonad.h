@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <any>
 #include <concepts>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -355,57 +356,9 @@ struct STMonadTests {
   };
 
   static_assert(STRefClass<nat_stref, uint64_t>);
-
-  template <typename _tcI0, typename _tcI1>
-  static uint64_t array_simp_fixed_init() {
-    std::vector<uint64_t> *arr;
-    arr = new std::remove_pointer_t<decltype(arr)>(
-        _tcI1::suc(
-            _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))))) -
-            _tcI1::zero() + 1,
-        UINT64_C(5));
-    uint64_t elem = (*arr)[_tcI1::suc(_tcI1::zero())];
-    return elem;
-  }
-
-  template <typename _tcI0, typename _tcI1>
+  static uint64_t array_simp_fixed_init();
   static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-  array_simp_list() {
-    std::vector<uint64_t> *arr;
-    arr = new std::remove_pointer_t<decltype(arr)>(
-        _tcI1::suc(_tcI1::suc(_tcI1::suc(_tcI1::zero()))) - _tcI1::zero() + 1);
-    {
-      auto _xs = List<uint64_t>::cons(
-          UINT64_C(5),
-          List<uint64_t>::cons(
-              UINT64_C(4),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
-      for (size_t _i = 0; _i < arr->size(); _i++) {
-        if (std::holds_alternative<
-                typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) {
-          auto &[_a, _l] =
-              std::get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
-                  _xs.v_mut());
-          (*arr)[_i] = _a;
-          if (_l)
-            _xs = *_l;
-        }
-      }
-    };
-    uint64_t elem = (*arr)[_tcI1::zero()];
-    List<uint64_t> lst = [&]() {
-      using _E = typename std::remove_pointer_t<
-          std::remove_cvref_t<decltype(arr)>>::value_type;
-      List<_E> _r = List<_E>::nil();
-      for (size_t _i = arr->size(); _i > 0; _i--) {
-        _r = List<_E>::cons((*arr)[_i - 1], std::move(_r));
-      }
-      return _r;
-    }();
-    return std::make_pair(std::make_pair(elem, lst.length()), lst);
-  }
+  array_simp_list();
 
   template <typename _tcI0, typename _tcI1> static uint64_t fib_ST(uint64_t n) {
     if (n < UINT64_C(2)) {
@@ -491,6 +444,7 @@ struct STMonadTests {
   }
 
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
+  static List<uint64_t> quicksort(const List<uint64_t> &xs);
 };
 
 template <typename F1>
