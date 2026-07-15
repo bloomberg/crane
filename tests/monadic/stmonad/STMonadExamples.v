@@ -212,7 +212,7 @@ Section NatExampleTrees.
        to define this admissably for Rocq's syntactic guard condition. If we define quicksort with
        two recursive calls, we cannot admissably place `Tau (qsort ...<args>...)` on the left side of a bind.
      *)
-    Definition qsort_body 
+    Definition quicksort_ST_body 
       (args : (STArray T S nat * T * T * T))
       : itree ((callE (STArray T S nat * T * T * T) unit) +' E0) unit :=
       let '(arr,arr_idx,l,r) := args in
@@ -226,14 +226,14 @@ Section NatExampleTrees.
       else Ret tt.
 
 
-    Definition qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
-      rec qsort_body (arr, arr_idx, left, right).
+    Definition quicksort_ST (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
+      rec quicksort_ST_body (arr, arr_idx, left, right).
 
     
-    Definition sort_list (xs : list nat) : itree E0 (list nat) :=
+    Definition quicksort_ST_list (xs : list nat) : itree E0 (list nat) :=
       let lastIndex := fromNat (length xs - 1) in 
       arr <- newListArray zero zero lastIndex xs;;
-      qsort arr zero zero lastIndex;;
+      quicksort_ST arr zero zero lastIndex;;
       newXs <- getElems arr;;
       Ret newXs.
   

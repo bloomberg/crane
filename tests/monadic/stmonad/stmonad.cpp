@@ -69,7 +69,7 @@ List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
       x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
 }
 
-List<uint64_t> STMonadTests::quicksort(const List<uint64_t> &xs) {
+List<uint64_t> STMonadTests::quicksort_ST(const List<uint64_t> &xs) {
   std::vector<uint64_t> *arr;
   arr = new std::remove_pointer_t<decltype(arr)>(
       nat_idx::fromNat((((xs.length() - UINT64_C(1)) > xs.length()

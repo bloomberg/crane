@@ -136,7 +136,7 @@ int main() {
     List<uint64_t> lst = List<uint64_t>::cons(
         4, List<uint64_t>::cons(
                1, List<uint64_t>::cons(2, List<uint64_t>::nil())));
-    auto result = STMonadTests::quicksort(lst);
+    auto result = STMonadTests::quicksort_ST(lst);
     ASSERT(result.hd(6) == 1);
     ASSERT(result.tl().hd(6) == 2);
     ASSERT(result.tl().tl().hd(6) == 4);

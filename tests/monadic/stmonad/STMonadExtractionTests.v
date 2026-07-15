@@ -67,9 +67,9 @@ Module STMonadTests.
 
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
-  Definition quicksort :=
-    Eval unfold sort_list,qsort,qsort_body,partition,swap_arr,for_each_with in
-      (@sort_list nat unit Nat.le nat_idx nat_stref).
+  Definition quicksort_ST :=
+    Eval unfold quicksort_ST_list,quicksort_ST,quicksort_ST_body,partition,swap_arr,for_each_with in
+      (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
 
 End STMonadTests.
 

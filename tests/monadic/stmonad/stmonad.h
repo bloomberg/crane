@@ -444,7 +444,7 @@ struct STMonadTests {
   }
 
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
-  static List<uint64_t> quicksort(const List<uint64_t> &xs);
+  static List<uint64_t> quicksort_ST(const List<uint64_t> &xs);
 };
 
 template <typename F1>
