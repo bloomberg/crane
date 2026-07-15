@@ -368,3 +368,9 @@ Proof.
     rewrite fib_fun_eq_seq.
     exact (@fib_ST_full_correct unit n).
 Qed.
+
+Lemma qsort_fun_eq_qsort_ST : forall {S : Type} (l : list nat),
+    Ret (quicksort_fun l) ≈ runST (S := S) (fun S0 => quicksort_ST_list l).  
+  (* TODO: finish proof! *)
+  Abort.
+
