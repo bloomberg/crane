@@ -190,8 +190,9 @@ struct LoopifyTail {
       }
     }
     return _result;
-  } /// Tail-recursive: last element of a list
+  }
 
+  /// Tail-recursive: last element of a list
   template <typename T1> static T1 last(T1 x, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
     T1 _loop_x = std::move(x);
@@ -204,8 +205,9 @@ struct LoopifyTail {
         _loop_x = a0;
       }
     }
-  } /// Tail-recursive: length with accumulator
+  }
 
+  /// Tail-recursive: length with accumulator
   template <typename T1>
   static uint64_t length_acc(uint64_t acc, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
@@ -223,8 +225,9 @@ struct LoopifyTail {
 
   template <typename T1> static uint64_t length(const list<T1> &l) {
     return length_acc<T1>(UINT64_C(0), l);
-  } /// Tail-recursive: membership test
+  }
 
+  /// Tail-recursive: membership test
   static bool member(uint64_t x, const list<uint64_t> &l);
   /// Tail-recursive: nth element
   static uint64_t nth(uint64_t n, const list<uint64_t> &l, uint64_t default0);

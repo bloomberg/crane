@@ -332,8 +332,9 @@ struct MemSafetyProbe18 {
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     return fold_left_tree(std::move(l), tree::leaf()).tree_sum();
-  }(); /// TEST 6: Concat two lists, using both in the result.
+  }();
 
+  /// TEST 6: Concat two lists, using both in the result.
   template <typename T1>
   static mylist<T1> concat_flat(
       const mylist<mylist<T1>> &

@@ -58,6 +58,9 @@ int main() {
       header,
       "/// A simple pair holding two values of possibly different types."));
   ASSERT(file_contains(header, "/// mylist is a polymorphic list type."));
+  ASSERT(!file_contains(header, "}; /// mylist is a polymorphic list type."));
+  ASSERT(file_contains(
+      header, "\n  /// mylist is a polymorphic list type.\n  template"));
   ASSERT(file_contains(
       header, "/// The identity function: returns its argument unchanged."));
   ASSERT(file_contains(header, "/// double n returns 2 * n."));
@@ -65,8 +68,7 @@ int main() {
   // Check that constructor doc comments appear
   ASSERT(file_contains(header, "/// The empty list."));
   ASSERT(file_contains(
-      header,
-      "/// Cons cell: an element followed by the rest of the list."));
+      header, "/// Cons cell: an element followed by the rest of the list."));
 
   // Check that record field doc comments appear
   ASSERT(file_contains(header, "/// The first element of the pair."));

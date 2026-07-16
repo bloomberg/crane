@@ -19,8 +19,9 @@ MergesortFuel::split(const List<uint64_t> &l) {
                             List<uint64_t>::cons(a00, std::move(l2)));
     }
   }
-} /// * Merge
+}
 
+/// * Merge
 List<uint64_t> MergesortFuel::merge(List<uint64_t> l1,
                                     const List<uint64_t> &l2) {
   auto merge_aux_impl = [&](auto &_self_merge_aux,

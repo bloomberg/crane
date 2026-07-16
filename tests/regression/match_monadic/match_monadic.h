@@ -16,8 +16,9 @@
 using namespace std::string_literals;
 
 /// A simple custom inductive for testing
-enum class Color { RED, GREEN, BLUE }; /// A parameterized inductive
+enum class Color { RED, GREEN, BLUE };
 
+/// A parameterized inductive
 template <typename A> struct Tree {
   // TYPES
   struct Leaf {};

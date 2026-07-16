@@ -325,8 +325,8 @@ struct MemSafetyProbe14 {
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
                  tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
-          .two_closures(); /// TEST 5: Closure captures tree, tree is
-                           /// pattern-matched
+          .two_closures();
+  /// TEST 5: Closure captures tree, tree is pattern-matched
   /// AFTER closure creation. The match destructures the tree.
   /// The closure must still hold the original tree.
   static uint64_t capture_then_match(tree t);

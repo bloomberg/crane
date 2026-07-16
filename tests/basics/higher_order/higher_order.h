@@ -164,8 +164,9 @@ struct HigherOrder {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
       return foldl<T1, T2>(f, f(z, a0), *a1);
     }
-  } /// compose g f returns the composition of g after f.
+  }
 
+  /// compose g f returns the composition of g after f.
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
              std::is_invocable_r_v<T2, F1 &, T1 &>

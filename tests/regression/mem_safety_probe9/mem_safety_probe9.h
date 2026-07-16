@@ -352,7 +352,8 @@ struct MemSafetyProbe9 {
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
                  tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
-          .cross_capture(); /// TEST 6: Stress test — large tree, many closures.
+          .cross_capture();
+  /// TEST 6: Stress test — large tree, many closures.
   static tree make_balanced(uint64_t n);
   static inline const uint64_t test_stress = []() {
     tree t = make_balanced(UINT64_C(5));

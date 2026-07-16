@@ -249,9 +249,9 @@ struct LoopifySearch {
   /// subset_sum target l checks if any subset sums to target.
   static bool subset_sum_fuel(uint64_t fuel, uint64_t target,
                               const List<uint64_t> &l);
-  static bool subset_sum(uint64_t target,
-                         const List<uint64_t> &l); /// Helper: filter predicate.
+  static bool subset_sum(uint64_t target, const List<uint64_t> &l);
 
+  /// Helper: filter predicate.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static List<uint64_t>

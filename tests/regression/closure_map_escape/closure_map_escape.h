@@ -147,9 +147,9 @@ struct ClosureMapEscape {
   static uint64_t
   apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns,
               uint64_t arg);
-  static uint64_t sum_apply(
-      const mylist<std::function<uint64_t(uint64_t)>> &fns,
-      uint64_t arg); /// test1: map_to_adders 10, 20, 30, apply first to 5.
+  static uint64_t
+  sum_apply(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t arg);
+  /// test1: map_to_adders 10, 20, 30, apply first to 5.
   /// add(5) where add(x) = x + 10. So 10 + 5 = 15.
   /// Bug: h=10 captured by &, dangling after match.
   static inline const uint64_t test1 = apply_first(

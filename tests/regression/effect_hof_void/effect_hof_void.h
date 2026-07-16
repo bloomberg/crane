@@ -17,15 +17,17 @@ struct EffectHofVoid {
   static void apply_void(F0 &&f, std::string _x0) {
     f(std::move(_x0));
     return;
-  } /// 2. Apply a void callback then return a value
+  }
 
+  /// 2. Apply a void callback then return a value
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
   static std::string apply_then_return(F0 &&f, std::string x) {
     f(x);
     return x;
-  } /// 3. Apply a value callback
+  }
 
+  /// 3. Apply a value callback
   template <typename F0> static std::string apply_value(F0 &&f, std::string x) {
     return f(x);
   }
@@ -40,8 +42,9 @@ struct EffectHofVoid {
     } else {
       return;
     }
-  } /// 5. Chain two void callbacks
+  }
 
+  /// 5. Chain two void callbacks
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<void, F0 &, std::string &> &&
              std::is_invocable_r_v<void, F1 &, std::string &>
@@ -49,8 +52,9 @@ struct EffectHofVoid {
     f(x);
     g(x);
     return;
-  } /// 6. Apply a callback N times
+  }
 
+  /// 6. Apply a callback N times
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
   static uint64_t apply_n(F0 &&f, std::string x, uint64_t n) {

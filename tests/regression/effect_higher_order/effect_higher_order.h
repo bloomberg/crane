@@ -116,8 +116,9 @@ struct EffectHigherOrder {
   static void apply_effect(F0 &&f, std::string _x0) {
     f(std::move(_x0));
     return;
-  } /// 2. Map-like function over a list with effects
+  }
 
+  /// 2. Map-like function over a list with effects
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, std::string &>
   static void for_each_str(F0 &&f, const List<std::string> &xs) {
@@ -129,8 +130,9 @@ struct EffectHigherOrder {
       for_each_str(f, *a1);
       return;
     }
-  } /// 3. Callback that returns a value
+  }
 
+  /// 3. Callback that returns a value
   template <typename F0> static std::string with_line(F0 &&f) {
     std::string _bind_result = []() -> std::string {
       std::string _r;
@@ -138,8 +140,9 @@ struct EffectHigherOrder {
       return _r;
     }();
     return f(_bind_result);
-  } /// 4. Nested bind in callback
+  }
 
+  /// 4. Nested bind in callback
   template <typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, std::string &>
   static std::string transform_input(F0 &&f) {

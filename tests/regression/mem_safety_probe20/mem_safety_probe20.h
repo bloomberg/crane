@@ -223,8 +223,9 @@ struct MemSafetyProbe20 {
     wrapped w = nested_wrap(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                             true, false);
     return std::move(w).unwrap(UINT64_C(0));
-  }(); /// TEST 7: List of wrapped closures from if branches.
+  }();
 
+  /// TEST 7: List of wrapped closures from if branches.
   template <typename A> struct mylist {
     // TYPES
     struct Mynil {};

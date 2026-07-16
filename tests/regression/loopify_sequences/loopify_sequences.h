@@ -194,8 +194,9 @@ struct LoopifySequences {
       };
       return List<T1>::cons(a0, go(*a1));
     }
-  } /// transpose l transposes a list of lists.
+  }
 
+  /// transpose l transposes a list of lists.
   template <typename T1>
   static List<List<T1>> transpose_fuel(
       uint64_t fuel,
@@ -479,8 +480,9 @@ struct LoopifySequences {
         }
       }
     }
-  } /// Helper: check if element is in list.
+  }
 
+  /// Helper: check if element is in list.
   static bool elem(uint64_t x, const List<uint64_t> &l);
   /// Helper: filter list.
   static List<uint64_t> filter_ne(uint64_t x, const List<uint64_t> &l);

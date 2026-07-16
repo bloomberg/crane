@@ -85,8 +85,9 @@ struct NameClashNestedDeep {
       const auto &[a0, a1] = std::get<typename mylist::MyCons>(m.v());
       return f0(a0, *a1, mylist_rec<T1>(f, f0, *a1));
     }
-  } /// Four levels of nested matching.
+  }
 
+  /// Four levels of nested matching.
   static uint64_t deep4(const mylist &a, const mylist &b, const mylist &c,
                         const mylist &d);
   /// Match in a let, then match on the let result.
