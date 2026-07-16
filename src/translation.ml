@@ -11124,31 +11124,39 @@ let gen_typeclass_cpp name fields ind =
             ret
         in
         let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
-        (* Create parameter names: a0, a1, a2, ... *)
-        let params =
-          List.mapi
-            (fun j arg_ty ->
+        (* Emit each argument inline as [std::declval<ArgType>()] rather than
+           binding it to a shared [requires(...)] parameter.  A requires-
+           expression has a single parameter list shared across all its
+           requirement lines, so naming arguments positionally (a0, a1, ...)
+           and deduplicating by name aliases parameters of different types
+           across methods (e.g. [g : T -> T] would reuse [a0 : pair<T,T>]
+           left over from [f : T*T -> T]).  Using [declval] gives each method
+           its own correctly-typed arguments, matching the module-type concept
+           idiom in [cpp.ml]'s [pp_spec_as_requirement]. *)
+        let arg_declvals =
+          List.map
+            (fun arg_ty ->
               let arg_cpp =
                 convert_ml_type_to_cpp_type
                   (empty_env ())
                   prefixed_ip_vars
                   arg_ty
               in
-              let arg_cpp = subst_promoted_in_cpp_type arg_cpp in
-              (arg_cpp, Id.of_string ("a" ^ string_of_int j)) )
+              CPPdeclval (subst_promoted_in_cpp_type arg_cpp) )
             args
         in
-        (* Method call: I::method_name(a0, a1, ...).  CPPfun_call stores
-           args reversed (the printer applies List.rev when rendering),
-           so we pre-reverse to get the correct printed order. *)
-        let call_args = List.rev_map (fun (_, id) -> CPPvar id) params in
+        (* Method call: I::method_name(std::declval<...>(), ...).
+           CPPfun_call stores args reversed (the printer applies List.rev
+           when rendering), so we pre-reverse to get the correct printed
+           order. *)
+        let call_args = List.rev arg_declvals in
         let call =
           CPPfun_call
             (CPPqualified (CPPvar inst_id, Id.of_string method_name), call_args)
         in
         (* Constraint: use the cpp_type directly - cpp.ml will render it *)
         let constraint_expr = CPPconvertible_to ret_cpp in
-        Some (`Normal (params, (call, constraint_expr)))
+        Some (`Normal ([], (call, constraint_expr)))
   in
   let all_reqs =
     List.filter_map (fun pair -> gen_method_req pair) method_list
@@ -11176,21 +11184,10 @@ let gen_typeclass_cpp name fields ind =
       if normal_reqs = [] then
         None
       else
-        let all_params_flat = List.concat_map fst normal_reqs in
-        let seen = ref [] in
-        let dedup_params =
-          List.filter
-            (fun (_ty, id) ->
-              let key = Id.to_string id in
-              if List.mem key !seen then
-                false
-              else (
-                seen := key :: !seen;
-                true ) )
-            all_params_flat
-        in
+        (* Arguments are emitted inline as [std::declval<...>()], so the
+           requires-expression needs no parameter list. *)
         let constraints = List.map snd normal_reqs in
-        Some (CPPrequires (dedup_params, constraints, type_reqs))
+        Some (CPPrequires ([], constraints, type_reqs))
     in
     match (normal_part, disjunctive_exprs) with
     | Some np, [] -> np

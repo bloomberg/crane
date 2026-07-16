@@ -4,11 +4,15 @@
 #include <any>
 #include <concepts>
 #include <functional>
+#include <utility>
 
 template <typename I>
-concept Magma = requires(typename I::carrier a0, typename I::carrier a1) {
+concept Magma = requires {
   typename I::carrier;
-  { I::op(a0, a1) } -> std::convertible_to<typename I::carrier>;
+  {
+    I::op(std::declval<typename I::carrier>(),
+          std::declval<typename I::carrier>())
+  } -> std::convertible_to<typename I::carrier>;
 };
 
 struct TodoDependentFieldAlias {

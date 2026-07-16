@@ -8,11 +8,11 @@
 #include <variant>
 #include <vector>
 
-template <typename I>concept Monoid = requires (typename I::m_carrier a0,
-typename I::m_carrier a1) {
+template <typename
+I>concept Monoid = requires {
   typename I::m_carrier;
-  { I::m_op(a0,
-a1) } -> std::convertible_to<typename I::m_carrier>;
+  { I::m_op(std::declval<typename I::m_carrier>(),
+std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
 } && (requires {
   { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
 } || requires {

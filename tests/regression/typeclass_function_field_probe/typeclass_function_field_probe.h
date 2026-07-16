@@ -11,8 +11,8 @@ struct Datatypes {
 };
 
 template <typename I, typename A>
-concept HasEndo = requires(A a0) {
-  { I::endo(a0) } -> std::convertible_to<A>;
+concept HasEndo = requires {
+  { I::endo(std::declval<A>()) } -> std::convertible_to<A>;
 };
 
 struct TypeclassFunctionFieldProbe {

@@ -30,17 +30,24 @@ template <typename A, typename P> struct SigT {
 };
 
 template <typename I>
-concept PreCategory = requires(typename I::Obj a0, typename I::Obj a1,
-                               typename I::Obj a2, std::any a3, std::any a4) {
+concept PreCategory = requires {
   typename I::Obj;
-  { I::identity(a0) } -> std::convertible_to<std::any>;
-  { I::compose(a0, a1, a2, a3, a4) } -> std::convertible_to<std::any>;
+  {
+    I::identity(std::declval<typename I::Obj>())
+  } -> std::convertible_to<std::any>;
+  {
+    I::compose(std::declval<typename I::Obj>(), std::declval<typename I::Obj>(),
+               std::declval<typename I::Obj>(), std::declval<std::any>(),
+               std::declval<std::any>())
+  } -> std::convertible_to<std::any>;
 };
 template <typename I>
-concept PreStableCategory = requires(typename I::base_category::Obj a0) {
+concept PreStableCategory = requires {
   typename I::base_category;
   { I::zero_object() } -> std::convertible_to<typename I::base_category::Obj>;
-  { I::suspension(a0) } -> std::convertible_to<typename I::base_category::Obj>;
+  {
+    I::suspension(std::declval<typename I::base_category::Obj>())
+  } -> std::convertible_to<typename I::base_category::Obj>;
 };
 
 struct DoubleOppositeWitnessesCase {
