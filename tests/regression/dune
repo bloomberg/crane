@@ -5959,3 +5959,25 @@
   (alias runtest)
   (deps deque_any_cast_element.t.exe)
   (action (run ./deque_any_cast_element.t.exe))))
+
+(subdir deque_deep_tree_stackoverflow
+ (rule
+  (targets deque_deep_tree_stackoverflow.t.exe)
+  (deps DequeDeepTreeStackoverflow.vo deque_deep_tree_stackoverflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_deep_tree_stackoverflow.t.exe deque_deep_tree_stackoverflow.cpp deque_deep_tree_stackoverflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_deep_tree_stackoverflow.t.exe)
+  (action (run ./deque_deep_tree_stackoverflow.t.exe))))
+
+(subdir type_args_extraction
+ (rule
+  (targets type_args_extraction.t.exe)
+  (deps TypeArgsExtraction.vo type_args_extraction.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_args_extraction.t.exe type_args_extraction.cpp type_args_extraction.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_args_extraction.t.exe)
+  (action (run ./type_args_extraction.t.exe))))
