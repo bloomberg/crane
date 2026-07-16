@@ -431,6 +431,24 @@ let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
 (** Check if an inductive packet qualifies as flat: single constructor, no kept
     type parameters, not coinductive, not mutual, no self-referencing fields.
     Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
+(** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
+    specific packet index [packet_idx]), either directly or nested inside type
+    arguments (e.g. [list (tree A)] counts for [tree]).
+    @param packet_idx  when given, only an occurrence of this exact packet
+      (not just any packet of the same mutual block [kn]) counts
+    @param descend_arr  whether to also look inside function-type arrows *)
+let rec type_mentions_kn ?packet_idx ~descend_arr kn ty =
+  let mentions = type_mentions_kn ?packet_idx ~descend_arr kn in
+  match ty with
+  | Miniml.Tglob (GlobRef.IndRef (kn2, j), args, _) ->
+    ( MutInd.CanOrd.equal kn kn2
+      && (match packet_idx with None -> true | Some i -> j = i) )
+    || List.exists mentions args
+  | Miniml.Tglob (_, args, _) -> List.exists mentions args
+  | Miniml.Tarr (a, b) when descend_arr -> mentions a || mentions b
+  | Miniml.Tmeta { contents = Some t } -> mentions t
+  | _ -> false
+
 let is_flat_inductive_packet kn ind i =
   try
     let p = ind.ind_packets.(i) in
@@ -445,15 +463,9 @@ let is_flat_inductive_packet kn ind i =
         | _ -> false
       in
       let has_self_ref =
-        let rec check = function
-          | Miniml.Tglob (GlobRef.IndRef (kn2, j), args, _) ->
-            (MutInd.CanOrd.equal kn kn2 && j = i)
-            || List.exists check args
-          | Miniml.Tglob (_, args, _) -> List.exists check args
-          | Miniml.Tmeta { contents = Some t } -> check t
-          | _ -> false
-        in
-        Array.exists (List.exists check) p.ip_types
+        Array.exists
+          (List.exists (type_mentions_kn ~packet_idx:i ~descend_arr:false kn))
+          p.ip_types
       in
       num_param_vars = 0 && not is_mutual && not is_coinductive_ind && not has_self_ref
   with _ -> false
@@ -506,24 +518,12 @@ let is_enum_inductive r =
 let has_recursive_fields r =
   match r with
   | GlobRef.IndRef (kn, i) ->
-    let rec ty_mentions_kn ty =
-      match ty with
-      | Miniml.Tglob (GlobRef.IndRef (kn2, _), args, _) ->
-        MutInd.CanOrd.equal kn kn2
-        || List.exists ty_mentions_kn args
-      | Miniml.Tglob (_, args, _) ->
-        List.exists ty_mentions_kn args
-      | Miniml.Tarr (a, b) ->
-        ty_mentions_kn a || ty_mentions_kn b
-      | Miniml.Tmeta { contents = Some t } -> ty_mentions_kn t
-      | _ -> false
-    in
     ( try
         let ind = snd (Mindmap_env.find kn !inductives) in
         let packet = ind.ind_packets.(i) in
-        Array.exists (fun tys ->
-          List.exists ty_mentions_kn tys
-        ) packet.ip_types
+        Array.exists
+          (List.exists (type_mentions_kn ~descend_arr:true kn))
+          packet.ip_types
       with Not_found | Invalid_argument _ -> false )
   | _ -> false
 
@@ -756,6 +756,48 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
     type aliases (standalone definitions like [Force := list Unit]). *)
 let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
   make_refset ()
+
+(** Like {!make_refset_can}, but a reference rooted at a functor parameter
+    ([MPbound]) also matches by label alone, not just by canonical kername.
+
+    A functor-parameter projection (e.g. [Ty.sym_semty] inside
+    [Module Destruct (Ty : SymTypes)]) has a distinct kername — even
+    canonically — from the module type's own member ([SymTypes.sym_semty])
+    that gets registered.  Canonical-set membership alone therefore never
+    matches uses of the member through the parameter, which is the case we
+    actually care about; falling back to a same-label check for [MPbound]
+    references bridges that gap. *)
+let make_refset_can_with_functor_fallback () =
+  let (init_can, add_can, mem_can) = make_refset_can () in
+  let labels = ref StringSet.empty in
+  let init () =
+    init_can ();
+    labels := StringSet.empty
+  in
+  let add r =
+    add_can r;
+    labels := StringSet.add (Label.to_string (label_of_r r)) !labels
+  in
+  let mem r =
+    mem_can r
+    ||
+    match base_mp (modpath_of_r r) with
+    | MPbound _ -> StringSet.mem (Label.to_string (label_of_r r)) !labels
+    | _ -> false
+  in
+  (init, add, mem)
+
+(** Value-dependent type schemes: constants (typically Module Type
+    [Parameter]s) whose kind takes a VALUE argument, e.g.
+    [sym_semty : sym -> Type].  A type family applied to a runtime value is not
+    representable as a C++ type, so [convert_ml_type_to_cpp_type] erases it to
+    [std::any] rather than emitting [typename M::sym_semty].  Detected at
+    extraction time via [type_sign_vl] (more signature slots than type vars);
+    see {!make_refset_can_with_functor_fallback} for why functor-parameter
+    matching needs the label fallback. *)
+let (init_value_dep_type_schemes, add_value_dep_type_scheme, is_value_dep_type_scheme)
+  =
+  make_refset_can_with_functor_fallback ()
 
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
@@ -2119,22 +2161,11 @@ let get_ref_import_list r =
   | Some imports -> StringSet.elements imports
   | None -> []
 
-(* Legacy global custom imports (kept for backward compatibility with
-   [add_custom_import] which is called directly in some places). *)
+(* Legacy global custom imports — always empty now that nothing populates it
+   (retained only because [get_custom_imports] below still unions it in). *)
 let empty_custom_imports = StringSet.empty
 
 let custom_imports = Summary.ref empty_custom_imports ~name:"CraneCustomImports"
-
-let add_custom_import s =
-  if not (String.is_empty s) then
-    custom_imports := StringSet.add s !custom_imports
-
-let custom_imports_object : string -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane Custom Imports"
-       ~cache:(fun s -> add_custom_import s)
-       ~subst:None
 
 (* Returns only the imports for custom constants/inductives that were actually
    referenced during extraction, plus any legacy global imports. *)
@@ -2604,6 +2635,7 @@ let reset_tables () =
   init_projs ();
   init_promoted_type_vars ();
   init_erased_type_consts ();
+  init_value_dep_type_schemes ();
   init_instance_promoted_types ();
   init_higher_order_projections ();
   init_phantom_tvars ();

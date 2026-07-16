@@ -3,6 +3,7 @@
 
 #include <any>
 #include <concepts>
+#include <utility>
 #include <variant>
 
 struct RefNat {
@@ -22,8 +23,8 @@ struct RefNat {
 };
 
 template <typename _Inst, typename I>
-concept RefClass = requires(std::any a0) {
-  { _Inst::refToIx(a0) } -> std::convertible_to<I>;
+concept RefClass = requires {
+  { _Inst::refToIx(std::declval<std::any>()) } -> std::convertible_to<I>;
 };
 
 struct nat_ref {

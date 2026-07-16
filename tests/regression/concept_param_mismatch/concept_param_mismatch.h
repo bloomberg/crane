@@ -103,10 +103,12 @@ public:
 };
 
 template <typename I, typename T>
-concept C = requires(std::pair<T, T> a0, T a1) {
-  { I::f(a0) } -> std::convertible_to<T>;
-  { I::g(a0) } -> std::convertible_to<T>;
-  { I::h(a0, a1) } -> std::convertible_to<T>;
+concept C = requires {
+  { I::f(std::declval<std::pair<T, T>>()) } -> std::convertible_to<T>;
+  { I::g(std::declval<T>()) } -> std::convertible_to<T>;
+  {
+    I::h(std::declval<List<T>>(), std::declval<T>())
+  } -> std::convertible_to<T>;
 };
 
 struct ConceptParamMismatch {

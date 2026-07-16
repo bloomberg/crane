@@ -176,20 +176,26 @@ public:
 
 /// Decidable equality via a boolean function eqb.
 template <typename I, typename A>
-concept Eq = requires(A a0, A a1) {
-  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+concept Eq = requires {
+  { I::eqb(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
 };
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.
 template <typename I, typename G, typename A>
-concept Graph = requires(G a0, A a1) {
+concept Graph = requires {
   typename I::edge;
   { I::empty() } -> std::convertible_to<G>;
-  { I::add_node(a0, a1) } -> std::convertible_to<G>;
-  { I::add_edge(a0, a1) } -> std::convertible_to<G>;
-  { I::nodes(a0) } -> std::convertible_to<List<A>>;
-  { I::edges(a0, a1) } -> std::convertible_to<List<typename I::edge>>;
+  {
+    I::add_node(std::declval<G>(), std::declval<A>())
+  } -> std::convertible_to<G>;
+  {
+    I::add_edge(std::declval<G>(), std::declval<typename I::edge>())
+  } -> std::convertible_to<G>;
+  { I::nodes(std::declval<G>()) } -> std::convertible_to<List<A>>;
+  {
+    I::edges(std::declval<G>(), std::declval<A>())
+  } -> std::convertible_to<List<typename I::edge>>;
 };
 
 template <typename g, typename a> using edge = std::any;

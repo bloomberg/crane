@@ -43,7 +43,7 @@ struct TypeIndexedInductiveProbe {
   static inline const Bool0 sample = []() {
     const auto &_sv0 = w;
     const auto &[a0] = _sv0;
-    return std::any_cast<Bool0>(a0);
+    return std::any_cast<Bool0>(std::any_cast<Bool0>(a0));
   }();
 };
 

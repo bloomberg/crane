@@ -43,11 +43,11 @@ template <SymTypes Ty> struct ListCollect {
     return go(n, Datatypes::template List<std::any>::nil());
   }
 
-  static typename Ty::sym_semty
+  static std::any
   head_first(typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              const typename Datatypes::template List<symbols_semty> &l,
-             typename Ty::sym_semty default0) {
+             std::any default0) {
     if (std::holds_alternative<
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
@@ -55,15 +55,17 @@ template <SymTypes Ty> struct ListCollect {
       const auto &[a0, a1] =
           std::get<typename Datatypes::template List<symbols_semty>::Cons>(
               l.v());
-      return std::any_cast<std::pair<std::any, std::any>>(a0).first;
+      return std::any_cast<std::pair<std::any, std::any>>(
+                 std::any_cast<std::pair<std::any, std::any>>(a0))
+          .first;
     }
   }
 
-  static typename Ty::sym_semty collect_and_get_first(
+  static std::any collect_and_get_first(
       typename Ty::sym x,
       const typename Datatypes::template List<typename Ty::sym> &xs,
       const typename Datatypes::Nat &n, symbols_semty default_tuple,
-      typename Ty::sym_semty default_val) {
+      std::any default_val) {
     return head_first(x, xs, collect(x, xs, n, default_tuple), default_val);
   }
 };

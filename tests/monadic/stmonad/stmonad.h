@@ -235,21 +235,27 @@ struct Err {
 };
 
 template <typename I, typename T>
-concept Ix = requires(T a0, T a1, T a2) {
-  { I::range(a0, a1) } -> std::convertible_to<List<T>>;
-  { I::index(a0, a1, a2) } -> std::convertible_to<std::optional<uint64_t>>;
-  { I::rangeSize(a0, a1) } -> std::convertible_to<uint64_t>;
-  { I::toNat(a0) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(a0) } -> std::convertible_to<T>;
-  { I::suc(a0) } -> std::convertible_to<T>;
-  { I::sub(a0, a1) } -> std::convertible_to<T>;
-  { I::max(a0, a1) } -> std::convertible_to<T>;
+concept Ix = requires {
+  {
+    I::range(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<List<T>>;
+  {
+    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<std::optional<uint64_t>>;
+  {
+    I::rangeSize(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<uint64_t>;
+  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
+  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
+  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
+  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
   { I::zero() } -> std::convertible_to<T>;
 };
 template <typename I, typename T>
-concept STRefClass = requires(T a0) {
-  { I::mkSTRef(a0) } -> std::convertible_to<std::any>;
-  { I::STRefToIx(a0) } -> std::convertible_to<T>;
+concept STRefClass = requires {
+  { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<std::any>;
+  { I::STRefToIx(std::declval<std::any>()) } -> std::convertible_to<T>;
 };
 
 struct STRefNat {

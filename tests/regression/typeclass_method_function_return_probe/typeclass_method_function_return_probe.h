@@ -6,8 +6,8 @@
 
 enum class Bool0 { TRUE_, FALSE_ };
 template <typename I, typename A>
-concept Factory = requires(A a0, A a1) {
-  { I::make(a0, a1) } -> std::convertible_to<A>;
+concept Factory = requires {
+  { I::make(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<A>;
 };
 
 struct TypeclassMethodFunctionReturnProbe {

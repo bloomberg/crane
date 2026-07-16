@@ -21,10 +21,13 @@ open Table
     to these inductives won't be wrapped in Tnamespace, so they appear as
     sibling types rather than outer-namespace-qualified types. *)
 
+(** Record an inductive as defined in the current module scope. *)
 val add_local_inductive : GlobRef.t -> unit
 
+(** Reset the local-inductive set. Called at module boundaries. *)
 val clear_local_inductives : unit -> unit
 
+(** Return the inductives currently recorded as local to this module scope. *)
 val get_local_inductives : unit -> GlobRef.t list
 
 (** Set method_self_ns from local_inductives for standalone functions.

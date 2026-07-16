@@ -6,10 +6,10 @@
 #include <functional>
 #include <utility>
 
-template <typename I>concept Pack = requires (typename I::carrier
-a0) {
+template <typename
+I>concept Pack = requires {
   typename I::carrier;
-  { I::step(a0) } -> std::convertible_to<typename I::carrier>;
+  { I::step(std::declval<typename I::carrier>()) } -> std::convertible_to<typename I::carrier>;
 } && (requires {
   { I::seed() } -> std::convertible_to<typename I::carrier>;
 } || requires {

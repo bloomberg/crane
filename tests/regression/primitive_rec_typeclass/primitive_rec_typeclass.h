@@ -2,10 +2,11 @@
 #define INCLUDED_PRIMITIVE_REC_TYPECLASS
 
 #include <concepts>
+#include <utility>
 
 template <typename I, typename A>
-concept HasNorm = requires(A a0) {
-  { I::norm(a0) } -> std::convertible_to<uint64_t>;
+concept HasNorm = requires {
+  { I::norm(std::declval<A>()) } -> std::convertible_to<uint64_t>;
 };
 
 struct PrimitiveRecTypeclass {

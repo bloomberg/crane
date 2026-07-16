@@ -119,7 +119,6 @@ let id_emplace_back = Id.of_string "emplace_back"
 let id_pop_back     = Id.of_string "pop_back"
 let id_back         = Id.of_string "back"
 let id_reserve      = Id.of_string "reserve"
-let id_clone        = Id.of_string "clone"
 
 (** {2 List utility helpers} *)
 
@@ -526,9 +525,15 @@ and collect_stmts check ~in_visitor stmts =
      via collect_expr (cs_is_tail = false), misclassifying the function
      as Nontail_recursion and producing an unnecessary explicit stack. *)
   let rec go = function
-    | Sexpr e :: Sreturn None :: rest ->
+    | Sexpr e :: Sreturn None :: rest when Option.has_some (check e) ->
       collect_stmt check ~in_visitor (Sreturn (Some e)) @ go rest
-    | Sexpr e :: Sreturn (Some _) :: rest ->
+    | Sexpr e :: Sreturn (Some _) :: rest when Option.has_some (check e) ->
+      (* Void/unit tail-call pattern [f(); return (val)] where [f()] is itself
+         the recursive call — treat it as [return f()].  Guard on [check e] so
+         we only fire when the [Sexpr] is genuinely the recursive tail call; a
+         bare side-effect followed by [return g()] (e.g. [writeSTRef(...);
+         return _self_go(...)]) must fall through so the recursive call in the
+         [Sreturn] is not discarded. *)
       collect_stmt check ~in_visitor (Sreturn (Some e)) @ go rest
     | s :: rest ->
       collect_stmt check ~in_visitor s @ go rest
@@ -2749,7 +2754,7 @@ let build_cell_call ~vt_ret pp_expr cell =
              | None -> e)
           else e
         | None ->
-          CPPraw "std::any{}" )
+          CPPconverting_ctor (Tany, []) )
   in
   match vt_ret with
   | Some ret_ty ->
@@ -3635,18 +3640,6 @@ let frame_field_named names i =
     starting at [offset]. *)
 let frame_fields_named ?(offset = 0) names n =
   List.init n (fun i -> frame_field_named names (offset + i))
-
-(** Read the [i]-th saved field from frame variable [_f]. Generates [_f._sI].
-    Deprecated: prefer {!frame_field_named} with derived field names. *)
-let frame_field i =
-  CPPmember (CPPvar (id_f), Id.of_string ("_s" ^ string_of_int i))
-
-(** Read [n] consecutive saved fields from frame [_f], starting at [offset].
-    Returns a list of expressions [[_f._s{offset}; ...; _f._s{offset+n-1}]].
-    Deprecated: prefer {!frame_fields_named} with derived field names. *)
-let frame_fields ?(offset = 0) n =
-  List.init n (fun i -> frame_field (offset + i))
-
 
 (** Prepare an expression for saving in a continuation frame.
     [shared_ptr] values are ref-counted and can be copied directly.
@@ -7016,6 +7009,109 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
       in
       Some lbody'
   in
+  (* Y-combinator idiom emitted by {!Translation.gen_local_fix_by_ref} for
+     local fixpoints:
+     {v
+       auto f_impl = [&](A... args, auto& _self_f) { ... _self_f(newargs, _self_f) ... };
+       auto f      = [&](A... args) { return f_impl(args, f_impl); };
+     v}
+     The lambda's LAST parameter is a single self-reference [_self_f] and the
+     recursive call forwards it as its own last argument.  The patterns above
+     miss this shape: they key on the lambda's own name and on [Tfun] /
+     [mk_shared] init exprs, whereas this is [Some Tauto] + [CPPlambda] and
+     recurses through the self-parameter.  Recognise it here and, for tail
+     recursion, reuse {!transform_tail} with a checker keyed on the self-param
+     (dropping the trailing self-forward argument so the remaining args align
+     positionally with the non-self loop params).  After transformation the
+     self-parameter is unreferenced; the {!Cpp_print} lambda printer emits
+     unreferenced params without a name, so there is no [-Wunused-parameter].
+     Only single (non-mutual) fixpoints are handled; mutual ones (multiple
+     self-params) and non-tail recursion are left unchanged. *)
+  let self_param_prefix = "_self_" in
+  let is_self_param_id id =
+    let s = Id.to_string id in
+    let p = self_param_prefix in
+    String.length s > String.length p && String.sub s 0 (String.length p) = p
+  in
+  let ycomb_self_id lparams =
+    let self_count =
+      List.length
+        (List.filter
+           (fun (_, io) ->
+             match io with Some id -> is_self_param_id id | None -> false )
+           lparams)
+    in
+    match List.rev lparams with
+    | (_, Some sid) :: _ when is_self_param_id sid && self_count = 1 -> Some sid
+    | _ -> None
+  in
+  let self_checker self_id : call_checker =
+   fun e ->
+    match e with
+    | CPPfun_call (CPPvar id, args) when Id.equal id self_id -> (
+      (* Drop the trailing self-forward argument. *)
+      match List.rev args with
+      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false}
+      | [] -> None )
+    | _ -> None
+  in
+  (* Whole-word occurrence test used to detect params that vanish from the
+     printed body (e.g. erased-index args dropped by a custom-extraction
+     template).  Such params are still [CPPvar] nodes in the AST, so the
+     lambda printer would keep their names and trip [-Wunused-parameter]; we
+     render the transformed body with [pp_expr] and drop the name of any param
+     whose identifier does not survive to the printed output. *)
+  let word_appears name s =
+    let n = String.length name and len = String.length s in
+    let is_word_char c =
+      (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+      || (c >= '0' && c <= '9') || c = '_'
+    in
+    let rec scan i =
+      if i + n > len then false
+      else if String.sub s i n = name
+              && (i = 0 || not (is_word_char s.[i - 1]))
+              && (i + n >= len || not (is_word_char s.[i + n]))
+      then true
+      else scan (i + 1)
+    in
+    n > 0 && scan 0
+  in
+  let try_loopify_ycomb lparams ret_ty_opt lbody =
+    match ycomb_self_id lparams with
+    | None -> None
+    | Some self_id -> (
+      let check = self_checker self_id in
+      match classify check lbody with
+      | Tail_recursion ->
+        (* Loop params = all params except the trailing self-param. *)
+        let loop_lparams =
+          match List.rev lparams with _ :: rest -> List.rev rest | [] -> []
+        in
+        let params =
+          List.filter_map
+            (fun (ty, id_opt) ->
+              match id_opt with Some pid -> Some (pid, ty) | None -> None )
+            loop_lparams
+        in
+        let ret_ty = match ret_ty_opt with Some ty -> ty | None -> Tvoid in
+        let body' = transform_tail check pp_type params ret_ty lbody in
+        (* Drop names of params (including the self-param) that no longer
+           appear in the printed loop body, so unused ones become unnamed
+           rather than triggering [-Wunused-parameter]. *)
+        let rendered = pp_expr (CPPlambda ([], None, body', false)) in
+        let lparams' =
+          List.map
+            (fun (ty, id_opt) ->
+              match id_opt with
+              | Some id when not (word_appears (Id.to_string id) rendered) ->
+                (ty, None)
+              | _ -> (ty, id_opt) )
+            lparams
+        in
+        Some (lparams', body')
+      | No_recursion | Nontail_recursion -> None )
+  in
   let rec process_stmts stmts =
     match stmts with
     | [] -> []
@@ -7080,6 +7176,24 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         let lbody' = process_stmts lbody in
         Sasgn (id, _ty_opt, init_expr)
         :: Sderef_asgn (CPPvar id, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        :: process_stmts rest )
+    (* Pattern 4: Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
+       [Sasgn(id, Some Tauto, CPPlambda(...))] whose last param is a single
+       self-reference [_self_*].  Distinct from Pattern 2 ([Some (Tfun _)]) and
+       Pattern 3 ([CPPmk_shared] init). *)
+    | Sasgn
+        ( id,
+          (Some Tauto as ty_opt),
+          CPPlambda (lparams, ret_ty_opt, lbody, cap) )
+      :: rest
+      when Option.has_some (ycomb_self_id lparams) ->
+      ( match try_loopify_ycomb lparams ret_ty_opt lbody with
+      | Some (lparams', lbody') ->
+        Sasgn (id, ty_opt, CPPlambda (lparams', ret_ty_opt, lbody', cap))
+        :: process_stmts rest
+      | None ->
+        let lbody' = process_stmts lbody in
+        Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     | stmt :: rest -> process_stmt stmt :: process_stmts rest
   and process_expr expr =

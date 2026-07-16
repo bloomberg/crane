@@ -38,6 +38,15 @@ exception I of inductive_kind
 (* A set of all fixpoint functions currently being extracted *)
 let current_fixpoints = ref ([] : Constant.t list)
 
+(* For the C++ backend: deferred meta fills for erased constructor type params.
+   When a constructor like nil/none has a type parameter whose meta is unresolved
+   after needs_magic (because the expected type is a dependent/erased type), we
+   record the meta and its erased Coq type here.  After the whole constant is
+   extracted, any meta that is STILL None gets filled with the recorded erased type.
+   This correctly handles nil in deque_action_mismatch (meta stays None → fill with
+   pair<any,any>) without affecting sigma_types (cons meta gets resolved to nat → skip). *)
+let pending_cpp_meta_fills : (ml_meta * ml_type) list ref = ref []
+
 (* NB: In C++, [type_of] and [get_of] might raise
    [SingletonInductiveBecomeProp]. This exception will be caught in late
    wrappers around the exported functions of this file, in order to display the
@@ -1714,6 +1723,59 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   in
   let magic1 = needs_magic (type_cons, type_recomp (metas, a)) in
   let magic2 = needs_magic (a, mlt) in
+  (* For C++: register any still-None type-param metas with their erased Coq type.
+     After the whole constant is extracted, metas that are STILL None will be
+     filled — those represent genuinely erased type positions (e.g. nil inside a
+     lambda whose return type is a dependent/erased type like sem_ty TagList).
+     Metas that get resolved later (like sigma_types' list element = nat) will
+     have contents ≠ None and will be skipped. *)
+  let () =
+    if lang () == Cpp then begin
+      let la_now = List.length args in
+      if params_nb > 0 && la_now >= params_nb then begin
+        let db =
+          List.rev
+            (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
+        in
+        let param_args = List.firstn params_nb args in
+        let n_sign = List.length oi.ip_sign in
+        let param_sign = List.firstn (min params_nb n_sign) oi.ip_sign in
+        let result_metas =
+          match snd (type_decomp type_cons) with
+          | Tglob (_, l, []) -> Array.of_list l
+          | _ -> [||]
+        in
+        let tvar_idx = ref 0 in
+        List.iter2
+          (fun sign_entry coq_arg ->
+            ( match sign_entry with
+            | Keep ->
+              let idx = !tvar_idx in
+              incr tvar_idx;
+              if idx < Array.length result_metas then
+                ( match result_metas.(idx) with
+                | Tmeta r when r.contents = None ->
+                  ( try
+                      let ty = extract_type env sg db 0 coq_arg [] in
+                      ( match type_simpl ty with
+                      | Tunknown | Tdummy _ -> ()
+                      | concrete ->
+                        let rec erase_leaves = function
+                          | Tglob (_, [], _) -> Tdummy Ktype
+                          | Tglob (g, args, ns) ->
+                            Tglob (g, List.map erase_leaves args, ns)
+                          | Tarr (a, b) -> Tarr (erase_leaves a, erase_leaves b)
+                          | _ -> Tdummy Ktype
+                        in
+                        pending_cpp_meta_fills :=
+                          (r, erase_leaves concrete) :: !pending_cpp_meta_fills )
+                    with _ -> () )
+                | _ -> () )
+            | Kill _ -> () ))
+          param_sign param_args
+      end
+    end
+  in
   let head mla =
     let typeargs =
       match snd (type_decomp type_cons) with
@@ -1876,13 +1938,51 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
       (* The extraction of the head. *)
       let type_head = Tglob (GlobRef.IndRef ip, Array.to_list metas, []) in
       let a = extract_term env sg mle type_head c [] in
+      let has_unresolved_meta =
+        Array.exists (fun m -> match m with
+          | Tmeta {contents = None} -> true
+          | _ -> false) metas
+      in
+      ( if has_unresolved_meta then try
+          let coq_ty = whd_all env sg (Retyping.get_type_of env sg c) in
+          match EConstr.kind sg coq_ty with
+          | App (hd, args) ->
+            let kept_args =
+              let rec filter_keep sign args =
+                match sign, args with
+                | Keep :: s, a :: aa -> a :: filter_keep s aa
+                | _ :: s, _ :: aa -> filter_keep s aa
+                | _ -> []
+              in
+              filter_keep oi.ip_sign (Array.to_list args)
+            in
+            List.iter2 (fun meta coq_arg ->
+              match meta with
+              | Tmeta ({contents = None} as r) ->
+                let ml_ty =
+                  try extract_type env sg [] 0 coq_arg []
+                  with _ -> Tunknown
+                in
+                let rec has_unknown = function
+                  | Tunknown -> true
+                  | Tmeta {contents = None} -> true
+                  | Tmeta {contents = Some t} -> has_unknown t
+                  | Tglob (_, args, _) -> List.exists has_unknown args
+                  | Tarr (a, b) -> has_unknown a || has_unknown b
+                  | _ -> false
+                in
+                if not (has_unknown ml_ty) then
+                  r.contents <- Some ml_ty
+              | _ -> ()
+            ) (Array.to_list metas) kept_args
+          | _ -> ()
+        with _ -> () );
       (* The extraction of each branch. *)
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in
         (* The types of the arguments of the corresponding constructor. *)
         let f t = type_subst_vect metas (expand env t) in
         let l = List.map f oi.ip_types.(i) in
-        (* HERE! THE TYPES!!! *)
         (* the corresponding signature *)
         let s = List.map (type2sign env) oi.ip_types.(i) in
         let s = sign_with_implicits r s mi.ind_nparams in
@@ -1890,7 +1990,6 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
         let e = extract_maybe_term env sg mle (type_recomp (l, mlt)) br.(i) in
         (* We suppress dummy arguments according to signature. *)
         let ids, e = case_expunge s e in
-        (* HERE! May need to figure out how this is effecting the types *)
         (List.rev ids, mlt, Pusual r, e)
       in
       (* Apply standard case extraction for all inductives. *)
@@ -1970,9 +2069,6 @@ and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
 
 (* Sigma type precondition detection. For functions taking {x : A | P x}, detect
    P and translate to C++ assertions. *)
-
-(** Looks up a Rocq library reference by name, returning [None] if not found. *)
-let try_ref name = try Some (Rocqlib.lib_ref name) with _ -> None
 
 (** Tests whether a global reference [gr] corresponds to the Rocq library
     reference with the given name. *)
@@ -2169,6 +2265,7 @@ let detect_sigma_assertions env sg kn typ =
     @return A pair [(ml_ast, ml_type)] of the extracted term and its ML type *)
 let extract_std_constant env sg kn body typ =
   reset_meta_count ();
+  pending_cpp_meta_fills := [];
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let numtvars, t = record_constant_type env sg kn (Some typ) in
   (* Detect sigma type preconditions and register assertions *)
@@ -2224,6 +2321,15 @@ let extract_std_constant env sg kn body typ =
   let env = push_rels_assum rels env in
   (* The real extraction: *)
   let e = extract_term env sg mle t' c [] in
+  (* For C++: fill any type-param metas that remained unresolved after full extraction.
+     These represent genuinely erased type positions (e.g. the element type of nil
+     inside a lambda whose return type is a dependent/erased type). *)
+  if lang () == Cpp then
+    List.iter
+      (fun (r, erased) ->
+        if r.contents = None then r.contents <- Some erased)
+      !pending_cpp_meta_fills;
+  pending_cpp_meta_fills := [];
   (* Expunging term and type from dummy lambdas. *)
   let trm = term_expunge s (List.combine ids (List.rev l), e) in
   (trm, add_tvars numtvars (type_expunge_from_sign env s t))
@@ -2415,6 +2521,14 @@ let extract_constant_spec env kn cb =
     | Logic, Default -> Sval (r, MLaxiom "SVAL extraction issue", Tdummy Kprop)
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
+      (* A type scheme with more signature slots than type variables takes at
+         least one VALUE argument (e.g. [sym_semty : sym -> Type], [s=[Kill]],
+         [vl=[]]).  Such a family applied to a runtime value is not
+         representable as a C++ type; record it so that
+         [convert_ml_type_to_cpp_type] erases it to [std::any] at use sites
+         instead of emitting [typename M::sym_semty] and needing a runtime
+         [any_cast] guard. *)
+      if List.length s > List.length vl then Table.add_value_dep_type_scheme r;
       ( match cb.const_body with
       | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> Stype (r, vl, None)
       | Def body ->

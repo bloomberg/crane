@@ -18,7 +18,7 @@ concept SymTypes = requires {
 template <SymTypes Ty> struct Defs {
   using symbols_semty = tuple;
 
-  static typename Ty::symbol_semty
+  static std::any
   get_first(typename Ty::symbol,
             const typename Datatypes::template List<typename Ty::symbol> &,
             symbols_semty vs) {

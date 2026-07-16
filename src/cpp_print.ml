@@ -616,6 +616,15 @@ let rec is_any_type = function
     ([Tvar(0..N, _)]) and loopification-internal types
     ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
     outside, it is qualified as [StructName::id]. *)
+(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
+    with a concrete (non-[std::any]) element type.  Used to detect when a
+    grammar-framework [List<std::any>] value needs its element type restored
+    via the converting constructor rather than a plain [any_cast]. *)
+let is_list_with_concrete_elem = function
+  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
+  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
+  | _ -> false
+
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1023,13 +1032,6 @@ and pp_cpp_expr env args t =
         (* For List<T> (T ≠ std::any) grammar productions always store List<std::any>
            at runtime.  Use the converting constructor so element casts are correct. *)
         let resolved_ty = resolve_tvars_to_any ty in
-        let is_list_with_concrete_elem = function
-          | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
-            is_list_global g && elem_ty <> Tany
-          | Tglob (g, [elem_ty], _) ->
-            is_list_global g && elem_ty <> Tany
-          | _ -> false
-        in
         if is_list_with_concrete_elem resolved_ty then
           let g_of_list, elem_ty_of_list =
             match resolved_ty with
@@ -1047,16 +1049,9 @@ and pp_cpp_expr env args t =
           in
           if Table.is_custom g_of_list then begin
             require_header "any";
-            let bare_ety = bare_elem_ty elem_ty_of_list in
-            let elem_s = pp_cpp_type false [] bare_ety in
-            let src_s =
-              str (sn ()).any_cast ++ str "<"
-              ++ pp_cpp_type false [] list_any_ty
-              ++ str ">(" ++ Id.print id ++ str ")"
-            in
-            let cast_e = deque_elem_extract_expr bare_ety (str "_e") in
-            str "[&]() { std::deque<" ++ elem_s ++ str "> _r; for (const auto& _e : "
-            ++ src_s ++ str ") _r.push_back(" ++ cast_e ++ str "); return _r; }()"
+            str (sn ()).any_cast ++ str "<"
+            ++ pp_cpp_type false [] resolved_ty
+            ++ str ">(" ++ Id.print id ++ str ")"
           end else
           pp_cpp_type false [] resolved_ty
           ++ str "(" ++ str (sn ()).any_cast ++ str "<"
@@ -1324,9 +1319,15 @@ and pp_cpp_expr env args t =
             | _ -> []
           in
           let ml_arg_types = extract_arg_types ml_ty in
-          List.map
+          let raw = List.map
             (Translation.convert_ml_type_to_cpp_type env [])
             ml_arg_types
+          in
+          let result = List.map (Minicpp.map_cpp_type (function
+            | Tvar (i, None) when i >= 1 && i - 1 < List.length tys ->
+              List.nth tys (i - 1)
+            | t -> t)) raw in
+          result
         with _ -> []
       in
       pp_custom
@@ -1969,10 +1970,6 @@ and pp_cpp_expr env args t =
   | CPPbrace_init -> str "{}"
   | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
   | CPPany_cast (ty, e) ->
-    (* When the target type resolves to [std::any] (either [Tany] directly, or
-       an axiom/unknown ConstRef like [SemVal = std::any]), the value is already
-       the right type — [any_cast<std::any>(x)] fails if [x] holds a concrete
-       type (e.g. uint64_t). *)
     if is_any_type ty then
       pp_cpp_expr env args e
     else begin
@@ -2415,8 +2412,8 @@ and pp_cpp_stmt env args = function
          No if/else needed. *)
       let br = match branches with br :: _ -> br
         | [] -> CErrors.anomaly (Pp.str "pp_cpp_stmt Smatch: empty branch list") in
-      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
+      let body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       if binding = mt () then body_pp
       else scrut_binding_pp ++ binding ++ fnl () ++ body_pp
     else
@@ -2425,8 +2422,8 @@ and pp_cpp_stmt env args = function
       let is_last_no_wild =
         i = n_branches - 1 && default = None && n_branches > 1
       in
-      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       let binding = pp_block_binding scrut_var_pp br in
+      let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
       (* When the branch has a reuse fast-path, nest the use_count check
          inside the holds_alternative block:
            if (holds_alternative<Ctor>(scrut)) {
@@ -2598,6 +2595,16 @@ and expr_is_any_typed_param = function
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
+(** Erase leaf types to [Tany], preserving container structure.
+    E.g. [pair<uint64_t, uint64_t>] → [pair<any, any>],
+    [deque<pair<uint64_t, uint64_t>>] → [deque<pair<any, any>>]. *)
+and erase_type_to_any = function
+  | Tglob (g, args, ns) when args <> [] ->
+    Tglob (g, List.map erase_type_to_any args, ns)
+  | Tnamespace (ns_g, inner) ->
+    Tnamespace (ns_g, erase_type_to_any inner)
+  | _ -> Tany
+
 (** Replace unresolved type variables ([Tvar(_, None)]) with [Tany] so that
     [any_cast] targets render as [std::any] instead of invalid placeholders. *)
 and resolve_tvars_to_any = function
@@ -2620,37 +2627,20 @@ and resolve_tvars_to_any = function
     @param vl           type variable names in scope for rendering [expected_ty]
     @return [expr_printed] unchanged, or wrapped in [any_cast<expected_ty>(...)] *)
 and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
-  if (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
-     && is_concrete_cpp_type expected_ty
-  then
+  let fires = (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
+     && is_concrete_cpp_type expected_ty in
+  if fires then
     let resolved_ty = resolve_tvars_to_any expected_ty in
     (* For List<T> where T ≠ std::any, the grammar framework stores List<std::any>
        at runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
        so the element type is recovered correctly by the converting constructor. *)
-    let is_list_with_concrete_elem = function
-      | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
-        is_list_global g && elem_ty <> Tany
-      | Tglob (g, [elem_ty], _) ->
-        is_list_global g && elem_ty <> Tany
-      | _ -> false
-    in
     if is_list_with_concrete_elem resolved_ty then
-      let list_any_ty =
-        match resolved_ty with
-        | Tnamespace (ns_g, Tglob (g, _, _)) ->
-          Tnamespace (ns_g, Tglob (g, [Tany], []))
-        | Tglob (g, _, _) ->
-          Tglob (g, [Tany], [])
-        | _ -> CErrors.anomaly (Pp.str "pp_cpp_type Tshared_ptr: expected list type")
-      in
-      pp_cpp_type false vl resolved_ty
-      ++ str "("
-      ++ str (sn ()).any_cast
+      str (sn ()).any_cast
       ++ str "<"
-      ++ pp_cpp_type false vl list_any_ty
+      ++ pp_cpp_type false vl resolved_ty
       ++ str ">("
       ++ expr_printed
-      ++ str "))"
+      ++ str ")"
     else
       str (sn ()).any_cast
       ++ str "<"
@@ -2849,7 +2839,7 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
             | _ -> false
           in
           let saved_concrete_params = !concrete_typed_any_params in
-          if !outer_any_pair_overrode || scrut_is_any_cast_pair then
+          if !outer_any_pair_overrode || scrut_is_any_cast_pair then begin
             List.iter (fun (id, ty) ->
               let is_pair_ty = match ty with
                 | Tglob (g, _ :: _, _) ->
@@ -2860,12 +2850,17 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
               if is_any_type ty || is_pair_ty then
                 current_any_typed_params :=
                   Id.Set.add id !current_any_typed_params
-              else if not (is_any_type ty) then begin
-                (* Concrete non-pair: needs explicit any_cast at every use. *)
+              else if not (is_any_type ty) then
+                let erased_ty = match ty with
+                  | Tglob (g, args, ns) when args <> [] ->
+                    Tglob (g, List.map erase_type_to_any args, ns)
+                  | Tnamespace (ns_g, inner) ->
+                    Tnamespace (ns_g, erase_type_to_any inner)
+                  | t -> t
+                in
                 concrete_typed_any_params :=
-                  Id.Map.add id ty !concrete_typed_any_params
-              end
-            ) ids;
+                  Id.Map.add id erased_ty !concrete_typed_any_params
+            ) ids end;
           let result = pp_list_stmt (pp_cpp_stmt env []) ss in
           current_any_typed_params := saved_any_params;
           concrete_typed_any_params := saved_concrete_params;
@@ -2883,7 +2878,10 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
     | CCbr_var (i, j) ->
       ( try
           let ids, _, _ = List.nth cases i in
-          let id, _ = List.nth ids j in
+          let id, ty = List.nth ids j in
+          if is_any_type ty then
+            current_any_typed_params :=
+              Id.Set.add id !current_any_typed_params;
           Id.print id
         with Failure _ ->
           CErrors.anomaly
@@ -2960,10 +2958,12 @@ and pp_custom custom env typ t tyargs cases args arg_types vl cmds =
             | _ -> arg
           else arg
       in
-      match List.nth_opt arg_types i with
+      let result = match List.nth_opt arg_types i with
       | Some expected_ty when custom_list_iife_opt = None ->
         wrap_any_cast_if_needed arg_expr arg expected_ty vl
       | _ -> arg
+      in
+      result
     with Failure _ ->
       CErrors.anomaly
         Pp.(str "Custom syntax: unbound term argument in: " ++ str custom)

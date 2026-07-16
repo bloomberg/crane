@@ -3,15 +3,19 @@
 
 #include <any>
 #include <concepts>
+#include <utility>
 
 struct Bool {
   static bool eqb(bool b1, bool b2);
 };
 
 template <typename I>
-concept EqType = requires(typename I::carrier a0, typename I::carrier a1) {
+concept EqType = requires {
   typename I::carrier;
-  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+  {
+    I::eqb(std::declval<typename I::carrier>(),
+           std::declval<typename I::carrier>())
+  } -> std::convertible_to<bool>;
 };
 
 struct CanonStruct {

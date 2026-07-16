@@ -2,10 +2,11 @@
 #define INCLUDED_TODO_TYPECLASS_REQUIRES
 
 #include <concepts>
+#include <utility>
 
 template <typename I, typename A>
-concept Numeric = requires(A a0) {
-  { I::to_nat_val(a0) } -> std::convertible_to<uint64_t>;
+concept Numeric = requires {
+  { I::to_nat_val(std::declval<A>()) } -> std::convertible_to<uint64_t>;
 };
 
 struct TodoTypeclassRequires {

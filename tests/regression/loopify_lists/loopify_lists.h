@@ -714,18 +714,23 @@ struct LoopifyLists {
           auto take = [&](uint64_t k, const list<T1> &lst) -> list<T1> {
             return take_impl(take_impl, k, lst);
           };
-          auto drop0_impl = [](auto &_self_drop0, uint64_t k,
-                               list<T1> lst) -> list<T1> {
-            if (k <= 0) {
-              return lst;
-            } else {
-              uint64_t m = k - 1;
-              if (std::holds_alternative<typename list<T1>::Nil>(lst.v_mut())) {
-                return list<T1>::nil();
+          auto drop0_impl = [](auto &, uint64_t k, list<T1> lst) -> list<T1> {
+            list<T1> _loop_lst = std::move(lst);
+            uint64_t _loop_k = std::move(k);
+            while (true) {
+              if (_loop_k <= 0) {
+                return _loop_lst;
               } else {
-                auto &[a00, a10] =
-                    std::get<typename list<T1>::Cons>(lst.v_mut());
-                return _self_drop0(_self_drop0, m, *a10);
+                uint64_t m = _loop_k - 1;
+                if (std::holds_alternative<typename list<T1>::Nil>(
+                        _loop_lst.v_mut())) {
+                  return list<T1>::nil();
+                } else {
+                  auto &[a00, a10] =
+                      std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
+                  _loop_lst = *a10;
+                  _loop_k = m;
+                }
               }
             }
           };

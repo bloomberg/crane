@@ -36,7 +36,7 @@ struct MemSafetyProbe12 {
   /// Unwrap extracts the value from wrap A.
   template <typename T1> static T1 unwrap(const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(a0);
+    return std::any_cast<T1>(std::any_cast<T1>(a0));
   }
 
   /// TEST 1: Pack a NAT — should work since nat = unsigned int.

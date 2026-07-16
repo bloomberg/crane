@@ -31,7 +31,7 @@ template <SymTypes Ty> struct Actions {
              F1 &&f) {
     return Specif::template SigT<
         typename Datatypes::template List<typename Ty::sym>,
-        std::function<bool(std::any)>>::existt(std::move(gamma), f);
+        std::function<bool(symbols_semty)>>::existt(std::move(gamma), f);
   }
 
   static bool apply_entry(entry _x0, symbols_semty _x1) {

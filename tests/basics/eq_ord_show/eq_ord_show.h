@@ -3,24 +3,27 @@
 
 #include <concepts>
 #include <string>
+#include <utility>
 
 using namespace std::string_literals;
 
 template <typename I, typename A>
-concept Eq = requires(A a0, A a1) {
-  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
-  { I::neqb(a0, a1) } -> std::convertible_to<bool>;
+concept Eq = requires {
+  { I::eqb(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
+  {
+    I::neqb(std::declval<A>(), std::declval<A>())
+  } -> std::convertible_to<bool>;
 };
 template <typename I, typename A>
-concept Ord = requires(A a0, A a1) {
-  { I::lt(a0, a1) } -> std::convertible_to<bool>;
-  { I::le(a0, a1) } -> std::convertible_to<bool>;
-  { I::gt(a0, a1) } -> std::convertible_to<bool>;
-  { I::ge(a0, a1) } -> std::convertible_to<bool>;
+concept Ord = requires {
+  { I::lt(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
+  { I::le(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
+  { I::gt(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
+  { I::ge(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
 };
 template <typename I, typename A>
-concept Show = requires(A a0) {
-  { I::show(a0) } -> std::convertible_to<std::string>;
+concept Show = requires {
+  { I::show(std::declval<A>()) } -> std::convertible_to<std::string>;
 };
 
 struct NatEq {

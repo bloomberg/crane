@@ -1,7 +1,7 @@
 #include "sigma_types.h"
 
 SigT<uint64_t, std::any> SigmaTypes::nat_with_double(uint64_t n) {
-  return SigT<uint64_t, std::any>::existt((n + n), std::any{});
+  return SigT<uint64_t, std::any>::existt((n + n), std::any());
 }
 
 Sig<uint64_t> SigmaTypes::positive_succ(uint64_t n) {

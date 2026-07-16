@@ -3,6 +3,7 @@
 
 #include <any>
 #include <concepts>
+#include <utility>
 
 struct RefNat {
   // DATA
@@ -16,8 +17,8 @@ struct RefNat {
 };
 
 template <typename _Inst, typename I>
-concept RefClass = requires(I a0) {
-  { _Inst::mkRef(a0) } -> std::convertible_to<std::any>;
+concept RefClass = requires {
+  { _Inst::mkRef(std::declval<I>()) } -> std::convertible_to<std::any>;
 };
 
 struct nat_ref {

@@ -229,17 +229,20 @@ struct LoopifySequences {
           _result = List<List<T1>>::nil();
         } else {
           uint64_t f = fuel - 1;
-          auto all_nil_impl = [](auto &_self_all_nil,
-                                 const List<List<T1>> &l) -> bool {
-            if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
-              return true;
-            } else {
-              const auto &[a0, a1] =
-                  std::get<typename List<List<T1>>::Cons>(l.v());
-              if (std::holds_alternative<typename List<T1>::Nil>(a0.v())) {
-                return _self_all_nil(_self_all_nil, *a1);
+          auto all_nil_impl = [](auto &, const List<List<T1>> &l) -> bool {
+            const List<List<T1>> *_loop_l = &l;
+            while (true) {
+              if (std::holds_alternative<typename List<List<T1>>::Nil>(
+                      _loop_l->v())) {
+                return true;
               } else {
-                return false;
+                const auto &[a0, a1] =
+                    std::get<typename List<List<T1>>::Cons>(_loop_l->v());
+                if (std::holds_alternative<typename List<T1>::Nil>(a0.v())) {
+                  _loop_l = a1.get();
+                } else {
+                  return false;
+                }
               }
             }
           };

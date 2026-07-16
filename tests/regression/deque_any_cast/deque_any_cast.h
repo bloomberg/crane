@@ -8,11 +8,11 @@
 #include <variant>
 #include <vector>
 
-template <typename I>concept Monoid = requires (typename I::m_carrier a0,
-typename I::m_carrier a1) {
+template <typename
+I>concept Monoid = requires {
   typename I::m_carrier;
-  { I::m_op(a0,
-a1) } -> std::convertible_to<typename I::m_carrier>;
+  { I::m_op(std::declval<typename I::m_carrier>(),
+std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
 } && (requires {
   { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
 } || requires {
@@ -78,13 +78,13 @@ struct DequeAnyCast {
       std::any_cast<uint64_t>(mfold<nat_monoid>([](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(std::any(UINT64_C(1)), [](auto _a0, auto _a1) {
+      }(UINT64_C(1), [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(std::any(UINT64_C(2)), [](auto _a0, auto _a1) {
+      }(UINT64_C(2), [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
-        }(std::any(UINT64_C(3)), std::deque<std::any>{})))));
+        }(UINT64_C(3), std::deque<uint64_t>{})))));
 };
 
 #endif // INCLUDED_DEQUE_ANY_CAST

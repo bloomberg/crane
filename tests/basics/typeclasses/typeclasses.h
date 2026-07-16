@@ -104,16 +104,16 @@ public:
 };
 
 template <typename I, typename A>
-concept Numeric = requires(A a0) {
-  { I::to_nat(a0) } -> std::convertible_to<uint64_t>;
+concept Numeric = requires {
+  { I::to_nat(std::declval<A>()) } -> std::convertible_to<uint64_t>;
 };
 template <typename I, typename A>
-concept Eq = requires(A a0, A a1) {
-  { I::eqb(a0, a1) } -> std::convertible_to<bool>;
+concept Eq = requires {
+  { I::eqb(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
 };
 template <typename I, typename A>
-concept Ord = requires(A a0, A a1) {
-  { I::leb(a0, a1) } -> std::convertible_to<bool>;
+concept Ord = requires {
+  { I::leb(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
 };
 
 struct Typeclasses {

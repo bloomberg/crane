@@ -17,5 +17,17 @@ uint64_t LetFixTailLoop::sum_list(const List<uint64_t> &l) {
 }
 
 uint64_t LetFixTailLoop::length_list(const List<uint64_t> &l) {
-  return _length_list_go<uint64_t>(l, UINT64_C(0));
+  auto go_impl = [](auto &_self_go, const List<uint64_t> &xs,
+                    uint64_t n) -> uint64_t {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
+      return n;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      return _self_go(_self_go, *a1, (UINT64_C(1) + n));
+    }
+  };
+  auto go = [&](const List<uint64_t> &xs, uint64_t n) -> uint64_t {
+    return go_impl(go_impl, xs, n);
+  };
+  return go(l, UINT64_C(0));
 }

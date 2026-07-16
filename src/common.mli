@@ -137,7 +137,11 @@ val opened_libraries : unit -> ModPath.t list
 (** Clear the set of opened-module paths.  Used in separate extraction to
     force fully qualified cross-module references. *)
 val mpfiles_clear : unit -> unit
+
+(** Save the current set of opened-module paths, for later restoration. *)
 val mpfiles_save : unit -> Names.MPset.t
+
+(** Restore a previously-saved set of opened-module paths. *)
 val mpfiles_restore : Names.MPset.t -> unit
 
 (** Activate "force qualified capitalization" mode: when set, qualified type
@@ -146,12 +150,20 @@ val mpfiles_restore : Names.MPset.t -> unit
     in separate extraction.  Cleared automatically on reset. *)
 val set_force_qualified_capitalization : unit -> unit
 
+(** Check whether "force qualified capitalization" mode is active. *)
 val get_force_qualified_capitalization : unit -> bool
 
+(** Record which module paths belong to the current extraction output.
+    References to any other module path will be treated as external by
+    {!is_non_output_module}; replaces any previously recorded set. *)
 val set_non_output_modules : Names.ModPath.t list -> unit
 
+(** [true] iff [mp] is known but not part of the current extraction output —
+    i.e., its definition will live in a different generated file. *)
 val is_non_output_module : Names.ModPath.t -> bool
 
+(** Clear the set of non-output module paths recorded by
+    {!set_non_output_modules}. *)
 val clear_non_output_modules : unit -> unit
 
 type kind =
@@ -224,20 +236,30 @@ val get_keywords : unit -> Id.Set.t
     [Extract Inductive ascii => char] has been declared, then the constants are
     directly turned into chars *)
 
+(** Check whether an ML term is an [ascii] constructor application that can be
+    decoded into a native C++ [char] literal. *)
 val is_native_char : ml_ast -> bool
 
+(** Decode an [ascii] constructor application into a native [char] value. *)
 val get_native_char : ml_ast -> char
 
+(** Pretty-print an ascii constructor as a C++ char literal. *)
 val pp_native_char : ml_ast -> Pp.t
 
 (** Special hack for constants of type String.string : if an
     [Extract Inductive string => string] has been declared, then the constants
     are directly turned into string literals *)
 
+(** Check whether an ML term is a fully statically-known [string] built from
+    [EmptyString]/[String] constructors with constant [ascii] characters, that
+    can be turned into a native C++ string literal. *)
 val is_native_string : ml_ast -> bool
 
+(** Extract the underlying OCaml string from a statically-known [string]
+    term (see {!is_native_string}). *)
 val get_native_string : ml_ast -> string
 
+(** Pretty-print a statically-known [string] term as a C++ string literal. *)
 val pp_native_string : ml_ast -> Pp.t
 
 (** Registered name for the sig type (used for existential type extraction). *)
@@ -248,20 +270,29 @@ val sig_type_name : string
     Centralized naming conventions for generated C++ identifiers. Each function
     takes an integer index and returns a string or [Id.t]. *)
 
+(** Name for template type parameter [i], e.g. ["T0"]. *)
 val tvar_name : int -> string
 
+(** {!tvar_name} as an [Id.t]. *)
 val tvar_id : int -> Id.t
 
+(** Name for an anonymous/unresolved type variable [i], e.g. ["_tvar0"]. *)
 val anon_tvar_name : int -> string
 
+(** {!anon_tvar_name} as an [Id.t]. *)
 val anon_tvar_id : int -> Id.t
 
+(** Name for a function-typed template parameter [i], e.g. ["F0"]. *)
 val fun_tparam_name : int -> string
 
+(** {!fun_tparam_name} as an [Id.t]. *)
 val fun_tparam_id : int -> Id.t
 
+(** Fallback positional name for constructor field [i] when no binder name is
+    registered, e.g. ["a0"] (["d_a0"] under the BDE flavor). *)
 val field_param_name : int -> string
 
+(** {!field_param_name} as an [Id.t]. *)
 val field_param_id : int -> Id.t
 
 (** {2 Constructor Field Name Registry}
@@ -289,26 +320,48 @@ val register_ctor_bind_name : string -> int -> Id.t -> unit
 (** Look up the binding variable name; falls back to [a{idx}] if unregistered. *)
 val lookup_ctor_bind_name : string -> int -> Id.t
 
+(** Name for a synthesized eta-expansion binder [i], e.g. ["_x0"].  Used when a
+    let-bound lambda must be eta-expanded to match its declared arity;
+    numbered by de Bruijn depth at the synthesis site so nested synthesized
+    binders cannot collide with each other or with source-level names, which
+    never start with [_x]. *)
 val eta_param_name : int -> string
 
+(** {!eta_param_name} as an [Id.t]. *)
 val eta_param_id : int -> Id.t
 
+(** Name for a synthesized type-class instance parameter [i], e.g. ["_tcI0"]. *)
 val tc_instance_name : int -> string
 
+(** {!tc_instance_name} as an [Id.t]. *)
 val tc_instance_id : int -> Id.t
 
+(** Fallback name for constructor [i] when no better name is available, e.g.
+    ["Ctor0"]. *)
 val ctor_fallback_name : int -> string
 
+(** {!ctor_fallback_name} as an [Id.t]. *)
 val ctor_fallback_id : int -> Id.t
 
+(** Fallback name for a de-Bruijn-indexed variable [i] when no source binder
+    name is available, e.g. ["_db0"]. *)
 val db_fallback_name : int -> string
 
+(** {!db_fallback_name} as an [Id.t]. *)
 val db_fallback_id : int -> Id.t
 
+(** Rename a template type parameter for the BDE flavor (prefixes with
+    ["t_"]); identity under the standard flavor. *)
 val tparam_name : Id.t -> Id.t
 
+(** Compute the C++ enum constructor name for a single already-uppercased
+    string [s]: applies the BDE [e_] prefix or dangerous-macro escaping as
+    needed.  Does not perform collision avoidance; prefer
+    {!enum_ctor_names_of_packet} when the full sibling set is available. *)
 val enum_ctor_name : string -> string
 
+(** Compute the C++ enum constructor name for a single constructor [Id.t],
+    applying prime-to-underscore escaping.  See {!enum_ctor_name}. *)
 val enum_ctor_name_of_id : Id.t -> string
 
 (** Compute C++ enum constructor names for all constructors of an inductive
@@ -316,10 +369,17 @@ val enum_ctor_name_of_id : Id.t -> string
     Deterministic: same packet always produces the same names. *)
 val enum_ctor_names_of_packet : Id.t array -> string array
 
+(** Capitalize only the last [::]-separated component of a qualified name,
+    e.g. [Nat::add] becomes [Nat::Add]. *)
 val capitalize_last_component : string -> string
 
 (** {2 Needed C++ Headers} *)
 
+(** Record that a C++ header is needed by the current extraction output. *)
 val require_header : string -> unit
+
+(** Return the sorted list of headers requested via {!require_header}. *)
 val get_needed_headers : unit -> string list
+
+(** Clear the set of required headers. Call between extraction passes. *)
 val reset_needed_headers : unit -> unit
