@@ -166,8 +166,9 @@ struct HigherOrder {
     }
   } /// compose g f returns the composition of g after f.
 
-  template <typename T1, typename T2 = void, typename T3, typename F0,
-            typename F1>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
+             std::is_invocable_r_v<T2, F1 &, T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }

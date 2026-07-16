@@ -2,6 +2,7 @@
 #define INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 
 #include <functional>
+#include <type_traits>
 #include <utility>
 
 struct OppositePropertyTransferTraceCase {
@@ -67,7 +68,12 @@ struct OppositePropertyTransferTraceCase {
   static EquivT<LeftProperty, RightProperty>
   dual_property_equiv(const PreStableCategory &_x);
 
-  template <typename T1 = void, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<
+                 std::pair<std::function<T2(T1)>, std::function<T1(T2)>>, F0 &,
+                 PreStableCategory &> &&
+             std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
+                                   LeftStableWitness &, Triangle1Witness &>
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
@@ -77,7 +83,12 @@ struct OppositePropertyTransferTraceCase {
     return q(h_theorem(opposite_prestable_category(pS), h_left_op, h_tri1_op));
   }
 
-  template <typename T1 = void, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2, typename F0, typename F1>
+    requires std::is_invocable_r_v<
+                 std::pair<std::function<T2(T1)>, std::function<T1(T2)>>, F0 &,
+                 PreStableCategory &> &&
+             std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
+                                   LeftStableWitness &, Triangle1Witness &>
   static T2 theorem_doubling_principle_final(F0 &&h_dual, F1 &&h_theorem,
                                              const PreStableCategory &pS,
                                              const RightStableWitness &h_right,

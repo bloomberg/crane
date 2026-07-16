@@ -12110,29 +12110,48 @@ let get_tvars t = List.map snd (get_tvars_indexed t)
 (** Tvar indices only (unsorted) *)
 let get_tvar_indices t = List.map fst (get_tvars_indexed t)
 
-(** Collect tvar indices that are deducible by the C++ compiler: those appearing
-    in the codomain or in non-function-typed domain params. Function-typed
-    params are excluded because gen_dfun converts them to auto-deduced Fn&&
-    template parameters, hiding their original Rocq-level type variables from
-    C++ template argument deduction. Used by both gen_dfun (to decide whether a
-    function param should get an is_invocable_v constraint or plain TTtypename) and
-    gen_decl_for_pp (to filter out phantom tvars from the template param list).
-*)
+(** Collect tvar indices that are represented concretely in the generated C++
+    signature.
+
+    In addition to the codomain and non-function domain parameters, tvars from
+    fully rendered function signatures are primary: {!gen_dfun} can represent
+    those signatures with [is_invocable_r_v] constraints.  This matters for a
+    type such as [(B -> C) -> (A -> B) -> A -> C], where [B] occurs only in
+    function-typed parameters but is nevertheless a real part of both callable
+    signatures.
+
+    Function types containing HKT erasure markers cannot be rendered faithfully.
+    If any function parameter is HKT-erased, function-only tvars remain phantom:
+    conversion may already have removed their occurrences from the erased
+    function, so it is no longer possible to correlate them safely with tvars in
+    the remaining clean functions.  This preserves the defaults needed by
+    [hk_map].  Tvars that also occur in the codomain or a non-function parameter
+    remain primary.
+
+    Used by both {!gen_dfun} (to choose between an [is_invocable_r_v]
+    constraint and plain [TTtypename]) and {!phantom_aware_temps} (to choose
+    whether a template parameter needs a [void] default). *)
 let primary_tvar_indices dom cod =
-  let non_fun_dom =
-    List.filter
-      (fun t ->
+  let add_rendered acc t =
+    List.fold_left
+      (fun acc i -> IntSet.add i acc)
+      acc
+      (get_rendered_tvar_indices t)
+  in
+  let concrete, clean_fun, has_erased_fun =
+    List.fold_left
+      (fun (concrete, clean_fun, has_erased_fun) t ->
         match t with
-        | Tfun _ -> false
-        | _ -> true )
+        | Tfun _ when has_hkt_erasure t ->
+          (concrete, clean_fun, true)
+        | Tfun _ ->
+          (concrete, add_rendered clean_fun t, has_erased_fun)
+        | _ ->
+          (add_rendered concrete t, clean_fun, has_erased_fun) )
+      (add_rendered IntSet.empty cod, IntSet.empty, false)
       dom
   in
-  List.fold_left
-    (fun acc t ->
-      List.fold_left (fun a i -> IntSet.add i a) acc
-        (get_rendered_tvar_indices t) )
-    IntSet.empty
-    (cod :: non_fun_dom)
+  if has_erased_fun then concrete else IntSet.union concrete clean_fun
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
@@ -12176,11 +12195,11 @@ let collect_ml_type_index_tvars ml_ty =
 
 (** Build template parameter list with phantom detection.
 
-    Type variables that appear in the codomain or non-function domain params
-    (i.e. {!primary_tvar_indices}) are emitted as plain [typename T].  All
-    others — phantom tvars from erased HKT positions or custom-template
-    positions that the C++ compiler cannot deduce — are emitted with a
-    [void] default ([typename T = void]).
+    Type variables represented concretely in the generated signature (i.e.
+    {!primary_tvar_indices}) are emitted as plain [typename T].  All others —
+    phantom tvars from erased HKT positions or custom-template positions that
+    the C++ compiler cannot deduce — are emitted with a [void] default
+    ([typename T = void]).
 
     We never {i remove} tvars from the list: only default them.  Removing
     would shift the de Bruijn index-to-name mapping used throughout the

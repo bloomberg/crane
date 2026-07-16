@@ -12,6 +12,24 @@ namespace {
 
 int testStatus = 0;
 
+struct UnaryU64 {
+  uint64_t operator()(uint64_t) const;
+};
+
+struct BinaryU64 {
+  uint64_t operator()(uint64_t, uint64_t) const;
+};
+
+template <typename G, typename F>
+concept CanComposeU64 = requires(G &&g, F &&f, uint64_t x) {
+  HigherOrder::compose<uint64_t, uint64_t, uint64_t>(std::forward<G>(g),
+                                                     std::forward<F>(f), x);
+};
+
+static_assert(CanComposeU64<UnaryU64, UnaryU64>);
+static_assert(!CanComposeU64<BinaryU64, UnaryU64>);
+static_assert(!CanComposeU64<UnaryU64, BinaryU64>);
+
 void aSsErT(bool condition, const char *message, int line) {
   if (condition) {
     std::cout << "Error " __FILE__ "(" << line << "): " << message
