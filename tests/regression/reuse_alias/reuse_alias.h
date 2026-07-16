@@ -154,7 +154,6 @@ struct ReuseAlias {
   /// from the same match.
   static std::pair<mylist<uint64_t>, mylist<uint64_t>>
   scrutinee_in_branch(mylist<uint64_t> l);
-
   /// Chain inc_head: each call might try to reuse.
   static mylist<uint64_t> triple_inc(const mylist<uint64_t> &l);
 };

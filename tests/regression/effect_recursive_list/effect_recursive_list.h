@@ -133,7 +133,6 @@ struct EffectRecursiveList {
   /// 5. Collect env values into a list
   static List<std::optional<std::string>>
   collect_envs(const List<std::string> &names);
-
   /// 6. Read a line and prepend to existing list
   static List<std::string> read_and_prepend(List<std::string> xs);
 };

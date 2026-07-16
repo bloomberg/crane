@@ -120,8 +120,9 @@ struct EffectCrossModule {
       greet(name);
       return f(std::move(name));
     }
-  }; /// Outer code uses Inner's definitions
+  };
 
+  /// Outer code uses Inner's definitions
   static void test_greet();
   static std::string test_ask_name();
   static int64_t test_with_greeting();

@@ -423,7 +423,6 @@ struct MemSafetyProbe17 {
   static qtree make_qtree(uint64_t n);
   static inline const uint64_t test_make_qtree =
       make_qtree(UINT64_C(4)).qtree_sum();
-
   /// TEST 8: Two-pass on a 4-ary tree: flatten then sum vs direct sum.
   static inline const uint64_t test_two_pass_qtree = []() {
     qtree t =

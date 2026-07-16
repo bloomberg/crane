@@ -199,8 +199,9 @@ struct FoldClosureAccum {
       return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
                 tree_rec<T1>(f, f0, *a2));
     }
-  } /// Sum all values in a tree.
+  }
 
+  /// Sum all values in a tree.
   static uint64_t tree_sum(const tree &t);
   /// Build a composed function by folding over a list of trees.
   /// Each step takes the accumulated function and the current tree,

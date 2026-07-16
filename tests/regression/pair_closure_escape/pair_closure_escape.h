@@ -100,6 +100,7 @@ struct PairClosureEscape {
   /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
   static std::pair<std::function<uint64_t(uint64_t)>, uint64_t>
   pair_escape(tree t);
+
   static uint64_t
   use_pair(const std::pair<std::function<uint64_t(uint64_t)>, uint64_t> &p);
   /// Clobber stack after pair_escape returns.

@@ -108,7 +108,8 @@ struct NumeralStress {
   static inline const std::optional<uint64_t> opt_100 =
       std::make_optional<uint64_t>(UINT64_C(100));
   static inline const std::optional<int64_t> opt_neg =
-      std::make_optional<int64_t>(INT64_C(-50)); /// 2. Numeral in a pair
+      std::make_optional<int64_t>(INT64_C(-50));
+  /// 2. Numeral in a pair
   static inline const std::pair<uint64_t, int64_t> pair_nums =
       std::make_pair(UINT64_C(42), INT64_C(-7));
   /// 3. Numeral in a list

@@ -331,8 +331,9 @@ struct LoopifyLists {
       }
     }
     return _result;
-  } /// replicate n x creates n copies of x.
+  }
 
+  /// replicate n x creates n copies of x.
   template <typename T1>
   static list<T1> replicate(
       uint64_t n,
@@ -661,8 +662,9 @@ struct LoopifyLists {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
       return group_by_aux<T1>(eq, a0, list<T1>::cons(a0, list<T1>::nil()), *a1);
     }
-  } /// chunks_of n l splits into chunks of size n.
+  }
 
+  /// chunks_of n l splits into chunks of size n.
   template <typename T1>
   static list<list<T1>>
   chunks_of_aux(uint64_t n, const list<T1> &l,
@@ -1081,8 +1083,9 @@ struct LoopifyLists {
         }
       }
     }
-  } /// transpose m transposes a matrix (list of lists).
+  }
 
+  /// transpose m transposes a matrix (list of lists).
   template <typename T1>
   static list<list<T1>> transpose_fuel(
       uint64_t fuel,

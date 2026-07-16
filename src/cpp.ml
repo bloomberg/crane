@@ -429,6 +429,40 @@ let pp_doc_comment_for_name name =
 (** Look up and format a doc comment for the given label. *)
 let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
 
+(** Whether the first printable content in [p] is a C++ doc comment.  Soft
+    breaks are ignored because they may be flattened to nothing. *)
+let starts_with_doc_comment p =
+  let rec first_output = function
+    | [] -> None
+    | p :: rest ->
+      ( match Pp.repr p with
+      | Ppcmd_empty | Ppcmd_print_break _ -> first_output rest
+      | Ppcmd_string text -> Some (String.starts_with ~prefix:"///" text)
+      | Ppcmd_glue parts ->
+        ( match first_output parts with
+        | Some _ as result -> result
+        | None -> first_output rest )
+      | Ppcmd_box (_, contents) | Ppcmd_tag (_, contents) ->
+        ( match first_output [contents] with
+        | Some _ as result -> result
+        | None -> first_output rest )
+      | Ppcmd_force_newline | Ppcmd_comment _ -> Some false )
+  in
+  match first_output [p] with Some result -> result | None -> false
+
+(** Join already-rendered structure elements, forcing a newline before a
+    leading C++ doc comment.  [cut2] normally supplies soft breaks for
+    clang-format, but an unbroken [}///] or [;///] is interpreted as a trailing
+    comment and cannot be repaired by the formatter. *)
+let rec prlist_with_doc_safe_sep sep = function
+  | [] -> mt ()
+  | [p] -> p
+  | p :: ((next :: _) as rest) ->
+    let boundary =
+      if starts_with_doc_comment next then fnl () else sep ()
+    in
+    p ++ boundary ++ prlist_with_doc_safe_sep sep rest
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -1373,7 +1407,7 @@ and pp_module_expr ~is_header f params = function
     if List.is_empty l then
       mt ()
     else
-      v 1 (prlist_with_sep cut2 identity l) ++ fnl ()
+      v 1 (prlist_with_doc_safe_sep cut2 l) ++ fnl ()
 
 (** Like [prlist_with_sep] but skips empty ([mt ()]) elements.
 
@@ -1388,7 +1422,11 @@ let rec prlist_sep_nonempty sep f = function
   | h :: t ->
     let e = f h in
     let r = prlist_sep_nonempty sep f t in
-    if Pp.ismt e then r else e ++ sep () ++ r
+    if Pp.ismt e then
+      r
+    else
+      let boundary = if starts_with_doc_comment r then fnl () else sep () in
+      e ++ boundary ++ r
 
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 

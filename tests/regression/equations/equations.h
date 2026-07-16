@@ -251,10 +251,16 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3, typename F4>
+  template <typename T1, typename T2, typename F0, typename F1, typename F2,
+            typename F3, typename F4>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                   gcd_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                           std::pair<uint64_t, uint64_t> _x0, uint64_t _x1,
                           gcd_graph _x2) {
@@ -326,8 +332,16 @@ struct Equations {
     return f4(_x0, _x1, _x2);
   }
 
-  template <typename T1 = void, typename T2, typename F0, typename F1,
-            typename F2, typename F3, typename F4>
+  template <typename T1, typename T2, typename F0, typename F1, typename F2,
+            typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                   gcd_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &>
   static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                    uint64_t _x0, uint64_t _x1, bool _x2,
                                    uint64_t _x3, gcd_clause_3_graph _x4) {
@@ -399,10 +413,16 @@ struct Equations {
     return f5(_x0, _x1, _x2, _x3, _x4);
   }
 
-  template <typename T1, typename T2 = void, typename F0, typename F1,
-            typename F2, typename F3, typename F4>
+  template <typename T1, typename T2, typename F0, typename F1, typename F2,
+            typename F3, typename F4>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                   gcd_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
+                                   gcd_graph &, T1 &>
   static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
                            const std::pair<uint64_t, uint64_t> &_x5,
                            uint64_t _x6, const gcd_graph &_x7) {
@@ -686,8 +706,13 @@ struct Equations {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2 = void, typename F2, typename F3,
-            typename F4>
+  template <typename T1, typename T2, typename F2, typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &,
+                                   collatz_steps_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, uint64_t &, collatz_steps_graph &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
+                                   T1 &>
   static T1 collatz_steps_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
                                     F4 &&f3, uint64_t _x0, uint64_t _x1,
                                     collatz_steps_graph _x2) {
@@ -812,8 +837,13 @@ struct Equations {
     return f5(_x0, _x1, _x2, _x3);
   }
 
-  template <typename T1, typename T2 = void, typename F2, typename F3,
-            typename F4>
+  template <typename T1, typename T2, typename F2, typename F3, typename F4>
+    requires std::is_invocable_r_v<T1, F2 &, uint64_t &,
+                                   collatz_steps_clause_3_graph &, T2 &> &&
+             std::is_invocable_r_v<T2, F3 &, uint64_t &, collatz_steps_graph &,
+                                   T1 &> &&
+             std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
+                                   T1 &>
   static T1 collatz_steps_graph_rect(const T1 &_x0, const T1 &_x1, F2 &&_x2,
                                      F3 &&_x3, F4 &&_x4, uint64_t _x5,
                                      uint64_t _x6,

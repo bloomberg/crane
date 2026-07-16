@@ -13,10 +13,9 @@ std::string EffectPoly::test_lift_string() {
   return lift_pure<std::string>("hello");
 }
 
-bool EffectPoly::test_lift_bool() {
-  return lift_pure<bool>(true);
-} /// 3. Monadic when / guard
+bool EffectPoly::test_lift_bool() { return lift_pure<bool>(true); }
 
+/// 3. Monadic when / guard
 void EffectPoly::when_(bool b, std::monostate action) {
   if (b) {
     {
@@ -34,8 +33,9 @@ void EffectPoly::test_when() {
     return std::monostate{};
   }());
   return;
-} /// 4. Monadic unless
+}
 
+/// 4. Monadic unless
 void EffectPoly::unless(bool b, std::monostate action) {
   if (b) {
     return;

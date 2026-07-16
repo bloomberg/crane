@@ -30,8 +30,9 @@ struct TypeApp {
   static inline const uint64_t id_int = id<uint64_t>(UINT64_C(42));
   static inline const bool id_bool = id<bool>(true);
 
-  template <typename T1, typename T2 = void, typename T3, typename F0,
-            typename F1>
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
+             std::is_invocable_r_v<T2, F1 &, T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }

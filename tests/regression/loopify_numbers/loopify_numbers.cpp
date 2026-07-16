@@ -1032,8 +1032,9 @@ bool LoopifyNumbers::is_even(uint64_t n) {
 
 bool LoopifyNumbers::is_odd(uint64_t n) {
   return is_odd_fuel(UINT64_C(1000), n);
-} /// power b e computes b^e.
+}
 
+/// power b e computes b^e.
 uint64_t
 LoopifyNumbers::power(uint64_t b,
                       uint64_t e) { /// _Enter: captures varying parameters for

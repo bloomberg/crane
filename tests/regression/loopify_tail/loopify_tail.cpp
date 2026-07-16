@@ -17,8 +17,9 @@ bool LoopifyTail::member(uint64_t x, const LoopifyTail::list<uint64_t> &l) {
       }
     }
   }
-} /// Tail-recursive: nth element
+}
 
+/// Tail-recursive: nth element
 uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
                           uint64_t default0) {
   const LoopifyTail::list<uint64_t> *_loop_l = &l;

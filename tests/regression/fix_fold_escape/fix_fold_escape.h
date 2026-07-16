@@ -134,8 +134,8 @@ struct FixFoldEscape {
   static uint64_t apply_head(const List<std::function<uint64_t(uint64_t)>> &l,
                              uint64_t x);
   static uint64_t sum_apply(const List<std::function<uint64_t(uint64_t)>> &l,
-                            uint64_t x); /// test1: collect_adders 10; 20; 30 ->
-                                         /// adder_30; adder_20; adder_10
+                            uint64_t x);
+  /// test1: collect_adders 10; 20; 30 -> adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
   static inline const uint64_t test1 = apply_head(
       collect_adders(List<uint64_t>::cons(

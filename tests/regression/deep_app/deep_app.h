@@ -243,8 +243,9 @@ struct DeepApp {
       }
     }
     return _result;
-  } /// Recursive map — same issue.
+  }
 
+  /// Recursive map — same issue.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static mylist<T2>

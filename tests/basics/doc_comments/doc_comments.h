@@ -19,8 +19,9 @@ struct DocComments {
     A fst;
     /// The second element of the pair.
     B snd;
-  }; /// mylist is a polymorphic list type.
+  };
 
+  /// mylist is a polymorphic list type.
   template <typename A> struct mylist {
     // TYPES
     /// The empty list.

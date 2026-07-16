@@ -142,8 +142,9 @@ struct FoldClosureBuild {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
       return f0(a0, *a1, mylist_rec<T1, T2>(f, f0, *a1));
     }
-  } /// Simple fold_left.
+  }
 
+  /// Simple fold_left.
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
   static T1 fold_left(F0 &&f, T1 acc, const mylist<T2> &l) {
@@ -193,8 +194,8 @@ struct FoldClosureBuild {
   static mylist<std::function<uint64_t(uint64_t)>>
   collect_adders(const mylist<uint64_t> &l);
   static uint64_t
-  apply_all(const mylist<std::function<uint64_t(uint64_t)>> &fns,
-            uint64_t x); /// test3: collect_adders 10,20,30
+  apply_all(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  /// test3: collect_adders 10,20,30
   /// = (30+_), (20+_), (10+_)  (reversed by fold_left)
   /// apply_all with x=5: (30+5) + (20+5) + (10+5) = 75
   static inline const uint64_t test3 = apply_all(

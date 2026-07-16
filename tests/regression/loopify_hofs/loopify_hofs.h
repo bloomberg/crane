@@ -187,8 +187,9 @@ struct LoopifyHofs {
         }
       }
     }
-  } /// drop_while p l drops elements while predicate holds.
+  }
 
+  /// drop_while p l drops elements while predicate holds.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1> drop_while(F0 &&p, const List<T1> &l) {
@@ -205,8 +206,9 @@ struct LoopifyHofs {
         }
       }
     }
-  } /// take_while p l takes elements while predicate holds.
+  }
 
+  /// take_while p l takes elements while predicate holds.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static List<T1>
@@ -677,8 +679,9 @@ struct LoopifyHofs {
       }
     }
     return _result;
-  } /// scanr1 f l scanr with no initial value.
+  }
 
+  /// scanr1 f l scanr with no initial value.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
   static List<uint64_t>

@@ -266,8 +266,9 @@ struct LoopifyPairs {
       }
     }
     return _result;
-  } /// zip3 combines three lists.
+  }
 
+  /// zip3 combines three lists.
   template <typename T1, typename T2, typename T3>
   static list<std::pair<T1, std::pair<T2, T3>>>
   zip3(const list<T1> &l1, const list<T2> &l2,
@@ -328,8 +329,9 @@ struct LoopifyPairs {
       }
     }
     return _result;
-  } /// split_at n l splits at position n.
+  }
 
+  /// split_at n l splits at position n.
   template <typename T1>
   static std::pair<list<T1>, list<T1>> split_at(uint64_t n, list<T1> l) {
     if (n <= 0) {
@@ -345,8 +347,9 @@ struct LoopifyPairs {
                               std::move(rest));
       }
     }
-  } /// swizzle separates into even/odd positions.
+  }
 
+  /// swizzle separates into even/odd positions.
   template <typename T1>
   static std::pair<list<T1>, list<T1>> swizzle(const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
@@ -364,8 +367,9 @@ struct LoopifyPairs {
                               list<T1>::cons(a00, std::move(odds)));
       }
     }
-  } /// span p l splits at first element not satisfying p.
+  }
 
+  /// span p l splits at first element not satisfying p.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::pair<list<T1>, list<T1>> span(F0 &&p, const list<T1> &l) {

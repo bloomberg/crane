@@ -539,9 +539,8 @@ struct ZArithOverflow {
   /// Addition near INT64_MAX
   static inline const int64_t near_max =
       static_cast<int64_t>(UINT64_C(4000000000));
-  static inline const int64_t near_max_sq =
-      (near_max *
-       near_max); /// Negation of the most negative int64_t is also UB
+  static inline const int64_t near_max_sq = (near_max * near_max);
+  /// Negation of the most negative int64_t is also UB
   static inline const int64_t neg_big =
       (-static_cast<int64_t>(UINT64_C(4000000000)));
 

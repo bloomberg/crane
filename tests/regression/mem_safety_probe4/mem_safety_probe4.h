@@ -288,8 +288,8 @@ struct MemSafetyProbe4 {
               mylist<tree>::mycons(
                   tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
                   mylist<tree>::mynil()))),
-      UINT64_C(5)); /// TEST 5: Map building new trees from partial app results
-                    /// across recursion.
+      UINT64_C(5));
+  /// TEST 5: Map building new trees from partial app results across recursion.
   static mylist<uint64_t> transform_list(const mylist<tree> &l);
   static uint64_t mysum(const mylist<uint64_t> &l);
   static inline const uint64_t test_transform =

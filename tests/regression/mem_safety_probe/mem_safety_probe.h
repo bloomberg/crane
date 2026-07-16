@@ -187,8 +187,9 @@ struct MemSafetyProbe {
       const auto &[a0] = *this;
       return f(a0);
     }
-  }; /// Custom list type.
+  };
 
+  /// Custom list type.
   template <typename A> struct mylist {
     // TYPES
     struct Mynil {};
