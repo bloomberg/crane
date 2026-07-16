@@ -2524,6 +2524,14 @@ let extract_constant_spec env kn cb =
     | Logic, Default -> Sval (r, MLaxiom "SVAL extraction issue", Tdummy Kprop)
     | Info, TypeScheme ->
       let s, vl = type_sign_vl env sg typ in
+      (* A type scheme with more signature slots than type variables takes at
+         least one VALUE argument (e.g. [sym_semty : sym -> Type], [s=[Kill]],
+         [vl=[]]).  Such a family applied to a runtime value is not
+         representable as a C++ type; record it so that
+         [convert_ml_type_to_cpp_type] erases it to [std::any] at use sites
+         instead of emitting [typename M::sym_semty] and needing a runtime
+         [any_cast] guard. *)
+      if List.length s > List.length vl then Table.add_value_dep_type_scheme r;
       ( match cb.const_body with
       | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ -> Stype (r, vl, None)
       | Def body ->

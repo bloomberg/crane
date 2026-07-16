@@ -409,6 +409,13 @@ val add_erased_type_const : GlobRef.t -> unit
 (** Check if reference is an erased type constant. *)
 val is_erased_type_const : GlobRef.t -> bool
 
+(** Register a value-dependent type scheme (kind takes a value argument, e.g.
+    [sym_semty : sym -> Type]).  Applied to a value it erases to [std::any]. *)
+val add_value_dep_type_scheme : GlobRef.t -> unit
+
+(** Check whether a reference is a value-dependent type scheme. *)
+val is_value_dep_type_scheme : GlobRef.t -> bool
+
 (** Add instance promoted types. *)
 val add_instance_promoted_types :
   GlobRef.t -> (Names.Id.t * Miniml.ml_type) list -> unit

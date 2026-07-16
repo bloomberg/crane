@@ -18,7 +18,7 @@ concept SymTypes = requires {
 template <SymTypes Ty> struct Destruct {
   using symbols_semty = tuple;
 
-  static typename Ty::sym_semty
+  static std::any
   get_second(typename Ty::sym, typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {

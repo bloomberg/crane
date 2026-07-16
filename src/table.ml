@@ -757,6 +757,48 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
 let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
   make_refset ()
 
+(** Like {!make_refset_can}, but a reference rooted at a functor parameter
+    ([MPbound]) also matches by label alone, not just by canonical kername.
+
+    A functor-parameter projection (e.g. [Ty.sym_semty] inside
+    [Module Destruct (Ty : SymTypes)]) has a distinct kername — even
+    canonically — from the module type's own member ([SymTypes.sym_semty])
+    that gets registered.  Canonical-set membership alone therefore never
+    matches uses of the member through the parameter, which is the case we
+    actually care about; falling back to a same-label check for [MPbound]
+    references bridges that gap. *)
+let make_refset_can_with_functor_fallback () =
+  let (init_can, add_can, mem_can) = make_refset_can () in
+  let labels = ref StringSet.empty in
+  let init () =
+    init_can ();
+    labels := StringSet.empty
+  in
+  let add r =
+    add_can r;
+    labels := StringSet.add (Label.to_string (label_of_r r)) !labels
+  in
+  let mem r =
+    mem_can r
+    ||
+    match base_mp (modpath_of_r r) with
+    | MPbound _ -> StringSet.mem (Label.to_string (label_of_r r)) !labels
+    | _ -> false
+  in
+  (init, add, mem)
+
+(** Value-dependent type schemes: constants (typically Module Type
+    [Parameter]s) whose kind takes a VALUE argument, e.g.
+    [sym_semty : sym -> Type].  A type family applied to a runtime value is not
+    representable as a C++ type, so [convert_ml_type_to_cpp_type] erases it to
+    [std::any] rather than emitting [typename M::sym_semty].  Detected at
+    extraction time via [type_sign_vl] (more signature slots than type vars);
+    see {!make_refset_can_with_functor_fallback} for why functor-parameter
+    matching needs the label fallback. *)
+let (init_value_dep_type_schemes, add_value_dep_type_scheme, is_value_dep_type_scheme)
+  =
+  make_refset_can_with_functor_fallback ()
+
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
    nat)], so that call sites can substitute promoted Tvars with concrete types
@@ -2604,6 +2646,7 @@ let reset_tables () =
   init_projs ();
   init_promoted_type_vars ();
   init_erased_type_consts ();
+  init_value_dep_type_schemes ();
   init_instance_promoted_types ();
   init_higher_order_projections ();
   init_phantom_tvars ();

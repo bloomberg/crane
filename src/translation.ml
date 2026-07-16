@@ -3200,6 +3200,13 @@ let rec convert_ml_type_to_cpp_type
         if tctx.in_constructor_expr then Tany
         else Tvar (1000, Some var_id) )
     | None -> Tany )
+  | Tglob (g, _, _) when Table.is_value_dep_type_scheme g ->
+    (* Value-dependent type scheme (e.g. [sym_semty : sym -> Type]) applied to a
+       runtime value — not representable as a C++ type, so erase to [std::any].
+       This keeps erasure consistent: such values are already stored as
+       [std::any], so the types that mention them are [std::any] too, and no
+       [any_cast] guard is needed at use sites. *)
+    Tany
   | Tglob (g, ts, args) when is_custom g ->
     Tglob
       ( g,
