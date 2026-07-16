@@ -1,5 +1,5 @@
-#ifndef INCLUDED_FUNC_INLINE
-#define INCLUDED_FUNC_INLINE
+#ifndef INCLUDED_LOCAL_FIXPOINT
+#define INCLUDED_LOCAL_FIXPOINT
 
 #include <functional>
 #include <type_traits>
@@ -18,9 +18,7 @@ struct Monadic {
     requires std::is_invocable_r_v<State<T1, T3>, F1 &, T2 &>
   static State<T1, T3> state_bind(State<T1, T2> ma, F1 &&f) {
     return [=](const T1 &s) mutable {
-      auto _cs = ma(s);
-      T2 a = std::move(_cs.first);
-      T1 s_ = std::move(_cs.second);
+      auto [a, s_] = ma(s);
       return f(a)(s_);
     };
   }
@@ -28,17 +26,15 @@ struct Monadic {
   static State<bool, std::monostate> foo_state(std::monostate _x);
   static inline const bool foo = []() {
     std::function<std::pair<std::monostate, bool>(std::monostate, bool)>
-        foo_state_ = [](std::monostate u) {
+        foo_state_ = [](std::monostate u, bool x) {
           return state_bind<bool, std::monostate, std::monostate>(
               foo_state(u), [](std::monostate) {
                 return state_return<bool, std::monostate>(std::monostate{});
-              });
+              })(x);
         };
-    auto _cs = foo_state_(std::monostate{}, true);
-    std::monostate _x = std::move(_cs.first);
-    bool a = std::move(_cs.second);
+    auto [_x, a] = foo_state_(std::monostate{}, true);
     return a;
   }();
 };
 
-#endif // INCLUDED_FUNC_INLINE
+#endif // INCLUDED_LOCAL_FIXPOINT

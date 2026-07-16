@@ -9436,6 +9436,66 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Normal MLletin fallback (shared by no-extra-tvars and
        thunk-with-free-vars cases) *)
     let gen_normal_letin () =
+      (* Eta-expand a let-bound lambda whose body returns a function value.
+         [convert_ml_type_to_cpp_type] maximally uncurries the binding type,
+         so a binding of type [unit -> State bool unit] (= [unit -> (bool ->
+         pair)]) becomes [std::function<pair(monostate, bool)>] (2 params) and
+         the call site emits a 2-arg call.  But if the RHS is [fun u =>
+         state_bind ...] — a 1-binder lambda whose body is itself a [State]
+         (a unary function) rather than a nested lambda — the emitted lambda
+         only takes 1 arg, so it is not convertible to the 2-param type.  Add
+         the missing binders (with types drawn from the arrow structure of [t])
+         and apply the body to them, so value, type, and call site all agree on
+         arity.  Gated on [n_want > n_have] so fully eta-expanded lambdas (the
+         common case) are unchanged. *)
+      let a =
+        match a with
+        | MLlam _ ->
+          let n_want = count_ml_value_arrows t in
+          let binders, body = collect_lams a in
+          let n_have =
+            List.length
+              (List.filter (fun (_, ty) -> not (Mlutil.isTdummy ty)) binders)
+          in
+          if n_want <= n_have then
+            a
+          else
+            let rec value_arrow_domains = function
+              | Miniml.Tarr (t1, t2) when not (Mlutil.isTdummy t1) ->
+                t1 :: value_arrow_domains t2
+              | Miniml.Tarr (_, t2) -> value_arrow_domains t2
+              | Miniml.Tmeta {contents = Some t} -> value_arrow_domains t
+              | _ -> []
+            in
+            (* Domains of the value-arrows not yet abstracted by the lambda,
+               in binding order (outermost first). *)
+            let new_doms =
+              List.filteri (fun i _ -> i >= n_have) (value_arrow_domains t)
+            in
+            let d = List.length new_doms in
+            if d = 0 then
+              a
+            else
+              (* Use the anonymous binder name so these synthesized params are
+                 rendered like every other anonymous lambda parameter (the
+                 renamer uniquifies them to [_x0], [_x1], ...) instead of a
+                 bespoke [_eta] scheme. *)
+              let new_binders =
+                List.map (fun dom -> (Id anonymous_name, dom)) new_doms
+              in
+              (* Args applied to the (lifted) body: the innermost new binder is
+                 [MLrel 1], the outermost is [MLrel d]. *)
+              let args = List.init d (fun i -> MLrel (d - i)) in
+              let lifted_body = ast_lift d body in
+              let applied =
+                match lifted_body with
+                | MLapp (f, xs) -> MLapp (f, xs @ args)
+                | _ -> MLapp (lifted_body, args)
+              in
+              let inner = named_lams (List.rev new_binders) applied in
+              named_lams binders inner
+        | _ -> a
+      in
       let x' = remove_prime_id (id_of_mlid x) in
       let renamed_ids, env' = push_vars' [(x', t)] env in
       let x_renamed = fst (List.hd renamed_ids) in
