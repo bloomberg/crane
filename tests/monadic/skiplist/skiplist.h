@@ -1018,21 +1018,25 @@ template <typename K, typename V> struct SkipList {
   static uint64_t removeAll_aux(uint64_t fuel,
                                 std::shared_ptr<SkipNode<T1, T2>> head,
                                 uint64_t acc) {
-    if (fuel <= 0) {
-      return acc;
-    } else {
-      uint64_t fuel_ = fuel - 1;
-      std::optional<std::shared_ptr<SkipNode<T1, T2>>> firstOpt =
-          ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
-              head->forward[UINT64_C(0)]));
-      if (firstOpt.has_value()) {
-        const std::shared_ptr<SkipNode<T1, T2>> &node = *firstOpt;
-        SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(head, node,
-                                                                   node->level);
-        return SkipList<int, int>::template removeAll_aux<T1, T2>(fuel_, head,
-                                                                  (acc + 1));
+    uint64_t _loop_acc = std::move(acc);
+    uint64_t _loop_fuel = std::move(fuel);
+    while (true) {
+      if (_loop_fuel <= 0) {
+        return _loop_acc;
       } else {
-        return acc;
+        uint64_t fuel_ = _loop_fuel - 1;
+        std::optional<std::shared_ptr<SkipNode<T1, T2>>> firstOpt =
+            ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
+                head->forward[UINT64_C(0)]));
+        if (firstOpt.has_value()) {
+          const std::shared_ptr<SkipNode<T1, T2>> &node = *firstOpt;
+          SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
+              head, node, node->level);
+          _loop_acc = (_loop_acc + 1);
+          _loop_fuel = fuel_;
+        } else {
+          return _loop_acc;
+        }
       }
     }
   }

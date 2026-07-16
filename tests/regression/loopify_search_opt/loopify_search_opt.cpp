@@ -319,26 +319,31 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
         } else {
           uint64_t mid = (UINT64_C(2) ? len / UINT64_C(2) : 0);
           uint64_t mid_val;
-          auto nth_impl = [](auto &_self_nth, uint64_t n,
+          auto nth_impl = [](auto &, uint64_t n,
                              const List<uint64_t> &xs) -> uint64_t {
-            if (n <= 0) {
-              if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                      xs.v())) {
-                return UINT64_C(0);
+            const List<uint64_t> *_loop_xs = &xs;
+            uint64_t _loop_n = std::move(n);
+            while (true) {
+              if (_loop_n <= 0) {
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        _loop_xs->v())) {
+                  return UINT64_C(0);
+                } else {
+                  const auto &[a01, a11] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+                  return a01;
+                }
               } else {
-                const auto &[a01, a11] =
-                    std::get<typename List<uint64_t>::Cons>(xs.v());
-                return a01;
-              }
-            } else {
-              uint64_t n_ = n - 1;
-              if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                      xs.v())) {
-                return UINT64_C(0);
-              } else {
-                const auto &[a02, a12] =
-                    std::get<typename List<uint64_t>::Cons>(xs.v());
-                return _self_nth(_self_nth, n_, *a12);
+                uint64_t n_ = _loop_n - 1;
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        _loop_xs->v())) {
+                  return UINT64_C(0);
+                } else {
+                  const auto &[a02, a12] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
+                  _loop_xs = a12.get();
+                  _loop_n = n_;
+                }
               }
             }
           };
@@ -370,19 +375,24 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
           };
           left = take(mid, _loop_l);
           List<uint64_t> right;
-          auto drop_impl = [](auto &_self_drop, uint64_t n,
+          auto drop_impl = [](auto &, uint64_t n,
                               List<uint64_t> xs) -> List<uint64_t> {
-            if (n <= 0) {
-              return xs;
-            } else {
-              uint64_t n_ = n - 1;
-              if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                      xs.v_mut())) {
-                return List<uint64_t>::nil();
+            List<uint64_t> _loop_xs = std::move(xs);
+            uint64_t _loop_n = std::move(n);
+            while (true) {
+              if (_loop_n <= 0) {
+                return _loop_xs;
               } else {
-                auto &[a04, a14] =
-                    std::get<typename List<uint64_t>::Cons>(xs.v_mut());
-                return _self_drop(_self_drop, n_, *a14);
+                uint64_t n_ = _loop_n - 1;
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        _loop_xs.v_mut())) {
+                  return List<uint64_t>::nil();
+                } else {
+                  auto &[a04, a14] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
+                  _loop_xs = *a14;
+                  _loop_n = n_;
+                }
               }
             }
           };

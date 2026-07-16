@@ -60,17 +60,24 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
   } else {
     uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
-    auto drop_impl = [](auto &_self_drop, uint64_t n,
+    auto drop_impl = [](auto &, uint64_t n,
                         List<uint64_t> xs) -> List<uint64_t> {
-      if (n <= 0) {
-        return xs;
-      } else {
-        uint64_t n_ = n - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v_mut())) {
-          return List<uint64_t>::nil();
+      List<uint64_t> _loop_xs = std::move(xs);
+      uint64_t _loop_n = std::move(n);
+      while (true) {
+        if (_loop_n <= 0) {
+          return _loop_xs;
         } else {
-          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v_mut());
-          return _self_drop(_self_drop, n_, *a1);
+          uint64_t n_ = _loop_n - 1;
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                  _loop_xs.v_mut())) {
+            return List<uint64_t>::nil();
+          } else {
+            auto &[a0, a1] =
+                std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
+            _loop_xs = *a1;
+            _loop_n = n_;
+          }
         }
       }
     };
@@ -78,25 +85,34 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
       return drop_impl(drop_impl, n, xs);
     };
     suffix = drop(diff, l2);
-    auto eq_impl = [](auto &_self_eq, const List<uint64_t> &a,
+    auto eq_impl = [](auto &, const List<uint64_t> &a,
                       const List<uint64_t> &b) -> bool {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(a.v())) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(b.v())) {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(a.v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(b.v())) {
-          return false;
-        } else {
-          const auto &[a01, a11] =
-              std::get<typename List<uint64_t>::Cons>(b.v());
-          if (a00 == a01) {
-            return _self_eq(_self_eq, *a10, *a11);
+      const List<uint64_t> *_loop_b = &b;
+      const List<uint64_t> *_loop_a = &a;
+      while (true) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                _loop_a->v())) {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                  _loop_b->v())) {
+            return true;
           } else {
             return false;
+          }
+        } else {
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_a->v());
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                  _loop_b->v())) {
+            return false;
+          } else {
+            const auto &[a01, a11] =
+                std::get<typename List<uint64_t>::Cons>(_loop_b->v());
+            if (a00 == a01) {
+              _loop_b = a11.get();
+              _loop_a = a10.get();
+            } else {
+              return false;
+            }
           }
         }
       }
