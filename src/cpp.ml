@@ -440,6 +440,52 @@ let pp_doc_comment label = pp_doc_comment_for_name (Label.to_string label)
                       nodes; typically [pp_decl] or [pp_hdecl].
     @return Pretty-printer document for the element, or [mt ()] if the element
             produces no output in the current pass. *)
+(** Try to extract a named concept from a module type.
+
+    Strips [MTwith] constraints (which have no C++ concept equivalent) and
+    [MTfunsig] parameter layers, looking for an [MTident] that references an
+    already-defined concept.  Returns [None] for anonymous inline signatures
+    ([MTsig]).
+
+    This is important for functor parameters like
+    [c' : C b' with Module a := A_instance].  Rocq's extraction expands
+    [MEapply] (module type application) into an inline [MTsig], losing the
+    reference to the named concept [C].  Without this helper,
+    [pp_module_type] would inline the concept body into the template
+    parameter list, producing garbled C++. *)
+let rec get_concept_name_from_mt = function
+  | MTident kn -> Some (pp_concept_ref kn)
+  | MTwith (mt, _) -> get_concept_name_from_mt mt
+  | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
+  | MTsig _ -> None
+
+(** Render a functor parameter as a C++ template parameter.
+
+    Strategy:
+    - If a named concept can be extracted from the module type via
+      {!get_concept_name_from_mt}, emit [ConceptName param_name].
+    - If the module type has no constraints (empty concept body), emit
+      [typename param_name] (unconstrained type parameter).
+    - If the concept body is complex (multi-line or >40 chars) — typically
+      from [MEapply] expansion of a parameterised module type — fall back to
+      [typename param_name] rather than inlining the unreadable requires
+      body.
+    - Otherwise use the simple concept body as a constraint. *)
+let pp_template_param (mbid, mt) =
+  let param_name = pp_modname (MPbound mbid) in
+  match get_concept_name_from_mt mt with
+  | Some cname -> cname ++ str " " ++ param_name
+  | None ->
+    let concept_body = pp_module_type [] mt in
+    if Pp.ismt concept_body then
+      str "typename " ++ param_name
+    else
+      let body_str = Pp.string_of_ppcmds concept_body in
+      if String.contains body_str '\n' || String.length body_str > 40 then
+        str "typename " ++ param_name
+      else
+        concept_body ++ str " " ++ param_name
+
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
     let body = f d in
@@ -494,53 +540,6 @@ let rec pp_structure_elem ~is_header f = function
             | _ -> ([], m.ml_mod_expr)
           in
           let template_params, body = get_template_and_body m.ml_mod_expr in
-          (* Try to extract a named concept from a module type.
-
-             Strips MTwith constraints (which have no C++ concept equivalent)
-             and MTfunsig parameter layers, looking for an MTident that
-             references an already-defined concept.  Returns None for
-             anonymous inline signatures (MTsig).
-
-             This is important for functor parameters like
-             [c' : C b' with Module a := A_instance].  Rocq's extraction
-             expands MEapply (module type application) into an inline MTsig,
-             losing the reference to the named concept C.  Without this
-             helper, pp_module_type would inline the concept body into the
-             template parameter list, producing garbled C++. *)
-          let rec get_concept_name_from_mt = function
-            | MTident kn -> Some (pp_concept_ref kn)
-            | MTwith (mt, _) -> get_concept_name_from_mt mt
-            | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
-            | MTsig _ -> None
-          in
-          (* Render a functor parameter as a C++ template parameter.
-
-             Strategy:
-             - If a named concept can be extracted from the module type via
-               get_concept_name_from_mt, emit [ConceptName param_name].
-             - If the module type has no constraints (empty concept body),
-               emit [typename param_name] (unconstrained type parameter).
-             - If the concept body is complex (multi-line or >40 chars) —
-               typically from MEapply expansion of a parameterised module
-               type — fall back to [typename param_name] rather than
-               inlining the unreadable requires body.
-             - Otherwise use the simple concept body as a constraint. *)
-          let pp_template_param (mbid, mt) =
-            let param_name = pp_modname (MPbound mbid) in
-            match get_concept_name_from_mt mt with
-            | Some cname -> cname ++ str " " ++ param_name
-            | None ->
-              let concept_body = pp_module_type [] mt in
-              if Pp.ismt concept_body then
-                str "typename " ++ param_name
-              else
-                let body_str = Pp.string_of_ppcmds concept_body in
-                if String.contains body_str '\n'
-                   || String.length body_str > 40 then
-                  str "typename " ++ param_name
-                else
-                  concept_body ++ str " " ++ param_name
-          in
           let template_decl =
             str "template<"
             ++ prlist_with_sep
@@ -1208,29 +1207,7 @@ let rec pp_structure_elem ~is_header f = function
                 str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
             else begin
               (* Functor alias: emit [template<...> using Name = Body<params>;].
-                 Re-uses the same template-param rendering as the MEfunctor case. *)
-              let rec get_concept_name_from_mt = function
-                | MTident kn -> Some (pp_concept_ref kn)
-                | MTwith (mt, _) -> get_concept_name_from_mt mt
-                | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
-                | MTsig _ -> None
-              in
-              let pp_template_param (mbid, mt) =
-                let param_name = pp_modname (MPbound mbid) in
-                match get_concept_name_from_mt mt with
-                | Some cname -> cname ++ str " " ++ param_name
-                | None ->
-                  let concept_body = pp_module_type [] mt in
-                  if Pp.ismt concept_body then
-                    str "typename " ++ param_name
-                  else
-                    let body_str' = Pp.string_of_ppcmds concept_body in
-                    if String.contains body_str' '\n'
-                       || String.length body_str' > 40 then
-                      str "typename " ++ param_name
-                    else
-                      concept_body ++ str " " ++ param_name
-              in
+                 Re-uses {!pp_template_param} from the MEfunctor case. *)
               let template_decl =
                 str "template<"
                 ++ prlist_with_sep

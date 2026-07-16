@@ -3611,7 +3611,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
      prevents moving variables that appear more than once across all args). *)
   let gen_ctor_arg ?expected_ty e =
     match e with
-    | MLdummy _ -> CPPraw "std::any{}"
+    | MLdummy _ -> CPPconverting_ctor (Tany, [])
     | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
       wrap_void_call_as_value (gen_expr env e)
     | _ -> gen_expr ?expected_ty env e
@@ -5046,7 +5046,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
          constructor args is NOT in move_dead_after and cannot be moved twice. *)
       let gen_ctor_arg e =
         match e with
-        | MLdummy _ -> CPPraw "std::any{}"
+        | MLdummy _ -> CPPconverting_ctor (Tany, [])
         | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
           wrap_void_call_as_value (gen_expr env e)
         | _ -> gen_expr env e

@@ -65,7 +65,7 @@ Dim10TowerProofChainCase::layer_measure(uint64_t base_dim, uint64_t n) {
 
 Dim10TowerProofChainCase::EventuallyZero
 Dim10TowerProofChainCase::layer_measure_eventually_zero(uint64_t base_dim) {
-  return SigT<uint64_t, std::any>::existt(base_dim, std::any{});
+  return SigT<uint64_t, std::any>::existt(base_dim, std::any());
 }
 
 Dim10TowerProofChainCase::GradedObj Dim10TowerProofChainCase::P_n_obj(
@@ -100,12 +100,12 @@ Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     uint64_t base_dim) {
   SigT<uint64_t, std::any> e = D_n_measure_eventually_zero(base_dim);
   auto &[x0, a1] = e;
-  return SigT<uint64_t, std::any>::existt(std::move(x0), std::any{});
+  return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
 }
 
 SigT<uint64_t, std::any>
 Dim10TowerProofChainCase::graded_goodwillie_P_stabilizes(uint64_t base_dim) {
-  return SigT<uint64_t, std::any>::existt(base_dim, std::any{});
+  return SigT<uint64_t, std::any>::existt(base_dim, std::any());
 }
 
 std::pair<std::pair<std::pair<Dim10TowerProofChainCase::IsIntegerValued,
@@ -115,7 +115,7 @@ std::pair<std::pair<std::pair<Dim10TowerProofChainCase::IsIntegerValued,
 Dim10TowerProofChainCase::graded_complete_proof_chain(uint64_t base_dim) {
   return std::make_pair(
       std::make_pair(
-          std::make_pair(std::any{}, D_n_measure_eventually_zero(base_dim)),
+          std::make_pair(std::any(), D_n_measure_eventually_zero(base_dim)),
           graded_goodwillie_layers_stabilize(base_dim)),
       graded_goodwillie_P_stabilizes(base_dim));
 }

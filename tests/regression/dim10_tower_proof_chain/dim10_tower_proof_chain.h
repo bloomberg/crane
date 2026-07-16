@@ -66,12 +66,12 @@ struct Dim10TowerProofChainCase {
     SigT<uint64_t, std::any> s =
         graded_goodwillie_layers_stabilize(UINT64_C(10));
     auto &[x0, a1] = s;
-    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any{});
+    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
   }();
   static inline const SigT<uint64_t, std::any> dim10_P_stabilizes = []() {
     SigT<uint64_t, std::any> s = graded_goodwillie_P_stabilizes(UINT64_C(10));
     auto &[x0, a1] = s;
-    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any{});
+    return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
   }();
   static std::pair<std::pair<std::pair<IsIntegerValued, EventuallyZero>,
                              SigT<uint64_t, std::any>>,

@@ -212,6 +212,14 @@ val get_ind_nparams_opt : MutInd.t -> int option
 (** Get number of parameter variables for inductive if available. *)
 val get_ind_num_param_vars_opt : MutInd.t -> int option
 
+(** Compute the kept type-variable names among an inductive packet's
+    PARAMETER positions only (the first [ind_nparams] entries of [ip_sign]),
+    excluding type INDICES.  Used to distinguish a scheme's own parameters
+    (e.g. [List (A:Type)]) from indices it is applied to (e.g. the [A] in
+    [wrap : Set -> Type]), which are not template-representable in C++.
+    @param ind the inductive body
+    @param p the packet (one constructor group) to compute parameter vars for
+    @return the kept parameter variable names, and their count *)
 val ind_param_vars :
   Miniml.ml_ind -> Miniml.ml_ind_packet -> Names.Id.t list * int
 
@@ -731,9 +739,6 @@ val reset_extraction_callback : unit -> unit
     @param optstr optional alias string to use instead of the default name
     @param x      the qualified identifier of the function to register as a callback *)
 val extract_callback : string option -> qualid -> unit
-
-(** Add custom import. *)
-val add_custom_import : string -> unit
 
 (** Get list of custom imports. *)
 val get_custom_imports : unit -> string list

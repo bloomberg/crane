@@ -70,6 +70,7 @@ val generalizable : ml_ast -> bool
 module Mlenv : sig
   type t
 
+  (** The empty type environment. *)
   val empty : t
 
   (** Get the n-th most recently entered schema and instantiate it.

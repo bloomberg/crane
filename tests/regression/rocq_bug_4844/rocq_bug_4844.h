@@ -110,7 +110,7 @@ public:
 
 struct RocqBug4844 {
   static inline const Sum<std::any, std::any> semilogic =
-      Sum<std::any, std::any>::inl(std::any{});
+      Sum<std::any, std::any>::inl(std::any());
   enum class SomeType { BUILD_SOMETYPE };
   using ST = std::any;
   static inline const SomeType SomeTrue = SomeType::BUILD_SOMETYPE;

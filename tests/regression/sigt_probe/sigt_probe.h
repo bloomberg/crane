@@ -80,7 +80,7 @@ struct SigTProbe {
   /// but declare the type as SigT<std::any, std::any>, producing
   /// incompatible shared_ptr template instantiations.
   static inline const SigT<std::any, std::any> packed =
-      SigT<std::any, std::any>::existt(std::any{}, Bool0::TRUE_);
+      SigT<std::any, std::any>::existt(std::any(), Bool0::TRUE_);
   static inline const Nat sample = Nat::o();
 };
 

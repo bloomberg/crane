@@ -616,6 +616,15 @@ let rec is_any_type = function
     ([Tvar(0..N, _)]) and loopification-internal types
     ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
     outside, it is qualified as [StructName::id]. *)
+(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
+    with a concrete (non-[std::any]) element type.  Used to detect when a
+    grammar-framework [List<std::any>] value needs its element type restored
+    via the converting constructor rather than a plain [any_cast]. *)
+let is_list_with_concrete_elem = function
+  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
+  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
+  | _ -> false
+
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1023,13 +1032,6 @@ and pp_cpp_expr env args t =
         (* For List<T> (T ≠ std::any) grammar productions always store List<std::any>
            at runtime.  Use the converting constructor so element casts are correct. *)
         let resolved_ty = resolve_tvars_to_any ty in
-        let is_list_with_concrete_elem = function
-          | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
-            is_list_global g && elem_ty <> Tany
-          | Tglob (g, [elem_ty], _) ->
-            is_list_global g && elem_ty <> Tany
-          | _ -> false
-        in
         if is_list_with_concrete_elem resolved_ty then
           let g_of_list, elem_ty_of_list =
             match resolved_ty with
@@ -2632,13 +2634,6 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
     (* For List<T> where T ≠ std::any, the grammar framework stores List<std::any>
        at runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
        so the element type is recovered correctly by the converting constructor. *)
-    let is_list_with_concrete_elem = function
-      | Tnamespace (_, Tglob (g, [elem_ty], _)) ->
-        is_list_global g && elem_ty <> Tany
-      | Tglob (g, [elem_ty], _) ->
-        is_list_global g && elem_ty <> Tany
-      | _ -> false
-    in
     if is_list_with_concrete_elem resolved_ty then
       str (sn ()).any_cast
       ++ str "<"

@@ -2070,9 +2070,6 @@ and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
 (* Sigma type precondition detection. For functions taking {x : A | P x}, detect
    P and translate to C++ assertions. *)
 
-(** Looks up a Rocq library reference by name, returning [None] if not found. *)
-let try_ref name = try Some (Rocqlib.lib_ref name) with _ -> None
-
 (** Tests whether a global reference [gr] corresponds to the Rocq library
     reference with the given name. *)
 let is_ref name gr =

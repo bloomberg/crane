@@ -119,7 +119,6 @@ let id_emplace_back = Id.of_string "emplace_back"
 let id_pop_back     = Id.of_string "pop_back"
 let id_back         = Id.of_string "back"
 let id_reserve      = Id.of_string "reserve"
-let id_clone        = Id.of_string "clone"
 
 (** {2 List utility helpers} *)
 
@@ -2755,7 +2754,7 @@ let build_cell_call ~vt_ret pp_expr cell =
              | None -> e)
           else e
         | None ->
-          CPPraw "std::any{}" )
+          CPPconverting_ctor (Tany, []) )
   in
   match vt_ret with
   | Some ret_ty ->
@@ -3641,18 +3640,6 @@ let frame_field_named names i =
     starting at [offset]. *)
 let frame_fields_named ?(offset = 0) names n =
   List.init n (fun i -> frame_field_named names (offset + i))
-
-(** Read the [i]-th saved field from frame variable [_f]. Generates [_f._sI].
-    Deprecated: prefer {!frame_field_named} with derived field names. *)
-let frame_field i =
-  CPPmember (CPPvar (id_f), Id.of_string ("_s" ^ string_of_int i))
-
-(** Read [n] consecutive saved fields from frame [_f], starting at [offset].
-    Returns a list of expressions [[_f._s{offset}; ...; _f._s{offset+n-1}]].
-    Deprecated: prefer {!frame_fields_named} with derived field names. *)
-let frame_fields ?(offset = 0) n =
-  List.init n (fun i -> frame_field (offset + i))
-
 
 (** Prepare an expression for saving in a continuation frame.
     [shared_ptr] values are ref-counted and can be copied directly.

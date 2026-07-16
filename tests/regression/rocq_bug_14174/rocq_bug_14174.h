@@ -557,7 +557,7 @@ struct RocqBug14174 {
 
     template <typename T1>
     static sigT<T1, std::any> sigT_of_sig(const sig<T1> &x) {
-      return sigT<T1, std::any>::existt(x.proj1_sig(), std::any{});
+      return sigT<T1, std::any>::existt(x.proj1_sig(), std::any());
     }
 
     template <typename T1>
@@ -568,7 +568,7 @@ struct RocqBug14174 {
     template <typename T1>
     static sigT2<T1, std::any, std::any> sigT2_of_sig2(const sig2<T1> &x) {
       return sigT2<T1, std::any, std::any>::existt2(x.sig_of_sig2().proj1_sig(),
-                                                    std::any{}, std::any{});
+                                                    std::any(), std::any());
     }
 
     template <typename T1, typename T2>
