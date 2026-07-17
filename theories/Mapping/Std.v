@@ -39,7 +39,15 @@ Crane Extract Inlined Constant PrimString.cat => "%a0 + %a1" From "string".
 Crane Extract Inlined Constant PrimString.get =>
   "((%a1 >= 0 && %a1 < static_cast<int64_t>(%a0.length())) ? %a0[%a1] : static_cast<char>(0))"
   From "string".
-Crane Extract Inlined Constant PrimString.sub => "%a0.substr(%a1, %a2)" From "string".
+(* [sub] is total in Rocq (Pstring.sub): an [off] at or past the string's
+   length yields the empty string rather than raising, and [len] is clamped
+   to what remains. [std::string::substr] already clamps [count], but throws
+   [std::out_of_range] when [pos > size()]. The guard reproduces Rocq's
+   clamp-to-empty behavior instead of letting the exception escape and
+   terminate the generated program (CWE-248/CWE-755). *)
+Crane Extract Inlined Constant PrimString.sub =>
+  "((%a1 >= 0 && %a1 <= static_cast<int64_t>(%a0.length())) ? %a0.substr(%a1, %a2) : std::string())"
+  From "string".
 Crane Extract Inlined Constant PrimString.length => "static_cast<int64_t>(%a0.length())" From "string".
 
 (* int63 primitives - int64_t with 63-bit masking.

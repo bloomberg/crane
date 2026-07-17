@@ -41,7 +41,15 @@ Crane Extract Inlined Constant PrimString.cat => "%a0 + %a1" From "bsl_string.h"
 Crane Extract Inlined Constant PrimString.get =>
   "((%a1 >= 0 && %a1 < static_cast<int64_t>(%a0.length())) ? %a0[%a1] : static_cast<char>(0))"
   From "bsl_string.h".
-Crane Extract Inlined Constant PrimString.sub => "%a0.substr(%a1, %a2)" From "bsl_string.h".
+(* [sub] is total in Rocq (Pstring.sub): an [off] at or past the string's
+   length yields the empty string rather than raising, and [len] is clamped
+   to what remains. [bsl::string::substr] already clamps [count], but throws
+   when [pos > size()]. The guard reproduces Rocq's clamp-to-empty behavior
+   instead of letting the exception escape and terminate the generated
+   program (CWE-248/CWE-755). *)
+Crane Extract Inlined Constant PrimString.sub =>
+  "((%a1 >= 0 && %a1 <= static_cast<int64_t>(%a0.length())) ? %a0.substr(%a1, %a2) : bsl::string())"
+  From "bsl_string.h".
 Crane Extract Inlined Constant PrimString.length => "%a0.length()" From "bsl_string.h".
 
 (* int63 primitives - int64_t with 63-bit masking.
