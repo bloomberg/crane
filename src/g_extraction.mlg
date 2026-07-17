@@ -13,6 +13,7 @@
 {
 
 open Procq.Prim
+open Procq.Constr
 
 }
 
@@ -103,31 +104,47 @@ END
 {
 
 let pr_benchmark_language = function
-  | BenchmarkOCaml -> str "OCaml"
-  | BenchmarkCpp -> str "C++"
+  | Benchmark.OCaml -> str "OCaml"
+  | Benchmark.Cpp -> str "C++"
 
-let pr_benchmark_option (lang, file, flags) =
-  match flags with
-  | "" -> pr_benchmark_language lang ++ str " From " ++ quote (str file)
-  | _ -> pr_benchmark_language lang ++ str " From " ++ quote (str file) ++  str " With " ++ quote (str flags)
+let pr_benchmark_subject subject =
+  Libnames.pr_qualid subject.Benchmark.term
+  ++ match subject.Benchmark.label with
+     | None -> mt ()
+     | Some label -> str " As " ++ quote (str label)
+
+let pr_benchmark_option configuration =
+  pr_benchmark_language configuration.Benchmark.backend
+  ++ if String.equal configuration.Benchmark.flags "" then mt ()
+     else str " With " ++ quote (str configuration.Benchmark.flags)
 
 }
 
+VERNAC ARGUMENT EXTEND crane_benchmark_subject
+PRINTED BY { pr_benchmark_subject }
+| [ global(term) "As" string(label) ]
+  -> { { Benchmark.term = term; label = Some label } }
+| [ global(term) ] -> { { Benchmark.term = term; label = None } }
+END
+
 VERNAC ARGUMENT EXTEND crane_benchmark_language
 PRINTED BY { pr_benchmark_language }
-| [ "OCaml" ] -> { BenchmarkOCaml }
-| [ "C++" ] -> { BenchmarkCpp }
+| [ "OCaml" ] -> { Benchmark.OCaml }
+| [ "C++" ] -> { Benchmark.Cpp }
 END
 
 VERNAC ARGUMENT EXTEND crane_benchmark_option
 PRINTED BY { pr_benchmark_option }
-| [ crane_benchmark_language(lang) "From" string(file) "With" string(flags) ] -> { (lang, file, flags) }
-| [ crane_benchmark_language(lang) "From" string(file) ] -> { (lang, file, "") }
+| [ crane_benchmark_language(backend) "With" string(flags) ]
+  -> { { Benchmark.backend = backend; flags = flags } }
+| [ crane_benchmark_language(backend) ]
+  -> { { Benchmark.backend = backend; flags = "" } }
 END
 
-VERNAC COMMAND EXTEND Benchmark CLASSIFIED AS QUERY
-| [ "Crane" "Benchmark" global(g) "On" ne_crane_benchmark_option_list_sep(bl, ",") ]
-  -> { benchmark g bl }
+VERNAC COMMAND EXTEND Benchmark CLASSIFIED AS QUERY STATE opaque_access
+| [ "Crane" "Benchmark" ne_crane_benchmark_subject_list_sep(subjects, ",")
+    "On" ne_crane_benchmark_option_list_sep(options, ",") ]
+  -> { Benchmark.run subjects options }
 END
 
 (* Target Language *)

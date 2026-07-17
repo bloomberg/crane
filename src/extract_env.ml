@@ -679,20 +679,6 @@ let include_guard_name s =
   let name = Filename.remove_extension base in
   String.uppercase_ascii ("INCLUDED_" ^ name)
 
-(** Strip trailing slash from BDE directory path. *)
-let normalize_bde_dir () =
-  let d = Table.bde_dir () in
-  let n = String.length d in
-  if n > 0 && d.[n - 1] = '/' then String.sub d 0 (n - 1) else d
-
-(** Create a temporary file for capturing compiler error output. *)
-let make_error_file prefix infile =
-  Filename.temp_file (prefix ^ Filename.basename infile ^ "_error") ".log"
-
-(** Remove an error file if it exists. *)
-let cleanup_error_file errfile =
-  if Sys.file_exists errfile then Sys.remove errfile
-
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
     are already included transitively via the component's own header (both
@@ -904,17 +890,11 @@ let get_comment () =
 (** Checks if an executable is available on the system PATH. Returns true if the
     executable can be found. *)
 let executable_available exe =
-  Sys.command ("which " ^ exe ^ " > /dev/null 2>&1") = 0
+  Subprocess.executable_available exe
 
 let bde_format_available () = executable_available "bde-format"
 
 let clang_format_available () = executable_available "clang-format"
-
-let clang_available () = executable_available "clang"
-
-let ocamlopt_available () = executable_available "ocamlopt"
-
-let hyperfine_available () = executable_available "hyperfine"
 
 (** Formats a buffer using clang-format or bde-format. Returns the formatted
     string, or the original buffer contents if formatting fails. *)
@@ -1293,28 +1273,40 @@ let derive_source_file filename =
 
 (** Core of recursive extraction: extracts the given references and module
     paths, optimizes, and writes to a monolithic output file. *)
-let full_extr opaque_access f (refs, mps) =
+let full_extr_with_result opaque_access f (refs, mps) after_print =
   init false false;
-  List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
-  let struc =
-    optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
-  in
-  warns ();
-  let filenames = mono_filename f in
-  (* Parse doc comments from the source .v file, if available *)
-  ( match filenames with
-  | Some fn, _, _ ->
-    let source = derive_source_file fn in
-    if source <> "" then
-      Doc_comments.set_table (Doc_comments.parse_file source)
-  | _ -> () );
-  print_structure_to_file filenames false struc;
-  reset ()
+  Fun.protect
+    ~finally:reset
+    (fun () ->
+      List.iter (fun mp -> if is_modfile mp then error_MPfile_as_mod mp true) mps;
+      let struc =
+        optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
+      in
+      warns ();
+      let filenames = mono_filename f in
+      (* Parse doc comments from the source .v file, if available *)
+      ( match filenames with
+      | Some fn, _, _ ->
+        let source = derive_source_file fn in
+        if source <> "" then
+          Doc_comments.set_table (Doc_comments.parse_file source)
+      | _ -> () );
+      print_structure_to_file filenames false struc;
+      after_print () )
+
+let full_extr opaque_access f refs =
+  full_extr_with_result opaque_access f refs (fun () -> ())
 
 (** Main entry point for full library extraction. Extracts the given references
     and module paths to a single output file. *)
 let full_extraction ~opaque_access f lr =
   full_extr opaque_access f (locate_ref lr)
+
+(** Full extraction variant used by managed benchmarks.  [after_print] runs
+    while the exact C++ renaming tables used to print the artifact are still
+    available. *)
+let full_extraction_with_result ~opaque_access f lr after_print =
+  full_extr_with_result opaque_access f (locate_ref lr) after_print
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
     decomposed in many files, one per Rocq .v file} *)
@@ -1729,188 +1721,6 @@ let emit_test_status status test_id_str source_file =
 
 (** {2 Test-suite: extraction to a temporary file + compilation} *)
 
-exception NoClangFound
-
-exception ClangError of int * string
-
-(** Compiles a C++ file using clang++. When [shouldlink] is false, only compiles
-    to object code. Raises [NoClangFound] or [ClangError] on failure. *)
-let compile_cpp ?(shouldlink = false) ?(includes = []) ?outfile ?errfile infile
-    =
-  if not (clang_available ()) then raise NoClangFound;
-  let errfile =
-    match errfile with
-    | Some e -> e
-    | None -> make_error_file "cpp_" infile
-  in
-  let outfile =
-    match outfile with
-    | Some o -> o
-    | None ->
-      Filename.chop_suffix infile ".cpp" ^ if shouldlink then "" else ".o"
-  in
-  let args =
-    if is_bde () then
-      let bde_dir = normalize_bde_dir () in
-      ["clang++"]
-      @ prepend_to_all "-I" includes
-      @ [
-          (if shouldlink then "" else "-c");
-          "-std=c++20";
-          "-Wno-deprecated-literal-operator";
-          "-Wno-unused-command-line-argument";
-          "-I";
-          bde_dir ^ "/include";
-          infile;
-          "-L";
-          bde_dir ^ "/lib";
-          "-lbsl -lbal -lbdl -lbbl -lbbryu -linteldfp -lpcre2";
-          "-o";
-          outfile;
-          "2>";
-          errfile;
-        ]
-    else
-      ["clang++"]
-      @ prepend_to_all "-I" includes
-      @ [
-          (if shouldlink then "" else "-c");
-          "-std=c++23";
-          infile;
-          "-o";
-          outfile;
-          "2>";
-          errfile;
-        ]
-  in
-  let cmd = String.concat " " args in
-  let res = Sys.command cmd in
-  if res <> 0 then (
-    let ic = open_in errfile in
-    let errors = really_input_string ic (in_channel_length ic) in
-    close_in ic;
-    cleanup_error_file errfile;
-    raise (ClangError (res, errors)) );
-  cleanup_error_file errfile
-
-exception NoOcamloptFound
-
-exception OcamloptError of int * string
-
-(** Compiles an OCaml file using ocamlopt. Raises [NoOcamloptFound] or
-    [OcamloptError] on failure. *)
-let compile_ocaml
-    ?(shouldlink = false)
-    ?(includes = [])
-    ?outfile
-    ?errfile
-    infile =
-  if not (ocamlopt_available ()) then raise NoOcamloptFound;
-  let errfile =
-    match errfile with
-    | Some e -> e
-    | None ->
-      make_error_file "ocaml_" infile
-  in
-  let outfile =
-    match outfile with
-    | Some o -> o
-    | None -> Filename.chop_suffix infile ".ml"
-  in
-  let args =
-    [Envars.ocamlfind (); "ocamlopt"]
-    @ prepend_to_all "-I" includes
-    @ [(if shouldlink then "" else "-c"); "-o"; outfile; infile; "2>"; errfile]
-  in
-  let cmd = String.concat " " args in
-  let res = Sys.command cmd in
-  if res <> 0 then (
-    let ic = open_in errfile in
-    let errors = really_input_string ic (in_channel_length ic) in
-    close_in ic;
-    cleanup_error_file errfile;
-    raise (OcamloptError (res, errors)) );
-  cleanup_error_file errfile
-
-(** Links and runs a test executable from the compiled object and its
-    [.t.cpp] test driver. Returns the test's stdout. Raises [ClangError] on
-    compilation failure or [Failure] if test assertions fail. *)
-let compile_and_test ?outfile ?errfile infile =
-  if not (clang_available ()) then raise NoClangFound;
-  let dir = Filename.dirname infile in
-  let errfile =
-    match errfile with
-    | Some e -> e
-    | None ->
-      make_error_file "cpp_" infile
-  in
-  let ofile =
-    match outfile with
-    | Some o -> o
-    | None -> Filename.chop_suffix infile ".cpp" ^ ".t.exe"
-  in
-  let args =
-    if is_bde () then
-      let bde_dir = normalize_bde_dir () in
-      [
-        "clang++";
-        "-O2";
-        "-std=c++20";
-        "-Wno-deprecated-literal-operator";
-        "-Wno-unused-command-line-argument";
-        "-I";
-        dir;
-        "-I";
-        bde_dir ^ "/include";
-        Filename.chop_suffix infile ".cpp" ^ ".o";
-        Filename.chop_suffix infile ".cpp" ^ ".t.cpp";
-        "-L";
-        bde_dir ^ "/lib";
-        "-lbsl -lbal -lbdl -lbbl -lbbryu -linteldfp -lpcre2";
-        "-o";
-        ofile;
-        "2>";
-        errfile;
-      ]
-    else
-      [
-        "clang++";
-        "-O2";
-        "-std=c++23";
-        "-I";
-        dir;
-        Filename.chop_suffix infile ".cpp" ^ ".o";
-        Filename.chop_suffix infile ".cpp" ^ ".t.cpp";
-        "-o";
-        ofile;
-        "2>";
-        errfile;
-      ]
-  in
-  let cmd = String.concat " " args in
-  let res = Sys.command cmd in
-  if res <> 0 then (
-    let ic = open_in errfile in
-    let errors = really_input_string ic (in_channel_length ic) in
-    close_in ic;
-    cleanup_error_file errfile;
-    raise (ClangError (res, errors)) );
-  cleanup_error_file errfile;
-  let out = Filename.temp_file "test_out" ".log" in
-  let test_exit_code = Sys.command (ofile ^ " >" ^ out ^ " 2>&1") in
-  let ic = open_in out in
-  let out_string = really_input_string ic (in_channel_length ic) in
-  close_in ic;
-  if Sys.file_exists out then Sys.remove out;
-  (* If test returns non-zero, it failed *)
-  if test_exit_code <> 0 then
-    raise
-      (Failure
-         ( "Test assertions failed (exit code "
-         ^ string_of_int test_exit_code
-         ^ ")" ) );
-  out_string
-
 (** Full extract-compile-test pipeline: extracts to C++, compiles with clang,
     optionally links and runs the [.t.cpp] test driver, and reports results. *)
 let extract_and_compile ~opaque_access file l =
@@ -1963,10 +1773,10 @@ let extract_and_compile ~opaque_access file l =
     (* Phase 2: Compile the generated C++ code with clang *)
     let compilation_ok =
       try
-        compile_cpp ~includes:[Filename.dirname filename] filename;
+        Toolchain.compile_cpp ~includes:[Filename.dirname filename] filename;
         true
       with
-      | NoClangFound ->
+      | Toolchain.NoClangFound ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
@@ -1975,7 +1785,7 @@ let extract_and_compile ~opaque_access file l =
                Pp.(
                  test_id ++ spc () ++ str "extracted but clang cannot be found." ) );
         false
-      | ClangError (_exit_code, clang_errors) ->
+      | Toolchain.ClangError (_exit_code, clang_errors) ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
@@ -2015,7 +1825,7 @@ let extract_and_compile ~opaque_access file l =
     (* Phase 3: Run test assertions (if any) embedded in the .v file *)
     let tests_ok, out =
       try
-        let o = compile_and_test filename in
+        let o = Toolchain.compile_and_test filename in
         (true, o)
       with _ -> (false, "")
     in
@@ -2081,220 +1891,3 @@ let show_extraction ~pstate =
     print_one_decl [] mp decl
   in
   Feedback.msg_notice (Pp.prlist_with_sep Pp.fnl extr_term trms)
-
-(* Replace paths of the compiled executables with user-readable descriptions of
-   each benchmark *)
-let replace_paths_with_names execs output =
-  List.fold_right
-    (fun (i, desc, tmpfile, outfile) ->
-      let name = "Benchmark " ^ string_of_int i in
-      let once = ref false in
-      Str.global_substitute
-        (Str.regexp ("\\(" ^ Str.quote outfile ^ "\\)"))
-        (fun _ ->
-          if !once then
-            name
-          else (
-            once := true;
-            name ^ " (" ^ desc ^ ")" ) ) )
-    execs
-    output
-
-(* Hyperfine has its own count of benchmarks since we do not pass it the ones
-   that didn't compile. But we still want to keep the user-provided numbering of
-   the benchmarks. It is better if we remove the numbering part of the Hyperfine
-   output and add that in the user-readable description. *)
-let clean_benchmark_lines output =
-  let benchmark_re = Str.regexp "^\\(Benchmark [0-9]+: \\)" in
-  Str.global_substitute benchmark_re (fun _ -> "") output
-
-(** Compiles and benchmarks extracted code using hyperfine. Validates the term
-    type (unit -> string) and compiles provided options. *)
-let benchmark term options =
-  if not (hyperfine_available ()) then
-    CErrors.user_err
-      Pp.(str "Hyperfine is not available: cannot run benchmarks.");
-  (* Type check: term must have type unit -> string *)
-  (let open Names in
-   let open Constr in
-   let open Globnames in
-   let open Environ in
-   let open Evd in
-   let open Libnames in
-   let open Reductionops in
-   let open Pp in
-   let env = Global.env () in
-   let sigma = Evd.from_env env in
-
-   (* Step 1: Locate the global reference from the qualid *)
-   let gr = Smartlocate.global_with_alias term in
-   let econstr =
-     match gr with
-     (* Step 2: Ensure it's a constant *)
-     | GlobRef.ConstRef c ->
-       let cb = Global.lookup_constant c in
-       ( match cb.const_body with
-       | Def body -> EConstr.of_constr body
-       | _ -> CErrors.user_err (str "Cannot extract body from constant") )
-     | _ ->
-       CErrors.user_err
-         (str "Only constant references are supported for benchmarking")
-   in
-   (* Step 3: Get the type of the constant *)
-   let actual_ty = snd (Typing.type_of env sigma econstr) in
-
-   (* Step 4: Construct the expected type: unit -> string *)
-   let locate_type path =
-     let gr = Nametab.locate (Libnames.qualid_of_string path) in
-     match gr with
-     | GlobRef.ConstRef c -> Constr.mkConstU (c, UVars.Instance.empty)
-     | GlobRef.IndRef (ind, _) -> Constr.mkIndU ((ind, 0), UVars.Instance.empty)
-     | GlobRef.ConstructRef ((ind, idx), _) ->
-       Constr.mkConstructU (((ind, 0), idx), UVars.Instance.empty)
-     | _ ->
-       CErrors.user_err
-         (str
-            "Expected a constant, inductive, or constructor reference for type \
-             location" )
-   in
-
-   let unit_ty = locate_type "Corelib.Init.Datatypes.unit" in
-   let string_ty = locate_type "Corelib.Strings.PrimString.string" in
-   let expected_ty = Term.mkArrow unit_ty Sorts.Relevant string_ty in
-
-   (* Step 5: Compare actual and expected types *)
-   let evd = Evd.from_env env in
-   if not (is_conv env evd actual_ty (EConstr.of_constr expected_ty)) then
-     let actual_ty_pp = Printer.pr_econstr_env env evd actual_ty in
-     let expected_ty_pp = Printer.pr_constr_env env evd expected_ty in
-     CErrors.user_err
-       ( str "Benchmark term '"
-       ++ Libnames.pr_qualid term
-       ++ str "' has the wrong type:"
-       ++ fnl ()
-       ++ str "Actual type: "
-       ++ actual_ty_pp
-       ++ fnl ()
-       ++ str "Expected type: "
-       ++ expected_ty_pp ) );
-  (* Start compiling based on user-provided options *)
-  let execs =
-    List.mapi
-      (fun i (lang, file, flags) ->
-        let i = i + 1 in
-        (* use 1-indexing since this is user-facing *)
-        let file = Filename.concat (output_directory ()) file in
-        (* Generate a temporary input file to append the driver *)
-        let tmpfile =
-          Filename.temp_file
-            "benchmark"
-            ( match lang with
-            | BenchmarkCpp -> ".cpp"
-            | BenchmarkOCaml -> ".ml" )
-        in
-        let in_chan = open_in file in
-        let out_chan = open_out tmpfile in
-        ( try
-            while true do
-              output_string out_chan (input_line in_chan ^ "\n")
-            done
-          with End_of_file -> () );
-        close_in in_chan;
-        (* Append the driver code *)
-        let main_code =
-          match lang with
-          | BenchmarkCpp ->
-            "\nint main() {\n  std::cout << ("
-            ^ Libnames.string_of_qualid term
-            ^ " (unit::tt::make())) << std::endl;\n  return 0;\n}\n"
-          | BenchmarkOCaml ->
-            "\nlet () = print_endline ("
-            ^ Libnames.string_of_qualid term
-            ^ " ())\n"
-        in
-        output_string out_chan main_code;
-        close_out out_chan;
-        let outfile =
-          Filename.concat
-            (output_directory ())
-            ("benchmark_output_" ^ string_of_int i ^ ".out")
-        in
-        match lang with
-        | BenchmarkCpp ->
-          ( try
-              compile_cpp
-                ~shouldlink:true
-                ~includes:[Filename.dirname file]
-                ~outfile
-                tmpfile;
-              (* Feedback.msg_notice (str ("Compiled: " ^ tmp_file ^ " -> " ^
-                 outfile)); *)
-              let desc =
-                "extraction via Crane to C++, compiled via Clang"
-                ^ if String.is_empty flags then "" else " with options " ^ flags
-              in
-              Some (i, desc, tmpfile, outfile)
-            with
-          | NoClangFound ->
-            Feedback.msg_warning (str "clang not found");
-            None
-          | ClangError (_, msg) ->
-            Feedback.msg_warning (str msg);
-            None
-          | _ ->
-            Feedback.msg_warning (str ("Failed to compile: " ^ tmpfile));
-            None )
-        | BenchmarkOCaml ->
-        try
-          compile_ocaml
-            ~shouldlink:true
-            ~includes:[Filename.dirname file]
-            ~outfile
-            tmpfile;
-          (* Feedback.msg_notice (str ("Compiled: " ^ tmp_file ^ " -> " ^
-             outfile)); *)
-          let desc =
-            "built-in extraction to OCaml, compiled via ocamlopt"
-            ^ if String.is_empty flags then "" else " with options " ^ flags
-          in
-          Some (i, desc, tmpfile, outfile)
-        with
-        | NoOcamloptFound ->
-          Feedback.msg_warning (str "ocamlopt not found");
-          None
-        | OcamloptError (_, msg) ->
-          Feedback.msg_warning (str msg);
-          None
-        | _ ->
-          Feedback.msg_warning (str ("Failed to compile: " ^ tmpfile));
-          None )
-      options
-    |> List.filter_map (fun x -> x)
-    (* Don't pass noncompiling benchmarks to Hyperfine *)
-  in
-  if execs <> [] then (
-    let cmd =
-      "hyperfine --style=basic "
-      ^ String.concat " " (List.map (fun (_, _, _, outfile) -> outfile) execs)
-      ^ " 2> /dev/null"
-    in
-    (* Feedback.msg_info (str cmd); *)
-    let ic = Unix.open_process_in cmd in
-    let buf = Buffer.create 1024 in
-    ( try
-        while true do
-          Buffer.add_string buf (input_line ic ^ "\n")
-        done
-      with End_of_file -> () );
-    let _ = Unix.close_process_in ic in
-    Buffer.contents buf
-    |> clean_benchmark_lines
-    |> replace_paths_with_names execs
-    |> str
-    |> Feedback.msg_info;
-    (* Delete temporary files and compiled executables *)
-    List.iter
-      (fun (_, _, tmpfile, outfile) ->
-        if Sys.file_exists outfile then Sys.remove outfile;
-        if Sys.file_exists tmpfile then Sys.remove tmpfile )
-      execs )

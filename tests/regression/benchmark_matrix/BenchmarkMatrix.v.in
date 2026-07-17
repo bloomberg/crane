@@ -1,0 +1,56 @@
+(* Regression test for managed, multi-subject Crane Benchmark matrices.  Dune
+   supplies the local Hyperfine test double through its test environment. *)
+From Stdlib Require Import Extraction PrimString.
+From Crane Require Import Extraction Mapping.Std.
+
+Open Scope pstring_scope.
+
+Module BenchmarkMatrix.
+
+Axiom compiler_flag_enabled : bool.
+
+Definition baseline (_ : unit) : string :=
+  if compiler_flag_enabled then "same" else "wrong".
+
+Definition optimized (_ : unit) : string :=
+  if compiler_flag_enabled then "same" else "wrong".
+
+Definition different (_ : unit) : string := "different".
+
+Definition wrong_type (_ : unit) : nat := 0.
+
+End BenchmarkMatrix.
+
+(* The C++ build only succeeds if [With] flags are really forwarded. *)
+Crane Extract Inlined Constant BenchmarkMatrix.compiler_flag_enabled =>
+  "CRANE_BENCHMARK_FLAG == 1".
+
+(* Give Rocq's built-in OCaml extraction an implementation for the axiom. *)
+Extract Inductive bool => "bool" [ "true" "false" ].
+Extract Constant BenchmarkMatrix.compiler_flag_enabled => "true".
+
+(* Two subjects by two configurations must produce four Hyperfine entries. *)
+Crane Benchmark
+  BenchmarkMatrix.baseline As "baseline",
+  BenchmarkMatrix.optimized As "optimized"
+On
+  C++ With "-O2 -DCRANE_BENCHMARK_FLAG=1",
+  OCaml With "-O2".
+
+(* Observationally different subjects must be rejected before Hyperfine runs.
+   This is also a four-entry matrix, so the fake Hyperfine would accept it if
+   output validation were accidentally skipped. *)
+Fail Crane Benchmark
+  BenchmarkMatrix.baseline As "baseline",
+  BenchmarkMatrix.different As "different"
+On
+  C++ With "-O0 -DCRANE_BENCHMARK_FLAG=1",
+  C++ With "-O2 -DCRANE_BENCHMARK_FLAG=1".
+
+(* Invalid matrix shapes and subjects fail before extraction or compilation. *)
+Fail Crane Benchmark BenchmarkMatrix.wrong_type On C++.
+
+Fail Crane Benchmark
+  BenchmarkMatrix.baseline As "same-label",
+  BenchmarkMatrix.optimized As "same-label"
+On C++.
