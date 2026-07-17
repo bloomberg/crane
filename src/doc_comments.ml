@@ -369,13 +369,47 @@ let translate_brackets ~translate text =
 
     Shared helper for rendering doc comment text as C++ [///] comment lines. *)
 
+(** Normalize CRLF and bare CR line endings to LF. A bare [\r] left inside a
+    generated [///] line terminates the comment for the C++ compiler (which
+    treats CR as a line break) while the byte itself is invisible in most
+    editors, letting text after it escape the comment and be compiled as
+    source (finding 63, CWE-94/CWE-116). Folding every line ending to [\n]
+    before splitting ensures no raw [\r] ever reaches the emitted line. *)
+let normalize_line_endings text =
+  let len = String.length text in
+  let buf = Buffer.create len in
+  let i = ref 0 in
+  while !i < len do
+    ( match text.[!i] with
+    | '\r' ->
+      Buffer.add_char buf '\n';
+      if !i + 1 < len && text.[!i + 1] = '\n' then incr i
+    | c -> Buffer.add_char buf c );
+    incr i
+  done;
+  Buffer.contents buf
+
+(** A physical [///] line whose last character is a backslash gets spliced
+    with the next generated C++ line: the standard deletes a backslash
+    immediately followed by a newline, and both GCC and Clang additionally
+    splice (with only a warning) when trailing blanks separate the backslash
+    from the newline, so trimming alone cannot neutralize it. A spliced line
+    absorbs the following declaration into the comment, corrupting or
+    dropping generated code (finding 73, CWE-94/CWE-116). Appending a
+    non-blank, non-backslash marker guarantees the emitted line never ends in
+    a splicing backslash. *)
+let escape_trailing_backslash line =
+  let n = String.length line in
+  if n > 0 && line.[n - 1] = '\\' then line ^ "_" else line
+
 (** Format a doc comment string as a list of [///]-prefixed lines. Translates
     bracket references [[name]] by stripping the brackets. *)
 let format_as_cpp_lines text =
   let text = translate_brackets ~translate:(fun s -> s) text in
+  let text = normalize_line_endings text in
   let lines = String.split_on_char '\n' text in
   List.map
     (fun line ->
       let trimmed = String.trim line in
-      if trimmed = "" then "///" else "/// " ^ trimmed )
+      if trimmed = "" then "///" else "/// " ^ escape_trailing_backslash trimmed )
     lines
