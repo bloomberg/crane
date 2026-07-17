@@ -479,6 +479,12 @@ val output_directory : unit -> string
     directory on error. *)
 val output_directory_for_module : unit -> string
 
+(** [validate_output_target target] rejects a user-supplied extraction target
+    filename that could escape the output directory. Absolute paths and [..]
+    components raise a Rocq user error; ordinary relative subpaths are accepted.
+    Guards against path traversal / arbitrary file write (CWE-22/CWE-73). *)
+val validate_output_target : string -> unit
+
 (** {2 AccessOpaque parameter} *)
 
 (** Check if accessing opaque definitions is enabled. *)

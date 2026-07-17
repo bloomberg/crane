@@ -49,26 +49,31 @@ let executable_available executable =
 
 (** Execute a program directly, with optional file redirection, and wait for
     its termination. Open redirection descriptors are always closed. *)
-let run ?stdout_file ?stderr_file program args =
+let run ?stdin_file ?stdout_file ?stderr_file program args =
   let open_output filename =
     Unix.openfile
       filename
       [Unix.O_WRONLY; Unix.O_CREAT; Unix.O_TRUNC]
       0o600
   in
+  let stdin_fd =
+    Option.map (fun filename -> Unix.openfile filename [Unix.O_RDONLY] 0) stdin_file
+  in
   let stdout_fd = Option.map open_output stdout_file in
   let stderr_fd = Option.map open_output stderr_file in
   let close_redirects () =
+    Option.iter Unix.close stdin_fd;
     Option.iter Unix.close stdout_fd;
     Option.iter Unix.close stderr_fd
   in
   Fun.protect
     ~finally:close_redirects
     (fun () ->
+      let stdin_fd = match stdin_fd with Some fd -> fd | None -> Unix.stdin in
       let stdout_fd = match stdout_fd with Some fd -> fd | None -> Unix.stdout in
       let stderr_fd = match stderr_fd with Some fd -> fd | None -> Unix.stderr in
       let argv = Array.of_list (program :: args) in
-      let pid = Unix.create_process program argv Unix.stdin stdout_fd stderr_fd in
+      let pid = Unix.create_process program argv stdin_fd stdout_fd stderr_fd in
       CUnix.waitpid_non_intr pid )
 
 (** Execute a program while capturing stdout and stderr in separate temporary
@@ -82,6 +87,31 @@ let capture program args =
       remove_if_exists stderr_file )
     (fun () ->
       let status = run ~stdout_file ~stderr_file program args in
+      {
+        status;
+        stdout = read_file stdout_file;
+        stderr = read_file stderr_file;
+      } )
+
+(** Run [program] with [input] fed on standard input, capturing stdout and
+    stderr. The child never sees a shell: [input] is staged through a temporary
+    file wired directly to the child's stdin descriptor. All temporary files are
+    removed even when execution raises. *)
+let filter program args input =
+  let stdin_file = Filename.temp_file "crane_process_stdin" ".in" in
+  let stdout_file = Filename.temp_file "crane_process_stdout" ".log" in
+  let stderr_file = Filename.temp_file "crane_process_stderr" ".log" in
+  Fun.protect
+    ~finally:(fun () ->
+      remove_if_exists stdin_file;
+      remove_if_exists stdout_file;
+      remove_if_exists stderr_file )
+    (fun () ->
+      let oc = open_out_bin stdin_file in
+      Fun.protect
+        ~finally:(fun () -> close_out_noerr oc)
+        (fun () -> output_string oc input);
+      let status = run ~stdin_file ~stdout_file ~stderr_file program args in
       {
         status;
         stdout = read_file stdout_file;

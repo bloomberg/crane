@@ -262,7 +262,9 @@ let extract_managed_artifact
   | Cpp ->
     let source = Filename.concat temp_dir (stem ^ ".cpp") in
     let callable, unit =
+      (* [source] is an internal path under a private temp directory. *)
       Extract_env.full_extraction_with_result
+        ~validate:false
         ~opaque_access
         (Some source)
         [subject.benchmark_term]

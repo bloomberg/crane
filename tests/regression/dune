@@ -34,6 +34,20 @@
   (deps benchmark_matrix.t.exe)
   (action (run ./benchmark_matrix.t.exe))))
 
+(subdir extraction_path_traversal
+ ; Security regression: the assertions run while the .vo is built (Fail commands
+ ; reject path-traversal extraction targets). The .t.cpp is a shim so the
+ ; standard test runner still sees and depends on the fixture.
+ (rule
+  (targets extraction_path_traversal.t.exe)
+  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp)
+  (action
+   (run clang++ -std=c++23 -o extraction_path_traversal.t.exe extraction_path_traversal.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps extraction_path_traversal.t.exe)
+  (action (run ./extraction_path_traversal.t.exe))))
+
 (subdir any_cast_nested
  (rule
   (targets any_cast_nested.t.exe)

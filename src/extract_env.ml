@@ -903,11 +903,12 @@ let format_buffer_to_string (buf : Buffer.t) : string =
     Buffer.contents buf
   else
     let use_bde = Table.format_style () = "BDE" in
-    let formatter_cmd, available =
+    let formatter, formatter_args, available =
       if use_bde then
-        ("bde-format", bde_format_available ())
+        ("bde-format", [], bde_format_available ())
       else
-        ( "clang-format -style=" ^ Filename.quote (Table.format_style ()),
+        ( "clang-format",
+          ["-style=" ^ Table.format_style ()],
           clang_format_available () )
     in
     if not available then (
@@ -919,24 +920,10 @@ let format_buffer_to_string (buf : Buffer.t) : string =
       Buffer.contents buf )
     else
       let raw_output = Buffer.contents buf in
-      match Unix.open_process_full formatter_cmd (Unix.environment ()) with
+      match Subprocess.filter formatter formatter_args raw_output with
       | exception _ -> Buffer.contents buf
-      | chan_in, chan_out, chan_err ->
-        output_string chan_out raw_output;
-        close_out chan_out;
-        let fmt_buf = Buffer.create (Buffer.length buf) in
-        ( try
-            while true do
-              Buffer.add_string fmt_buf (input_line chan_in);
-              Buffer.add_char fmt_buf '\n'
-            done
-          with End_of_file -> () );
-        close_in chan_in;
-        close_in chan_err;
-        let status = Unix.close_process_full (chan_in, chan_out, chan_err) in
-        ( match status with
-        | Unix.WEXITED 0 -> Buffer.contents fmt_buf
-        | _ -> Buffer.contents buf )
+      | {status = Unix.WEXITED 0; stdout; _} -> stdout
+      | _ -> Buffer.contents buf
 
 (** Runs [clang-format -i] (or [bde-format]) on [filename] in place. No-op
     if the formatter is unavailable or style is set to ["None"]. *)
@@ -956,19 +943,16 @@ let format_file_inplace (filename : string) : unit =
         ++ spc ()
         ++ str "not found: skipping formatting" )
   else
-    let cmd =
+    let formatter, formatter_args =
       if use_bde then
-        "bde-format -i " ^ Filename.quote filename
+        ("bde-format", ["-i"; filename])
       else
-        "clang-format -i -style="
-        ^ Filename.quote (Table.format_style ())
-        ^ " "
-        ^ Filename.quote filename
+        ("clang-format", ["-i"; "-style=" ^ Table.format_style (); filename])
     in
     if skip_format then
       ()
     else
-      ignore (Sys.command cmd)
+      ignore (Subprocess.run formatter formatter_args)
 
 (** Scans the ML structure and marks all custom-extracted GlobRefs as "used"
     so their associated [From "header.h"] imports are included. Must run before
@@ -1298,14 +1282,21 @@ let full_extr opaque_access f refs =
   full_extr_with_result opaque_access f refs (fun () -> ())
 
 (** Main entry point for full library extraction. Extracts the given references
-    and module paths to a single output file. *)
-let full_extraction ~opaque_access f lr =
+    and module paths to a single output file.
+
+    [validate] (default [true]) rejects an output filename that would escape the
+    output directory; trusted callers that supply an already-vetted or internal
+    path (e.g. a temporary file) pass [~validate:false]. *)
+let full_extraction ?(validate = true) ~opaque_access f lr =
+  if validate then Option.iter Table.validate_output_target f;
   full_extr opaque_access f (locate_ref lr)
 
 (** Full extraction variant used by managed benchmarks.  [after_print] runs
     while the exact C++ renaming tables used to print the artifact are still
-    available. *)
-let full_extraction_with_result ~opaque_access f lr after_print =
+    available. See {!full_extraction} for [validate]. *)
+let full_extraction_with_result ?(validate = true) ~opaque_access f lr after_print
+    =
+  if validate then Option.iter Table.validate_output_target f;
   full_extr_with_result opaque_access f (locate_ref lr) after_print
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
@@ -1724,6 +1715,9 @@ let emit_test_status status test_id_str source_file =
 (** Full extract-compile-test pipeline: extracts to C++, compiles with clang,
     optionally links and runs the [.t.cpp] test driver, and reports results. *)
 let extract_and_compile ~opaque_access file l =
+  (* Reject an output target that would escape the output directory before it is
+     turned into a path. *)
+  Option.iter Table.validate_output_target file;
   let filename =
     match mono_filename file with
     | Some fn, _, _ ->
@@ -1749,7 +1743,8 @@ let extract_and_compile ~opaque_access file l =
   (* Phase 1: Extract Rocq definitions to C++ code *)
   let extraction_ok =
     try
-      full_extraction ~opaque_access (Some filename) l;
+      (* [filename] is derived internally from the already-validated [file]. *)
+      full_extraction ~validate:false ~opaque_access (Some filename) l;
       true
     with exn ->
       (* Emit structured output for dune, or pretty error for interactive use *)

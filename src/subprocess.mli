@@ -23,13 +23,15 @@ exception Invalid_arguments of string
     searched on [PATH]; explicit paths are checked directly. *)
 val executable_available : string -> bool
 
-(** [run ?stdout_file ?stderr_file program arguments] executes [program]
-    directly and waits for it to terminate. Redirection files are truncated or
-    created with permissions [0o600]. Unspecified streams remain inherited from
-    the parent process.
+(** [run ?stdin_file ?stdout_file ?stderr_file program arguments] executes
+    [program] directly and waits for it to terminate. [stdin_file] is opened
+    read-only; redirection output files are truncated or created with
+    permissions [0o600]. Unspecified streams remain inherited from the parent
+    process.
 
     @return the child's raw {!Unix.process_status} *)
 val run :
+  ?stdin_file:string ->
   ?stdout_file:string ->
   ?stderr_file:string ->
   string ->
@@ -41,6 +43,14 @@ val run :
 
     @return the child's status and captured streams *)
 val capture : string -> string list -> captured_output
+
+(** [filter program arguments input] runs [program] with [input] on standard
+    input and captures its stdout and stderr. The input is staged through a
+    temporary file wired directly to the child's stdin, so no shell is involved.
+    Temporary files are removed even when execution raises.
+
+    @return the child's status and captured streams *)
+val filter : string -> string list -> string -> captured_output
 
 (** [exit_code status] converts [status] to a conventional integer exit code.
     Normal exits retain their code; signals and stopped states use [128 + n]. *)

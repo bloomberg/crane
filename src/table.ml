@@ -1331,6 +1331,35 @@ let output_directory_for_module () =
     | _ -> base_dir
   with _ -> base_dir
 
+(** Reject a user-supplied extraction target filename that could place generated
+    files outside the configured output directory.
+
+    A monolithic extraction target such as [Crane Extraction "f" M] flows
+    directly into the [.h]/[.cpp] output paths. Allowing an absolute path or a
+    [..] component would let a malicious Rocq source create or overwrite files
+    anywhere the extracting user can write (CWE-22/CWE-73). We therefore reject
+    absolute paths and any parent-directory component outright; ordinary
+    relative subpaths (e.g. ["sub/name"]) remain allowed and, being relative and
+    free of [..], are guaranteed to stay under the output directory. *)
+let validate_output_target target =
+  if not (Filename.is_relative target) then
+    CErrors.user_err
+      Pp.(
+        strbrk
+          "Crane extraction target must be a relative path within the output \
+           directory, but got an absolute path: "
+        ++ str target );
+  if
+    List.exists
+      (fun component -> String.equal component Filename.parent_dir_name)
+      (String.split_on_char '/' target)
+  then
+    CErrors.user_err
+      Pp.(
+        strbrk
+          "Crane extraction target must not contain a '..' path component: "
+        ++ str target )
+
 (** {2 Crane Extraction AccessOpaque} *)
 
 let access_opaque = my_bool_option "AccessOpaque" true
