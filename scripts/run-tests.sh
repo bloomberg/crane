@@ -22,7 +22,15 @@ TMPDIR="${TMPDIR:-/tmp}"
 RESULTS_FILE="$TMPDIR/crane_test_results_$$"
 ERRORS_DIR="$TMPDIR/crane_test_errors_$$"
 mkdir -p "$ERRORS_DIR"
-trap "rm -rf $RESULTS_FILE $ERRORS_DIR" EXIT
+# Clean up via a function rather than a trap *string*. A string trap is re-parsed
+# as shell code at EXIT, so metacharacters in the (environment-derived) paths —
+# e.g. a TMPDIR containing ';' or '$(...)' — would be executed. A function body
+# expands the quoted paths at run time instead; '--' stops a leading-dash path
+# being read as an rm option (CWE-78).
+cleanup() {
+    rm -rf -- "$RESULTS_FILE" "$ERRORS_DIR"
+}
+trap cleanup EXIT
 
 # Print header
 echo ""

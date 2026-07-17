@@ -39,7 +39,15 @@ echo ""
 TMPDIR="${TMPDIR:-/tmp}"
 OBJ_DIR="$TMPDIR/crane_infer_$$"
 mkdir -p "$OBJ_DIR"
-trap "rm -rf $OBJ_DIR" EXIT
+# Clean up via a function rather than a trap *string*. A string trap is re-parsed
+# as shell code at EXIT, so metacharacters in the (environment-derived) path —
+# e.g. a TMPDIR containing ';' or '$(...)' — would be executed. A function body
+# expands the quoted path at run time instead; '--' stops a leading-dash path
+# being read as an rm option (CWE-78).
+cleanup() {
+    rm -rf -- "$OBJ_DIR"
+}
+trap cleanup EXIT
 
 # Clean previous Infer output
 rm -rf "$PROJECT_ROOT/infer-out"

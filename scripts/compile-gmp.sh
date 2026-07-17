@@ -17,10 +17,35 @@ THEORIES_CPP="$PROJECT_ROOT/theories/cpp"
 
 OUTPUT="$1"
 shift
-SOURCES="$@"
+# Keep the source operands as a real array so they reach the compiler as
+# distinct argv entries. Never re-expand them as an unquoted scalar: word
+# splitting would let a source path containing spaces/metacharacters, or one
+# beginning with '-', turn into extra compiler options (CWE-88 / CWE-78).
+SOURCES=("$@")
 
-# Optimization level: O0 (default, fast compile), O1, O2, or O3
+# Reject any operand that clang would interpret as an option rather than an
+# input file: '-foo' is a flag and '@foo' is a response file, regardless of
+# quoting. Generated C++ sources never legitimately start with these.
+for _src in "${SOURCES[@]}"; do
+    case "$_src" in
+        -* | @*)
+            echo "Error: refusing source operand that could be read as a compiler option: '$_src'" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Optimization level: O0 (default, fast compile), O1, O2, or O3. Validated
+# against a fixed allow-list because it is attacker-influenced (an environment
+# variable) and is spliced directly onto the compiler command line.
 OPT_LEVEL="${CRANE_CPP_OPTIMIZATION:-O0}"
+case "$OPT_LEVEL" in
+    O0 | O1 | O2 | O3) ;;
+    *)
+        echo "Error: invalid CRANE_CPP_OPTIMIZATION='$OPT_LEVEL' (expected O0, O1, O2, or O3)" >&2
+        exit 1
+        ;;
+esac
 
 # Find GMP installation
 GMP_PREFIX=""
@@ -135,4 +160,4 @@ if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
     )
 fi
 
-exec "$CXX" "${CXX_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" $SOURCES "${LINK_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" -o "$OUTPUT"
+exec "$CXX" "${CXX_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" "${SOURCES[@]}" "${LINK_FLAGS[@]}" "${SANITIZE_FLAGS[@]}" -o "$OUTPUT"
