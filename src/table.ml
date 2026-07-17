@@ -1542,10 +1542,6 @@ let {Goptions.get = file_comment} =
 
 type lang = Cpp
 
-type benchmark_lang =
-  | BenchmarkOCaml
-  | BenchmarkCpp
-
 let lang_ref = Summary.ref Cpp ~name:"CraneExtrLang"
 
 let lang () = !lang_ref

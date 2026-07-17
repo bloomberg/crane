@@ -558,11 +558,6 @@ val file_comment : unit -> string
 (** Target language for extraction. *)
 type lang = Cpp
 
-(** Benchmark language variant. *)
-type benchmark_lang =
-  | BenchmarkOCaml
-  | BenchmarkCpp
-
 (** Get current target language. *)
 val lang : unit -> lang
 

@@ -1,0 +1,22 @@
+#!/bin/sh
+
+if [ "$1" != "--style=basic" ]; then
+  echo "expected --style=basic" >&2
+  exit 2
+fi
+
+shift
+if [ "$#" -ne 4 ]; then
+  echo "expected a four-entry benchmark matrix, got $#" >&2
+  exit 2
+fi
+
+index=1
+for executable in "$@"; do
+  if [ ! -x "$executable" ]; then
+    echo "benchmark is not executable: $executable" >&2
+    exit 2
+  fi
+  printf 'Benchmark %d: %s\n' "$index" "$executable"
+  index=$((index + 1))
+done

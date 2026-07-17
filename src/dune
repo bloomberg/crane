@@ -15,6 +15,7 @@
    rocq-runtime.lib
    rocq-runtime.kernel
    rocq-runtime.library
-   rocq-runtime.vernac))
+   rocq-runtime.vernac
+   rocq-runtime.plugins.extraction))
 
 (coq.pp (modules g_extraction))

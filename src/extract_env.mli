@@ -16,12 +16,11 @@
     Coordinates the full extraction pipeline:
     {v Rocq source  -->  MiniML  -->  MiniCpp  -->  C++ files v}
 
-    Also handles dependency resolution, file I/O, compilation with clang, and
-    benchmarking. *)
+    Also handles dependency resolution, file I/O, and extraction-test
+    coordination. *)
 
 open Names
 open Libnames
-open Table
 
 (** [Extraction qualid]: extract a single definition and print to stdout.
     @param opaque_access accessor for opaque constant bodies *)
@@ -33,6 +32,16 @@ val simple_extraction : opaque_access:Global.indirect_accessor -> qualid -> unit
     @param the list of qualified names to extract *)
 val full_extraction :
   opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
+
+(** Perform a full extraction and evaluate [after_print] before the extraction
+    state is reset. This lets consumers retain metadata derived from the exact
+    names used while printing. *)
+val full_extraction_with_result :
+  opaque_access:Global.indirect_accessor ->
+  string option ->
+  qualid list ->
+  (unit -> 'a) ->
+  'a
 
 (** [Separate Extraction qualids]: extract each definition to its own file.
     @param opaque_access accessor for opaque constant bodies
@@ -75,9 +84,3 @@ val print_one_decl : Miniml.ml_structure -> ModPath.t -> Miniml.ml_decl -> Pp.t
 (** [Show Extraction]: show the extraction of the current ongoing proof.
     @param pstate the current proof state *)
 val show_extraction : pstate:Declare.Proof.t -> unit
-
-(** [Crane Benchmark]: extract, compile, and benchmark with hyperfine.
-    @param term a [unit -> string] constant to benchmark
-    @param options list of [(lang, file, flags)] triples: language variant,
-      pre-extracted source file, and extra compiler flags *)
-val benchmark : qualid -> (benchmark_lang * string * string) list -> unit

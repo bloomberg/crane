@@ -1,6 +1,9 @@
 (include_subdirs qualified)
 
-(env (_ (env-vars (INSIDE_DUNE "1"))))
+(env
+ (_
+  (env-vars (INSIDE_DUNE "1"))
+  (binaries (benchmark_matrix/bin/hyperfine as hyperfine))))
 
 (coq.theory
  (name CraneTestsRegression)
@@ -14,6 +17,22 @@
  (flags (:standard -output-directory %{project_root}/tests/regression)))
 
 ; Test rules - compile C++ and run tests
+
+(subdir benchmark_matrix
+ ; Make the local Hyperfine test double an explicit prerequisite of coqc.
+ (rule
+  (targets BenchmarkMatrix.v)
+  (deps BenchmarkMatrix.v.in %{bin:hyperfine})
+  (action (copy BenchmarkMatrix.v.in BenchmarkMatrix.v)))
+ (rule
+  (targets benchmark_matrix.t.exe)
+  (deps BenchmarkMatrix.vo benchmark_matrix.t.cpp)
+  (action
+   (run clang++ -std=c++23 -o benchmark_matrix.t.exe benchmark_matrix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps benchmark_matrix.t.exe)
+  (action (run ./benchmark_matrix.t.exe))))
 
 (subdir any_cast_nested
  (rule
