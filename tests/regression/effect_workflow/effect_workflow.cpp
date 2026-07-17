@@ -10,19 +10,23 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
     std::string _n = std::filesystem::path(prefix).filename().string();
     if (_n.empty() || _n == "." || _n == "..")
       _n = "tmp";
-    std::filesystem::path _dir = std::filesystem::temp_directory_path();
+    std::filesystem::path _base = std::filesystem::temp_directory_path();
     std::random_device _rng;
     for (;;) {
-      std::string _p =
-          (_dir / (_n + std::to_string(_rng()) + std::to_string(_rng())))
+      std::string _d =
+          (_base / (_n + std::to_string(_rng()) + std::to_string(_rng())))
               .string();
-      int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-      if (_fd >= 0) {
-        ::close(_fd);
-        return _p;
+      if (::mkdir(_d.c_str(), 0700) != 0) {
+        if (errno == EEXIST)
+          continue;
+        throw std::runtime_error("crane: failed to create temporary directory");
       }
-      if (errno != EEXIST)
+      std::string _p = _d + "/" + _n;
+      int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+      if (_fd < 0)
         throw std::runtime_error("crane: failed to create temporary file");
+      ::close(_fd);
+      return _p;
     }
   }();
   bool _x0 = std::filesystem::create_directories(std::filesystem::path(tmp));
