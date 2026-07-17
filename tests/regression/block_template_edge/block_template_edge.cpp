@@ -17,8 +17,10 @@ std::string BlockTemplateEdge::block_in_if() {
 int64_t BlockTemplateEdge::block_in_arith() {
   std::string n;
   std::getline(std::cin, n);
-  return ((static_cast<int64_t>(n.length()) + INT64_C(1)) &
-          0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(static_cast<int64_t>(n.length())) +
+       static_cast<uint64_t>(INT64_C(1))) &
+      0x7FFFFFFFFFFFFFFFULL);
 }
 
 /// 3. Two block templates of same type back-to-back
@@ -42,5 +44,7 @@ int64_t BlockTemplateEdge::block_then_pure() {
   std::string s;
   std::getline(std::cin, s);
   int64_t n = static_cast<int64_t>(std::move(s).length());
-  return ((n + n) & 0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(n) + static_cast<uint64_t>(n)) &
+      0x7FFFFFFFFFFFFFFFULL);
 }

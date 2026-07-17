@@ -26,30 +26,50 @@ Tokenizer::next_token(std::basic_string_view<char> input,
           return std::make_pair(
               std::make_optional<std::basic_string_view<char>>(
                   s.substr(INT64_C(0), index)),
-              s.substr(((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
-                       ((input.length() -
-                         ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
-                        0x7FFFFFFFFFFFFFFFLL)));
+              s.substr(
+                  static_cast<int64_t>((static_cast<uint64_t>(index) +
+                                        static_cast<uint64_t>(INT64_C(1))) &
+                                       0x7FFFFFFFFFFFFFFFULL),
+                  static_cast<int64_t>(
+                      (static_cast<uint64_t>(input.length()) -
+                       static_cast<uint64_t>(static_cast<int64_t>(
+                           (static_cast<uint64_t>(index) +
+                            static_cast<uint64_t>(INT64_C(1))) &
+                           0x7FFFFFFFFFFFFFFFULL))) &
+                      0x7FFFFFFFFFFFFFFFULL)));
         } else {
           if (soft.contains(c)) {
             if (index == INT64_C(0)) {
-              return _self_aux(_self_aux, fuel_, INT64_C(0),
-                               std::move(s).substr(
-                                   INT64_C(1), ((input.length() - INT64_C(1)) &
-                                                0x7FFFFFFFFFFFFFFFLL)));
+              return _self_aux(
+                  _self_aux, fuel_, INT64_C(0),
+                  std::move(s).substr(
+                      INT64_C(1), static_cast<int64_t>(
+                                      (static_cast<uint64_t>(input.length()) -
+                                       static_cast<uint64_t>(INT64_C(1))) &
+                                      0x7FFFFFFFFFFFFFFFULL)));
             } else {
               return std::make_pair(
                   std::make_optional<std::basic_string_view<char>>(
                       s.substr(INT64_C(0), index)),
-                  s.substr(((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
-                           ((input.length() -
-                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL)) &
-                            0x7FFFFFFFFFFFFFFFLL)));
+                  s.substr(
+                      static_cast<int64_t>((static_cast<uint64_t>(index) +
+                                            static_cast<uint64_t>(INT64_C(1))) &
+                                           0x7FFFFFFFFFFFFFFFULL),
+                      static_cast<int64_t>(
+                          (static_cast<uint64_t>(input.length()) -
+                           static_cast<uint64_t>(static_cast<int64_t>(
+                               (static_cast<uint64_t>(index) +
+                                static_cast<uint64_t>(INT64_C(1))) &
+                               0x7FFFFFFFFFFFFFFFULL))) &
+                          0x7FFFFFFFFFFFFFFFULL)));
             }
           } else {
-            return _self_aux(_self_aux, fuel_,
-                             ((index + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL),
-                             std::move(s));
+            return _self_aux(
+                _self_aux, fuel_,
+                static_cast<int64_t>((static_cast<uint64_t>(index) +
+                                      static_cast<uint64_t>(INT64_C(1))) &
+                                     0x7FFFFFFFFFFFFFFFULL),
+                std::move(s));
           }
         }
       }

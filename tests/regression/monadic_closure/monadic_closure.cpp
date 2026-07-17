@@ -4,9 +4,10 @@
 int64_t MonadicClosure::capture_bind() {
   std::string line;
   std::getline(std::cin, line);
-  return ((_capture_bind_f(UINT64_C(0), line) +
-           _capture_bind_f(UINT64_C(1), line)) &
-          0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(_capture_bind_f(UINT64_C(0), line)) +
+       static_cast<uint64_t>(_capture_bind_f(UINT64_C(1), line))) &
+      0x7FFFFFFFFFFFFFFFULL);
 }
 
 int64_t MonadicClosure::test_apply_after() {
@@ -29,8 +30,11 @@ std::function<std::string(std::string)> MonadicClosure::make_greeter() {
 }
 
 int64_t MonadicClosure::test_with_length() {
-  return with_length(
-      [](int64_t n) { return ((n + INT64_C(1)) & 0x7FFFFFFFFFFFFFFFLL); });
+  return with_length([](int64_t n) {
+    return static_cast<int64_t>(
+        (static_cast<uint64_t>(n) + static_cast<uint64_t>(INT64_C(1))) &
+        0x7FFFFFFFFFFFFFFFULL);
+  });
 }
 
 /// 5. Nested closures over bindings
@@ -41,7 +45,9 @@ int64_t MonadicClosure::nested_capture() {
   std::getline(std::cin, b);
   int64_t la = static_cast<int64_t>(std::move(a).length());
   int64_t lb = static_cast<int64_t>(std::move(b).length());
-  return ((la + lb) & 0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(la) + static_cast<uint64_t>(lb)) &
+      0x7FFFFFFFFFFFFFFFULL);
 }
 
 uint64_t MonadicClosure::test_count() {

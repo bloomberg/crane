@@ -25,8 +25,30 @@ Crane Extract Numeral Z => "mpz_class(%n)".
 Crane Extract Inlined Constant Z.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Z.sub => "(%a0 - %a1)".
 Crane Extract Inlined Constant Z.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant Z.div => "(%a1 == 0 ? mpz_class(0) : %a0 / %a1)".
-Crane Extract Inlined Constant Z.modulo => "(%a1 == 0 ? mpz_class(0) : %a0 % %a1)".
+(* Rocq's Z.div / Z.modulo use *floored* division (the remainder takes the sign
+   of the divisor). GMP's mpz_class / and % truncate toward zero (remainder
+   takes the sign of the dividend), so we apply the flooring correction to match
+   Rocq for negative operands, following Rocq's a/0 = 0 and a mod 0 = a
+   conventions for a zero divisor (CWE-682). *)
+Crane Extract Inlined Constant Z.div =>
+"[&]() -> mpz_class {
+  mpz_class _a = %a0;
+  mpz_class _b = %a1;
+  if (_b == 0) return mpz_class(0);
+  mpz_class _q = _a / _b;
+  mpz_class _r = _a % _b;
+  if (_r != 0 && ((_r < 0) != (_b < 0))) return _q - 1;
+  return _q;
+}()".
+Crane Extract Inlined Constant Z.modulo =>
+"[&]() -> mpz_class {
+  mpz_class _a = %a0;
+  mpz_class _b = %a1;
+  if (_b == 0) return _a;
+  mpz_class _r = _a % _b;
+  if (_r != 0 && ((_r < 0) != (_b < 0))) return _r + _b;
+  return _r;
+}()".
 Crane Extract Inlined Constant Z.opp => "(-%a0)".
 Crane Extract Inlined Constant Z.abs => "abs(%a0)".
 Crane Extract Inlined Constant Z.succ => "(%a0 + 1)".
@@ -41,7 +63,14 @@ Crane Extract Inlined Constant Z.max => "(%a0 >= %a1 ? %a0 : %a1)".
 
 (* Conversions *)
 Crane Extract Inlined Constant Z.of_nat => "mpz_class(%a0)".
-Crane Extract Inlined Constant Z.to_nat => "static_cast<unsigned int>(%a0 < 0 ? 0 : %a0.get_ui())".
+(* [mpz_class::get_ui] only returns the low word of an arbitrary-precision
+   value. Rocq's [Z.to_nat] is total (negatives map to 0) but places no upper
+   bound on the result, so silently truncating a large positive value would
+   produce a wrapped, wrong result instead of surfacing the loss of precision
+   (CWE-190/CWE-681); we saturate at [UINT_MAX] instead. *)
+Crane Extract Inlined Constant Z.to_nat =>
+  "(%a0 < 0 ? 0 : (%a0 > mpz_class(UINT_MAX) ? UINT_MAX : static_cast<unsigned int>(%a0.get_ui())))"
+  From "climits".
 Crane Extract Inlined Constant Z.of_N => "mpz_class(%a0)".
 Crane Extract Inlined Constant Z.to_N => "(%a0 < 0 ? mpz_class(0) : %a0)".
 Crane Extract Inlined Constant Z.abs_N => "abs(%a0)".

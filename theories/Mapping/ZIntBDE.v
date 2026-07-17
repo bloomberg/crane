@@ -22,8 +22,30 @@ Crane Extract Numeral Z => "INT64_C(%n)".
 Crane Extract Inlined Constant Z.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant Z.sub => "(%a0 - %a1)".
 Crane Extract Inlined Constant Z.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant Z.div => "(%a1 == 0 ? INT64_C(0) : %a0 / %a1)".
-Crane Extract Inlined Constant Z.modulo => "(%a1 == 0 ? INT64_C(0) : %a0 % %a1)".
+(* Rocq's Z.div / Z.modulo use *floored* division (the remainder takes the sign
+   of the divisor), whereas C++ / and % truncate toward zero. We compute the
+   truncated quotient/remainder once and apply the flooring correction so the
+   results match Rocq for negative operands, and follow Rocq's a/0 = 0 and
+   a mod 0 = a conventions for a zero divisor (CWE-682). *)
+Crane Extract Inlined Constant Z.div =>
+"[&]() -> int64_t {
+  int64_t _a = %a0;
+  int64_t _b = %a1;
+  if (_b == 0) return INT64_C(0);
+  int64_t _q = _a / _b;
+  int64_t _r = _a % _b;
+  if (_r != 0 && ((_r < 0) != (_b < 0))) return _q - 1;
+  return _q;
+}()".
+Crane Extract Inlined Constant Z.modulo =>
+"[&]() -> int64_t {
+  int64_t _a = %a0;
+  int64_t _b = %a1;
+  if (_b == 0) return _a;
+  int64_t _r = _a % _b;
+  if (_r != 0 && ((_r < 0) != (_b < 0))) return _r + _b;
+  return _r;
+}()".
 Crane Extract Inlined Constant Z.opp => "(-%a0)".
 Crane Extract Inlined Constant Z.abs => "bsl::abs(%a0)" From "bsl_cstdlib.h".
 Crane Extract Inlined Constant Z.succ => "(%a0 + 1)".

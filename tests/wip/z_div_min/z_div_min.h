@@ -11,14 +11,31 @@ struct ZDivMin {
   /// INT64_MIN / -1 = 9223372036854775808, which doesn't fit in int64_t.
   /// In Rocq: perfectly fine, result is positive.
   /// In C++: signed division overflow → undefined behavior.
-  static inline const int64_t div_min_neg1 =
-      (INT64_C(-1) == 0 ? INT64_C(0) : int64_min / INT64_C(-1));
+  static inline const int64_t div_min_neg1 = [&]() -> int64_t {
+    int64_t _a = int64_min;
+    int64_t _b = INT64_C(-1);
+    if (_b == 0)
+      return INT64_C(0);
+    int64_t _q = _a / _b;
+    int64_t _r = _a % _b;
+    if (_r != 0 && ((_r < 0) != (_b < 0)))
+      return _q - 1;
+    return _q;
+  }();
   /// The result should be positive (dividing negative by negative).
   static inline const bool div_is_positive = INT64_C(0) < div_min_neg1;
   /// INT64_MIN % -1 = 0 in Rocq.
   /// In C++: also UB (same overflow issue).
-  static inline const int64_t mod_min_neg1 =
-      (INT64_C(-1) == 0 ? INT64_C(0) : int64_min % INT64_C(-1));
+  static inline const int64_t mod_min_neg1 = [&]() -> int64_t {
+    int64_t _a = int64_min;
+    int64_t _b = INT64_C(-1);
+    if (_b == 0)
+      return _a;
+    int64_t _r = _a % _b;
+    if (_r != 0 && ((_r < 0) != (_b < 0)))
+      return _r + _b;
+    return _r;
+  }();
   /// Z.opp INT64_MIN is also UB: -(INT64_MIN) overflows int64_t.
   /// In Rocq: result is positive 9223372036854775808.
   static inline const int64_t opp_min = (-int64_min);

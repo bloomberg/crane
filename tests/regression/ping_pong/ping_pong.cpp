@@ -24,7 +24,8 @@ void PingPong::run_game(uint64_t round) {
                 << '\n';
       _loop_round = (_loop_round + 1);
     } else {
-      std::cout << "You said '"s + response + "' — game over!"s << '\n';
+      std::cout << "You said '"s + response + "' \342\200\224 game over!"s
+                << '\n';
       return;
     }
   }

@@ -8,7 +8,9 @@ int64_t MutableVectorTest::test1(int64_t) {
   int64_t x = v.size();
   v.pop_back();
   int64_t y = v.size();
-  return ((x - y) & 0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(x) - static_cast<uint64_t>(y)) &
+      0x7FFFFFFFFFFFFFFFULL);
 }
 
 std::vector<int64_t> MutableVectorTest::test2(int64_t) {
