@@ -90,15 +90,17 @@ int main() {
     auto result = STMonadTests::array_simp_list();
     ASSERT(result.first.first == 5);
     ASSERT(result.first.second == 4);
-    ASSERT(result.second.hd(0) == 5);
-    ASSERT(result.second.tl().hd(0) == 4);
-    ASSERT(result.second.tl().tl().hd(0) == 3);
-    ASSERT(result.second.tl().tl().tl().hd(0) == 2);
-    std::cout << "Test 7 (array_simp_list): " << result.first.first << ","
-              << result.first.second << ", [" << result.second.hd(0) << ","
-              << result.second.tl().hd(0) << ","
-              << result.second.tl().tl().hd(0) << ","
-              << result.second.tl().tl().tl().hd(0) << "]"
+    ASSERT(STMonadTests::nth(0,result.second,0) == 5);
+    ASSERT(STMonadTests::nth(1,result.second,0) == 4);
+    ASSERT(STMonadTests::nth(2,result.second,0) == 3);
+    ASSERT(STMonadTests::nth(3,result.second,0) == 2);
+    std::cout << "Test 7 (array_simp_list): "
+              << result.first.first << ","
+              << result.first.second << ", ["
+              << STMonadTests::nth(0,result.second,0) << ","
+              << STMonadTests::nth(1,result.second,0) << ","
+              << STMonadTests::nth(2,result.second,0) << ","
+              << STMonadTests::nth(3,result.second,0) << "]"
               << " PASSED" << std::endl;
   }
 
@@ -123,27 +125,35 @@ int main() {
         4, List<uint64_t>::cons(
                1, List<uint64_t>::cons(2, List<uint64_t>::nil())));
     auto result = STMonadTests::quicksort_fun(lst);
-    ASSERT(result.hd(6) == 1);
-    ASSERT(result.tl().hd(6) == 2);
-    ASSERT(result.tl().tl().hd(6) == 4);
+    ASSERT(STMonadTests::nth(0, result, 0) == 1);
+    ASSERT(STMonadTests::nth(1, result, 0) == 2);
+    ASSERT(STMonadTests::nth(2, result, 0) == 4);
+
     std::cout << "Test 10 (quicksort_fun [4;2;1])"
-              << " outputs [" << result.hd(6) << ", " << result.tl().hd(6)
-              << ", " << result.tl().tl().hd(6) << "], len: " << result.length()
-              << " PASSED" << std::endl;
+              << " outputs [" << STMonadTests::nth(0, result, 0) << ", "
+              << STMonadTests::nth(1, result, 0) << ", "
+              << STMonadTests::nth(2, result, 0)
+              << "], len: " << result.length() << " PASSED" << std::endl;
   }
 
   {
     List<uint64_t> lst = List<uint64_t>::cons(
         4, List<uint64_t>::cons(
                1, List<uint64_t>::cons(2, List<uint64_t>::nil())));
-    auto result = STMonadTests::quicksort_ST(lst);
-    ASSERT(result.hd(6) == 1);
-    ASSERT(result.tl().hd(6) == 2);
-    ASSERT(result.tl().tl().hd(6) == 4);
+    auto result = STMonadTests::quicksort_ST_mine(lst);
+    ASSERT(STMonadTests::nth(0, result, 0) == 1);
+    ASSERT(STMonadTests::nth(1, result, 0) == 2);
+    ASSERT(STMonadTests::nth(2, result, 0) == 4);
     std::cout << "Test 11 (quicksort [4;2;1])"
-              << " outputs [" << result.hd(6) << ", " << result.tl().hd(6)
-              << ", " << result.tl().tl().hd(6) << "], len: " << result.length()
+              << " outputs [" << STMonadTests::nth(0,result,0) << ", " << STMonadTests::nth(1,result,0)
+              << ", " << STMonadTests::nth(2,result,0) << "], len: " << result.length()
               << " PASSED" << std::endl;
+  }
+
+  {
+    auto result = STMonadTests::test_quicksort_ST({});
+    // sorted list: [4,51,126,127,2412,5981,74879,212498,2749812]
+    std::cout << "Test 12 (test_quicksort_ST): " << result << std::endl;
   }
 
   if (testStatus == 0) {

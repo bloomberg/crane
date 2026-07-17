@@ -5,15 +5,17 @@ From Crane Require Import Monads.STMonad.
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
+  Basics
+  Classes.EquivDec
+  Extraction
   Init.Peano
   List
   Morphisms
+  PrimString
   RelationClasses
   Relation_Definitions
   Setoid
   Strings.String
-  Classes.EquivDec
-  Basics
 .
 
 From Crane Require Import Monads.ITree.
@@ -47,6 +49,7 @@ From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
 Import ListNotations.
 
+
 Module STMonadTests. 
   (* Re-exporting instances so they're available to call in the exported file. *)
   (* Just referring to them does not seem to work to extract them here, unfolding does *)
@@ -57,8 +60,10 @@ Module STMonadTests.
   Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le nat_idx nat_stref).
   Definition fib_ST := Eval unfold fib_ST,fib_loop in (@fib_ST nat unit Nat.le).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
-  Definition list_hd := List.hd.
-  Definition list_tl := List.tl.
+
+  (* Need to reimport these definitions to put them in scope. *)
+  Definition nth := Eval unfold List.nth in (@List.nth nat).
+  
   Definition new_and_read_both_bool := Eval unfold new_and_read_both_bool in (@new_and_read_both_bool nat unit Nat.le).
   Definition new_and_read_both_nat := Eval unfold new_and_read_both_nat in (@new_and_read_both_nat nat unit Nat.le).
   Definition tree_simp_another_nat := Eval unfold tree_simp_another_nat in (@tree_simp_another_nat nat unit Nat.le).
@@ -67,20 +72,54 @@ Module STMonadTests.
 
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
-  Definition quicksort_ST :=
+  Definition quicksort_ST_mine :=
     Eval unfold quicksort_ST_list,quicksort_ST,quicksort_ST_body,partition,swap_arr,for_each_with in
       (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
 
+  (* NOTE: axiomatized for purposes of applying the intuitive std::to_string here instead of
+     printing long strings of (S (S ( S.... )))
+   *)
+  Axiom int_to_string: forall (n : nat), PrimString.string.
+
+  Fixpoint list_to_string_helper (l : list nat) : PrimString.string :=
+    match l with
+    | nil => ""
+    | x::xs => PrimString.cat (int_to_string x) (PrimString.cat ", " (list_to_string_helper xs))
+    end.
+
+  Definition list_to_string (l : list nat) : PrimString.string :=
+    PrimString.cat "[ " (PrimString.cat (list_to_string_helper l) " ]").
+    
+  (* NOTE: axiomatized for purpose of converting a value of type iTree void1 A into A,
+     as runST can only interpret itree inputs to itree void1 A, not to A itself. 
+   *)
+  Axiom runST' : forall (A : Type), itree (STEvent nat unit (fun _ : nat => nat) +' exceptE Err) A -> A.  
+
+  Definition input_lst1 := [212498;127;5981;2749812;74879;126;4;51;2412].
+
+  Definition test_quicksort_ST (_ : unit) : PrimString.string :=
+    runST' PrimString.string 
+      (out <- quicksort_ST_mine input_lst1;;
+       Ret (list_to_string out)).
+  
+  Definition test_quicksort_fun (_ : unit) : PrimString.string :=
+    let out := quicksort_fun input_lst1 in
+    list_to_string out.
+    
+
 End STMonadTests.
 
-Crane Extract Skip Foldable.
-Crane Extract Skip Foldable_list.
-Crane Extract Skip Monad.
-Crane Extract Skip Monad_itree.
-Crane Extract Skip Reducible.
 
+Crane Extract Inlined Constant STMonadTests.runST' => "%a0".
+Crane Extract Skip callE.
+Crane Extract Inlined Constant STMonadTests.int_to_string => "std::to_string(%a0)".
 
 Require Import Crane.Mapping.NatIntStd.
 
 
 Crane Extraction "stmonad" STMonadTests.
+
+Crane Benchmark
+  STMonadTests.test_quicksort_fun,
+  STMonadTests.test_quicksort_ST
+On C++ With "-O3".
