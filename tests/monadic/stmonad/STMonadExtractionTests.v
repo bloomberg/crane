@@ -79,17 +79,6 @@ Crane Extract Skip Monad.
 Crane Extract Skip Monad_itree.
 Crane Extract Skip Reducible.
 
-Crane Extract Skip Module Recursion.
-Crane Extract Inlined Constant rec =>
-        "
-         [&]() -> %t2 {
-         static  std::function<%t2(%t1)> __self;
-         __self = %a0;
-         return __self(%a1);;
- }()
-" From "functional".
-Crane Extract Inlined Constant call => "__self(%a0)".
-
 
 Require Import Crane.Mapping.NatIntStd.
 

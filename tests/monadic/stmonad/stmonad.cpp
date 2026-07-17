@@ -90,33 +90,32 @@ List<uint64_t> STMonadTests::quicksort_ST(const List<uint64_t> &xs) {
       }
     }
   };
-
-  [&]() -> std::monostate {
-    static std::function<std::monostate(
-        std::pair<
-            std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
-            uint64_t>)>
-        __self;
-    __self = [](std::pair<
-                 std::pair<std::pair<std::vector<uint64_t> *, uint64_t>,
-                           uint64_t>,
-                 uint64_t>
-                    args) {
-      const auto &[p, r] = args;
-      const auto &[p0, l] = p;
-      const auto &[arr0, arr_idx] = p0;
-      if (nat_idx::toNat(l) < nat_idx::toNat(r)) {
-        uint64_t newPivot = [&]() {
-          uint64_t pivotValue = (*arr0)[nat_idx::fromNat((
-              nat_idx::toNat(l) +
-              (UINT64_C(2) ? (((nat_idx::toNat(r) - nat_idx::toNat(l)) >
-                                       nat_idx::toNat(r)
-                                   ? 0
-                                   : (nat_idx::toNat(r) - nat_idx::toNat(l)))) /
-                                 UINT64_C(2)
-                           : 0)))];
-          [&]() {
-            uint64_t leftVal = (*arr0)[nat_idx::fromNat(
+  [&]() {
+    static std::vector<std::pair<
+        std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
+        uint64_t>>
+        _stack;
+    _stack.push_back(std::make_pair(
+        std::make_pair(std::make_pair(arr, nat_idx::zero()), nat_idx::zero()),
+        nat_idx::fromNat((((xs.length() - UINT64_C(1)) > xs.length()
+                               ? 0
+                               : (xs.length() - UINT64_C(1)))))));
+    while (!_stack.empty()) {
+      std::pair<
+          std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
+          uint64_t>
+          _arg = _stack.back();
+      _stack.pop_back();
+      [](std::pair<
+          std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
+          uint64_t>
+             args) {
+        const auto &[p, r] = args;
+        const auto &[p0, l] = p;
+        const auto &[arr0, arr_idx] = p0;
+        if (nat_idx::toNat(l) < nat_idx::toNat(r)) {
+          uint64_t newPivot = [&]() {
+            uint64_t pivotValue = (*arr0)[nat_idx::fromNat(
                 (nat_idx::toNat(l) +
                  (UINT64_C(2)
                       ? (((nat_idx::toNat(r) - nat_idx::toNat(l)) >
@@ -125,90 +124,100 @@ List<uint64_t> STMonadTests::quicksort_ST(const List<uint64_t> &xs) {
                               : (nat_idx::toNat(r) - nat_idx::toNat(l)))) /
                             UINT64_C(2)
                       : 0)))];
-            uint64_t rightVal = (*arr0)[r];
-            (*arr0)[nat_idx::fromNat(
-                (nat_idx::toNat(l) +
-                 (UINT64_C(2)
-                      ? (((nat_idx::toNat(r) - nat_idx::toNat(l)) >
-                                  nat_idx::toNat(r)
-                              ? 0
-                              : (nat_idx::toNat(r) - nat_idx::toNat(l)))) /
-                            UINT64_C(2)
-                      : 0)))] = rightVal;
-            (*arr0)[r] = leftVal;
-            return std::monostate{};
+            [&]() {
+              uint64_t leftVal = (*arr0)[nat_idx::fromNat(
+                  (nat_idx::toNat(l) +
+                   (UINT64_C(2)
+                        ? (((nat_idx::toNat(r) - nat_idx::toNat(l)) >
+                                    nat_idx::toNat(r)
+                                ? 0
+                                : (nat_idx::toNat(r) - nat_idx::toNat(l)))) /
+                              UINT64_C(2)
+                        : 0)))];
+              uint64_t rightVal = (*arr0)[r];
+              (*arr0)[nat_idx::fromNat(
+                  (nat_idx::toNat(l) +
+                   (UINT64_C(2)
+                        ? (((nat_idx::toNat(r) - nat_idx::toNat(l)) >
+                                    nat_idx::toNat(r)
+                                ? 0
+                                : (nat_idx::toNat(r) - nat_idx::toNat(l)))) /
+                              UINT64_C(2)
+                        : 0)))] = rightVal;
+              (*arr0)[r] = leftVal;
+              return std::monostate{};
+            }();
+            uint64_t storeIndex = [&]() {
+              auto for_each_with_impl =
+                  [](auto &_self_for_each_with, const List<uint64_t> &xs0,
+                     uint64_t v, std::function<uint64_t(uint64_t, uint64_t)> f)
+                  -> uint64_t {
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        xs0.v())) {
+                  return v;
+                } else {
+                  const auto &[a0, a1] =
+                      std::get<typename List<uint64_t>::Cons>(xs0.v());
+                  uint64_t v_ = f(v, a0);
+                  return _self_for_each_with(_self_for_each_with, *a1, v_, f);
+                }
+              };
+              auto for_each_with =
+                  [&](const List<uint64_t> &xs0, uint64_t v,
+                      std::function<uint64_t(uint64_t, uint64_t)> f)
+                  -> uint64_t {
+                return for_each_with_impl(for_each_with_impl, xs0, v, f);
+              };
+              return for_each_with(
+                  nat_idx::range(
+                      l, nat_idx::sub(r, nat_idx::suc(nat_idx::zero()))),
+                  l, [=](uint64_t storeIndex, uint64_t i) mutable {
+                    uint64_t val = (*arr0)[i];
+                    if (val <= pivotValue) {
+                      [&]() {
+                        uint64_t leftVal = (*arr0)[i];
+                        uint64_t rightVal = (*arr0)[storeIndex];
+                        (*arr0)[i] = rightVal;
+                        (*arr0)[storeIndex] = leftVal;
+                        return std::monostate{};
+                      }();
+                      return nat_idx::suc(storeIndex);
+                    } else {
+                      return storeIndex;
+                    }
+                  });
+            }();
+            [&]() {
+              uint64_t leftVal = (*arr0)[storeIndex];
+              uint64_t rightVal = (*arr0)[r];
+              (*arr0)[storeIndex] = rightVal;
+              (*arr0)[r] = leftVal;
+              return std::monostate{};
+            }();
+            return storeIndex;
           }();
-          uint64_t storeIndex = [&]() {
-            auto for_each_with_impl =
-                [](auto &_self_for_each_with, const List<uint64_t> &xs0,
-                   uint64_t v,
-                   std::function<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
-              if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                      xs0.v())) {
-                return v;
-              } else {
-                const auto &[a0, a1] =
-                    std::get<typename List<uint64_t>::Cons>(xs0.v());
-                uint64_t v_ = f(v, a0);
-                return _self_for_each_with(_self_for_each_with, *a1, v_, f);
-              }
-            };
-            auto for_each_with =
-                [&](const List<uint64_t> &xs0, uint64_t v,
-                    std::function<uint64_t(uint64_t, uint64_t)> f) -> uint64_t {
-              return for_each_with_impl(for_each_with_impl, xs0, v, f);
-            };
-            return for_each_with(
-                nat_idx::range(l,
-                               nat_idx::sub(r, nat_idx::suc(nat_idx::zero()))),
-                l, [=](uint64_t storeIndex, uint64_t i) mutable {
-                  uint64_t val = (*arr0)[i];
-                  if (val <= pivotValue) {
-                    [&]() {
-                      uint64_t leftVal = (*arr0)[i];
-                      uint64_t rightVal = (*arr0)[storeIndex];
-                      (*arr0)[i] = rightVal;
-                      (*arr0)[storeIndex] = leftVal;
-                      return std::monostate{};
-                    }();
-                    return nat_idx::suc(storeIndex);
-                  } else {
-                    return storeIndex;
-                  }
-                });
-          }();
-          [&]() {
-            uint64_t leftVal = (*arr0)[storeIndex];
-            uint64_t rightVal = (*arr0)[r];
-            (*arr0)[storeIndex] = rightVal;
-            (*arr0)[r] = leftVal;
-            return std::monostate{};
-          }();
-          return storeIndex;
-        }();
-        __self(std::make_pair(
-            std::make_pair(std::make_pair(arr0, arr_idx), l),
-            nat_idx::fromNat(
-                (((nat_idx::toNat(newPivot) - UINT64_C(1)) >
-                          nat_idx::toNat(newPivot)
-                      ? 0
-                      : (nat_idx::toNat(newPivot) - UINT64_C(1)))))));
-        return __self(std::make_pair(
-            std::make_pair(
-                std::make_pair(arr0, arr_idx),
-                nat_idx::fromNat((nat_idx::toNat(newPivot) + UINT64_C(1)))),
-            r));
-      } else {
-        return std::monostate{};
-      }
-    };
-    return __self(std::make_pair(
-        std::make_pair(std::make_pair(arr, nat_idx::zero()), nat_idx::zero()),
-        nat_idx::fromNat((((xs.length() - UINT64_C(1)) > xs.length()
-                               ? 0
-                               : (xs.length() - UINT64_C(1)))))));
-    ;
+          (_stack.push_back(std::make_pair(
+               std::make_pair(std::make_pair(arr0, arr_idx), l),
+               nat_idx::fromNat(
+                   (((nat_idx::toNat(newPivot) - UINT64_C(1)) >
+                             nat_idx::toNat(newPivot)
+                         ? 0
+                         : (nat_idx::toNat(newPivot) - UINT64_C(1))))))),
+           std::monostate{});
+          return (
+              _stack.push_back(std::make_pair(
+                  std::make_pair(std::make_pair(arr0, arr_idx),
+                                 nat_idx::fromNat(
+                                     (nat_idx::toNat(newPivot) + UINT64_C(1)))),
+                  r)),
+              std::monostate{});
+        } else {
+          return std::monostate{};
+        }
+      }(_arg);
+    }
   }();
+  ;
   List<uint64_t> newXs = [&]() {
     using _E = typename std::remove_pointer_t<
         std::remove_cvref_t<decltype(arr)>>::value_type;
