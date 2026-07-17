@@ -4,10 +4,9 @@
 (** Orchestration for the [Crane Benchmark] command.
 
     A benchmark request is a Cartesian product of Rocq definitions and compiler
-    configurations. Managed configurations extract their source automatically;
-    legacy configurations consume a source file supplied with [From]. Before
-    invoking Hyperfine, every generated executable is run once and its output is
-    compared with the first executable's output. *)
+    configurations. Crane extracts each definition automatically for every
+    requested backend. Before invoking Hyperfine, every generated executable is
+    run once and its output is compared with the first executable's output. *)
 
 open Libnames
 
@@ -27,9 +26,6 @@ type subject = {
 (** One compilation configuration applied to every benchmark subject. *)
 type configuration = {
   backend : backend;  (** Extraction and native compilation backend. *)
-  source : string option;
-      (** Legacy pre-extracted source selected by [From]. [None] requests
-          managed extraction. *)
   flags : string;
       (** User-supplied compiler arguments, parsed without invoking a shell. *)
 }
@@ -38,10 +34,8 @@ type configuration = {
     and compiles every subject/configuration pair, checks that all executables
     produce identical stdout, and reports the Hyperfine comparison.
 
-    All configurations must use either managed extraction or legacy [From]
-    sources. Legacy mode supports exactly one subject. Invalid requests,
-    unavailable tools, failed compilation or execution, and observationally
-    different output are reported as Rocq user errors.
+    Invalid requests, unavailable tools, failed compilation or execution, and
+    observationally different output are reported as Rocq user errors.
 
     @param opaque_access accessor used when Crane extracts opaque definitions *)
 val run :

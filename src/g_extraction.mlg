@@ -115,9 +115,6 @@ let pr_benchmark_subject subject =
 
 let pr_benchmark_option configuration =
   pr_benchmark_language configuration.Benchmark.backend
-  ++ (match configuration.Benchmark.source with
-      | None -> mt ()
-      | Some file -> str " From " ++ quote (str file))
   ++ if String.equal configuration.Benchmark.flags "" then mt ()
      else str " With " ++ quote (str configuration.Benchmark.flags)
 
@@ -138,14 +135,10 @@ END
 
 VERNAC ARGUMENT EXTEND crane_benchmark_option
 PRINTED BY { pr_benchmark_option }
-| [ crane_benchmark_language(backend) "From" string(source) "With" string(flags) ]
-  -> { { Benchmark.backend = backend; source = Some source; flags = flags } }
-| [ crane_benchmark_language(backend) "From" string(source) ]
-  -> { { Benchmark.backend = backend; source = Some source; flags = "" } }
 | [ crane_benchmark_language(backend) "With" string(flags) ]
-  -> { { Benchmark.backend = backend; source = None; flags = flags } }
+  -> { { Benchmark.backend = backend; flags = flags } }
 | [ crane_benchmark_language(backend) ]
-  -> { { Benchmark.backend = backend; source = None; flags = "" } }
+  -> { { Benchmark.backend = backend; flags = "" } }
 END
 
 VERNAC COMMAND EXTEND Benchmark CLASSIFIED AS QUERY STATE opaque_access

@@ -37,14 +37,6 @@ On
   C++ With "-O2 -DCRANE_BENCHMARK_FLAG=1",
   OCaml With "-O2".
 
-(* The original pre-extracted, single-subject form remains compatible. *)
-Extract Constant PrimString.string => "String.t".
-Crane Benchmark BenchmarkMatrix.baseline As "legacy" On
-  C++ From "benchmark_matrix/legacy.cpp" With "-O0 -DCRANE_BENCHMARK_FLAG=1",
-  OCaml From "benchmark_matrix/legacy.ml" With "-Oclassic",
-  C++ From "benchmark_matrix/legacy.cpp" With "-O2 -DCRANE_BENCHMARK_FLAG=1",
-  OCaml From "benchmark_matrix/legacy.ml" With "-O2".
-
 (* Observationally different subjects must be rejected before Hyperfine runs.
    This is also a four-entry matrix, so the fake Hyperfine would accept it if
    output validation were accidentally skipped. *)
@@ -62,12 +54,3 @@ Fail Crane Benchmark
   BenchmarkMatrix.baseline As "same-label",
   BenchmarkMatrix.optimized As "same-label"
 On C++.
-
-Fail Crane Benchmark BenchmarkMatrix.baseline On
-  C++ From "benchmark_matrix/legacy.cpp",
-  C++.
-
-Fail Crane Benchmark
-  BenchmarkMatrix.baseline,
-  BenchmarkMatrix.optimized
-On C++ From "benchmark_matrix/legacy.cpp".

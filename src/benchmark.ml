@@ -3,10 +3,10 @@
 
 (** Implementation of the [Crane Benchmark] command.
 
-    The command validates Rocq subjects, materializes managed or legacy source
-    artifacts, compiles the subject/configuration matrix, checks observational
-    equivalence, and finally delegates timing to Hyperfine. Temporary artifacts
-    are scoped to a single command invocation. *)
+    The command validates Rocq subjects, extracts a source artifact per
+    subject/backend, compiles the subject/configuration matrix, checks
+    observational equivalence, and finally delegates timing to Hyperfine.
+    Temporary artifacts are scoped to a single command invocation. *)
 
 open Names
 open Libnames
@@ -25,8 +25,6 @@ type subject = {
 (** User-facing compiler configuration parsed after [On]. *)
 type configuration = {
   backend : backend;  (** Backend used for extraction and compilation. *)
-  source : string option;
-      (** Pre-extracted legacy source, or [None] for managed extraction. *)
   flags : string;  (** Compiler arguments in shell-like textual form. *)
 }
 
@@ -50,11 +48,6 @@ type compiled_benchmark = {
   compiled_description : string;  (** Human-readable subject/configuration. *)
   compiled_executable : string;  (** Temporary native executable path. *)
 }
-
-(** Source acquisition strategy shared by all configurations in one command. *)
-type mode =
-  | Managed  (** Crane creates source artifacts from each subject. *)
-  | Legacy  (** Every configuration names an existing source with [From]. *)
 
 (** Return the user-facing name of a backend. *)
 let backend_name = function OCaml -> "OCaml" | Cpp -> "C++"
@@ -151,30 +144,6 @@ let validate_unique_labels subjects =
   in
   loop [] subjects
 
-(** Validate a matrix's source mode and classify it as managed or legacy.
-
-    Managed and legacy configurations cannot be mixed. Legacy mode accepts only
-    a single subject because all configurations refer to pre-extracted code. *)
-let validate_mode subjects configurations =
-  let managed =
-    List.for_all
-      (fun configuration -> Option.is_empty configuration.source)
-      configurations
-  in
-  let has_managed =
-    List.exists
-      (fun configuration -> Option.is_empty configuration.source)
-      configurations
-  in
-  if (not managed) && has_managed then
-    benchmark_error
-      "Crane Benchmark cannot mix managed entries with legacy 'From' entries.";
-  if (not managed) && not (Int.equal (List.length subjects) 1) then
-    benchmark_error
-      "Legacy 'From' entries support exactly one benchmark subject. Remove \
-       'From' to benchmark multiple definitions with managed extraction.";
-  if managed then Managed else Legacy
-
 (** Return the exact C++ expression for Rocq's [tt] constructor under the
     currently active extraction mappings and renaming state. *)
 let cpp_unit () =
@@ -208,21 +177,6 @@ let split_last_label labels =
   in
   split [] labels
 
-(** Construct the best-effort qualified C++ name used by a legacy source file.
-
-    Legacy mode has no live extraction naming state, so the name is derived from
-    the reference's raw labels and Crane's reserved-identifier escaping. *)
-let raw_qualified_name reference =
-  let _, labels = Table.labels_of_ref reference in
-  let modules, term = split_last_label labels in
-  let modules =
-    List.map
-      (fun label ->
-        Table.escape_reserved_struct_name (Common.module_label_name label) )
-      modules
-  in
-  String.concat "::" (modules @ [Common.module_label_name term])
-
 (** Construct the qualified name emitted by Rocq's built-in OCaml extraction. *)
 let ocaml_callable reference =
   let _, labels = Table.labels_of_ref reference in
@@ -244,21 +198,6 @@ let ocaml_output expression =
     expression
   else
     "Pstring.to_string (" ^ expression ^ ")"
-
-(** Construct the conventional C++ [tt] expression used by legacy artifacts. *)
-let legacy_cpp_unit () =
-  match Table.resolve_tt_ctor () with
-  | Some tt when Table.is_custom tt -> Table.find_custom tt
-  | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
-    let unit_name =
-      String.capitalize_ascii
-        (Id.to_string
-           (Table.safe_basename_of_global (GlobRef.IndRef (kn, index))) )
-    in
-    unit_name ^ "::" ^ Table.enum_ctor_name_of_ref kn index constructor_index
-  | _ ->
-    CErrors.anomaly
-      Pp.(str "Crane Benchmark could not resolve Rocq's unit constructor.")
 
 (** Read all bytes from a source file and close the channel reliably. *)
 let read_file filename =
@@ -365,41 +304,6 @@ let materialize_managed ~opaque_access ~temp_dir subjects configurations =
     subjects
   |> List.flatten
 
-(** Resolve a legacy source relative to Crane's output directory and verify that
-    it exists. *)
-let resolve_legacy_source source =
-  let source =
-    if Filename.is_relative source then
-      Filename.concat (Table.output_directory ()) source
-    else
-      source
-  in
-  if not (Sys.file_exists source) then
-    benchmark_error ("Benchmark source file not found: " ^ source);
-  source
-
-(** Describe a pre-extracted source and the call expression needed by its
-    backend-specific driver. *)
-let legacy_artifact subject configuration =
-  let source =
-    match configuration.source with
-    | Some source -> resolve_legacy_source source
-    | None -> assert false
-  in
-  match configuration.backend with
-  | Cpp ->
-    {
-      artifact_source = source;
-      artifact_callable = raw_qualified_name subject.benchmark_ref;
-      artifact_unit = legacy_cpp_unit ();
-    }
-  | OCaml ->
-    {
-      artifact_source = source;
-      artifact_callable = ocaml_callable subject.benchmark_ref;
-      artifact_unit = "()";
-    }
-
 (** Build the display name used in compiler errors and Hyperfine output. *)
 let description subject configuration =
   subject.benchmark_label
@@ -502,9 +406,8 @@ let compile_artifact
   }
 
 (** Compile the Cartesian product of [subjects] and [configurations] in
-    subject-major order. Managed artifacts are looked up by subject/backend;
-    legacy artifacts are described directly from each configuration. *)
-let compile_matrix ~temp_dir ~mode ~artifacts subjects configurations =
+    subject-major order. Artifacts are looked up by subject/backend. *)
+let compile_matrix ~temp_dir ~artifacts subjects configurations =
   let configuration_count = List.length configurations in
   List.mapi
     (fun subject_index subject ->
@@ -514,9 +417,7 @@ let compile_matrix ~temp_dir ~mode ~artifacts subjects configurations =
             (subject_index * configuration_count) + configuration_index + 1
           in
           let artifact =
-            match mode with
-            | Managed -> List.assoc (subject_index, configuration.backend) artifacts
-            | Legacy -> legacy_artifact subject configuration
+            List.assoc (subject_index, configuration.backend) artifacts
           in
           compile_artifact
             ~temp_dir
@@ -636,28 +537,15 @@ let run ~opaque_access requested_subjects configurations =
     benchmark_error "Hyperfine is not available: cannot run benchmarks.";
   let subjects = List.map validate_subject requested_subjects in
   validate_unique_labels subjects;
-  let mode = validate_mode subjects configurations in
   let temp_dir = CUnix.mktemp_dir "crane_benchmark" "" in
   Fun.protect
     ~finally:(fun () -> remove_directory_tree temp_dir)
     (fun () ->
       let artifacts =
-        match mode with
-        | Managed ->
-          materialize_managed
-            ~opaque_access
-            ~temp_dir
-            subjects
-            configurations
-        | Legacy -> []
+        materialize_managed ~opaque_access ~temp_dir subjects configurations
       in
       let benchmarks =
-        compile_matrix
-          ~temp_dir
-          ~mode
-          ~artifacts
-          subjects
-          configurations
+        compile_matrix ~temp_dir ~artifacts subjects configurations
       in
       verify_outputs benchmarks;
       run_hyperfine benchmarks )

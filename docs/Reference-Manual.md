@@ -274,20 +274,6 @@ On
 This example builds four benchmarks. `baseline` and `optimized` must print
 exactly the same result in all four builds.
 
-### Legacy pre-extracted form
-
-The original single-function syntax remains available for existing files:
-
-```coq
-Crane Benchmark benchmark On
-  OCaml From "./benchmark.ml" With "-O3",
-  C++ From "./benchmark.cpp" With "-O3".
-```
-
-The `From` form accepts exactly one benchmark function, and it cannot be mixed
-with managed entries in the same command. New benchmarks should normally omit
-`From` and let Crane manage extraction and temporary build artifacts.
-
 ---
 
 ## `Crane Extract Skip`
