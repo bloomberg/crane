@@ -3,6 +3,7 @@
 
 #include <filesystem>
 #include <string>
+#include <system_error>
 
 struct Path {
   static std::string abs_path(std::string p);

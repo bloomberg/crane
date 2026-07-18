@@ -17,6 +17,27 @@ Inductive consoleE : Type -> Type :=
 | PrintEndline : string -> consoleE unit
 | GetLine : consoleE string.
 
+(**
+   Security note (CWE-22 / CWE-73).
+
+   [fileE] grants raw host filesystem authority: the path argument of
+   [ReadFile], [WriteFile], [AppendFile], [FileExists], and [RemoveFile] is
+   passed through to the underlying C++ filesystem call verbatim, so an
+   absolute path or a [..] traversal reaches whatever the generated process
+   can access. This is intentional -- these are general-purpose filesystem
+   effects with no single containment root, so path confinement is a policy
+   only the *embedding application* can define.
+
+   A program that exposes these effects to untrusted input MUST confine the
+   path before calling the effect (canonicalize and check containment under an
+   approved root, reject absolute paths and [..] where unsafe, and gate
+   destructive operations). The mappings themselves only guarantee that a
+   failed or malformed path degrades to a neutral result rather than crashing
+   the process (see [IO.v]); they do NOT restrict which paths are reachable.
+   For containment guarantees, use [tempFileE] (see [TempFileDefs.v]), whose
+   mappings reduce the caller prefix to a single filename component under the
+   system temporary directory.
+*)
 Inductive fileE : Type -> Type :=
 | ReadFile : string -> fileE string
 | WriteFile : string -> string -> fileE unit

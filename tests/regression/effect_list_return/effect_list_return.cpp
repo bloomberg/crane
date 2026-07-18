@@ -4,8 +4,13 @@
 List<std::string> EffectListReturn::list_files(std::string path) {
   return [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
-    for (const auto &entry : std::filesystem::directory_iterator(path)) {
-      result = List<std::string>::cons(entry.path().filename().string(),
+    std::error_code _ec;
+    std::size_t _count = 0;
+    std::filesystem::directory_iterator _it(std::filesystem::path(path), _ec),
+        _end;
+    for (; !_ec && _it != _end && _count < 65536;
+         _it.increment(_ec), ++_count) {
+      result = List<std::string>::cons(_it->path().filename().string(),
                                        std::move(result));
     }
     return result;
@@ -14,7 +19,11 @@ List<std::string> EffectListReturn::list_files(std::string path) {
 
 /// 2. create dir and verify
 bool EffectListReturn::make_and_check(std::string path) {
-  return std::filesystem::create_directories(std::filesystem::path(path));
+  return [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    return !_ec;
+  }();
 }
 
 /// 3. get_time result used in pair
@@ -30,18 +39,31 @@ std::pair<int64_t, std::string> EffectListReturn::timestamped_line() {
 
 /// 4. current_path as a no-arg effect
 std::string EffectListReturn::get_cwd() {
-  return std::filesystem::current_path().string();
+  return [&]() -> std::string {
+    std::error_code _ec;
+    auto _p = std::filesystem::current_path(_ec);
+    return _ec ? std::string{} : _p.string();
+  }();
 }
 
 /// 5. Chain effects with different return types
 std::pair<bool, List<std::string>>
 EffectListReturn::create_and_list(std::string dir) {
-  bool ok = std::filesystem::create_directories(std::filesystem::path(dir));
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(dir), _ec);
+    return !_ec;
+  }();
   if (ok) {
     List<std::string> files = [&]() -> List<std::string> {
       auto result = List<std::string>::nil();
-      for (const auto &entry : std::filesystem::directory_iterator(dir)) {
-        result = List<std::string>::cons(entry.path().filename().string(),
+      std::error_code _ec;
+      std::size_t _count = 0;
+      std::filesystem::directory_iterator _it(std::filesystem::path(dir), _ec),
+          _end;
+      for (; !_ec && _it != _end && _count < 65536;
+           _it.increment(_ec), ++_count) {
+        result = List<std::string>::cons(_it->path().filename().string(),
                                          std::move(result));
       }
       return result;

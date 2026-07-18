@@ -30,7 +30,10 @@ std::string ReadVariableCapture::read_variable(std::string path) {
 /// but that's a plain expression, not a lambda, so it works.
 /// This test is for read specifically.
 std::string ReadVariableCapture::read_and_check(std::string path) {
-  bool ok = std::filesystem::exists(std::filesystem::path(path));
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    return std::filesystem::exists(std::filesystem::path(path), _ec);
+  }();
   if (ok) {
     return [&]() -> std::string {
       std::ifstream file(path);

@@ -5,6 +5,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <variant>
 #include <vector>

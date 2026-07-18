@@ -29,7 +29,11 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
       return _p;
     }
   }();
-  bool _x0 = std::filesystem::create_directories(std::filesystem::path(tmp));
+  bool _x0 = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(tmp), _ec);
+    return !_ec;
+  }();
   setenv("LAST_TEMP"s.c_str(), tmp.c_str(), 1);
   std::cout << tmp << '\n';
   int64_t _x3 = static_cast<int64_t>(
@@ -41,7 +45,11 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
 
 /// 2. Match on bool from create_directory inside a chain
 std::string EffectWorkflow::conditional_create(std::string path) {
-  bool ok = std::filesystem::create_directories(std::filesystem::path(path));
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    return !_ec;
+  }();
   if (ok) {
     std::cout << "created"s << '\n';
     return path;
@@ -84,7 +92,11 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
     const std::string &v = *r;
     return v;
   } else {
-    bool _x = std::filesystem::create_directories(std::filesystem::path(path));
+    bool _x = [&]() -> bool {
+      std::error_code _ec;
+      std::filesystem::create_directories(std::filesystem::path(path), _ec);
+      return !_ec;
+    }();
     setenv(name.c_str(), path.c_str(), 1);
     return path;
   }

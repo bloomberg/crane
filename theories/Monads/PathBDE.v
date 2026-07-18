@@ -11,23 +11,31 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.BDE.
 From Crane Require Export Monads.PathDefs.
 
+(**
+   Safety: the [std::filesystem] path-normalization mappings use the
+   non-throwing [std::error_code] overload so an invalid or inaccessible path
+   degrades to the empty string rather than raising a [std::filesystem_error]
+   that terminates the generated process. The Rocq effects carry no error
+   channel (CWE-248 / CWE-755). The BDE predicate mappings
+   ([isDirectory]/[isRegularFile]) already report failure by return value.
+*)
 Crane Extract Inductive pathE => ""
-  [ "std::filesystem::canonical(std::filesystem::path(%a0)).string()"
-    "std::filesystem::relative(std::filesystem::path(%a0)).string()"
-    "std::filesystem::absolute(std::filesystem::path(%a0)).string()"
+  [ "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::canonical(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+    "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::relative(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+    "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::absolute(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
     "bdls::FilesystemUtil::isDirectory(%a0)"
     "bdls::FilesystemUtil::isRegularFile(%a0)" ]
-  From "filesystem" "bdls_filesystemutil.h".
+  From "filesystem" "system_error" "bdls_filesystemutil.h".
 
 Crane Extract Inlined Constant canonical =>
-  "std::filesystem::canonical(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::canonical(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant relative =>
-  "std::filesystem::relative(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::relative(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant absolute =>
-  "std::filesystem::absolute(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::absolute(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant is_directory =>
   "bdls::FilesystemUtil::isDirectory(%a0)"
   From "bdls_filesystemutil.h".
