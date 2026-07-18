@@ -5971,6 +5971,17 @@
   (deps deque_element_cast.t.exe)
   (action (run ./deque_element_cast.t.exe))))
 
+(subdir deque_empty_ops
+ (rule
+  (targets deque_empty_ops.t.exe)
+  (deps DequeEmptyOps.vo deque_empty_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_empty_ops.t.exe deque_empty_ops.cpp deque_empty_ops.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_empty_ops.t.exe)
+  (action (run ./deque_empty_ops.t.exe))))
+
 (subdir deque_action_mismatch
  (rule
   (targets deque_action_mismatch.t.exe)

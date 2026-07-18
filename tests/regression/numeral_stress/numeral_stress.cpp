@@ -21,5 +21,6 @@ bool NumeralStress::check_range(uint64_t n) {
 
 /// 10. Mixed nat and Z in one function
 int64_t NumeralStress::mixed_arith(uint64_t n) {
-  return (static_cast<int64_t>(n) + INT64_C(100));
+  return static_cast<int64_t>(static_cast<uint64_t>(static_cast<int64_t>(n)) +
+                              static_cast<uint64_t>(INT64_C(100)));
 }

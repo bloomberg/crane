@@ -21,6 +21,16 @@ Axiom length : string_view -> int.
 Axiom substr : string_view -> int -> int -> string_view.
 Axiom sv_get : string_view -> int -> char63.
 Axiom sv_at : string_view -> int -> char63.
+(* [sv_of_string] returns a NON-OWNING view: both the std and BDE mappings build
+   it from the source string's [data()]/[size()], so the returned view is only
+   valid while that source string is alive.  This is an inherent property of
+   [string_view] and cannot be enforced at the mapping level (a temporary and an
+   lvalue string share the same extraction template).  Callers MUST apply it to a
+   string that outlives the view -- never to a temporary such as the result of a
+   substring, concatenation, or function return -- or later reads through the
+   view are use-after-free (CWE-416).  When a temporary source is unavoidable,
+   bind it to a named [string] first, or keep the owning [string] and index into
+   it rather than converting to a view. *)
 Axiom sv_of_string : string -> string_view.
 Axiom contains : string_view -> char63 -> bool.
 
@@ -31,9 +41,16 @@ Axiom sv_eq_rel_equiv : equivalence string_view sv_eq_rel.
 Axiom empty_substr : forall sv i, empty (substr sv i 0) = true.
 Axiom empty_length : forall sv, empty sv = true <-> length sv = 0.
 Axiom length_of_string : forall s, length (sv_of_string s) = PrimString.length s.
+(* [i] and [j] are start/end indices: the slice is the half-open range
+   [[i, j)].  Both sides must therefore denote a slice of length [j - i].  The
+   view side already uses [sub j i]; [PrimString.sub] takes an (offset, length)
+   pair, so it must receive [sub j i] as its length -- passing [j] would make
+   the primitive side a length-[j] slice (e.g. "bcd" instead of "bc" for
+   s = "abcde", i = 1, j = 3), letting proofs about an end-index slice diverge
+   from the extracted code (CWE-682 / CWE-345). *)
 Axiom substr_of_string_comm : forall s i j, compare i j <> Gt
                               -> compare j (PrimString.length s) <> Gt
-                              -> substr (sv_of_string s) i (sub j i) = sv_of_string (PrimString.sub s i j).
+                              -> substr (sv_of_string s) i (sub j i) = sv_of_string (PrimString.sub s i (sub j i)).
 
 (* Axioms relating contains, sv_get, substr, and length *)
 

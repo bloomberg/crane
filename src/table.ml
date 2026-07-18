@@ -2575,8 +2575,56 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
     and non-Peano numeric types (e.g. N, Z).  For Peano types, S(S(..O))
     chains are folded.  For all types, digit-chain converters like
     [of_num_uint] are resolved and registered for large-literal folding. *)
+(* A numeral format is documented as a numeric-literal formatting directive, but
+   it is rendered by textual [%n] substitution and emitted verbatim as C++
+   ([CPPraw]).  Without a syntax guard a format could smuggle arbitrary C++
+   (statements, string/char literals, lambdas, comments, extra placeholders)
+   into generated code (CWE-94, source injection).  Restrict it to a numeric
+   literal wrapper: exactly one [%n] placeholder and, apart from that, only
+   characters that build a numeric literal or a wrapping macro/cast
+   ([INT64_C(%n)], [%nu], [static_cast<int64_t>(%n)], [mpz_class(%n)], ...).
+   The allowlist excludes the characters needed for statement, string, char,
+   comment, or lambda injection (semicolon, braces, quotes, backslash, slash,
+   brackets) while leaving every legitimate numeric format valid. *)
+let validate_numeral_fmt fmt =
+  let len = String.length fmt in
+  let rec count_placeholders i acc =
+    if i >= len then acc
+    else if fmt.[i] = '%' then
+      if i + 1 < len && fmt.[i + 1] = 'n' then
+        count_placeholders (i + 2) (acc + 1)
+      else
+        CErrors.user_err
+          (Pp.str
+             "Crane Extract Numeral: the only placeholder allowed in a format \
+              is %n")
+    else count_placeholders (i + 1) acc
+  in
+  if count_placeholders 0 0 <> 1 then
+    CErrors.user_err
+      (Pp.str
+         "Crane Extract Numeral: format must contain exactly one %n placeholder");
+  String.iter
+    (fun c ->
+      let ok =
+        (c >= 'A' && c <= 'Z')
+        || (c >= 'a' && c <= 'z')
+        || (c >= '0' && c <= '9')
+        || List.mem c
+             [ '%'; '_'; '('; ')'; '<'; '>'; ','; ':'; '+'; '-'; ' ' ]
+      in
+      if not ok then
+        CErrors.user_err
+          (Pp.str
+             (Printf.sprintf
+                "Crane Extract Numeral: format contains disallowed character \
+                 %C; only numeric-literal wrappers are permitted"
+                c)))
+    fmt
+
 let extract_numeral r fmt =
   check_inside_section ();
+  validate_numeral_fmt fmt;
   let g = Smartlocate.global_with_alias r in
   Dumpglob.add_glob ?loc:r.CAst.loc g;
   match g with

@@ -15210,6 +15210,17 @@ let gen_ind_header_v2
                   Id.to_string _alt_id ^ "->"
                   ^ Id.to_string field_id
                 in
+                (* This iterative drain replaces the naive recursive destructor,
+                   so cleanup of a deep deque-backed recursive value no longer
+                   overflows the call stack (the primary CWE-674 mitigation;
+                   regression: tests/regression/deque_deep_tree_stackoverflow).
+                   Residual tradeoff (CWE-400): the drain heap-allocates one
+                   [make_shared] wrapper per element, so under extreme memory
+                   pressure an allocation inside this (noexcept) destructor can
+                   still terminate the process.  Eliminating that would require
+                   an allocation-free intrusive worklist -- a larger redesign
+                   deferred here; bounded call-stack depth is the property that
+                   matters for the adversarial-depth attack. *)
                 if Table.is_custom list_g then
                   [Sif_then (
                     CPPbinop ("&&", fe,

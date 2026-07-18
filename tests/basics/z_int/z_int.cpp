@@ -1,14 +1,27 @@
 #include "z_int.h"
 
-int64_t ZIntTest::add_test(int64_t _x0, int64_t _x1) { return (_x0 + _x1); }
+int64_t ZIntTest::add_test(int64_t _x0, int64_t _x1) {
+  return static_cast<int64_t>(static_cast<uint64_t>(_x0) +
+                              static_cast<uint64_t>(_x1));
+}
 
-int64_t ZIntTest::mul_test(int64_t _x0, int64_t _x1) { return (_x0 * _x1); }
+int64_t ZIntTest::mul_test(int64_t _x0, int64_t _x1) {
+  return static_cast<int64_t>(static_cast<uint64_t>(_x0) *
+                              static_cast<uint64_t>(_x1));
+}
 
-int64_t ZIntTest::sub_test(int64_t _x0, int64_t _x1) { return (_x0 - _x1); }
+int64_t ZIntTest::sub_test(int64_t _x0, int64_t _x1) {
+  return static_cast<int64_t>(static_cast<uint64_t>(_x0) -
+                              static_cast<uint64_t>(_x1));
+}
 
-int64_t ZIntTest::abs_test(int64_t _x0) { return std::abs(_x0); }
+int64_t ZIntTest::abs_test(int64_t _x0) {
+  return (_x0 < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(_x0)) : _x0);
+}
 
-int64_t ZIntTest::opp_test(int64_t _x0) { return (-_x0); }
+int64_t ZIntTest::opp_test(int64_t _x0) {
+  return static_cast<int64_t>(-static_cast<uint64_t>(_x0));
+}
 
 bool ZIntTest::eqb_test(int64_t _x0, int64_t _x1) { return _x0 == _x1; }
 

@@ -28,8 +28,13 @@ Crane Extract Inlined Constant Datatypes.app =>
   "[&]() { auto _r = %a0; auto _s = %a1; _r.insert(_r.end(), _s.begin(), _s.end()); return _r; }()" From "deque".
 
 (** Higher-order list functions from the [List] module. *)
+(* Result element types are derived from the deque's [value_type] and a
+   [std::declval] of it, never from [%a1.front()]: on an empty deque [front()]
+   is undefined behaviour, and deriving a type from it (even in an unevaluated
+   [decltype]) reads as unsafe.  Using [value_type] keeps the inference total
+   regardless of whether the input deque is empty (CWE-476 / CWE-125). *)
 Crane Extract Inlined Constant List.map =>
-  "[&]() { std::deque<std::decay_t<decltype(%a0(%a1.front()))>> _r; for (const auto& _x : %a1) _r.push_back(%a0(_x)); return _r; }()" From "deque".
+  "[&]() { std::deque<std::decay_t<decltype(%a0(std::declval<typename std::decay_t<decltype(%a1)>::value_type&>()))>> _r; for (const auto& _x : %a1) _r.push_back(%a0(_x)); return _r; }()" From "deque" "utility" "type_traits".
 
 Crane Extract Inlined Constant List.rev =>
   "[&]() { auto _r = %a0; std::reverse(_r.begin(), _r.end()); return _r; }()" From "algorithm".
@@ -47,10 +52,10 @@ Crane Extract Inlined Constant List.forallb =>
   "[&]() { for (const auto& _x : %a1) if (!%a0(_x)) return false; return true; }()" From "deque".
 
 Crane Extract Inlined Constant List.flat_map =>
-  "[&]() { std::deque<typename std::decay_t<decltype(%a0(%a1.front()))>::value_type> _r; for (const auto& _x : %a1) { auto _s = %a0(_x); _r.insert(_r.end(), _s.begin(), _s.end()); } return _r; }()" From "deque".
+  "[&]() { std::deque<typename std::decay_t<decltype(%a0(std::declval<typename std::decay_t<decltype(%a1)>::value_type&>()))>::value_type> _r; for (const auto& _x : %a1) { auto _s = %a0(_x); _r.insert(_r.end(), _s.begin(), _s.end()); } return _r; }()" From "deque" "utility" "type_traits".
 
 Crane Extract Inlined Constant List.concat =>
-  "[&]() { std::deque<typename std::decay_t<decltype(%a0.front())>::value_type> _r; for (const auto& _s : %a0) _r.insert(_r.end(), _s.begin(), _s.end()); return _r; }()" From "deque".
+  "[&]() { std::deque<typename std::decay_t<decltype(%a0)>::value_type::value_type> _r; for (const auto& _s : %a0) _r.insert(_r.end(), _s.begin(), _s.end()); return _r; }()" From "deque" "type_traits".
 
 (** String <-> list conversions. *)
 Crane Extract Inlined Constant String.list_ascii_of_string =>

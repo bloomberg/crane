@@ -2,8 +2,11 @@
 
 int64_t BinInt::pow_pos(int64_t z, unsigned int _x0) {
   return Pos::template iter<int64_t>(
-      [=](int64_t _x0) mutable -> int64_t { return (z * _x0); }, INT64_C(1),
-      _x0);
+      [=](int64_t _x0) mutable -> int64_t {
+        return static_cast<int64_t>(static_cast<uint64_t>(z) *
+                                    static_cast<uint64_t>(_x0));
+      },
+      INT64_C(1), _x0);
 }
 
 Real PolygonWindingAreaTraceCase::hav(Real theta) {
