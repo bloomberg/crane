@@ -3015,7 +3015,13 @@ let pp_template_type = function
   | TTtypename -> str "typename"
   | TTtypename_default _ -> str "typename"
   | TTfun _ -> str "typename"
-  | TTconcept concept -> pp_global Type concept
+  | TTconcept (concept, []) -> pp_global Type concept
+  | TTconcept (_, _ :: _) ->
+    (* Multi-parameter concept: the constraint cannot be written inline
+       ([C _tcI0] would apply C to only one argument), so declare the
+       parameter as a plain [typename] and attach [requires C<_tcI0, …>]
+       via {!pp_requires_of_tparams}. *)
+    str "typename"
 
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =
@@ -3058,6 +3064,19 @@ let pp_requires_of_tparams tparams =
             ++ List.fold_left
                  (fun acc ty -> acc ++ str ", " ++ pp_ref ty)
                  (mt ()) dom
+            ++ str ">" )
+        | TTconcept (concept, (_ :: _ as args)) ->
+          (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
+             constrained parameter [id] is the first concept argument, the
+             kept type args follow.  Emitting this as a [requires] clause is
+             what enforces the Rocq typeclass interface at the use site
+             instead of an unconstrained [typename] (CWE-693 / CWE-345). *)
+          Some
+            ( pp_global Type concept ++ str "<"
+            ++ Id.print id
+            ++ List.fold_left
+                 (fun acc ty -> acc ++ str ", " ++ pp_type ty)
+                 (mt ()) args
             ++ str ">" )
         | _ -> None)
       tparams

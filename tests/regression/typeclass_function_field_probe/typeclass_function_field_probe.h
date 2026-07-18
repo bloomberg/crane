@@ -22,7 +22,9 @@ struct TypeclassFunctionFieldProbe {
 
   static_assert(HasEndo<boolEndo, Bool0>);
 
-  template <typename _tcI0, typename T1> static T1 use(const T1 &x) {
+  template <typename _tcI0, typename T1>
+    requires HasEndo<_tcI0, T1>
+  static T1 use(const T1 &x) {
     return _tcI0::endo(_tcI0::endo(x));
   }
 

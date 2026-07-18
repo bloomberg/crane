@@ -236,6 +236,14 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
       | ty -> pp_cpp_type false [] ty
     in
     if args = [] then
+      (* A nullary module value may be emitted either as a static data member
+         ([M::name]) or, inside a template where it becomes a Meyers singleton,
+         as a nullary accessor function ([M::name()]).  Which spelling a functor
+         body uses is decided later (by the [template_static_accessors] registry
+         and per-reference resolution) and is not reliably knowable here at
+         concept-generation time.  Accept BOTH forms so the concept never
+         rejects a module a generated body would in fact accept; the requirement
+         still enforces that the member exists with a convertible result type. *)
       let qualified_ret = qualify_type cpp_ret in
       str "requires ("
       ++ fnl ()
@@ -492,6 +500,45 @@ let rec get_concept_name_from_mt = function
   | MTwith (mt, _) -> get_concept_name_from_mt mt
   | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
   | MTsig _ -> None
+
+(** Render the [MTwith] refinements of a module type ([BASE with Definition t
+    := nat], [OUTER with Module Inner := NatInner]) as C++ [std::same_as<…>]
+    constraints.
+
+    A refined module type such as [NAT_BASE := BASE with Definition t := nat]
+    would otherwise be emitted as a bare alias [concept NAT_BASE = BASE<M>;],
+    silently dropping the [t := nat] equality so any module satisfying [BASE]
+    is accepted — including ones whose [t] is not [nat] (CWE-345 / CWE-807).
+    Emitting [std::same_as<typename M::t, uint64_t>] as an extra conjunct
+    restores that fixed-type / fixed-submodule requirement at the concept
+    boundary.  Returns the constraint documents (one per refinement); the
+    caller conjoins them onto the base concept. *)
+let collect_with_refinements mt =
+  let rec go acc = function
+    | MTwith (inner, ML_With_type (idl, _vl, typ)) ->
+      let path = String.concat "::" (List.map Id.to_string idl) in
+      let cpp = convert_ml_type_to_cpp_type (empty_env ()) [] typ in
+      let clause =
+        str (sn ()).same_as
+        ++ str "<typename M::"
+        ++ str path
+        ++ str ", "
+        ++ pp_cpp_type false [] cpp
+        ++ str ">"
+      in
+      go (clause :: acc) inner
+    | MTwith (inner, ML_With_module _) ->
+      (* [with Module Inner := Concrete] would need a [std::same_as<typename
+         M::Inner, Concrete>] check, but the concept is emitted at namespace
+         scope before the concrete module's struct is declared, so a forward
+         reference to it does not compile.  Leave the submodule refinement
+         unenforced (as before) rather than emit a broken constraint. *)
+      go acc inner
+    | _ -> acc
+  in
+  let clauses = go [] mt in
+  if clauses <> [] then require_header "concepts";
+  clauses
 
 (** Render a functor parameter as a C++ template parameter.
 
@@ -834,6 +881,11 @@ let rec pp_structure_elem ~is_header f = function
                     match get_base_concept m with
                     | Some base_kn ->
                       let base_name = pp_concept_ref base_kn in
+                      let refine_pp =
+                        prlist
+                          (fun c -> str " && " ++ c)
+                          (collect_with_refinements m)
+                      in
                       str "template<typename M>"
                       ++ fnl ()
                       ++ hov
@@ -842,7 +894,9 @@ let rec pp_structure_elem ~is_header f = function
                            ++ modtype_name
                            ++ str " = "
                            ++ base_name
-                           ++ str "<M>;" )
+                           ++ str "<M>"
+                           ++ refine_pp
+                           ++ str ";" )
                     | None ->
                       let old_hoisted = !hoisted_concept_defs in
                       hoisted_concept_defs := [];
@@ -1286,7 +1340,17 @@ let rec pp_structure_elem ~is_header f = function
         match get_base_concept m with
         | Some base_kn ->
           let base_name = pp_concept_ref base_kn in
-          hov 1 (str "concept " ++ name ++ str " = " ++ base_name ++ str "<M>;")
+          let refine_pp =
+            prlist (fun c -> str " && " ++ c) (collect_with_refinements m)
+          in
+          hov 1
+            ( str "concept "
+            ++ name
+            ++ str " = "
+            ++ base_name
+            ++ str "<M>"
+            ++ refine_pp
+            ++ str ";" )
         | None ->
           let old_hoisted = !hoisted_concept_defs in
           hoisted_concept_defs := [];

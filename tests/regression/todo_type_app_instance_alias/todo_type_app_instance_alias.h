@@ -15,7 +15,9 @@ struct TodoTypeAppInstanceAlias {
 
   static_assert(Boxed<natBoxed, uint64_t>);
 
-  template <typename _tcI0, typename T1> static T1 pick() {
+  template <typename _tcI0, typename T1>
+    requires Boxed<_tcI0, T1>
+  static T1 pick() {
     return _tcI0::boxed_default();
   }
 

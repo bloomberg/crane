@@ -248,6 +248,7 @@ struct STRefNat {
 };
 
 template <typename _tcI0, typename _tcI1, typename T1>
+  requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
 uint64_t fibst_repro(uint64_t n) {
   auto go_impl = [&](auto &, uint64_t x, uint64_t y, const T1 &,
                      const T1 &) -> uint64_t {

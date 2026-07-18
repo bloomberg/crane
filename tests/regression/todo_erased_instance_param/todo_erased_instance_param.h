@@ -15,7 +15,9 @@ struct TodoErasedInstanceParam {
 
   static_assert(Default<natDefault, uint64_t>);
 
-  template <typename _tcI0, typename T1> static T1 pick() {
+  template <typename _tcI0, typename T1>
+    requires Default<_tcI0, T1>
+  static T1 pick() {
     return _tcI0::def();
   }
 

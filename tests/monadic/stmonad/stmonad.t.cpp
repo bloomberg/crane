@@ -32,7 +32,7 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   // Test 1: newAndReadBoth returns (5, 6)
   {
-    auto result = STMonadTests::new_and_read_both_nat<STMonadTests::nat_idx, STMonadTests::nat_stref>();
+    auto result = STMonadTests::new_and_read_both_nat<STMonadTests::nat_stref, STMonadTests::nat_idx>();
     ASSERT(result.first == 5);
     ASSERT(result.second == 6);
     std::cout << "Test 1 (new_and_read_both_nat): (" << result.first << ", "
@@ -41,7 +41,7 @@ int main() {
 
   // Test 2: tree_simp returns 5
   {
-    auto result = STMonadTests::tree_simp_nat<STMonadTests::nat_idx, STMonadTests::nat_stref>();
+    auto result = STMonadTests::tree_simp_nat<STMonadTests::nat_stref, STMonadTests::nat_idx>();
     ASSERT(result == 5);
     std::cout << "Test 2 (tree_simp_nat): " << result << " PASSED"
               << std::endl;
@@ -57,7 +57,7 @@ int main() {
 
   // Test 4: newAndReadBoth returns (false, true)
   {
-    auto result = STMonadTests::new_and_read_both_bool<STMonadTests::nat_idx, STMonadTests::nat_stref>();
+    auto result = STMonadTests::new_and_read_both_bool<STMonadTests::nat_stref, STMonadTests::nat_idx>();
     ASSERT(result.first == false);
     ASSERT(result.second == true);
     std::cout << "Test 4 (new_and_read_both_bool): (" << result.first << ", "
@@ -66,7 +66,7 @@ int main() {
 
   // Test 5: tree_simp_bool returns true
   {
-    auto result =  STMonadTests::tree_simp_bool<STMonadTests::nat_idx, STMonadTests::nat_stref>();
+    auto result =  STMonadTests::tree_simp_bool<STMonadTests::nat_stref, STMonadTests::nat_idx>();
     ASSERT(result == true);
     std::cout << "Test 5 (tree_simp_bool): " << result << " PASSED"
               << std::endl;

@@ -11336,15 +11336,21 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         let instance_name = tc_instance_id tc_idx in
         let tt =
           match arg_ty with
-          | Tglob (r, _, _) ->
-            (* Only use inline concept constraint for unary concepts.
-               A concept is unary iff it has no kept type variables
-               (nb_sign_keeps = 0), so its only template param is I.
-               Multi-parameter concepts like [Numeric<I, t_A>] cannot
-               use inline syntax because the remaining type args aren't
-               available at the template-param declaration site. *)
+          | Tglob (r, type_args, _) ->
+            (* Unary concepts (nb_sign_keeps = 0) are expressed inline as
+               [Eq _tcI0].  Multi-parameter concepts like [Numeric<I, t_A>]
+               carry their kept type args so a [requires C<_tcI0, T1>] clause
+               can be emitted at the use site instead of silently degrading to
+               an unconstrained [typename] (CWE-693 / CWE-345). *)
             let nb_keeps = Table.get_ind_nb_sign_keeps r in
-            if nb_keeps = 0 then TTconcept r else TTtypename
+            if nb_keeps = 0 then TTconcept (r, [])
+            else
+              let type_arg_cpp =
+                List.map
+                  (convert_ml_type_to_cpp_type (empty_env ()) [])
+                  type_args
+              in
+              TTconcept (r, type_arg_cpp)
           | _ -> TTtypename
         in
         strip_outer_layers
@@ -11859,7 +11865,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         List.concat_map
           (fun (tt, tc_name) ->
             match tt with
-            | TTconcept class_ref_tc ->
+            | TTconcept (class_ref_tc, _) ->
               let tc_ip_vars = Table.get_ind_ip_vars class_ref_tc in
               let tc_nb_keeps = Table.get_ind_nb_sign_keeps class_ref_tc in
               let tc_promoted =
@@ -12629,7 +12635,8 @@ let gen_dfun n b cty ty temps =
               in
               let tt =
                 let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
-                if nb_keeps = 0 then TTconcept class_ref else TTtypename
+                if nb_keeps = 0 then TTconcept (class_ref, [])
+                else TTconcept (class_ref, type_arg_cpp)
               in
               ( tt,
                 instance_name,

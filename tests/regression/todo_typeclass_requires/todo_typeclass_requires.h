@@ -17,6 +17,7 @@ struct TodoTypeclassRequires {
   static_assert(Numeric<NatNumeric, uint64_t>);
 
   template <typename _tcI0, typename T1>
+    requires Numeric<_tcI0, T1>
   static uint64_t double_val(const T1 &x) {
     return (_tcI0::to_nat_val(x) + _tcI0::to_nat_val(x));
   }
