@@ -3568,6 +3568,27 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   match folded with
   | Some e -> e
   | None ->
+  (* Some custom-extracted inductives (e.g. [sum1], registered as
+     [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
+     erasure markers: their constructor template forwards the argument
+     completely unboxed, with no runtime wrapper type at all. For these, the
+     generic "erase Tvar-typed fields into std::any" logic below must NOT
+     fire, because there is no field storage to box into — the value must
+     stay exactly as it was produced. Wrapping it anyway makes the erased
+     [std::any] hold the argument's own (possibly unique closure) type
+     instead of whatever a downstream consumer expects inside that [std::any]
+     (e.g. [itree_vis] expects [std::function<std::any()>], not a bare
+     lambda), and the mismatched [std::any_cast] throws at runtime
+     (CWE-704, finding 44). *)
+  let is_passthrough_ctor_arg i =
+    match r with
+    | GlobRef.ConstructRef ((kn, mi), cidx) ->
+      ( try
+          let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
+          String.trim tmpl = Printf.sprintf "%%a%d" i
+        with _ -> false )
+    | _ -> false
+  in
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
      aliases (std::any) instead of template-qualified types.
 
@@ -3741,6 +3762,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       let result = match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
           (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+          | _ when is_passthrough_ctor_arg i -> result
           | Some Tany ->
             (match result with
             | CPPlambda _ -> result

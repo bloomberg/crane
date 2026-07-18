@@ -43,8 +43,12 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
     R run() {
         auto cur = this->shared_from_this();
         while (true) {
+            // Copy (not move) the payload: cur is reached via shared_ptr and
+            // observe() lets callers hold onto and re-run the same tree, so
+            // moving out of a shared node would corrupt it for later runs
+            // (finding 37, CWE-664).
             if (auto *r = std::get_if<Ret>(&cur->node))
-                return std::move(r->value);
+                return r->value;
             if (auto *t = std::get_if<Tau>(&cur->node)) {
                 cur = t->next;
                 continue;
