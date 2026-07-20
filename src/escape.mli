@@ -95,34 +95,6 @@ val infer_owned_params : int -> ml_ast -> bool list
     custom [prod]), NOT for shared_ptr-backed types ([list], cofix, etc.). *)
 val infer_sub_bindings_escape_params : int -> ml_ast -> bool list
 
-(** {2 Phase 2: reset/reuse optimization} *)
-
-(** [find_reuse_candidates scrutinee_type branches] identifies branches where
-    the result constructs a value of the same inductive type with the same
-    constructor arity as the matched pattern. When the scrutinee has use_count()
-    == 1, we can reuse its memory cell instead of allocating.
-
-    Returns: [(pv_idx, variant_idx, matched_ctor, arity, tail_ctor, tail_args)]
-    where [pv_idx] is the position in the pattern vector (for array access) and
-    [variant_idx] is the constructor's 0-based index in the C++ variant (for the
-    [use_count()==1 && v().index()==N] runtime check).
-
-    @param scrutinee_type the [ml_type] of the case scrutinee; used to check
-                          that each tail constructor rebuilds the same inductive
-    @param branches the pattern-vector branches of the [MLcase] expression
-    @return list of reuse candidates, one per qualifying branch, as tuples
-            [(pv_idx, variant_idx, matched_ctor, arity, tail_ctor, tail_args)]:
-            {ul {li [pv_idx] – 0-based index into the [branches] array}
-                {li [variant_idx] – 0-based C++ variant index of [matched_ctor]}
-                {li [matched_ctor] – the constructor tested in the pattern}
-                {li [arity] – number of fields (= length of [tail_args])}
-                {li [tail_ctor] – constructor built at the tail (equals [matched_ctor])}
-                {li [tail_args] – arguments passed to [tail_ctor]}} *)
-val find_reuse_candidates :
-  ml_type ->
-  ml_branch array ->
-  (int * int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
-
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)

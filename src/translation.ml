@@ -1721,9 +1721,6 @@ let stmts_reference_var_directly (target : Id.t) (stmts : cpp_stmt list) : bool 
       List.iter (fun br ->
         ve br.smb_scrutinee;
         List.iter ve br.smb_extra_conds;
-        ( match br.smb_reuse with
-        | Some (cond, _, stmts) -> ve cond; List.iter vs stmts
-        | None -> () );
         List.iter vs br.smb_body) branches;
       Option.iter (List.iter vs) default
   in
@@ -6681,7 +6678,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
          List.map (fun (n, ty, _is_uptr, used) -> (n, ty, used)) field_bindings
        else []);
     smb_extra_conds = [];
-    smb_reuse = None;
     smb_is_value_type = is_value_type;
     smb_is_owned = is_owned;
     smb_is_flat = is_flat;
@@ -6695,10 +6691,6 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     - {b Variant types}: generate an if/else-if chain using
       [std::holds_alternative] guards and [std::get] structured bindings
       ({!gen_match_branch}).
-    - {b Reuse optimization}: when the scrutinee is an owned [shared_ptr] with
-      [use_count() == 1] and a branch constructs a value of the same type/arity,
-      mutate the existing allocation in-place instead of allocating a new one
-      ({!Escape.find_reuse_candidates}).
 
     {b Type resolution.}  When the match type contains unresolved [Tvar]s,
     attempts to resolve them from [env_types] so that field types and
@@ -6860,18 +6852,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
       (CPPlambda ([], iife_ret_opt, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
-       and [std::get].  Produces an {!Smatch} node wrapped in
-       an IIFE.  When the scrutinee is an owned [shared_ptr] with reuse
-       candidates, a reuse branch is prepended with a
-       [use_count() == 1] guard. *)
-    let reuse_candidates = Escape.find_reuse_candidates typ pv in
+       and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
     let scrut_db =
       match t with
       | MLrel i -> Some i
       | MLmagic (MLrel i) -> Some i
       | _ -> None
     in
-    let is_coinductive = is_coinductive_type typ in
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
        its own scope); nested matches get the next name ([_m0], [_m1]). *)
@@ -6976,154 +6963,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | Ptuple _ -> gen_branches cs
     in
     let branches, wildcard = gen_branches (Array.to_list pv) in
-    (* Prepend a reuse branch when the scrutinee is an owned [shared_ptr]
-       with reuse candidates.  The branch checks
-       [holds_alternative<Ctor>(scrut->v()) && scrut.use_count() == 1],
-       then mutates the variant storage in place and returns the original
-       pointer — avoiding a fresh allocation. *)
-    let branches =
-      (* Reuse optimization only applies to shared_ptr types (coinductive).
-         Value types don't have reference counting. *)
-      if false && reuse_candidates <> [] && scrut_is_owned && not is_coinductive then
-        let tvars = get_current_type_vars () in
-        let pv_idx, variant_idx, matched_ctor, _arity, _tail_ctor, tail_args =
-          List.hd reuse_candidates
-        in
-        let reuse_ctor_struct_name = ctor_struct_name_of_ref matched_ctor in
-        let ids, _rty, _pat, body = pv.(pv_idx) in
-        (* Safety check: skip reuse if the scrutinee is referenced anywhere
-           in the branch body.
-
-           The reuse path [std::move]'s fields out of the scrutinee before
-           evaluating tail constructor arguments.  If any tail arg, prefix
-           [let]-binding RHS, or lambda capture references the scrutinee —
-           directly or through a function call — the moved-from fields
-           produce null dereferences ([reuse_use_after_move],
-           [reuse_fn_in_body], [reuse_lambda_capture]) or self-referential
-           cycles ([reuse_self_cycle]).
-
-           {!Escape.nb_occur_match} counts occurrences of a de Bruijn
-           index in a MiniML term.  In the branch body scope, pattern
-           variables occupy indices [1..n_pat_vars], so the scrutinee
-           sits at [db + n_pat_vars]. *)
-        let n_pat_vars = List.length ids in
-        let scrutinee_used_in_body =
-          match scrut_db with
-          | Some db -> Escape.nb_occur_match (db + n_pat_vars) body > 0
-          | None -> true
-        in
-        if scrutinee_used_in_body then branches
-        else
-        (* use_count() == 1 guard *)
-        let use_count_cond =
-          CPPbinop ("==",
-            CPPfun_call (CPPmember (scrut_expr, Id.of_string "use_count"), []),
-            CPPint 1)
-        in
-        (* Push pattern variables into the environment.  Wrap the entire
-           body generation in {!with_shifted_move_tracking} to shift
-           [move_owned_vars] and [move_dead_after] indices by [n_pat_vars].
-           This matches the index shift performed by the non-reuse path,
-           preventing parameter-level indices from colliding with
-           pattern-variable indices and causing spurious [std::move]s
-           ([reuse_move_shadow]). *)
-        let saved_env_types = tctx.env_types in
-        let rf_var = Id.of_string "_rf" in
-        let ids', env', dummies, extract_stmts, prefix_stmts, assign_stmts =
-          with_shifted_move_tracking n_pat_vars ~clear_dead:true (fun () ->
-        let ids', env', dummies = process_match_pattern_vars ids env in
-        (* Extract fields into local variables via [std::move(_rf.d_field)] *)
-        let rev_ids' = List.rev ids' in
-        let extract_stmts =
-          List.filter_map Fun.id
-            (List.mapi
-               (fun i (var_name, ml_ty) ->
-                 let cpp_ty =
-                   convert_ml_type_to_cpp_type env tvars ml_ty
-                 in
-                 if List.nth dummies i then
-                   let field_id =
-                     lookup_ctor_field_name reuse_ctor_struct_name i
-                   in
-                   Some
-                     (Sasgn
-                        ( var_name, Some cpp_ty,
-                          CPPmove (CPPmember (CPPvar rf_var, field_id)) ))
-                 else None )
-               rev_ids')
-        in
-        (* Walk through MLletin/MLmagic to reach the tail MLcons, generating
-           statements for each intermediate binding. *)
-        let rec gen_prefix_and_tail env' body =
-          match body with
-          | MLcons (_, _, _) -> ([], env')
-          | MLmagic a -> gen_prefix_and_tail env' a
-          | MLletin (x, t, a, b) ->
-            let x' = remove_prime_id (id_of_mlid x) in
-            let _, env'' = push_vars' [(x', t)] env' in
-            let afun v = Sasgn (x', None, v) in
-            let asgn = gen_stmts env' afun a in
-            push_env_types [(x', t)];
-            let letin_stmt =
-              match asgn with
-              | [Sasgn (x', None, e)] ->
-                [Sasgn (x', Some (convert_ml_type_to_cpp_type env tvars t), e)]
-              | _ ->
-                Sdecl (x', convert_ml_type_to_cpp_type env tvars t)
-                :: asgn
-            in
-            let rest, final_env = gen_prefix_and_tail env'' b in
-            (letin_stmt @ rest, final_env)
-          | _ -> ([], env')
-        in
-        let prefix_stmts, body_env = gen_prefix_and_tail env' body in
-        (* Assign new field values back.  Skip erased proof/type fields
-           ([MLdummy]) — their value is semantically irrelevant (the C++
-           type is [std::any]) and the field already holds a valid value
-           from the original construction. *)
-        let assign_stmts =
-          List.filter_map
-            (fun (i, tail_arg) ->
-              match tail_arg with
-              | MLdummy _ | MLmagic (MLdummy _) -> None
-              | _ ->
-                let field_id =
-                  lookup_ctor_field_name reuse_ctor_struct_name i
-                in
-                Some (Sassign_field (CPPvar rf_var, field_id,
-                        gen_expr body_env tail_arg)))
-            (List.mapi (fun i a -> (i, a)) tail_args)
-        in
-        (ids', env', dummies, extract_stmts, prefix_stmts, assign_stmts))
-        in
-        tctx.env_types <- saved_env_types;
-        (* Build reuse body: extract fields, prefix lets,
-           assign new values, return original pointer.
-           The [auto& _rf = std::get<Type>(scrut->v_mut())] binding is
-           emitted at print time using [smb_ctor_type], not baked into
-           the stmt list. *)
-        (* Skip reuse when there are no field assignments — the tail
-           constructor has the same fields as the matched one (typically a
-           zero-field constructor like Nil→Nil).  The use_count check would
-           be pure overhead since we're not actually mutating anything. *)
-        if assign_stmts = [] && extract_stmts = [] && prefix_stmts = [] then
-          branches
-        else
-          let needs_rf = assign_stmts <> [] in
-          let reuse_body =
-            extract_stmts @ prefix_stmts @ assign_stmts
-            @ [Sreturn (Some scrut_expr)]
-          in
-          List.mapi (fun i br ->
-            if i = pv_idx then
-              { br with smb_reuse = Some (use_count_cond,
-                  (if needs_rf then Some rf_var else None),
-                  reuse_body) }
-            else br
-          ) branches
-      else
-        branches
-    in
     (* Compute IIFE return type.  Void: [-> void] is required when the lambda
        may have no return statement.  Function-typed ([Tfun _]): emit the
        explicit [std::function<R(A...)>] type so that branches returning

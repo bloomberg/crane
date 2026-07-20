@@ -221,12 +221,6 @@ and smatch_branch = {
           Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
       (** Additional [&&]-joined conditions. *)
-  smb_reuse : (cpp_expr * Id.t option * cpp_stmt list) option;
-      (** When [Some (cond, rf_var, body)], the branch has a reuse fast-path.
-          When [rf_var = Some id], the printer emits
-          [auto& id = std::get<smb_ctor_type>(scrut->v_mut())] before the body.
-          Typically [cond = use_count() == 1].  [None] for branches without
-          reuse. *)
   smb_is_value_type : bool;
       (** When [true], the scrutinee is a value type (not shared_ptr). *)
   smb_is_owned : bool;

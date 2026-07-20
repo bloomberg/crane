@@ -217,13 +217,6 @@ and smatch_branch = {
         Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
     (** Additional [&&]-joined conditions after the primary check. *)
-  smb_reuse : (cpp_expr * Id.t option * cpp_stmt list) option;
-    (** When [Some (cond, rf_var, body)], the branch has a reuse fast-path:
-        the printer emits [if (cond) { get_ref; body } else { bindings; normal }]
-        inside the [holds_alternative] block.  When [rf_var = Some id], the
-        printer emits [auto& id = std::get<smb_ctor_type>(scrut->v_mut())]
-        before the body.  The condition is typically [use_count() == 1].
-        [None] for branches without reuse. *)
   smb_is_value_type : bool;
     (** When [true], the scrutinee is a value type (not shared_ptr).
         Affects binding style: value types use [.v()] / [.v_mut()],
@@ -562,9 +555,6 @@ let map_stmt
               smb_field_bindings =
                 List.map (fun (id, ty, u) -> (id, ft ty, u)) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
-              smb_reuse =
-                Option.map (fun (cond, rf, stmts) ->
-                  (fe cond, rf, List.map fs stmts)) br.smb_reuse;
               smb_is_value_type = br.smb_is_value_type;
               smb_is_owned = br.smb_is_owned;
               smb_is_flat = br.smb_is_flat;
@@ -638,9 +628,6 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
     List.iter (fun br ->
       on_expr br.smb_scrutinee;
       List.iter on_expr br.smb_extra_conds;
-      ( match br.smb_reuse with
-      | Some (cond, _, stmts) -> on_expr cond; on_stmts stmts
-      | None -> () );
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
 
@@ -707,10 +694,6 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
       List.fold_left (fun a br ->
         let a = on_expr a br.smb_scrutinee in
         let a = List.fold_left on_expr a br.smb_extra_conds in
-        let a = match br.smb_reuse with
-          | Some (cond, _, stmts) -> on_stmts (on_expr a cond) stmts
-          | None -> a
-        in
         on_stmts a br.smb_body) acc branches
     in
     (match default with None -> acc | Some d -> on_stmts acc d)

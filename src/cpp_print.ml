@@ -252,13 +252,6 @@ let lambda_needs_capture
             let acc =
               List.fold_left collect_from_expr acc br.smb_extra_conds
             in
-            let acc =
-              match br.smb_reuse with
-              | Some (cond, _, stmts) ->
-                List.fold_left
-                  collect_from_stmt (collect_from_expr acc cond) stmts
-              | None -> acc
-            in
             let refs', decls' = acc in
             let branch_decls =
               let d =
@@ -1430,20 +1423,17 @@ and pp_cpp_expr env args t =
         [] )
     when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
             Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
-            + a return-only wildcard; no structured bindings, no extra conditions,
-            no reuse paths. *)
+            + a return-only wildcard; no structured bindings, no extra conditions. *)
       ( match branches, wildcard with
       | [br1; br2], None ->
         br1.smb_field_bindings = [] && br2.smb_field_bindings = []
         && br1.smb_extra_conds = [] && br2.smb_extra_conds = []
-        && br1.smb_reuse = None && br2.smb_reuse = None
         && ( match br1.smb_body, br2.smb_body with
              | [Sreturn (Some _)], [Sreturn (Some _)] -> true
              | _ -> false )
       | [br1], Some [Sreturn (Some _)] ->
         br1.smb_field_bindings = []
         && br1.smb_extra_conds = []
-        && br1.smb_reuse = None
         && ( match br1.smb_body with
              | [Sreturn (Some _)] -> true
              | _ -> false )
@@ -2410,7 +2400,7 @@ and pp_cpp_stmt env args = function
       else
         name ^ (if is_owned then "->v_mut()" else "->v()")
     in
-    let scrut_binding_pp, scrut_var_pp, scrut_obj_pp =
+    let scrut_binding_pp, scrut_var_pp, _scrut_obj_pp =
       match scrut_obj_opt with
       | Some (CPPvar id) ->
         let name = Id.to_string id in
@@ -2450,35 +2440,10 @@ and pp_cpp_stmt env args = function
       in
       let binding = pp_block_binding scrut_var_pp br in
       let normal_body_pp = pp_list_stmt (pp_cpp_stmt env args) br.smb_body in
-      (* When the branch has a reuse fast-path, nest the use_count check
-         inside the holds_alternative block:
-           if (holds_alternative<Ctor>(scrut)) {
-             if (use_count_cond) { reuse_body }
-             else { bindings; normal_body }
-           } *)
       let body_pp =
-        match br.smb_reuse with
-        | Some (cond, rf_var, reuse_body) ->
-          let rf_binding = match rf_var with
-            | Some id ->
-              str "auto& " ++ Id.print id ++ str " = "
-              ++ str (sn ()).get ++ str "<"
-              ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
-              ++ scrut_obj_pp ++ str "->v_mut());" ++ fnl ()
-            | None -> mt ()
-          in
-          let reuse_pp = pp_list_stmt (pp_cpp_stmt env args) reuse_body in
-          str "if (" ++ pp_cpp_expr env args cond ++ str ") {"
-          ++ fnl () ++ rf_binding ++ reuse_pp
-          ++ str "} else {" ++ fnl ()
-          ++ ( if binding = mt () then mt ()
-               else binding ++ fnl () )
-          ++ normal_body_pp
-          ++ str "}" ++ fnl ()
-        | None ->
-          ( if binding = mt () then mt ()
-            else binding ++ fnl () )
-          ++ normal_body_pp
+        ( if binding = mt () then mt ()
+          else binding ++ fnl () )
+        ++ normal_body_pp
       in
       if is_last_no_wild then
         str "} else {" ++ fnl () ++ body_pp
