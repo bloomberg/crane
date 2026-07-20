@@ -126,8 +126,13 @@ struct NumeralStress {
   static inline const uint64_t test_count =
       count_from(UINT64_C(100), UINT64_C(50));
   /// 7. Z arithmetic with literals
-  static inline const int64_t z_complex =
-      ((INT64_C(100) * INT64_C(200)) + (INT64_C(50) - INT64_C(25)));
+  static inline const int64_t z_complex = static_cast<int64_t>(
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(100)) *
+                               static_cast<uint64_t>(INT64_C(200)))) +
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(50)) -
+                               static_cast<uint64_t>(INT64_C(25)))));
 
   /// 8. Multiple numerals in one record
   struct point {

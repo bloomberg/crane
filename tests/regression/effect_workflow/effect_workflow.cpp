@@ -7,14 +7,33 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
   std::string tmp = [&]() -> std::string {
-    auto p = std::filesystem::temp_directory_path() / (prefix + "XXXXXX");
-    std::string s = p.string();
-    int fd = mkstemp(s.data());
-    if (fd >= 0)
-      ::close(fd);
-    return s;
+    std::string _n = std::filesystem::path(prefix).filename().string();
+    if (_n.empty() || _n == "." || _n == "..")
+      _n = "tmp";
+    std::filesystem::path _base = std::filesystem::temp_directory_path();
+    std::random_device _rng;
+    for (;;) {
+      std::string _d =
+          (_base / (_n + std::to_string(_rng()) + std::to_string(_rng())))
+              .string();
+      if (::mkdir(_d.c_str(), 0700) != 0) {
+        if (errno == EEXIST)
+          continue;
+        throw std::runtime_error("crane: failed to create temporary directory");
+      }
+      std::string _p = _d + "/" + _n;
+      int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+      if (_fd < 0)
+        throw std::runtime_error("crane: failed to create temporary file");
+      ::close(_fd);
+      return _p;
+    }
   }();
-  bool _x0 = std::filesystem::create_directories(std::filesystem::path(tmp));
+  bool _x0 = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(tmp), _ec);
+    return !_ec;
+  }();
   setenv("LAST_TEMP"s.c_str(), tmp.c_str(), 1);
   std::cout << tmp << '\n';
   int64_t _x3 = static_cast<int64_t>(
@@ -26,7 +45,11 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
 
 /// 2. Match on bool from create_directory inside a chain
 std::string EffectWorkflow::conditional_create(std::string path) {
-  bool ok = std::filesystem::create_directories(std::filesystem::path(path));
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    return !_ec;
+  }();
   if (ok) {
     std::cout << "created"s << '\n';
     return path;
@@ -69,7 +92,11 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
     const std::string &v = *r;
     return v;
   } else {
-    bool _x = std::filesystem::create_directories(std::filesystem::path(path));
+    bool _x = [&]() -> bool {
+      std::error_code _ec;
+      std::filesystem::create_directories(std::filesystem::path(path), _ec);
+      return !_ec;
+    }();
     setenv(name.c_str(), path.c_str(), 1);
     return path;
   }

@@ -207,6 +207,7 @@ template <typename A> struct DirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
 bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
   return _tcI0::eqb(e.edge_from, a);
 }
@@ -217,7 +218,9 @@ template <typename A> struct Directed {
   List<DirectedEdge<A>> directed_edges;
 };
 
-template <typename _tcI0, typename T1> struct DirectedGraph {
+template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
+struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
   static Directed<std::any> empty() {
@@ -252,6 +255,7 @@ template <typename A> struct UndirectedEdge {
 };
 
 template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
 bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
   return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
 }
@@ -261,7 +265,9 @@ template <typename A> struct Undirected {
   List<UndirectedEdge<A>> undirected_edges;
 };
 
-template <typename _tcI0, typename T1> struct UndirectedGraph {
+template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
+struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
   static Undirected<std::any> empty() {
@@ -299,7 +305,9 @@ struct NatEq {
 
 static_assert(Eq<NatEq, Nat>);
 
-template <typename _tcI0, typename T1> bool test_eq(const T1 &x, const T1 &y) {
+template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
+bool test_eq(const T1 &x, const T1 &y) {
   return _tcI0::eqb(x, y);
 }
 

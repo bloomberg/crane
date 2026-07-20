@@ -2,7 +2,6 @@
 #define INCLUDED_Z_INT
 
 #include <cstdint>
-#include <cstdlib>
 
 struct ZIntTest {
   static int64_t add_test(int64_t _x0, int64_t _x1);

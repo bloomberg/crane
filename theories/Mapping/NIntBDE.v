@@ -8,6 +8,15 @@ From Stdlib Require Import BinNat BinPos.
 
     Maps [positive] to [unsigned int] and [N] to [unsigned int].
     All [N] and [Pos] operations become native C++ arithmetic.
+
+    WARNING (prototyping only): [unsigned int] is fixed-width, whereas Rocq's
+    [positive] and [N] are unbounded. Addition, multiplication, successor,
+    doubling, and numeral extraction wrap modulo 2^32 once a value exceeds
+    [UINT_MAX], and conversions truncate — silently diverging from the proof
+    model (CWE-190/CWE-681). Use this mapping only for testing/prototyping where
+    values are provably in range; for security-sensitive or unbounded arithmetic
+    use the arbitrary-precision GMP mappings ([Mapping.NGMP], [Mapping.ZGMP])
+    instead.
 *)
 
 (* positive: strictly positive binary integers *)

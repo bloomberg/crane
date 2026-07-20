@@ -151,6 +151,6 @@ Definition sample_centroid_winding_gt_half : bool :=
 End PolygonWindingAreaTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.NatIntStd Mapping.Real.
+From Crane Require Mapping.NatIntStd Mapping.ZInt Mapping.Real.
 
 Crane Extraction "polygon_winding_area_trace" PolygonWindingAreaTraceCase.

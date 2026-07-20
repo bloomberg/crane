@@ -636,3 +636,14 @@
   (alias runtest)
   (deps z_int.t.exe)
   (action (run ./z_int.t.exe))))
+
+(subdir string_get_bounds
+ (rule
+  (targets string_get_bounds.t.exe)
+  (deps StringGetBounds.vo string_get_bounds.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_get_bounds.t.exe string_get_bounds.cpp string_get_bounds.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_get_bounds.t.exe)
+  (action (run ./string_get_bounds.t.exe))))

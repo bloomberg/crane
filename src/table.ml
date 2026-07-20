@@ -1331,6 +1331,35 @@ let output_directory_for_module () =
     | _ -> base_dir
   with _ -> base_dir
 
+(** Reject a user-supplied extraction target filename that could place generated
+    files outside the configured output directory.
+
+    A monolithic extraction target such as [Crane Extraction "f" M] flows
+    directly into the [.h]/[.cpp] output paths. Allowing an absolute path or a
+    [..] component would let a malicious Rocq source create or overwrite files
+    anywhere the extracting user can write (CWE-22/CWE-73). We therefore reject
+    absolute paths and any parent-directory component outright; ordinary
+    relative subpaths (e.g. ["sub/name"]) remain allowed and, being relative and
+    free of [..], are guaranteed to stay under the output directory. *)
+let validate_output_target target =
+  if not (Filename.is_relative target) then
+    CErrors.user_err
+      Pp.(
+        strbrk
+          "Crane extraction target must be a relative path within the output \
+           directory, but got an absolute path: "
+        ++ str target );
+  if
+    List.exists
+      (fun component -> String.equal component Filename.parent_dir_name)
+      (String.split_on_char '/' target)
+  then
+    CErrors.user_err
+      Pp.(
+        strbrk
+          "Crane extraction target must not contain a '..' path component: "
+        ++ str target )
+
 (** {2 Crane Extraction AccessOpaque} *)
 
 let access_opaque = my_bool_option "AccessOpaque" true
@@ -1879,7 +1908,38 @@ let reset_used_custom_imports () = used_refs := Refset'.empty
 
 let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
 
-let add_custom r ids s = customs := Refmap'.add r (ids, s) !customs
+(* Fires when a global already has a Crane extraction mapping and a *different*
+   one is registered on top of it -- almost always the symptom of importing two
+   overlapping [Mapping.*] modules (e.g. an int-backed and a GMP-backed flavor of
+   [Z]), where the last import silently wins.  Identical re-registration (the
+   same target reached through a transitive import) is not reported. *)
+let warn_overlapping_mapping =
+  CWarnings.create
+    ~name:"crane-overlapping-mapping"
+    ~category:CWarnings.CoreCategories.extraction
+    (fun (r, old_s, new_s) ->
+      let one_line s =
+        String.concat " " (String.split_on_char '\n' s)
+      in
+      let trunc s =
+        let s = one_line s in
+        if String.length s <= 50 then s else String.sub s 0 50 ^ "..."
+      in
+      strbrk "Crane: the extraction mapping for "
+      ++ safe_pr_global r
+      ++ strbrk " is being overridden (was \""
+      ++ str (trunc old_s)
+      ++ strbrk "\", now \""
+      ++ str (trunc new_s)
+      ++ strbrk "\"). The later mapping wins; this usually means two overlapping "
+      ++ strbrk "Mapping modules were imported together.")
+
+let add_custom r ids s =
+  (match Refmap'.find_opt r !customs with
+  | Some (_old_ids, old_s) when not (String.equal old_s s) ->
+    warn_overlapping_mapping (r, old_s, s)
+  | _ -> ());
+  customs := Refmap'.add r (ids, s) !customs
 
 let is_custom r = Refmap'.mem r !customs
 
@@ -2546,8 +2606,56 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
     and non-Peano numeric types (e.g. N, Z).  For Peano types, S(S(..O))
     chains are folded.  For all types, digit-chain converters like
     [of_num_uint] are resolved and registered for large-literal folding. *)
+(* A numeral format is documented as a numeric-literal formatting directive, but
+   it is rendered by textual [%n] substitution and emitted verbatim as C++
+   ([CPPraw]).  Without a syntax guard a format could smuggle arbitrary C++
+   (statements, string/char literals, lambdas, comments, extra placeholders)
+   into generated code (CWE-94, source injection).  Restrict it to a numeric
+   literal wrapper: exactly one [%n] placeholder and, apart from that, only
+   characters that build a numeric literal or a wrapping macro/cast
+   ([INT64_C(%n)], [%nu], [static_cast<int64_t>(%n)], [mpz_class(%n)], ...).
+   The allowlist excludes the characters needed for statement, string, char,
+   comment, or lambda injection (semicolon, braces, quotes, backslash, slash,
+   brackets) while leaving every legitimate numeric format valid. *)
+let validate_numeral_fmt fmt =
+  let len = String.length fmt in
+  let rec count_placeholders i acc =
+    if i >= len then acc
+    else if fmt.[i] = '%' then
+      if i + 1 < len && fmt.[i + 1] = 'n' then
+        count_placeholders (i + 2) (acc + 1)
+      else
+        CErrors.user_err
+          (Pp.str
+             "Crane Extract Numeral: the only placeholder allowed in a format \
+              is %n")
+    else count_placeholders (i + 1) acc
+  in
+  if count_placeholders 0 0 <> 1 then
+    CErrors.user_err
+      (Pp.str
+         "Crane Extract Numeral: format must contain exactly one %n placeholder");
+  String.iter
+    (fun c ->
+      let ok =
+        (c >= 'A' && c <= 'Z')
+        || (c >= 'a' && c <= 'z')
+        || (c >= '0' && c <= '9')
+        || List.mem c
+             [ '%'; '_'; '('; ')'; '<'; '>'; ','; ':'; '+'; '-'; ' ' ]
+      in
+      if not ok then
+        CErrors.user_err
+          (Pp.str
+             (Printf.sprintf
+                "Crane Extract Numeral: format contains disallowed character \
+                 %C; only numeric-literal wrappers are permitted"
+                c)))
+    fmt
+
 let extract_numeral r fmt =
   check_inside_section ();
+  validate_numeral_fmt fmt;
   let g = Smartlocate.global_with_alias r in
   Dumpglob.add_glob ?loc:r.CAst.loc g;
   match g with

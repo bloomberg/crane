@@ -34,6 +34,20 @@
   (deps benchmark_matrix.t.exe)
   (action (run ./benchmark_matrix.t.exe))))
 
+(subdir extraction_path_traversal
+ ; Security regression: the assertions run while the .vo is built (Fail commands
+ ; reject path-traversal extraction targets). The .t.cpp is a shim so the
+ ; standard test runner still sees and depends on the fixture.
+ (rule
+  (targets extraction_path_traversal.t.exe)
+  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp)
+  (action
+   (run clang++ -std=c++23 -o extraction_path_traversal.t.exe extraction_path_traversal.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps extraction_path_traversal.t.exe)
+  (action (run ./extraction_path_traversal.t.exe))))
+
 (subdir any_cast_nested
  (rule
   (targets any_cast_nested.t.exe)
@@ -275,6 +289,17 @@
   (alias runtest)
   (deps record_defaults.t.exe)
   (action (run ./record_defaults.t.exe))))
+
+(subdir real_floor_guard
+ (rule
+  (targets real_floor_guard.t.exe)
+  (deps RealFloorGuard.vo real_floor_guard.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} real_floor_guard.t.exe real_floor_guard.cpp real_floor_guard.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps real_floor_guard.t.exe)
+  (action (run ./real_floor_guard.t.exe))))
 
 (subdir setoid_rw
  (rule
@@ -3590,6 +3615,17 @@
   (deps loopify_coind_stream.t.exe)
   (action (run ./loopify_coind_stream.t.exe))))
 
+(subdir itree_invariants
+ (rule
+  (targets itree_invariants.t.exe)
+  (deps ItreeInvariants.vo itree_invariants.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_invariants.t.exe itree_invariants.cpp itree_invariants.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_invariants.t.exe)
+  (action (run ./itree_invariants.t.exe))))
+
 (subdir loopify_itree_reified
  (rule
   (targets loopify_itree_reified.t.exe)
@@ -5956,6 +5992,17 @@
   (alias runtest)
   (deps deque_element_cast.t.exe)
   (action (run ./deque_element_cast.t.exe))))
+
+(subdir deque_empty_ops
+ (rule
+  (targets deque_empty_ops.t.exe)
+  (deps DequeEmptyOps.vo deque_empty_ops.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deque_empty_ops.t.exe deque_empty_ops.cpp deque_empty_ops.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deque_empty_ops.t.exe)
+  (action (run ./deque_empty_ops.t.exe))))
 
 (subdir deque_action_mismatch
  (rule

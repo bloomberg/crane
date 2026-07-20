@@ -5,6 +5,26 @@
 // inspected.  R is the result type (use void for effectful computations
 // that produce no value).  Tau is intentionally omitted -- it is a
 // coinductive guardedness marker with no runtime meaning.
+//
+// Invariants (enforced here so host/generated code cannot forge invalid
+// nodes):
+//   * Nodes are only constructible through the ret/tau/vis factories, which
+//     return a std::shared_ptr.  The constructor takes a private passkey, so
+//     external code cannot build a node from a hand-crafted variant or stack
+//     allocate one (a stack ITree would make shared_from_this throw)
+//     (CWE-665 / CWE-476, finding 132).
+//   * A Tau's next pointer and a Vis continuation's result are never null:
+//     the factories reject a null argument up front and run() rechecks the
+//     continuation result before dereferencing it (finding 132).
+//   * run() keeps the current node alive for the whole loop via
+//     shared_from_this -- including the void specialization, which must not
+//     fabricate a non-owning alias of [this] that an effect could outlive
+//     (CWE-416, finding 86).
+//
+// run() intentionally has no step budget: an itree is coinductive and may be
+// legitimately infinite, so bounding it here would be wrong.  A caller that
+// needs to stop a divergent computation controls that at its own effect
+// boundary.
 
 #ifndef INCLUDED_CRANE_ITREE
 #define INCLUDED_CRANE_ITREE
@@ -12,6 +32,7 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <variant>
 
@@ -26,32 +47,54 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
     using variant_t = std::variant<Ret, Tau, Vis>;
     variant_t node;
 
-    explicit ITree(variant_t n) : node(std::move(n)) {}
+  private:
+    // Passkey: only ITree's own factories can name it, so the public
+    // constructor cannot be called from outside despite make_shared needing it.
+    struct Private { explicit Private() = default; };
+
+  public:
+    ITree(Private, variant_t n) : node(std::move(n)) {}
 
     static std::shared_ptr<ITree<R>> ret(R value) {
-        return std::make_shared<ITree<R>>(Ret{std::move(value)});
+        return std::make_shared<ITree<R>>(Private{}, Ret{std::move(value)});
     }
     static std::shared_ptr<ITree<R>> tau(std::shared_ptr<ITree<R>> next) {
-        return std::make_shared<ITree<R>>(Tau{std::move(next)});
+        if (!next)
+            throw std::invalid_argument("crane: ITree::tau given a null next");
+        return std::make_shared<ITree<R>>(Private{}, Tau{std::move(next)});
     }
     static std::shared_ptr<ITree<R>> vis(
         std::function<std::any()> effect,
         std::function<std::shared_ptr<ITree<R>>(std::any)> cont) {
-        return std::make_shared<ITree<R>>(Vis{std::move(effect), std::move(cont)});
+        if (!effect || !cont)
+            throw std::invalid_argument("crane: ITree::vis given a null effect or continuation");
+        return std::make_shared<ITree<R>>(Private{}, Vis{std::move(effect), std::move(cont)});
     }
 
     R run() {
+        // Hold an owning reference to the current node for the whole loop:
+        // effects and continuations may drop every other owner, so a
+        // non-owning alias would dangle (finding 86).
         auto cur = this->shared_from_this();
         while (true) {
+            // Copy (not move) the payload: cur is reached via shared_ptr and
+            // observe() lets callers hold onto and re-run the same tree, so
+            // moving out of a shared node would corrupt it for later runs
+            // (finding 37, CWE-664).
             if (auto *r = std::get_if<Ret>(&cur->node))
-                return std::move(r->value);
+                return r->value;
             if (auto *t = std::get_if<Tau>(&cur->node)) {
+                if (!t->next)
+                    throw std::runtime_error("crane: ITree Tau has a null next");
                 cur = t->next;
                 continue;
             }
             auto &v = std::get<Vis>(cur->node);
             std::any response = v.effect();
-            cur = v.cont(std::move(response));
+            auto next = v.cont(std::move(response));
+            if (!next)
+                throw std::runtime_error("crane: ITree Vis continuation returned null");
+            cur = std::move(next);
         }
     }
     const variant_t &observe() const { return node; }
@@ -59,7 +102,7 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
 
 // Void specialization (Ret holds nothing).
 template <>
-struct ITree<void> {
+struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
     struct Ret { std::monostate value = {}; };
     struct Tau { std::shared_ptr<ITree<void>> next; };
     struct Vis {
@@ -69,37 +112,50 @@ struct ITree<void> {
     using variant_t = std::variant<Ret, Tau, Vis>;
     variant_t node;
 
-    explicit ITree(variant_t n) : node(std::move(n)) {}
+  private:
+    struct Private { explicit Private() = default; };
+
+  public:
+    ITree(Private, variant_t n) : node(std::move(n)) {}
 
     static std::shared_ptr<ITree<void>> ret() {
-        return std::make_shared<ITree<void>>(Ret{});
+        return std::make_shared<ITree<void>>(Private{}, Ret{});
     }
     static std::shared_ptr<ITree<void>> ret(std::monostate) {
-        return std::make_shared<ITree<void>>(Ret{});
+        return std::make_shared<ITree<void>>(Private{}, Ret{});
     }
     static std::shared_ptr<ITree<void>> tau(std::shared_ptr<ITree<void>> next) {
-        return std::make_shared<ITree<void>>(Tau{std::move(next)});
+        if (!next)
+            throw std::invalid_argument("crane: ITree::tau given a null next");
+        return std::make_shared<ITree<void>>(Private{}, Tau{std::move(next)});
     }
     static std::shared_ptr<ITree<void>> vis(
         std::function<std::any()> effect,
         std::function<std::shared_ptr<ITree<void>>(std::any)> cont) {
-        return std::make_shared<ITree<void>>(Vis{std::move(effect), std::move(cont)});
+        if (!effect || !cont)
+            throw std::invalid_argument("crane: ITree::vis given a null effect or continuation");
+        return std::make_shared<ITree<void>>(Private{}, Vis{std::move(effect), std::move(cont)});
     }
 
     void run() {
-        // Non-owning shared_ptr: safe because we stay in scope for the
-        // duration of the loop.
-        auto cur = std::shared_ptr<ITree<void>>(this, [](auto *) {});
+        // Owning reference (not a non-owning alias of [this]): an effect or
+        // continuation may release the last other owner mid-run (finding 86).
+        auto cur = this->shared_from_this();
         while (true) {
             if (std::holds_alternative<Ret>(cur->node))
                 return;
             if (auto *t = std::get_if<Tau>(&cur->node)) {
+                if (!t->next)
+                    throw std::runtime_error("crane: ITree Tau has a null next");
                 cur = t->next;
                 continue;
             }
             auto &v = std::get<Vis>(cur->node);
             std::any response = v.effect();
-            cur = v.cont(std::move(response));
+            auto next = v.cont(std::move(response));
+            if (!next)
+                throw std::runtime_error("crane: ITree Vis continuation returned null");
+            cur = std::move(next);
         }
     }
     const variant_t &observe() const { return node; }

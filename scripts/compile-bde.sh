@@ -17,10 +17,35 @@ THEORIES_CPP_BDE="$PROJECT_ROOT/theories/cpp_bde"
 
 OUTPUT="$1"
 shift
-SOURCES="$@"
+# Keep the source operands as a real array so they reach the compiler as
+# distinct argv entries. Never re-expand them as an unquoted scalar: word
+# splitting would let a source path containing spaces/metacharacters, or one
+# beginning with '-', turn into extra compiler options (CWE-88 / CWE-78).
+SOURCES=("$@")
 
-# Optimization level: O0 (default, fast compile), O1, O2, or O3
+# Reject any operand that clang would interpret as an option rather than an
+# input file: '-foo' is a flag and '@foo' is a response file, regardless of
+# quoting. Generated C++ sources never legitimately start with these.
+for _src in "${SOURCES[@]}"; do
+    case "$_src" in
+        -* | @*)
+            echo "Error: refusing source operand that could be read as a compiler option: '$_src'" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Optimization level: O0 (default, fast compile), O1, O2, or O3. Validated
+# against a fixed allow-list because it is attacker-influenced (an environment
+# variable) and is spliced directly onto the compiler command line.
 OPT_LEVEL="${CRANE_CPP_OPTIMIZATION:-O0}"
+case "$OPT_LEVEL" in
+    O0 | O1 | O2 | O3) ;;
+    *)
+        echo "Error: invalid CRANE_CPP_OPTIMIZATION='$OPT_LEVEL' (expected O0, O1, O2, or O3)" >&2
+        exit 1
+        ;;
+esac
 
 # Find BDE installation via pkg-config
 # Users should set PKG_CONFIG_PATH to include BDE's pkgconfig directory
@@ -61,37 +86,49 @@ fi
 
 export PKG_CONFIG_PATH="$BDE_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-# Get compiler flags from pkg-config, overriding the prefix
-BDE_CFLAGS=$(pkg-config --define-variable=prefix="$BDE_PREFIX" --cflags bdl 2>/dev/null || echo "-I$BDE_PREFIX/include")
-BDE_LIBS=$(pkg-config --define-variable=prefix="$BDE_PREFIX" --libs bdl --static 2>/dev/null || echo "-L$BDE_PREFIX/lib -lbdl -lbsl -linteldfp -lpcre2 -lryu")
+# Get compiler flags from pkg-config, overriding the prefix. pkg-config emits a
+# single whitespace-separated string that legitimately needs to become several
+# argv entries. Split it with `read -ra`, which performs word splitting only —
+# no glob expansion and no command substitution — so a hostile .pc file or BDE
+# install path cannot smuggle in `$(...)`/`` `...` `` execution (CWE-88 / CWE-78).
+# The flags themselves remain trusted, but we stop treating them as shell code.
+BDE_CFLAGS_STR=$(pkg-config --define-variable=prefix="$BDE_PREFIX" --cflags bdl 2>/dev/null || echo "-I$BDE_PREFIX/include")
+BDE_LIBS_STR=$(pkg-config --define-variable=prefix="$BDE_PREFIX" --libs bdl --static 2>/dev/null || echo "-L$BDE_PREFIX/lib -lbdl -lbsl -linteldfp -lpcre2 -lryu")
 
 # On macOS, filter out -lrt (doesn't exist) and -lstdc++ (use libc++ instead)
 if [ "$(uname)" = "Darwin" ]; then
-    BDE_LIBS=$(echo "$BDE_LIBS" | sed 's/-lrt//g; s/-lstdc++//g')
+    BDE_LIBS_STR=$(echo "$BDE_LIBS_STR" | sed 's/-lrt//g; s/-lstdc++//g')
 fi
 
-# On macOS, clang may not find the SDK automatically
-SYSROOT_FLAGS=""
+read -ra BDE_CFLAGS <<< "$BDE_CFLAGS_STR"
+read -ra BDE_LIBS <<< "$BDE_LIBS_STR"
+
+# On macOS, clang may not find the SDK automatically. Hold the flag pair in an
+# array so the resolved path stays a single argv entry even if it contains
+# spaces.
+SYSROOT_FLAGS=()
 if [ "$(uname)" = "Darwin" ]; then
     SDK="${SDKROOT:-$(xcrun --show-sdk-path 2>/dev/null)}"
     if [ -n "$SDK" ] && [ -d "$SDK" ]; then
-        SYSROOT_FLAGS="-isysroot $SDK"
+        SYSROOT_FLAGS=(-isysroot "$SDK")
     fi
 fi
 
 # Sanitizer support
-SANITIZE_FLAGS=""
+SANITIZE_FLAGS=()
 if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
-    SANITIZE_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer"
+    SANITIZE_FLAGS=(-fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer)
 fi
 
-# Compile with C++20, BDE ABI compatibility, and suppress deprecation warnings
+# Compile with C++20, BDE ABI compatibility, and suppress deprecation warnings.
+# Every expansion below is a quoted array so nothing is re-split or re-evaluated
+# by the shell on its way to clang++.
 exec clang++ \
     -std=c++20 \
     -DBSLS_LIBRARYFEATURES_FORCE_ABI_CPP17 \
     -Wno-deprecated-literal-operator \
-    -$OPT_LEVEL \
-    $SYSROOT_FLAGS \
+    -"$OPT_LEVEL" \
+    "${SYSROOT_FLAGS[@]}" \
     -I . \
     -I "$THEORIES_CPP_BDE" \
     -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion \
@@ -102,9 +139,9 @@ exec clang++ \
     -Wno-unused-variable -Wno-unused-value \
     -Wno-constant-conversion -Wno-sign-conversion \
     -Wno-c11-extensions -Wno-dtor-name -Wno-nontrivial-memcall -Werror \
-    $SANITIZE_FLAGS \
-    $BDE_CFLAGS \
-    $SOURCES \
-    $BDE_LIBS \
-    $SANITIZE_FLAGS \
+    "${SANITIZE_FLAGS[@]}" \
+    "${BDE_CFLAGS[@]}" \
+    "${SOURCES[@]}" \
+    "${BDE_LIBS[@]}" \
+    "${SANITIZE_FLAGS[@]}" \
     -o "$OUTPUT"

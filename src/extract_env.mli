@@ -27,16 +27,23 @@ open Libnames
 val simple_extraction : opaque_access:Global.indirect_accessor -> qualid -> unit
 
 (** [Crane Extraction "file" qualids]: extract listed definitions to a file.
+    @param validate reject an output filename that escapes the output directory
+      (default [true]); trusted callers with an internal path pass [false]
     @param opaque_access accessor for opaque constant bodies
     @param the optional output filename; [None] prints to stdout
     @param the list of qualified names to extract *)
 val full_extraction :
-  opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
+  ?validate:bool ->
+  opaque_access:Global.indirect_accessor ->
+  string option ->
+  qualid list ->
+  unit
 
 (** Perform a full extraction and evaluate [after_print] before the extraction
     state is reset. This lets consumers retain metadata derived from the exact
-    names used while printing. *)
+    names used while printing. See {!full_extraction} for [validate]. *)
 val full_extraction_with_result :
+  ?validate:bool ->
   opaque_access:Global.indirect_accessor ->
   string option ->
   qualid list ->

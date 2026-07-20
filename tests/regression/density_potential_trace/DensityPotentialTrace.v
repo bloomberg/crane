@@ -84,6 +84,6 @@ Definition sample_massive_nonneg : bool :=
 End DensityPotentialTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.NatIntStd Mapping.Real.
+From Crane Require Mapping.NatIntStd Mapping.ZInt Mapping.Real.
 
 Crane Extraction "density_potential_trace" DensityPotentialTraceCase.

@@ -1,14 +1,20 @@
 #ifndef INCLUDED_EFFECT_WORKFLOW
 #define INCLUDED_EFFECT_WORKFLOW
 
+#include <cerrno>
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
+#include <fcntl.h>
 #include <filesystem>
 #include <iostream>
 #include <memory>
 #include <optional>
+#include <random>
+#include <stdexcept>
 #include <string>
+#include <sys/stat.h>
+#include <system_error>
 #include <unistd.h>
 #include <utility>
 #include <variant>

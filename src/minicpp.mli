@@ -339,7 +339,11 @@ and template_type =
       (** typename with default: typename T = default_type *)
   | TTfun of (cpp_type list * cpp_type)
       (** Function type parameter for higher-order templates *)
-  | TTconcept of GlobRef.t  (** Concept-constrained parameter, e.g., Eq T *)
+  | TTconcept of GlobRef.t * cpp_type list
+      (** Concept-constrained parameter.  The [cpp_type list] carries the
+          concept's extra kept type arguments: [] for a unary concept
+          ([Eq _tcI0]), or the kept args for a multi-parameter concept
+          ([C<_tcI0, T1>]). *)
 
 (** {2 Struct fields} *)
 

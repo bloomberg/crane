@@ -135,7 +135,9 @@ struct Typeclasses {
 
   static_assert(Numeric<numBool, bool>);
 
-  template <typename _tcI0, typename T1> struct numOption {
+  template <typename _tcI0, typename T1>
+    requires Numeric<_tcI0, T1>
+  struct numOption {
     static uint64_t to_nat(std::optional<T1> o) {
       if (o.has_value()) {
         const T1 &x = *o;
@@ -146,7 +148,9 @@ struct Typeclasses {
     }
   };
 
-  template <typename _tcI0, typename T1> struct numList {
+  template <typename _tcI0, typename T1>
+    requires Numeric<_tcI0, T1>
+  struct numList {
     static uint64_t to_nat(List<T1> a0) {
       auto sum_impl = [&](auto &_self_sum, const List<T1> &l) -> uint64_t {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -164,11 +168,13 @@ struct Typeclasses {
   };
 
   template <typename _tcI0, typename T1>
+    requires Numeric<_tcI0, T1>
   static uint64_t numeric_sum(const List<T1> &l) {
     return numList<_tcI0, T1>::to_nat(l);
   }
 
   template <typename _tcI0, typename T1>
+    requires Numeric<_tcI0, T1>
   static uint64_t numeric_double(const T1 &x) {
     return (_tcI0::to_nat(x) + _tcI0::to_nat(x));
   }
@@ -186,6 +192,7 @@ struct Typeclasses {
   static_assert(Ord<ordNat, uint64_t>);
 
   template <typename _tcI0, typename _tcI1, typename T1>
+    requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
   static std::pair<T1, T1> sort_pair(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return std::make_pair(x, y);
@@ -195,6 +202,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
+    requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
   static T1 min_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return x;
@@ -204,6 +212,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
+    requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
   static T1 max_of(T1 x, T1 y) {
     if (_tcI0::leb(x, y)) {
       return y;
@@ -213,6 +222,7 @@ struct Typeclasses {
   }
 
   template <typename _tcI0, typename _tcI1, typename T1>
+    requires Eq<_tcI0, T1> && Numeric<_tcI1, T1>
   static uint64_t describe(const T1 &x, const T1 &y) {
     if (_tcI0::eqb(x, y)) {
       return _tcI1::to_nat(x);

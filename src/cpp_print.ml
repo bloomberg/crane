@@ -33,6 +33,32 @@ open Cpp_names
 (** Memoized regex for matching the [::] C++ scope-resolution operator. *)
 let re_double_colon = Str.regexp_string "::"
 
+(** Escape a byte string for emission inside a double-quoted C++ string literal.
+
+    A primitive Rocq [String] can contain any byte, including quotes,
+    backslashes, newlines, and comment delimiters. Emitting those verbatim would
+    terminate the literal early or otherwise corrupt (or inject into) the
+    generated C++ source (CWE-116/CWE-94). We therefore escape the C++-
+    significant characters and render every other non-printable byte as a
+    three-digit octal escape ([\\ooo]) — octal is bounded to three digits, so
+    unlike [\\x…] it cannot swallow a following hex digit. Note this differs from
+    OCaml's [String.escaped], whose [\\ddd] escapes are decimal and would be
+    misread by C++ as octal. *)
+let escape_cpp_string (s : string) : string =
+  let buf = Buffer.create (String.length s + 2) in
+  String.iter
+    (fun c ->
+      match c with
+      | '"' -> Buffer.add_string buf "\\\""
+      | '\\' -> Buffer.add_string buf "\\\\"
+      | '\n' -> Buffer.add_string buf "\\n"
+      | '\r' -> Buffer.add_string buf "\\r"
+      | '\t' -> Buffer.add_string buf "\\t"
+      | c when Char.code c >= 0x20 && Char.code c < 0x7f -> Buffer.add_char buf c
+      | c -> Buffer.add_string buf (Printf.sprintf "\\%03o" (Char.code c)) )
+    s;
+  Buffer.contents buf
+
 (* Global mutable state in this file:
    - axiom_type_refs: accumulates across the full extraction session; never cleared
      because axiom classifications are global to a Rocq session. *)
@@ -1777,7 +1803,7 @@ and pp_cpp_expr env args t =
     | CPPderef _ | CPPraw _ ->
       str "(" ++ pp_cpp_expr env args e ++ str ")." ++ field_name
     | _ -> pp_cpp_expr env args e ++ str "." ++ field_name )
-  | CPPstring s -> str ("\"" ^ Pstring.to_string s ^ "\"")
+  | CPPstring s -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
   | CPPparray (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr env args) (Array.to_list elems) ++ str "}"
   | CPPuint x ->
@@ -2989,7 +3015,13 @@ let pp_template_type = function
   | TTtypename -> str "typename"
   | TTtypename_default _ -> str "typename"
   | TTfun _ -> str "typename"
-  | TTconcept concept -> pp_global Type concept
+  | TTconcept (concept, []) -> pp_global Type concept
+  | TTconcept (_, _ :: _) ->
+    (* Multi-parameter concept: the constraint cannot be written inline
+       ([C _tcI0] would apply C to only one argument), so declare the
+       parameter as a plain [typename] and attach [requires C<_tcI0, …>]
+       via {!pp_requires_of_tparams}. *)
+    str "typename"
 
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =
@@ -3032,6 +3064,19 @@ let pp_requires_of_tparams tparams =
             ++ List.fold_left
                  (fun acc ty -> acc ++ str ", " ++ pp_ref ty)
                  (mt ()) dom
+            ++ str ">" )
+        | TTconcept (concept, (_ :: _ as args)) ->
+          (* Multi-parameter concept constraint: [C<_tcI0, T1, …>].  The
+             constrained parameter [id] is the first concept argument, the
+             kept type args follow.  Emitting this as a [requires] clause is
+             what enforces the Rocq typeclass interface at the use site
+             instead of an unconstrained [typename] (CWE-693 / CWE-345). *)
+          Some
+            ( pp_global Type concept ++ str "<"
+            ++ Id.print id
+            ++ List.fold_left
+                 (fun acc ty -> acc ++ str ", " ++ pp_type ty)
+                 (mt ()) args
             ++ str ">" )
         | _ -> None)
       tparams

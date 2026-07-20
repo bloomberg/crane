@@ -4,7 +4,9 @@
 #define CRANE_REAL_H
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 #include <sstream>
+#include <type_traits>
 
 class Real {
   long double v_;
@@ -46,7 +48,21 @@ public:
 
   // Exponential & floor
   friend Real r_exp(Real x) { return Real(std::exp(x.v_)); }
-  friend int64_t r_floor_z(Real x) { return static_cast<int64_t>(std::floor(x.v_)); }
+  friend int64_t r_floor_z(Real x) {
+    // Guard the floating-point -> int64_t conversion: casting NaN, an infinity,
+    // or a value outside the int64_t range is undefined behaviour
+    // (CWE-681 / CWE-682 / CWE-190).  Division and r_inv can produce
+    // infinities, and sqrt/asin/acos can produce NaN from out-of-domain
+    // inputs, either of which then reaches this cast.  Rocq's floor is total
+    // over an idealized unbounded real, so keep the extracted version total
+    // too: NaN maps to 0, and out-of-range magnitudes saturate to the int64_t
+    // bounds rather than wrapping or trapping.
+    long double f = std::floor(x.v_);
+    if (std::isnan(f)) return 0;
+    if (f >= 0x1p63L) return INT64_MAX;   // f >= 2^63
+    if (f < -0x1p63L) return INT64_MIN;   // f < -2^63
+    return static_cast<int64_t>(f);
+  }
   friend std::string real_to_string(Real x) {
     std::ostringstream oss;
     oss << x.v_;
@@ -55,8 +71,23 @@ public:
 
   // Constants & conversions
   static Real pi() { return Real(std::acos(-1.0L)); }
-  static Real from_nat(unsigned int n) { return Real(static_cast<long double>(n)); }
-  static Real from_z(int64_t z) { return Real(static_cast<long double>(z)); }
-  static Real from_pos(unsigned int p) { return Real(static_cast<long double>(p)); }
+
+  // Integer -> Real coercions (INR / IZR / IPR).  Templated so the *same*
+  // mapping works with whatever integer representation the user imports for
+  // nat / Z / positive -- int64_t and unsigned int (the Int flavors) or GMP's
+  // mpz_class (the GMP flavor) -- without Real.v committing to one.  Arithmetic
+  // types convert directly; a bignum is narrowed through its get_d() member
+  // (only instantiated when T is such a type, so <gmpxx.h> is not required
+  // here).  Real is finite precision, so this coercion is inherently lossy for
+  // integers beyond the long double mantissa, regardless of the source type.
+  template <class T> static long double to_long_double(const T &z) {
+    if constexpr (std::is_arithmetic_v<T>)
+      return static_cast<long double>(z);
+    else
+      return static_cast<long double>(z.get_d());
+  }
+  template <class T> static Real from_nat(const T &n) { return Real(to_long_double(n)); }
+  template <class T> static Real from_z(const T &z) { return Real(to_long_double(z)); }
+  template <class T> static Real from_pos(const T &p) { return Real(to_long_double(p)); }
 };
 #endif

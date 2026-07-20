@@ -10,26 +10,34 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export Monads.PathDefs.
 
+(**
+   Safety: every mapping uses the non-throwing [std::error_code] overload so
+   that an ordinary invalid, inaccessible, or raced path cannot raise a
+   [std::filesystem_error] that terminates the generated process. The Rocq
+   effects return a plain [string]/[bool] with no error channel, so a failed
+   query degrades to the neutral result (empty string / [false]) instead of
+   crashing (CWE-248 / CWE-755).
+*)
 Crane Extract Inductive pathE => ""
-  [ "std::filesystem::canonical(std::filesystem::path(%a0)).string()"
-    "std::filesystem::relative(std::filesystem::path(%a0)).string()"
-    "std::filesystem::absolute(std::filesystem::path(%a0)).string()"
-    "std::filesystem::is_directory(std::filesystem::path(%a0))"
-    "std::filesystem::is_regular_file(std::filesystem::path(%a0))" ]
-  From "filesystem".
+  [ "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::canonical(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+    "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::relative(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+    "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::absolute(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+    "[&]() -> bool { std::error_code _ec; return std::filesystem::is_directory(std::filesystem::path(%a0), _ec); }()"
+    "[&]() -> bool { std::error_code _ec; return std::filesystem::is_regular_file(std::filesystem::path(%a0), _ec); }()" ]
+  From "filesystem" "system_error".
 
 Crane Extract Inlined Constant canonical =>
-  "std::filesystem::canonical(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::canonical(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant relative =>
-  "std::filesystem::relative(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::relative(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant absolute =>
-  "std::filesystem::absolute(std::filesystem::path(%a0)).string()"
-  From "filesystem".
+  "[&]() -> std::string { std::error_code _ec; auto _r = std::filesystem::absolute(std::filesystem::path(%a0), _ec); return _ec ? std::string{} : _r.string(); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant is_directory =>
-  "std::filesystem::is_directory(std::filesystem::path(%a0))"
-  From "filesystem".
+  "[&]() -> bool { std::error_code _ec; return std::filesystem::is_directory(std::filesystem::path(%a0), _ec); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant is_regular_file =>
-  "std::filesystem::is_regular_file(std::filesystem::path(%a0))"
-  From "filesystem".
+  "[&]() -> bool { std::error_code _ec; return std::filesystem::is_regular_file(std::filesystem::path(%a0), _ec); }()"
+  From "filesystem" "system_error".

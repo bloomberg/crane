@@ -35,9 +35,9 @@ Crane Extract Inductive fileE => ""
   std::ofstream file(%a0, std::ios::app);
   file << %a1;
 }()"
-    "std::filesystem::exists(std::filesystem::path(%a0))"
-    "std::filesystem::remove(std::filesystem::path(%a0))" ]
-  From "fstream" "filesystem".
+    "[&]() -> bool { std::error_code _ec; return std::filesystem::exists(std::filesystem::path(%a0), _ec); }()"
+    "[&]() { std::error_code _ec; std::filesystem::remove(std::filesystem::path(%a0), _ec); }()" ]
+  From "fstream" "filesystem" "system_error".
 
 Crane Extract Inlined Constant print => "std::cout << %a0" From "iostream".
 Crane Extract Inlined Constant print_endline => "std::cout << %a0 << '\n'" From "iostream".
@@ -68,7 +68,13 @@ Crane Extract Inlined Constant append_file =>
   file << %a1;
 }()" From "fstream".
 
+(* [file_exists]/[remove_file] use the non-throwing [std::error_code] overload:
+   the Rocq effects return plain [bool]/[unit] with no error channel, so an
+   invalid, inaccessible, or raced path must not raise a [std::filesystem_error]
+   that terminates the generated process (CWE-248 / CWE-755). *)
 Crane Extract Inlined Constant file_exists =>
-  "std::filesystem::exists(std::filesystem::path(%a0))" From "filesystem".
+  "[&]() -> bool { std::error_code _ec; return std::filesystem::exists(std::filesystem::path(%a0), _ec); }()"
+  From "filesystem" "system_error".
 Crane Extract Inlined Constant remove_file =>
-  "std::filesystem::remove(std::filesystem::path(%a0))" From "filesystem".
+  "[&]() { std::error_code _ec; std::filesystem::remove(std::filesystem::path(%a0), _ec); }()"
+  From "filesystem" "system_error".

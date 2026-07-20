@@ -30,5 +30,7 @@ int64_t Clock::elapsed() {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
-  return ((t2 - t1) & 0x7FFFFFFFFFFFFFFFLL);
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(t2) - static_cast<uint64_t>(t1)) &
+      0x7FFFFFFFFFFFFFFFULL);
 }

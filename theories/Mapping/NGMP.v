@@ -30,10 +30,14 @@ Crane Extract Numeral N => "mpz_class(%n)".
 
 (* Pos operations *)
 Crane Extract Inlined Constant Pos.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant Pos.sub => "(%a0 - %a1)".
+(* [positive] is strictly >= 1. Rocq's [Pos.sub] truncates at 1 (it returns 1
+   when a <= b) and [Pos.pred 1 = 1], keeping the result inside the positive
+   domain. Raw subtraction would produce 0 or negative values that violate the
+   invariant (CWE-682). *)
+Crane Extract Inlined Constant Pos.sub => "(%a0 > %a1 ? %a0 - %a1 : mpz_class(1))".
 Crane Extract Inlined Constant Pos.mul => "(%a0 * %a1)".
 Crane Extract Inlined Constant Pos.succ => "(%a0 + 1)".
-Crane Extract Inlined Constant Pos.pred => "(%a0 - 1)".
+Crane Extract Inlined Constant Pos.pred => "(%a0 > 1 ? %a0 - 1 : mpz_class(1))".
 Crane Extract Inlined Constant Pos.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Pos.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Pos.leb => "%a0 <= %a1".
@@ -58,6 +62,15 @@ Crane Extract Inlined Constant N.succ_double => "(%a0 * 2 + 1)".
 
 (* Conversions *)
 Crane Extract Inlined Constant N.of_nat => "mpz_class(%a0)".
-Crane Extract Inlined Constant N.to_nat => "static_cast<unsigned int>(%a0.get_ui())".
+(* [mpz_class::get_ui] returns only the low word of an arbitrary-precision
+   value, and Rocq's [N.to_nat]/[Pos.to_nat] are total, unbounded-domain
+   functions. Silently truncating a value that exceeds [UINT_MAX] would
+   produce a wrapped, wrong result rather than surfacing the loss of
+   precision (CWE-190/CWE-681), so we saturate at [UINT_MAX] instead. *)
+Crane Extract Inlined Constant N.to_nat =>
+  "(%a0 > mpz_class(UINT_MAX) ? UINT_MAX : static_cast<unsigned int>(%a0.get_ui()))"
+  From "climits".
 Crane Extract Inlined Constant Pos.of_nat => "mpz_class(%a0 == 0 ? 1 : %a0)".
-Crane Extract Inlined Constant Pos.to_nat => "static_cast<unsigned int>(%a0.get_ui())".
+Crane Extract Inlined Constant Pos.to_nat =>
+  "(%a0 > mpz_class(UINT_MAX) ? UINT_MAX : static_cast<unsigned int>(%a0.get_ui()))"
+  From "climits".

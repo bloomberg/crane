@@ -3568,6 +3568,27 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
   match folded with
   | Some e -> e
   | None ->
+  (* Some custom-extracted inductives (e.g. [sum1], registered as
+     [Crane Extract Inductive sum1 => "" ["%a0" "%a0"]]) are pure type-level
+     erasure markers: their constructor template forwards the argument
+     completely unboxed, with no runtime wrapper type at all. For these, the
+     generic "erase Tvar-typed fields into std::any" logic below must NOT
+     fire, because there is no field storage to box into — the value must
+     stay exactly as it was produced. Wrapping it anyway makes the erased
+     [std::any] hold the argument's own (possibly unique closure) type
+     instead of whatever a downstream consumer expects inside that [std::any]
+     (e.g. [itree_vis] expects [std::function<std::any()>], not a bare
+     lambda), and the mismatched [std::any_cast] throws at runtime
+     (CWE-704, finding 44). *)
+  let is_passthrough_ctor_arg i =
+    match r with
+    | GlobRef.ConstructRef ((kn, mi), cidx) ->
+      ( try
+          let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
+          String.trim tmpl = Printf.sprintf "%%a%d" i
+        with _ -> false )
+    | _ -> false
+  in
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
      aliases (std::any) instead of template-qualified types.
 
@@ -3741,6 +3762,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       let result = match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
           (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+          | _ when is_passthrough_ctor_arg i -> result
           | Some Tany ->
             (match result with
             | CPPlambda _ -> result
@@ -11314,15 +11336,21 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         let instance_name = tc_instance_id tc_idx in
         let tt =
           match arg_ty with
-          | Tglob (r, _, _) ->
-            (* Only use inline concept constraint for unary concepts.
-               A concept is unary iff it has no kept type variables
-               (nb_sign_keeps = 0), so its only template param is I.
-               Multi-parameter concepts like [Numeric<I, t_A>] cannot
-               use inline syntax because the remaining type args aren't
-               available at the template-param declaration site. *)
+          | Tglob (r, type_args, _) ->
+            (* Unary concepts (nb_sign_keeps = 0) are expressed inline as
+               [Eq _tcI0].  Multi-parameter concepts like [Numeric<I, t_A>]
+               carry their kept type args so a [requires C<_tcI0, T1>] clause
+               can be emitted at the use site instead of silently degrading to
+               an unconstrained [typename] (CWE-693 / CWE-345). *)
             let nb_keeps = Table.get_ind_nb_sign_keeps r in
-            if nb_keeps = 0 then TTconcept r else TTtypename
+            if nb_keeps = 0 then TTconcept (r, [])
+            else
+              let type_arg_cpp =
+                List.map
+                  (convert_ml_type_to_cpp_type (empty_env ()) [])
+                  type_args
+              in
+              TTconcept (r, type_arg_cpp)
           | _ -> TTtypename
         in
         strip_outer_layers
@@ -11837,7 +11865,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         List.concat_map
           (fun (tt, tc_name) ->
             match tt with
-            | TTconcept class_ref_tc ->
+            | TTconcept (class_ref_tc, _) ->
               let tc_ip_vars = Table.get_ind_ip_vars class_ref_tc in
               let tc_nb_keeps = Table.get_ind_nb_sign_keeps class_ref_tc in
               let tc_promoted =
@@ -12607,7 +12635,8 @@ let gen_dfun n b cty ty temps =
               in
               let tt =
                 let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
-                if nb_keeps = 0 then TTconcept class_ref else TTtypename
+                if nb_keeps = 0 then TTconcept (class_ref, [])
+                else TTconcept (class_ref, type_arg_cpp)
               in
               ( tt,
                 instance_name,
@@ -15181,6 +15210,17 @@ let gen_ind_header_v2
                   Id.to_string _alt_id ^ "->"
                   ^ Id.to_string field_id
                 in
+                (* This iterative drain replaces the naive recursive destructor,
+                   so cleanup of a deep deque-backed recursive value no longer
+                   overflows the call stack (the primary CWE-674 mitigation;
+                   regression: tests/regression/deque_deep_tree_stackoverflow).
+                   Residual tradeoff (CWE-400): the drain heap-allocates one
+                   [make_shared] wrapper per element, so under extreme memory
+                   pressure an allocation inside this (noexcept) destructor can
+                   still terminate the process.  Eliminating that would require
+                   an allocation-free intrusive worklist -- a larger redesign
+                   deferred here; bounded call-stack depth is the property that
+                   matters for the adversarial-depth attack. *)
                 if Table.is_custom list_g then
                   [Sif_then (
                     CPPbinop ("&&", fe,

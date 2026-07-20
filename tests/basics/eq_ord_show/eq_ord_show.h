@@ -52,27 +52,33 @@ struct NatShow {
 
 static_assert(Show<NatShow, uint64_t>);
 
-template <typename _tcI0, typename T1> bool is_equal(const T1 &x, const T1 &y) {
+template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
+bool is_equal(const T1 &x, const T1 &y) {
   return _tcI0::eqb(x, y);
 }
 
 template <typename _tcI0, typename T1>
+  requires Eq<_tcI0, T1>
 bool is_different(const T1 &x, const T1 &y) {
   return _tcI0::neqb(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
+  requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
 bool is_less_than(const T1 &x, const T1 &y) {
   return _tcI0::lt(x, y);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
+  requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
 bool is_less_or_equal(const T1 &x, const T1 &y) {
   return _tcI0::le(x, y);
 }
 enum class Ordering { LT, EQ, GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>
+  requires Ord<_tcI0, T1> && Eq<_tcI1, T1>
 Ordering compare(const T1 &x, const T1 &y) {
   if (_tcI0::lt(x, y)) {
     return Ordering::LT;
@@ -85,11 +91,14 @@ Ordering compare(const T1 &x, const T1 &y) {
   }
 }
 
-template <typename _tcI0, typename T1> std::string to_string(const T1 &x) {
+template <typename _tcI0, typename T1>
+  requires Show<_tcI0, T1>
+std::string to_string(const T1 &x) {
   return _tcI0::show(x);
 }
 
 template <typename _tcI0, typename _tcI1, typename T1>
+  requires Show<_tcI0, T1> && Eq<_tcI1, T1>
 std::string show_if_equal(const T1 &x, const T1 &y) {
   if (_tcI1::eqb(x, y)) {
     return _tcI0::show(x);
@@ -99,6 +108,7 @@ std::string show_if_equal(const T1 &x, const T1 &y) {
 }
 
 template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
+  requires Show<_tcI0, T1> && Ord<_tcI1, T1> && Eq<_tcI2, T1>
 std::string show_comparison(const T1 &x, const T1 &y) {
   if (_tcI1::lt(x, y)) {
     return _tcI0::show(x) + " < "s + _tcI0::show(y);
