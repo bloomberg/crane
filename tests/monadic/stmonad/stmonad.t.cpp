@@ -157,7 +157,7 @@ int main() {
   }
 
   if (testStatus == 0) {
-    std::cout << "\nAll stmonad tests passed!" << std::endl;
+    std::cout << "\nAll quicksort tests passed!" << std::endl;
   } else {
     std::cout << "\n" << testStatus << " test(s) failed!" << std::endl;
   }

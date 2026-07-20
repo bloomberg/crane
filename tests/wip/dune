@@ -9,7 +9,7 @@
  (theories
    Stdlib
    Crane
-   ITree ExtLib Paco)
+   ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
 
@@ -68,3 +68,14 @@
   (alias runtest)
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
+
+(subdir loopification_quicksort_bug
+ (rule
+  (targets loopification_quicksort_bug.t.exe)
+  (deps LoopificationQuicksortBug.vo loopification_quicksort_bug.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopification_quicksort_bug.t.exe loopification_quicksort_bug.cpp loopification_quicksort_bug.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopification_quicksort_bug.t.exe)
+  (action (run ./loopification_quicksort_bug.t.exe))))
