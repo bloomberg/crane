@@ -30,6 +30,7 @@ open Modutil
 open Common
 open Minicpp
 open Translation
+open Gen_decls
 open Cpp_state
 open Cpp_names
 open Cpp_print
@@ -845,7 +846,7 @@ let rec pp_structure_elem ~is_header f = function
                          let concept_pp =
                            pp_cpp_decl
                              (empty_env ())
-                             (Translation.gen_typeclass_cpp
+                             (Gen_decls.gen_typeclass_cpp
                                 ind_ref
                                 fields
                                 packet )
@@ -1154,7 +1155,7 @@ let rec pp_structure_elem ~is_header f = function
                     (List.rev this_method_candidates)
                 in
                 let method_fields =
-                  Translation.gen_record_methods
+                  Gen_decls.gen_record_methods
                     epon_ref
                     ty_vars
                     non_projection_candidates

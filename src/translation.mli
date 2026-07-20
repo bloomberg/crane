@@ -67,58 +67,143 @@ val gen_expr : ?expected_ty:cpp_type -> env -> ml_ast -> cpp_expr
 (** Generate pattern matching as a C++ expression using std::visit. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
 
-(** {2 Declaration Generation} *)
+(** Generate C++ statements from an ML AST. The continuation [k] transforms the
+    final expression into a statement (e.g., return, assignment). Handles
+    let-bindings, pattern matching, fix expressions, and monadic operations. *)
+val gen_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
 
-(** Generate C++ declaration for a term definition. Returns (decl, env,
-    type_variables). *)
-val gen_decl : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env * variable list
+(** Try eta-expanding/applying [f] to [args] when a call is under-applied or
+    involves a type-erased higher-order callback. Falls back to a plain
+    application. *)
+val eta_fun : env -> ml_ast -> ml_ast list -> cpp_expr
 
-(** Similar to gen_decl but returns None for non-function types (used by
-    pp_hdecl). *)
-val gen_decl_for_pp :
-  GlobRef.t -> ml_ast -> ml_type -> cpp_decl option * env * variable list
+(** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
+    in the ML AST and should be ignored by numeral-folding traversals. *)
+val strip_magic : ml_ast -> ml_ast
 
-(** Generate C++ function specification (declaration without body). *)
-val gen_spec : GlobRef.t -> ml_ast -> ml_type -> cpp_decl * env
+(** {2 Declaration-Generation Helper Functions}
+    Pure helpers shared between the expression-level codegen above and the
+    declaration-level generators in {!Gen_decls}. *)
 
-(** Generate C++ definitions for a group of mutually recursive functions. *)
-val gen_dfuns :
-  GlobRef.t array * ml_ast array * ml_type array ->
-  (cpp_decl * env * variable list) list
+(** Return a prefix of [lst] with length [min(n, length lst)], never raising
+    when [n > length lst]. *)
+val safe_firstn : int -> 'a list -> 'a list
 
-(** Generate C++ headers (declarations) for a group of mutually recursive
-    functions. *)
-val gen_dfuns_header :
-  GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
+(** Extract the innermost result type from a (possibly monadic) ML type. *)
+val ml_result_type : ml_type -> ml_type
 
-(** Generate forward declarations matching the full definition signatures.
-    Unlike gen_dfuns_header which may simplify signatures for non-template
-    functions, this always derives specs from gen_dfun_def for signature
-    consistency. *)
-val gen_dfuns_spec :
-  GlobRef.t array * ml_ast array * ml_type array -> (cpp_decl * env) list
+(** Check if a monad reference uses the reified ITree extraction mode. *)
+val is_monad_reified : GlobRef.t -> bool
 
-(** Generate both spec and def for a group of mutually recursive functions in
-    one pass. Calls gen_dfun_def ONCE per function, then derives both spec
-    and def. Returns list of (spec, def_option, lifted_decls). *)
-val gen_dfuns_dual :
-  is_header:bool ->
-  GlobRef.t array * ml_ast array * ml_type array ->
-  ((cpp_decl * env) * (cpp_decl * env) option * cpp_decl list) list
+(** If the codomain of [ty] is a registered monad, return its reference. *)
+val extract_monad_from_codomain : ml_type -> GlobRef.t option
 
-(** Generate both spec and def for a single Dterm function in one pass. Calls
-    gen_decl_for_pp ONCE, then derives both spec and def. Returns (spec_opt,
-    def_opt, tvars). *)
-val gen_decl_for_pp_dual :
-  is_header:bool ->
-  GlobRef.t ->
-  ml_ast ->
-  ml_type ->
-  (cpp_decl * env) option * (cpp_decl * env) option * variable list
+(** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
+val collect_typeclass_param_ids : ml_type -> Id.t list
 
-(** Convert a definition (Dfundef) to a declaration (Dfundecl) by stripping the
-    body. *)
-val decl_to_spec : cpp_decl -> cpp_decl
+(** Apply unit-to-void conversion on a C++ type, respecting reified mode. *)
+val apply_unit_void : bool -> bool -> cpp_type -> cpp_type
+
+(** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
+val mk_tt_expr : unit -> cpp_expr
+
+(** Qualify inductive type references with {!Minicpp.Tnamespace}, subject to
+    a [skip] predicate that leaves selected inductives unwrapped. *)
+val qualify_inductives : ?skip:(GlobRef.t -> bool) -> cpp_type -> cpp_type
+
+(** Render a C++ type as a string suitable for use in raw C++ template
+    arguments, applying post-hoc name fixups. *)
+val render_cpp_type_for_raw_template :
+  ?raw_inductives:Refset'.t -> ?no_custom_inductives:Refset'.t ->
+  cpp_type -> string
+
+(** Build guard-compare statements for a constructor whose fields alias-check
+    two identical-typed pointer parameters. *)
+val build_guard_compare_stmts :
+  GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list
+
+(** Post-processing pass: insert [std::move] for the state-threading pattern
+    in tail-recursive functions returning [pair<S,R>]. *)
+val rewrite_state_threading_moves :
+  GlobRef.t -> Id.t -> cpp_type -> (Id.t * cpp_type) list -> cpp_stmt list ->
+  (Id.t * cpp_type) list * cpp_stmt list
+
+(** Generate a C++ expression converting [expr] from [src_ty] to [dst_ty],
+    inserting [make_shared]/dereference/etc. as needed. *)
+val gen_type_conversion_expr :
+  ?skip:(GlobRef.t -> bool) -> src_ty:cpp_type -> dst_ty:cpp_type ->
+  cpp_expr -> cpp_expr
+
+(** Reify a parameter's ML type into its monadic-aware C++ form (e.g.
+    voidifying [Unit] results inside [ITree] callbacks). *)
+val reify_monadic_param_type : ml_type -> cpp_type -> cpp_type
+
+(** Collect [Tvar] indices referenced by an ML type, added to the accumulator
+    list. *)
+val collect_tvars : int list -> ml_type -> int list
+
+(** True when evaluating an ML AST may throw through an extracted axiom or
+    exception. *)
+val ast_may_throw : ml_ast -> bool
+
+(** Detect which of the first [n_params] parameters (by de Bruijn index) are
+    NOT simply forwarded unchanged to a self/recursive call, per
+    [is_self_call]. *)
+val detect_non_forwarded_params_generic :
+  is_self_call:(int -> ml_ast -> bool) -> int -> ml_ast -> int list
+
+(** Infer, for each of [n_params] parameters, whether it is "owned" (should be
+    passed by value / moved) based on escape analysis of [body]. *)
+val infer_owned_flags :
+  int -> ml_ast -> ('a * ml_type) list -> bool list
+
+(** Wrap a C++ parameter type with const/ref based on ownership semantics. *)
+val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type
+
+(** True when a single-branch match body is a direct projection returning a
+    field stored as an erased [std::any]. *)
+val ml_body_returns_erased_field : ml_ast -> bool
+
+(** True when the head of an application chain is (or was) wrapped in
+    [MLmagic]. *)
+val ml_head_has_magic : ml_ast -> bool
+
+(** Build a [Tvar i -> concrete_type] substitution mapping for extra type
+    variables introduced beyond an inductive's own [num_ind_vars]. *)
+val make_subst_extra_tvars :
+  int -> (int * Id.t) list -> cpp_type -> cpp_type
+
+(** Rewrite lambda bodies so their statement lists are treated as
+    capture-by-value contexts (used when hoisting closures). *)
+val return_captures_by_value : cpp_stmt list -> cpp_stmt list
+
+(** Unify the (possibly polymorphic) declared type [ty] against the concrete
+    types occurring in body [b], substituting resolved type variables so
+    [gen_decl] can print a monomorphic signature even for polymorphic
+    definitions. *)
+val resolve_body_tvars : ml_ast -> ml_type -> ml_ast
+
+(** Compute the factory method name for a constructor (see
+    {!Translation.factory_name_of_ctor} implementation notes). *)
+val factory_name_of_ctor : ?type_name:string -> string -> string
+
+(** Augment [kernel_arg_names] with names from an [Arguments] declaration.
+    Where [kernel_arg_names] has [None] (anonymous binder), the corresponding
+    entry from [Arguments_renaming.arguments_names] is used if present and
+    non-anonymous.  Kernel-named entries ([Some _]) are never overridden.
+    Returns [kernel_arg_names] unchanged if [Arguments_renaming] has no entry
+    for [cref] or if all kernel binders are already named. *)
+val augment_with_args_renaming :
+  GlobRef.t -> Id.t option list -> Id.t option list
+
+(** Compute and register field names for all [n_fields] fields of a
+    constructor struct.  [field_consarg_names] supplies the pretty names used
+    for struct field declarations (may include [Arguments_renaming] overrides);
+    [bind_consarg_names] supplies the kernel-only names used for structured-
+    binding variable generation. *)
+val compute_and_register_field_names :
+  string -> Id.t option list -> Id.t option list -> int -> Id.t list
+
 
 (** Clear and return any pending lifted declarations. Used to prevent stale
     lifted decls from leaking between extraction passes. *)
@@ -129,81 +214,6 @@ val take_lifted_decls : unit -> cpp_decl list
     suppressed. *)
 val clear_seen_lifted_refs : unit -> unit
 
-(** {2 Inductive Type Generation} *)
-
-(** Generate C++ code for an inductive type (older style with make functions).
-    @param consarg_names  Optional constructor argument binder names from
-      {!Miniml.ml_ind_packet.ip_consarg_names}.  When provided, struct fields
-      use descriptive names (e.g. [d_left]) instead of positional [d_a0]. *)
-val gen_ind_cpp :
-  ?consarg_names:Id.t option list array ->
-  variable list ->
-  GlobRef.t ->
-  GlobRef.t array ->
-  ml_type list array ->
-  cpp_decl
-
-(** Generate C++ code for a record type. *)
-val gen_record_cpp :
-  GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
-
-(** Generate C++ concept for a type class. *)
-val gen_typeclass_cpp :
-  GlobRef.t -> GlobRef.t option list -> ml_ind_packet -> cpp_decl
-
-
-(** Generate C++ header for an inductive type (v2 style: encapsulated struct
-    with methods).
-    @param is_mutual       whether this is part of a mutual inductive definition
-    @param consarg_names   see {!gen_ind_cpp}
-    @param vars            template type parameter names
-    @param name            the inductive type reference
-    @param cnames          constructor references
-    @param tys             constructor argument types
-    @param method_candidates
-      functions to generate as methods: (func_ref, body, type, this_position)
-    @param ind_kind        whether the inductive is coinductive, standard, etc. *)
-val gen_ind_header_v2 :
-  ?is_mutual:bool ->
-  ?consarg_names:Id.t option list array ->
-  ?mutual_partners:(GlobRef.t * GlobRef.t array * ml_type list array * Id.t option list array) list ->
-  variable list ->
-  GlobRef.t ->
-  GlobRef.t array ->
-  ml_type list array ->
-  (GlobRef.t * ml_ast * ml_type * int) list ->
-  inductive_kind ->
-  cpp_decl
-
-(** Generate methods for eponymous records. For records merged into module
-    structs, this generates instance methods from functions that take the record
-    as first argument.
-    @param name The record type reference
-    @param vars Template type parameter names
-    @param method_candidates
-      Functions to generate as methods: (func_ref, body, type, this_position)
-    @return List of method fields with visibility *)
-val gen_record_methods :
-  GlobRef.t ->
-  variable list ->
-  (GlobRef.t * ml_ast * ml_type * int) list ->
-  (cpp_field * cpp_visibility * section_tag) list
-
-(** {2 Type Class Instance Generation} *)
-
-(** Generate a C++ struct for a type class instance. Type class instances become
-    structs with static methods. Returns (struct_decl option, class_ref option,
-    type_args). The class_ref and type_args are used by cpp.ml to generate
-    static_assert verifying the instance satisfies the concept. *)
-val gen_instance_struct :
-  GlobRef.t ->
-  ml_ast ->
-  ml_type ->
-  cpp_decl option * GlobRef.t option * ml_type list
-
-(** Check if a term is a type class instance (constructs a type class record).
-*)
-val is_typeclass_instance : ml_ast -> ml_type -> bool
 
 (** [is_list_global g] returns true iff [g] is the Coq list inductive.
     Exposed so that cpp_print.ml can detect list types in any_cast contexts. *)

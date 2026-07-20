@@ -28,6 +28,7 @@ open Modutil
 open Common
 open Minicpp
 open Translation
+open Gen_decls
 open Cpp_state
 open Cpp_names
 open Cpp_print
@@ -644,7 +645,7 @@ let pp_hdecl d =
     (* Type class instances: generate struct with static methods and
        static_assert *)
     let ds_opt, class_ref_opt, type_args =
-      Translation.gen_instance_struct r a t
+      Gen_decls.gen_instance_struct r a t
     in
     let struct_pp =
       match ds_opt with
@@ -779,8 +780,8 @@ let pp_hdecl_spec_only = function
        params. *)
     let ds, env, tvars = gen_decl_for_pp r a t in
     ( match (ds, tvars) with
-    | Some ds, _ :: _ -> pp_cpp_decl env (Translation.decl_to_spec ds)
-    | Some ds, [] -> pp_cpp_decl env (Translation.decl_to_spec ds)
+    | Some ds, _ :: _ -> pp_cpp_decl env (Gen_decls.decl_to_spec ds)
+    | Some ds, [] -> pp_cpp_decl env (Gen_decls.decl_to_spec ds)
     | None, _ ->
       let ds, env = gen_spec r a t in
       pp_cpp_decl env ds )
