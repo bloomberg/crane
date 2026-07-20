@@ -50,43 +50,111 @@ STMonadTests::array_simp_list() {
   return std::make_pair(std::make_pair(elem, lst.length()), lst);
 }
 
-uint64_t STMonadTests::fib_fun(uint64_t n) {
-  if (n <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t m0 = n - 1;
-    if (m0 <= 0) {
-      return UINT64_C(1);
+uint64_t
+STMonadTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters for
+                                    /// each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _After_m: saves [m0], dispatches next recursive call.
+  struct _After_m {
+    uint64_t m0;
+  };
+
+  /// _Combine_m: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_m {
+    uint64_t _result;
+  };
+
+  using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified fib_fun: _Enter -> _After_m -> _Combine_m.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = UINT64_C(0);
+      } else {
+        uint64_t m0 = n - 1;
+        if (m0 <= 0) {
+          _result = UINT64_C(1);
+        } else {
+          uint64_t m = m0 - 1;
+          _stack.emplace_back(_After_m{m0});
+          _stack.emplace_back(_Enter{m});
+        }
+      }
+    } else if (std::holds_alternative<_After_m>(_frame)) {
+      auto _f = std::move(std::get<_After_m>(_frame));
+      _stack.emplace_back(_Combine_m{std::move(_result)});
+      _stack.emplace_back(_Enter{_f.m0});
     } else {
-      uint64_t m = m0 - 1;
-      return (fib_fun(m0) + fib_fun(m));
+      auto _f = std::move(std::get<_Combine_m>(_frame));
+      _result = (std::move(_result) + std::move(_f._result));
     }
   }
+  return _result;
 }
 
 uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
                            uint64_t default0) {
-  if (n <= 0) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return default0;
+  const List<uint64_t> *_loop_l = &l;
+  uint64_t _loop_n = std::move(n);
+  while (true) {
+    if (_loop_n <= 0) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        return default0;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        return a0;
+      }
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return a0;
-    }
-  } else {
-    uint64_t m = n - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return default0;
-    } else {
-      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return nth(m, *a10, default0);
+      uint64_t m = _loop_n - 1;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        return default0;
+      } else {
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        _loop_l = a10.get();
+        _loop_n = m;
+      }
     }
   }
 }
 
-List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
-  return STMonadExamples::quicksort_fun_functional(
-      x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
+List<uint64_t> STMonadTests::quicksort_fun(
+    const List<uint64_t>
+        &x) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> x;
+  };
+
+  using _Frame = std::variant<_Enter>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{x});
+  /// Loopified quicksort_fun: _Enter.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    auto _f = std::move(std::get<_Enter>(_frame));
+    const List<uint64_t> &x = std::move(_f.x);
+    _result = STMonadExamples::quicksort_fun_functional(
+        x, [](const List<uint64_t> &y) { return quicksort_fun(y); });
+  }
+  return _result;
 }
 
 List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
@@ -169,17 +237,22 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
             }();
             uint64_t storeIndex = [&]() {
               auto for_each_with_impl =
-                  [](auto &_self_for_each_with, const List<uint64_t> &xs0,
-                     uint64_t v, std::function<uint64_t(uint64_t, uint64_t)> f)
+                  [](auto &, const List<uint64_t> &xs0, uint64_t v,
+                     std::function<uint64_t(uint64_t, uint64_t)> f)
                   -> uint64_t {
-                if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                        xs0.v())) {
-                  return v;
-                } else {
-                  const auto &[a0, a1] =
-                      std::get<typename List<uint64_t>::Cons>(xs0.v());
-                  uint64_t v_ = f(v, a0);
-                  return _self_for_each_with(_self_for_each_with, *a1, v_, f);
+                uint64_t _loop_v = std::move(v);
+                const List<uint64_t> *_loop_xs0 = &xs0;
+                while (true) {
+                  if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                          _loop_xs0->v())) {
+                    return _loop_v;
+                  } else {
+                    const auto &[a0, a1] =
+                        std::get<typename List<uint64_t>::Cons>(_loop_xs0->v());
+                    uint64_t v_ = f(_loop_v, a0);
+                    _loop_v = v_;
+                    _loop_xs0 = a1.get();
+                  }
                 }
               };
               auto for_each_with =
@@ -250,17 +323,88 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
   return newXs;
 }
 
-std::string STMonadTests::list_to_string_helper(const List<uint64_t> &l) {
-  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return "";
-  } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    return std::to_string(a0) + ", "s + list_to_string_helper(*a1);
+std::string STMonadTests::list_to_string_helper(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Resume_Cons: saves [a0, _s1], resumes after recursive call with _result.
+  struct _Resume_Cons {
+    std::decay_t<decltype(std::to_string(std::declval<uint64_t &>()))> a0;
+    std::decay_t<decltype(", ")> _s1;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  std::string _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified list_to_string_helper: _Enter -> _Resume_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = "";
+      } else {
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        _stack.emplace_back(_Resume_Cons{std::to_string(a0), ", "});
+        _stack.emplace_back(_Enter{a1.get()});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      _result = _f.a0 + _f._s1 + std::move(_result);
+    }
   }
+  return _result;
 }
 
 std::string STMonadTests::list_to_string(const List<uint64_t> &l) {
   return "[ "s + list_to_string_helper(l) + " ]"s;
+}
+
+List<uint64_t>
+STMonadTests::rep_list_nat(List<uint64_t> l,
+                           uint64_t n) { /// _Enter: captures varying parameters
+                                         /// for each recursive call.
+
+  struct _Enter {
+    uint64_t n;
+  };
+
+  /// _Resume_x: resumes after recursive call with _result.
+  struct _Resume_x {};
+
+  using _Frame = std::variant<_Enter, _Resume_x>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{n});
+  /// Loopified rep_list_nat: _Enter -> _Resume_x.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t n = _f.n;
+      if (n <= 0) {
+        _result = std::move(l);
+      } else {
+        uint64_t x = n - 1;
+        _stack.emplace_back(_Resume_x{});
+        _stack.emplace_back(_Enter{x});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_x>(_frame));
+      _result = l.app(std::move(_result));
+    }
+  }
+  return _result;
 }
 
 std::string STMonadTests::test_quicksort_ST(std::monostate) {
@@ -273,30 +417,74 @@ std::string STMonadTests::test_quicksort_fun(std::monostate) {
   return list_to_string(std::move(out));
 }
 
-List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  if (len <= 0) {
-    return List<uint64_t>::nil();
-  } else {
-    uint64_t len0 = len - 1;
-    return List<uint64_t>::cons(start, ListDef::seq((start + 1), len0));
+List<uint64_t>
+ListDef::seq(uint64_t start,
+             uint64_t len) { /// _Enter: captures varying parameters for each
+                             /// recursive call.
+
+  struct _Enter {
+    uint64_t len;
+    uint64_t start;
+  };
+
+  /// _Resume_len0: saves [start], resumes after recursive call with _result.
+  struct _Resume_len0 {
+    uint64_t start;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_len0>;
+  List<uint64_t> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{len, start});
+  /// Loopified seq: _Enter -> _Resume_len0.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t len = _f.len;
+      uint64_t start = _f.start;
+      if (len <= 0) {
+        _result = List<uint64_t>::nil();
+      } else {
+        uint64_t len0 = len - 1;
+        _stack.emplace_back(_Resume_len0{start});
+        _stack.emplace_back(_Enter{len0, (start + 1)});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_len0>(_frame));
+      _result = List<uint64_t>::cons(_f.start, std::move(_result));
+    }
   }
+  return _result;
 }
 
 uint64_t Nat::tail_add(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    return m;
-  } else {
-    uint64_t n0 = n - 1;
-    return Nat::tail_add(n0, (m + 1));
+  uint64_t _loop_m = std::move(m);
+  uint64_t _loop_n = std::move(n);
+  while (true) {
+    if (_loop_n <= 0) {
+      return _loop_m;
+    } else {
+      uint64_t n0 = _loop_n - 1;
+      _loop_m = (_loop_m + 1);
+      _loop_n = n0;
+    }
   }
 }
 
 uint64_t Nat::tail_addmul(uint64_t r, uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    return r;
-  } else {
-    uint64_t n0 = n - 1;
-    return Nat::tail_addmul(Nat::tail_add(m, r), n0, m);
+  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_r = std::move(r);
+  while (true) {
+    if (_loop_n <= 0) {
+      return _loop_r;
+    } else {
+      uint64_t n0 = _loop_n - 1;
+      _loop_n = n0;
+      _loop_r = Nat::tail_add(m, _loop_r);
+    }
   }
 }
 
@@ -305,56 +493,72 @@ uint64_t Nat::tail_mul(uint64_t n, uint64_t m) {
 }
 
 uint64_t Nat::of_uint_acc(const Uint &d, uint64_t acc) {
-  if (std::holds_alternative<typename Uint::Nil>(d.v())) {
-    return acc;
-  } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D0>(d.v());
-    return Nat::of_uint_acc(*a0, Nat::tail_mul(UINT64_C(10), acc));
-  } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D1>(d.v());
-    return Nat::of_uint_acc(*a0, (Nat::tail_mul(UINT64_C(10), acc) + 1));
-  } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D2>(d.v());
-    return Nat::of_uint_acc(*a0, ((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D3>(d.v());
-    return Nat::of_uint_acc(*a0,
-                            (((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return Nat::of_uint_acc(
-        *a0, ((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D5>(d.v());
-    return Nat::of_uint_acc(
-        *a0, (((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D6>(d.v());
-    return Nat::of_uint_acc(
-        *a0,
-        ((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return Nat::of_uint_acc(
-        *a0,
-        (((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1));
-  } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
-    const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return Nat::of_uint_acc(
-        *a0,
-        ((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-          1) +
-         1));
-  } else {
-    const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return Nat::of_uint_acc(
-        *a0,
-        (((((((((Nat::tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) +
+  uint64_t _loop_acc = std::move(acc);
+  const Uint *_loop_d = &d;
+  while (true) {
+    if (std::holds_alternative<typename Uint::Nil>(_loop_d->v())) {
+      return _loop_acc;
+    } else if (std::holds_alternative<typename Uint::D0>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D0>(_loop_d->v());
+      _loop_acc = Nat::tail_mul(UINT64_C(10), _loop_acc);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D1>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D1>(_loop_d->v());
+      _loop_acc = (Nat::tail_mul(UINT64_C(10), _loop_acc) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D2>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D2>(_loop_d->v());
+      _loop_acc = ((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D3>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D3>(_loop_d->v());
+      _loop_acc = (((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D4>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D4>(_loop_d->v());
+      _loop_acc =
+          ((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D5>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D5>(_loop_d->v());
+      _loop_acc =
+          (((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D6>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D6>(_loop_d->v());
+      _loop_acc =
+          ((((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1) +
             1) +
-           1) +
-          1) +
-         1));
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D7>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D7>(_loop_d->v());
+      _loop_acc =
+          (((((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint::D8>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint::D8>(_loop_d->v());
+      _loop_acc =
+          ((((((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1) +
+              1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    } else {
+      const auto &[a0] = std::get<typename Uint::D9>(_loop_d->v());
+      _loop_acc =
+          (((((((((Nat::tail_mul(UINT64_C(10), _loop_acc) + 1) + 1) + 1) + 1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    }
   }
 }
 
@@ -363,108 +567,86 @@ uint64_t Nat::of_uint(const Uint &d) {
 }
 
 uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
-  if (std::holds_alternative<typename Uint0::Nil0>(d.v())) {
-    return acc;
-  } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D10>(d.v());
-    return Nat::of_hex_uint_acc(*a0, Nat::tail_mul(UINT64_C(16), acc));
-  } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return Nat::of_hex_uint_acc(*a0, (Nat::tail_mul(UINT64_C(16), acc) + 1));
-  } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return Nat::of_hex_uint_acc(*a0,
-                                ((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0, (((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0, ((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0, (((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D16>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        ((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1));
-  } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        (((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        ((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        (((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+  uint64_t _loop_acc = std::move(acc);
+  const Uint0 *_loop_d = &d;
+  while (true) {
+    if (std::holds_alternative<typename Uint0::Nil0>(_loop_d->v())) {
+      return _loop_acc;
+    } else if (std::holds_alternative<typename Uint0::D10>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D10>(_loop_d->v());
+      _loop_acc = Nat::tail_mul(UINT64_C(16), _loop_acc);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D11>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D11>(_loop_d->v());
+      _loop_acc = (Nat::tail_mul(UINT64_C(16), _loop_acc) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D12>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D12>(_loop_d->v());
+      _loop_acc = ((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D13>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D13>(_loop_d->v());
+      _loop_acc = (((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D14>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D14>(_loop_d->v());
+      _loop_acc =
+          ((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D15>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D15>(_loop_d->v());
+      _loop_acc =
+          (((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) + 1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D16>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D16>(_loop_d->v());
+      _loop_acc =
+          ((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        ((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D17>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D17>(_loop_d->v());
+      _loop_acc =
+          (((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        (((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D18>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D18>(_loop_d->v());
+      _loop_acc =
+          ((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) +
               1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        ((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::D19>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::D19>(_loop_d->v());
+      _loop_acc =
+          (((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) +
                1) +
               1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        (((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::Da>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::Da>(_loop_d->v());
+      _loop_acc =
+          ((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) + 1) +
                 1) +
                1) +
               1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
-    const auto &[a0] = std::get<typename Uint0::De>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        ((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::Db>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::Db>(_loop_d->v());
+      _loop_acc =
+          (((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) +
                   1) +
                  1) +
                 1) +
@@ -472,14 +654,12 @@ uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
               1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
-  } else {
-    const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return Nat::of_hex_uint_acc(
-        *a0,
-        (((((((((((((((Nat::tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::Dc>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::Dc>(_loop_d->v());
+      _loop_acc =
+          ((((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) +
                    1) +
                   1) +
                  1) +
@@ -488,9 +668,57 @@ uint64_t Nat::of_hex_uint_acc(const Uint0 &d, uint64_t acc) {
               1) +
              1) +
             1) +
-           1) +
-          1) +
-         1));
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::Dd>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::Dd>(_loop_d->v());
+      _loop_acc =
+          (((((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) +
+                    1) +
+                   1) +
+                  1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    } else if (std::holds_alternative<typename Uint0::De>(_loop_d->v())) {
+      const auto &[a0] = std::get<typename Uint0::De>(_loop_d->v());
+      _loop_acc =
+          ((((((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) +
+                     1) +
+                    1) +
+                   1) +
+                  1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    } else {
+      const auto &[a0] = std::get<typename Uint0::Df>(_loop_d->v());
+      _loop_acc =
+          (((((((((((((((Nat::tail_mul(UINT64_C(16), _loop_acc) + 1) + 1) + 1) +
+                      1) +
+                     1) +
+                    1) +
+                   1) +
+                  1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1);
+      _loop_d = a0.get();
+    }
   }
 }
 
