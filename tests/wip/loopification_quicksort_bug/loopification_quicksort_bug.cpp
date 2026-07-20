@@ -7,6 +7,9 @@ List<uint64_t> QuicksortFun::quicksort_fun(
   struct _Enter {
     List<uint64_t> x;
   };
+  
+  // NOTE: manually inserted print statement!
+  std::cout << "called quicksort_fun" << std::endl;
 
   using _Frame = std::variant<_Enter>;
   List<uint64_t> _result{};
