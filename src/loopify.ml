@@ -2744,11 +2744,6 @@ let build_cell_call ~vt_ret pp_expr cell =
                 || expr_builds_cell_type e)
           in
           if should_wrap then
-            Printf.eprintf "[loopify] build_cell_call: wrapping field %d of %s (uptr_idxs=[%s], rec_idx=%d, n_args=%d)\n%!"
-              i cell.tca_ctor_name
-              (String.concat ";" (List.map string_of_int cell.tca_uptr_field_idxs))
-              cell.tca_rec_field_idx cell.tca_n_args;
-          if should_wrap then
             (match vt_ret with
              | Some ret_ty -> CPPfun_call (CPPmk_shared ret_ty, [e])
              | None -> e)
@@ -6282,11 +6277,6 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let env =
     collect_type_env body @ List.map (fun (id, ty) -> (id, ty)) params
   in
-  (* body_has_unique_owner_decomposition check disabled: Tshared_ptr is now
-     rendered as shared_ptr, which is copyable, so this guard is never needed *)
-  if false then
-    body
-  else
   (
   (* Rewrite body for Enter handler and collect call frame info *)
   let call_counter = ref 1 in
@@ -6313,37 +6303,6 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let frame_ps_map =
     compute_frame_pointer_safe pointer_safe_varying frames
   in
-  (* Bail out when any frame has a non-pointer-safe Tshared_ptr field.  Even
-     though Tshared_ptr is now rendered as shared_ptr (copyable), a non-PS
-     shared_ptr frame field still requires a shared_ptr<T> value at the push
-     site — but if that value was previously extracted from a PS frame as
-     const T&, the push would fail to convert T& → shared_ptr<T>.  The guard
-     kept for now for consistency with prior guards. *)
-  let _has_unsafe_sptr =
-    List.exists (fun cf ->
-      let cf_ps = match List.assoc_opt cf.cf_name frame_ps_map with
-        | Some flags -> flags
-        | None -> List.map (fun _ -> false) cf.cf_saved_types
-      in
-      List.exists2 (fun ty safe ->
-        (not safe) && type_contains_shared_ptr ty)
-        cf.cf_saved_types cf_ps)
-      frames
-  in
-  if false (* shared_ptr is copyable, no need to bail out *) then
-    ( Printf.eprintf "[loopify] %s: skip — unsafe sptr\n%!"
-        (match fn_name with Some n -> n | None -> "?");
-      body )
-  else
-  let _has_empty_cont_frame =
-    List.exists (fun cf ->
-      cf.cf_saved_types = [] && not (String.equal cf.cf_name "_Enter"))
-      frames
-  in
-  if false (* empty cont frames are valid — they execute continuation code
-              using _result without needing saved local state *) then
-    body
-  else
   let all_frame_ps =
     ("_Enter", pointer_safe_varying) :: frame_ps_map
   in
@@ -7372,9 +7331,7 @@ let body_contains_lazy_factory body =
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
     tparams params ret_ty body =
   if has_recursive_branch_dependency check body then
-    ( Printf.eprintf "[loopify] %s: skip — branch dependency\n%!"
-        (match fn_name with Some n -> n | None -> "?");
-      (body, false) )
+    (body, false)
   else
   match (None : tmc_info option) with
   | Some ti ->
@@ -7689,13 +7646,8 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
             var_fields
           |> List.filter_map Fun.id
         in
-        if uptr_idxs <> [] then begin
-          Printf.eprintf "[loopify] ctor_ptr_fields: %s → [%s] (total Fvar fields: %d)\n%!"
-            ctor_name
-            (String.concat "; " (List.map string_of_int uptr_idxs))
-            (List.length var_fields);
-          Hashtbl.replace ctor_ptr_fields ctor_name uptr_idxs
-        end;
+        if uptr_idxs <> [] then
+          Hashtbl.replace ctor_ptr_fields ctor_name uptr_idxs;
         List.iter collect_uptr_fields sub_fields
       | _ -> ()
     in

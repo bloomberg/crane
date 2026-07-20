@@ -501,6 +501,14 @@ let rec get_concept_name_from_mt = function
   | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
   | MTsig _ -> None
 
+(** Like {!get_concept_name_from_mt}, but returns the base module type's raw
+    kernel name (for callers that emit [Name<M>] directly rather than a
+    pretty-printed concept reference). *)
+let rec get_base_concept = function
+  | MTident kn -> Some kn
+  | MTwith (mt, _) -> get_base_concept mt
+  | _ -> None
+
 (** Render the [MTwith] refinements of a module type ([BASE with Definition t
     := nat], [OUTER with Module Inner := NatInner]) as C++ [std::same_as<…>]
     constraints.
@@ -685,14 +693,8 @@ let rec pp_structure_elem ~is_header f = function
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
-          let rec get_concept_name = function
-            | MTident kn -> Some (pp_concept_ref kn)
-            | MTwith (mt, _) -> get_concept_name mt
-            | MTfunsig (_, mt, mt') -> get_concept_name mt'
-            | MTsig _ -> None
-          in
           let static_assert =
-            match get_concept_name m.ml_mod_type with
+            match get_concept_name_from_mt m.ml_mod_type with
             | Some concept_name ->
               fnl ()
               ++ str "static_assert("
@@ -872,11 +874,6 @@ let rec pp_structure_elem ~is_header f = function
                 match se with
                 | SEmodtype m ->
                   let modtype_name = str (Label.to_string l) in
-                  let rec get_base_concept = function
-                    | MTident kn -> Some kn
-                    | MTwith (mt, _) -> get_base_concept mt
-                    | _ -> None
-                  in
                   let concept_pp =
                     match get_base_concept m with
                     | Some base_kn ->
@@ -1213,14 +1210,8 @@ let rec pp_structure_elem ~is_header f = function
                 ++ body
                 ++ str "};"
               in
-              let rec get_concept_name = function
-                | MTident kn -> Some (pp_concept_ref kn)
-                | MTwith (mt, _) -> get_concept_name mt
-                | MTfunsig (_, mt, mt') -> get_concept_name mt'
-                | MTsig _ -> None
-              in
               let static_assert =
-                match get_concept_name m.ml_mod_type with
+                match get_concept_name_from_mt m.ml_mod_type with
                 | Some concept_name ->
                   fnl ()
                   ++ str "static_assert("
@@ -1331,11 +1322,6 @@ let rec pp_structure_elem ~is_header f = function
       mt ()
     else
       let name = pp_modname (MPdot (top_visible_mp (), l)) in
-      let rec get_base_concept = function
-        | MTident kn -> Some kn
-        | MTwith (mt, _) -> get_base_concept mt
-        | _ -> None
-      in
       let concept_pp =
         match get_base_concept m with
         | Some base_kn ->
