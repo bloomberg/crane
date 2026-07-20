@@ -1908,7 +1908,38 @@ let reset_used_custom_imports () = used_refs := Refset'.empty
 
 let customs = Summary.ref Refmap'.empty ~name:"CraneExtrCustom"
 
-let add_custom r ids s = customs := Refmap'.add r (ids, s) !customs
+(* Fires when a global already has a Crane extraction mapping and a *different*
+   one is registered on top of it -- almost always the symptom of importing two
+   overlapping [Mapping.*] modules (e.g. an int-backed and a GMP-backed flavor of
+   [Z]), where the last import silently wins.  Identical re-registration (the
+   same target reached through a transitive import) is not reported. *)
+let warn_overlapping_mapping =
+  CWarnings.create
+    ~name:"crane-overlapping-mapping"
+    ~category:CWarnings.CoreCategories.extraction
+    (fun (r, old_s, new_s) ->
+      let one_line s =
+        String.concat " " (String.split_on_char '\n' s)
+      in
+      let trunc s =
+        let s = one_line s in
+        if String.length s <= 50 then s else String.sub s 0 50 ^ "..."
+      in
+      strbrk "Crane: the extraction mapping for "
+      ++ safe_pr_global r
+      ++ strbrk " is being overridden (was \""
+      ++ str (trunc old_s)
+      ++ strbrk "\", now \""
+      ++ str (trunc new_s)
+      ++ strbrk "\"). The later mapping wins; this usually means two overlapping "
+      ++ strbrk "Mapping modules were imported together.")
+
+let add_custom r ids s =
+  (match Refmap'.find_opt r !customs with
+  | Some (_old_ids, old_s) when not (String.equal old_s s) ->
+    warn_overlapping_mapping (r, old_s, s)
+  | _ -> ());
+  customs := Refmap'.add r (ids, s) !customs
 
 let is_custom r = Refmap'.mem r !customs
 

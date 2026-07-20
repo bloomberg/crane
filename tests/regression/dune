@@ -290,6 +290,17 @@
   (deps record_defaults.t.exe)
   (action (run ./record_defaults.t.exe))))
 
+(subdir real_floor_guard
+ (rule
+  (targets real_floor_guard.t.exe)
+  (deps RealFloorGuard.vo real_floor_guard.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} real_floor_guard.t.exe real_floor_guard.cpp real_floor_guard.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps real_floor_guard.t.exe)
+  (action (run ./real_floor_guard.t.exe))))
+
 (subdir setoid_rw
  (rule
   (targets setoid_rw.t.exe)
