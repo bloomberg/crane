@@ -3604,6 +3604,17 @@
   (deps loopify_coind_stream.t.exe)
   (action (run ./loopify_coind_stream.t.exe))))
 
+(subdir itree_invariants
+ (rule
+  (targets itree_invariants.t.exe)
+  (deps ItreeInvariants.vo itree_invariants.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_invariants.t.exe itree_invariants.cpp itree_invariants.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_invariants.t.exe)
+  (action (run ./itree_invariants.t.exe))))
+
 (subdir loopify_itree_reified
  (rule
   (targets loopify_itree_reified.t.exe)
