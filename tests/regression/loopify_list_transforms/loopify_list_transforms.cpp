@@ -1,33 +1,63 @@
 #include "loopify_list_transforms.h"
 
-List<std::pair<uint64_t, uint64_t>>
-LoopifyListTransforms::run_length_encode(const List<uint64_t> &l) {
-  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return List<std::pair<uint64_t, uint64_t>>::nil();
-  } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    auto &&_sv = *a1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-      return List<std::pair<uint64_t, uint64_t>>::cons(
-          std::make_pair(a0, UINT64_C(1)),
-          List<std::pair<uint64_t, uint64_t>>::nil());
+List<std::pair<uint64_t, uint64_t>> LoopifyListTransforms::run_length_encode(
+    const List<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const List<uint64_t> *l;
+  };
+
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  List<std::pair<uint64_t, uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified run_length_encode: _Enter -> _Cont_Cons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+        _result = List<std::pair<uint64_t, uint64_t>>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        auto &&_sv = *a1;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
+          _result = List<std::pair<uint64_t, uint64_t>>::cons(
+              std::make_pair(a0, UINT64_C(1)),
+              List<std::pair<uint64_t, uint64_t>>::nil());
+        } else {
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
+      }
     } else {
-      auto &&_sv1 = run_length_encode(*a1);
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      uint64_t a0 = _f.a0;
+      List<std::pair<uint64_t, uint64_t>> _rc1 = std::move(_result);
       if (std::holds_alternative<
-              typename List<std::pair<uint64_t, uint64_t>>::Nil>(_sv1.v())) {
-        return List<std::pair<uint64_t, uint64_t>>::cons(
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(_rc1.v())) {
+        _result = List<std::pair<uint64_t, uint64_t>>::cons(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
         const auto &[a01, a11] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                _sv1.v());
+                _rc1.v());
         const auto &[y, n] = a01;
         if (a0 == y) {
-          return List<std::pair<uint64_t, uint64_t>>::cons(
+          _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(y, (n + UINT64_C(1))), *a11);
         } else {
-          return List<std::pair<uint64_t, uint64_t>>::cons(
+          _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(a0, UINT64_C(1)),
               List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
                                                         *a11));
@@ -35,6 +65,7 @@ LoopifyListTransforms::run_length_encode(const List<uint64_t> &l) {
       }
     }
   }
+  return _result;
 }
 
 List<uint64_t> LoopifyListTransforms::prefix_sums(

@@ -937,18 +937,70 @@ struct HofTreeLoopify {
 
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
-  static std::pair<T3, tree<T2>> tree_map_accum(F0 &&f, T3 acc,
-                                                const tree<T1> &t) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-      return std::make_pair(std::move(acc), tree<T2>::leaf());
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
-      auto [acc1, l_] = tree_map_accum<T1, T2, T3>(f, std::move(acc), *a0);
-      auto [acc2, x_] = f(acc1, a1);
-      auto [acc3, r_] = tree_map_accum<T1, T2, T3>(f, acc2, *a2);
-      return std::make_pair(acc3,
-                            tree<T2>::node(std::move(l_), x_, std::move(r_)));
+  static std::pair<T3, tree<T2>>
+  tree_map_accum(F0 &&f, T3 acc,
+                 const tree<T1> &t) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
+
+    struct _Enter {
+      const tree<T1> *t;
+      T3 acc;
+    };
+
+    /// _Cont_Node: saves [a1, a2], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Node {
+      std::decay_t<T1> a1;
+      const tree<T1> *a2;
+    };
+
+    /// _Cont_acc2: saves [l_, x_], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_acc2 {
+      tree<T2> l_;
+      std::decay_t<T2> x_;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Node, _Cont_acc2>;
+    std::pair<T3, tree<T2>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&t, acc});
+    /// Loopified tree_map_accum: _Enter -> _Cont_Node -> _Cont_acc2.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const tree<T1> &t = *_f.t;
+        auto acc = std::move(_f.acc);
+        if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
+          _result = std::make_pair(std::move(acc), tree<T2>::leaf());
+        } else {
+          const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
+          _stack.emplace_back(_Cont_Node{a1, a2.get()});
+          _stack.emplace_back(_Enter{a0.get(), std::move(acc)});
+        }
+      } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+        auto _f = std::move(std::get<_Cont_Node>(_frame));
+        auto a1 = std::move(_f.a1);
+        const tree<T1> &a2 = *_f.a2;
+        std::pair<T3, tree<T2>> _rc1 = std::move(_result);
+        auto [acc1, l_] = _rc1;
+        auto [acc2, x_] = f(acc1, a1);
+        _stack.emplace_back(_Cont_acc2{l_, x_});
+        _stack.emplace_back(_Enter{&a2, acc2});
+      } else {
+        auto _f = std::move(std::get<_Cont_acc2>(_frame));
+        tree<T2> l_ = std::move(_f.l_);
+        auto x_ = std::move(_f.x_);
+        std::pair<T3, tree<T2>> _rc2 = std::move(_result);
+        auto [acc3, r_] = _rc2;
+        _result = std::make_pair(
+            acc3, tree<T2>::node(std::move(l_), x_, std::move(r_)));
+      }
     }
+    return _result;
   }
 
   static inline const tree<uint64_t> small_tree = tree<uint64_t>::node(

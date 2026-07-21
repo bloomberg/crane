@@ -1057,32 +1057,69 @@ struct LoopifyLists {
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &> &&
              std::is_invocable_r_v<bool, F1 &, uint64_t &>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-  partition3(F0 &&p, F1 &&q, const list<uint64_t> &l) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
-      return std::make_pair(
-          std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
-          list<uint64_t>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
-      auto [p0, cs] = partition3(p, q, *a1);
-      auto [as_, bs] = std::move(p0);
-      if (p(a0)) {
-        return std::make_pair(
-            std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                           std::move(bs)),
-            std::move(cs));
+  partition3(F0 &&p, F1 &&q,
+             const list<uint64_t> &l) { /// _Enter: captures varying parameters
+                                        /// for each recursive call.
+
+    struct _Enter {
+      const list<uint64_t> *l;
+    };
+
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      uint64_t a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
+        _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified partition3: _Enter -> _Cont_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const list<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
+          _result = std::make_pair(
+              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil()),
+              list<uint64_t>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       } else {
-        if (q(a0)) {
-          return std::make_pair(
-              std::make_pair(std::move(as_),
-                             list<uint64_t>::cons(a0, std::move(bs))),
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
+            _rc1 = std::move(_result);
+        auto [p0, cs] = _rc1;
+        auto [as_, bs] = std::move(p0);
+        if (p(a0)) {
+          _result = std::make_pair(
+              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
+                             std::move(bs)),
               std::move(cs));
         } else {
-          return std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
-                                list<uint64_t>::cons(a0, std::move(cs)));
+          if (q(a0)) {
+            _result = std::make_pair(
+                std::make_pair(std::move(as_),
+                               list<uint64_t>::cons(a0, std::move(bs))),
+                std::move(cs));
+          } else {
+            _result =
+                std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
+                               list<uint64_t>::cons(a0, std::move(cs)));
+          }
         }
       }
     }
+    return _result;
   }
 
   /// transpose m transposes a matrix (list of lists).
@@ -1194,16 +1231,52 @@ struct LoopifyLists {
   /// map_accum_l f acc l maps with accumulator from left.
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<std::pair<T3, T2>, F0 &, T3 &, T1 &>
-  static std::pair<T3, list<T2>> map_accum_l(F0 &&f, T3 acc,
-                                             const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return std::make_pair(std::move(acc), list<T2>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      auto [acc_, y] = f(acc, a0);
-      auto [acc__, ys] = map_accum_l<T1, T2, T3>(f, acc_, *a1);
-      return std::make_pair(acc__, list<T2>::cons(y, std::move(ys)));
+  static std::pair<T3, list<T2>>
+  map_accum_l(F0 &&f, T3 acc,
+              const list<T1> &l) { /// _Enter: captures varying parameters for
+                                   /// each recursive call.
+
+    struct _Enter {
+      const list<T1> *l;
+      T3 acc;
+    };
+
+    /// _Cont_acc_: saves [y], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_acc_ {
+      std::decay_t<T2> y;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_acc_>;
+    std::pair<T3, list<T2>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l, acc});
+    /// Loopified map_accum_l: _Enter -> _Cont_acc_.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const list<T1> &l = *_f.l;
+        auto acc = std::move(_f.acc);
+        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
+          _result = std::make_pair(std::move(acc), list<T2>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
+          auto [acc_, y] = f(acc, a0);
+          _stack.emplace_back(_Cont_acc_{y});
+          _stack.emplace_back(_Enter{a1.get(), acc_});
+        }
+      } else {
+        auto _f = std::move(std::get<_Cont_acc_>(_frame));
+        auto y = std::move(_f.y);
+        std::pair<T3, list<T2>> _rc1 = std::move(_result);
+        auto [acc__, ys] = _rc1;
+        _result = std::make_pair(acc__, list<T2>::cons(y, std::move(ys)));
+      }
     }
+    return _result;
   }
 
   /// prefix_sums acc l returns all prefix sums: 1,2,3 -> 0,1,3,6.

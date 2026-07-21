@@ -156,22 +156,59 @@ struct LoopifySorting {
   static List<uint64_t> insertion_sort(const List<uint64_t> &l);
 
   template <typename T1>
-  static std::pair<List<T1>, List<T1>> split(const List<T1> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return std::make_pair(List<T1>::nil(), List<T1>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto &&_sv0 = *a1;
-      if (std::holds_alternative<typename List<T1>::Nil>(_sv0.v())) {
-        return std::make_pair(List<T1>::cons(a0, List<T1>::nil()),
-                              List<T1>::nil());
+  static std::pair<List<T1>, List<T1>>
+  split(const List<T1> &l) { /// _Enter: captures varying parameters for each
+                             /// recursive call.
+
+    struct _Enter {
+      const List<T1> *l;
+    };
+
+    /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_Cons {
+      std::decay_t<T1> a0;
+      std::decay_t<T1> a00;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    std::pair<List<T1>, List<T1>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified split: _Enter -> _Cont_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<T1> &l = *_f.l;
+        if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+          _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+          auto &&_sv0 = *a1;
+          if (std::holds_alternative<typename List<T1>::Nil>(_sv0.v())) {
+            _result = std::make_pair(List<T1>::cons(a0, List<T1>::nil()),
+                                     List<T1>::nil());
+          } else {
+            const auto &[a00, a10] =
+                std::get<typename List<T1>::Cons>(_sv0.v());
+            _stack.emplace_back(_Cont_Cons{a0, a00});
+            _stack.emplace_back(_Enter{a10.get()});
+          }
+        }
       } else {
-        const auto &[a00, a10] = std::get<typename List<T1>::Cons>(_sv0.v());
-        auto [l1, l2] = split<T1>(*a10);
-        return std::make_pair(List<T1>::cons(a0, std::move(l1)),
-                              List<T1>::cons(a00, std::move(l2)));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        auto a00 = std::move(_f.a00);
+        std::pair<List<T1>, List<T1>> _rc1 = std::move(_result);
+        auto [l1, l2] = _rc1;
+        _result = std::make_pair(List<T1>::cons(a0, std::move(l1)),
+                                 List<T1>::cons(a00, std::move(l2)));
       }
     }
+    return _result;
   }
 
   static List<uint64_t> merge_fuel(uint64_t fuel, List<uint64_t> l1,

@@ -219,20 +219,54 @@ struct LoopifyFolds {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &, uint64_t &>
-  static List<uint64_t> scanr(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return List<uint64_t>::cons(acc, List<uint64_t>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      auto &&_sv0 = scanr(f, acc, *a1);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
-        return List<uint64_t>::cons(acc, List<uint64_t>::nil());
+  static List<uint64_t>
+  scanr(F0 &&f, uint64_t acc,
+        const List<uint64_t> &l) { /// _Enter: captures varying parameters for
+                                   /// each recursive call.
+
+    struct _Enter {
+      const List<uint64_t> *l;
+    };
+
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      uint64_t a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    List<uint64_t> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified scanr: _Enter -> _Cont_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<uint64_t> &l = *_f.l;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       } else {
-        const auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        return List<uint64_t>::cons(f(a0, a00), *a10);
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        uint64_t a0 = _f.a0;
+        List<uint64_t> _rc1 = std::move(_result);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_rc1.v())) {
+          _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
+        } else {
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_rc1.v());
+          _result = List<uint64_t>::cons(f(a0, a00), *a10);
+        }
       }
     }
+    return _result;
   }
 
   template <typename F1>
@@ -322,15 +356,52 @@ struct LoopifyFolds {
     requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F0 &,
                                    uint64_t &, uint64_t &>
   static std::pair<uint64_t, List<uint64_t>>
-  map_accum(F0 &&f, uint64_t acc, const List<uint64_t> &l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-      return std::make_pair(std::move(acc), List<uint64_t>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      auto [acc_, y] = f(acc, a0);
-      auto [final_acc, ys] = map_accum(f, acc_, *a1);
-      return std::make_pair(final_acc, List<uint64_t>::cons(y, std::move(ys)));
+  map_accum(F0 &&f, uint64_t acc,
+            const List<uint64_t> &l) { /// _Enter: captures varying parameters
+                                       /// for each recursive call.
+
+    struct _Enter {
+      const List<uint64_t> *l;
+      uint64_t acc;
+    };
+
+    /// _Cont_acc_: saves [y], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_acc_ {
+      uint64_t y;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_acc_>;
+    std::pair<uint64_t, List<uint64_t>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l, acc});
+    /// Loopified map_accum: _Enter -> _Cont_acc_.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<uint64_t> &l = *_f.l;
+        uint64_t acc = _f.acc;
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+          _result = std::make_pair(std::move(acc), List<uint64_t>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          auto [acc_, y] = f(acc, a0);
+          _stack.emplace_back(_Cont_acc_{y});
+          _stack.emplace_back(_Enter{a1.get(), acc_});
+        }
+      } else {
+        auto _f = std::move(std::get<_Cont_acc_>(_frame));
+        uint64_t y = _f.y;
+        std::pair<uint64_t, List<uint64_t>> _rc1 = std::move(_result);
+        auto [final_acc, ys] = _rc1;
+        _result =
+            std::make_pair(final_acc, List<uint64_t>::cons(y, std::move(ys)));
+      }
     }
+    return _result;
   }
 
   template <typename F0>

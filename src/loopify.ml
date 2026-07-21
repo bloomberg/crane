@@ -7519,9 +7519,15 @@ let try_inline_functional_into names body =
     branch both use.  Only conditions are rewritten (recursive scrutinees are
     already let-bound during match lowering); lambda bodies are not descended
     into, since their calls are not evaluated as part of the condition. *)
-let hoist_rec_conditions (check : call_checker) (ret_ty : cpp_type)
+let hoist_rec_conditions (check : call_checker)
+    (params : (Id.t * cpp_type) list) (ret_ty : cpp_type)
     (stmts : cpp_stmt list) : cpp_stmt list =
-  if not (is_trivially_copyable_type ret_ty) then stmts
+  (* Only safe when the recursive call's arguments (≈ the parameters) are
+     trivially copyable: those are what the [_Enter] frame stores, so there is
+     no move-only subtree that could dangle — the exact hazard
+     [has_recursive_branch_dependency] guards against. *)
+  if not (List.for_all (fun (_, ty) -> is_trivially_copyable_type ty) params)
+  then stmts
   else
     let counter = ref 0 in
     let fresh () =
@@ -7595,9 +7601,27 @@ let hoist_rec_conditions (check : call_checker) (ret_ty : cpp_type)
                 List.map (fun (ps, rty, b) -> (ps, rty, hs b)) branches,
                 err ) ]
       | Smatch (branches, default) ->
-        [ Smatch
-            ( List.map (fun br -> {br with smb_body = hs br.smb_body}) branches,
-              Option.map hs default ) ]
+        (* All branches of one match share the scrutinee; hoist a recursive
+           call out of it once (e.g. [let (a,b) := f m in ...] destructuring a
+           recursive result) and thread the temporary through every branch. *)
+        ( match branches with
+        | br0 :: _ -> (
+          let binds, scrut' = hoist_cond br0.smb_scrutinee in
+          match binds with
+          | [] ->
+            [ Smatch
+                ( List.map (fun br -> {br with smb_body = hs br.smb_body})
+                    branches,
+                  Option.map hs default ) ]
+          | _ ->
+            binds_to_stmts binds
+            @ [ Smatch
+                  ( List.map
+                      (fun br ->
+                        {br with smb_scrutinee = scrut'; smb_body = hs br.smb_body})
+                      branches,
+                    Option.map hs default ) ] )
+        | [] -> [Smatch (branches, Option.map hs default)] )
       | _ -> [s]
     in
     hs stmts
@@ -7645,9 +7669,9 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
      recursion becomes ordinary self-recursion that loopifies. *)
   let body = try_inline_functional_into names body in
   let check = fn_checker names in
-  (* Hoist recursive calls out of if-conditions so a value-typed
+  (* Hoist recursive calls out of if-conditions/scrutinees so a value-typed
      condition-dependent recursion can loopify instead of bailing. *)
-  let body = hoist_rec_conditions check ret_ty body in
+  let body = hoist_rec_conditions check params ret_ty body in
   (* Cofixpoint guard: if this function body ends with a [lazy_] return,
      it is a cofixpoint returning a standard coinductive type.  The entire
      body (including recursive calls) is captured inside a [=] lambda and

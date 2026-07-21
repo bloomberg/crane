@@ -489,37 +489,107 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename T2>
-  static std::pair<List<T1>, List<T2>>
-  poly_unzip(const List<std::pair<T1, T2>> &l) {
-    if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(l.v())) {
-      return std::make_pair(List<T1>::nil(), List<T2>::nil());
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::pair<T1, T2>>::Cons>(l.v());
-      const auto &[a, b] = a0;
-      auto [as_, bs] = poly_unzip<T1, T2>(*a1);
-      return std::make_pair(List<T1>::cons(a, std::move(as_)),
-                            List<T2>::cons(b, std::move(bs)));
+  static std::pair<List<T1>, List<T2>> poly_unzip(
+      const List<std::pair<T1, T2>>
+          &l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      const List<std::pair<T1, T2>> *l;
+    };
+
+    /// _Cont_a: saves [a, b], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_a {
+      std::decay_t<T1> a;
+      std::decay_t<T2> b;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_a>;
+    std::pair<List<T1>, List<T2>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified poly_unzip: _Enter -> _Cont_a.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<std::pair<T1, T2>> &l = *_f.l;
+        if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(
+                l.v())) {
+          _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename List<std::pair<T1, T2>>::Cons>(l.v());
+          const auto &[a, b] = a0;
+          _stack.emplace_back(_Cont_a{a, b});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
+      } else {
+        auto _f = std::move(std::get<_Cont_a>(_frame));
+        auto a = std::move(_f.a);
+        auto b = std::move(_f.b);
+        std::pair<List<T1>, List<T2>> _rc1 = std::move(_result);
+        auto [as_, bs] = _rc1;
+        _result = std::make_pair(List<T1>::cons(a, std::move(as_)),
+                                 List<T2>::cons(b, std::move(bs)));
+      }
     }
+    return _result;
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &>
-  static std::pair<List<T1>, List<T1>> poly_partition(F0 &&p,
-                                                      const List<T1> &l) {
-    if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-      return std::make_pair(List<T1>::nil(), List<T1>::nil());
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      auto [trues, falses] = poly_partition<T1>(p, *a1);
-      if (p(a0)) {
-        return std::make_pair(List<T1>::cons(a0, std::move(trues)),
-                              std::move(falses));
+  static std::pair<List<T1>, List<T1>>
+  poly_partition(F0 &&p,
+                 const List<T1> &l) { /// _Enter: captures varying parameters
+                                      /// for each recursive call.
+
+    struct _Enter {
+      const List<T1> *l;
+    };
+
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      std::decay_t<T1> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    std::pair<List<T1>, List<T1>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{&l});
+    /// Loopified poly_partition: _Enter -> _Cont_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List<T1> &l = *_f.l;
+        if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
+          _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
+        } else {
+          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+          _stack.emplace_back(_Cont_Cons{a0});
+          _stack.emplace_back(_Enter{a1.get()});
+        }
       } else {
-        return std::make_pair(std::move(trues),
-                              List<T1>::cons(a0, std::move(falses)));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        std::pair<List<T1>, List<T1>> _rc1 = std::move(_result);
+        auto [trues, falses] = _rc1;
+        if (p(a0)) {
+          _result = std::make_pair(List<T1>::cons(a0, std::move(trues)),
+                                   std::move(falses));
+        } else {
+          _result = std::make_pair(std::move(trues),
+                                   List<T1>::cons(a0, std::move(falses)));
+        }
       }
     }
+    return _result;
   }
 
   template <typename T1, typename F0>
