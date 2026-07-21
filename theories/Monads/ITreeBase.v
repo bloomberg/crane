@@ -90,6 +90,5 @@ Crane Extract Skip Inr_sum1.
 
 Crane Extract Inlined Constant subevent_void1 => "".
 
-Crane Extract Skip itree.
 Crane Extract Skip ITree.subst.
 Crane Extract Skip Module ITree.
