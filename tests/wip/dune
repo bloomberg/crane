@@ -69,13 +69,57 @@
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
 
-(subdir loopification_quicksort_bug
+(subdir loopify_gap_if_condition
  (rule
-  (targets loopification_quicksort_bug.t.exe)
-  (deps LoopificationQuicksortBug.vo loopification_quicksort_bug.t.cpp (source_tree .))
+  (targets loopify_gap_if_condition.t.exe)
+  (deps LoopifyGapIfCondition.vo loopify_gap_if_condition.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopification_quicksort_bug.t.exe loopification_quicksort_bug.cpp loopification_quicksort_bug.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_if_condition.t.exe loopify_gap_if_condition.cpp loopify_gap_if_condition.t.cpp)))
  (rule
   (alias runtest)
-  (deps loopification_quicksort_bug.t.exe)
-  (action (run ./loopification_quicksort_bug.t.exe))))
+  (deps loopify_gap_if_condition.t.exe)
+  (action (run ./loopify_gap_if_condition.t.exe))))
+
+(subdir loopify_gap_pair_destructure
+ (rule
+  (targets loopify_gap_pair_destructure.t.exe)
+  (deps LoopifyGapPairDestructure.vo loopify_gap_pair_destructure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_pair_destructure.t.exe loopify_gap_pair_destructure.cpp loopify_gap_pair_destructure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_pair_destructure.t.exe)
+  (action (run ./loopify_gap_pair_destructure.t.exe))))
+
+(subdir loopify_gap_mutual3
+ (rule
+  (targets loopify_gap_mutual3.t.exe)
+  (deps LoopifyGapMutual3.vo loopify_gap_mutual3.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_mutual3.t.exe loopify_gap_mutual3.cpp loopify_gap_mutual3.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_mutual3.t.exe)
+  (action (run ./loopify_gap_mutual3.t.exe))))
+
+(subdir loopify_gap_nested_fix
+ (rule
+  (targets loopify_gap_nested_fix.t.exe)
+  (deps LoopifyGapNestedFix.vo loopify_gap_nested_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_nested_fix.t.exe loopify_gap_nested_fix.cpp loopify_gap_nested_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_nested_fix.t.exe)
+  (action (run ./loopify_gap_nested_fix.t.exe))))
+
+(subdir loopify_gap_ackermann
+ (rule
+  (targets loopify_gap_ackermann.t.exe)
+  (deps LoopifyGapAckermann.vo loopify_gap_ackermann.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_ackermann.t.exe loopify_gap_ackermann.cpp loopify_gap_ackermann.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_ackermann.t.exe)
+  (action (run ./loopify_gap_ackermann.t.exe))))
