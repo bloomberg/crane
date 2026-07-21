@@ -1,6 +1,6 @@
-// Loopification gap (wip): parity's recursive call feeds an if-condition, so
-// loopify bails and the generated parity is a plain recursive function.  The
-// recursion is still correct; this test pins that behaviour down.
+// parity's recursive call feeds an if-condition.  Loopify hoists it out of the
+// condition and produces an explicit-stack loop (it used to bail to plain
+// recursion).  This test guards the result stays correct.
 #include "loopify_gap_if_condition.h"
 
 #include <cassert>

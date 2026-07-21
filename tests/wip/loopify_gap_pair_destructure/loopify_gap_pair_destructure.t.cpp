@@ -1,6 +1,6 @@
-// Loopification gap (wip): swap_pair's non-tail recursive call is destructured
-// and consumed, so loopify leaves it as a plain recursive function.  The
-// recursion is still correct; this test pins that behaviour down.
+// swap_pair's non-tail recursive call is destructured and consumed.  Loopify
+// hoists it out of the match scrutinee and produces an explicit-stack loop (it
+// used to stay plain recursion).  This test guards the result stays correct.
 #include "loopify_gap_pair_destructure.h"
 
 #include <cassert>

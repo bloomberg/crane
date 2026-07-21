@@ -2,14 +2,14 @@ From Stdlib Require Import Arith.PeanoNat.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 
-(** Loopification gap: a recursive call whose result feeds a branch condition.
+(** Loopification of a recursive call whose result feeds a branch condition.
 
     [parity]'s recursive call [parity m] is used inside the [if] guard
-    [Nat.eqb (parity m) 0].  Loopify's [has_recursive_branch_dependency] check
-    detects a recursive call in a condition/scrutinee position and bails out
-    (the frame-based rewriter cannot keep the cloned subtree alive while
-    evaluating the selected continuation), so the extracted C++ stays a plain
-    recursive function rather than an explicit-stack loop.
+    [Nat.eqb (parity m) 0].  Loopify now hoists the value-typed recursive call
+    out of the condition into a temporary and linearises it with a resume
+    frame, so the extracted C++ is an explicit-stack loop.  (This shape
+    previously defeated loopification: [has_recursive_branch_dependency] bailed
+    to plain recursion.)  Kept as a regression guard.
 
     The recursion is linear (the guard names the recursive result exactly once),
     so it computes [n mod 2] without exponential blow-up. *)

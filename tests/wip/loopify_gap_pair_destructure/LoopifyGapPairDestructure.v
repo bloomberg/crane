@@ -2,14 +2,15 @@ From Stdlib Require Import Arith.PeanoNat.
 From Crane Require Import Mapping.Std Mapping.NatIntStd.
 From Crane Require Extraction.
 
-(** Loopification gap: a non-tail recursive call whose result is immediately
+(** Loopification of a non-tail recursive call whose result is immediately
     destructured and consumed.
 
     [swap_pair]'s recursive call [swap_pair m] returns a pair that is taken
     apart with [let (a, b) := ...] and both components are used to build the
-    result.  This is genuine non-tail recursion whose continuation depends on
-    the destructured recursive result; loopify does not linearise it, so the
-    extracted C++ stays a plain recursive function. *)
+    result.  Loopify now hoists the recursive call out of the match scrutinee
+    into a temporary and linearises the continuation with a resume frame, so
+    the extracted C++ is an explicit-stack loop.  (This shape previously stayed
+    plain recursion.)  Kept as a regression guard. *)
 
 Set Crane Loopify.
 

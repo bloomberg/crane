@@ -2,13 +2,15 @@ From Stdlib Require Import Arith.PeanoNat.
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 
-(** Loopification gap: three-way mutual recursion.
+(** Loopification of three-way mutual recursion.
 
-    Loopify's mutual-recursion inliner ([try_inline_mutual_into]) folds a single
-    partner into a self-recursive function that can then be loopified.  With a
-    three-way cycle [a -> b -> c -> a] there is no single partner to inline, so
-    none of the three is converted to self-recursion and all remain plain
-    (mutually) recursive functions in the extracted C++. *)
+    Loopify's mutual-recursion inliner ([try_inline_mutual_into]) folds cycle
+    partners into a self-recursive function that can then be loopified.  It now
+    handles cycles longer than two (transitive reachability), so a three-way
+    cycle [a -> b -> c -> a] is inlined one hop at a time until self-recursive
+    and each of [rot_a]/[rot_b]/[rot_c] extracts to a while-loop.  (Previously
+    only 2-way cycles were inlined and these stayed recursive.)  Kept as a
+    regression guard. *)
 
 Set Crane Loopify.
 

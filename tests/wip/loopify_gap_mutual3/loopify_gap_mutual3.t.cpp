@@ -1,6 +1,6 @@
-// Loopification gap (wip): a three-way mutual recursion (rot_a -> rot_b ->
-// rot_c -> rot_a) has no single partner to inline, so loopify leaves all three
-// as plain (mutually) recursive functions.  The recursion is still correct.
+// A three-way mutual recursion (rot_a -> rot_b -> rot_c -> rot_a).  Loopify now
+// inlines the whole cycle and turns all three into while-loops (it used to only
+// handle 2-way cycles).  This test guards the result stays correct.
 #include "loopify_gap_mutual3.h"
 
 #include <cassert>
