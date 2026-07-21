@@ -296,9 +296,7 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype(std::declval<const List<uint64_t> &>().app(
-        std::declval<const List<uint64_t> &>()))>
-        _s0;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -321,14 +319,14 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
         if (n <= UINT64_C(0)) {
           _result = List<uint64_t>::nil();
         } else {
-          _stack.emplace_back(_Resume1{sep.app(end_marker)});
+          _stack.emplace_back(_Resume1{std::move(sep.app(end_marker))});
           _stack.emplace_back(
               _Enter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
         }
       }
     } else {
       auto _f = std::move(std::get<_Resume1>(_frame));
-      _result = s.app(sep.app(std::move(_result).app(_f._s0)));
+      _result = s.app(sep.app(std::move(_result).app(std::move(_f._s0))));
     }
   }
   return _result;

@@ -3154,6 +3154,25 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
         | first :: rest when List.for_all (( = ) first) rest -> first
         | _ -> Tunknown )
       else Tunknown
+    | CPPfun_call (CPPglob (r, _, _), args)
+      when List.mem
+             (Id.to_string (Label.to_id (Common.label_of_r r)))
+             ["filter"; "app"; "myapp"] ->
+      (* Container combinators (from the standard list mappings) return a value
+         of the receiver's own type.  Member calls extract to a qualified free
+         call [filter(recv, pred)], so the receiver is the argument that infers
+         to a concrete (non-callable) type.  Resolving this keeps the saved
+         value out of the [decltype] fallback, which cannot render a capturing
+         predicate lambda at struct-definition scope. *)
+      let concrete_arg =
+        List.find_map
+          (fun a ->
+            match strip_ref_and_const_type (infer_saved_type tparams env a) with
+            | Tunknown | Tauto | Tfun _ -> None
+            | t -> Some t )
+          args
+      in
+      (match concrete_arg with Some t -> t | None -> Tunknown)
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->
@@ -7223,6 +7242,241 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_ex
     in
     (body', false)
 
+(** Inline an Equations-style "functional" into its knot-tying wrapper.
+
+    Well-founded recursion defined with [Equations] (or the [Fix]/[Wf]
+    combinators) extracts as two sibling definitions: a {e functional}
+    [f_functional l rec] that performs the real recursion by calling its
+    [rec] parameter, and the tied knot [f l = f_functional l f] that passes
+    [f] itself as [rec].  At the C++ level this becomes
+
+    {v
+      f(x) { return f_functional(x, [](y){ return f(y); }); }
+    v}
+
+    Loopify cannot linearise this on its own: the actual recursion is hidden
+    behind an opaque helper and an argument lambda it does not control, so the
+    frame transform degenerates into a single [_Enter] loop that just re-runs
+    the body.  We repair it {e before} loopification by inlining the
+    functional's body into [f], rewriting every call to the [rec] parameter
+    into a direct self-call to [f].  The result is ordinary self-recursion
+    (here, two non-tail calls combined with [++]) that {!transform_nontail}
+    turns into a proper explicit-stack loop.
+
+    Detection is deliberately narrow — the wrapper's body must contain a call
+    to a sibling field whose argument at some position is exactly an
+    eta-expansion [fun y => f(y)] of the wrapper itself — so only the knot
+    pattern is rewritten.  The functional field is left in place (now unused);
+    it is a template and instantiates only on demand. *)
+let try_inline_functional_into names body =
+  let self_refs = List.map fst names in
+  let self_labels =
+    List.map (fun r -> Label.to_id (Common.label_of_r r)) self_refs
+  in
+  let is_self_ref r = List.exists (Common.globref_equal r) self_refs in
+  let is_self_name n = List.exists (Id.equal n) self_labels in
+  (* The unqualified name a call target resolves to, if any. *)
+  let callee_name = function
+    | CPPvar id -> Some id
+    | CPPglob (r, _, _) -> (
+      match r with
+      | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
+      | GlobRef.VarRef v -> Some v
+      | _ -> None )
+    | _ -> None
+  in
+  (* Is [e] the eta-expansion [fun y => self(y)] of the function being defined?
+     Return the call head so the exact self-call form (with its type args) can
+     be reused when rewriting the functional's recursive parameter. *)
+  let eta_self_head = function
+    | CPPlambda
+        ([(_, Some y)], _, [Sreturn (Some (CPPfun_call (head, [CPPvar y'])))], _)
+      when Id.equal y y'
+           && (match callee_name head with
+              | Some n -> is_self_name n
+              | None -> false) ->
+      Some head
+    | _ -> None
+  in
+  (* Resolve a call target to a registered functional [(params, body)], skipping
+     self. *)
+  let lookup_functional callee =
+    match callee with
+    | CPPglob (r, _, _) when not (is_self_ref r) ->
+      Hashtbl.find_opt mutual_fn_table r
+    | CPPvar id when not (is_self_name id) ->
+      Hashtbl.fold
+        (fun r pb acc ->
+          match acc with
+          | Some _ -> acc
+          | None ->
+            if
+              (not (is_self_ref r))
+              && Id.equal id (Label.to_id (Common.label_of_r r))
+            then Some pb
+            else None )
+        mutual_fn_table None
+    | _ -> None
+  in
+  (* Find, anywhere in [body], a call to a registered functional with an
+     eta-self argument.  Returns (g_params, g_body, args, k, self_head). *)
+  let find_knot body =
+    let result = ref None in
+    let consider callee args =
+      if !result = None then
+        match lookup_functional callee with
+        | Some (g_params, g_body) ->
+          List.iteri
+            (fun k a ->
+              if !result = None then
+                match eta_self_head a with
+                | Some head -> result := Some (g_params, g_body, args, k, head)
+                | None -> () )
+            args
+        | None -> ()
+    in
+    let rec ve e =
+      ( match e with
+      | CPPfun_call (callee, args) -> consider callee args
+      | _ -> () );
+      ignore (map_expr (fun e' -> ve e'; e') (fun s -> vs s; s) Fun.id e)
+    and vs s = ignore (map_stmt (fun e -> ve e; e) (fun s' -> vs s'; s') Fun.id s) in
+    List.iter vs body;
+    !result
+  in
+  let inline_into a_body (g_params, g_body, args, k, self_head) =
+    if List.length g_params <> List.length args then None
+    else
+      let rec_param_id = fst (List.nth g_params k) in
+      (* The parameter at the eta-argument's position must be the one the
+         functional recurses through; if it is never called, the args and
+         params are misaligned (or this is not the knot pattern) — bail. *)
+      let rec_param_called =
+        body_exists
+          (function
+            | CPPfun_call (CPPvar id, _) -> Id.equal id rec_param_id
+            | _ -> false)
+          g_body
+      in
+      if not rec_param_called then None
+      else
+      (* Rewrite calls to the [rec] parameter into direct self-calls. *)
+      let rec subst_rec e =
+        match e with
+        | CPPfun_call (CPPvar id, cargs) when Id.equal id rec_param_id ->
+          CPPfun_call (self_head, List.map subst_rec cargs)
+        | _ -> map_expr subst_rec subst_stmt Fun.id e
+      and subst_stmt s = map_stmt subst_rec subst_stmt Fun.id s in
+      let g_body = List.map subst_stmt g_body in
+      (* Bail if the [rec] parameter is used in any non-call position we did
+         not rewrite — the simple self-call substitution would be unsound. *)
+      let uses_rec_param =
+        body_exists (function CPPvar id -> Id.equal id rec_param_id | _ -> false)
+          g_body
+      in
+      if uses_rec_param then None
+      else
+        (* Freshen every identifier the functional binds — parameters, locals,
+           match bindings, and lambda parameters — to avoid capturing (or being
+           shadowed by) the wrapper's own variables once spliced in.  Lambda
+           parameters matter in particular: a filter predicate [fun x => x < p]
+           would otherwise collide with a wrapper parameter also named [x],
+           confusing the decltype-based frame-field typing. *)
+        let bound = ref [] in
+        let add id = bound := id :: !bound in
+        let rec cb_expr e =
+          ( match e with
+          | CPPlambda (ps, _, _, _) ->
+            List.iter (fun (_, ido) -> Option.iter add ido) ps
+          | _ -> () );
+          ignore (map_expr (fun e' -> cb_expr e'; e') (fun s -> cb_stmt s; s) Fun.id e)
+        and cb_stmt s =
+          ( match s with
+          | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Some _, _) -> add id
+          | Smatch (branches, _) ->
+            List.iter
+              (fun br ->
+                Option.iter add br.smb_var;
+                List.iter (fun (id, _, _) -> add id) br.smb_field_bindings )
+              branches
+          | _ -> () );
+          ignore (map_stmt (fun e -> cb_expr e; e) (fun s' -> cb_stmt s'; s') Fun.id s)
+        in
+        let keep_params =
+          List.filteri (fun i _ -> i <> k) g_params
+        in
+        List.iter (fun (pid, _) -> add pid) keep_params;
+        List.iter cb_stmt g_body;
+        let rename_map =
+          List.map
+            (fun id -> (id, Id.of_string ("_inl_" ^ Id.to_string id)))
+            !bound
+        in
+        let rename_var id =
+          match List.assoc_opt id rename_map with Some f -> f | None -> id
+        in
+        let rec ren_expr = function
+          | CPPvar id -> CPPvar (rename_var id)
+          | CPPlambda (ps, rty, stmts, cap) ->
+            CPPlambda
+              ( List.map (fun (ty, ido) -> (ty, Option.map rename_var ido)) ps,
+                rty,
+                List.map ren_stmt stmts,
+                cap )
+          | e -> map_expr ren_expr ren_stmt Fun.id e
+        and ren_stmt s =
+          match s with
+          | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, ren_expr e)
+          | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
+          | Smatch (branches, default) ->
+            Smatch
+              ( List.map
+                  (fun br ->
+                    { br with
+                      smb_scrutinee = ren_expr br.smb_scrutinee;
+                      smb_var = Option.map rename_var br.smb_var;
+                      smb_field_bindings =
+                        List.map
+                          (fun (id, ty, u) -> (rename_var id, ty, u))
+                          br.smb_field_bindings;
+                      smb_extra_conds = List.map ren_expr br.smb_extra_conds;
+                      smb_body = List.map ren_stmt br.smb_body } )
+                  branches,
+                Option.map (List.map ren_stmt) default )
+          | _ -> map_stmt ren_expr ren_stmt Fun.id s
+        in
+        let fresh_params =
+          List.map (fun (pid, ty) -> (rename_var pid, ty)) keep_params
+        in
+        let fresh_body = List.map ren_stmt g_body in
+        (* Match exactly the knot call: a call to a registered functional whose
+           argument at position [k] is the eta-self lambda. *)
+        let spec =
+          {
+            is_target =
+              (function
+              | CPPfun_call (callee, cargs) ->
+                lookup_functional callee <> None
+                && List.length cargs = List.length args
+                && (match List.nth_opt cargs k with
+                   | Some a -> eta_self_head a <> None
+                   | None -> false)
+              | _ -> false);
+            get_args =
+              (function
+              | CPPfun_call (_, cargs) -> List.filteri (fun i _ -> i <> k) cargs
+              | _ -> []);
+            params = fresh_params;
+            body = fresh_body;
+          }
+        in
+        Some (generic_inline_stmts spec a_body)
+  in
+  match find_knot body with
+  | Some knot -> (
+    match inline_into body knot with Some body' -> body' | None -> body )
+  | None -> body
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfundef]. The transformation
@@ -7262,6 +7516,9 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
   register_fundef names params body;
   (* Try to inline mutual recursion partners *)
   let body = try_inline_mutual_into names body in
+  (* Inline an Equations-style functional applied to itself so its hidden
+     recursion becomes ordinary self-recursion that loopifies. *)
+  let body = try_inline_functional_into names body in
   let check = fn_checker names in
   (* Cofixpoint guard: if this function body ends with a [lazy_] return,
      it is a cofixpoint returning a standard coinductive type.  The entire
@@ -7495,6 +7752,7 @@ let try_inline_mutual_fields fields =
           (Fmethod { mf with mf_body = generic_inline_stmts spec mf.mf_body }, vis, tag)
         | _ -> (f, vis, tag) )
       fields
+
 
 (** Top-level entry point: transform a declaration and all its nested
     declarations (templates, structs, namespaces). Dispatches to
