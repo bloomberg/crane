@@ -7503,6 +7503,105 @@ let try_inline_functional_into names body =
     match inline_into body knot with Some body' -> body' | None -> body )
   | None -> body
 
+(** Hoist recursive calls out of [if]-conditions into preceding let-bindings.
+
+    Loopify's [has_recursive_branch_dependency] guard leaves a function fully
+    recursive when a recursive call appears in a branch condition, because the
+    frame rewriter cannot keep a move-only cloned subtree alive across the
+    branch.  For value-typed results that danger does not apply, and once the
+    call is bound to a temporary the condition merely reads a scalar — exactly
+    the shape [transform_nontail] already linearises with a resume frame (as it
+    does for a recursive [let r := f m in if ... r ...]).
+
+    So, when the return type is trivially copyable, rewrite each
+    [if cond[f(x)] then A else B] into [let r := f(x) in if cond[r] then A
+    else B].  Binding once also de-duplicates a call that the condition and a
+    branch both use.  Only conditions are rewritten (recursive scrutinees are
+    already let-bound during match lowering); lambda bodies are not descended
+    into, since their calls are not evaluated as part of the condition. *)
+let hoist_rec_conditions (check : call_checker) (ret_ty : cpp_type)
+    (stmts : cpp_stmt list) : cpp_stmt list =
+  if not (is_trivially_copyable_type ret_ty) then stmts
+  else
+    let counter = ref 0 in
+    let fresh () =
+      incr counter;
+      Id.of_string (Printf.sprintf "_rc%d" !counter)
+    in
+    let bindings = ref [] in
+    (* Bind every recursive-call subexpression of [e] to a fresh temporary and
+       replace it with a variable reference.  Used for expressions that are
+       always evaluated (branch conditions). *)
+    let rec hoist_calls e =
+      match check e with
+      | Some _ ->
+        let f = fresh () in
+        bindings := (f, e) :: !bindings;
+        CPPvar f
+      | None -> map_expr hoist_calls (fun s -> s) Fun.id e
+    in
+    (* Within an always-evaluated expression, hoist recursive calls out of any
+       ternary *condition* (which is itself always evaluated) but leave the
+       branches — and any other non-condition calls — untouched, so we never
+       eagerly evaluate a call the original code guarded. *)
+    let rec hoist_ternaries e =
+      match e with
+      | CPPcond (c, t, f) ->
+        CPPcond (hoist_calls c, hoist_ternaries t, hoist_ternaries f)
+      | _ -> map_expr hoist_ternaries (fun s -> s) Fun.id e
+    in
+    let hoist_cond cond =
+      bindings := [];
+      let cond' = hoist_calls cond in
+      (List.rev !bindings, cond')
+    in
+    let hoist_expr e =
+      bindings := [];
+      let e' = hoist_ternaries e in
+      (List.rev !bindings, e')
+    in
+    let binds_to_stmts binds =
+      List.map (fun (f, c) -> Sasgn (f, Some ret_ty, c)) binds
+    in
+    let rec hs stmts = List.concat_map hstmt stmts
+    and hstmt s =
+      match s with
+      | Sif (cond, t, e) ->
+        let binds, cond' = hoist_cond cond in
+        binds_to_stmts binds @ [Sif (cond', hs t, hs e)]
+      | Sif_then (cond, t) ->
+        let binds, cond' = hoist_cond cond in
+        binds_to_stmts binds @ [Sif_then (cond', hs t)]
+      | Sreturn (Some e) ->
+        let binds, e' = hoist_expr e in
+        binds_to_stmts binds @ [Sreturn (Some e')]
+      | Sasgn (id, ty, e) ->
+        let binds, e' = hoist_expr e in
+        binds_to_stmts binds @ [Sasgn (id, ty, e')]
+      | Sblock ss -> [Sblock (hs ss)]
+      | Swhile (c, ss) -> [Swhile (c, hs ss)]
+      | Sswitch (e, r, branches, def) ->
+        let binds, e' = hoist_cond e in
+        binds_to_stmts binds
+        @ [ Sswitch
+              ( e', r,
+                List.map (fun (p, b) -> (p, hs b)) branches,
+                Option.map hs def ) ]
+      | Scustom_case (ty, scrut, tyargs, branches, err) ->
+        let binds, scrut' = hoist_cond scrut in
+        binds_to_stmts binds
+        @ [ Scustom_case
+              ( ty, scrut', tyargs,
+                List.map (fun (ps, rty, b) -> (ps, rty, hs b)) branches,
+                err ) ]
+      | Smatch (branches, default) ->
+        [ Smatch
+            ( List.map (fun br -> {br with smb_body = hs br.smb_body}) branches,
+              Option.map hs default ) ]
+      | _ -> [s]
+    in
+    hs stmts
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfundef]. The transformation
@@ -7546,6 +7645,9 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
      recursion becomes ordinary self-recursion that loopifies. *)
   let body = try_inline_functional_into names body in
   let check = fn_checker names in
+  (* Hoist recursive calls out of if-conditions so a value-typed
+     condition-dependent recursion can loopify instead of bailing. *)
+  let body = hoist_rec_conditions check ret_ty body in
   (* Cofixpoint guard: if this function body ends with a [lazy_] return,
      it is a cofixpoint returning a standard coinductive type.  The entire
      body (including recursive calls) is captured inside a [=] lambda and

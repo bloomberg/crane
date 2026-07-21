@@ -3,41 +3,114 @@
 /// Consolidated search and optimization algorithms.
 /// knapsack capacity items solves 0/1 knapsack problem.
 /// Items are (weight, value) pairs.
-uint64_t
-LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
-                             const List<std::pair<uint64_t, uint64_t>> &items) {
-  if (fuel <= 0) {
-    return UINT64_C(0);
-  } else {
-    uint64_t f = fuel - 1;
-    if (std::holds_alternative<
-            typename List<std::pair<uint64_t, uint64_t>>::Nil>(items.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-              items.v());
-      const auto &[weight, value] = a0;
-      if (capacity < weight) {
-        return knapsack_fuel(f, capacity, *a1);
+uint64_t LoopifySearch::knapsack_fuel(
+    uint64_t fuel, uint64_t capacity,
+    const List<std::pair<uint64_t, uint64_t>>
+        &items) { /// _Enter: captures varying parameters for each recursive
+                  /// call.
+
+  struct _Enter {
+    const List<std::pair<uint64_t, uint64_t>> *items;
+    uint64_t capacity;
+    uint64_t fuel;
+  };
+
+  /// _Cont1: saves [a1, capacity, f, value, weight], resumes after recursive
+  /// call, then processes rest.
+  struct _Cont1 {
+    const List<std::pair<uint64_t, uint64_t>> *a1;
+    uint64_t capacity;
+    uint64_t f;
+    uint64_t value;
+    uint64_t weight;
+  };
+
+  /// _Cont2: saves [_rc1, a1, capacity, f, value, weight], resumes after
+  /// recursive call, then processes rest.
+  struct _Cont2 {
+    uint64_t _rc1;
+    const List<std::pair<uint64_t, uint64_t>> *a1;
+    uint64_t capacity;
+    uint64_t f;
+    uint64_t value;
+    uint64_t weight;
+  };
+
+  /// _Resume3: saves [value], resumes after recursive call with _result.
+  struct _Resume3 {
+    uint64_t value;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont1, _Cont2, _Resume3>;
+  uint64_t _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{&items, capacity, fuel});
+  /// Loopified knapsack_fuel: _Enter -> _Cont1 -> _Cont2 -> _Resume3.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const List<std::pair<uint64_t, uint64_t>> &items = *_f.items;
+      uint64_t capacity = _f.capacity;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = UINT64_C(0);
       } else {
-        if (knapsack_fuel(f, capacity, *a1) <=
-            (value +
-             knapsack_fuel(
-                 f,
-                 (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-                 *a1))) {
-          return (value + knapsack_fuel(f,
-                                        (((capacity - weight) > capacity
-                                              ? 0
-                                              : (capacity - weight))),
-                                        *a1));
+        uint64_t f = fuel - 1;
+        if (std::holds_alternative<
+                typename List<std::pair<uint64_t, uint64_t>>::Nil>(items.v())) {
+          _result = UINT64_C(0);
         } else {
-          return knapsack_fuel(f, capacity, *a1);
+          const auto &[a0, a1] =
+              std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                  items.v());
+          const auto &[weight, value] = a0;
+          if (capacity < weight) {
+            _stack.emplace_back(_Enter{a1.get(), capacity, f});
+          } else {
+            _stack.emplace_back(_Cont1{a1.get(), capacity, f, value, weight});
+            _stack.emplace_back(_Enter{
+                a1.get(),
+                (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+                f});
+          }
         }
       }
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
+      uint64_t capacity = _f.capacity;
+      uint64_t f = _f.f;
+      uint64_t value = _f.value;
+      uint64_t weight = _f.weight;
+      uint64_t _rc1 = std::move(_result);
+      _stack.emplace_back(_Cont2{_rc1, &a1, capacity, f, value, weight});
+      _stack.emplace_back(_Enter{&a1, capacity, f});
+    } else if (std::holds_alternative<_Cont2>(_frame)) {
+      auto _f = std::move(std::get<_Cont2>(_frame));
+      uint64_t _rc1 = _f._rc1;
+      const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
+      uint64_t capacity = _f.capacity;
+      uint64_t f = _f.f;
+      uint64_t value = _f.value;
+      uint64_t weight = _f.weight;
+      uint64_t _rc2 = std::move(_result);
+      if (_rc2 <= (value + _rc1)) {
+        _stack.emplace_back(_Resume3{value});
+        _stack.emplace_back(_Enter{
+            &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+            f});
+      } else {
+        _stack.emplace_back(_Enter{&a1, capacity, f});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume3>(_frame));
+      _result = (_f.value + std::move(_result));
     }
   }
+  return _result;
 }
 
 uint64_t
