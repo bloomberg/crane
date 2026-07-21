@@ -240,13 +240,13 @@ Section NatProgramProofs.
     reflexivity.
     Defined.
 
-  Lemma sort_list2154 :
-    burn 100 (runST (S := S) (fun S0 => sort_list (S := S0) [2;1;5;4]))
+  Lemma quicksort_ST_list2154 :
+    burn 100 (runST (S := S) (fun S0 => quicksort_ST_list (S := S0) [2;1;5;4]))
     = Ret [1;2;4;5].
   Proof using Type. lazy. reflexivity. Qed.
 
   Lemma sort_list__long :
-    burn 300 (runST (S := S) (fun S0 => sort_list (S := S0) [8;4;6;9;7;3;1;2;5]))
+    burn 300 (runST (S := S) (fun S0 => quicksort_ST_list (S := S0) [8;4;6;9;7;3;1;2;5]))
     = Ret [1;2;3;4;5;6;7;8;9].
   Proof using Type. lazy. reflexivity. Qed.
 
@@ -368,3 +368,9 @@ Proof.
     rewrite fib_fun_eq_seq.
     exact (@fib_ST_full_correct unit n).
 Qed.
+
+Lemma qsort_fun_eq_qsort_ST : forall {S : Type} (l : list nat),
+    Ret (quicksort_fun l) ≈ runST (S := S) (fun S0 => quicksort_ST_list l).  
+  (* TODO: finish proof! *)
+  Abort.
+

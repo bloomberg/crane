@@ -4,6 +4,7 @@ From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
   Init.Peano
+  Lia
   List
   Morphisms
   RelationClasses
@@ -39,6 +40,9 @@ From ITree Require Import
   ITree
   ITreeFacts
 .
+
+
+From Equations Require Import Equations.
 
 
 Import Monads.
@@ -168,13 +172,17 @@ Section NatExampleTrees.
       newXs <- getElems arr;;
       Ret newXs.
 
-    Definition for_each_with {A B}
+    (* NOTE: would be nice to use following definition, but it does not extract well
+    foldM (flip f) (Ret v) (rev xs). (* reversing so foldM goes left to right. *) *)
+    Fixpoint for_each_with {A B}
        {E' : Type -> Type}
-      `{STEvent T S V -< E'}
-      `{exceptE Err -< E'}
       (xs : list A) (v : B) (f : B -> A -> itree E' B)
       : itree E' B :=
-      foldM (flip f) (Ret v) (rev xs). (* reversing so foldM goes left to right. *)
+      match xs with
+      | nil => Ret v
+      | h::t => v' <- f v h;; for_each_with t v' f
+      end.
+
 
 
     Definition partition 
@@ -204,7 +212,7 @@ Section NatExampleTrees.
        to define this admissably for Rocq's syntactic guard condition. If we define quicksort with
        two recursive calls, we cannot admissably place `Tau (qsort ...<args>...)` on the left side of a bind.
      *)
-    Definition qsort_body 
+    Definition quicksort_ST_body 
       (args : (STArray T S nat * T * T * T))
       : itree ((callE (STArray T S nat * T * T * T) unit) +' E0) unit :=
       let '(arr,arr_idx,l,r) := args in
@@ -218,17 +226,18 @@ Section NatExampleTrees.
       else Ret tt.
 
 
-    Definition qsort (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
-      rec qsort_body (arr, arr_idx, left, right).
+    Definition quicksort_ST (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
+      rec quicksort_ST_body (arr, arr_idx, left, right).
 
     
-    Definition sort_list (xs : list nat) : itree E0 (list nat) :=
+    Definition quicksort_ST_list (xs : list nat) : itree E0 (list nat) :=
       let lastIndex := fromNat (length xs - 1) in 
       arr <- newListArray zero zero lastIndex xs;;
-      qsort arr zero zero lastIndex;;
+      quicksort_ST arr zero zero lastIndex;;
       newXs <- getElems arr;;
       Ret newXs.
   
+
 
   End QSort.
 
@@ -236,6 +245,24 @@ Section NatExampleTrees.
 End NatExampleTrees.
 
 
+
+Lemma filter_length {A} (f : A -> bool) (l : list A) :
+  length (List.filter f l) <= length l.
+Proof. induction l; simpl; [lia | destruct (f a); simpl; lia]. Qed.
+
+Section FunctionalQuicksort.
+
+  Equations? quicksort_fun (l : list nat) : list nat by wf (length l) lt :=
+    quicksort_fun [] => [];
+    quicksort_fun (p :: xs) =>
+      quicksort_fun (List.filter (fun x => Nat.ltb x p) xs)
+        ++ [p] ++
+      quicksort_fun (List.filter (fun x => Nat.leb p x) xs).
+  - specialize (filter_length (fun x => Nat.ltb x p) xs) as H. lia.   
+  - specialize (filter_length (fun x => Nat.leb p x) xs) as H. lia.   
+  Defined.
+
+End FunctionalQuicksort.
 
 
 Section BoolExampleTrees.

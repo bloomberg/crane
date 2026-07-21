@@ -507,3 +507,18 @@ Crane Extract Inlined Constant newListArray =>
 Crane Extract Inlined Constant getElems =>
   "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()".
 
+(* Recursion is mapped to a while loop that models the stack explicitly. *)
+(* NOTE: should this go in ITree base as part of the erased translation? *)
+Crane Extract Skip Module Recursion.
+Crane Extract Inlined Constant rec =>
+        "[&]() { static std::vector<%t1> _stack;
+                _stack.push_back(%a1);
+                while (!_stack.empty()) {
+                %t1 _arg = _stack.back();
+                _stack.pop_back();
+                %a0(_arg);
+        } } ();".
+
+Crane Extract Inlined Constant call => "(_stack.push_back(%a0), std::monostate{})".
+
+
