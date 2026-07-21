@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Crane"
+type: software
+repository-code: "https://github.com/bloomberg/crane"
+license: LGPL-2.1
+authors:
+  - family-names: "Korkut"
+    given-names: "Joomy"
+    affiliation: "Bloomberg"
+    email: "jkorkut@bloomberg.net"
+  - family-names: "Weaver"
+    given-names: "Matthew Z."
+    affiliation: "Bloomberg"
+    email: "mweaver89@bloomberg.net"
+preferred-citation:
+  type: conference-paper
+  title: "Crane Lowers Rocq Safely into C++ (Extended Abstract)"
+  collection-title: "Proceedings of Rocq for Programming Languages (RocqPL '26)"
+  year: 2026
+  authors:
+    - family-names: "Weaver"
+      given-names: "Matthew Z."
+      affiliation: "Bloomberg"
+      email: "mweaver89@bloomberg.net"
+    - family-names: "Korkut"
+      given-names: "Joomy"
+      affiliation: "Bloomberg"
+      email: "jkorkut@bloomberg.net"
