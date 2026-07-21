@@ -2195,6 +2195,39 @@
   (deps loopification_quicksort_bug.t.exe)
   (action (run ./loopification_quicksort_bug.t.exe))))
 
+(subdir loopify_gap_if_condition
+ (rule
+  (targets loopify_gap_if_condition.t.exe)
+  (deps LoopifyGapIfCondition.vo loopify_gap_if_condition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_if_condition.t.exe loopify_gap_if_condition.cpp loopify_gap_if_condition.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_if_condition.t.exe)
+  (action (run ./loopify_gap_if_condition.t.exe))))
+
+(subdir loopify_gap_pair_destructure
+ (rule
+  (targets loopify_gap_pair_destructure.t.exe)
+  (deps LoopifyGapPairDestructure.vo loopify_gap_pair_destructure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_pair_destructure.t.exe loopify_gap_pair_destructure.cpp loopify_gap_pair_destructure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_pair_destructure.t.exe)
+  (action (run ./loopify_gap_pair_destructure.t.exe))))
+
+(subdir loopify_gap_mutual3
+ (rule
+  (targets loopify_gap_mutual3.t.exe)
+  (deps LoopifyGapMutual3.vo loopify_gap_mutual3.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_gap_mutual3.t.exe loopify_gap_mutual3.cpp loopify_gap_mutual3.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_gap_mutual3.t.exe)
+  (action (run ./loopify_gap_mutual3.t.exe))))
+
 (subdir coalition_bid_honor_trace
  (rule
   (targets coalition_bid_honor_trace.t.exe)
