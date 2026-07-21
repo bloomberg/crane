@@ -6610,23 +6610,51 @@ and generic_inline_expr spec expr =
             mutual partner was found *)
 let try_inline_mutual_into names body =
   (* For each ref this function is known by, skip it (self-call). For each call
-     in the body, check if the callee is registered AND the callee calls back
-     this function (true mutual recursion). *)
+     in the body, check if the callee is registered AND lies on a recursion
+     cycle back to this function.  A directly-mutual partner (2-way) calls this
+     function outright; a longer cycle (e.g. 3-way [a -> b -> c -> a]) reaches
+     it only transitively, so we test transitive reachability through the
+     registered call graph and inline the whole cycle one hop at a time. *)
   let self_refs = List.map fst names in
-  (* Check if a GlobRef or Id matches a registered function *)
+  let is_self r = List.exists (Common.globref_equal r) self_refs in
+  let label_of r =
+    match r with
+    | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
+    | GlobRef.VarRef v -> v
+    | _ -> Id.of_string ""
+  in
+  (* Does [b] call the registered function [r] (by GlobRef or unqualified id)? *)
+  let body_calls_reg r b =
+    body_calls_any_ref [r] b || body_calls_id (label_of r) b
+  in
+  (* Can [start]'s body reach one of [self_refs] through the registered call
+     graph (so that inlining [start] moves this function towards
+     self-recursion)?  Cycles are broken with a visited set. *)
+  let reaches_self start =
+    let visited = ref [] in
+    let rec go r =
+      if List.exists (Common.globref_equal r) !visited then false
+      else begin
+        visited := r :: !visited;
+        match Hashtbl.find_opt mutual_fn_table r with
+        | None -> false
+        | Some (_, b) ->
+          body_calls_any_ref self_refs b
+          || Hashtbl.fold
+               (fun r2 _ acc ->
+                 acc
+                 || ((not (is_self r2)) && body_calls_reg r2 b && go r2) )
+               mutual_fn_table false
+      end
+    in
+    go start
+  in
+  (* Check if a GlobRef or Id matches a registered function on a cycle. *)
   let find_registered_callee_by_ref r =
-    if
-      List.exists
-        (fun sr -> Common.globref_equal r sr)
-        self_refs
-    then
-      None
+    if is_self r then None
     else
-      match
-        Hashtbl.find_opt mutual_fn_table r
-      with
-      | Some (callee_params, callee_body)
-        when body_calls_any_ref self_refs callee_body ->
+      match Hashtbl.find_opt mutual_fn_table r with
+      | Some (callee_params, callee_body) when reaches_self r ->
         Some (r, callee_params, callee_body)
       | _ -> None
   in
@@ -6636,24 +6664,10 @@ let try_inline_mutual_into names body =
         match acc with
         | Some _ -> acc
         | None ->
-          if
-            List.exists
-              (fun sr -> Common.globref_equal r sr)
-              self_refs
-          then
-            None
-          else
-            let label =
-              match r with
-              | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-              | GlobRef.VarRef v -> v
-              | _ -> Id.of_string ""
-            in
-            if Id.equal id label && body_calls_any_ref self_refs callee_body
-            then
-              Some (r, callee_params, callee_body)
-            else
-              None )
+          if is_self r then None
+          else if Id.equal id (label_of r) && reaches_self r then
+            Some (r, callee_params, callee_body)
+          else None )
       mutual_fn_table
       None
   in
@@ -6696,9 +6710,10 @@ let try_inline_mutual_into names body =
     | Sblock ss -> find_callee_in_stmts ss
     | _ -> None
   in
-  match find_callee_in_stmts body with
-  | None -> body
-  | Some (callee_ref, callee_params, callee_body) ->
+  (* Inline one cycle partner ([callee_ref]) into [body], returning the new
+     body.  Applied repeatedly by the loop below until this function only calls
+     itself (or no cycle partner remains). *)
+  let inline_one (callee_ref, callee_params, callee_body) body =
     (* Collect all locally-declared IDs from a statement list, including
        structured binding names from Smatch branches. *)
     let rec collect_local_ids stmts =
@@ -6793,6 +6808,17 @@ let try_inline_mutual_into names body =
       body = fresh_body;
     } in
     generic_inline_stmts spec body
+  in
+  (* Inline cycle partners one hop at a time until self-recursive.  Bounded by
+     the number of registered functions to guarantee termination. *)
+  let rec loop body iters =
+    if iters <= 0 then body
+    else
+      match find_callee_in_stmts body with
+      | None -> body
+      | Some callee -> loop (inline_one callee body) (iters - 1)
+  in
+  loop body (Hashtbl.length mutual_fn_table + 1)
 
 (** {2 Inner lambda loopification}
 
