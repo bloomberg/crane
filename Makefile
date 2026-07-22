@@ -3,9 +3,11 @@
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
 
-# Build everything including tests (extract first to avoid race conditions)
+# Build everything including tests (extract first to avoid race conditions).
+# Uses @all because a plain `dune build` only builds the installable package
+# (see the root dune file) and deliberately skips tests.
 all: extract
-	dune build
+	dune build @all
 
 # Extract: build plugin/theories and generate all test C++ files (without compiling them)
 # Continues even if some extractions fail (pre-existing plugin bugs)

@@ -1,0 +1,7 @@
+; Bare `dune build` builds only the installable package (plugin + theories).
+; Tests are built on demand via their explicit `@tests/<cat>/<name>/runtest`
+; aliases (see bin/test_runner and the Makefile test targets), so known-broken
+; wip tests never break a plain `dune build` / `dune install`.
+(alias
+ (name default)
+ (deps (package rocq-crane)))
