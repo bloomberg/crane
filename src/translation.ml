@@ -9716,6 +9716,20 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   tctx.move_n_params <- saved_nparams;
   result
 
+(** Whether [expr] is a numeral-converter application (e.g.
+    [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
+    literal via [Table.get_numeral_info].  When true, the whole subtree is
+    replaced by a raw integer literal at translation time, so the converter and
+    its digit-chain argument (and everything they transitively reference) are
+    never emitted.  Dependency collection uses this to avoid pulling in the
+    vestigial [of_num_uint]/[of_uint]/[Uint] machinery. *)
+let is_foldable_numeral_converter_app = function
+  | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
+    ( match try_fold_num_uint arg with
+    | Some _ -> true
+    | None -> Option.has_some (try_fold_num_int arg) )
+  | _ -> false
+
 (** Set method_self_ns from local_inductives for standalone functions.
     Functions inside wrapper modules (e.g. Cotree.tree_of_cotree) construct
     containers whose type parameters must use shared_ptr for recursive

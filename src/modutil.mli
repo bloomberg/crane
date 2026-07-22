@@ -49,16 +49,22 @@ val type_iter_references : do_ref -> ml_type -> unit
 
 (** [ast_iter_references do_term do_cons do_type ast] applies the appropriate
     callback to every reference in [ast].
+    @param prune when [prune a] is [true], [a] is skipped entirely — neither its
+      own references nor those of its subterms are visited (used to drop subtrees
+      that later passes fold away, e.g. numeral-converter applications)
     @param do_term callback for term-level references ([MLglob])
     @param do_cons callback for constructor references ([MLcons], [Pcons])
     @param do_type callback for type-level references ([Tglob]) *)
-val ast_iter_references : do_ref -> do_ref -> do_ref -> ml_ast -> unit
+val ast_iter_references :
+  ?prune:(ml_ast -> bool) -> do_ref -> do_ref -> do_ref -> ml_ast -> unit
 
 (** Like {!ast_iter_references} but for declarations.
+    @param prune see {!ast_iter_references}
     @param do_term callback for term-level references
     @param do_cons callback for constructor references
     @param do_type callback for type-level references *)
-val decl_iter_references : do_ref -> do_ref -> do_ref -> ml_decl -> unit
+val decl_iter_references :
+  ?prune:(ml_ast -> bool) -> do_ref -> do_ref -> do_ref -> ml_decl -> unit
 
 (** Like {!ast_iter_references} but for specifications.
     @param do_term callback for term-level references

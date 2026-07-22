@@ -125,9 +125,14 @@ let patt_iter_references do_cons p =
   in
   iter p
 
-(** Iterate over term, constructor, and type references in an ML AST. *)
-let ast_iter_references do_term do_cons do_type a =
+(** Iterate over term, constructor, and type references in an ML AST.
+    [prune a] returning [true] skips [a] entirely (neither its own references
+    nor those of its subterms are visited).  Used to drop subtrees that later
+    passes fold away, e.g. numeral-converter applications. *)
+let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
   let rec iter a =
+    if prune a then ()
+    else (
     ast_iter iter a;
     match a with
     | MLglob (r, _) -> do_term r
@@ -148,7 +153,7 @@ let ast_iter_references do_term do_cons do_type a =
      |MLuint _
      |MLfloat _
      |MLstring _
-     |MLparray _ -> ()
+     |MLparray _ -> () )
   in
   iter a
 
@@ -172,10 +177,11 @@ let ind_iter_references do_term do_cons do_type kn ind =
   if lang () == Cpp then record_iter_references do_term ind.ind_kind;
   Array.iteri (fun i -> packet_iter (kn, i)) ind.ind_packets
 
-(** Iterate over all references in an ML declaration. *)
-let decl_iter_references do_term do_cons do_type =
+(** Iterate over all references in an ML declaration.
+    See {!ast_iter_references} for the meaning of [prune]. *)
+let decl_iter_references ?prune do_term do_cons do_type =
   let type_iter = type_iter_references do_type
-  and ast_iter = ast_iter_references do_term do_cons do_type in
+  and ast_iter = ast_iter_references ?prune do_term do_cons do_type in
   function
     | Dind (kn, ind) -> ind_iter_references do_term do_cons do_type kn ind
     | Dtype (r, _, t) ->

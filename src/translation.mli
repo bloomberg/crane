@@ -61,6 +61,13 @@ val type_is_erased : cpp_type -> bool
 
 (** {2 Expression Generation} *)
 
+(** Whether the expression is a numeral-converter application (e.g.
+    [Nat.of_num_uint (Number.UIntDecimal ...)]) that {!gen_expr} folds into a
+    literal at translation time.  Such subtrees never reach code generation, so
+    dependency collection can prune them to avoid emitting the vestigial
+    [of_num_uint]/[Uint] machinery. *)
+val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
+
 (** Generate a C++ expression from an ML AST. *)
 val gen_expr : ?expected_ty:cpp_type -> env -> ml_ast -> cpp_expr
 

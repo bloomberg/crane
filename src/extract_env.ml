@@ -130,7 +130,15 @@ module Visit : VISIT = struct
       | IndRef (ind, _) | ConstructRef ((ind, _), _) -> add_kn (MutInd.user ind)
       | VarRef _ -> assert false
 
-  let add_decl_deps = decl_iter_references add_ref add_ref add_ref
+  (* Prune numeral-converter applications (e.g. [Nat.of_num_uint (...)]): the
+     translation pass folds them into raw integer literals, so the converter,
+     its digit-chain argument, and everything they transitively reference are
+     never emitted.  Visiting them anyway would pull in the vestigial
+     [of_num_uint]/[of_uint]/[Uint] machinery that no generated code calls. *)
+  let add_decl_deps d =
+    decl_iter_references
+      ~prune:Translation.is_foldable_numeral_converter_app
+      add_ref add_ref add_ref d
 
   let add_spec_deps = spec_iter_references add_ref add_ref add_ref
 end
