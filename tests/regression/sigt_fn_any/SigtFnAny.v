@@ -4,8 +4,8 @@ Require Import Crane.Mapping.NatIntStd.
 From Stdlib Require Import List.
 Import ListNotations.
 
-(** Minimal reproduction of the [bad_any_cast] Crane bug hit by parse-a-lot's
-    LL parser.
+(** Regression test for the [bad_any_cast] Crane bug hit by parse-a-lot's
+    LL parser (now fixed).
 
     The parser stores, per grammar production, a semantic predicate/action
     *function* inside a dependent pair
@@ -17,12 +17,17 @@ Import ListNotations.
     witness [p], Crane cannot express it in C++'s static type system and erases
     it to [std::any].
 
-    The bug: at the *construction* site Crane stores the function by wrapping the
-    raw lambda closure directly into the [std::any] (so the [std::any] holds the
+    The bug: at the *construction* site Crane stored the function by wrapping the
+    raw lambda closure directly into the [std::any] (so the [std::any] held the
     closure type), but at the *application* site it retrieves the function with
     [std::any_cast<std::function<std::any(std::any)>>]. Those two representations
-    disagree, so the cast throws [std::bad_any_cast] at runtime — even though the
+    disagreed, so the cast threw [std::bad_any_cast] at runtime — even though the
     Rocq program is perfectly well typed and total.
+
+    The fix wraps a non-lambda function value stored into an erased field with
+    the [crane_erase_fn] runtime helper, which adapts the callable to the
+    canonical [std::function<std::any(std::any...)>] representation the
+    application site expects.
 
     This file distills that pattern to its essence. *)
 
@@ -71,10 +76,10 @@ Module M := Make Inst.
 Definition my_entry : M.entry := M.mk tt (fun n => Nat.eqb n 0).
 Definition my_arg   : forall a : Inst.idx, Inst.sem a := fun _ => 0.
 
-(** In Rocq this evaluates to [true] ((fun n => n =? 0) 0). In C++ the extracted
-    code throws [std::bad_any_cast] when called. Kept as a function (not a value)
-    so the C++ test driver can invoke it under try/catch rather than crashing at
-    static-initialization time. *)
+(** In Rocq this evaluates to [true] ((fun n => n =? 0) 0), and the extracted
+    C++ now returns [true] as well.  Kept as a function (not a value) so the C++
+    test driver can invoke it under try/catch (before the fix it threw
+    [std::bad_any_cast]). *)
 Definition check (u : unit) : bool := M.run my_entry my_arg.
 
 Crane Extraction "sigt_fn_any" check my_entry my_arg.

@@ -765,6 +765,18 @@ let spec_header si () =
     else
       h
   in
+  (* [crane::erase_fn] (for function values stored into erased [std::any]
+     fields) lives in the crane_fn.h runtime header so separate extraction does
+     not emit the template into every generated header (which would be an ODR
+     redefinition when several are included in one translation unit). *)
+  let h =
+    if Table.needs_erase_fn ()
+       && not (List.exists (fun s -> String.equal s "crane_fn.h") (himports @ imps))
+    then
+      h ++ mk_include_quoted "crane_fn.h" ++ fnl ()
+    else
+      h
+  in
   let fun_concept =
     if is_bde () then
       "template <class From, class To>\n\
@@ -1037,6 +1049,9 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
     Table.mark_needs_string_literals ()
   else
     Table.reset_needs_string_literals ();
+  (* [crane_erase_fn] is emitted on demand; translation sets the flag when it
+     wraps a non-lambda function value stored into an erased field. *)
+  Table.reset_needs_erase_fn ();
   (* First, a dry run, for computing objects to rename or duplicate.
      Also accumulates needed standard headers via require_header. *)
   Common.reset_needed_headers ();

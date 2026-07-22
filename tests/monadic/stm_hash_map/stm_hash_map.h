@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <stm_adapter.h>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>

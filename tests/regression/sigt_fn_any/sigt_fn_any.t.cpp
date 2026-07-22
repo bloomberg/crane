@@ -4,13 +4,15 @@
 #include <cstdio>
 #include <variant>
 
-// Minimal reproduction of the parse-a-lot LL-parser `bad_any_cast`.
+// Regression test for the parse-a-lot LL-parser `bad_any_cast` (now fixed).
 //
 // In Rocq, `check tt` evaluates to `true` — the stored predicate is
-// `(fun n => n =? 0)` and it is applied to `0`. The extracted C++ instead
-// throws `std::bad_any_cast`, because a function value stored into a
-// `std::any` as a raw lambda closure (in `Make::mk`) is read back with
-// `any_cast<std::function<std::any(std::any)>>` (in `Make::run`).
+// `(fun n => n =? 0)` and it is applied to `0`. Before the fix, the extracted
+// C++ threw `std::bad_any_cast`, because a function value stored into a
+// `std::any` as a raw lambda closure (in `Make::mk`) was read back with
+// `any_cast<std::function<std::any(std::any)>>` (in `Make::run`). `Make::mk`
+// now routes the callable through `crane_erase_fn`, so the representations
+// agree and `check` returns `true`.
 int main() {
   try {
     bool r = check(std::monostate{});

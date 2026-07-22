@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIGT_FN_ANY
 #define INCLUDED_SIGT_FN_ANY
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
 #include <memory>
@@ -134,7 +135,7 @@ template <SEM S> struct Make {
   /// The lambda is stored at the erased type pred_ty (a, []) = std::any.
   template <typename F1> static entry mk(typename S::idx a, F1 &&f) {
     return SigT<prod2, std::any>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()), f);
+        std::make_pair(a, List<typename S::idx>::nil()), crane_erase_fn(f));
   }
 
   /// Look up + apply: destructure the entry and apply the stored predicate.
@@ -164,10 +165,10 @@ using M = Make<Inst>;
 const M::entry my_entry =
     M::mk(std::monostate{}, [](uint64_t n) { return n == UINT64_C(0); });
 Inst::sem my_arg(std::monostate _x);
-/// In Rocq this evaluates to true ((fun n => n =? 0) 0). In C++ the extracted
-/// code throws std::bad_any_cast when called. Kept as a function (not a value)
-/// so the C++ test driver can invoke it under try/catch rather than crashing at
-/// static-initialization time.
+/// In Rocq this evaluates to true ((fun n => n =? 0) 0), and the extracted
+/// C++ now returns true as well.  Kept as a function (not a value) so the C++
+/// test driver can invoke it under try/catch (before the fix it threw
+/// std::bad_any_cast).
 bool check(std::monostate _x);
 
 #endif // INCLUDED_SIGT_FN_ANY

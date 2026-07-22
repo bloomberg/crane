@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <system_error>
 #include <type_traits>
 
 struct BindEtaReduced {

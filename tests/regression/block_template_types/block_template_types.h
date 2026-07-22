@@ -5,6 +5,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <system_error>
 
 struct BlockTemplateTypes {
   /// %result inferred as unsigned int.

@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 #include <stm_adapter.h>
+#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>

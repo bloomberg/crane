@@ -279,6 +279,17 @@ let needs_string_literals () = !needs_string_literals_flag
 
 let reset_needs_string_literals () = needs_string_literals_flag := false
 
+(* Whether the [crane_erase_fn] runtime helper (adapts a concrete callable to
+   the erased [std::function<std::any(std::any...)>] representation) must be
+   emitted into the header preamble. *)
+let needs_erase_fn_flag = ref false
+
+let mark_needs_erase_fn () = needs_erase_fn_flag := true
+
+let needs_erase_fn () = !needs_erase_fn_flag
+
+let reset_needs_erase_fn () = needs_erase_fn_flag := false
+
 (** Track whether any reified [ITree<R>] types appear in the output,
     requiring the [crane_itree.h] header. *)
 let itree_header_needed : bool ref = ref false

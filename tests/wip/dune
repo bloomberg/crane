@@ -14,17 +14,6 @@
 
 
 
-(subdir sigt_fn_any
- (rule
-  (targets sigt_fn_any.t.exe)
-  (deps SigtFnAny.vo sigt_fn_any.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_fn_any.t.exe sigt_fn_any.cpp sigt_fn_any.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_fn_any.t.exe)
-  (action (run ./sigt_fn_any.t.exe))))
-
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)

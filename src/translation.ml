@@ -4284,7 +4284,48 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   let new_expr = gen_ctor_arg ml_e in
                   tctx.wrap_for_any_param <- saved_wrap;
                   new_expr
-                end else expr )
+                end else begin
+                  (* A non-lambda FUNCTION value (e.g. a forwarded callback
+                     parameter [f]) stored into an erased field must be wrapped
+                     into the canonical [std::function<std::any(std::any...)>]
+                     representation that the application side reads back with
+                     [any_cast<std::function<std::any(std::any)>>] (see
+                     [eta_fun]'s [callee_is_bare_any] branch).  Storing the raw
+                     closure makes the [std::any] hold the bare lambda type, so
+                     that [any_cast] throws at runtime.
+
+                     The domain/codomain of such a function are typically
+                     value-dependent (erased to [std::any] in the generic ML
+                     type), so the concrete argument types needed for the
+                     [any_cast] inside the adapter are only known at C++
+                     instantiation.  Rather than reconstruct them here, defer to
+                     the [crane_erase_fn] runtime helper, which uses
+                     [std::function] CTAD to deduce the callable's signature and
+                     builds the [std::function<std::any(std::any...)>] adapter
+                     (unbox each argument, box the result). *)
+                  let is_function_value =
+                    match strip_magic ml_e with
+                    | MLrel i
+                      when not (Escape.IntSet.mem i tctx.cpp_erased_env) ->
+                      (* Skip when [f] is itself already erased to std::any:
+                         it is not callable, so wrapping would double-erase. *)
+                      ( match get_env_type_opt i with
+                      | Some t -> count_ml_value_arrows t >= 1
+                      | None -> false )
+                    | MLrel _ -> false
+                    | other ->
+                      ( match infer_ml_body_type other with
+                      | Some t -> count_ml_value_arrows t >= 1
+                      | None -> false )
+                  in
+                  if is_function_value then begin
+                    (* Wrap via the [crane_erase_fn] runtime helper (emitted as
+                       [#include "crane_fn.h"] in the header preamble). *)
+                    Table.mark_needs_erase_fn ();
+                    CPPfun_call
+                      (CPPvar (Id.of_string "crane_erase_fn"), [expr])
+                  end else expr
+                end )
             | Tfun (param_tys, _ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
               | CPPlambda (params, ret_ty_opt, body_stmts, cap) ->

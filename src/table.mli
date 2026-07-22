@@ -244,6 +244,15 @@ val needs_string_literals : unit -> bool
 (** Reset string literals flag. *)
 val reset_needs_string_literals : unit -> unit
 
+(** Mark that the [crane_erase_fn] runtime helper must be emitted. *)
+val mark_needs_erase_fn : unit -> unit
+
+(** Check whether the [crane_erase_fn] runtime helper is needed. *)
+val needs_erase_fn : unit -> bool
+
+(** Reset the [crane_erase_fn] flag. *)
+val reset_needs_erase_fn : unit -> unit
+
 (** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
 val require_itree_header : unit -> unit
 
