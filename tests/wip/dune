@@ -14,6 +14,17 @@
 
 
 
+(subdir sigt_prod_fn_any
+ (rule
+  (targets sigt_prod_fn_any.t.exe)
+  (deps SigtProdFnAny.vo sigt_prod_fn_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_prod_fn_any.t.exe sigt_prod_fn_any.cpp sigt_prod_fn_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_prod_fn_any.t.exe)
+  (action (run ./sigt_prod_fn_any.t.exe))))
+
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
