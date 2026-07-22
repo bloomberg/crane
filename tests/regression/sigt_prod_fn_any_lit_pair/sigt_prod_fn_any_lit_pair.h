@@ -125,8 +125,19 @@ concept SEM = requires {
 /// production with an erased predicate/action pair), but here the
 /// predicate/action *domain* is itself a concrete pair `sem a * unit`
 /// (mirroring symbols_semty ys := symbol_semty y * symbols_semty ys' in
-/// theories/Parser/Defs.v), so the inline generic lambda body must
-/// structurally destructure its argument via `let (v, _x) := tup`.
+/// theories/Parser/Defs.v), so the inline generic lambda body structurally
+/// destructures its argument via `let (v, _x) := tup`.
+///
+/// This used to fail to *compile*: the lambda is stored via crane_erase_fn
+/// (its domain is partly erased), so at runtime it is only ever invoked with
+/// its whole argument boxed as a single raw std::any — but the generated
+/// parameter was a generic auto& that, once deduced as std::any, can't be
+/// destructured via a structured binding (std::any is not tuple-like).
+/// Fixed by mark_own_param_for_pair_erasure (translation.ml): when a
+/// lambda literal is about to be routed through crane_erase_fn, its
+/// immediate self-match on its own parameter is marked MLmagic so the
+/// scrutinee is any_cast to pair<any,any> before destructuring, matching
+/// what run's application site actually constructs and passes.
 template <SEM S> struct Make {
   using dom = std::pair<std::any, std::monostate>;
   using prod2 = std::pair<typename S::idx, List<typename S::idx>>;
@@ -139,11 +150,13 @@ template <SEM S> struct Make {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
         std::make_pair(crane_erase_fn([](const auto &tup) {
-                         const auto &[_x, _x0] = tup;
+                         const auto &[_x, _x0] =
+                             std::any_cast<std::pair<std::any, std::any>>(tup);
                          return true;
                        }),
                        crane_erase_fn([](const auto &tup) {
-                         const auto &[_x, _x0] = tup;
+                         const auto &[_x, _x0] =
+                             std::any_cast<std::pair<std::any, std::any>>(tup);
                          return true;
                        })));
   }

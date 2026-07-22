@@ -2732,6 +2732,23 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
             | _ -> Some cpp_ty)
         | None -> None
       in
+      let will_erase_fn_wrap =
+        match List.nth_opt field_types_for_wrap i with
+        | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
+          (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+          | _ when is_passthrough_ctor_arg i -> false
+          | Some Tany -> ml_expr_is_function_value e
+          | _ -> false)
+        | _ -> false
+      in
+      let e =
+        if will_erase_fn_wrap then
+          match strip_magic e with
+          | MLlam (id, ty, body) ->
+            MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
+          | _ -> e
+        else e
+      in
       let result = gen_ctor_arg ?expected_ty:expected_cpp_ty e in
       tctx.current_cpp_return_type <- saved_ret;
       tctx.expected_ml_type_for_arg <- saved_expected;
@@ -2953,6 +2970,28 @@ and ml_expr_is_function_value e =
     ( match infer_ml_body_type other with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
+
+(** When a lambda literal is about to be stored via [crane_erase_fn] (see the
+    [ml_expr_is_function_value] call site in the custom-constructor arg loop),
+    the lambda will only ever be invoked with its whole argument boxed as a
+    single raw [std::any] (never with the generically-deduced concrete type),
+    because that is exactly what [crane_erase_fn]'s CTAD-non-viable fallback
+    forwards. If the lambda's own bound parameter [n] is immediately
+    pattern-matched via a custom (e.g. pair) match, that match must therefore
+    treat the scrutinee as erased — wrap it in [MLmagic] so
+    [gen_custom_cpp_case] emits [any_cast<pair<any,any>>(...)] instead of a
+    structured binding directly on the (at runtime erased) parameter. Without
+    this, a domain type that is a pair with a mix of erased/concrete fields
+    (e.g. [S.sem a * unit]) renders the parameter as a generic [auto&], and the
+    destructure compiles fine at the OCaml/template level but fails at C++
+    instantiation time when [auto&] deduces to [std::any] (structured
+    bindings are not valid on [std::any]). *)
+and mark_own_param_for_pair_erasure n body =
+  match body with
+  | MLcase (ty, MLrel i, pv) when i = n && is_custom_match pv ->
+    MLcase (ty, MLmagic (MLrel i), pv)
+  | MLmagic a -> MLmagic (mark_own_param_for_pair_erasure n a)
+  | other -> other
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
 and try_fold_numeral info expr =

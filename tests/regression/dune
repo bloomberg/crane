@@ -6146,3 +6146,14 @@
   (alias runtest)
   (deps sigt_prod_fn_any_lit.t.exe)
   (action (run ./sigt_prod_fn_any_lit.t.exe))))
+
+(subdir sigt_prod_fn_any_lit_pair
+ (rule
+  (targets sigt_prod_fn_any_lit_pair.t.exe)
+  (deps SigtProdFnAnyLitPair.vo sigt_prod_fn_any_lit_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_prod_fn_any_lit_pair.t.exe sigt_prod_fn_any_lit_pair.cpp sigt_prod_fn_any_lit_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_prod_fn_any_lit_pair.t.exe)
+  (action (run ./sigt_prod_fn_any_lit_pair.t.exe))))
