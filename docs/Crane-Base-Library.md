@@ -114,6 +114,12 @@ Maps Rocq's `N` to GMP arbitrary-precision integers (`mpz_class`).
 
 Maps Rocq's `Z` to GMP arbitrary-precision integers (`mpz_class`).
 
+### `Mapping/DequeList.v`
+
+Opt-in mapping that extracts Rocq's `list` to `std::deque<T>` instead of the default linked-list representation. Useful when a program relies on efficient indexing or push/pop at both ends, which a linked-list extraction handles poorly.
+
+Import this module instead of (or after) `Mapping/Std.v`'s default `list` handling to switch representations.
+
 ### `Mapping/Real.v`
 
 Maps Rocq's `R` (axiomatized reals) to a C++ `Real` class wrapping `long double` (defined in `crane_real.h`).
@@ -264,6 +270,31 @@ Temporary file/directory creation. Shared definitions are in `TempFileDefs.v`.
 - **`create_temp_file (prefix : string) : string`** — Create a temporary file, returns path
 - **`create_temp_dir (prefix : string) : string`** — Create a temporary directory, returns path
 
+### `Monads/STMonad.v` / `Monads/STMonadFacts.v`
+
+A Haskell-style `ST` monad for encapsulated, in-place mutable state — distinct
+from the `STM` (software transactional memory) effect documented above. `ST`
+computations extract to plain in-place mutation with no transactional
+machinery; `STMonadFacts.v` provides the correctness lemmas for `ST`-based
+code (not extracted).
+
+- **`STRefClass (T : Type)`** — Type class for mutable reference cells
+- **`STRef`** — A mutable reference handle (extracts to a bare value, `%t2`)
+- **`newSTRef {A} (a : A)`** — Allocate a new reference (extracts to assignment)
+- **`readSTRef {A} (r : STRef A)`** — Read a reference's current value
+- **`writeSTRef {A} (r : STRef A) (a : A)`** — Write a reference's value
+- **`runST {A} (c : ...) : A`** — Run an `ST` computation, discharging its state
+- **`STArray`** — A mutable array (extracts to `std::vector<T> *`)
+- **`newArray`, `readArray`, `writeArray`, `newListArray`, `getElems`** — Array
+  operations on `STArray`
+- **`Ix (T : Type) (ltu : T -> T -> Prop)`** — Type class for indexable range
+  types (modeled after Haskell's `Data.Ix`), used to bound `STArray` indices
+- **`Ix_Correct`** — Correctness properties for an `Ix` instance (not extracted)
+- **`Module Recursion`** — Provides `rec`/`call` combinators for extracting
+  recursive computations written against the `ST` monad; the module itself is
+  skipped during extraction, with `rec`/`call` mapped directly to an explicit
+  C++ work-stack idiom
+
 ---
 
 ## External Types
@@ -335,3 +366,36 @@ Full C++ implementation of Software Transactional Memory with transaction logs, 
 ### `persistent_array.h`
 
 Copy-on-write persistent array implementation used by `PrimArray` extraction.
+
+### `crane_pch.h`
+
+Precompiled header bundling the standard library headers commonly needed by
+generated code (`<memory>`, `<optional>`, `<variant>`, `<any>`, etc.), used to
+speed up compilation of extracted C++.
+
+### `lazy.h`
+
+Defines `crane::lazy<T>`, a memoizing thunk used to represent lazily-evaluated
+values (e.g., `CoFixpoint` bodies) in the generated C++ — `force()` evaluates
+the wrapped closure once and caches the result.
+
+### `mini_stm.h`
+
+An earlier, self-contained single-header STM implementation. `stm_adapter.h`
+now documents itself as providing a `mini_stm.h`-compatible API on top of the
+full `crane-stm/` backend, so `mini_stm.h` is kept as a reference for that
+API surface rather than being the active STM implementation.
+
+### `rc.h`
+
+A single-allocation, single-threaded `rc<T>`/`weak<T>` smart pointer pair
+(control block and value share one heap allocation, non-atomic reference
+counts). Used by `stm_adapter.h`/`crane-stm/` internals where the overhead
+of `std::shared_ptr`'s atomic counting and separate control block isn't
+needed.
+
+### `skipnode.h`
+
+C++ runtime support for the STM-backed skip list example (`SkipNode`,
+forward-pointer levels). `MAX_LEVELS` must be kept in sync with the
+corresponding Rocq `SkipList.v`'s `maxLevels` constant.
