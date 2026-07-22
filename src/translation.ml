@@ -6029,6 +6029,18 @@ and eta_fun env f args =
     let saved_wrap = tctx.wrap_for_any_param in
     if callee_has_erased_params then
       tctx.wrap_for_any_param <- true;
+    (* [has_unresolved_boxed_arg]: set when an argument is statically known to
+       be boxed as [std::any] ([cpp_erased_env]) but the callee's parameter
+       type at this position can't be resolved to a concrete C++ type (it is
+       itself abstract/erased, e.g. a value-dependent type scheme like
+       [S.sem a]).  This happens when the callee is a genuinely-concrete
+       function only at C++ template instantiation time (e.g. a functor
+       parameter instantiated with a concrete inlined function) — the OCaml
+       side cannot know the concrete type to [any_cast] to.  Such calls are
+       routed through the [crane_call_erased] runtime helper instead of a
+       direct call, so the concrete parameter types can be recovered via
+       [std::function] CTAD once C++ instantiates the template. *)
+    let has_unresolved_boxed_arg = ref false in
     let args = List.mapi (fun i x ->
       match x with
       | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
@@ -6062,7 +6074,9 @@ and eta_fun env f args =
               | _ -> Tany
             in
             CPPany_cast (erase_type_to_any ty, inner)
-          | None -> inner )
+          | None ->
+            has_unresolved_boxed_arg := true;
+            inner )
       | _ -> gen_expr env x) args in
     tctx.wrap_for_any_param <- saved_wrap;
     (* Detect over-application: when a local variable's C++ type has fewer
@@ -6171,7 +6185,14 @@ and eta_fun env f args =
            [std::function<std::any(std::any)>]).
          - [MLrel] higher-rank callback whose env-type has a [Tvar] codomain
            guarded by [Tdummy] (e.g. [f : forall A, A -> A]). *)
-      let result = CPPfun_call (callee_expr, List.rev args) in
+      let result =
+        if !has_unresolved_boxed_arg && not callee_is_bare_any then begin
+          Table.mark_needs_erase_fn ();
+          CPPfun_call
+            (CPPvar (Id.of_string "crane_call_erased"), List.rev args @ [callee_expr])
+        end
+        else CPPfun_call (callee_expr, List.rev args)
+      in
       let n = n_args in
       let erased_cod =
         match f with

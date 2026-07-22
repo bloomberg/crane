@@ -80,17 +80,6 @@
   (deps loopify_gap_nested_fix.t.exe)
   (action (run ./loopify_gap_nested_fix.t.exe))))
 
-(subdir sigt_leaf_forward_string
- (rule
-  (targets sigt_leaf_forward_string.t.exe)
-  (deps SigtLeafForwardString.vo sigt_leaf_forward_string.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_leaf_forward_string.t.exe sigt_leaf_forward_string.cpp sigt_leaf_forward_string.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_leaf_forward_string.t.exe)
-  (action (run ./sigt_leaf_forward_string.t.exe))))
-
 (subdir loopify_gap_ackermann
  (rule
   (targets loopify_gap_ackermann.t.exe)

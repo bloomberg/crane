@@ -13,8 +13,8 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
     auto &[x2, a10] = v;
     switch (std::move(x2)) {
     case Tag::TAGLIST: {
-      return Specif::template SigT<Tag, std::any>::existt(Tag::TAGLIST,
-                                                          a1(std::move(a10)));
+      return Specif::template SigT<Tag, std::any>::existt(
+          Tag::TAGLIST, crane_call_erased(a1, std::move(a10)));
     }
     case Tag::TAGNAT: {
       return v;
@@ -31,8 +31,8 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
       return v;
     }
     case Tag::TAGNAT: {
-      return Specif::template SigT<Tag, std::any>::existt(Tag::TAGNAT,
-                                                          a1(std::move(a11)));
+      return Specif::template SigT<Tag, std::any>::existt(
+          Tag::TAGNAT, crane_call_erased(a1, std::move(a11)));
     }
     default:
       std::unreachable();

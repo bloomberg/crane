@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ERASED_FIELD_DANGLE
 #define INCLUDED_ERASED_FIELD_DANGLE
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
 #include <type_traits>
@@ -43,14 +44,14 @@ struct ErasedFieldDangle {
       requires std::is_invocable_r_v<T1, F0 &, std::any &>
     T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
-      return f(a0);
+      return crane_call_erased(f, a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, std::any &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
-      return f(a0);
+      return crane_call_erased(f, a0);
     }
   };
 

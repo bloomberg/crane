@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ERASED_MULTI_INDEX
 #define INCLUDED_ERASED_MULTI_INDEX
 
+#include "crane_fn.h"
 #include <any>
 #include <memory>
 #include <type_traits>
@@ -42,14 +43,14 @@ struct ErasedMultiIndex {
       requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
     T1 tagged_rec(F0 &&f) const {
       const auto &[k0, v0] = *this;
-      return f(k0, v0);
+      return crane_call_erased(f, k0, v0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
     T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v0] = *this;
-      return f(k0, v0);
+      return crane_call_erased(f, k0, v0);
     }
   };
 

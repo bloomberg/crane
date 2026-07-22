@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE12
 #define INCLUDED_MEM_SAFETY_PROBE12
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
 #include <type_traits>
@@ -24,13 +25,13 @@ struct MemSafetyProbe12 {
   template <typename T1, typename T2, typename F0>
   static T1 wrap_rect(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(f(std::any_cast<T2>(a0)));
+    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
   }
 
   template <typename T1, typename T2, typename F0>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
-    return std::any_cast<T1>(f(std::any_cast<T2>(a0)));
+    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
   }
 
   /// Unwrap extracts the value from wrap A.

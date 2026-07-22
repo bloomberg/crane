@@ -129,8 +129,21 @@ concept SEM = requires {
 /// opaquely. This mirrors XML.h's `xmlnode(nm, ...)` call, where `nm` is
 /// pulled out of a nested `std::any_cast<std::pair<std::any,std::any>>>`
 /// chain but then handed to `xmlnode` (which expects `std::string`) with no
-/// final `std::any_cast<std::string>` — a leaf-projection-forgets-to-unwrap
-/// bug distinct from the earlier "destructuring a raw std::any" bug.
+/// final `std::any_cast<std::string>`.
+///
+/// This used to fail to *compile*: `eq` is itself a functor parameter whose
+/// domain (`S.sem a`) is abstract, so its C++ type is only concrete once the
+/// generated template is instantiated with the caller-supplied `String.eqb`
+/// lambda. Crane's `any_cast` insertion for call arguments only fires when
+/// the callee's parameter type can be resolved to something concrete at
+/// translation time (MLmagic + expected_ty threading); here it can't be
+/// (the domain type resolves to `std::any`/`Tany` generically), so `v` was
+/// passed to `eq` raw, and `eq`'s concrete (non-generic) instantiation
+/// rejected `std::any`. Fixed by routing such calls through the
+/// `crane_call_erased` runtime helper (`crane_fn.h`), which uses
+/// `std::function` CTAD — same trick as `crane_erase_fn` — to recover `eq`'s
+/// concrete parameter types at C++ instantiation time and `any_cast` each
+/// boxed argument accordingly.
 template <SEM S> struct Make {
   using dom = std::pair<std::any, std::monostate>;
   using prod2 = std::pair<typename S::idx, List<typename S::idx>>;
@@ -146,7 +159,7 @@ template <SEM S> struct Make {
             crane_erase_fn([=](const auto &tup) mutable {
               const auto &[v, _x] =
                   std::any_cast<std::pair<std::any, std::any>>(tup);
-              return eq(v, v);
+              return crane_call_erased(eq, v, v);
             }),
             crane_erase_fn([=](const auto &tup) mutable {
               const auto &[v, _x] =

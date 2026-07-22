@@ -61,3 +61,53 @@ template <class F> auto crane_erase_fn(F &&f) {
         });
   }
 }
+
+// Runtime helper for calling a genuinely-concrete callable [f] with
+// arguments that may be boxed as [std::any] even though [f] does not accept
+// [std::any] directly.
+//
+// This arises when a value-dependent parameter (e.g. a functor's abstract
+// [S.sem a]) is destructured from a type-erased carrier (a [std::pair<any,
+// any>] built for a generic domain), so the resulting value is statically
+// [std::any] at the call site.  The callee [f], however, is only concrete at
+// C++ template instantiation time (e.g. a functor parameter deduced from a
+// caller-supplied lambda with a concrete signature like
+// [bool(std::string, std::string)]).  Crane cannot know at OCaml translation
+// time whether [f] will end up generic (accepts [std::any] as-is) or
+// concrete (needs each boxed argument unwrapped with
+// [std::any_cast<ParamType>]), so the decision is deferred to C++ via
+// [std::function] CTAD, same trick as [crane_erase_fn].
+template <class Sig, std::size_t I> struct crane_fn_param;
+template <class R, class... P, std::size_t I>
+struct crane_fn_param<std::function<R(P...)>, I> {
+  using type = std::tuple_element_t<I, std::tuple<P...>>;
+};
+
+template <class Sig, std::size_t I, class A>
+decltype(auto) crane_call_erased_unbox(A &&a) {
+  using T = typename crane_fn_param<Sig, I>::type;
+  if constexpr (std::is_same_v<std::decay_t<A>, std::any> &&
+                !std::is_same_v<std::decay_t<T>, std::any>) {
+    return std::any_cast<T>(std::forward<A>(a));
+  } else {
+    return std::forward<A>(a);
+  }
+}
+
+template <class F, class... Args, std::size_t... I>
+decltype(auto) crane_call_erased_dispatch(std::index_sequence<I...>, F &&f,
+                                           Args &&...args) {
+  using Sig = decltype(std::function{f});
+  return f(crane_call_erased_unbox<Sig, I>(std::forward<Args>(args))...);
+}
+
+template <class F, class... Args>
+decltype(auto) crane_call_erased(F &&f, Args &&...args) {
+  if constexpr (requires { std::function{f}; }) {
+    return crane_call_erased_dispatch(std::index_sequence_for<Args...>{},
+                                       std::forward<F>(f),
+                                       std::forward<Args>(args)...);
+  } else {
+    return f(std::forward<Args>(args)...);
+  }
+}
