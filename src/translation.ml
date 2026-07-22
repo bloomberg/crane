@@ -2027,6 +2027,18 @@ let rec ml_return_type_is_erased = function
     Coq type says the result is [nat = unsigned int], but the C++ expression
     [forward_functor->object_of(7u)] actually returns [std::any]. *)
 let rec ml_body_returns_erased_field = function
+  | Miniml.MLapp ((MLglob (r, tys) | MLmagic (MLglob (r, tys))), args) as full ->
+    let direct =
+      match find_type_opt r with
+      | Some ty ->
+        let ty = match tys with [] -> ty | _ -> ml_subst_tvars (Array.of_list tys) ty in
+        ( match strip_tarr_n (count_real_ml_args args) ty with
+        | Some ret_ty -> ml_return_type_is_erased ret_ty
+        | None -> false )
+      | None -> false
+    in
+    direct ||
+    (match full with Miniml.MLapp (f, _) -> ml_body_returns_erased_field f | _ -> false)
   | Miniml.MLapp (f, _) -> ml_body_returns_erased_field f
   | MLmagic f -> ml_body_returns_erased_field f
   | MLcase (typ, _, pv) when Array.length pv = 1 ->
@@ -5487,7 +5499,19 @@ and eta_fun env f args =
                      | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
                      | _ -> false) ->
         let cpp_ty = convert_ml_type_to_cpp_type env tvars param_ty in
-        CPPany_cast (cpp_ty, as_value ())
+        let strip_ns_tg = function
+          | Tnamespace (_, (Tglob _ as inner)) -> inner
+          | t -> t
+        in
+        ( match strip_ns_tg cpp_ty with
+        | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+          let list_any_ty =
+            match cpp_ty with
+            | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
+            | _ -> Tglob (g, [Tany], [])
+          in
+          CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, as_value ())])
+        | _ -> CPPany_cast (cpp_ty, as_value ()) )
       (* Monadic parameter (reified mode only): the callee expects
          [shared_ptr<ITree<R>>].  If the argument already produces a reified
          tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
