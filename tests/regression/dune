@@ -6168,3 +6168,14 @@
   (alias runtest)
   (deps sigt_leaf_forward_string.t.exe)
   (action (run ./sigt_leaf_forward_string.t.exe))))
+
+(subdir sigt_leaf_forward_topfn
+ (rule
+  (targets sigt_leaf_forward_topfn.t.exe)
+  (deps SigtLeafForwardTopfn.vo sigt_leaf_forward_topfn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_leaf_forward_topfn.t.exe sigt_leaf_forward_topfn.cpp sigt_leaf_forward_topfn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_leaf_forward_topfn.t.exe)
+  (action (run ./sigt_leaf_forward_topfn.t.exe))))

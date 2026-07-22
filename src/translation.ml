@@ -2745,7 +2745,19 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
         if will_erase_fn_wrap then
           match strip_magic e with
           | MLlam (id, ty, body) ->
-            MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
+            (* Only force the [any_cast<pair<any,any>>] rewrite when the
+               lambda's own parameter type is actually erased/generic at this
+               instantiation (mixed or fully Tany). When the domain resolves
+               to a fully concrete type here (e.g. a literal index picks out
+               a concrete branch of a dependent type family), the lambda
+               parameter is rendered with its real concrete C++ type, and a
+               plain structured binding on it is correct — any_cast-ing it as
+               if it were [std::any] does not compile. *)
+            let tvars = get_current_type_vars () in
+            let param_cpp_ty = convert_ml_type_to_cpp_type env tvars ty in
+            if Ml_type_util.has_tany_in_type param_cpp_ty then
+              MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
+            else MLlam (id, ty, body)
           | _ -> e
         else e
       in
