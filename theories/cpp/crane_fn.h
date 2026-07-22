@@ -11,9 +11,18 @@
 // closure (otherwise [any_cast] throws [std::bad_any_cast]).
 //
 // [crane_erase_fn] adapts an arbitrary callable to
-// [std::function<std::any(std::any...)>]: it uses [std::function] CTAD to
-// deduce the callable's signature [R(A...)], then unboxes each argument with
-// [std::any_cast<A>] and boxes the result back into [std::any].
+// [std::function<std::any(std::any...)>] and boxes the result into [std::any].
+// Two cases:
+//
+//   * Concrete-signature callables (a named function, a monomorphic lambda,
+//     etc.): [std::function] CTAD deduces the signature [R(A...)], and the
+//     adapter unboxes each argument with [std::any_cast<A>].
+//
+//   * Generic lambdas (e.g. [ [](const auto&){...} ], produced when a function's
+//     domain is a value-dependent/abstract type erased to [std::any]): CTAD
+//     cannot deduce a signature, so the callable is wrapped as a unary
+//     [any -> any] adapter that forwards the boxed argument directly (a generic
+//     lambda accepts the [std::any] as its [const auto&] parameter).
 //
 // Emitted as a global (like [ITree] in crane_itree.h) rather than in
 // [namespace crane] so the extractor can reference it with a plain identifier.
@@ -38,5 +47,17 @@ crane_erase_fn_impl(std::function<R(A...)> f) {
 }
 
 template <class F> auto crane_erase_fn(F &&f) {
-  return crane_erase_fn_impl(std::function{std::forward<F>(f)});
+  if constexpr (requires { std::function{std::forward<F>(f)}; }) {
+    return crane_erase_fn_impl(std::function{std::forward<F>(f)});
+  } else {
+    return std::function<std::any(std::any)>(
+        [f = std::forward<F>(f)](std::any a) mutable -> std::any {
+          if constexpr (std::is_void_v<decltype(f(a))>) {
+            f(a);
+            return std::any{};
+          } else {
+            return std::any(f(a));
+          }
+        });
+  }
 }

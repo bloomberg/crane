@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIGT_PROD_FN_ANY
 #define INCLUDED_SIGT_PROD_FN_ANY
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
 #include <memory>
@@ -138,7 +139,7 @@ template <SEM S> struct Make {
   static entry mk(typename S::idx a, F1 &&f, F2 &&g) {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(std::any(f), std::any(g)));
+        std::make_pair(crane_erase_fn(f), crane_erase_fn(g)));
   }
 
   /// Look up + apply the predicate, exactly like Parser.v:113 if p vs' ....
@@ -172,8 +173,8 @@ const M::entry my_entry = M::mk(
     std::monostate{}, [](uint64_t n) { return n == UINT64_C(0); },
     [](uint64_t n) { return (n + 1); });
 Inst::sem my_arg(std::monostate _x);
-/// In Rocq this is true (predicate 0 =? 0 holds). The extracted C++ throws
-/// std::bad_any_cast instead.
+/// In Rocq this is true (predicate 0 =? 0 holds), and the extracted C++ now
+/// returns true as well (before the fix it threw std::bad_any_cast).
 bool check(std::monostate _x);
 
 #endif // INCLUDED_SIGT_PROD_FN_ANY

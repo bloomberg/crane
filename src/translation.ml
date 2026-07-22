@@ -2741,6 +2741,18 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           | _ when is_passthrough_ctor_arg i -> result
           | Some Tany ->
             (match result with
+            | _ when ml_expr_is_function_value e ->
+              (* Function value stored into an erased ([std::any]) field via a
+                 custom constructor (e.g. a [std::pair<std::any, std::any>]
+                 component from [prod]).  Route it through [crane_erase_fn] so
+                 the stored [std::any] holds a [std::function<std::any(std::any)>]
+                 that the application-site [any_cast] can recover, instead of a
+                 raw closure.  This covers both non-lambda callables (named
+                 [mk] parameters) and inline lambda literals — including the
+                 generic [ [](const auto&){...} ] form produced when the
+                 function's domain is an erased/abstract type. *)
+              Table.mark_needs_erase_fn ();
+              CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [result])
             | CPPlambda _ -> result
             | _ -> CPPconverting_ctor (Tany, [result]))
           | Some _ when draft_has_any_tany ->
@@ -2921,6 +2933,26 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
     in the ML AST and should be ignored by numeral-folding traversals. *)
 and strip_magic = function MLmagic e -> strip_magic e | e -> e
+
+(** Whether [e] denotes a value whose ML type is a function (at least one value
+    arrow).  Used to decide, at a constructor argument that is stored into an
+    erased ([std::any]) field, whether to route it through the [crane_erase_fn]
+    runtime helper so the canonical [std::function<std::any(std::any...)>]
+    representation is stored (matching the [any_cast] on the application side)
+    rather than a raw closure.  An [MLrel] already erased to [std::any]
+    ([tctx.cpp_erased_env]) is excluded: it is not callable, so wrapping it
+    would miscompile. *)
+and ml_expr_is_function_value e =
+  match strip_magic e with
+  | MLrel i ->
+    (not (Escape.IntSet.mem i tctx.cpp_erased_env))
+    && ( match get_env_type_opt i with
+       | Some t -> count_ml_value_arrows t >= 1
+       | None -> false )
+  | other ->
+    ( match infer_ml_body_type other with
+    | Some t -> count_ml_value_arrows t >= 1
+    | None -> false )
 
 (** Try to fold a Peano numeral chain (nested constructors) into an integer *)
 and try_fold_numeral info expr =
@@ -4303,22 +4335,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                      [std::function] CTAD to deduce the callable's signature and
                      builds the [std::function<std::any(std::any...)>] adapter
                      (unbox each argument, box the result). *)
-                  let is_function_value =
-                    match strip_magic ml_e with
-                    | MLrel i
-                      when not (Escape.IntSet.mem i tctx.cpp_erased_env) ->
-                      (* Skip when [f] is itself already erased to std::any:
-                         it is not callable, so wrapping would double-erase. *)
-                      ( match get_env_type_opt i with
-                      | Some t -> count_ml_value_arrows t >= 1
-                      | None -> false )
-                    | MLrel _ -> false
-                    | other ->
-                      ( match infer_ml_body_type other with
-                      | Some t -> count_ml_value_arrows t >= 1
-                      | None -> false )
-                  in
-                  if is_function_value then begin
+                  if ml_expr_is_function_value ml_e then begin
                     (* Wrap via the [crane_erase_fn] runtime helper (emitted as
                        [#include "crane_fn.h"] in the header preamble). *)
                     Table.mark_needs_erase_fn ();

@@ -4,12 +4,12 @@ Require Import Crane.Mapping.NatIntStd.
 From Stdlib Require Import List.
 Import ListNotations.
 
-(** Minimal reproduction of the parse-a-lot LL-parser [bad_any_cast] that
-    SURVIVES the [crane_erase_fn] store-site fix.
+(** Regression test for the parse-a-lot LL-parser [bad_any_cast] in the
+    product-payload case (now fixed).
 
     The earlier repro (sigt_fn_any) stored a function *directly* into a field of
-    type [std::any]; Crane's fix now wraps such a store in [crane_erase_fn(...)]
-    so the [std::any] holds a [std::function]. That case works.
+    type [std::any]; Crane's fix wraps such a store in [crane_erase_fn(...)]
+    so the [std::any] holds a [std::function].
 
     But parse-a-lot's grammar does not store the predicate/action functions
     directly. It stores them as the two *components of a product*:
@@ -19,11 +19,15 @@ Import ListNotations.
     where [predicate_semty]/[action_semty] are value-dependent function types
     that Crane erases to [std::any]. So the C++ payload is
     [std::pair<std::any, std::any>], and the two lambdas are erased to
-    [std::any] *through the pair conversion* — a path the [crane_erase_fn] fix
-    does not cover. The lambdas are stored as raw closures, but the parser reads
-    them back with [any_cast<std::function<std::any(std::any)>>] and crashes.
+    [std::any] *through the pair conversion*. This path goes through the
+    custom-constructor code (prod -> std::make_pair), which the original
+    [crane_erase_fn] fix did not cover, so the lambdas were stored as raw
+    closures and the parser crashed reading them back with
+    [any_cast<std::function<std::any(std::any)>>].
 
-    This file distills exactly that product-payload shape. *)
+    The fix extends the [crane_erase_fn] wrapping to function values boxed into
+    erased fields through a custom constructor.  This file distills exactly that
+    product-payload shape. *)
 
 Module Type SEM.
   Parameter idx : Type.
@@ -78,8 +82,8 @@ Definition my_entry : M.entry :=
   M.mk tt (fun n => Nat.eqb n 0) (fun n => S n).
 Definition my_arg : forall a : Inst.idx, Inst.sem a := fun _ => 0.
 
-(** In Rocq this is [true] (predicate [0 =? 0] holds). The extracted C++ throws
-    [std::bad_any_cast] instead. *)
+(** In Rocq this is [true] (predicate [0 =? 0] holds), and the extracted C++ now
+    returns [true] as well (before the fix it threw [std::bad_any_cast]). *)
 Definition check (u : unit) : bool := M.run my_entry my_arg.
 
 Crane Extraction "sigt_prod_fn_any" check my_entry my_arg.
