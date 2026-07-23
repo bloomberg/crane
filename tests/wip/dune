@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir grammar_tuple_record_cons
- (rule
-  (targets grammar_tuple_record_cons.t.exe)
-  (deps GrammarTupleRecordCons.vo grammar_tuple_record_cons.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_tuple_record_cons.t.exe grammar_tuple_record_cons.cpp grammar_tuple_record_cons.t.cpp)))
- (rule
-  (alias runtest)
-  (deps grammar_tuple_record_cons.t.exe)
-  (action (run ./grammar_tuple_record_cons.t.exe))))

@@ -317,6 +317,10 @@ and cpp_expr =
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
       (** std::any_cast<T>(expr) — recovers typed value from std::any *)
+  | CPPcontainer_cast of cpp_type * cpp_expr
+      (** crane_container_cast<Dst>(expr) — converts a type-erased sequence
+          container (element type std::any) into a concrete-element container
+          by std::any_cast-ing each element. *)
   | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
       (** std::get_if<T>(&variant) — pointer-returning variant accessor.
           Uses [(sn()).get_if] for BDE compatibility. *)

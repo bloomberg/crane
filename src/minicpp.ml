@@ -320,6 +320,12 @@ and cpp_expr =
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
+  | CPPcontainer_cast of cpp_type * cpp_expr
+    (* crane_container_cast<Dst>(expr) — converts a type-erased sequence
+       container (element type std::any) into a concrete-element container by
+       [std::any_cast]-ing each element.  Used when an erased list/deque leaf is
+       forwarded into a consumer whose parameter has a concrete element type and
+       the container type (e.g. std::deque) has no element-converting ctor. *)
   | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
     (* std::get_if<T>(&variant) — pointer-returning variant accessor.
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
@@ -492,6 +498,7 @@ let map_expr
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
+  | CPPcontainer_cast (ty, e') -> CPPcontainer_cast (ft ty, fe e')
   | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
@@ -579,7 +586,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
+  | CPPany_cast (_, e') | CPPcontainer_cast (_, e')
+  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -647,7 +655,8 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
+  | CPPany_cast (_, e') | CPPcontainer_cast (_, e')
+  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->

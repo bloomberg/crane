@@ -4813,23 +4813,49 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       let saved_dead = tctx.move_dead_after in
       tctx.move_dead_after <- Escape.IntSet.empty;
       let record_arg_exprs =
+        let field_types_rec =
+          match Table.get_ctor_ip_types_opt r with
+          | Some ft -> ft
+          | None -> []
+        in
+        let tvars = get_current_type_vars () in
+        (* A record field with a CONCRETE type receiving an argument that is an
+           erased ([std::any]) pattern variable (e.g. a leaf destructured from a
+           deeply-erased [pair<any,any>]) needs a final [any_cast<concrete>] —
+           otherwise the bare [std::any] is aggregate-brace-initialized into a
+           concrete field and fails to compile.  Thread the field's concrete C++
+           type as the expected type so the erased-[MLrel] path (see [gen_expr]'s
+           [MLrel] case) inserts the cast.  This mirrors the equivalent handling
+           for value-type (variant) constructors in [gen_and_wrap]. *)
+        let expected_for_field i e =
+          match List.nth_opt field_types_rec i with
+          | Some ft ->
+            let is_erased_rel =
+              match e with
+              | MLrel j | MLmagic (MLrel j) ->
+                Escape.IntSet.mem j tctx.cpp_erased_env
+              | _ -> false
+            in
+            ( match ft with
+            | Miniml.Tvar _ | Miniml.Tvar' _ -> None
+            | _ when is_erased_rel ->
+              let ct = convert_ml_type_to_cpp_type env tvars ft in
+              if is_erased_type ct then None else Some ct
+            | _ -> None )
+          | None -> None
+        in
         let base_args =
-          List.map
-            (fun e ->
+          List.mapi
+            (fun i e ->
               match e with
               | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
                 wrap_void_call_as_value (gen_expr env e)
-              | _ -> gen_expr env e)
+              | _ -> gen_expr ?expected_ty:(expected_for_field i e) env e)
             ts
         in
         match ty with
         | Tglob (n, _, _) ->
-          let field_types =
-            match Table.get_ctor_ip_types_opt r with
-            | Some ft -> ft
-            | None -> []
-          in
-          let tvars = get_current_type_vars () in
+          let field_types = field_types_rec in
           List.mapi
             (fun i expr ->
               match List.nth_opt field_types i with
@@ -5633,7 +5659,38 @@ and eta_fun env f args =
               Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], [])
             | _ -> cpp_ty
           in
-          CPPany_cast (erased_ty, as_value ())
+          let inner = CPPany_cast (erased_ty, as_value ()) in
+          (* When the callee's parameter has a CONCRETE element type (e.g.
+             [triples_le_max(const std::deque<rgb>&)]), the erased-element value
+             cannot convert to it and, unlike Crane's own [List<A>],
+             [std::deque] has no element-converting ctor — unbox each element via
+             the [crane_container_cast] runtime helper.
+
+             This is only valid when the element was erased WHOLESALE to
+             [std::any] (an opaque/no-args type such as a record — the runtime
+             container is [deque<any>] and per-element [any_cast<Elt>] recovers
+             it).  A STRUCTURALLY-erased element (e.g. [pair<any,any>] from
+             [nat*nat]) is not a boxed [std::any] and would need component-wise
+             conversion the helper does not do; inline-custom callees (e.g.
+             [length]'s [.size()]) impose no concrete element type at all.  In
+             both cases keep the erased value ([inner]) unchanged. *)
+          let elem_needs_unbox =
+            (* Inline-custom callees splice the argument into a template (e.g.
+               [length]'s [%a0.size()]) and work fine on the erased container,
+               so no element unboxing is needed there — only a REAL function
+               whose parameter is a typed [deque<Elt>] requires it. *)
+            (not (Table.is_inline_custom id))
+            &&
+            match strip_ns_tg cpp_ty with
+            | Tglob (_, [et], _) ->
+              et <> Tany && Ml_type_util.erase_type_to_any et = Tany
+            | _ -> false
+          in
+          if elem_needs_unbox then begin
+            Table.mark_needs_erase_fn ();
+            CPPcontainer_cast (cpp_ty, inner)
+          end
+          else inner
         | _ -> CPPany_cast (cpp_ty, as_value ()) )
       (* Monadic parameter (reified mode only): the callee expects
          [shared_ptr<ITree<R>>].  If the argument already produces a reified

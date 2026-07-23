@@ -68,8 +68,9 @@ const std::deque<grammar_entry> entries =
                        const auto &[tpls, _x1] =
                            std::any_cast<std::pair<std::any, std::any>>(y2);
                        return triples_le_max(
-                           std::any_cast<std::deque<std::any>>(
-                               std::any_cast<std::deque<std::any>>(tpls)),
+                           crane_container_cast<std::deque<rgb>>(
+                               std::any_cast<std::deque<std::any>>(
+                                   std::any_cast<std::deque<std::any>>(tpls))),
                            std::any_cast<uint64_t>(x));
                      }),
                      crane_erase_fn([](const auto &tup) {
@@ -84,7 +85,9 @@ const std::deque<grammar_entry> entries =
                        return [](auto _a0, auto _a1) {
                          _a1.push_front(_a0);
                          return _a1;
-                       }(rgb{x, y, z},
+                       }(rgb{std::any_cast<uint64_t>(x),
+                              std::any_cast<uint64_t>(y),
+                              std::any_cast<uint64_t>(z)},
                               std::any_cast<std::deque<std::any>>(tpls));
                      }))),
       [](auto _a0, auto _a1) {

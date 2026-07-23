@@ -125,3 +125,28 @@ decltype(auto) crane_call_erased(F &&f, Args &&...args) {
     return f(std::forward<Args>(args)...);
   }
 }
+
+// Converts a type-erased sequence container (element type [std::any], e.g. a
+// [std::deque<std::any>] produced when a value-dependent list is erased) into a
+// concrete-element container [Dst] by [std::any_cast]-ing each element.
+//
+// This is the container analogue of the element-converting constructor that
+// Crane's own [List<A>] carries: [std::deque]/[std::vector] and other mapped
+// containers have no such ctor, so an erased list leaf forwarded into a
+// consumer whose parameter has a concrete element type (e.g.
+// [triples_le_max(const std::deque<rgb>&)]) needs its elements unboxed here.
+//
+// Each element is either already of the destination element type (passed
+// through) or a [std::any] holding it (unboxed with [std::any_cast]).
+template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
+  using Elt = typename Dst::value_type;
+  Dst dst;
+  for (auto &&_e : src) {
+    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>) {
+      dst.insert(dst.end(), _e);
+    } else {
+      dst.insert(dst.end(), std::any_cast<Elt>(_e));
+    }
+  }
+  return dst;
+}

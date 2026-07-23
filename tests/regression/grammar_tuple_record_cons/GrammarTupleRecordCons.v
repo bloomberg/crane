@@ -6,26 +6,40 @@ From Stdlib Require Import List.
 Import ListNotations.
 
 (** FAITHFUL repro of the RESIDUAL parse-a-lot leaf-forward shapes that
-    survive after grammar_tuple_leaf_ctor was fixed.
+    survived after grammar_tuple_leaf_ctor was fixed (now also fixed).
 
     grammar_tuple_leaf_ctor covered: a SINGLE leaf forwarded into a
     single-arg inductive constructor in RETURN position (Json_value::jstring(s),
-    Newick, XML -- all now compile). Two shapes still fail, both in PPM's
+    Newick, XML). Two further shapes are exercised here, both in PPM's
     Triples/Document productions (examples/PPM/Parser/PPM.v), and identically
     in JSON's Obj production:
 
-      SHAPE A (PPM.h:218, action of Triples -> [NAT;NAT;NAT;Triples]):
+      SHAPE A (action of Triples -> [NAT;NAT;NAT;Triples]):
         action = fun tup => match tup with (x,(y,(z,(tpls,_)))) =>
-                              mkRGBTriple x y z :: tpls end
-        -> generates rgb_triple{x, y, z} (a single-ctor Record => C++ aggregate
+                              mkRGB x y z :: tpls end
+        -> generates rgb{x, y, z} (a single-ctor Record => C++ aggregate
         brace-init) with x,y,z still std::any, NOT in return position (it is
-        the head argument of cons/push_front), plus tpls forwarded as
-        std::deque<std::any> where std::deque<rgb_triple> is expected.
+        the head argument of cons/push_front).
 
-      SHAPE B (JSON.h:660 nodupKeys, PPM.h:145 triples_le_max, predicate of
-        Document): an erased CONTAINER leaf (list rgb / list (string*_)) is
-        forwarded into a function whose parameter is a concretely-typed
-        container -- deque<std::any> vs deque<rgb_triple>/deque<pair<string,_>>.
+      SHAPE B (predicate of Document): an erased CONTAINER leaf (list rgb) is
+        forwarded into a REAL function whose parameter is a concretely-typed
+        container -- deque<std::any> where deque<rgb> is expected.
+
+    Fixes:
+      SHAPE A: the RECORD constructor argument path ([record_arg_exprs],
+        translation.ml) now threads the field's concrete C++ type as the
+        expected type when the argument is an erased ([std::any]) pattern
+        variable, so leaves get a final [any_cast<field>] (mirrors the
+        value-type/variant fix from grammar_tuple_leaf_ctor).
+
+      SHAPE B: forwarding an erased [deque<any>] into a concrete-element
+        [deque<rgb>] parameter of a REAL function now emits the
+        [crane_container_cast<Dst>] runtime helper (crane_fn.h), which unboxes
+        each element -- [std::deque], unlike Crane's own [List<A>], has no
+        element-converting ctor.  Applied only when the element was erased
+        WHOLESALE to [std::any] (an opaque/no-args type such as this record);
+        structurally-erased elements ([pair<any,any>]) and inline-custom
+        callees (e.g. [length]'s [.size()]) keep the erased container.
 
     This repro mirrors the PPM Triples production faithfully: [tuple (map
     symbol_semty gamma)] domain (the essential ingredient established in

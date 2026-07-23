@@ -1997,6 +1997,12 @@ and pp_cpp_expr env args t =
       ++ pp_cpp_expr env args e
       ++ str ")"
     end
+  | CPPcontainer_cast (ty, e) ->
+    str "crane_container_cast<"
+    ++ pp_cpp_type false [] ty
+    ++ str ">("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
   | CPPstd_get_if (ty, ctor, e) ->
     require_header "variant";
     let targ = match ctor with
