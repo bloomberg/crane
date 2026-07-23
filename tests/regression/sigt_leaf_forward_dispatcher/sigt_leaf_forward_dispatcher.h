@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER
 #define INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
 #include <memory>
@@ -127,21 +128,25 @@ struct String {
   static bool eqb1(const std::string &s1, const std::string &s2);
 };
 
-/// All prior attempts wrote the action closure directly at the entry's
-/// definition site (my_entry := existT psem (0,[]) ((fun tup => ...), ...)),
-/// which Crane always concretizes (the generated lambda's parameter is a
-/// concrete pair type, not auto). The REAL grammar table
-/// (Parser.v/Defs.v) instead builds every production's predicate/action
-/// through a SINGLE shared dispatcher function with one big match over
-/// the production id -- e.g. production_action (p : production) :
-/// predicate_semty p * action_semty p := match p with ... end -- and only
-/// THEN stores existT psem p (production_action p) per entry. This test
-/// checks whether routing the action through such a shared dispatcher (one
-/// function, many match arms, each returning a differently-typed closure)
-/// is what forces Crane to emit a genuinely generic auto-parameterized
-/// lambda (hitting crane_erase_fn's buggy generic branch) instead of a
-/// concretely-typed one -- which would explain why Newick.h/PPM.h/XML.h
-/// still fail after all prior fixes.
+/// Unlike sigt_leaf_forward_topfn, which writes the action closure directly
+/// at the entry's definition site, this test routes the action through a
+/// SINGLE shared dispatcher function (mk_action) with one match over the
+/// production id -- the shape of the REAL grammar table (Parser.v/Defs.v),
+/// which builds every production's predicate/action via
+/// production_action (p : production) : predicate_semty p * action_semty p :=
+/// match p with ... end and only then stores existT psem p
+/// (production_action p) per entry.
+///
+/// The consumer of the dispatched closure (run, via mk_action) is generic
+/// over the runtime-varying index n, so it must read the closure's domain
+/// (domty n, a value-dependent alias) through the fully-erased
+/// representation any_cast<pair<any,any>>.  This forced two fixes: the
+/// producer (garg) must DEEP-erase the pair components it returns into the
+/// value-dependent std::any slot (so the stored value is pair<any,any>,
+/// not pair<string,unit>), and the pair_wrap/fst/snd accessors must
+/// not synthesize out-of-scope template parameters when casting an erased
+/// field.  Both producer and consumer now agree on the deep-erased
+/// representation.
 bool wrap_string(const std::string &s);
 using domty = std::any;
 using prod2 = std::pair<uint64_t, List<uint64_t>>;
@@ -152,9 +157,12 @@ using entry = SigT<prod2, psem>;
 bool mk_action(uint64_t n, std::any tup);
 const entry my_entry = SigT<prod2, psem>::existt(
     std::make_pair(UINT64_C(0), List<uint64_t>::nil()),
-    std::make_pair(
-        [](domty _x0) -> bool { return mk_action(UINT64_C(0), _x0); },
-        [](domty _x0) -> bool { return mk_action(UINT64_C(0), _x0); }));
+    std::make_pair(crane_erase_fn([](domty _x0) -> bool {
+                     return mk_action(UINT64_C(0), _x0);
+                   }),
+                   crane_erase_fn([](domty _x0) -> bool {
+                     return mk_action(UINT64_C(0), _x0);
+                   })));
 domty garg(uint64_t n);
 bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
                     std::pair<std::any, std::any>> &e);

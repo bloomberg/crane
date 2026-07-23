@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir sigt_leaf_forward_dispatcher
- (rule
-  (targets sigt_leaf_forward_dispatcher.t.exe)
-  (deps SigtLeafForwardDispatcher.vo sigt_leaf_forward_dispatcher.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_leaf_forward_dispatcher.t.exe sigt_leaf_forward_dispatcher.cpp sigt_leaf_forward_dispatcher.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_leaf_forward_dispatcher.t.exe)
-  (action (run ./sigt_leaf_forward_dispatcher.t.exe))))

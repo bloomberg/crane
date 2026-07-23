@@ -1,26 +1,30 @@
 #include "sigt_leaf_forward_dispatcher.h"
 
-/// All prior attempts wrote the action closure directly at the entry's
-/// definition site (my_entry := existT psem (0,[]) ((fun tup => ...), ...)),
-/// which Crane always concretizes (the generated lambda's parameter is a
-/// concrete pair type, not auto). The REAL grammar table
-/// (Parser.v/Defs.v) instead builds every production's predicate/action
-/// through a SINGLE shared dispatcher function with one big match over
-/// the production id -- e.g. production_action (p : production) :
-/// predicate_semty p * action_semty p := match p with ... end -- and only
-/// THEN stores existT psem p (production_action p) per entry. This test
-/// checks whether routing the action through such a shared dispatcher (one
-/// function, many match arms, each returning a differently-typed closure)
-/// is what forces Crane to emit a genuinely generic auto-parameterized
-/// lambda (hitting crane_erase_fn's buggy generic branch) instead of a
-/// concretely-typed one -- which would explain why Newick.h/PPM.h/XML.h
-/// still fail after all prior fixes.
+/// Unlike sigt_leaf_forward_topfn, which writes the action closure directly
+/// at the entry's definition site, this test routes the action through a
+/// SINGLE shared dispatcher function (mk_action) with one match over the
+/// production id -- the shape of the REAL grammar table (Parser.v/Defs.v),
+/// which builds every production's predicate/action via
+/// production_action (p : production) : predicate_semty p * action_semty p :=
+/// match p with ... end and only then stores existT psem p
+/// (production_action p) per entry.
+///
+/// The consumer of the dispatched closure (run, via mk_action) is generic
+/// over the runtime-varying index n, so it must read the closure's domain
+/// (domty n, a value-dependent alias) through the fully-erased
+/// representation any_cast<pair<any,any>>.  This forced two fixes: the
+/// producer (garg) must DEEP-erase the pair components it returns into the
+/// value-dependent std::any slot (so the stored value is pair<any,any>,
+/// not pair<string,unit>), and the pair_wrap/fst/snd accessors must
+/// not synthesize out-of-scope template parameters when casting an erased
+/// field.  Both producer and consumer now agree on the deep-erased
+/// representation.
 bool wrap_string(const std::string &s) { return String::eqb1(s, s); }
 
 bool mk_action(uint64_t n, std::any tup) {
   if (n <= 0) {
     const auto &[v, _x] = std::any_cast<std::pair<std::any, std::any>>(tup);
-    return wrap_string(v);
+    return wrap_string(std::any_cast<std::string>(v));
   } else {
     uint64_t _x = n - 1;
     const auto &[v, _x0] = std::any_cast<std::pair<std::any, std::any>>(tup);
@@ -31,20 +35,21 @@ bool mk_action(uint64_t n, std::any tup) {
 domty garg(uint64_t n) {
   if (n <= 0) {
     return std::make_pair(
-        std::string(1, (static_cast<char>(
-                           (false ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
-                           (true ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
-                           (true ? 64 : 0) | (false ? 128 : 0)))) +
-            std::string(
-                1, (static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
-                                      (true ? 64 : 0) | (false ? 128 : 0)))) +
-            std::string(),
-        std::monostate{});
+        std::any(std::string(1, (static_cast<char>(
+                                    (false ? 1 : 0) | (false ? 2 : 0) |
+                                    (false ? 4 : 0) | (true ? 8 : 0) |
+                                    (false ? 16 : 0) | (true ? 32 : 0) |
+                                    (true ? 64 : 0) | (false ? 128 : 0)))) +
+                 std::string(1, (static_cast<char>(
+                                    (true ? 1 : 0) | (false ? 2 : 0) |
+                                    (false ? 4 : 0) | (true ? 8 : 0) |
+                                    (false ? 16 : 0) | (true ? 32 : 0) |
+                                    (true ? 64 : 0) | (false ? 128 : 0)))) +
+                 std::string()),
+        std::any(std::monostate{}));
   } else {
     uint64_t _x = n - 1;
-    return std::make_pair(UINT64_C(0), std::monostate{});
+    return std::make_pair(std::any(UINT64_C(0)), std::any(std::monostate{}));
   }
 }
 

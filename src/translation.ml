@@ -2771,25 +2771,46 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
         if will_erase_fn_wrap then
           match strip_magic e with
           | MLlam (id, ty, body) ->
-            (* Only force the [any_cast<pair<any,any>>] rewrite when the
-               lambda's own parameter type is actually erased/generic at this
-               instantiation (mixed or fully Tany). When the domain resolves
-               to a fully concrete type here (e.g. a literal index picks out
-               a concrete branch of a dependent type family), the lambda
-               parameter is rendered with its real concrete C++ type, and a
-               plain structured binding on it is correct — any_cast-ing it as
-               if it were [std::any] does not compile. *)
+            (* The lambda is stored via [crane_erase_fn] into an erased slot,
+               so at runtime it is invoked with its argument boxed as a single
+               [std::any] holding the fully-erased representation
+               ([pair<any,any>] for a pair domain) — that is what producers of
+               a value-dependent type emit (see [flows_into_erased_slot]).  Its
+               parameter's own pattern match must therefore treat the scrutinee
+               as erased and go through [any_cast<pair<any,any>>]. *)
             let tvars = get_current_type_vars () in
             let param_cpp_ty = convert_ml_type_to_cpp_type env tvars ty in
             if Ml_type_util.has_tany_in_type param_cpp_ty then
               MLlam (id, ty, mark_own_param_for_pair_erasure 1 body)
-            else MLlam (id, ty, body)
+            else
+              (* Domain resolves to a fully concrete type at this literal (e.g.
+                 a literal index [0] picks out a concrete branch of a dependent
+                 type family), yet the value received at runtime is the erased
+                 [pair<any,any>] a generic producer emits.  Erase the parameter
+                 to [std::any] so the lambda renders with an erased parameter
+                 and the [any_cast<pair<any,any>>] on it compiles. *)
+              MLlam (id, Miniml.Tunknown, mark_own_param_for_pair_erasure 1 body)
           | _ -> e
         else e
       in
       let result = gen_ctor_arg ?expected_ty:expected_cpp_ty e in
       tctx.current_cpp_return_type <- saved_ret;
       tctx.expected_ml_type_for_arg <- saved_expected;
+      (* When this pair/tuple value flows directly into a value-dependent
+         erased slot — the enclosing function's C++ return type resolves to
+         [std::any] (e.g. [domty n], a type-level match) — a generic consumer
+         reconstructs its shape from the match structure and reads it back as
+         [pair<std::any, std::any>] with each component boxed.  The concrete
+         component types available here (e.g. [string], [unit]) would produce
+         [pair<string, monostate>], which the consumer's
+         [any_cast<pair<any,any>>] cannot recover.  Box each concrete component
+         into [std::any] so the stored representation is the fully-erased
+         [pair<any,any>] the consumer expects. *)
+      let flows_into_erased_slot =
+        match tctx.current_cpp_return_type with
+        | Some t -> resolves_to_any_type t
+        | None -> false
+      in
       let result = match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
           (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
@@ -2816,6 +2837,16 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
                second field is concrete unit but concat_tuple_rec_case casts the
                pair as pair<any,any>, so std::monostate{} must become
                std::any(std::monostate{}). *)
+            CPPconverting_ctor (Tany, [result])
+          | Some _
+            when flows_into_erased_slot
+                 && (match result with
+                     | CPPconverting_ctor (Tany, _) | CPPany_cast _ -> false
+                     | _ -> true) ->
+            (* Concrete component of a pair/tuple whose whole value flows into
+               a value-dependent erased slot (see [flows_into_erased_slot]).
+               Box it so the stored representation is [pair<any,any>], matching
+               what a generic consumer's [any_cast<pair<any,any>>] recovers. *)
             CPPconverting_ctor (Tany, [result])
           | _ -> result)
         | _ -> result
