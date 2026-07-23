@@ -4,7 +4,8 @@ Require Import Crane.Mapping.NatIntStd.
 From Stdlib Require Import List Ascii String.
 Import ListNotations.
 
-(** FAITHFUL repro of the parse-a-lot grammar's residual leaf-forward bug.
+(** FAITHFUL repro of the parse-a-lot grammar's residual leaf-forward bug
+    (now fixed).
 
     Every prior repro (sigt_leaf_forward_{string,topfn,dispatcher,ctor},
     sigt_leaf_list_dispatch, ...) approximated the RHS-values domain type
@@ -20,7 +21,16 @@ Import ListNotations.
     a concrete literal -- it erases the whole thing to [std::any]. THAT is what
     forces the generic [crane_erase_fn([](const auto &tup){...})] lambda whose
     body destructures via [any_cast<pair<any,any>>] and then forwards a leaf
-    (still [std::any]) into a concrete constructor with no final any_cast.
+    (still [std::any]) into a concrete constructor.
+
+    The fix: the value-type constructor argument path
+    ([gen_and_wrap]/[gen_ctor_arg], translation.ml) now threads the field's
+    CONCRETE C++ type as the expected type when the argument is an erased
+    ([std::any]) pattern variable, so the leaf gets a final
+    [any_cast<concrete>] before entering the factory (e.g.
+    [Val::vstr(any_cast<string>(s))]).  Previously only the plain
+    function-call path inserted that cast, so [wrap_string v] worked but a
+    constructor forward [VStr s] did not.
 
     This repro mirrors examples/JSON/Parser/JSON.v byte-for-byte in structure:
     [tuple (map symbol_semty gamma)] domain, action returning [nt_semty x] via

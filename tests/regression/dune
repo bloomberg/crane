@@ -4979,6 +4979,17 @@
   (deps generated_std_namespace_name_clash.t.exe)
   (action (run ./generated_std_namespace_name_clash.t.exe))))
 
+(subdir grammar_tuple_leaf_ctor
+ (rule
+  (targets grammar_tuple_leaf_ctor.t.exe)
+  (deps GrammarTupleLeafCtor.vo grammar_tuple_leaf_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_tuple_leaf_ctor.t.exe grammar_tuple_leaf_ctor.cpp grammar_tuple_leaf_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps grammar_tuple_leaf_ctor.t.exe)
+  (action (run ./grammar_tuple_leaf_ctor.t.exe))))
+
 (subdir optional_self_deep_copy
  (rule
   (targets optional_self_deep_copy.t.exe)

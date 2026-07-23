@@ -210,7 +210,7 @@ const List<grammar_entry> entries = List<
                        crane_erase_fn([](const auto &tup) {
                          const auto &[s, _x] =
                              std::any_cast<std::pair<std::any, std::any>>(tup);
-                         return Val::vstr(s);
+                         return Val::vstr(std::any_cast<std::string>(s));
                        }))),
         List<SigT<std::pair<std::any, List<Symbol>>,
                   std::pair<std::any, std::any>>>::
@@ -227,7 +227,7 @@ const List<grammar_entry> entries = List<
                                const auto &[i, _x] =
                                    std::any_cast<std::pair<std::any, std::any>>(
                                        tup);
-                               return Val::vint(i);
+                               return Val::vint(std::any_cast<uint64_t>(i));
                              }))),
                  List<SigT<std::pair<std::any, List<Symbol>>,
                            std::pair<std::any, std::any>>>::nil()));

@@ -4195,12 +4195,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
          only marks variables that occur exactly once in the entire tail
          expression (nb_occur_match = 1), so a variable appearing in multiple
          constructor args is NOT in move_dead_after and cannot be moved twice. *)
-      let gen_ctor_arg e =
+      let gen_ctor_arg ?expected_ty e =
         match e with
         | MLdummy _ -> CPPconverting_ctor (Tany, [])
         | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
           wrap_void_call_as_value (gen_expr env e)
-        | _ -> gen_expr env e
+        | _ -> gen_expr ?expected_ty env e
       in
       (* When a constructor's field type is a type variable (Tvar i) that
          resolves to an owning pointer type (because T is in method_self_ns),
@@ -4742,12 +4742,39 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       let gen_and_wrap i e =
         let saved_ret = tctx.current_cpp_return_type in
         tctx.current_cpp_return_type <- None;
-        let expr = gen_ctor_arg e in
-        tctx.current_cpp_return_type <- saved_ret;
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None
         in
+        (* A constructor field with a CONCRETE type receiving an argument that
+           is an erased ([std::any]) pattern variable (e.g. a leaf destructured
+           from a deeply-erased [pair<any,any>] via [any_cast]) needs a final
+           [any_cast<concrete>] — otherwise the bare [std::any] is forwarded
+           straight into a concrete-typed factory parameter and fails to
+           compile.  Thread the field's concrete C++ type as the expected type
+           so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
+           the cast.  [Tvar]/[Tvar'] fields are left to
+           [wrap_if_needed_for_field], which handles the erased-field cases. *)
+        let expected_for_arg =
+          match ft_opt with
+          | Some ft ->
+            let is_erased_rel =
+              match e with
+              | MLrel j | MLmagic (MLrel j) ->
+                Escape.IntSet.mem j tctx.cpp_erased_env
+              | _ -> false
+            in
+            ( match ft with
+            | Miniml.Tvar _ | Miniml.Tvar' _ -> None
+            | _ when is_erased_rel ->
+              let tvars = get_current_type_vars () in
+              let ct = convert_ml_type_to_cpp_type env tvars ft in
+              if is_erased_type ct then None else Some ct
+            | _ -> None )
+          | None -> None
+        in
+        let expr = gen_ctor_arg ?expected_ty:expected_for_arg e in
+        tctx.current_cpp_return_type <- saved_ret;
         match ft_opt with
         | Some ft -> wrap_if_needed_for_field ft e expr
         | None -> expr
