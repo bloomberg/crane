@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir list_cons_erasure_bleed
- (rule
-  (targets list_cons_erasure_bleed.t.exe)
-  (deps ListConsErasureBleed.vo list_cons_erasure_bleed.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} list_cons_erasure_bleed.t.exe list_cons_erasure_bleed.cpp list_cons_erasure_bleed.t.cpp)))
- (rule
-  (alias runtest)
-  (deps list_cons_erasure_bleed.t.exe)
-  (action (run ./list_cons_erasure_bleed.t.exe))))

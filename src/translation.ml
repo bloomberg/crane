@@ -2764,7 +2764,30 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           List.nth_opt field_types_for_wrap i
       in
       tctx.expected_ml_type_for_arg <- new_expected;
-      tctx.current_cpp_return_type <- None;
+      (* Propagate the erased-return-slot context into nested pair/tuple
+         fields (e.g. the second component of [(n, (n, tt))]) so that a
+         nested prod-cons also self-boxes its OWN components into
+         [std::any] instead of relying on the outer cons to wrap the whole
+         nested value as a single opaque [std::any].  Without this, only
+         the outer level is erased and a further destructure of the inner
+         value (e.g. a recursive call peeling one field at a time) hits a
+         [std::any] holding a concrete (non-any) pair, causing
+         [any_cast<pair<any,any>>] to throw at runtime. *)
+      let is_list_cons_ctor_for_flow_pre =
+        match r with
+        | GlobRef.ConstructRef ((kn, _), _) ->
+          let ind = GlobRef.IndRef (kn, 0) in
+          is_list_global ind && Table.is_custom ind
+        | _ -> false
+      in
+      let propagate_erased_ctx =
+        (not is_list_cons_ctor_for_flow_pre)
+        &&
+        match saved_ret with
+        | Some t -> resolves_to_any_type t
+        | None -> false
+      in
+      tctx.current_cpp_return_type <- (if propagate_erased_ctx then Some Tany else None);
       let expected_cpp_ty =
         match new_expected with
         | Some ml_ty ->
@@ -2824,7 +2847,16 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
          [any_cast<pair<any,any>>] cannot recover.  Box each concrete component
          into [std::any] so the stored representation is the fully-erased
          [pair<any,any>] the consumer expects. *)
+      let is_list_cons_ctor_for_flow =
+        match r with
+        | GlobRef.ConstructRef ((kn, _), _) ->
+          let ind = GlobRef.IndRef (kn, 0) in
+          is_list_global ind && Table.is_custom ind
+        | _ -> false
+      in
       let flows_into_erased_slot =
+        (not is_list_cons_ctor_for_flow)
+        &&
         match tctx.current_cpp_return_type with
         | Some t -> resolves_to_any_type t
         | None -> false
@@ -2859,7 +2891,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           | Some _
             when flows_into_erased_slot
                  && (match result with
-                     | CPPconverting_ctor (Tany, _) | CPPany_cast _ -> false
+                     | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> false
                      | _ -> true) ->
             (* Concrete component of a pair/tuple whose whole value flows into
                a value-dependent erased slot (see [flows_into_erased_slot]).
@@ -5575,7 +5607,27 @@ and eta_fun env f args =
           if not (ml_type_contains_erased ml_ty) then
             tctx.expected_ml_type_for_arg <- Some ml_ty
         | _ -> () );
+      (* When the callee's declared parameter type is value-dependent and
+         resolves to [std::any] (e.g. [syms_semty xs]), a concrete pair/tuple
+         literal passed at this call site (e.g. [(n, (n, tt))] for a literal
+         [xs]) must be DEEP-erased — every component boxed into [std::any] —
+         so that the callee's generic body, which reconstructs the value via
+         [any_cast<pair<any,any>>], can recover it.  Reuse the
+         [flows_into_erased_slot] mechanism in [gen_expr_custom_cons] (normally
+         driven by the enclosing function's erased return type) by treating
+         this call argument as if it were itself in erased "return" position
+         for the duration of its generation. *)
+      let param_resolves_to_any =
+        match List.nth_opt fn_param_ml_tys i with
+        | Some ml_ty ->
+          let tvars = get_current_type_vars () in
+          resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ml_ty)
+        | None -> false
+      in
+      let saved_ret_for_arg = tctx.current_cpp_return_type in
+      if param_resolves_to_any then tctx.current_cpp_return_type <- Some Tany;
       let expr = gen_expr ?expected_ty:arg_expected_ty env ml_arg in
+      if param_resolves_to_any then tctx.current_cpp_return_type <- saved_ret_for_arg;
       tctx.expected_ml_type_for_arg <- saved_expected_for_arg;
       (* Annotate the outer lambda with the explicit return type computed
          during the split, so that C++ concept checking sees the concrete
@@ -7423,13 +7475,45 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           | None -> false)
     | _ -> false
   in
+  (* [scrut_callee_ret_erased]: the scrutinee is a call to a global function
+     ([MLapp (MLglob (r, _), args)], possibly [MLmagic]-wrapped) whose
+     DECLARED (un-instantiated) codomain resolves to [std::any] — e.g.
+     [rev_tuple : forall xs, syms_semty xs -> syms_semty (rev xs)], a single
+     C++ function generic over [xs], so its actual return type is the
+     value-dependent-erased [syms_semty] regardless of how a specific
+     call-site's Rocq type-checker happened to reduce the annotated result
+     type (e.g. to a concrete [prod] when [xs] is a literal list). Using the
+     call-site-reduced [typ] alone under-detects this: it looks concrete even
+     though the callee only ever returns [std::any] at the C++ level. *)
+  let rec flatten_app = function
+    | MLapp (f, args) ->
+      ( match flatten_app f with
+      | MLapp (f', inner_args) -> flatten_app (MLapp (f', inner_args @ args))
+      | f' -> MLapp (f', args) )
+    | MLmagic e -> flatten_app e
+    | other -> other
+  in
+  let scrut_callee_ret_erased =
+    match flatten_app t with
+    | MLapp (MLglob (r, tys), args) ->
+      ( match find_type_opt r with
+      | Some fty ->
+        let fty = match tys with [] -> fty | _ -> ml_subst_tvars (Array.of_list tys) fty in
+        ( match strip_tarr_n (count_real_ml_args args) fty with
+        | Some rty ->
+          let tvars' = get_current_type_vars () in
+          resolves_to_any_type (convert_ml_type_to_cpp_type env tvars' rty)
+        | None -> false )
+      | None -> false )
+    | _ -> false
+  in
   let typ = convert_ml_type_to_cpp_type env tvars typ in
   (* [concrete_match_type]: when [typ] is erased ([std::any]), recover the
      actual inductive type from the first branch's pattern constructor and
      its field types.  Used for non-pair matches (e.g. option, variant) where
      we need to emit [any_cast<ConcreteType>(scrut)]. *)
   let concrete_match_type =
-    if is_erased_type typ then
+    if is_erased_type typ || resolves_to_any_type typ || scrut_callee_ret_erased then
       try
         let _, _, pat0, _ = pv.(0) in
         let ind_ref = match pat0 with
@@ -7530,9 +7614,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let t, fix_a_fired =
     let needs_pair_any_cast =
       pair_g_opt <> None &&
-      ( scrut_is_cpp_erased || scrut_is_mlmagic
+      ( scrut_is_cpp_erased || scrut_is_mlmagic || scrut_callee_ret_erased
         || (scrut_is_magic && is_erased_type typ)
-        || (is_erased_type typ || is_all_erased typ) &&
+        || (is_erased_type typ || is_all_erased typ || resolves_to_any_type typ) &&
            ( Ml_type_util.has_tany_in_type concrete_match_type
              || (match concrete_match_type with
                  | Tglob (_, args, _) -> List.exists resolves_to_any_type args

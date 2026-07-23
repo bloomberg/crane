@@ -32,7 +32,7 @@ syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs) {
 }
 
 uint64_t check(uint64_t n) {
-  auto [v, _x] = rev_tuple(
+  const auto &[v, _x] = std::any_cast<std::pair<std::any, std::any>>(rev_tuple(
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
@@ -41,6 +41,8 @@ uint64_t check(uint64_t n) {
           _a1.push_front(_a0);
           return _a1;
         }(Sym::B, std::deque<Sym>{})),
-      std::make_pair(n, std::make_pair(n, std::monostate{})));
-  return v;
+      std::make_pair(
+          std::any(n),
+          std::any(std::make_pair(std::any(n), std::any(std::monostate{}))))));
+  return std::any_cast<uint64_t>(v);
 }
