@@ -5644,51 +5644,62 @@ and eta_fun env f args =
           in
           CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, as_value ())])
         | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
-          (* Custom-extracted list (e.g. [std::deque]) still boxed as
-             [std::any] with erased elements at runtime — casting straight
-             to the concrete element type here would double-wrap: any_cast
-             on the (already concrete) result of a prior any_cast implicitly
-             re-boxes it into a fresh [std::any] and then fails to match.
-             Cast to the erased-element type instead, matching what
-             [gen_match_branch]'s field substitution actually stores. *)
+          (* Flat single-file extraction sometimes wraps a module-local
+             inductive in a self-referential [Tnamespace(g, Tglob(g,..))]
+             (renders as the bogus [typename G::...]).  Strip such self-wraps
+             recursively so the concrete callee element type is well-formed. *)
+          let rec clean_self_ns t =
+            match t with
+            | Tnamespace (ns_r, Tglob (g_r, args, gns))
+              when GlobRef.CanOrd.equal ns_r g_r ->
+              clean_self_ns (Tglob (g_r, args, gns))
+            | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
+            | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
+            | Tref t -> Tref (clean_self_ns t)
+            | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
+            | t -> t
+          in
+          let clean_cpp_ty = clean_self_ns cpp_ty in
+          (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
+             with fully-erased elements at runtime ([deque<pair<any,any>>]).
+             Cast the inner value to that erased representation, matching what
+             [gen_match_branch]'s field substitution stores. *)
           let erased_ty =
-            match cpp_ty with
+            match clean_cpp_ty with
             | Tnamespace (ns_g, Tglob (g, [elem_ty], _)) ->
               Tnamespace (ns_g, Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], []))
             | Tglob (g, [elem_ty], _) ->
               Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], [])
-            | _ -> cpp_ty
+            | _ -> clean_cpp_ty
           in
           let inner = CPPany_cast (erased_ty, as_value ()) in
-          (* When the callee's parameter has a CONCRETE element type (e.g.
-             [triples_le_max(const std::deque<rgb>&)]), the erased-element value
-             cannot convert to it and, unlike Crane's own [List<A>],
-             [std::deque] has no element-converting ctor — unbox each element via
-             the [crane_container_cast] runtime helper.
+          (* When the callee is a REAL function whose parameter has a CONCRETE
+             element type — a wholesale-boxed opaque element
+             ([triples_le_max(const std::deque<rgb>&)]), OR a structural element
+             whose concrete component must be preserved for a POLYMORPHIC/template
+             callee ([nodupKeys<T1>(const std::deque<std::pair<std::string,T1>>&)],
+             whose [std::string] key cannot be erased to [std::any] or template
+             argument deduction fails) — the fully-erased [inner] neither converts
+             nor deduces against it.  Route it through [crane_container_cast],
+             which builds the concrete-element container (unboxing wholesale-boxed
+             elements at runtime; for structural elements it still compiles and
+             lets deduction succeed).
 
-             This is only valid when the element was erased WHOLESALE to
-             [std::any] (an opaque/no-args type such as a record — the runtime
-             container is [deque<any>] and per-element [any_cast<Elt>] recovers
-             it).  A STRUCTURALLY-erased element (e.g. [pair<any,any>] from
-             [nat*nat]) is not a boxed [std::any] and would need component-wise
-             conversion the helper does not do; inline-custom callees (e.g.
-             [length]'s [.size()]) impose no concrete element type at all.  In
-             both cases keep the erased value ([inner]) unchanged. *)
-          let elem_needs_unbox =
-            (* Inline-custom callees splice the argument into a template (e.g.
-               [length]'s [%a0.size()]) and work fine on the erased container,
-               so no element unboxing is needed there — only a REAL function
-               whose parameter is a typed [deque<Elt>] requires it. *)
+             Inline-custom callees (e.g. [length]'s [.size()]) splice the
+             argument into a template and work on the erased container, and a
+             callee whose parameter element is ALREADY fully erased
+             ([deque<pair<any,any>>]) needs no conversion — both keep [inner]. *)
+          let needs_concrete =
             (not (Table.is_inline_custom id))
             &&
-            match strip_ns_tg cpp_ty with
+            match strip_ns_tg clean_cpp_ty with
             | Tglob (_, [et], _) ->
-              et <> Tany && Ml_type_util.erase_type_to_any et = Tany
+              et <> Ml_type_util.erase_type_to_any et
             | _ -> false
           in
-          if elem_needs_unbox then begin
+          if needs_concrete then begin
             Table.mark_needs_erase_fn ();
-            CPPcontainer_cast (cpp_ty, inner)
+            CPPcontainer_cast (clean_cpp_ty, inner)
           end
           else inner
         | _ -> CPPany_cast (cpp_ty, as_value ()) )

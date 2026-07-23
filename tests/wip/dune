@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir grammar_poly_pairlist_pred
- (rule
-  (targets grammar_poly_pairlist_pred.t.exe)
-  (deps GrammarPolyPairlistPred.vo grammar_poly_pairlist_pred.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_poly_pairlist_pred.t.exe grammar_poly_pairlist_pred.cpp grammar_poly_pairlist_pred.t.cpp)))
- (rule
-  (alias runtest)
-  (deps grammar_poly_pairlist_pred.t.exe)
-  (action (run ./grammar_poly_pairlist_pred.t.exe))))

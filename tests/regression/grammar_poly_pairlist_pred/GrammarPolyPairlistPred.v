@@ -6,34 +6,33 @@ From Stdlib Require Import List Ascii String.
 Import ListNotations.
 
 (** Repro of the LAST residual leaf-forward shape after grammar_tuple_record_cons
-    was fixed (PPM.h now 0 errors; only JSON.h's nodupKeys remains, 2 errors:
-    JSON.h:660 "no matching function for call to 'nodupKeys'" /
-    "candidate template ignored: could not match 'std::string' against 'std::any'").
+    was fixed (now also fixed).
 
     JSON's (Value, [NT Obj]) production PREDICATE forwards its erased
     [list (string * json_value)] leaf (nt_semty Obj) into [nodupKeys], which in
     Coq is POLYMORPHIC: [nodupKeys {A} (prs : list (string * A)) : bool] -> Crane
     emits a C++ FUNCTION TEMPLATE
     [template<typename T1> bool nodupKeys(const std::deque<std::pair<std::string, T1>>&)].
-    The erased leaf is any_cast to [std::deque<std::pair<std::any, std::any>>], but
+    The erased leaf is [std::deque<std::pair<std::any, std::any>>] at runtime, but
     the template parameter is [deque<pair<string, T1>>] -- the KEY is concretely
-    [std::string], not [std::any] -> template argument deduction fails. The sibling
-    ACTION [JAssoc prs] compiles because [Json_value::jassoc]'s fully-concrete
-    signature gives Crane a type to cast toward (real JSON.h emits
-    [any_cast<deque<pair<string,Json_value>>>] there); the polymorphic predicate
-    callee has no concrete element type to cast toward, so Crane emits a wrong
-    outer any_cast for the [nodupKeys] argument.
+    [std::string]. Casting the argument to the fully-erased [deque<pair<any,any>>]
+    made template argument deduction fail ("could not match 'std::string' against
+    'std::any'"). The sibling ACTION [VAssoc prs] compiled because it goes through
+    the value-type CONSTRUCTOR path, whose fully-concrete factory signature
+    ([vassoc(deque<pair<string,Val>>)]) gives Crane a concrete type to cast toward.
 
-    Root defect = wrong/missing any_cast type when an erased CONTAINER
-    (deque<pair<...>>) is forwarded into a POLYMORPHIC/template function.
-    NOTE ON FIDELITY: the real (separate/functor) extraction degrades the bad
-    outer cast to a clean redundant [deque<pair<any,any>>] (hence the
-    "string vs any" template error). This minimal FLAT single-file extraction
-    degrades it slightly differently, to [deque<pair<any, typename Val::std::any>>]
-    (an extra "no member named 'std' in 'Val'" render artifact) -- same root
-    cause (Crane cannot compute the element type for the template callee), just a
-    messier fallback. The primary "could not match 'std::string' against
-    'std::any'" error on the [nodupKeys] call is identical to real JSON.h:660. *)
+    Fix (translation.ml, MLapp custom-list erased-arg branch): when the callee is
+    a REAL function (not inline-custom) whose parameter element type has ANY
+    concrete content ([et <> erase_type_to_any et]) -- an opaque wholesale-boxed
+    element (deque<rgb>) OR a structural element with a concrete component
+    (deque<pair<string,T1>>) -- route the erased container through
+    [crane_container_cast<Dst>] toward that concrete element type instead of the
+    fully-erased cast. This both makes template deduction succeed and unboxes
+    wholesale-boxed elements at runtime. Inline-custom callees ([length]'s
+    [.size()]) and callees whose element is already fully erased keep the erased
+    container. A flat-extraction artifact that wraps a module-local inductive in a
+    self-referential [Tnamespace(g, Tglob(g,..))] (rendered [typename G::...]) is
+    stripped first so the concrete callee element type is well-formed. *)
 
 Crane Extract Inductive Ascii.ascii => "char"
   [ "(static_cast<char>((%a0 ? 1 : 0) | (%a1 ? 2 : 0) | (%a2 ? 4 : 0) | (%a3 ? 8 : 0) | (%a4 ? 16 : 0) | (%a5 ? 32 : 0) | (%a6 ? 64 : 0) | (%a7 ? 128 : 0)))" ]

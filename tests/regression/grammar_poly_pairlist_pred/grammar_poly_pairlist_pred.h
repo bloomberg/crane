@@ -191,12 +191,14 @@ const std::deque<grammar_entry> entries =
                   crane_erase_fn([](const auto &tup) {
                     const auto &[prs, _x] =
                         std::any_cast<std::pair<std::any, std::any>>(tup);
-                    return nodupKeys(
-                        std::any_cast<std::deque<
-                            std::pair<std::any, typename Val::std::any>>>(
+                    return nodupKeys<Val>(
+                        crane_container_cast<
+                            std::deque<std::pair<std::string, Val>>>(
                             std::any_cast<
                                 std::deque<std::pair<std::any, std::any>>>(
-                                prs)));
+                                std::any_cast<
+                                    std::deque<std::pair<std::any, std::any>>>(
+                                    prs))));
                   }),
                   crane_erase_fn([](const auto &tup) {
                     const auto &[prs, _x] =
