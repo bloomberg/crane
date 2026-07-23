@@ -1985,6 +1985,17 @@
   (deps erased_record.t.exe)
   (action (run ./erased_record.t.exe))))
 
+(subdir erased_singleton_unit_tuple
+ (rule
+  (targets erased_singleton_unit_tuple.t.exe)
+  (deps ErasedSingletonUnitTuple.vo erased_singleton_unit_tuple.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_singleton_unit_tuple.t.exe erased_singleton_unit_tuple.cpp erased_singleton_unit_tuple.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_singleton_unit_tuple.t.exe)
+  (action (run ./erased_singleton_unit_tuple.t.exe))))
+
 (subdir erased_field_dangle
  (rule
   (targets erased_field_dangle.t.exe)

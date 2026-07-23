@@ -2423,10 +2423,28 @@ and resolves_to_any_type = function
   | Tany -> true
   | Tglob (g, [], _) when Table.is_erased_type_const g -> true
   | Tglob (g, [], _) ->
-    (match find_type_opt g with
-     | Some ml_ty ->
-       let tvars = get_current_type_vars () in
-       resolves_to_any_type (convert_ml_type_to_cpp_type (empty_env ()) tvars ml_ty)
+    let via_ml_ty =
+      match find_type_opt g with
+      | Some ml_ty ->
+        let tvars = get_current_type_vars () in
+        Some (convert_ml_type_to_cpp_type (empty_env ()) tvars ml_ty)
+      | None ->
+        (* A type-level Definition/Fixpoint (e.g. [syms_semty g := tuple (map
+           sym_semty g)]) has no entry in the [find_type_opt] type table, but its
+           erased [using] expansion is recorded as a typedef.  Follow that so a
+           multi-level alias chain ([syms_semty -> tuple -> std::any]) still
+           resolves. *)
+        (match g with
+         | GlobRef.ConstRef kn ->
+           (match Table.lookup_typedef_unchecked kn with
+            | Some ml_ty ->
+              let tvars = get_current_type_vars () in
+              Some (convert_ml_type_to_cpp_type (empty_env ()) tvars ml_ty)
+            | None -> None)
+         | _ -> None)
+    in
+    (match via_ml_ty with
+     | Some cvt -> resolves_to_any_type cvt
      | None -> false)
   | t when is_erased_type t -> true
   | _ -> false

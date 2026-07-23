@@ -6,7 +6,7 @@ syms_semty cons_sem(Sym, const List<Sym> &, sym_semty v, syms_semty rest) {
 
 syms_semty head1(const List<Sym> &, syms_semty vs) {
   const auto &[v, _x0] = std::any_cast<std::pair<std::any, std::any>>(vs);
-  return std::make_pair(v, std::monostate{});
+  return std::make_pair(std::any(v), std::any(std::monostate{}));
 }
 
 uint64_t firstOf(const List<Sym> &, syms_semty t) {

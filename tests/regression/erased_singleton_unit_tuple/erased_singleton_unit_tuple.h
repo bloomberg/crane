@@ -101,35 +101,39 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// Runtime bad_any_cast repro. After all the compile-time leaf-forward bugs
-/// were fixed, the extracted parsers COMPILE but crash at runtime with
-/// std::bad_any_cast during parse_*. Root cause is Crane's codegen for
+/// Runtime bad_any_cast repro (now fixed). Mirrors Crane's codegen for
 /// theories/Parser/Defs.v's rev_tuple_cons_case:
 /// exact (concat_tuple (rev xs') x (f xs' vs) (v, tt)).
 /// The singleton tuple (v, tt) : symbols_semty [x] -- where symbols_semty
 /// gamma := tuple (map symbol_semty gamma) erases to std::any and v is
-/// destructured from an erased tuple (so it is std::any) -- is emitted by Crane
-/// (Defs.h:340) as
-/// std::make_pair(s, std::monostate{})
-/// i.e. a std::pair<std::any, std::monostate>: the tt : unit component is
-/// left as a raw std::monostate{} instead of being erased to
-/// std::any(std::monostate{}). So the value's dynamic type is
-/// pair<any, monostate>. But every consumer of an erased symbols_semty
-/// destructures with std::any_cast<std::pair<std::any, std::any>>(...), which
-/// requires the boxed type to be EXACTLY pair<any,any> -> std::bad_any_cast at
-/// runtime (the LL parser hits this in Parser.h applying a production's
-/// predicate/action to the reversed RHS-values tuple vs_ = rev_tuple ...).
+/// destructured from an erased tuple (so it is std::any) -- was emitted by
+/// Crane as std::make_pair(v, std::monostate{}) i.e. a std::pair<std::any,
+/// std::monostate>: the tt : unit component was left as a raw std::monostate{}
+/// instead of being erased to std::any(std::monostate{}). So the value's
+/// dynamic type was pair<any, monostate>. But every consumer of an erased
+/// symbols_semty destructures with std::any_cast<std::pair<std::any,
+/// std::any>>(...), which requires the boxed type to be EXACTLY pair<any,any>
+/// -> std::bad_any_cast at runtime.
+///
+/// Root cause: the producer-side "box each component when the pair flows into a
+/// value-dependent erased slot" logic (flows_into_erased_slot in
+/// gen_expr_custom_cons) keys on resolves_to_any_type
+/// tctx.current_cpp_return_type.  head1's return type syms_semty [A] is a
+/// MULTI-LEVEL alias (syms_semty -> tuple -> std::any); resolves_to_any_type
+/// only followed one level (via find_type_opt, which has no entry for a
+/// type-level Definition), so it returned false and the unit component was left
+/// unboxed.  Fix (translation.ml): resolves_to_any_type now also follows the
+/// using-alias expansion recorded as a typedef (Table.lookup_typedef_unchecked)
+/// for ConstRefs, so the syms_semty -> tuple -> std::any chain resolves and
+/// both components get boxed to pair<any,any>.
 ///
 /// Repro: cons_sem builds erased tuples correctly (generic over head symbol
-/// and tail list -> Crane emits make_pair(any(v), rest), a proper
-/// pair<any,any>). head1 mirrors rev_tuple_cons_case's (v, tt): a singleton
-/// erased tuple from an erased head -> Crane emits the buggy make_pair(any_v,
-/// monostate{}). firstOf is a generic consumer destructuring an erased tuple as
-/// pair<any,any>. check feeds head1's output into firstOf and throws
-/// std::bad_any_cast at runtime, because head1 produced pair<any,monostate> but
-/// firstOf any_casts to pair<any,any>. (cons_sem is used to build the input so
-/// we avoid an unrelated concrete-literal-to-erased coercion artifact at
-/// static-init time.)
+/// and tail list -> make_pair(any(v), rest), a proper pair<any,any>).
+/// head1 mirrors rev_tuple_cons_case's (v, tt): a singleton erased tuple
+/// from an erased head.  firstOf is a generic consumer destructuring an erased
+/// tuple as pair<any,any>.  check feeds head1's output into firstOf.
+/// (cons_sem builds the input from a runtime n so we avoid an unrelated
+/// concrete-literal-to-erased coercion artifact at static-init time.)
 using tuple = std::any;
 enum class Sym { A, B };
 using sym_semty = std::any;
