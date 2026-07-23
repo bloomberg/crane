@@ -2582,7 +2582,9 @@ and expr_is_any_returning_method = function
 (** Check if an expression is a variable (possibly wrapped in [CPPmove])
     whose type is [std::any] — tracked via {!current_any_typed_params}. *)
 and expr_is_any_typed_param = function
-  | CPPvar id -> Id.Set.mem id !current_any_typed_params
+  | CPPvar id ->
+    Id.Set.mem id !current_any_typed_params
+    && not (Id.Map.mem id !concrete_typed_any_params)
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
@@ -2622,23 +2624,12 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
      && is_concrete_cpp_type expected_ty in
   if fires then
     let resolved_ty = resolve_tvars_to_any expected_ty in
-    (* For List<T> where T ≠ std::any, the grammar framework stores List<std::any>
-       at runtime.  Use the converting constructor List<T>(any_cast<List<any>>(v))
-       so the element type is recovered correctly by the converting constructor. *)
-    if is_list_with_concrete_elem resolved_ty then
-      str (sn ()).any_cast
-      ++ str "<"
-      ++ pp_cpp_type false vl resolved_ty
-      ++ str ">("
-      ++ expr_printed
-      ++ str ")"
-    else
-      str (sn ()).any_cast
-      ++ str "<"
-      ++ pp_cpp_type false vl resolved_ty
-      ++ str ">("
-      ++ expr_printed
-      ++ str ")"
+    str (sn ()).any_cast
+    ++ str "<"
+    ++ pp_cpp_type false vl resolved_ty
+    ++ str ">("
+    ++ expr_printed
+    ++ str ")"
   else
     expr_printed
 

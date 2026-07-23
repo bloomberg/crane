@@ -32,16 +32,30 @@
 #include <type_traits>
 #include <utility>
 
+// Unboxes a boxed argument for parameter type [A], unless [A] is itself
+// [std::any] — a declared-erased parameter (e.g. a value-dependent domain
+// like [domty n]) already receives the boxed value as-is; any_cast-ing an
+// [std::any] to [std::any] requires the *contained* value to itself be an
+// [std::any] (double-boxed), which is not how erased-domain values are
+// represented, and throws [std::bad_any_cast].
+template <class A> decltype(auto) crane_erase_fn_unbox(std::any &as) {
+  if constexpr (std::is_same_v<A, std::any>) {
+    return (as);
+  } else {
+    return std::any_cast<A>(as);
+  }
+}
+
 template <class R, class... A>
 std::function<std::any(std::conditional_t<true, std::any, A>...)>
 crane_erase_fn_impl(std::function<R(A...)> f) {
   return [f = std::move(f)](
              std::conditional_t<true, std::any, A>... as) mutable -> std::any {
     if constexpr (std::is_void_v<R>) {
-      f(std::any_cast<A>(as)...);
+      f(crane_erase_fn_unbox<A>(as)...);
       return std::any{};
     } else {
-      return std::any(f(std::any_cast<A>(as)...));
+      return std::any(f(crane_erase_fn_unbox<A>(as)...));
     }
   };
 }

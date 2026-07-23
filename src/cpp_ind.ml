@@ -111,7 +111,10 @@ let pp_decl = function
   | Dterm (r, _, _) when is_suppressed_projection r -> mt ()
   | Dind (kn, i) -> mt () (* Inductives are fully defined in headers *)
   | Dtype (r, _, t) ->
-    if t == Taxiom then register_axiom_type r;
+    if t == Taxiom then begin
+      register_axiom_type r;
+      Table.add_erased_type_const r
+    end;
     mt ()
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
@@ -616,6 +619,7 @@ let pp_hdecl d =
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
+            Table.add_erased_type_const r;
             require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
@@ -757,6 +761,7 @@ let pp_hdecl_spec_only = function
         ( pp_parameters l,
           if t == Taxiom then (
             register_axiom_type r;
+            Table.add_erased_type_const r;
             require_header "any";
             str " = std::any /* AXIOM TO BE REALIZED */" )
           else
@@ -824,6 +829,7 @@ let pp_spec = function
         | None -> (ids, mt ())
         | Some Taxiom ->
           register_axiom_type r;
+          Table.add_erased_type_const r;
           require_header "any";
           (ids, str " = std::any /* AXIOM TO BE REALIZED */")
         | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )

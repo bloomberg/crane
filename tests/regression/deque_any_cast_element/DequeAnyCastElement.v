@@ -47,3 +47,5 @@ Definition test_result : nat := get_length (apply_entry my_action).
 
 Set Crane Loopify.
 Crane Extraction "deque_any_cast_element" test_result.
+(* force 1784808163 *)
+(* force 1784808209 *)

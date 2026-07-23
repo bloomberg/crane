@@ -49,7 +49,9 @@ uint64_t get_length(const Specif::SigT<Tag, sem_ty> &v) {
   switch (x0) {
   case Tag::TAGLIST: {
     return static_cast<uint64_t>(
-        std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1).size());
+        std::any_cast<std::deque<std::pair<std::any, std::any>>>(
+            std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1))
+            .size());
   }
   case Tag::TAGNAT: {
     return UINT64_C(0);

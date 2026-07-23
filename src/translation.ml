@@ -2399,6 +2399,20 @@ let rec convert_ml_type_to_cpp_type
     @param tys   ML type arguments to convert
     @return List of C++ types, with out-of-scope Tvars marked as dummy_type *)
 
+(** [convert_ml_type_to_cpp_type] only resolves [Tvar] indices within
+    [tvars]; anything out of range comes back as [Tvar (_, None)], which
+    prints as a bogus, undeclared template parameter name (e.g. "T3").
+    Normalize those to [Tany] instead, since they represent erased/
+    unresolvable data. *)
+and erase_unresolved_tvars = function
+  | Tvar (_, None) -> Tany
+  | Tglob (g, ts, es) -> Tglob (g, List.map erase_unresolved_tvars ts, es)
+  | Tfun (dom, cod) ->
+    Tfun (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
+  | Tshared_ptr t -> Tshared_ptr (erase_unresolved_tvars t)
+  | Tref t -> Tref (erase_unresolved_tvars t)
+  | t -> t
+
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any].  Handles direct [Tany], erased-type constants (aliases for
     [std::any] registered via {!Table.is_erased_type_const}), and type
@@ -2990,6 +3004,19 @@ and ml_expr_is_function_value e =
     && ( match get_env_type_opt i with
        | Some t -> count_ml_value_arrows t >= 1
        | None -> false )
+  (* A partial application of a global whose codomain mentions a
+     value-dependent erased type (e.g. [mk_action n : domty n -> bool]) is
+     wrapped in [MLmagic] by the kernel's typing coercion even at the
+     application node itself, not just around the whole expression — so
+     [strip_magic] above (which only strips the outer expression) does not
+     expose the [MLglob] underneath. Look through it here, locally, rather
+     than in [infer_ml_body_type] itself (whose result also feeds unrelated
+     callers like lambda return-type annotation), so this fix cannot change
+     behavior anywhere but function-value detection. *)
+  | MLapp (MLmagic f, args) ->
+    ( match infer_ml_body_type (MLapp (f, args)) with
+    | Some t -> count_ml_value_arrows t >= 1
+    | None -> false )
   | other ->
     ( match infer_ml_body_type other with
     | Some t -> count_ml_value_arrows t >= 1
@@ -5492,12 +5519,33 @@ and eta_fun env f args =
           | _ -> wrap_void_call_as_value expr )
         | _ -> expr
       in
+      (* A bare local variable known to be boxed as [std::any]
+         ([cpp_erased_env]) — e.g. a leaf pulled out of an erased-pair
+         destructure — passed directly to a plain global function whose
+         parameter type is concrete.  Mirrors the equivalent check for
+         non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
+      let ml_arg_is_erased_rel =
+        match ml_arg with
+        | MLrel j | MLmagic (MLrel j) -> Escape.IntSet.mem j tctx.cpp_erased_env
+        | _ -> false
+      in
       match List.nth_opt fn_param_ml_tys i with
       | Some param_ty
-        when ml_body_returns_erased_field ml_arg
+        when (ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel)
              && not (match param_ty with
                      | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
-                     | _ -> false) ->
+                     | _ -> false)
+             (* [param_ty] comes from the callee's own (call-site-substituted)
+                type signature, whose [Tvar] indices are not anchored to this
+                function's [tvars] scope. When conversion produces an
+                unresolved [Tvar (_, None)] (would print as a bogus template
+                parameter like "T3"), we cannot build a meaningful concrete
+                cast here — skip this branch and fall back to [as_value ()]
+                unchanged; a later pass (e.g. [gen_match_branch]'s field
+                substitution) supplies the correct cast at its own,
+                properly-scoped [tvars]. *)
+             && erase_unresolved_tvars (convert_ml_type_to_cpp_type env tvars param_ty)
+                = convert_ml_type_to_cpp_type env tvars param_ty ->
         let cpp_ty = convert_ml_type_to_cpp_type env tvars param_ty in
         let strip_ns_tg = function
           | Tnamespace (_, (Tglob _ as inner)) -> inner
@@ -5511,6 +5559,23 @@ and eta_fun env f args =
             | _ -> Tglob (g, [Tany], [])
           in
           CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, as_value ())])
+        | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
+          (* Custom-extracted list (e.g. [std::deque]) still boxed as
+             [std::any] with erased elements at runtime — casting straight
+             to the concrete element type here would double-wrap: any_cast
+             on the (already concrete) result of a prior any_cast implicitly
+             re-boxes it into a fresh [std::any] and then fails to match.
+             Cast to the erased-element type instead, matching what
+             [gen_match_branch]'s field substitution actually stores. *)
+          let erased_ty =
+            match cpp_ty with
+            | Tnamespace (ns_g, Tglob (g, [elem_ty], _)) ->
+              Tnamespace (ns_g, Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], []))
+            | Tglob (g, [elem_ty], _) ->
+              Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], [])
+            | _ -> cpp_ty
+          in
+          CPPany_cast (erased_ty, as_value ())
         | _ -> CPPany_cast (cpp_ty, as_value ()) )
       (* Monadic parameter (reified mode only): the callee expects
          [shared_ptr<ITree<R>>].  If the argument already produces a reified
@@ -5990,12 +6055,13 @@ and eta_fun env f args =
               find_prod ml_ty
             with Not_found -> None
           in
-          ( match prod_g_opt with
-          | Some g ->
+          ( match prod_g_opt, single_arg with
+          | _, CPPany_cast _ -> primary_result
+          | Some g, _ ->
             tctx.last_pair_accessor_any_cast <- true;
             CPPfun_call (cglob',
               [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)])
-          | None -> primary_result )
+          | None, _ -> primary_result )
         else
           primary_result
       | _ -> primary_result
@@ -7229,7 +7295,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         in
         let ids0, _, _, _ = pv.(0) in
         let tyargs = List.rev_map (fun (_, ty) ->
-          convert_ml_type_to_cpp_type env tvars ty
+          erase_unresolved_tvars (convert_ml_type_to_cpp_type env tvars ty)
         ) ids0 in
         Tglob (ind_ref, tyargs, [])
       with _ -> typ
@@ -7320,8 +7386,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let t, fix_a_fired =
     let needs_pair_any_cast =
       pair_g_opt <> None &&
-      (is_erased_type typ || is_all_erased typ ||
-       scrut_is_mlmagic || scrut_is_cpp_erased)
+      ( scrut_is_cpp_erased || scrut_is_mlmagic
+        || (scrut_is_magic && is_erased_type typ)
+        || (is_erased_type typ || is_all_erased typ) &&
+           ( Ml_type_util.has_tany_in_type concrete_match_type
+             || (match concrete_match_type with
+                 | Tglob (_, args, _) -> List.exists resolves_to_any_type args
+                 | _ -> false) ) )
     in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
@@ -7335,6 +7406,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
          This ensures runtime types match: a deque<pair<any,any>> stored as any
          must be cast as deque<pair<any,any>>, not deque<any>. *)
       let erase_tparams = function
+        | Tglob (_, [], _) -> Tany
         | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
         | _ -> Tany
       in

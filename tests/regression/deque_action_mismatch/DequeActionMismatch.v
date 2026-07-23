@@ -69,5 +69,5 @@ Definition get_first (v : { t : tag & sem_ty t }) : nat :=
 Definition test_length : nat := get_length chain.
 Definition test_first : nat := get_first chain.
 
-Set Crane Loopify. (* force regen 11 *)
+Set Crane Loopify. (* force regen 14 *)
 Crane Separate Extraction test_length test_first.

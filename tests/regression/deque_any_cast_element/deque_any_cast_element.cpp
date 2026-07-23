@@ -35,7 +35,9 @@ uint64_t get_length(const SigT<Tag, output_ty> &r) {
   switch (x0) {
   case Tag::TAGA: {
     return static_cast<uint64_t>(
-        std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1).size());
+        std::any_cast<std::deque<std::pair<std::any, std::any>>>(
+            std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1))
+            .size());
   }
   case Tag::TAGB: {
     return std::any_cast<uint64_t>(a1);
