@@ -126,6 +126,44 @@ decltype(auto) crane_call_erased(F &&f, Args &&...args) {
   }
 }
 
+// Detects [std::pair<X, Y>] specializations so [crane_any_cast] can recurse
+// into pair components (see below).
+template <class T> struct crane_is_pair : std::false_type {};
+template <class X, class Y>
+struct crane_is_pair<std::pair<X, Y>> : std::true_type {};
+
+// [std::any_cast<T>], generalized to recover a pair [T = std::pair<X, Y>]
+// whose components were themselves boxed independently as
+// [std::pair<std::any, std::any>] rather than stored directly as a concrete
+// [std::pair<X, Y>].
+//
+// A value-dependent pair/tuple flowing through an erased ([std::any]) slot
+// (e.g. a grammar action's tuple-typed result, built up one component at a
+// time via nested destructuring whose own component types cannot be
+// statically resolved at that construction site — see
+// [gen_expr_custom_cons] in translation.ml) is erased ONE COMPONENT AT A
+// TIME: each component is stored as plain [std::any], giving
+// [std::pair<std::any, std::any>] boxed into the outer [std::any]. A
+// consumer that knows the pair's true concrete element type [T] (e.g. from
+// a declared record field like [list (string * nat)]) must therefore
+// recover it by unboxing each component individually, not by taking a
+// direct [std::any_cast<T>] of the whole pair (which throws
+// [std::bad_any_cast] because the boxed value is [pair<any,any>], not
+// [pair<X,Y>]).
+template <class T> T crane_any_cast(const std::any &a) {
+  if constexpr (crane_is_pair<T>::value) {
+    if (auto *p = std::any_cast<T>(&a)) {
+      return *p;
+    }
+    using X = typename T::first_type;
+    using Y = typename T::second_type;
+    const auto &boxed = std::any_cast<const std::pair<std::any, std::any> &>(a);
+    return T(crane_any_cast<X>(boxed.first), crane_any_cast<Y>(boxed.second));
+  } else {
+    return std::any_cast<T>(a);
+  }
+}
+
 // Converts a type-erased sequence container (element type [std::any], e.g. a
 // [std::deque<std::any>] produced when a value-dependent list is erased) into a
 // concrete-element container [Dst] by [std::any_cast]-ing each element.
@@ -137,7 +175,9 @@ decltype(auto) crane_call_erased(F &&f, Args &&...args) {
 // [triples_le_max(const std::deque<rgb>&)]) needs its elements unboxed here.
 //
 // Each element is either already of the destination element type (passed
-// through) or a [std::any] holding it (unboxed with [std::any_cast]).
+// through) or a [std::any] holding it (unboxed with [crane_any_cast], which
+// also recovers pair-typed elements whose components were boxed
+// independently -- see [crane_any_cast] above).
 template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
   using Elt = typename Dst::value_type;
   Dst dst;
@@ -145,7 +185,7 @@ template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
     if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>) {
       dst.insert(dst.end(), _e);
     } else {
-      dst.insert(dst.end(), std::any_cast<Elt>(_e));
+      dst.insert(dst.end(), crane_any_cast<Elt>(_e));
     }
   }
   return dst;

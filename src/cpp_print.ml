@@ -1067,9 +1067,21 @@ and pp_cpp_expr env args t =
             | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
           in
           if Table.is_custom g_of_list then begin
+            (* Canonical erased shape for a custom list is [deque<std::any>]
+               (a bare [std::any] per element), never a structure-preserving
+               [deque<pair<any,any>>] -- see the matching invariant in
+               [translation.ml]'s [gen_expr] (the [MLrel]/[MLmagic] cases).
+               [any_cast]ing to the preserved-structure [resolved_ty] here
+               would implicitly re-box an already-erased [deque<std::any>]
+               into a fresh [std::any] and then fail to unbox it, since a
+               sibling producer for the same Coq list type may have erased
+               to the flat form.  Cast to the flat [list_any_ty] instead; a
+               downstream consumer that needs the concrete-element container
+               converts it with [crane_container_cast] at its own site. *)
+            ignore elem_ty_of_list;
             require_header "any";
             str (sn ()).any_cast ++ str "<"
-            ++ pp_cpp_type false [] resolved_ty
+            ++ pp_cpp_type false [] list_any_ty
             ++ str ">(" ++ Id.print id ++ str ")"
           end else
           pp_cpp_type false [] resolved_ty
@@ -1990,11 +2002,28 @@ and pp_cpp_expr env args t =
       pp_cpp_expr env args e
     else begin
       require_header "any";
+      (* When [e] is a bare variable already registered in
+         [concrete_typed_any_params], the [CPPvar id] printer case below
+         would independently insert its OWN use-site [any_cast] for [id],
+         producing a nested [any_cast<Outer>(any_cast<Inner>(id))]. That is
+         only safe when [Outer] and [Inner] are the same type (an idempotent
+         box/unbox round-trip); when this [CPPany_cast] node already
+         supplies the correct target type [ty] (an AST-level cast
+         translation.ml built for this exact expression), print the bare
+         variable directly instead of letting the printer-level mechanism
+         wrap it again with a possibly DIFFERENT type, which throws
+         [std::bad_any_cast] at runtime. *)
+      let inner =
+        match e with
+        | CPPvar id when Id.Map.mem id !concrete_typed_any_params ->
+          Id.print id
+        | _ -> pp_cpp_expr env args e
+      in
       str (sn ()).any_cast
       ++ str "<"
       ++ pp_cpp_type false [] ty
       ++ str ">("
-      ++ pp_cpp_expr env args e
+      ++ inner
       ++ str ")"
     end
   | CPPcontainer_cast (ty, e) ->

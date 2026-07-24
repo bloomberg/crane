@@ -21,10 +21,11 @@ int main() {
   const auto &prod_semty = entries[0].a1;         // std::pair<std::any, std::any>
   auto action = std::any_cast<std::function<std::any(std::any)>>(prod_semty.second);
 
-  // The erased Obj value at runtime: an empty list, represented as the fully
-  // erased std::deque<std::pair<std::any, std::any>> (what the nil producer /
-  // erased parser stack holds).
-  std::any prs = std::deque<std::pair<std::any, std::any>>{};
+  // The erased Obj value at runtime: an empty list, represented as the
+  // canonical fully-flat std::deque<std::any> (what the nil producer /
+  // erased parser stack holds -- a bare std::any per element, not a
+  // structure-preserving deque<pair<any,any>>).
+  std::any prs = std::deque<std::any>{};
   // The action receives the RHS tuple (prs, tt) boxed as std::any.
   std::any tup =
       std::any(std::make_pair(prs, std::any(std::monostate{})));

@@ -35,7 +35,7 @@ const action_entry my_action =
             return _a1;
           }(std::make_pair(std::any(std::any_cast<uint64_t>(x)),
                            std::any(std::any_cast<uint64_t>(y))),
-                 std::any_cast<std::deque<std::pair<std::any, std::any>>>(xs));
+                 std::any_cast<std::deque<std::any>>(xs));
         }));
 SigT<Tag, output_ty>
 apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e);

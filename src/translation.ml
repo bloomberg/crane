@@ -950,6 +950,42 @@ let retype_dependent_params (typ : ml_type) ids =
       match ml_ty with Tvar' _ -> (n, Tdummy Ktype) | _ -> (n, ml_ty)) ids
   else ids
 
+(** Recover a pattern variable's type from the scrutinee's own type structure
+    when extraction left it as an unresolved meta-variable ([Tmeta
+    {contents=None}]).
+
+    For a [prod A B] scrutinee destructured as [(x, y)], [x]'s and [y]'s ML
+    types are exactly [A] and [B] — but when [A]/[B] come from a
+    non-reducible dependent computation (e.g. projecting an element out of
+    [tuple (List.map symbol_semty gamma)] for a nonterminal/production
+    grammar), Rocq's extraction can fail to unify the pattern variable's own
+    type with the (perfectly concrete, if opaque) component type visible in
+    the scrutinee's [Tglob(prod, [A; B])] annotation, leaving the pattern
+    variable's type as a dangling meta.  A dangling meta erases to
+    [std::any] with no further structure, discarding container information
+    (e.g. "this is a [list]") that the scrutinee type still carries — so a
+    "cons" production destructuring such a pattern var loses track of the
+    fact that it's building a [list], while the "nil" production (whose
+    return type is directly, concretely annotated, with no destructuring
+    involved) keeps it — the reason nil and cons productions of the very
+    same Coq-level [list] type diverge in their erased C++ representation.
+
+    [ids] here is in reverse-bound order relative to [tyargs] (the last
+    pattern variable in the list is the first component of the scrutinee
+    pair), matching the convention already used elsewhere in this file. *)
+let recover_pattern_var_types_from_scrutinee (typ : ml_type) ids =
+  match typ with
+  | Tglob (g, tyargs, _) when is_prod_global g
+                               && List.length tyargs = List.length ids ->
+    let n = List.length tyargs in
+    List.mapi (fun i (x, ml_ty) ->
+      match ml_ty with
+      | Tmeta {contents = None} ->
+        (x, List.nth tyargs (n - 1 - i))
+      | _ -> (x, ml_ty))
+      ids
+  | _ -> ids
+
 let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
   let render ty =
     render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
@@ -2755,13 +2791,24 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       let saved_ret = tctx.current_cpp_return_type in
       let new_expected =
         match List.nth_opt ty_args_for_expected i with
-        | Some _ as x -> x
-        | None ->
-          (* Fall back to the concrete field type when the enclosing constructor
-             has an erased ML type (e.g. pair(pred, action) with Tmeta{None}).
-             Combined with the MLlam Tarr-stripping logic, this lets gen_ctor_call
-             recover the concrete element type for nil constructors. *)
+        | Some (Tdummy _) | None ->
+          (* A [Tdummy] here means extraction couldn't statically reduce this
+             type argument (e.g. a [prod]'s component type inferred through a
+             non-reducible dependent [match] like [nt_semty x] at a literal
+             [x], which is dependently well-typed in Coq but whose component
+             types the ML type annotation on this specific node leaves as
+             placeholders) -- it carries no more information than [None], so
+             fall back the same way: to the concrete field type when the
+             enclosing constructor has an erased ML type (e.g. pair(pred,
+             action) with Tmeta{None}).  Combined with the MLlam
+             Tarr-stripping logic, this lets gen_ctor_call recover the
+             concrete element type for nil constructors, and lets a "cons"
+             argument like a tuple literal's own component recover its
+             declared field type so it gets any_cast'd to the concrete type
+             instead of staying a bare [std::any] mismatched with the
+             constructor's own (correctly concrete) return type. *)
           List.nth_opt field_types_for_wrap i
+        | Some _ as x -> x
       in
       tctx.expected_ml_type_for_arg <- new_expected;
       (* Propagate the erased-return-slot context into nested pair/tuple
@@ -2948,6 +2995,31 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
     | [] -> x
     | _ -> CPPfun_call (x, args)
   in
+  (* When [ty] (the MLcons node's own type annotation) is not itself a
+     resolved [Tglob] — e.g. an unresolved [Tmeta {contents = None}], which
+     happens for a "cons" expression built from destructured pattern
+     variables whose types extraction failed to unify with a non-reducible
+     dependent computation (see [recover_pattern_var_types_from_scrutinee])
+     — fall back to [ty_args_for_expected], already computed above via
+     [deep_resolve]/[tctx.expected_ml_type_for_arg] for the very same
+     purpose (recovering nil's element type in a pair).  Without this, a
+     "cons" production whose own return type stayed unresolved loses its
+     [list] template argument entirely, so [cpp_print.ml] can't substitute
+     the generic [cons : A -> list A -> list A] schema's [Tvar]s and
+     defaults them to [std::any] — producing [deque<any>] instead of the
+     canonical erased [deque<pair<any,any>>] that the sibling "nil"
+     production (whose literal, non-destructured type annotation IS
+     resolved) emits, causing an [any_cast] shape mismatch at runtime. *)
+  let ty =
+    match ty with
+    | Miniml.Tglob _ -> ty
+    | _ when ty_args_for_expected <> [] ->
+      ( match r with
+      | GlobRef.ConstructRef ((kn, i), _) ->
+        Miniml.Tglob (GlobRef.IndRef (kn, i), ty_args_for_expected, [])
+      | _ -> ty )
+    | _ -> ty
+  in
   let result =
     match ty with
     | Miniml.Tglob (n, tys, _) ->
@@ -3028,34 +3100,46 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
             else temps
         else temps
       in
+      (* For custom list constructors (e.g., deque nil/cons), a container
+         element type built entirely from [Tdummy] placeholders (extraction's
+         "no information available" marker, e.g. because the production's
+         return type is an opaque, non-reducible alias like [symbol_semty])
+         carries no genuine field information.  A sibling production for the
+         SAME Coq list type may still see concrete structure here (e.g. a
+         literal, directly-annotated [list (string*nat)]); preserving that
+         structure as [pair<any,any>] while the other production collapses
+         to bare [std::any] would produce two incompatible container shapes
+         for the same runtime list, causing an [any_cast] mismatch at the
+         consumer.  Collapse to bare [std::any] whenever the container is
+         hollow, regardless of [wrap_for_any_param], so nil/cons always
+         agree on representation. *)
+      let is_custom_list =
+        match r with
+        | GlobRef.ConstructRef ((kn, _), _) ->
+          let ind = GlobRef.IndRef (kn, 0) in
+          is_list_global ind && Table.is_custom ind
+        | _ -> false
+      in
+      let rec ml_ty_all_dummy = function
+        | Tdummy _ -> true
+        | Tglob (_, (_ :: _ as args), _) -> List.for_all ml_ty_all_dummy args
+        | Tmeta {contents = Some t} -> ml_ty_all_dummy t
+        | _ -> false
+      in
+      let hollow_container = is_custom_list && List.exists ml_ty_all_dummy tys in
       let temps =
-        if tctx.wrap_for_any_param && temps <> [] then
-          (* For custom list constructors (e.g., deque nil), preserve the
-             erased element type instead of forcing to Tany. This makes
-             deque<pair<any,any>>{} instead of deque<any>{} for list(nat*nat),
-             keeping the stored element type consistent with consumers. *)
-          let is_custom_list =
-            match r with
-            | GlobRef.ConstructRef ((kn, _), _) ->
-              let ind = GlobRef.IndRef (kn, 0) in
-              is_list_global ind && Table.is_custom ind
-            | _ -> false
-          in
-          if is_custom_list then
-            (* Namespace-collapsing erase: a namespaced leaf element like
-               [Nat] must become plain [std::any], not the malformed
-               [typename Nat::std::any] that [erase_type_to_any] produces for
-               a [Tnamespace]-wrapped [Tglob].  Container structure (e.g.
-               [prod<_,_>]) is preserved so [list(nat*nat)] erases to
-               [deque<prod<any,any>>], matching consumers. *)
-            let rec erase_arg = function
-              | Tglob (g, (_ :: _ as args), ns) ->
-                Tglob (g, List.map erase_arg args, ns)
-              | _ -> Tany
-            in
-            List.map erase_arg temps
-          else
-            List.map (fun _ -> Tany) temps
+        if hollow_container && temps <> [] then
+          List.map (fun _ -> Tany) temps
+        else if tctx.wrap_for_any_param && temps <> [] then
+          (* Canonical erased shape for a list is [deque<std::any>] -- a bare
+             [std::any] per element, not a structure-preserving
+             [deque<pair<any,any>>].  A sibling production for the same Coq
+             list type (e.g. one built via a different code path that already
+             collapses to the flat shape) must agree exactly, or the
+             consumer's [any_cast] throws [std::bad_any_cast] at runtime.
+             See the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
+             cases. *)
+          List.map (fun _ -> Tany) temps
         else temps
       in
       app (mk_cppglob r temps)
@@ -3364,15 +3448,23 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              [crane_container_cast], or [eta_fun]'s function-argument path)
              converts it.  Scalar targets keep the direct concrete [any_cast]. *)
           (match ty with
-           | Tglob (g, _ :: _, _) when is_list_global g && Table.is_custom g ->
-             let rec erase_arg = function
-               | Tglob (g, (_ :: _ as args), ns) ->
-                 Tglob (g, List.map erase_arg args, ns)
-               | _ -> Tany
-             in
+           | Tglob (g, _ :: _, _) when is_list_global g ->
+             (* Canonical erased shape is [deque<std::any>] -- every element
+                boxed as a single [std::any] (see [gen_expr_custom_cons]'s
+                hollow-container collapse for the producer side of this same
+                invariant).  Erasing to [deque<pair<any,any>>] instead (i.e.
+                preserving the element's own container structure) would
+                disagree with that canonical shape: [crane_container_cast]
+                (the consumer this cast feeds) expects a plain [std::any] per
+                element so it can unbox each one with [crane_any_cast]
+                directly; handing it a [pair<any,any>] element instead makes
+                it implicitly re-box that pair into a fresh [std::any] before
+                [crane_any_cast] can recover it, which is redundant with (and,
+                if the destination shape or printer state ever disagrees,
+                incompatible with) the direct-[std::any]-per-element path. *)
              let erased_ty =
                match ty with
-               | Tglob (g, args, ns) -> Tglob (g, List.map erase_arg args, ns)
+               | Tglob (g, args, ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
                | t -> t
              in
              CPPany_cast (erased_ty, result)
@@ -4511,19 +4603,16 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   in
                   Mlutil.type_expand abbrev ml_ty
                 in
-                (* For custom list (deque) types, erase element types preserving
-                   nested structure.  E.g., deque<pair<T1,T2>> → deque<pair<any,any>>,
-                   deque<T> → deque<any>.  This matches the runtime representation:
-                   when stored in any→any lambdas, pair elements are stored as
-                   pair<any,any> (C++ converts T to any for each field). *)
-                let erase_custom_list_elem t =
-                  match t with
-                  | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
-                  | _ -> Tany
-                in
+                (* Canonical erased shape for a list-typed erased param is
+                   [deque<std::any>] -- a bare [std::any] per element, not a
+                   structure-preserving [deque<pair<any,any>>].  A sibling
+                   producer for the same Coq list type (e.g. the base-case
+                   action of the same [SigT] action family) may erase to the
+                   flat shape; casting this parameter to the
+                   structure-preserving shape would then throw
+                   [std::bad_any_cast] at runtime.  See the matching
+                   invariant in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
                 let erase_custom_list_elems = function
-                  | Tglob (g, [elem_ty], ns) when is_list_global g && Table.is_custom g ->
-                    Tglob (g, [erase_custom_list_elem elem_ty], ns)
                   | Tglob (g, _ :: _, ns) when is_list_global g && Table.is_custom g ->
                     Tglob (g, [Tany], ns)
                   | t -> t
@@ -4537,6 +4626,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   get_body ml_e
                 in
                 let erase_inner_tparams = function
+                  | Tglob (g, (_ :: _), ns) when is_list_global g ->
+                    (* Canonical erased shape for a list is [deque<any>],
+                       a bare [std::any] per element, not a
+                       structure-preserving [deque<pair<any,any>>]. *)
+                    Tglob (g, [Tany], ns)
                   | Tglob (g, args, m) ->
                     let erase_t = function
                       | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
@@ -4718,6 +4812,20 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                           in
                           erase_inner_tparams ret_ct
                         end
+                      in
+                      (* Canonical erased shape for a list-typed erased param
+                         is [deque<std::any>] -- a bare [std::any] per
+                         element, not a structure-preserving
+                         [deque<pair<any,any>>].  See the matching invariant
+                         in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
+                      let concrete_ty =
+                        match concrete_ty with
+                        | Tglob (g, _ :: _, ns) when is_list_global g ->
+                          Tglob (g, [Tany], ns)
+                        | Tnamespace (ns_g, Tglob (g, _ :: _, ns))
+                          when is_list_global g ->
+                          Tnamespace (ns_g, Tglob (g, [Tany], ns))
+                        | t -> t
                       in
                       if resolves_to_any_type concrete_ty then None
                       else
@@ -4904,6 +5012,24 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                       let ct = convert_ml_type_to_cpp_type env tvars ml_ty in
                       strip_cpp_ref_const ct
                     | None -> strip_cpp_ref_const (fst (List.nth params j))
+                  in
+                  (* Canonical erased shape for a list-typed erased param is
+                     [deque<std::any>] -- a bare [std::any] per element -- not
+                     a structure-preserving [deque<pair<any,any>>].  A sibling
+                     producer for the same Coq list type (e.g. the base-case
+                     action of the same [SigT] action family) may erase to
+                     the flat shape; casting this parameter to the
+                     structure-preserving shape would then throw
+                     [std::bad_any_cast] at runtime.  See the matching
+                     invariant in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
+                  let concrete_ty =
+                    match concrete_ty with
+                    | Tglob (g, _ :: _, ns) when is_list_global g ->
+                      Tglob (g, [Tany], ns)
+                    | Tnamespace (ns_g, Tglob (g, _ :: _, ns))
+                      when is_list_global g ->
+                      Tnamespace (ns_g, Tglob (g, [Tany], ns))
+                    | t -> t
                   in
                   if concrete_ty <> Tany && concrete_ty <> Tauto then
                     let any_param_id = Id.of_string
@@ -5345,10 +5471,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
-        let is_cpp_erased_var = match t with
+        let rec is_cpp_erased_var_rec = function
           | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
+          | MLmagic t' -> is_cpp_erased_var_rec t'
           | _ -> false
         in
+        let is_cpp_erased_var = is_cpp_erased_var_rec t in
         (* Namespace-collapsing erase: a namespaced leaf like [R] must become
            plain [std::any], not the malformed [typename R::std::any] the shared
            [erase_type_to_any] produces for a [Tnamespace]-wrapped [Tglob].
@@ -5357,17 +5485,15 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            that needs the CONCRETE element container (e.g. a constructor field
            of type [deque<R>]) converts it with [crane_container_cast] at its
            own site (mirroring [eta_fun]'s function-argument path). *)
-        let rec erase_arg = function
-          | Tglob (g, (_ :: _ as args), ns) ->
-            Tglob (g, List.map erase_arg args, ns)
-          | _ -> Tany
-        in
         if is_cpp_erased_var then
+          (* Canonical erased shape is [deque<std::any>] (a bare [std::any]
+             per element, not a structure-preserving [pair<any,any>]) -- see
+             the matching fix in the [MLrel] case above. *)
           let erase_top_args = function
             | Tglob (g, args, ns) when args <> [] ->
-              Tglob (g, List.map erase_arg args, ns)
-            | Tnamespace (ns_g, inner_ty) ->
-              Tnamespace (ns_g, erase_arg inner_ty)
+              Tglob (g, List.map (fun _ -> Tany) args, ns)
+            | Tnamespace (ns_g, Tglob (g, args, ns)) when args <> [] ->
+              Tnamespace (ns_g, Tglob (g, List.map (fun _ -> Tany) args, ns))
             | t -> t
           in
           let cast_ty = erase_top_args ty in
@@ -5929,14 +6055,26 @@ and eta_fun env f args =
              Cast the inner value to that erased representation, matching what
              [gen_match_branch]'s field substitution stores. *)
           let erased_ty =
+            (* Canonical erased shape is [deque<std::any>] -- a bare [std::any]
+               per element, not a structure-preserving [deque<pair<any,any>>]
+               (see the matching invariant in [gen_expr]'s [MLrel]/[MLmagic]
+               cases).  Using the structure-preserving erasure here would
+               disagree with a sibling producer for the same Coq list type
+               that already erased to the flat shape, and — when [as_value ()]
+               is itself already an [any_cast] to the flat shape (added by
+               [gen_expr] above) — would additionally double-wrap it in a
+               second, incompatible [any_cast]. *)
             match clean_cpp_ty with
-            | Tnamespace (ns_g, Tglob (g, [elem_ty], _)) ->
-              Tnamespace (ns_g, Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], []))
-            | Tglob (g, [elem_ty], _) ->
-              Tglob (g, [Ml_type_util.erase_type_to_any elem_ty], [])
+            | Tnamespace (ns_g, Tglob (g, [_], _)) ->
+              Tnamespace (ns_g, Tglob (g, [Tany], []))
+            | Tglob (g, [_], _) ->
+              Tglob (g, [Tany], [])
             | _ -> clean_cpp_ty
           in
-          let inner = CPPany_cast (erased_ty, as_value ()) in
+          let inner = match as_value () with
+            | CPPany_cast _ as already_cast -> already_cast
+            | v -> CPPany_cast (erased_ty, v)
+          in
           (* When the callee is a REAL function whose parameter has a CONCRETE
              element type — a wholesale-boxed opaque element
              ([triples_le_max(const std::deque<rgb>&)]), OR a structural element
@@ -7831,15 +7969,23 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              || scrut_is_cpp_erased)
             && not (is_erased_type concrete_match_type) then
       (* Erase template args one level deep, preserving nested generic structure.
-         E.g., deque<pair<T1,T2>> → deque<pair<any,any>>, deque<T> → deque<any>.
-         This ensures runtime types match: a deque<pair<any,any>> stored as any
-         must be cast as deque<pair<any,any>>, not deque<any>. *)
+         E.g., deque<pair<T1,T2>> → deque<pair<any,any>>, deque<T> → deque<any>. *)
       let erase_tparams = function
         | Tglob (_, [], _) -> Tany
         | Tglob (g2, args2, ns2) -> Tglob (g2, List.map (fun _ -> Tany) args2, ns2)
         | _ -> Tany
       in
+      (* Canonical erased shape for a LIST scrutinee is [deque<std::any>] -- a
+         bare [std::any] per element -- not a structure-preserving
+         [deque<pair<any,any>>]: a sibling producer for the same Coq list type
+         (e.g. a base-case action erasing an empty list) may already have
+         erased to the flat shape, and casting this scrutinee to the
+         structure-preserving shape instead would throw [std::bad_any_cast]
+         at runtime.  See the matching invariant in [gen_expr]'s
+         [MLrel]/[MLmagic] cases. *)
       let cast_ty = match concrete_match_type with
+        | Tglob (g, (_ :: _), ns) when is_list_global g ->
+          Tglob (g, [Tany], ns)
         | Tglob (g, (_ :: _ as args), ns) when scrut_is_mlmagic ->
           Tglob (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
@@ -7943,6 +8089,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             | Tglob (g, _ :: _, _) when is_list_global g && Table.is_custom g -> true
             | _ -> false)
       in
+      let ids' = recover_pattern_var_types_from_scrutinee ml_typ ids' in
       let ids' = retype_dependent_params ml_typ ids' in
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in

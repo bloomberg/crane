@@ -12,9 +12,8 @@ uint64_t DequeElementCast::count_items(
     return UINT64_C(0);
   }
   case Nonterm::NT_ITEMS: {
-    return static_cast<uint64_t>(std::any_cast<std::deque<std::any>>(
-                                     std::any_cast<std::deque<std::any>>(a1))
-                                     .size());
+    return static_cast<uint64_t>(
+        std::any_cast<std::deque<std::any>>(a1).size());
   }
   default:
     std::unreachable();

@@ -19,7 +19,7 @@ apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e) {
                            return _a1;
                          }(std::make_pair(std::any(UINT64_C(3)),
                                           std::any(UINT64_C(4))),
-                           std::deque<std::pair<std::any, std::any>>{}))),
+                           std::deque<std::any>{}))),
                 std::any(UINT64_C(20)))))));
   }
   case Tag::TAGB: {
@@ -35,9 +35,7 @@ uint64_t get_length(const SigT<Tag, output_ty> &r) {
   switch (x0) {
   case Tag::TAGA: {
     return static_cast<uint64_t>(
-        std::any_cast<std::deque<std::pair<std::any, std::any>>>(
-            std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1))
-            .size());
+        std::any_cast<std::deque<std::any>>(a1).size());
   }
   case Tag::TAGB: {
     return std::any_cast<uint64_t>(a1);

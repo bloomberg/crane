@@ -49,9 +49,7 @@ uint64_t get_length(const Specif::SigT<Tag, sem_ty> &v) {
   switch (x0) {
   case Tag::TAGLIST: {
     return static_cast<uint64_t>(
-        std::any_cast<std::deque<std::pair<std::any, std::any>>>(
-            std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1))
-            .size());
+        std::any_cast<std::deque<std::any>>(a1).size());
   }
   case Tag::TAGNAT: {
     return UINT64_C(0);
@@ -65,7 +63,7 @@ uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v) {
   const auto &[x, a1] = v;
   switch (x) {
   case Tag::TAGLIST: {
-    auto _cs = std::any_cast<std::deque<std::pair<std::any, std::any>>>(a1);
+    auto _cs = std::any_cast<std::deque<std::any>>(a1);
     if (_cs.empty()) {
       return UINT64_C(0);
     } else {

@@ -2040,6 +2040,17 @@
   (deps grammar_action_pairlist_crash.t.exe)
   (action (run ./grammar_action_pairlist_crash.t.exe))))
 
+(subdir grammar_pairlist_nil_cons_mismatch
+ (rule
+  (targets grammar_pairlist_nil_cons_mismatch.t.exe)
+  (deps GrammarPairlistNilConsMismatch.vo grammar_pairlist_nil_cons_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_pairlist_nil_cons_mismatch.t.exe grammar_pairlist_nil_cons_mismatch.cpp grammar_pairlist_nil_cons_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps grammar_pairlist_nil_cons_mismatch.t.exe)
+  (action (run ./grammar_pairlist_nil_cons_mismatch.t.exe))))
+
 (subdir grammar_record_list_field
  (rule
   (targets grammar_record_list_field.t.exe)

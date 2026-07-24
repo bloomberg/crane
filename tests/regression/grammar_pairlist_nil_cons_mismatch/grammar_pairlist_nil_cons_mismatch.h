@@ -166,11 +166,7 @@ const std::deque<grammar_entry> entries =
                              std::any_cast<std::pair<std::any, std::any>>(tup);
                          return val{crane_container_cast<
                              std::deque<std::pair<String, uint64_t>>>(
-                             std::any_cast<
-                                 std::deque<std::pair<std::any, std::any>>>(
-                                 std::any_cast<
-                                     std::deque<std::pair<std::any, std::any>>>(
-                                     prs)))};
+                             std::any_cast<std::deque<std::any>>(prs))};
                        }))),
         [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
@@ -218,22 +214,21 @@ const std::deque<grammar_entry> entries =
           }(
               SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                    std::pair<std::any, std::any>>::
-                  existt(
-                      std::make_pair(Nonterminal::OBJ,
-                                     [](auto _a0, auto _a1) {
-                                       _a1.push_front(_a0);
-                                       return _a1;
-                                     }(Symbol::t(Terminal::LBRACE),
-                                       [](auto _a0, auto _a1) {
-                                         _a1.push_front(_a0);
-                                         return _a1;
-                                       }(Symbol::t(Terminal::RBRACE),
-                                         std::deque<Symbol>{}))),
-                      std::make_pair(
-                          crane_erase_fn([](const auto &) { return true; }),
-                          crane_erase_fn([](const auto &) {
-                            return std::deque<std::pair<std::any, std::any>>{};
-                          }))),
+                  existt(std::make_pair(Nonterminal::OBJ,
+                                        [](auto _a0, auto _a1) {
+                                          _a1.push_front(_a0);
+                                          return _a1;
+                                        }(Symbol::t(Terminal::LBRACE),
+                                          [](auto _a0, auto _a1) {
+                                            _a1.push_front(_a0);
+                                            return _a1;
+                                          }(Symbol::t(Terminal::RBRACE),
+                                            std::deque<Symbol>{}))),
+                         std::make_pair(
+                             crane_erase_fn([](const auto &) { return true; }),
+                             crane_erase_fn([](const auto &) {
+                               return std::deque<std::any>{};
+                             }))),
               [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
@@ -274,15 +269,14 @@ const std::deque<grammar_entry> entries =
                   return _a1;
                 }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                        std::pair<std::any, std::any>>::
-                      existt(
-                          std::make_pair(Nonterminal::PAIRS,
-                                         std::deque<Symbol>{}),
-                          std::make_pair(
-                              crane_erase_fn([](const auto &) { return true; }),
-                              crane_erase_fn([](const auto &) {
-                                return std::deque<
-                                    std::pair<std::any, std::any>>{};
-                              }))),
+                      existt(std::make_pair(Nonterminal::PAIRS,
+                                            std::deque<Symbol>{}),
+                             std::make_pair(crane_erase_fn([](const auto &) {
+                                              return true;
+                                            }),
+                                            crane_erase_fn([](const auto &) {
+                                              return std::deque<std::any>{};
+                                            }))),
                   [](auto _a0, auto _a1) {
                     _a1.push_front(_a0);
                     return _a1;
