@@ -33,8 +33,8 @@ const action_entry my_action =
           return [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
-          }(std::make_pair(std::any_cast<uint64_t>(x),
-                           std::any_cast<uint64_t>(y)),
+          }(std::make_pair(std::any(std::any_cast<uint64_t>(x)),
+                           std::any(std::any_cast<uint64_t>(y))),
                  std::any_cast<std::deque<std::pair<std::any, std::any>>>(xs));
         }));
 SigT<Tag, output_ty>

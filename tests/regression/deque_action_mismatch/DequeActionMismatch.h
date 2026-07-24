@@ -33,7 +33,7 @@ const action cons_action =
           return [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
-          }(std::make_pair(UINT64_C(42), UINT64_C(99)), xs);
+          }(std::make_pair(std::any(UINT64_C(42)), std::any(UINT64_C(99))), xs);
         }));
 Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,

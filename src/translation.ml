@@ -3042,7 +3042,18 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
             | _ -> false
           in
           if is_custom_list then
-            List.map erase_type_to_any temps
+            (* Namespace-collapsing erase: a namespaced leaf element like
+               [Nat] must become plain [std::any], not the malformed
+               [typename Nat::std::any] that [erase_type_to_any] produces for
+               a [Tnamespace]-wrapped [Tglob].  Container structure (e.g.
+               [prod<_,_>]) is preserved so [list(nat*nat)] erases to
+               [deque<prod<any,any>>], matching consumers. *)
+            let rec erase_arg = function
+              | Tglob (g, (_ :: _ as args), ns) ->
+                Tglob (g, List.map erase_arg args, ns)
+              | _ -> Tany
+            in
+            List.map erase_arg temps
           else
             List.map (fun _ -> Tany) temps
         else temps
@@ -3102,6 +3113,41 @@ and ml_expr_is_function_value e =
     ( match infer_ml_body_type other with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
+
+(** [field_stores_erased_fn_value field_types i e] — true when constructor
+    field [i] has an abstract type-variable (schema) type — a value-dependent
+    field such as the predicate [P] of [sigT A P] — and the argument [e] is a
+    lambda function value.
+
+    Such a function's return value is boxed into the field's [std::any] at
+    runtime and recovered by consumers with a fixed [any_cast] shape.  To keep
+    that shape consistent across every producer of the same Coq type (e.g. the
+    "cons" and "nil" productions of a value-dependent [list (nat*nat)] action),
+    the function body must be generated with [wrap_for_any_param] so its
+    list/pair/record producers deep-erase to the canonical erased C++ form.
+    Without this, a "cons" production built from concrete values would keep a
+    concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
+    "nil" production erases to [deque<Prod<any,any>>], and reading the value
+    back out of the [std::any] throws [std::bad_any_cast]. *)
+and field_stores_erased_fn_value field_types i e =
+  match List.nth_opt field_types i with
+  | Some ft ->
+    (* The (schema) field type must be an abstract type VARIABLE — e.g. the
+       predicate parameter [P] of [sigT A P], instantiated here to a function
+       type whose codomain is value-dependent and erased ([unit -> semty s]
+       ↦ [std::function<std::any(Unit)>]).  A lambda stored into such an
+       erased field has its result boxed into a single [std::any] at runtime,
+       so its body's list/pair/record producers must deep-erase to a canonical
+       C++ representation shared with every other producer of the same Coq
+       type — otherwise a concretely-typed "cons" production
+       ([deque<Prod<Nat,Nat>>]) and the erased "nil" production
+       ([deque<Prod<any,any>>]) disagree and [std::any_cast] throws. *)
+    let field_is_abstract_var =
+      match ft with Miniml.Tvar _ | Miniml.Tvar' _ -> true | _ -> false
+    in
+    field_is_abstract_var
+    && (match strip_magic e with MLlam _ -> true | _ -> false)
+  | None -> false
 
 (** When a lambda literal is about to be stored via [crane_erase_fn] (see the
     [ml_expr_is_function_value] call site in the custom-constructor arg loop),
@@ -4220,6 +4266,29 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               if i > cutoff && not (is_all_any t) then Tany else t
             ) temps
           in
+          (* When this constructor value flows into an erased ([std::any]) slot
+             ([wrap_for_any_param]) — e.g. a [Prod] pair built inside a
+             value-dependent action whose result is boxed into [std::any] —
+             erase its type arguments so a "cons" production's element type
+             (e.g. [Prod<Nat,Nat>]) matches the canonical erased form the
+             matching "nil" production produces (e.g. [Prod<any,any>]).
+             Concrete field values implicitly convert to [std::any], so the
+             factory call still type-checks.  This mirrors the custom-list
+             element erasure in the custom-cons path, extending it to plain
+             value-type constructors.  Uses a namespace-collapsing erase (a
+             leaf like [Nat] must become plain [std::any], not the malformed
+             [typename Nat::std::any] that the shared [erase_type_to_any]
+             would produce for a namespaced [Tglob]). *)
+          let temps =
+            if tctx.wrap_for_any_param && temps <> [] then
+              let rec erase_arg = function
+                | Tglob (g, (_ :: _ as args), ns) ->
+                  Tglob (g, List.map erase_arg args, ns)
+                | _ -> Tany
+              in
+              List.map erase_arg temps
+            else temps
+          in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
@@ -4823,7 +4892,25 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             | _ -> None )
           | None -> None
         in
+        (* When a function value is stored into an erased ([std::any])
+           constructor field (e.g. the action [unit -> semty s] stored in a
+           heterogeneous [sigT] list), the function's return value is, at
+           runtime, boxed inside a single [std::any].  Consumers recover it
+           with a fixed [any_cast] shape, so ALL of a given Coq type's
+           producers must erase to the SAME canonical C++ representation.  For
+           [list (nat*nat)] the empty ("nil") production erases to
+           [deque<pair<any,any>>] (its element type is already opaque in the
+           ML annotation), whereas a non-empty ("cons") production built from
+           concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
+           a different C++ type for the same Coq type, causing
+           [std::bad_any_cast] at the consumer.  Generate the body with
+           [wrap_for_any_param] so cons productions deep-erase their element
+           type to match nil.  See the mirror in the record-constructor path. *)
+        let saved_wrap = tctx.wrap_for_any_param in
+        if field_stores_erased_fn_value field_types i e then
+          tctx.wrap_for_any_param <- true;
         let expr = gen_ctor_arg ?expected_ty:expected_for_arg e in
+        tctx.wrap_for_any_param <- saved_wrap;
         tctx.current_cpp_return_type <- saved_ret;
         match ft_opt with
         | Some ft -> wrap_if_needed_for_field ft e expr
@@ -4900,7 +4987,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               match e with
               | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
                 wrap_void_call_as_value (gen_expr env e)
-              | _ -> gen_expr ?expected_ty:(expected_for_field i e) env e)
+              | _ ->
+                let saved_wrap = tctx.wrap_for_any_param in
+                if field_stores_erased_fn_value field_types_rec i e then
+                  tctx.wrap_for_any_param <- true;
+                let r = gen_expr ?expected_ty:(expected_for_field i e) env e in
+                tctx.wrap_for_any_param <- saved_wrap;
+                r)
             ts
         in
         match ty with

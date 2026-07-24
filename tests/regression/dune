@@ -2007,6 +2007,17 @@
   (deps list_cons_erasure_bleed.t.exe)
   (action (run ./list_cons_erasure_bleed.t.exe))))
 
+(subdir obj_nil_erasure_mismatch
+ (rule
+  (targets obj_nil_erasure_mismatch.t.exe)
+  (deps ObjNilErasureMismatch.vo obj_nil_erasure_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} obj_nil_erasure_mismatch.t.exe obj_nil_erasure_mismatch.cpp obj_nil_erasure_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps obj_nil_erasure_mismatch.t.exe)
+  (action (run ./obj_nil_erasure_mismatch.t.exe))))
+
 (subdir erased_field_dangle
  (rule
   (targets erased_field_dangle.t.exe)
