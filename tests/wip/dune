@@ -80,6 +80,17 @@
   (deps loopify_gap_nested_fix.t.exe)
   (action (run ./loopify_gap_nested_fix.t.exe))))
 
+(subdir grammar_pairlist_nil_cons_mismatch
+ (rule
+  (targets grammar_pairlist_nil_cons_mismatch.t.exe)
+  (deps GrammarPairlistNilConsMismatch.vo grammar_pairlist_nil_cons_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_pairlist_nil_cons_mismatch.t.exe grammar_pairlist_nil_cons_mismatch.cpp grammar_pairlist_nil_cons_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps grammar_pairlist_nil_cons_mismatch.t.exe)
+  (action (run ./grammar_pairlist_nil_cons_mismatch.t.exe))))
+
 (subdir loopify_gap_ackermann
  (rule
   (targets loopify_gap_ackermann.t.exe)
