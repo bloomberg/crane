@@ -95,8 +95,9 @@ const std::deque<grammar_entry>
                         crane_erase_fn([](const auto &tup) {
                           const auto &[ts, _x] =
                               std::any_cast<std::pair<std::any, std::any>>(tup);
-                          return rec{std::any_cast<std::deque<std::any>>(
-                              std::any_cast<std::deque<std::any>>(ts))};
+                          return rec{crane_container_cast<std::deque<elt>>(
+                              std::any_cast<std::deque<std::any>>(
+                                  std::any_cast<std::deque<std::any>>(ts)))};
                         }))),
             [](auto _a0, auto _a1) {
               _a1.push_front(_a0);

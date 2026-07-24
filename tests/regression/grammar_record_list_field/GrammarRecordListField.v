@@ -5,7 +5,7 @@ From Crane Require Import Mapping.DequeList.
 From Stdlib Require Import List.
 Import ListNotations.
 
-(** Reproduces the compile error the extracted C++ PPM parser hits after the
+(** Reproduced the compile error the extracted C++ PPM parser hits after the
     grammar_action_pairlist_crash fix:
 
       PPM.h: no viable conversion from 'deque<std::any>' to 'deque<rgb_triple>'
@@ -13,16 +13,19 @@ Import ListNotations.
     A semantic ACTION that constructs a RECORD (aggregate) whose field type is a
     concrete-element list (e.g. ppm_value's [triples : list rgb_triple]) forwards
     an erased list leaf ([nt_semty Triples], boxed at runtime as
-    std::deque<std::any>) straight into that field. Crane emits a plain
+    std::deque<std::any>) straight into that field. Crane used to emit a plain
       std::any_cast<std::deque<std::any>>(std::any_cast<std::deque<std::any>>(ts))
-    with NO crane_container_cast, so the erased std::deque<std::any> cannot
+    with NO crane_container_cast, so the erased std::deque<std::any> could not
     convert to the record field's concrete std::deque<elt>.
 
-    The earlier fix added crane_container_cast for the inductive-constructor
-    FACTORY path (e.g. json_value's JList/JAssoc factories); the RECORD /
-    aggregate-construction path ([mkRec ... ts]) was not covered. This mirrors
-    PPM's [Document -> ... NT Triples] production whose action is
-    [mkPPMValue w h m ts]. *)
+    The earlier fix added crane_container_cast only for the inductive-constructor
+    FACTORY path (e.g. json_value's JList/JAssoc factories, [gen_and_wrap] in
+    translation.ml); the RECORD / aggregate-construction path ([mkRec ... ts],
+    [record_arg_exprs]) was not covered. Fixed by extracting the factory path's
+    container-cast logic into a shared helper, [container_cast_erased_field] in
+    translation.ml, and calling it from both the constructor/factory path and the
+    record/aggregate path. This mirrors PPM's [Document -> ... NT Triples]
+    production whose action is [mkPPMValue w h m ts]. *)
 
 Fixpoint tuple (xs : list Type) : Type :=
   match xs with

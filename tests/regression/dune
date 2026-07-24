@@ -2040,6 +2040,17 @@
   (deps grammar_action_pairlist_crash.t.exe)
   (action (run ./grammar_action_pairlist_crash.t.exe))))
 
+(subdir grammar_record_list_field
+ (rule
+  (targets grammar_record_list_field.t.exe)
+  (deps GrammarRecordListField.vo grammar_record_list_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_record_list_field.t.exe grammar_record_list_field.cpp grammar_record_list_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps grammar_record_list_field.t.exe)
+  (action (run ./grammar_record_list_field.t.exe))))
+
 (subdir erased_field_dangle
  (rule
   (targets erased_field_dangle.t.exe)

@@ -4022,6 +4022,56 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     let saved_promoted_cons = tctx.promoted_var_map in
     let saved_in_ctor_cons = tctx.in_constructor_expr in
     tctx.in_constructor_expr <- true;
+    (* When an erased argument (a value-dependent leaf boxed as [std::any],
+       holding a custom list whose elements are fully erased —
+       [deque<std::any>] — at runtime) flows into a constructor/record field
+       whose concrete type is a custom list with a NON-erased element type
+       (e.g. [mkRec : list elt -> rec] → field [deque<elt>]), the [MLrel]/
+       [MLmagic] arg path only unwraps it to the erased [deque<std::any>].
+       Convert that to the concrete-element container with [crane_container_cast]
+       here, where the field's concrete type is known — a plain aggregate
+       initialization / [any_cast<deque<elt>>] would fail, since the value is a
+       [deque<std::any>].  Shared by the value-type-variant factory path
+       ([gen_and_wrap]) and the record/aggregate path.  Mirrors [eta_fun]'s
+       function-argument container-cast path. *)
+    let container_cast_erased_field ml_ft ml_arg expr =
+      let is_erased_rel =
+        match ml_arg with
+        | MLrel j | MLmagic (MLrel j) ->
+          Escape.IntSet.mem j tctx.cpp_erased_env
+        | _ -> false
+      in
+      if not is_erased_rel then expr
+      else begin
+        let tvars = get_current_type_vars () in
+        let ct = convert_ml_type_to_cpp_type env tvars ml_ft in
+        let rec clean_self_ns t =
+          match t with
+          | Tnamespace (ns_r, Tglob (g_r, args, gns))
+            when GlobRef.CanOrd.equal ns_r g_r ->
+            clean_self_ns (Tglob (g_r, args, gns))
+          | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
+          | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
+          | Tref t -> Tref (clean_self_ns t)
+          | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
+          | t -> t
+        in
+        let clean_ct = clean_self_ns ct in
+        let strip_ns_tg = function
+          | Tnamespace (_, (Tglob _ as inner)) -> inner
+          | t -> t
+        in
+        match strip_ns_tg clean_ct with
+        | Tglob (g, [elem_ty], _)
+          when is_list_global g && Table.is_custom g
+               && not (resolves_to_any_type elem_ty) ->
+          (* [expr] came out as the erased [deque<std::any>] from the
+             MLrel/MLmagic path; rebuild it as the concrete element container. *)
+          Table.mark_needs_erase_fn ();
+          CPPcontainer_cast (clean_ct, expr)
+        | _ -> expr
+      end
+    in
     let fds = record_fields_of_type ty in
     let cons_result = match fds with
     | [] ->
@@ -4941,55 +4991,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | Some ft -> wrap_if_needed_for_field ft e expr
           | None -> expr
         in
-        (* When an erased argument (a value-dependent leaf boxed as [std::any],
-           holding a custom list whose elements are fully erased —
-           [deque<std::any>] — at runtime) flows into a constructor field whose
-           concrete type is a custom list with a NON-erased element type (e.g.
-           [RArr : list R -> R] → field [deque<R>]), the [MLmagic] arg path
-           above only unwraps it to the erased [deque<std::any>].  Convert that
-           to the concrete-element container with [crane_container_cast] here,
-           where the field's concrete type is known — a plain [any_cast<deque<R>>]
-           would throw, since the boxed value is a [deque<std::any>].  This
-           mirrors [eta_fun]'s function-argument container-cast path. *)
         let expr =
           match ft_opt with
-          | Some ft ->
-            let is_erased_rel =
-              match e with
-              | MLrel j | MLmagic (MLrel j) ->
-                Escape.IntSet.mem j tctx.cpp_erased_env
-              | _ -> false
-            in
-            if is_erased_rel then begin
-              let tvars = get_current_type_vars () in
-              let ct = convert_ml_type_to_cpp_type env tvars ft in
-              let rec clean_self_ns t =
-                match t with
-                | Tnamespace (ns_r, Tglob (g_r, args, gns))
-                  when GlobRef.CanOrd.equal ns_r g_r ->
-                  clean_self_ns (Tglob (g_r, args, gns))
-                | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
-                | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
-                | Tref t -> Tref (clean_self_ns t)
-                | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
-                | t -> t
-              in
-              let clean_ct = clean_self_ns ct in
-              let strip_ns_tg = function
-                | Tnamespace (_, (Tglob _ as inner)) -> inner
-                | t -> t
-              in
-              match strip_ns_tg clean_ct with
-              | Tglob (g, [elem_ty], _)
-                when is_list_global g && Table.is_custom g
-                     && not (resolves_to_any_type elem_ty) ->
-                (* [expr] came out as the erased [deque<std::any>] from the
-                   MLmagic path; rebuild it as the concrete element container. *)
-                Table.mark_needs_erase_fn ();
-                CPPcontainer_cast (clean_ct, expr)
-              | _ -> expr
-            end
-            else expr
+          | Some ft -> container_cast_erased_field ft e expr
           | None -> expr
         in
         expr
@@ -5081,6 +5085,15 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             (fun i expr ->
               match List.nth_opt field_types i with
               | Some ft ->
+                (* An erased list leaf forwarded into a concrete-element list
+                   field (e.g. [mkRec ts] with field [items : deque<elt>]) came
+                   out as the erased [deque<std::any>]; convert it to the
+                   concrete-element container before aggregate initialization. *)
+                let expr =
+                  match List.nth_opt ts i with
+                  | Some e -> container_cast_erased_field ft e expr
+                  | None -> expr
+                in
                 let storage_ty =
                   convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton n) tvars ft
                 in
