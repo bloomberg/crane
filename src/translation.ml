@@ -4912,9 +4912,63 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         let expr = gen_ctor_arg ?expected_ty:expected_for_arg e in
         tctx.wrap_for_any_param <- saved_wrap;
         tctx.current_cpp_return_type <- saved_ret;
-        match ft_opt with
-        | Some ft -> wrap_if_needed_for_field ft e expr
-        | None -> expr
+        let expr =
+          match ft_opt with
+          | Some ft -> wrap_if_needed_for_field ft e expr
+          | None -> expr
+        in
+        (* When an erased argument (a value-dependent leaf boxed as [std::any],
+           holding a custom list whose elements are fully erased —
+           [deque<std::any>] — at runtime) flows into a constructor field whose
+           concrete type is a custom list with a NON-erased element type (e.g.
+           [RArr : list R -> R] → field [deque<R>]), the [MLmagic] arg path
+           above only unwraps it to the erased [deque<std::any>].  Convert that
+           to the concrete-element container with [crane_container_cast] here,
+           where the field's concrete type is known — a plain [any_cast<deque<R>>]
+           would throw, since the boxed value is a [deque<std::any>].  This
+           mirrors [eta_fun]'s function-argument container-cast path. *)
+        let expr =
+          match ft_opt with
+          | Some ft ->
+            let is_erased_rel =
+              match e with
+              | MLrel j | MLmagic (MLrel j) ->
+                Escape.IntSet.mem j tctx.cpp_erased_env
+              | _ -> false
+            in
+            if is_erased_rel then begin
+              let tvars = get_current_type_vars () in
+              let ct = convert_ml_type_to_cpp_type env tvars ft in
+              let rec clean_self_ns t =
+                match t with
+                | Tnamespace (ns_r, Tglob (g_r, args, gns))
+                  when GlobRef.CanOrd.equal ns_r g_r ->
+                  clean_self_ns (Tglob (g_r, args, gns))
+                | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
+                | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
+                | Tref t -> Tref (clean_self_ns t)
+                | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
+                | t -> t
+              in
+              let clean_ct = clean_self_ns ct in
+              let strip_ns_tg = function
+                | Tnamespace (_, (Tglob _ as inner)) -> inner
+                | t -> t
+              in
+              match strip_ns_tg clean_ct with
+              | Tglob (g, [elem_ty], _)
+                when is_list_global g && Table.is_custom g
+                     && not (resolves_to_any_type elem_ty) ->
+                (* [expr] came out as the erased [deque<std::any>] from the
+                   MLmagic path; rebuild it as the concrete element container. *)
+                Table.mark_needs_erase_fn ();
+                CPPcontainer_cast (clean_ct, expr)
+              | _ -> expr
+            end
+            else expr
+          | None -> expr
+        in
+        expr
       in
       gen_ctor_call (List.rev (List.mapi gen_and_wrap ts_updated))
     | _ ->
@@ -5258,15 +5312,25 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
           | _ -> false
         in
+        (* Namespace-collapsing erase: a namespaced leaf like [R] must become
+           plain [std::any], not the malformed [typename R::std::any] the shared
+           [erase_type_to_any] produces for a [Tnamespace]-wrapped [Tglob].
+           This unwraps the erased var to its runtime representation
+           ([deque<std::any>] for a custom list of [R]); a downstream consumer
+           that needs the CONCRETE element container (e.g. a constructor field
+           of type [deque<R>]) converts it with [crane_container_cast] at its
+           own site (mirroring [eta_fun]'s function-argument path). *)
+        let rec erase_arg = function
+          | Tglob (g, (_ :: _ as args), ns) ->
+            Tglob (g, List.map erase_arg args, ns)
+          | _ -> Tany
+        in
         if is_cpp_erased_var then
           let erase_top_args = function
-            | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
-              let erased_elem = erase_type_to_any elem_ty in
-              Tglob (g, [erased_elem], [])
             | Tglob (g, args, ns) when args <> [] ->
-              Tglob (g, List.map erase_type_to_any args, ns)
+              Tglob (g, List.map erase_arg args, ns)
             | Tnamespace (ns_g, inner_ty) ->
-              Tnamespace (ns_g, erase_type_to_any inner_ty)
+              Tnamespace (ns_g, erase_arg inner_ty)
             | t -> t
           in
           let cast_ty = erase_top_args ty in
@@ -7043,7 +7107,14 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               gen_type_conversion_expr ~src_ty:field_ty ~dst_ty:bare_ty
                 (CPPvar binding_name)
             else if field_is_wholesale_erased i
-                    && not (is_erased_type bare_ty) then
+                    && not (resolves_to_any_type bare_ty) then
+              (* [resolves_to_any_type] (not just [is_erased_type]) so that a
+                 field whose declared type is itself an erased alias (e.g.
+                 [symbol_semty = std::any]) is NOT wrapped in a spurious
+                 [any_cast<symbol_semty>]: the binding already holds the erased
+                 value directly, and casting a [std::any] holding a container to
+                 [std::any] would throw at runtime.  Only genuinely concrete
+                 target types are unwrapped here. *)
               let strip_ns_tg = function
                 | Tnamespace (_, (Tglob _ as inner)) -> inner
                 | t -> t

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ACTION_CONTAINER_CAST
 #define INCLUDED_ACTION_CONTAINER_CAST
 
+#include "crane_fn.h"
 #include <any>
 #include <deque>
 #include <functional>
@@ -225,15 +226,15 @@ const std::deque<grammar_entry> entries =
                              Bool0 _x = std::any_cast<Bool0>(_any__x);
                              return Bool0::TRUE_;
                            }),
-                       std::function<std::any(std::any)>([](const std::any
-                                                                &_any_ss) {
-                         Prod<symbol_semty, Unit> ss =
-                             std::any_cast<Prod<symbol_semty, Unit>>(_any_ss);
-                         const auto &[a0, a1] = ss;
-                         return R::rarr(
-                             std::any_cast<std::deque<typename R::std::any>>(
-                                 std::any_cast<symbol_semty>(a0)));
-                       }))),
+                       std::function<std::any(std::any)>(
+                           [](const std::any &_any_ss) {
+                             Prod<symbol_semty, Unit> ss =
+                                 std::any_cast<Prod<symbol_semty, Unit>>(
+                                     _any_ss);
+                             const auto &[a0, a1] = ss;
+                             return R::rarr(crane_container_cast<std::deque<R>>(
+                                 std::any_cast<std::deque<std::any>>(a0)));
+                           }))),
         std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
                         Prod<std::any, std::any>>>{}));
 

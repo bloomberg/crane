@@ -2018,6 +2018,17 @@
   (deps obj_nil_erasure_mismatch.t.exe)
   (action (run ./obj_nil_erasure_mismatch.t.exe))))
 
+(subdir action_container_cast
+ (rule
+  (targets action_container_cast.t.exe)
+  (deps ActionContainerCast.vo action_container_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} action_container_cast.t.exe action_container_cast.cpp action_container_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps action_container_cast.t.exe)
+  (action (run ./action_container_cast.t.exe))))
+
 (subdir erased_field_dangle
  (rule
   (targets erased_field_dangle.t.exe)

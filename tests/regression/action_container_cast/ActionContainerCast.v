@@ -3,8 +3,9 @@ Import ListNotations.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.DequeList.
 
-(** Reproduces the std::bad_any_cast the extracted C++ JSON parser still throws
-    on every array/object, including the empty ones "[]" and "{}".
+(** Regression test (now fixed).  Reproduces the std::bad_any_cast the extracted
+    C++ JSON parser threw on every array/object, including the empty ones "[]"
+    and "{}".
 
     Root cause (verified in the real generated JSON.h): a semantic ACTION of
     type [symbols_semty gamma -> nt_semty x], where
@@ -17,15 +18,36 @@ From Crane Require Import Mapping.DequeList.
     ([RArr : list R -> R], mirroring json_value's JList : list json_value ->
     json_value), Crane must convert std::deque<std::any> -> std::deque<R>.
 
-    The PREDICATE path does this correctly with crane_container_cast (see the
-    real JSON.h nodupKeys predicate, which emits crane_container_cast<...>).
-    The ACTION path does NOT: in the real JSON parser it emits
-       std::any_cast<std::deque<Json_value>>(std::any_cast<std::deque<std::any>>(vs))
-    whose OUTER any_cast is applied to an already-unwrapped std::deque<std::any>
-    -> std::bad_any_cast at runtime. In this minimal repro the same defective
-    action path generates an invalid conversion from std::deque<std::any> to the
-    constructor's concrete std::deque<R> (and a malformed target type
-    std::deque<typename R::std::any>) for the [NVal -> NT NArr] action. *)
+    The PREDICATE path already did this correctly with crane_container_cast (see
+    [eta_fun]'s function-argument path).  The ACTION path did NOT: extracting
+    [RArr l] (where [l] is the value-dependent leaf destructured from the erased
+    [ss] tuple) emitted a plain [any_cast] to a malformed target type
+    [std::deque<typename R::std::any>], instead of unboxing the erased
+    [std::deque<std::any>] into the constructor's concrete [std::deque<R>].
+
+    The fix (in [src/translation.ml]) has three parts:
+
+    1. The [MLmagic] erased-var path (used when a value-dependent leaf is coerced
+       to its concrete type) unwraps the erased var to its runtime
+       representation ([std::deque<std::any>]) using a NAMESPACE-COLLAPSING erase
+       so a namespaced leaf like [R] becomes plain [std::any] (not the malformed
+       [typename R::std::any] the shared [erase_type_to_any] produces for a
+       [Tnamespace]-wrapped [Tglob]).
+
+    2. The constructor-argument path ([gen_and_wrap]) now, when an erased leaf
+       flows into a constructor field whose concrete type is a custom list with a
+       NON-erased element type (e.g. [RArr]'s [std::deque<R>]), wraps the erased
+       [std::deque<std::any>] in [crane_container_cast<std::deque<R>>] — mirroring
+       the predicate/function path.  Inline-custom callees (e.g. [length], which
+       operate on the erased container directly) are unaffected: they go through
+       [eta_fun], not this path.
+
+    3. The pattern-match field substitution ([gen_match_branch]) no longer wraps
+       an erased leaf whose declared type is itself an erased alias
+       ([symbol_semty = std::any]) in a spurious [any_cast<symbol_semty>] — the
+       binding already holds the erased value directly, and casting a [std::any]
+       holding a container to [std::any] would throw.  The guard was widened from
+       [is_erased_type] to [resolves_to_any_type]. *)
 
 Fixpoint tuple (xs : list Type) : Type :=
   match xs with

@@ -203,11 +203,12 @@ const std::deque<grammar_entry> entries =
                   crane_erase_fn([](const auto &tup) {
                     const auto &[prs, _x] =
                         std::any_cast<std::pair<std::any, std::any>>(tup);
-                    return Val::vassoc(
+                    return Val::vassoc(crane_container_cast<
+                                       std::deque<std::pair<std::string, Val>>>(
                         std::any_cast<std::deque<std::pair<std::string, Val>>>(
                             std::any_cast<
                                 std::deque<std::pair<std::any, std::any>>>(
-                                prs)));
+                                prs))));
                   }))),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
