@@ -2029,6 +2029,17 @@
   (deps action_container_cast.t.exe)
   (action (run ./action_container_cast.t.exe))))
 
+(subdir grammar_action_pairlist_crash
+ (rule
+  (targets grammar_action_pairlist_crash.t.exe)
+  (deps GrammarActionPairlistCrash.vo grammar_action_pairlist_crash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} grammar_action_pairlist_crash.t.exe grammar_action_pairlist_crash.cpp grammar_action_pairlist_crash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps grammar_action_pairlist_crash.t.exe)
+  (action (run ./grammar_action_pairlist_crash.t.exe))))
+
 (subdir erased_field_dangle
  (rule
   (targets erased_field_dangle.t.exe)

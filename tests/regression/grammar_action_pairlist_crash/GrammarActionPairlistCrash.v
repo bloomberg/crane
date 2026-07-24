@@ -5,16 +5,33 @@ From Crane Require Import Mapping.DequeList.
 From Stdlib Require Import List Ascii String.
 Import ListNotations.
 
-(** RUNTIME repro: after the action_container_cast fix, the extracted C++ JSON
-    parser STILL throws std::bad_any_cast on every array/object. The consuming
-    ACTION emits a redundant, WRONG middle cast:
+(** Regression test (now fixed).  RUNTIME repro: after the action_container_cast
+    fix, the extracted C++ JSON parser STILL threw std::bad_any_cast on every
+    array/object. The consuming ACTION emitted a redundant, WRONG middle cast:
        crane_container_cast<deque<Concrete>>(     (* correct, added by the fix *)
-         any_cast<deque<Concrete>>(               (* redundant middle -- CRASHES *)
+         any_cast<deque<Concrete>>(               (* redundant middle -- CRASHED *)
            any_cast<deque<any>>(prs)))            (* correct erased unwrap *)
-    The middle any_cast<deque<Concrete>> is applied to an already-unwrapped
-    deque<any> -> bad_any_cast. The sibling PREDICATE survives only because its
-    middle cast is the erased type. See grammar_poly_pairlist_pred for the
+    The middle any_cast<deque<Concrete>> was applied to an already-unwrapped
+    deque<any> value: because std::any has an implicit converting constructor,
+    that deque<any> was silently re-boxed into a fresh std::any and then
+    any_cast to the concrete-element container -> the fresh any held a
+    deque<pair<any,any>>, not deque<pair<string,Val>>, so it threw at runtime.
+    The sibling PREDICATE survived only because its middle cast is to the ERASED
+    type (a matching round-trip). See grammar_poly_pairlist_pred for the
     compile-time history; this variant exercises the crash at runtime.
+
+    Fix (src/translation.ml, bare [MLrel] erased-var case in [gen_expr]): when an
+    erased pattern-var whose runtime representation is a CUSTOM-LIST container
+    (boxed as [deque<...erased...>]) is coerced toward a concrete-element
+    container target ([deque<pair<string,Val>>]), unwrap it to the ERASED
+    container ([any_cast<deque<pair<any,any>>>]) rather than emitting a direct
+    [any_cast] to the concrete-element type.  The concrete conversion is left to
+    the downstream consumer that knows the concrete field/parameter type: the
+    value-type CONSTRUCTOR path ([VAssoc]) wraps it in [crane_container_cast]
+    (from the action_container_cast fix), and the FUNCTION path ([nodupKeys], via
+    [eta_fun]) does the same.  Scalar targets keep the direct concrete
+    [any_cast].  This makes the action's middle cast the erased type — a matching
+    round-trip that survives — exactly like the predicate.
 
     Original context:
 

@@ -3352,7 +3352,31 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
         if resolves_to_any_type ty then result
-        else CPPany_cast (ty, result)
+        else
+          (* For a CUSTOM-LIST container target, the erased var is boxed at
+             runtime as [deque<...erased...>] (each element fully erased).  A
+             direct [any_cast] to the concrete-element container
+             ([deque<pair<string,Val>>]) would implicitly re-box the already-
+             unwrapped erased container into a fresh [std::any] and then throw
+             at runtime, since that any holds a [deque<pair<any,any>>].  Unwrap
+             to the ERASED container instead; a downstream consumer that needs
+             the concrete-element container (a constructor field via
+             [crane_container_cast], or [eta_fun]'s function-argument path)
+             converts it.  Scalar targets keep the direct concrete [any_cast]. *)
+          (match ty with
+           | Tglob (g, _ :: _, _) when is_list_global g && Table.is_custom g ->
+             let rec erase_arg = function
+               | Tglob (g, (_ :: _ as args), ns) ->
+                 Tglob (g, List.map erase_arg args, ns)
+               | _ -> Tany
+             in
+             let erased_ty =
+               match ty with
+               | Tglob (g, args, ns) -> Tglob (g, List.map erase_arg args, ns)
+               | t -> t
+             in
+             CPPany_cast (erased_ty, result)
+           | _ -> CPPany_cast (ty, result))
       | _ -> result
     end
     else result

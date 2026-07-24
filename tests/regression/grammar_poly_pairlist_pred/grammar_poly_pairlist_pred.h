@@ -205,7 +205,8 @@ const std::deque<grammar_entry> entries =
                         std::any_cast<std::pair<std::any, std::any>>(tup);
                     return Val::vassoc(crane_container_cast<
                                        std::deque<std::pair<std::string, Val>>>(
-                        std::any_cast<std::deque<std::pair<std::string, Val>>>(
+                        std::any_cast<
+                            std::deque<std::pair<std::any, std::any>>>(
                             std::any_cast<
                                 std::deque<std::pair<std::any, std::any>>>(
                                 prs))));
