@@ -1145,7 +1145,7 @@ Section NatProgramProofs.
       + (* lo < hi *)
         assert (Hlo_hi : lo < hi) by lia.
         assert (Hdiv : (hi - lo) / 2 <= hi - lo)
-          by (apply Nat.div_le_upper_bound; lia).
+          by (apply Nat.Div0.div_le_upper_bound; lia).
         set (pividx := lo + (hi - lo) / 2).
         assert (Hpiv_lo : lo <= pividx) by (unfold pividx; lia).
         assert (Hpiv_hi : pividx <= hi) by (unfold pividx; lia).
@@ -1447,46 +1447,56 @@ Qed.
    which underflows for the empty list, so the equivalence is stated for
    non-empty inputs. *)
 Lemma qsort_fun_eq_qsort_ST : forall {S : Type} (l : list nat),
-    l <> [] ->
     Ret (quicksort_fun l) ≈ runST (S := S) (fun S0 => quicksort_ST_list l).
 Proof.
-  intros S l Hne.
-  assert (Hpos : 0 < length l) by (destruct l; [ contradiction | simpl; lia ]).
-  edestruct (interp_st_newListArray (S:=unit) (length l - 1) l)
-    as (m0 & Hnew & Hrep0).
-  edestruct (quicksort_ST_segment (S:=unit) 1 (length l - 1) 0 (length l - 1) l m0)
-    as (m1 & full1 & Hrun & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _);
-    [ exact Hrep0 | lia | lia | ].
-  pose proof (interp_st_getElems (S:=unit) 1 (length l - 1) full1 m1 Hrep1
-                ltac:(rewrite Hlenf1; lia)) as Hget.
-  (* the whole [quicksort_ST_list] reduces to [Ret (m1, full1)] *)
-  assert (Hqs : interp_st Nat.le (list nat) (quicksort_ST_list (S:=unit) l) HMap.empty
-                ≈ Ret (m1, full1)).
-  { unfold quicksort_ST_list.
-    etransitivity; [ apply interp_st_bind_eutt |].
-    match goal with |- ITree.bind ?t ?k ≈ _ =>
-      transitivity (ITree.bind (Ret (m0, MkSTArray nat unit nat 1 0 (length l - 1))) k);
-        [ apply eutt_eq_bind'; [ exact Hnew | intros u; reflexivity ] |] end.
-    setoid_rewrite bind_Ret_l.
-    etransitivity; [ apply interp_st_bind_eutt |].
-    match goal with |- ITree.bind ?t ?k ≈ _ =>
-      transitivity (ITree.bind (Ret (m1, tt)) k);
-        [ apply eutt_eq_bind'; [ exact Hrun | intros u; reflexivity ] |] end.
-    setoid_rewrite bind_Ret_l.
-    etransitivity; [ apply interp_st_bind_eutt |].
-    match goal with |- ITree.bind ?t ?k ≈ _ =>
-      transitivity (ITree.bind (Ret (m1, full1)) k);
-        [ apply eutt_eq_bind'; [ exact Hget | intros u; reflexivity ] |] end.
-    setoid_rewrite bind_Ret_l. apply interp_st_Ret_eutt. }
-  (* the ST result is [quicksort_fun l] by uniqueness of sorted permutations *)
-  assert (Heq : full1 = quicksort_fun l).
-  { apply sorted_perm_unique.
-    - apply SortedSeg_StronglySorted. intros i j Hij Hjl.
-      apply Hsort1; [ lia | lia | rewrite Hlenf1 in Hjl; lia ].
-    - apply quicksort_fun_sorted.
-    - etransitivity; [ apply Permutation_sym; exact Hperm1 | apply quicksort_fun_perm ]. }
-  unfold runST. symmetry.
-  etransitivity; [ eapply eutt_fmap; exact Hqs |].
-  setoid_rewrite map_ret. cbn [snd]. rewrite Heq. reflexivity.
+  intros S l. destruct l as [| x l'].
+  - (* empty list: [quicksort_ST_list []] returns [Ret []] directly *)
+    assert (Hqf0 : quicksort_fun [] = [])
+      by (apply Permutation_nil; apply Permutation_sym; apply quicksort_fun_perm).
+    rewrite Hqf0. unfold runST. symmetry.
+    etransitivity; [ eapply eutt_fmap; apply interp_st_Ret_eutt |].
+    setoid_rewrite map_ret. cbn [snd]. reflexivity.
+  - (* non-empty list *)
+    assert (Hpos : 0 < length (x :: l')) by (simpl; lia).
+    edestruct (interp_st_newListArray (S:=unit) (length (x :: l') - 1) (x :: l'))
+      as (m0 & Hnew & Hrep0).
+    edestruct (quicksort_ST_segment (S:=unit) 1 (length (x :: l') - 1) 0
+                 (length (x :: l') - 1) (x :: l') m0)
+      as (m1 & full1 & Hrun & Hrep1 & Hlenf1 & Hperm1 & Hunch1 & Hsort1 & _);
+      [ exact Hrep0 | lia | lia | ].
+    pose proof (interp_st_getElems (S:=unit) 1 (length (x :: l') - 1) full1 m1 Hrep1
+                  ltac:(rewrite Hlenf1; lia)) as Hget.
+    (* the whole [quicksort_ST_list] reduces to [Ret (m1, full1)] *)
+    assert (Hqs : interp_st Nat.le (list nat)
+                    (quicksort_ST_list (S:=unit) (x :: l')) HMap.empty
+                  ≈ Ret (m1, full1)).
+    { unfold quicksort_ST_list.
+      etransitivity; [ apply interp_st_bind_eutt |].
+      match goal with |- ITree.bind ?t ?k ≈ _ =>
+        transitivity
+          (ITree.bind (Ret (m0, MkSTArray nat unit nat 1 0 (length (x :: l') - 1))) k);
+          [ apply eutt_eq_bind'; [ exact Hnew | intros u; reflexivity ] |] end.
+      setoid_rewrite bind_Ret_l.
+      etransitivity; [ apply interp_st_bind_eutt |].
+      match goal with |- ITree.bind ?t ?k ≈ _ =>
+        transitivity (ITree.bind (Ret (m1, tt)) k);
+          [ apply eutt_eq_bind'; [ exact Hrun | intros u; reflexivity ] |] end.
+      setoid_rewrite bind_Ret_l.
+      etransitivity; [ apply interp_st_bind_eutt |].
+      match goal with |- ITree.bind ?t ?k ≈ _ =>
+        transitivity (ITree.bind (Ret (m1, full1)) k);
+          [ apply eutt_eq_bind'; [ exact Hget | intros u; reflexivity ] |] end.
+      setoid_rewrite bind_Ret_l. apply interp_st_Ret_eutt. }
+    (* the ST result is [quicksort_fun (x :: l')] by uniqueness of sorted perms *)
+    assert (Heq : full1 = quicksort_fun (x :: l')).
+    { apply sorted_perm_unique.
+      - apply SortedSeg_StronglySorted. intros i j Hij Hjl.
+        apply Hsort1; [ lia | lia | rewrite Hlenf1 in Hjl; lia ].
+      - apply quicksort_fun_sorted.
+      - etransitivity;
+          [ apply Permutation_sym; exact Hperm1 | apply quicksort_fun_perm ]. }
+    unfold runST. symmetry.
+    etransitivity; [ eapply eutt_fmap; exact Hqs |].
+    setoid_rewrite map_ret. cbn [snd]. rewrite Heq. reflexivity.
 Qed.
 
