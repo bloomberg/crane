@@ -293,6 +293,17 @@ struct STRefNat {
   }
 };
 
+struct Err {
+  // DATA
+  String x;
+
+  // ACCESSORS
+  Err clone() const { return {x}; }
+
+  // CREATORS
+  static Err error(String x) { return {std::move(x)}; }
+};
+
 struct STMonadTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {

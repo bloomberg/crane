@@ -4,6 +4,7 @@
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
+  Classes.EquivDec
   Init.Peano
   List
   Morphisms
@@ -11,10 +12,8 @@ From Stdlib Require Import
   Relation_Definitions
   Setoid
   Strings.String
-  Classes.EquivDec
 .
 
-From Crane Require Import Monads.ITree Utils.HMap Utils.HAList Extraction.
 From ExtLib Require Import
   CmpDec
   Data.Bool
@@ -44,22 +43,20 @@ From ITree Require Import
   ITreeFacts
 .
 
+From Crane Require Import
+  Extraction
+  Monads.ITree
+  Monads.Error
+  Utils.HAList
+  Utils.HMap
+.
+
 Import Monads.
 Import ListNotations.
 Import ProperNotations.
 Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
-
-
-(* Used for runtime checks, though an ideal impl won't need these. *)
-
-Variant Err : Type :=
-| Error (x : string) : Err.
-
-Definition failwith
-  {E : Type -> Type} `{exceptE Err -< E}
-  {A:Type} (s:string) : itree E A := throw (Error s).
 
 
 (* Modeled after Ix type in https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix *)

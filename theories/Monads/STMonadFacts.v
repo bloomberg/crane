@@ -13,7 +13,15 @@ From Stdlib Require Import
   Strings.String
 .
 
-From Crane Require Import Monads.ITree Utils.HMap Utils.HAList Extraction Monads.STMonad.
+From Crane Require Import
+  Extraction
+  Monads.Error
+  Monads.ITree
+  Monads.STMonad
+  Utils.HAList
+  Utils.HMap
+.
+
 From ExtLib Require Import
   Data.Bool
   Data.List
@@ -48,7 +56,6 @@ Local Open Scope monad_scope.
 Local Open Scope string_scope.
 
 
-(* TODO: refactor for new world of generalized indices. *)
 Section InterpSTTheorems.
 
   Context {E : Type -> Type}.

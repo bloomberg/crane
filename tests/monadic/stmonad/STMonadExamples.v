@@ -1,4 +1,4 @@
-From Crane Require Import Monads.STMonad Monads.ITree.   
+From Crane Require Import Monads.STMonad Monads.ITree Monads.Error.   
 
 From Stdlib Require Import
   Arith.PeanoNat

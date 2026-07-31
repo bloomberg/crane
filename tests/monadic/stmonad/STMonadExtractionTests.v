@@ -1,49 +1,36 @@
 
 (* TODO: optimize imports *)
-From Crane Require Import Monads.STMonad.   
 
 From Stdlib Require Import
   Arith.PeanoNat
-  Arith.Peano_dec
-  Basics
   Classes.EquivDec
   Extraction
   Init.Peano
   List
   Morphisms
   PrimString
-  RelationClasses
-  Relation_Definitions
-  Setoid
   Strings.String
 .
 
-From Crane Require Import Monads.ITree.
 From ExtLib Require Import
   CmpDec
   Data.Bool
   Data.List
   Data.Map.FMapAList
-  Data.Monads.EitherMonad
-  Data.Pair
   Data.String
-  Structures.Functor
-  Structures.Maps
-  Structures.Traversable
-  Structures.Reducible
 .
 
 
 From ITree Require Import
   Events.Exception
-  Events.FailFacts
-  Events.MapDefault
-  Events.MapDefaultFacts
-  Events.State
-  Events.StateFacts
   ITree
-  ITreeFacts
 .
+
+From Crane Require Import
+  Monads.Error
+  Monads.ITree
+  Monads.STMonad
+.   
 
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
