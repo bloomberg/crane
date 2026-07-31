@@ -1,5 +1,3 @@
-From Crane Require Import Monads.STMonad Monads.ITree Monads.Error.   
-
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
@@ -43,6 +41,13 @@ From ITree Require Import
 
 
 From Equations Require Import Equations.
+
+From Crane Require Import
+  Monads.Error
+  Monads.ITree
+  Monads.Indices
+  Monads.STMonad
+.   
 
 
 Import Monads.

@@ -29,6 +29,7 @@ From ITree Require Import
 From Crane Require Import
   Monads.Error
   Monads.ITree
+  Monads.Indices
   Monads.STMonad
 .   
 

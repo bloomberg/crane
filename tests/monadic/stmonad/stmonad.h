@@ -154,6 +154,25 @@ template <typename Err> struct ExceptE {
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
 
+template <typename I, typename T>
+concept Ix = requires {
+  {
+    I::range(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<List<T>>;
+  {
+    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<std::optional<uint64_t>>;
+  {
+    I::rangeSize(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<uint64_t>;
+  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
+  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
+  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
+  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::zero() } -> std::convertible_to<T>;
+};
+
 struct Ascii {
   // DATA
   bool a0;
@@ -253,24 +272,6 @@ struct Err {
   static Err error(String x) { return {std::move(x)}; }
 };
 
-template <typename I, typename T>
-concept Ix = requires {
-  {
-    I::range(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<List<T>>;
-  {
-    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<std::optional<uint64_t>>;
-  {
-    I::rangeSize(std::declval<T>(), std::declval<T>())
-  } -> std::convertible_to<uint64_t>;
-  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
-  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
-  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
-  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
-  { I::zero() } -> std::convertible_to<T>;
-};
 template <typename I, typename T>
 concept STRefClass = requires {
   { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<std::any>;
@@ -424,8 +425,7 @@ struct STMonadTests {
     uint64_t v;
     v = UINT64_C(5);
     v = UINT64_C(6);
-    uint64_t val = v;
-    return val;
+    return v;
   }
 
   template <typename _tcI0, typename _tcI1>

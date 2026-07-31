@@ -17,6 +17,7 @@ From Crane Require Import
   Extraction
   Monads.Error
   Monads.ITree
+  Monads.Indices
   Monads.STMonad
   Utils.HAList
   Utils.HMap
