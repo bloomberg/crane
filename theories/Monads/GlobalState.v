@@ -93,7 +93,6 @@ Section GlobEventDefine.
 
 Variant GlobEvent (V : T -> Type) : Type -> Type :=
   | NewGlobRef (idx : T) (v : V idx) : GlobEvent V (GlobRef (V idx))
-  | RebuildGlobRef (idx : T) : GlobEvent V (GlobRef (V idx))
   | ReadGlobRef (idx : T) : GlobRef (V idx) -> GlobEvent V (V idx)
   | WriteGlobRef (idx : T) : GlobRef (V idx) -> (V idx) -> GlobEvent V unit
 .
@@ -115,9 +114,6 @@ Section Construction.
   (* NOTE: explicit index here because we cannot infer it automatically, yet. *)
   Definition newGlobRef (idx : T) (v : (V idx)) : itree E (GlobRef (V idx)) :=
     trigger (NewGlobRef T V idx v).
-
-  Definition rebuildGlobRef (idx : T) : itree E (GlobRef (V idx)) :=
-    trigger (RebuildGlobRef T V idx).
 
   Definition readGlobRef {idx : T} (ref : GlobRef (V idx)) : itree E (V idx) :=
     trigger (ReadGlobRef T V idx ref).
@@ -146,9 +142,6 @@ Section Construction.
     | NewGlobRef _ _ idx v =>
         let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
         in Ret (add (n, idx) v mem, mkGlobRef (V idx) n)
-    | RebuildGlobRef _ _ idx =>
-        let n := fold (fun '(existT _ (n, i) _) (acc : T) => if equiv_decb i idx then n else acc) zero mem
-        in Ret (mem, mkGlobRef (V idx) n)
     | ReadGlobRef _ _ idx s =>
         match lookup (GlobRefToIx (V idx) s, idx) mem with
         | Some v => Ret (mem, v)
@@ -205,7 +198,6 @@ Crane Extract Skip mkGlobRef.
 Crane Extract Skip GlobRefToIx.
 Crane Extract Inlined Constant GlobRef => "%t1".
 Crane Extract Inlined Constant newGlobRef => "(_crane_globals[%a0] = %a1, %a0)" From "crane_globals.h".
-Crane Extract Inlined Constant rebuildGlobRef => "%a0".
 Crane Extract Inlined Constant readGlobRef => "std::any_cast<%t2>(_crane_globals.at(%a1))" From "crane_globals.h".
 Crane Extract Inlined Constant writeGlobRef => "_crane_globals[%a1] = %a2" From "crane_globals.h".
 

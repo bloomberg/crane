@@ -135,7 +135,6 @@ Section NatProgramProofs.
     apply fib_seq_add.
   Qed.
 
-  (* TODO: suggests a hintdb-shaped soln would be appropriate here. *)
   Opaque add lookup GlobRefToIx zero suc.
   Lemma fib_loop_correct :
     forall k (a b : nat) (m : mem) (x y : GlobRef nat),

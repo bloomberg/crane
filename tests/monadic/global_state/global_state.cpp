@@ -55,23 +55,21 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
   return _result;
 }
 
-uint64_t GlobalStateTests::start_counter() {
+uint64_t GlobalStateTests::counter() {
   return (_crane_globals[GlobalStateExamples::template ctr_idx<
               GlobalStateTests::nat_idx, uint64_t>()] = UINT64_C(0),
           GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
                                                 uint64_t>());
 }
 
-uint64_t GlobalStateTests::counter_next_mine() {
-  uint64_t v = GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
-                                                     uint64_t>();
-  uint64_t a = std::any_cast<uint64_t>(_crane_globals.at(v));
-  _crane_globals[v] = (a + UINT64_C(1));
+uint64_t GlobalStateTests::counter_next_mine(uint64_t ctr) {
+  uint64_t a = std::any_cast<uint64_t>(_crane_globals.at(ctr));
+  _crane_globals[ctr] = (a + UINT64_C(1));
   return a;
 }
 
-std::string GlobalStateTests::gensym(std::string prefix) {
-  uint64_t v = counter_next_mine();
+std::string GlobalStateTests::gensym(uint64_t counter0, std::string prefix) {
+  uint64_t v = counter_next_mine(counter0);
   return prefix + std::to_string(v);
 }
 

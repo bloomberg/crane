@@ -27,11 +27,11 @@ Module GlobalStateTests.
   Definition fib_Glob := Eval unfold fib_Glob,fib_loop in (@fib_Glob nat Nat.le).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 
-  Definition start_counter := Eval unfold start_counter in (@start_counter nat Nat.le nat_idx nat_stref).
+  Definition counter := Eval unfold start_counter in (@start_counter nat Nat.le nat_idx nat_stref).
   Definition counter_next_mine := Eval unfold counter_next in (@counter_next nat Nat.le nat_idx nat_stref).
 
-  Definition gensym (prefix : string) :=
-    v <- counter_next_mine;;
+  Definition gensym (counter : GlobRef nat) (prefix : string) :=
+    v <- counter_next_mine counter;;
     Ret (PrimString.cat prefix (string_of_nat v)).
 
 End GlobalStateTests. 

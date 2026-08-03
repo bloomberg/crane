@@ -279,9 +279,9 @@ struct GlobalStateTests {
   }
 
   static uint64_t fib_fun(uint64_t n);
-  static uint64_t start_counter();
-  static uint64_t counter_next_mine();
-  static std::string gensym(std::string prefix);
+  static uint64_t counter();
+  static uint64_t counter_next_mine(uint64_t ctr);
+  static std::string gensym(uint64_t counter0, std::string prefix);
 };
 
 template <typename _tcI0, typename T1>

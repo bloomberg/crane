@@ -150,10 +150,9 @@ Section NatExampleTrees.
 
   Definition start_counter : itree E0 (GlobRef nat) := newGlobRef ctr_idx 0.
 
-  Definition counter_next : itree E0 nat :=
-    v <- rebuildGlobRef ctr_idx;;
-    a <- @readGlobRef E0 T HGlob V _ ctr_idx v;;
-    @writeGlobRef E0 T HGlob V _ ctr_idx v (a + 1);;
+  Definition counter_next (ctr : GlobRef nat) :  itree E0 nat :=
+    a <- @readGlobRef E0 T HGlob V _ ctr_idx ctr;;
+    @writeGlobRef E0 T HGlob V _ ctr_idx ctr (a + 1);;
     Ret a.
 
     
