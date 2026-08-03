@@ -1398,22 +1398,58 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
 
 /// split_at n l splits list at index n into (prefix, suffix).
 std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
-LoopifyLists::split_at(uint64_t n, LoopifyLists::list<uint64_t> l) {
-  if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-          l.v_mut())) {
-    return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-  } else {
-    auto &[a0, a1] =
-        std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v_mut());
-    if (n == UINT64_C(0)) {
-      return std::make_pair(list<uint64_t>::nil(), l);
+LoopifyLists::split_at(
+    uint64_t n,
+    LoopifyLists::list<uint64_t>
+        l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    LoopifyLists::list<uint64_t> l;
+    uint64_t n;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
+      _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{std::move(l), n});
+  /// Loopified split_at: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      LoopifyLists::list<uint64_t> l = std::move(_f.l);
+      uint64_t n = _f.n;
+      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
+              l.v_mut())) {
+        _result = std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+      } else {
+        auto &[a0, a1] =
+            std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v_mut());
+        if (n == UINT64_C(0)) {
+          _result = std::make_pair(list<uint64_t>::nil(), l);
+        } else {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(
+              _Enter{*a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+        }
+      }
     } else {
-      auto [a, b] =
-          split_at((((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), *a1);
-      return std::make_pair(list<uint64_t>::cons(std::move(a0), std::move(a)),
-                            std::move(b));
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      uint64_t a0 = _f.a0;
+      auto [a, b] = std::move(_result);
+      _result = std::make_pair(
+          list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
     }
   }
+  return _result;
 }
 
 /// unzip l splits list of pairs into two lists.

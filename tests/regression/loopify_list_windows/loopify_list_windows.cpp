@@ -89,20 +89,52 @@ List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
   }
 }
 
-std::pair<List<uint64_t>, List<uint64_t>>
-LoopifyListWindows::span_eq(uint64_t first, List<uint64_t> lst) {
-  if (std::holds_alternative<typename List<uint64_t>::Nil>(lst.v_mut())) {
-    return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-  } else {
-    auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(lst.v_mut());
-    if (first == a0) {
-      auto [s, r] = span_eq(first, *a1);
-      return std::make_pair(List<uint64_t>::cons(std::move(a0), std::move(s)),
-                            std::move(r));
+std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
+    uint64_t first,
+    List<uint64_t>
+        lst) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    List<uint64_t> lst;
+  };
+
+  /// _Resume1: saves [a0], resumes after recursive call with _result.
+  struct _Resume1 {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume1>;
+  std::pair<List<uint64_t>, List<uint64_t>> _result{};
+  std::vector<_Frame> _stack;
+  _stack.reserve(8);
+  _stack.emplace_back(_Enter{std::move(lst)});
+  /// Loopified span_eq: _Enter -> _Resume1.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      List<uint64_t> lst = std::move(_f.lst);
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(lst.v_mut())) {
+        _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+      } else {
+        auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(lst.v_mut());
+        if (first == a0) {
+          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Enter{*a1});
+        } else {
+          _result = std::make_pair(List<uint64_t>::nil(), lst);
+        }
+      }
     } else {
-      return std::make_pair(List<uint64_t>::nil(), lst);
+      auto _f = std::move(std::get<_Resume1>(_frame));
+      uint64_t a0 = _f.a0;
+      auto [s, r] = std::move(_result);
+      _result = std::make_pair(
+          List<uint64_t>::cons(std::move(a0), std::move(s)), std::move(r));
     }
   }
+  return _result;
 }
 
 List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {

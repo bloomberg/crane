@@ -342,20 +342,55 @@ struct LoopifyPairs {
 
   /// split_at n l splits at position n.
   template <typename T1>
-  static std::pair<list<T1>, list<T1>> split_at(uint64_t n, list<T1> l) {
-    if (n <= 0) {
-      return std::make_pair(list<T1>::nil(), std::move(l));
-    } else {
-      uint64_t m = n - 1;
-      if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
-        return std::make_pair(list<T1>::nil(), list<T1>::nil());
+  static std::pair<list<T1>, list<T1>>
+  split_at(uint64_t n,
+           list<T1> l) { /// _Enter: captures varying parameters for each
+                         /// recursive call.
+
+    struct _Enter {
+      list<T1> l;
+      uint64_t n;
+    };
+
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Cons {
+      std::decay_t<T1> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    std::pair<list<T1>, list<T1>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{std::move(l), n});
+    /// Loopified split_at: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        list<T1> l = std::move(_f.l);
+        uint64_t n = _f.n;
+        if (n <= 0) {
+          _result = std::make_pair(list<T1>::nil(), std::move(l));
+        } else {
+          uint64_t m = n - 1;
+          if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
+            _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
+          } else {
+            auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
+            _stack.emplace_back(_Resume_Cons{std::move(a0)});
+            _stack.emplace_back(_Enter{*a1, m});
+          }
+        }
       } else {
-        auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
-        auto [taken, rest] = split_at<T1>(m, *a1);
-        return std::make_pair(list<T1>::cons(std::move(a0), std::move(taken)),
-                              std::move(rest));
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        T1 a0 = std::move(_f.a0);
+        auto [taken, rest] = std::move(_result);
+        _result = std::make_pair(
+            list<T1>::cons(std::move(a0), std::move(taken)), std::move(rest));
       }
     }
+    return _result;
   }
 
   /// swizzle separates into even/odd positions.

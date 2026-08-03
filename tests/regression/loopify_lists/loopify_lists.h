@@ -1277,20 +1277,53 @@ struct LoopifyLists {
   /// span p l splits list at first element not satisfying p.
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<list<uint64_t>, list<uint64_t>> span(F0 &&p,
-                                                        list<uint64_t> l) {
-    if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
-      return std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
-    } else {
-      auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
-      if (p(a0)) {
-        auto [a, b] = span(p, *a1);
-        return std::make_pair(list<uint64_t>::cons(std::move(a0), std::move(a)),
-                              std::move(b));
+  static std::pair<list<uint64_t>, list<uint64_t>>
+  span(F0 &&p,
+       list<uint64_t>
+           l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      list<uint64_t> l;
+    };
+
+    /// _Resume1: saves [a0], resumes after recursive call with _result.
+    struct _Resume1 {
+      uint64_t a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume1>;
+    std::pair<list<uint64_t>, list<uint64_t>> _result{};
+    std::vector<_Frame> _stack;
+    _stack.reserve(8);
+    _stack.emplace_back(_Enter{std::move(l)});
+    /// Loopified span: _Enter -> _Resume1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        list<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(list<uint64_t>::nil(), list<uint64_t>::nil());
+        } else {
+          auto &[a0, a1] = std::get<typename list<uint64_t>::Cons>(l.v_mut());
+          if (p(a0)) {
+            _stack.emplace_back(_Resume1{a0});
+            _stack.emplace_back(_Enter{*a1});
+          } else {
+            _result = std::make_pair(list<uint64_t>::nil(), l);
+          }
+        }
       } else {
-        return std::make_pair(list<uint64_t>::nil(), l);
+        auto _f = std::move(std::get<_Resume1>(_frame));
+        uint64_t a0 = _f.a0;
+        auto [a, b] = std::move(_result);
+        _result = std::make_pair(
+            list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
       }
     }
+    return _result;
   }
 
   /// unzip l splits list of pairs into two lists.

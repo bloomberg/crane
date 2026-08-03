@@ -729,11 +729,28 @@ and has_recursive_branch_dependency check stmts =
         | None -> false)
       | Scustom_case (_, scrut, _, branches, _) ->
         let branch_bodies = List.map (fun (_, _, body) -> body) branches in
-        expr_has_call_or_branch_dep check scrut
+        (* An irrefutable single-branch destructure (e.g. [let (a, b) := f x in
+           ...], or a tuple/record pattern on a recursive call's result) selects
+           no continuation: its one branch always runs after the scrutinee is
+           fully evaluated.  A recursive call in that scrutinee is therefore
+           safe — {!transform_nontail} lifts it into a resume frame (see the
+           [Scustom_case]/[check scrut] handling there) — so it must not count
+           as a disqualifying branch dependency.  Only treat the scrutinee as a
+           dependency for genuine multi-way dispatch ([List.length > 1]). *)
+        (List.length branches > 1
+         && expr_has_call_or_branch_dep check scrut)
         || List.exists (has_recursive_branch_dependency check) branch_bodies
       | Smatch (branches, default) ->
+        (* Same reasoning as {!Scustom_case}: a single-branch [Smatch] with no
+           default is an irrefutable destructure (no branch selection), so a
+           recursive call in its scrutinee is safe.  Genuine dispatch — more
+           than one branch, or a fall-through [default] — keeps the guard. *)
+        let is_irrefutable_destructure =
+          List.length branches = 1 && default = None
+        in
         let branch_has_recursive_scrut br =
-          expr_has_call_or_branch_dep check br.smb_scrutinee
+          (not is_irrefutable_destructure
+           && expr_has_call_or_branch_dep check br.smb_scrutinee)
           || List.exists (expr_has_call_or_branch_dep check) br.smb_extra_conds
         in
         List.exists branch_has_recursive_scrut branches
