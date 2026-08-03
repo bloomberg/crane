@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 From Stdlib Require Import
-  Strings.String
+  PrimString
 .
 
 From Crane Require Import Monads.ITree Extraction.

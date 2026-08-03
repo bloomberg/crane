@@ -11,7 +11,7 @@ From Stdlib Require Import
   RelationClasses
   Relation_Definitions
   Setoid
-  Strings.String
+  PrimString
 .
 
 From ExtLib Require Import
@@ -209,7 +209,7 @@ Section Translation.
     | ReadSTRef _ _ _ idx s =>
         match lookup (STRefToIx S (V idx) s, idx) mem with
         | Some v => Ret (mem, v)
-        | None => failwith "Lookup failed!"
+        | None => failwith "Lookup failed!"%pstring
         end
     | WriteSTRef _ _ _ idx s v => Ret (add (STRefToIx S (V idx) s, idx) v mem, tt)
     | NewArray _ _ _ idx lo hi def =>
@@ -341,5 +341,6 @@ Crane Extract Inlined Constant rec =>
         } } ();".
 
 Crane Extract Inlined Constant call => "(_stack.push_back(%a0), std::monostate{})".
+Crane Extract Skip callE.
 
 
