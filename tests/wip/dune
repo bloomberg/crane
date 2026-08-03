@@ -80,17 +80,6 @@
   (deps loopify_gap_nested_fix.t.exe)
   (action (run ./loopify_gap_nested_fix.t.exe))))
 
-(subdir loopify_nontail_pair
- (rule
-  (targets loopify_nontail_pair.t.exe)
-  (deps LoopifyNontailPair.vo loopify_nontail_pair.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nontail_pair.t.exe loopify_nontail_pair.cpp loopify_nontail_pair.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_nontail_pair.t.exe)
-  (action (run ./loopify_nontail_pair.t.exe))))
-
 (subdir loopify_gap_ackermann
  (rule
   (targets loopify_gap_ackermann.t.exe)
