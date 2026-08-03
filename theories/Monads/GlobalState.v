@@ -8,10 +8,10 @@ From Stdlib Require Import
   Init.Peano
   List
   Morphisms
+  PrimString
   RelationClasses
   Relation_Definitions
   Setoid
-  Strings.String
 .
 
 From ExtLib Require Import

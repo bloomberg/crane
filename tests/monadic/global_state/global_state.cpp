@@ -62,12 +62,17 @@ uint64_t GlobalStateTests::start_counter() {
                                                 uint64_t>());
 }
 
-uint64_t GlobalStateTests::counter_next() {
+uint64_t GlobalStateTests::counter_next_mine() {
   uint64_t v = GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
                                                      uint64_t>();
   uint64_t a = std::any_cast<uint64_t>(_crane_globals.at(v));
   _crane_globals[v] = (a + UINT64_C(1));
   return a;
+}
+
+std::string GlobalStateTests::gensym(std::string prefix) {
+  uint64_t v = counter_next_mine();
+  return prefix + std::to_string(v);
 }
 
 List<uint64_t>

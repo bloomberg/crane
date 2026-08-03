@@ -50,13 +50,20 @@ int main() {
   // Test 4: counter run four times returns 4
   {
     GlobalStateTests::start_counter();
-    (void)GlobalStateTests::counter_next(); // first
-    (void)GlobalStateTests::counter_next();
-    (void)GlobalStateTests::counter_next();
-    (void)GlobalStateTests::counter_next();
-    auto result = GlobalStateTests::counter_next();
+    (void)GlobalStateTests::counter_next_mine(); // first
+    (void)GlobalStateTests::counter_next_mine();
+    (void)GlobalStateTests::counter_next_mine();
+    (void)GlobalStateTests::counter_next_mine();
+    auto result = GlobalStateTests::counter_next_mine();
     ASSERT(result == 4);
     std::cout << "Test 4 (counter repeated 4 is 4): " << result << " PASSED" << std::endl;
+  }
+
+  // Test 5: gensym returns "foo5" 
+  {
+    auto result = GlobalStateTests::gensym("foo");
+    std::cout << "Test 5 (gensym(foo) is foo5): " << result << " PASSED" << std::endl;
+    ASSERT(result == "foo5");
   }
 
   if (testStatus == 0) {

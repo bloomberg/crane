@@ -8,8 +8,8 @@ From Stdlib Require Import
   RelationClasses
   Relation_Definitions
   Setoid
-  Strings.String
   Classes.EquivDec
+  PrimString
   Basics
 .
 
@@ -20,7 +20,6 @@ From ExtLib Require Import
   Data.Map.FMapAList
   Data.Monads.EitherMonad
   Data.Pair
-  Data.String
   Structures.Functor
   Structures.Maps
   Structures.Traversable
@@ -54,7 +53,6 @@ Import Monads.
 Import ListNotations.
 Import ProperNotations.
 Local Open Scope monad_scope.
-Local Open Scope string_scope.
 
 
 Section NatExampleTrees.
@@ -158,7 +156,6 @@ Section NatExampleTrees.
     @writeGlobRef E0 T HGlob V _ ctr_idx v (a + 1);;
     Ret a.
 
-
-
-
+    
 End NatExampleTrees.  
+

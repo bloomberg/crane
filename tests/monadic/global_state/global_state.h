@@ -7,6 +7,7 @@
 #include <crane_globals.h>
 #include <memory>
 #include <optional>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -116,25 +117,8 @@ template <typename Err> struct ExceptE {
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
 
-struct Ascii {
-  // DATA
-  bool a0;
-  bool a1;
-  bool a2;
-  bool a3;
-  bool a4;
-  bool a5;
-  bool a6;
-  bool a7;
-
-  // ACCESSORS
-  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
-
-  // CREATORS
-  static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
-                      bool a6, bool a7) {
-    return {a0, a1, a2, a3, a4, a5, a6, a7};
-  }
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 template <typename I, typename T>
@@ -156,64 +140,15 @@ concept Ix = requires {
   { I::zero() } -> std::convertible_to<T>;
 };
 
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-struct String {
-  // TYPES
-  struct EmptyString {};
-
-  struct String0 {
-    Ascii a0;
-    std::shared_ptr<String> a1;
-  };
-
-  using variant_t = std::variant<EmptyString, String0>;
-
-private:
+struct Err {
   // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  String() {}
-
-  explicit String(EmptyString _v) : v_(_v) {}
-
-  explicit String(String0 _v) : v_(std::move(_v)) {}
-
-  static String emptystring() { return String(EmptyString{}); }
-
-  static String string0(Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
-  }
-
-  // MANIPULATORS
-  ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
-      if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
-        }
-      }
-    };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        _drain(_cur->v_mut());
-      }
-    }
-  }
-
-  inline variant_t &v_mut() { return v_; }
+  std::string x;
 
   // ACCESSORS
-  const variant_t &v() const { return v_; }
+  Err clone() const { return {x}; }
+
+  // CREATORS
+  static Err error(std::string x) { return {std::move(x)}; }
 };
 
 struct GlobalStateExamples {
@@ -248,17 +183,6 @@ struct GlobRefNat {
     const auto &[a] = *this;
     return a;
   }
-};
-
-struct Err {
-  // DATA
-  String x;
-
-  // ACCESSORS
-  Err clone() const { return {x}; }
-
-  // CREATORS
-  static Err error(String x) { return {std::move(x)}; }
 };
 
 struct GlobalStateTests {
@@ -356,7 +280,8 @@ struct GlobalStateTests {
 
   static uint64_t fib_fun(uint64_t n);
   static uint64_t start_counter();
-  static uint64_t counter_next();
+  static uint64_t counter_next_mine();
+  static std::string gensym(std::string prefix);
 };
 
 template <typename _tcI0, typename T1>

@@ -1,40 +1,21 @@
-(* TODO: optimize imports *)
-
 From Stdlib Require Import
   Arith.PeanoNat
-  Classes.EquivDec
   Extraction
-  Init.Peano
-  List
-  Morphisms
   PrimString
-  Strings.String
-.
-
-From ExtLib Require Import
-  CmpDec
-  Data.Bool
-  Data.List
-  Data.Map.FMapAList
-  Data.String
 .
 
 
-From ITree Require Import
-  Events.Exception
-  ITree
-.
+From ITree Require Import ITree.
 
 From Crane Require Import
-  Monads.Error
   Monads.ITree
   Monads.Indices
   Monads.GlobalState
+  Mapping.NatIntStd
 .   
 
-From CraneTestsMonadic.global_state Require Import GlobalStateExamples.
 
-Import ListNotations.
+From CraneTestsMonadic.global_state Require Import GlobalStateExamples.
 
 
 Module GlobalStateTests. 
@@ -47,11 +28,15 @@ Module GlobalStateTests.
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 
   Definition start_counter := Eval unfold start_counter in (@start_counter nat Nat.le nat_idx nat_stref).
-  Definition counter_next := Eval unfold counter_next in (@counter_next nat Nat.le nat_idx nat_stref).
+  Definition counter_next_mine := Eval unfold counter_next in (@counter_next nat Nat.le nat_idx nat_stref).
+
+  Definition gensym (prefix : string) :=
+    v <- counter_next_mine;;
+    Ret (PrimString.cat prefix (string_of_nat v)).
 
 End GlobalStateTests. 
   
 Set Crane Loopify.
 
-Require Import Crane.Mapping.NatIntStd.
+
 Crane Extraction "global_state" GlobalStateTests.
