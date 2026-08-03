@@ -1,7 +1,5 @@
 (* Equational theory and Derive proofs for the ST monad *)
 
-(* TODO: unfinished! do not commit! *)
-
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Compare_dec
@@ -105,7 +103,7 @@ Section NatProgramProofs.
           55).
   Proof using Type. lazy. reflexivity. Qed.
 
-  (* TODO: duplicates proof work from STMonadFunctionalTests.v *)
+  (* TODO: duplicates functional proof work from STMonadFunctionalTests.v *)
   (* Fibonacci function proofs. *)
 
 

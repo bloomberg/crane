@@ -62,7 +62,7 @@ int main() {
   // Test 5: gensym returns "foo5" 
   {
     auto result = GlobalStateTests::gensym(ctr, "foo");
-    std::cout << "Test 5 (gensym(foo) is foo5): " << result << " PASSED" << std::endl;
+    std::cout << "Test 5 (gensym(ctr,foo) is foo5): " << result << " PASSED" << std::endl;
     ASSERT(result == "foo5");
   }
 

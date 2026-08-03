@@ -110,21 +110,20 @@ Section InterpGlobTheorems.
       reflexivity.
   Qed.
 
-  (* TODO: cleanup following 3 to remove @. *)
   Lemma interp_glob_ret:  forall {R : Type} (val: R) (l : mem),
-      @interp_glob E T ltu _ _ _ _ _ _ _ _ _ (ret val) l ≅ ret (l, val).
+      interp_glob (E := E) _ _ (ret val) l ≅ ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_glob. reflexivity.
     Qed.
 
   Lemma interp_glob_Ret: forall {R : Type} (val: R) (l : mem),
-      @interp_glob E T ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≅ Ret (l, val).
+      interp_glob (E := E) _ _ (Ret val) l ≅ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_glob. reflexivity.
     Qed.
 
   Lemma interp_glob_Ret_eutt: forall {R : Type} (val: R) (l : mem),
-      @interp_glob E T ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≈ Ret (l, val).
+      interp_glob (E := E) _ _ (Ret val) l ≈ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_glob. reflexivity.
     Qed.

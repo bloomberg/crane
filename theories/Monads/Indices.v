@@ -202,17 +202,6 @@ Class Ix_Correct (T : Type)
 Lemma add_sub_le n m : n <= m -> n + (m - n) = m.
 Proof. lia. Qed.
 
-(* TODO: move into nat_ix_correct. unhelpful out here. *)
-Lemma in_seq_iff l u i :
-  In i (seq l (1 + u - l)) <-> l <= i /\ i <= u.
-Proof.
-  destruct (Nat.le_gt_cases l (1 + u)) as [Hle|Hgt].
-  - rewrite in_seq.
-    enough (l + (1 + u - l) = 1 + u) as -> by lia.
-    apply add_sub_le. exact Hle.
-  - replace (1 + u - l) with 0 by lia. simpl.
-    split; [tauto | lia].
-Qed.
 
 #[export,refine] Instance nat_ix_correct : Ix_Correct nat Nat.le nat_ix :=
   {|
@@ -221,7 +210,18 @@ Qed.
     map_over_indices_makes_incr_seq := _;
     rangeSize_is_length_of_range := _
   |}.
-- intros l u i. exact (iff_sym (in_seq_iff l u i)).
+- intros l u i.
+  assert (forall l u i, In i (seq l (1 + u - l)) <-> l <= i /\ i <= u).
+  {
+    intros l' u' i'. 
+    destruct (Nat.le_gt_cases l' (1 + u')) as [Hle|Hgt].
+    - rewrite in_seq.
+      enough (l' + (1 + u' - l') = 1 + u') as -> by lia.
+      apply add_sub_le. exact Hle.
+    - replace (1 + u' - l') with 0 by lia. simpl.
+      split; [tauto | lia].
+  }.
+  exact (iff_sym (H _ _ _)).
 - intros l u v i Hidx [Hl Hu].
   unfold index, range, nat_ix in *. simpl fst in *. simpl snd in *.
   destruct (Nat.leb l v) eqn:Elv; [|discriminate].
@@ -250,3 +250,6 @@ Qed.
 - intros l u. unfold rangeSize, range, nat_ix. simpl.
   rewrite length_seq. reflexivity.
 Qed.
+
+Crane Extract Skip Ix_Correct.
+Crane Extract Skip CmpDec_Correct.

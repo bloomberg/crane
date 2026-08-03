@@ -188,12 +188,7 @@ Definition runGlob {A : Type}
 
 (* CPP Bindings *)
 
-(* TODO: Dupes in here. *)
-Crane Extract Skip Ix_Correct.
-Crane Extract Skip CmpDec_Correct.
 Crane Extract Skip GlobEvent.
-Crane Extract Skip CmpDec.
-Crane Extract Skip max.
 Crane Extract Skip mkGlobRef.
 Crane Extract Skip GlobRefToIx.
 Crane Extract Inlined Constant GlobRef => "%t1".

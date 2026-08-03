@@ -110,21 +110,20 @@ Section InterpSTTheorems.
       reflexivity.
   Qed.
 
-  (* TODO: cleanup following 3 to remove @. *)
   Lemma interp_st_ret:  forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (ret val) l ≅ ret (l, val).
+      interp_st (E := E) (S := S) _ _ (ret val) l ≅ ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
 
   Lemma interp_st_Ret: forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≅ Ret (l, val).
+      interp_st (E := E) (S := S) _ _ (Ret val) l ≅ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
 
   Lemma interp_st_Ret_eutt: forall {R : Type} (val: R) (l : mem),
-      @interp_st E T S ltu _ _ _ _ _ _ _ _ _ (Ret val) l ≈ Ret (l, val).
+      interp_st (E := E) (S := S) _ _ (Ret val) l ≈ Ret (l, val).
     Proof using Type.
       intros. rewrite unfold_interp_st. reflexivity.
     Qed.
@@ -178,7 +177,7 @@ Definition eq_itree_eqv_global {R E} (x1 x2 : itree (E) (mem * R)) : Prop :=
 Global Instance eq_itree_interp_st {R : Type} :
 Proper (@eq_itree (STEvent T S V +' E) R R eq ==> eq ==> eq_itree_eqv_global)
         (interp_st ltu R).
-Proof.
+Proof using Type.
   repeat red.
   ginit. pcofix CIH. intros x y Heq s1 s2 Hseq.
   rewrite !unfold_interp_st. punfold Heq. red in Heq.

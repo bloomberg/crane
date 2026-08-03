@@ -66,7 +66,6 @@ Section NatExampleTrees.
   Let E0 := (GlobEvent T V) +' exceptE Err.
 
 
-  (* TODO: autogenerate successive indices here? *)
   Definition new_and_read_both_nat : itree E0 (nat * nat) :=
       r1 <- newGlobRef zero 5 ;;
       r2 <- newGlobRef (suc zero) 6 ;; 
@@ -92,7 +91,6 @@ Section NatExampleTrees.
     Ret val.
 
 
-  (* TODO: indices here should be derivable from reference *)
    Definition write_incr_one (v : GlobRef nat) : itree E0 unit :=
     a <- @readGlobRef E0 T HGlob V _ zero v;;
     @writeGlobRef E0 T HGlob V _ zero v (a + 1).
@@ -104,7 +102,6 @@ Section NatExampleTrees.
     writeGlobRef w a.
 
   (* "swap" function from "Lazy Functional State Threads", by John Launchbury and Simon L Peyton Jones. *)
-  (* TODO: would be good for indices here (and everywhere in the file) to be inferrable. *)
   Fail Definition swap (v w : GlobRef nat) : itree E0 unit :=
     a <- readGlobRef v;;
     b <- readGlobRef w;;

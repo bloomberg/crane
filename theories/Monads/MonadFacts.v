@@ -1,62 +1,31 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-From Stdlib Require Import
-  Arith.PeanoNat
-  Arith.Peano_dec
-  Init.Peano
-  List
-  Morphisms
-  RelationClasses
-  Relation_Definitions
-  Setoid
-  Strings.String
-.
-
 From Crane Require Import
   Extraction
   Monads.Error
   Monads.ITree
   Monads.Indices
-  Monads.STMonad
   Utils.HAList
   Utils.HMap
 .
 
 From ExtLib Require Import
   Data.Bool
-  Data.List
-  Data.Monads.EitherMonad
-  Data.Pair
-  Data.String
   Structures.Functor
-  Structures.Traversable
-  Structures.Reducible
 .
 
-(* NOTE: *must* import this before the ITree Eq.Paco2 import.*)
-From Paco Require Import paco.
-
 From ITree Require Import
-  Basics.HeterogeneousRelations
-  Eq.Paco2
   Events.Exception
-  Events.FailFacts
   Events.MapDefault
-  Events.MapDefaultFacts
   Events.State
-  Events.StateFacts
   ITree
   ITreeFacts
 .
 
 Import Monads.
-Import ListNotations.
-Import ProperNotations.
 Local Open Scope monad_scope.
-Local Open Scope string_scope.
 
-(* TODO: in-progress! *)
 Section HMapFacts.
   Context {K : Type} {V : K -> Type} {map : Type}.
   Context {hmap : HMap K V map}.
