@@ -68,6 +68,13 @@ Local Open Scope string_scope.
 
 
 (* Modeled after Ix type in https://hackage.haskell.org/package/base-4.18.1.0/docs/Data-Ix.html#t:Ix *)
+(* TODO: The `sub,zero,fromNat,toNat` functions are there in order
+  to be able to talk about ranges of indices, which is required to write
+  an in-place quicksort that recurses down into sections of an array.
+  This came about because STArrays are collections of STRefs, morally.
+  To make that safer, one could adjust array STRefs to form a "region"
+  for which one could manipulate "raw" nats instead.
+ *)
 Class Ix (T : Type)
   (ltu : T -> T -> Prop) (* lte *)
   : Type :=
