@@ -46,6 +46,9 @@ Module GlobalStateTests.
   Definition fib_Glob := Eval unfold fib_Glob,fib_loop in (@fib_Glob nat Nat.le).
   Definition fib_fun := Eval unfold fib_fun in fib_fun.
 
+  Definition start_counter := Eval unfold start_counter in (@start_counter nat Nat.le nat_idx nat_stref).
+  Definition counter_next := Eval unfold counter_next in (@counter_next nat Nat.le nat_idx nat_stref).
+
 End GlobalStateTests. 
   
 Set Crane Loopify.

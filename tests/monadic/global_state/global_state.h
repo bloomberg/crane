@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <any>
 #include <concepts>
+#include <crane_globals.h>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -215,6 +216,18 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+struct GlobalStateExamples {
+  template <typename _tcI0, typename T1>
+    requires Ix<_tcI0, T1>
+  static T1 idx_x();
+  template <typename _tcI0, typename T1>
+    requires Ix<_tcI0, T1>
+  static T1 idx_y();
+  template <typename _tcI0, typename T1>
+    requires Ix<_tcI0, T1>
+  static T1 ctr_idx();
+};
+
 template <typename I, typename T>
 concept GlobRefClass = requires {
   { I::mkGlobRef(std::declval<T>()) } -> std::convertible_to<std::any>;
@@ -301,12 +314,11 @@ struct GlobalStateTests {
   template <typename _tcI0, typename _tcI1>
     requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    uint64_t r1;
-    r1 = UINT64_C(5);
-    uint64_t r2;
-    r2 = UINT64_C(6);
-    uint64_t x1 = r1;
-    uint64_t x2 = r2;
+    uint64_t r1 = (_crane_globals[_tcI1::zero()] = UINT64_C(5), _tcI1::zero());
+    uint64_t r2 = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(6),
+                   _tcI1::suc(_tcI1::zero()));
+    uint64_t x1 = std::any_cast<uint64_t>(_crane_globals.at(r1));
+    uint64_t x2 = std::any_cast<uint64_t>(_crane_globals.at(r2));
     return std::make_pair(x1, x2);
   }
 
@@ -316,35 +328,53 @@ struct GlobalStateTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      uint64_t x;
-      x = UINT64_C(0);
-      uint64_t y;
-      y = UINT64_C(1);
-      auto fib_loop_impl = [&](auto &, uint64_t k, uint64_t x0, uint64_t y0,
-                               uint64_t, uint64_t) -> uint64_t {
+      uint64_t x = (_crane_globals[_tcI1::zero()] = UINT64_C(0), _tcI1::zero());
+      uint64_t y = (_crane_globals[_tcI1::suc(_tcI1::zero())] = UINT64_C(1),
+                    _tcI1::suc(_tcI1::zero()));
+      auto fib_loop_impl = [](auto &, uint64_t k, uint64_t x0,
+                              uint64_t y0) -> uint64_t {
         uint64_t _loop_k = std::move(k);
         while (true) {
           if (_loop_k <= 0) {
-            return x0;
+            return std::any_cast<uint64_t>(_crane_globals.at(x0));
           } else {
             uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = x0;
-            uint64_t y_ = y0;
-            x0 = y_;
-            y0 = (x_ + y_);
+            uint64_t x_ = std::any_cast<uint64_t>(_crane_globals.at(x0));
+            uint64_t y_ = std::any_cast<uint64_t>(_crane_globals.at(y0));
+            _crane_globals[x0] = y_;
+            _crane_globals[y0] = (x_ + y_);
             _loop_k = k_;
           }
         }
       };
-      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0, uint64_t idx_x,
-                          uint64_t idx_y) -> uint64_t {
-        return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
+      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
+        return fib_loop_impl(fib_loop_impl, k, x0, y0);
       };
-      return fib_loop(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+      return fib_loop(n, x, y);
     }
   }
 
   static uint64_t fib_fun(uint64_t n);
+  static uint64_t start_counter();
+  static uint64_t counter_next();
 };
+
+template <typename _tcI0, typename T1>
+  requires Ix<_tcI0, T1>
+T1 GlobalStateExamples::idx_x() {
+  return _tcI0::zero();
+}
+
+template <typename _tcI0, typename T1>
+  requires Ix<_tcI0, T1>
+T1 GlobalStateExamples::idx_y() {
+  return _tcI0::suc(_tcI0::zero());
+}
+
+template <typename _tcI0, typename T1>
+  requires Ix<_tcI0, T1>
+T1 GlobalStateExamples::ctr_idx() {
+  return _tcI0::suc(_tcI0::suc(_tcI0::zero()));
+}
 
 #endif // INCLUDED_GLOBAL_STATE

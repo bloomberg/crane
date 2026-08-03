@@ -117,15 +117,18 @@ Section NatExampleTrees.
 
   (* source: https://wiki.haskell.org/Monad/Glob *)
 
-  Fixpoint fib_loop (k : nat) (x y : GlobRef nat) (idx_x idx_y : T) : itree E0 nat :=
+  Definition idx_x := zero.
+  Definition idx_y := suc zero.
+
+  Fixpoint fib_loop (k : nat) (x y : GlobRef nat) : itree E0 nat :=
     match k with
     | 0 => @readGlobRef _ _ _ _ _ idx_x x
     | Datatypes.S k' =>
-        x' <- @readGlobRef _ _ _ _ _ idx_x x;;
-        y' <- @readGlobRef _ _ _ _ _ idx_y y;;
+        x' <- @readGlobRef _ _ _ V _ idx_x x;;
+        y' <- @readGlobRef _ _ _ V _ idx_y y;;
         @writeGlobRef _ _ _ _ _ idx_x x y';;
         @writeGlobRef _ _ _ _ _ idx_y y (x' + y');;
-        fib_loop k' x y idx_x idx_y
+        fib_loop k' x y 
     end.
 
   Definition fib_Glob (n : nat) : itree E0 nat :=
@@ -134,7 +137,7 @@ Section NatExampleTrees.
     else
       x <- newGlobRef zero 0;;
       y <- newGlobRef (suc zero) 1;;
-      fib_loop n x y zero (suc zero).
+      fib_loop n x y.
 
   Definition fib_fun (n : nat) : nat :=
     let fix fib' (n : nat) :=
@@ -144,5 +147,18 @@ Section NatExampleTrees.
       | Datatypes.S (Datatypes.S m as m0) => fib' m0 + fib' m
       end in
     fib' n.
+
+  Definition ctr_idx := suc (suc zero).
+
+  Definition start_counter : itree E0 (GlobRef nat) := newGlobRef ctr_idx 0.
+
+  Definition counter_next : itree E0 nat :=
+    v <- rebuildGlobRef ctr_idx;;
+    a <- @readGlobRef E0 T HGlob V _ ctr_idx v;;
+    @writeGlobRef E0 T HGlob V _ ctr_idx v (a + 1);;
+    Ret a.
+
+
+
 
 End NatExampleTrees.  

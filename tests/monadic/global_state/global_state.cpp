@@ -55,6 +55,21 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
   return _result;
 }
 
+uint64_t GlobalStateTests::start_counter() {
+  return (_crane_globals[GlobalStateExamples::template ctr_idx<
+              GlobalStateTests::nat_idx, uint64_t>()] = UINT64_C(0),
+          GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
+                                                uint64_t>());
+}
+
+uint64_t GlobalStateTests::counter_next() {
+  uint64_t v = GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
+                                                     uint64_t>();
+  uint64_t a = std::any_cast<uint64_t>(_crane_globals.at(v));
+  _crane_globals[v] = (a + UINT64_C(1));
+  return a;
+}
+
 List<uint64_t>
 ListDef::seq(uint64_t start,
              uint64_t len) { /// _Enter: captures varying parameters for each
