@@ -101,3 +101,17 @@
   (alias runtest)
   (deps arena_tree.t.exe)
   (action (run ./arena_tree.t.exe))))
+
+(subdir guard_compare_label_collision
+ ; Expected to fail: Crane Guard Compare's Label-keyed table injects an
+ ; ill-typed guard into Ordered::compare (see README.md). Left wired into
+ ; runtest per WIP conventions -- WIP tests are allowed to fail.
+ (rule
+  (targets guard_compare_label_collision.t.exe)
+  (deps GuardCompareLabelCollision.vo guard_compare_label_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_label_collision.t.exe guard_compare_label_collision.cpp guard_compare_label_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_label_collision.t.exe)
+  (action (run ./guard_compare_label_collision.t.exe))))
