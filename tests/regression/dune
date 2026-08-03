@@ -6344,3 +6344,14 @@
   (alias runtest)
   (deps parser_frame_modtype_nil.t.exe)
   (action (run ./parser_frame_modtype_nil.t.exe))))
+
+(subdir guard_compare_label_collision
+ (rule
+  (targets guard_compare_label_collision.t.exe)
+  (deps GuardCompareLabelCollision.vo guard_compare_label_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_label_collision.t.exe guard_compare_label_collision.cpp guard_compare_label_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_label_collision.t.exe)
+  (action (run ./guard_compare_label_collision.t.exe))))

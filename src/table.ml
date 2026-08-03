@@ -1647,15 +1647,12 @@ let reset_extraction_arena () = Lib.add_leaf (reset_arena ())
 (* --- Guard Compare --------------------------------------------------- *)
 
 let guard_compare_table =
-  Summary.ref Label.Map.empty ~name:"CraneGuardCompare"
+  Summary.ref Refmap'.empty ~name:"CraneGuardCompare"
 
 let add_guard_compare fn_ref ctor_ref =
-  let lbl = label_of_r fn_ref in
-  guard_compare_table := Label.Map.add lbl ctor_ref !guard_compare_table
+  guard_compare_table := Refmap'.add fn_ref ctor_ref !guard_compare_table
 
-let find_guard_compare r =
-  let lbl = label_of_r r in
-  Label.Map.find_opt lbl !guard_compare_table
+let find_guard_compare r = Refmap'.find_opt r !guard_compare_table
 
 let guard_compare_obj : GlobRef.t * GlobRef.t -> obj =
   declare_object
