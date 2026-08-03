@@ -147,7 +147,7 @@ Section Construction.
         let n := suc (fold (fun '(existT _ (n, _) _) (acc : T) => max n acc) zero mem)
         in Ret (add (n, idx) v mem, mkGlobRef (V idx) n)
     | RebuildGlobRef _ _ idx =>
-        let n := suc (fold (fun '(existT _ (n, i) _) (acc : T) => if equiv_decb i idx then n else acc) zero mem)
+        let n := fold (fun '(existT _ (n, i) _) (acc : T) => if equiv_decb i idx then n else acc) zero mem
         in Ret (mem, mkGlobRef (V idx) n)
     | ReadGlobRef _ _ idx s =>
         match lookup (GlobRefToIx (V idx) s, idx) mem with
