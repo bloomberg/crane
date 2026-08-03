@@ -1,0 +1,350 @@
+#ifndef INCLUDED_GLOBAL_STATE
+#define INCLUDED_GLOBAL_STATE
+
+#include <algorithm>
+#include <any>
+#include <concepts>
+#include <memory>
+#include <optional>
+#include <utility>
+#include <variant>
+#include <vector>
+
+template <typename A> struct List {
+  // TYPES
+  struct Nil {};
+
+  struct Cons {
+    A a;
+    std::shared_ptr<List<A>> l;
+  };
+
+  using variant_t = std::variant<Nil, Cons>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  List() {}
+
+  explicit List(Nil _v) : v_(_v) {}
+
+  explicit List(Cons _v) : v_(std::move(_v)) {}
+
+  template <typename _U> explicit List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      this->v_ = Nil{};
+    } else {
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
+    }
+  }
+
+  static List<A> nil() { return List(Nil{}); }
+
+  static List<A> cons(A a, List<A> l) {
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  }
+
+  // MANIPULATORS
+  ~List() {
+    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
+template <typename Err> struct ExceptE {
+  // DATA
+  Err a0;
+
+  // ACCESSORS
+  ExceptE<Err> clone() const { return {a0}; }
+
+  // CREATORS
+  static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
+};
+
+struct Ascii {
+  // DATA
+  bool a0;
+  bool a1;
+  bool a2;
+  bool a3;
+  bool a4;
+  bool a5;
+  bool a6;
+  bool a7;
+
+  // ACCESSORS
+  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
+
+  // CREATORS
+  static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
+                      bool a6, bool a7) {
+    return {a0, a1, a2, a3, a4, a5, a6, a7};
+  }
+};
+
+template <typename I, typename T>
+concept Ix = requires {
+  {
+    I::range(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<List<T>>;
+  {
+    I::index(std::declval<T>(), std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<std::optional<uint64_t>>;
+  {
+    I::rangeSize(std::declval<T>(), std::declval<T>())
+  } -> std::convertible_to<uint64_t>;
+  { I::toNat(std::declval<T>()) } -> std::convertible_to<uint64_t>;
+  { I::fromNat(std::declval<uint64_t>()) } -> std::convertible_to<T>;
+  { I::suc(std::declval<T>()) } -> std::convertible_to<T>;
+  { I::sub(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
+  { I::zero() } -> std::convertible_to<T>;
+};
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct String {
+  // TYPES
+  struct EmptyString {};
+
+  struct String0 {
+    Ascii a0;
+    std::shared_ptr<String> a1;
+  };
+
+  using variant_t = std::variant<EmptyString, String0>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  String() {}
+
+  explicit String(EmptyString _v) : v_(_v) {}
+
+  explicit String(String0 _v) : v_(std::move(_v)) {}
+
+  static String emptystring() { return String(EmptyString{}); }
+
+  static String string0(Ascii a0, String a1) {
+    return String(
+        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
+  }
+
+  // MANIPULATORS
+  ~String() {
+    std::vector<std::shared_ptr<String>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<String0>(&_v)) {
+        if (_alt->a1) {
+          _stack.push_back(std::move(_alt->a1));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
+template <typename I, typename T>
+concept GlobRefClass = requires {
+  { I::mkGlobRef(std::declval<T>()) } -> std::convertible_to<std::any>;
+  { I::GlobRefToIx(std::declval<std::any>()) } -> std::convertible_to<T>;
+};
+
+struct GlobRefNat {
+  // DATA
+  uint64_t a;
+
+  // ACCESSORS
+  GlobRefNat clone() const { return {a}; }
+
+  // CREATORS
+  static GlobRefNat mkglobref(uint64_t a) { return {a}; }
+
+  uint64_t GlobRefToIxNat() const {
+    const auto &[a] = *this;
+    return a;
+  }
+};
+
+struct Err {
+  // DATA
+  String x;
+
+  // ACCESSORS
+  Err clone() const { return {x}; }
+
+  // CREATORS
+  static Err error(String x) { return {std::move(x)}; }
+};
+
+struct GlobalStateTests {
+  struct nat_idx {
+    static List<uint64_t> range(uint64_t fp, uint64_t sp) {
+      return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
+                                    ? 0
+                                    : ((UINT64_C(1) + sp) - fp))));
+    }
+
+    static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+      if ((fp <= i && i <= sp)) {
+        return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
+      } else {
+        return std::optional<uint64_t>();
+      }
+    }
+
+    static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+      return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
+                   ? 0
+                   : ((UINT64_C(1) + sp) - fp)));
+    }
+
+    static uint64_t toNat(uint64_t n) { return n; }
+
+    static uint64_t fromNat(uint64_t n) { return n; }
+
+    static uint64_t suc(uint64_t x) { return (x + 1); }
+
+    static uint64_t sub(uint64_t a0, uint64_t a1) {
+      return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
+    }
+
+    static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+
+    static uint64_t zero() { return UINT64_C(0); }
+  };
+
+  static_assert(Ix<nat_idx, uint64_t>);
+
+  struct nat_stref {
+    static std::any mkGlobRef(uint64_t x) { return GlobRefNat::mkglobref(x); }
+
+    static uint64_t GlobRefToIx(std::any _p_a0) {
+      GlobRefNat a0 = std::any_cast<GlobRefNat>(_p_a0);
+      return a0.GlobRefToIxNat();
+    }
+  };
+
+  static_assert(GlobRefClass<nat_stref, uint64_t>);
+
+  template <typename _tcI0, typename _tcI1>
+    requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
+  static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
+    uint64_t r1;
+    r1 = UINT64_C(5);
+    uint64_t r2;
+    r2 = UINT64_C(6);
+    uint64_t x1 = r1;
+    uint64_t x2 = r2;
+    return std::make_pair(x1, x2);
+  }
+
+  template <typename _tcI0, typename _tcI1>
+    requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
+  static uint64_t fib_Glob(uint64_t n) {
+    if (n < UINT64_C(2)) {
+      return n;
+    } else {
+      uint64_t x;
+      x = UINT64_C(0);
+      uint64_t y;
+      y = UINT64_C(1);
+      auto fib_loop_impl = [&](auto &, uint64_t k, uint64_t x0, uint64_t y0,
+                               uint64_t, uint64_t) -> uint64_t {
+        uint64_t _loop_k = std::move(k);
+        while (true) {
+          if (_loop_k <= 0) {
+            return x0;
+          } else {
+            uint64_t k_ = _loop_k - 1;
+            uint64_t x_ = x0;
+            uint64_t y_ = y0;
+            x0 = y_;
+            y0 = (x_ + y_);
+            _loop_k = k_;
+          }
+        }
+      };
+      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0, uint64_t idx_x,
+                          uint64_t idx_y) -> uint64_t {
+        return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
+      };
+      return fib_loop(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+    }
+  }
+
+  static uint64_t fib_fun(uint64_t n);
+};
+
+#endif // INCLUDED_GLOBAL_STATE
