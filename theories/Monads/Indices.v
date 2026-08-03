@@ -220,7 +220,7 @@ Proof. lia. Qed.
       apply add_sub_le. exact Hle.
     - replace (1 + u' - l') with 0 by lia. simpl.
       split; [tauto | lia].
-  }.
+  }
   exact (iff_sym (H _ _ _)).
 - intros l u v i Hidx [Hl Hu].
   unfold index, range, nat_ix in *. simpl fst in *. simpl snd in *.

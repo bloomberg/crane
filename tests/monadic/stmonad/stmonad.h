@@ -177,13 +177,6 @@ struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
-struct STMonadExamples {
-  template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
-  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
-                                                 F1 &&quicksort_fun0);
-};
-
 struct Err {
   // DATA
   std::string x;
@@ -195,15 +188,11 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct Err {
-  // DATA
-  String x;
-
-  // ACCESSORS
-  Err clone() const { return {x}; }
-
-  // CREATORS
-  static Err error(String x) { return {std::move(x)}; }
+struct STMonadExamples {
+  template <typename F1>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
+                                                 F1 &&quicksort_fun0);
 };
 
 template <typename I, typename T>
