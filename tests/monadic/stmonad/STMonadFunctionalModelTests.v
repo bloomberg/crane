@@ -1,6 +1,5 @@
 (* Equational theory and Derive proofs for the ST monad *)
 
-From Crane Require Import Monads.STMonad Monads.ITree Monads.STMonadFacts Utils.HMap.
 
 From Stdlib Require Import
   Arith.PeanoNat
@@ -49,6 +48,16 @@ Local Open Scope monad_scope.
 
 From Corelib Require Derive.
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
+
+From Crane Require Import
+  Monads.Error
+  Monads.ITree
+  Monads.Indices
+  Monads.MonadFacts
+  Monads.STMonad
+  Monads.STMonadFacts
+  Utils.HMap
+.
 
 Section NatProgramProofs.
 
@@ -124,7 +133,8 @@ Section NatProgramProofs.
                change u0 with (snd (lmem'0, u0)).
                change lmem'1 with (fst (lmem'1, u1)). reflexivity.
             -- intros ? ?.
-               rewrite interp_st_Ret.
+               change_to_monad.
+               rewrite interp_st_ret.
                change lmem'2 with (fst (lmem'2, u2)).
                change u1 with (snd (lmem'1, u1)).
                change u2 with (snd (lmem'2, u2)). reflexivity. }
@@ -155,7 +165,8 @@ Section NatProgramProofs.
         unfold readArray. rewrite interp_st_trigger. cbn. reflexivity.
       }
       intros ? ?.
-      rewrite interp_st_Ret. reflexivity.
+      change_to_monad.
+      rewrite interp_st_ret. reflexivity.
     }
     setoid_rewrite map_bind.
     repeat setoid_rewrite bind_Ret_l.
@@ -188,7 +199,8 @@ Section NatProgramProofs.
         unfold getElems. rewrite interp_st_trigger. cbn. reflexivity.
       }
       intros ? ?.
-      rewrite interp_st_Ret. reflexivity.
+      change_to_monad.
+      rewrite interp_st_ret. reflexivity.
     }
     setoid_rewrite map_bind.
     repeat setoid_rewrite bind_Ret_l.
@@ -236,8 +248,8 @@ Section NatProgramProofs.
       {
         unfold getElems. rewrite interp_st_trigger. cbn. reflexivity.
       }
-      intros ? ?.
-      rewrite interp_st_Ret. reflexivity.
+      intros ? ?. change_to_monad.
+      rewrite interp_st_ret. reflexivity.
     }
     setoid_rewrite map_bind.
     repeat setoid_rewrite bind_Ret_l.
@@ -922,7 +934,7 @@ Section NatProgramProofs.
   Qed.
 
   Lemma interp_rec_ret {R} (x : R) :
-    interp (recursive quicksort_ST_body) (Ret x : itree ED R) ≈ Ret x.
+    interp (recursive quicksort_ST_body) (ITreeDefinition.Ret x : itree ED R) ≈ ITreeDefinition.Ret x.
   Proof.
     unfold ED, E0, V, T, ltu. rewrite interp_ret. reflexivity.
   Qed.
@@ -983,7 +995,7 @@ Section NatProgramProofs.
                             (fromNat (toNat l + (toNat r - toNat l) / 2)) ;;
               quicksort_ST arr arr_idx l (fromNat (toNat newPivot - 1)) ;;
               quicksort_ST arr arr_idx (fromNat (toNat newPivot + 1)) r
-         else Ret tt).
+         else ITreeDefinition.Ret tt).
   Proof.
     intros arr arr_idx l r.
     unfold quicksort_ST at 1.
@@ -1337,13 +1349,13 @@ End NatProgramProofs.
 
 
 Lemma fib_ST_eq_fib_fun : forall {S : Type} (n : nat),
-    Ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
+    ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
 Proof.
   intros S n. unfold runST, fib_ST.
   destruct (Nat.ltb n 2) eqn:Hn.
   - apply Nat.ltb_lt in Hn. symmetry.
     etransitivity.
-    { eapply eutt_fmap. rewrite interp_st_Ret. reflexivity. }
+    { eapply eutt_fmap. change_to_monad. rewrite interp_st_ret. reflexivity. }
     setoid_rewrite map_ret. cbn. apply eqit_Ret.
     destruct n as [|[|n]]; try lia; reflexivity.
   - apply Nat.ltb_ge in Hn. symmetry.

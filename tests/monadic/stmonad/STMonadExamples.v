@@ -228,7 +228,7 @@ Section NatExampleTrees.
         newPivot <- partition arr arr_idx l r (fromNat pivotIndexn);;
         call (arr, arr_idx, l, (fromNat ((toNat newPivot) - 1)));;
         call (arr, arr_idx, (fromNat ((toNat newPivot) + 1)), r)
-      else Ret tt.
+      else ITreeDefinition.Ret tt.
 
 
     Definition quicksort_ST (arr : STArray T S nat) (arr_idx : T) (left : T) (right : T) : itree E0 unit :=
