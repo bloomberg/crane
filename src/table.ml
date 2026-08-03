@@ -1646,13 +1646,84 @@ let reset_extraction_arena () = Lib.add_leaf (reset_arena ())
 
 (* --- Guard Compare --------------------------------------------------- *)
 
-let guard_compare_table =
-  Summary.ref Refmap'.empty ~name:"CraneGuardCompare"
+(* Keyed by the constant's printable kernel-name path (dirpath + label), NOT
+   by [GlobRef.t]/[KerName.t] equality: a functor-internal definition guarded
+   from inside its own module (e.g. via a self-reference during the functor
+   body's own elaboration) prints an identical path to, but carries a
+   different internal kernel-name discriminator than, the same constant as
+   later re-resolved by Crane's codegen (which sees it via the module's
+   external/extraction-time-elaborated copy) -- confirmed via debug tracing:
+   both resolve to the same [Constant.canonical] printed string, yet neither
+   [GlobRef.Map] (canonical-KerName-based) nor [Refmap'] (user-KerName-based)
+   report a match. String-keying on the canonical path collapses these two
+   while still requiring an exact dirpath+label match, so it does not
+   resurrect the earlier same-named-different-modules Label-keying collision
+   bug. *)
+let guard_compare_key_string = function
+  | GlobRef.ConstRef c -> Some (Names.KerName.to_string (Names.Constant.canonical c))
+  | GlobRef.VarRef _ | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> None
+
+(* Plain (non-[Summary]-tracked) ref: functor-body-internal registrations
+   must survive [End F.], which rolls back [Summary]-tracked state introduced
+   while a functor body is open (mirroring section-discharge semantics) --
+   confirmed via debug tracing showing the self-registered entry vanish from
+   a [Summary.ref]-backed table by the time codegen looks it up, while entries
+   added by the (post-rollback) [~subst] re-registration for each instantiation
+   survive. A plain ref is not subject to that rollback. *)
+let guard_compare_table : GlobRef.t CString.Map.t ref = ref CString.Map.empty
 
 let add_guard_compare fn_ref ctor_ref =
-  guard_compare_table := Refmap'.add fn_ref ctor_ref !guard_compare_table
+  match guard_compare_key_string fn_ref with
+  | None -> ()
+  | Some key ->
+    guard_compare_table := CString.Map.add key ctor_ref !guard_compare_table
 
-let find_guard_compare r = Refmap'.find_opt r !guard_compare_table
+(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
+   components. Used as a fallback match key below. *)
+let key_suffix n key =
+  let parts = String.split_on_char '.' key in
+  let len = List.length parts in
+  if len <= n then key
+  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
+
+(* A functor-internal self-reference (e.g. the guard directive's own target,
+   registered from inside the functor body it guards) never survives as a
+   persistent library object across [End F.] -- Coq's module system discharges
+   it the same way a Section would, and since this happens before the
+   surrounding file's [.vo] is even written, no amount of [Summary]-tracking
+   or [~cache]/[~subst] plumbing can make it reappear when that [.vo] is later
+   [Require]d from a different [coqc] process (confirmed via debug tracing:
+   the self-registration key is entirely absent from the table by the time
+   any other process looks it up, even though [add_guard_compare] visibly
+   fired for it during the defining file's own compilation). What DOES
+   survive across process/.vo boundaries are the [~subst]-rewritten
+   per-instantiation copies (e.g. one per grammar applying the functor),
+   which are ordinary top-level module-application objects, not functor-body-
+   internal ones. Since every such copy is produced by substituting the same
+   generic definition, they all share the identical trailing
+   "OuterModule.function" suffix (e.g. "SllSubparserAsUOT.compare") that the
+   original [Crane Guard Compare] directive named. So: if the exact
+   (functor-internal) key isn't found, fall back to matching by that 2-label
+   suffix against whatever instantiated copies did survive -- and only trust
+   the fallback if every match agrees on the same guard constructor, to avoid
+   silently guarding an unrelated same-named function. *)
+let find_guard_compare r =
+  match guard_compare_key_string r with
+  | None -> None
+  | Some key ->
+    (match CString.Map.find_opt key !guard_compare_table with
+     | Some _ as found -> found
+     | None ->
+       let suffix = key_suffix 2 key in
+       let matches =
+         CString.Map.fold
+           (fun k v acc -> if key_suffix 2 k = suffix then v :: acc else acc)
+           !guard_compare_table []
+       in
+       (match matches with
+        | [] -> None
+        | v :: rest when List.for_all (fun v' -> Names.GlobRef.CanOrd.equal v v') rest -> Some v
+        | _ -> None))
 
 let guard_compare_obj : GlobRef.t * GlobRef.t -> obj =
   declare_object

@@ -2223,9 +2223,13 @@ let gen_dfun n b cty ty temps =
           | None -> (ids, b) )
         | _ -> (ids, b)
       in
+      let guard =
+        build_guard_compare_stmts
+          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
+          n ids cod
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
-      let guard = build_guard_compare_stmts n ids in
       Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
@@ -2268,9 +2272,13 @@ let gen_dfun n b cty ty temps =
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
+      let guard =
+        build_guard_compare_stmts
+          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
+          n ids cod
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
-      let guard = build_guard_compare_stmts n ids in
       Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure)
   in
   tctx.current_cpp_return_type <- saved_return_type;
