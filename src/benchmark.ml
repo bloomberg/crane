@@ -338,6 +338,33 @@ let parse_flags flags =
   with Subprocess.Invalid_arguments message ->
     benchmark_error ("Invalid compiler flags: " ^ message ^ ".")
 
+(** Locate Crane's C++ runtime header directory ([theories/cpp]).
+
+    Generated C++ sources [#include "crane_fn.h"] and other Crane runtime
+    headers, so the C++ compiler must be pointed at the directory that holds
+    them. This takes the project root, drops a
+    trailing [_build/default] build-context segment so a dune build maps back to
+    the source tree, and appends [theories/cpp]. Recovers the
+    root from the physical location of the loaded [Crane] theory. *)
+let crane_runtime_include () =
+  let crane_dp = DirPath.make [Id.of_string "Crane"] in
+  match Loadpath.find_with_logical_path crane_dp with
+  | [] -> None
+  | lp :: _ ->
+    (* [Loadpath.physical] is the theory root, e.g. [<root>/theories] or, under
+       a dune build, [<root>/_build/default/theories]. *)
+    let project_root = Filename.dirname (Loadpath.physical lp) in
+    let build_suffix =
+      Filename.dir_sep ^ "_build" ^ Filename.dir_sep ^ "default"
+    in
+    let project_root =
+      if Filename.check_suffix project_root build_suffix then
+        Filename.chop_suffix project_root build_suffix
+      else
+        project_root
+    in
+    Some (Filename.concat (Filename.concat project_root "theories") "cpp")
+
 (** Create and compile one matrix cell.
 
     The source artifact is copied into a temporary driver, the requested flags
@@ -367,7 +394,12 @@ let compile_artifact
     ( try
         Toolchain.compile_cpp
           ~shouldlink:true
-          ~includes:[Filename.dirname artifact.artifact_source]
+          ~includes:
+            ( Filename.dirname artifact.artifact_source
+            ::
+            ( match crane_runtime_include () with
+            | Some dir -> [dir]
+            | None -> [] ) )
           ~flags:compiler_flags
           ~outfile:executable
           driver
