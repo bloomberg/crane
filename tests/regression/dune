@@ -2305,6 +2305,17 @@
   (deps loopify_nontail_pair.t.exe)
   (action (run ./loopify_nontail_pair.t.exe))))
 
+(subdir arena_scoping
+ (rule
+  (targets arena_scoping.t.exe)
+  (deps ArenaScoping.vo arena_scoping.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_scoping.t.exe arena_scoping.cpp arena_scoping.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_scoping.t.exe)
+  (action (run ./arena_scoping.t.exe))))
+
 (subdir loopify_gap_pair_destructure
  (rule
   (targets loopify_gap_pair_destructure.t.exe)
