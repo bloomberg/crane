@@ -116,17 +116,36 @@ else
     LINK_FLAGS=()
 fi
 
-# Sanitizer support: CRANE_CPP_SANITIZE=1 enables ASan + UBSan
+# Sanitizer support: CRANE_CPP_SANITIZE selects the -fsanitize argument.
+# Validated against a fixed allow-list because it is attacker-influenced (an
+# environment variable) and is spliced directly onto the compiler command line,
+# exactly like CRANE_CPP_OPTIMIZATION above. Accepted values:
+#   address, undefined, address,undefined   -> that -fsanitize set
+#   1                                       -> alias for address,undefined
+#                                              (back-compat with compile-gmp.sh /
+#                                              compile-bde.sh and existing CI)
+#   empty / unset                           -> sanitizers off
 SANITIZE_FLAGS=()
-if [ "${CRANE_CPP_SANITIZE:-}" = "1" ]; then
-    SANITIZE_FLAGS=(
-        -fsanitize=address,undefined
-        -fno-sanitize-recover=all
-        -fno-omit-frame-pointer
-    )
-    # Use a separate PCH for sanitizer builds (different flags = different PCH)
-    PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}_san.h.pch"
+SANITIZE_SPEC="${CRANE_CPP_SANITIZE:-}"
+if [ "$SANITIZE_SPEC" = "1" ]; then
+    SANITIZE_SPEC="address,undefined"
 fi
+case "$SANITIZE_SPEC" in
+    "") ;;
+    address | undefined | address,undefined)
+        SANITIZE_FLAGS=(
+            -fsanitize="$SANITIZE_SPEC"
+            -fno-sanitize-recover=all
+            -fno-omit-frame-pointer
+        )
+        # Use a separate PCH for sanitizer builds (different flags = different PCH)
+        PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}_san.h.pch"
+        ;;
+    *)
+        echo "Error: invalid CRANE_CPP_SANITIZE='$CRANE_CPP_SANITIZE' (expected address, undefined, address,undefined, 1, or empty)" >&2
+        exit 1
+        ;;
+esac
 
 # Build PCH if it doesn't exist or is older than the source
 if [ -f "$PCH_SRC" ] && { [ ! -f "$PCH_FILE" ] || [ "$PCH_SRC" -nt "$PCH_FILE" ]; }; then
