@@ -93,6 +93,26 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
+  Tree(const Tree<A> &_other) {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(_other.v())) {
+      this->v_ = Leaf{};
+    } else {
+      const auto &[t1, x, t2] = std::get<typename Tree<A>::Node>(_other.v());
+      this->v_ = Node{crane::arena_alloc<Tree<A>>(*t1), x,
+                      crane::arena_alloc<Tree<A>>(*t2)};
+    }
+  }
+
+  // MANIPULATORS
+  Tree<A> &operator=(const Tree<A> &_other) {
+    if (&*this != &_other) {
+      Tree<A> _tmp = Tree<A>(_other);
+      this->v_ = std::move(_tmp.v_mut());
+    }
+    return *this;
+  }
+
+  // CREATORS
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {

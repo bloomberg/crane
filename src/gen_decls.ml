@@ -4101,6 +4101,66 @@ let gen_ind_header_v2
 
       let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
+      (* Compute a field's final C++ type, including the arena-mode
+         pointerization of recursive fields.  Shared between the constructor
+         struct declarations below and the arena deep-copy constructor
+         (which needs to tell apart a recursive raw-pointer field, which it
+         must clone, from a plain scalar field, which it can copy). *)
+      let compute_field_cpp_ty ty =
+        let cpp_ty =
+          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+            vars
+            ty
+        in
+        (* Wrap fields that contain a nested self-reference in
+           their type arguments (e.g. list(tree(A)) inside tree).
+           The cycle is broken at the field level using a bare
+           (no-ns) type so the outer shared_ptr provides pointer
+           indirection without extra inner shared_ptrs for elements.
+           E.g. option(chain) → shared_ptr<optional<chain>>,
+                list(tree)   → shared_ptr<List<tree>>.
+           The body sees *a0 at the bare type directly with no
+           element-wise conversion needed. *)
+        (* Completeness-aware element wrapping (WRAP.md). *)
+        maybe_record_boxed_recursive_ind ~ind_ref:name ty;
+        let cpp_ty =
+          if ml_type_has_nested_self_ref ~ind_ref:name ty then
+            let bare_cpp_ty =
+              convert_ml_type_to_cpp_type
+                (empty_env ())
+                vars
+                ty
+            in
+            (* If the field recurses THROUGH a boxed-element
+               container, the element box already breaks the
+               completeness cycle, so the outer shared_ptr/arena
+               pointer is redundant: store the container by value. *)
+            if (not is_coinductive)
+               && ml_type_recurses_through_boxed_container
+                    ~ind_ref:name ty
+            then bare_cpp_ty
+            else Tshared_ptr bare_cpp_ty
+          else cpp_ty
+        in
+        let cpp_ty =
+          if vars = [] then
+            match cpp_ty with
+            | Tshared_ptr _ ->
+              tvar_erase_type cpp_ty
+            | _ when has_unnamed_tvar cpp_ty -> Tany
+            | _ -> cpp_ty
+          else cpp_ty
+        in
+        (* Arena mode: the recursive-field indirection is a raw
+           pointer into a region, not a shared_ptr.  Confined to the
+           field declaration so method return/parameter positions are
+           unaffected. *)
+        if arena_ok then
+          match cpp_ty with
+          | Tshared_ptr inner -> Tptr inner
+          | _ -> cpp_ty
+        else cpp_ty
+      in
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
         Array.to_list
@@ -4124,61 +4184,7 @@ let gen_ind_header_v2
                let fields =
                  List.mapi
                    (fun j ty ->
-                     let cpp_ty =
-                       convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-                         vars
-                         ty
-                     in
-                     (* Wrap fields that contain a nested self-reference in
-                        their type arguments (e.g. list(tree(A)) inside tree).
-                        The cycle is broken at the field level using a bare
-                        (no-ns) type so the outer shared_ptr provides pointer
-                        indirection without extra inner shared_ptrs for elements.
-                        E.g. option(chain) → shared_ptr<optional<chain>>,
-                             list(tree)   → shared_ptr<List<tree>>.
-                        The body sees *a0 at the bare type directly with no
-                        element-wise conversion needed. *)
-                     (* Completeness-aware element wrapping (WRAP.md). *)
-                     maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-                     let cpp_ty =
-                       if ml_type_has_nested_self_ref ~ind_ref:name ty then
-                         let bare_cpp_ty =
-                           convert_ml_type_to_cpp_type
-                             (empty_env ())
-                             vars
-                             ty
-                         in
-                         (* If the field recurses THROUGH a boxed-element
-                            container, the element box already breaks the
-                            completeness cycle, so the outer shared_ptr/arena
-                            pointer is redundant: store the container by value. *)
-                         if (not is_coinductive)
-                            && ml_type_recurses_through_boxed_container
-                                 ~ind_ref:name ty
-                         then bare_cpp_ty
-                         else Tshared_ptr bare_cpp_ty
-                       else cpp_ty
-                     in
-                     let cpp_ty =
-                       if vars = [] then
-                         match cpp_ty with
-                         | Tshared_ptr _ ->
-                           tvar_erase_type cpp_ty
-                         | _ when has_unnamed_tvar cpp_ty -> Tany
-                         | _ -> cpp_ty
-                       else cpp_ty
-                     in
-                     (* Arena mode: the recursive-field indirection is a raw
-                        pointer into a region, not a shared_ptr.  Confined to the
-                        field declaration so method return/parameter positions are
-                        unaffected. *)
-                     let cpp_ty =
-                       if arena_ok then
-                         match cpp_ty with
-                         | Tshared_ptr inner -> Tptr inner
-                         | _ -> cpp_ty
-                       else cpp_ty
-                     in
+                     let cpp_ty = compute_field_cpp_ty ty in
                      let field_name = List.nth field_ids j in
                      (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
                    tys_list
@@ -4899,6 +4905,140 @@ let gen_ind_header_v2
           []
       in
 
+      (* Arena mode: a copy of an arena-mode value must be an independent
+         value, not an alias into the source's region (Coq values have copy
+         semantics).  The implicit compiler-generated copy constructor would
+         just copy the raw recursive-field pointers verbatim, a shallow
+         alias, so provide an explicit one that walks the variant, and for
+         every recursive raw-pointer field allocates a fresh node in the
+         current ambient arena holding a recursive copy of the pointee.  The
+         recursion is free: allocating a fresh node from a dereferenced
+         field pointer invokes the pointee type's copy constructor, which
+         for a nested arena-mode field is this very constructor again.
+         Non-recursive fields are copied by value as usual.  This is a
+         deliberate simplification of the plan's full handle-node type
+         split, see the Part 3 report: it closes the real aliasing bug
+         without introducing a second C++ type, at the cost of still
+         relying on the ambient/scoped arena rather than a self-contained
+         owning handle. *)
+      let arena_deep_copy_ctor =
+        if not arena_ok then []
+        else
+          let n_ctors = Array.length cnames in
+          if n_ctors = 0 then []
+          else
+            let render_self_ty =
+              render_cpp_type_for_raw_template
+                (qualify_inductives
+                   ~skip:(fun g -> GlobRef.CanOrd.equal g name)
+                   self_ty)
+            in
+            let other_id = Id.of_string "_other" in
+            let other_v =
+              CPPdot_method_call (CPPvar other_id, Id.of_string "v", [])
+            in
+            let branch_body i tys_list =
+              let c = cnames.(i) in
+              let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
+              let cname_str = Id.to_string cname_id in
+              match tys_list with
+              | [] ->
+                [Sassign_expr
+                   ( CPParrow (CPPthis, vmn_id),
+                     CPPstruct_id (cname_id, [], []) )]
+              | _ ->
+                let ctor_consarg_names =
+                  if i < Array.length consarg_names then consarg_names.(i)
+                  else []
+                in
+                let n_fields = List.length tys_list in
+                let field_ids =
+                  compute_and_register_field_names cname_str
+                    (augment_with_args_renaming c ctor_consarg_names)
+                    ctor_consarg_names n_fields
+                in
+                let bindings =
+                  String.concat ", " (List.map Id.to_string field_ids)
+                in
+                let source_ctor_s =
+                  "typename " ^ render_self_ty ^ "::" ^ cname_str
+                in
+                let cloned =
+                  List.mapi
+                    (fun j ty ->
+                      let cpp_ty = compute_field_cpp_ty ty in
+                      let fid = List.nth field_ids j in
+                      match cpp_ty with
+                      | Tptr inner ->
+                        Table.mark_needs_arena ();
+                        CPPfun_call
+                          (CPParena_alloc inner, [CPPderef (CPPvar fid)])
+                      | _ -> CPPvar fid )
+                    tys_list
+                in
+                [ Sraw
+                    ( "const auto& [" ^ bindings ^ "] = std::get<"
+                    ^ source_ctor_s ^ ">(_other.v());" );
+                  Sassign_expr
+                    ( CPParrow (CPPthis, vmn_id),
+                      CPPstruct_id (cname_id, [], cloned) ) ]
+            in
+            let rec build_chain i =
+              if i = n_ctors - 1 then branch_body i tys.(i)
+              else
+                let cname_id =
+                  ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
+                in
+                let guard =
+                  CPPfun_call
+                    ( CPPstd_holds_alternative (self_ty, Some cname_id),
+                      [other_v] )
+                in
+                [Sif (guard, branch_body i tys.(i), build_chain (i + 1))]
+            in
+            let body = build_chain 0 in
+            let ctor_params =
+              [(other_id, Tref (Tmod (TMconst, self_ty)))]
+            in
+            (* Copy assignment: build a temporary via the deep-copy
+               constructor above, then move its variant into [this].  Also
+               closes the correctness gap for the assignment form (a
+               user-provided copy constructor without a matching copy
+               assignment leaves the compiler-generated one deprecated and,
+               worse here, still an aliasing shallow copy). *)
+            let assign_op =
+              let tmp_id = Id.of_string "_tmp" in
+              let assign_body =
+                [ Sif_then
+                    ( CPPbinop ("!=", CPPunop ("&", CPPderef CPPthis),
+                                CPPunop ("&", CPPvar other_id)),
+                      [ Sasgn (tmp_id, Some self_ty,
+                          CPPfun_call (mk_cppglob name ty_vars,
+                            [CPPvar other_id]));
+                        Sassign_expr
+                          ( CPParrow (CPPthis, vmn_id),
+                            CPPmove
+                              (CPPdot_method_call (CPPvar tmp_id,
+                                Id.of_string "v_mut", []))) ] );
+                  Sreturn (Some (CPPderef CPPthis)) ]
+              in
+              ( Fmethod
+                  { mf_name = Id.of_string_soft "operator=";
+                    mf_tparams = [];
+                    mf_ret_type = Tref self_ty;
+                    mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
+                    mf_body = assign_body;
+                    mf_is_const = false;
+                    mf_is_static = false;
+                    mf_is_inline = false;
+                    mf_this_pos = 0;
+                    mf_no_pure = true;
+                    mf_is_noexcept = false; },
+                VPublic, SManipulators )
+            in
+            [(Ftemplate_ctor ([], false, ctor_params, body), VPublic, SCreators);
+             assign_op]
+      in
       let value_copy_clone_methods =
         if is_coinductive then
           []
@@ -5196,6 +5336,7 @@ let gen_ind_header_v2
         @ default_ctor
         @ public_ctors
         @ value_copy_clone_methods
+        @ arena_deep_copy_ctor
         @ lazy_ctor
         @ factory_methods
         @ lazy_factory
