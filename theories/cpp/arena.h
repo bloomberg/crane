@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <atomic>
 #include <cstddef>
 #include <cstdio>
 #include <memory>
@@ -103,6 +104,24 @@ inline arena*& current_arena_ptr() noexcept
     return p;
 }
 
+// Process-wide flag: has any [arena_scope] / [arena_use_scope] ever been
+// installed on *any* thread yet?  Distinguishes two very different reasons the
+// fallback can be reached:
+//   - before the first scope is ever installed anywhere, e.g. a dynamically-
+//     initialized global (a memoized regex/DFA table built by a
+//     `__cxx_global_var_init`/static constructor that runs before `main`, on
+//     the thread that will later install scopes for real work). This is a
+//     normal, expected, one-time program-lifetime allocation.
+//   - after scopes are already in routine use elsewhere in the process, some
+//     other thread (or a code path on this thread) reaches the fallback with
+//     no scope active. That is far more likely a forgotten [arena_scope] on
+//     an ephemeral-lifetime build, which is the case worth flagging.
+inline std::atomic<bool>& any_scope_ever_installed() noexcept
+{
+    static std::atomic<bool> installed{false};
+    return installed;
+}
+
 // Per-thread fallback region, used when no [arena_scope] is active (e.g. a value
 // constructed during static initialization, or a caller that never installed a
 // scope).  It is never reset during the thread's life, so anything allocated
@@ -114,12 +133,17 @@ inline arena& fallback_arena()
     static thread_local arena g;
 #ifndef NDEBUG
     // Debug builds only: warn once per thread the first time the fallback is
-    // actually reached, so an embedding that forgot to install an [arena_scope]
+    // actually reached *after* some scope has already been installed somewhere
+    // in the process, so an embedding that forgot to install an [arena_scope]
     // (and would therefore grow this never-resetting region unboundedly) at
-    // least gets a signal in development.  Release builds compile this away
+    // least gets a signal in development. Fallback hits that happen before any
+    // scope has ever been installed (typically a dynamically-initialized
+    // global building a program-lifetime table, e.g. a memoized regex tree,
+    // before `main` runs) are expected and do not warn — see
+    // [any_scope_ever_installed] above. Release builds compile this away
     // entirely, so the fallback stays zero-overhead there.
     static thread_local bool warned = false;
-    if (!warned) {
+    if (!warned && any_scope_ever_installed().load(std::memory_order_relaxed)) {
         warned = true;
         std::fprintf(
             stderr,
@@ -149,7 +173,11 @@ T* arena_alloc(Args&&... args)
 // (restoring any previous one on exit, so scopes nest).
 class arena_scope {
 public:
-    arena_scope() : prev_(current_arena_ptr()) { current_arena_ptr() = &a_; }
+    arena_scope() : prev_(current_arena_ptr())
+    {
+        current_arena_ptr() = &a_;
+        any_scope_ever_installed().store(true, std::memory_order_relaxed);
+    }
     ~arena_scope() { current_arena_ptr() = prev_; }
 
     arena_scope(const arena_scope&)            = delete;
@@ -172,6 +200,7 @@ public:
     explicit arena_use_scope(arena& a) : prev_(current_arena_ptr())
     {
         current_arena_ptr() = &a;
+        any_scope_ever_installed().store(true, std::memory_order_relaxed);
     }
     ~arena_use_scope() { current_arena_ptr() = prev_; }
 
