@@ -67,6 +67,27 @@ int main() {
     const auto &mn = std::get<typename T::Node>(m.v());
     ASSERT(root_val(*mn.t1) == 3);
     ASSERT(root_val(*mn.t2) == 1);
+
+    // Copying an arena-mode value must deep-copy the node graph, not alias
+    // the source's raw pointers (arena.h documents this as the required
+    // copy semantics for arena-mode handles; the implicit compiler-generated
+    // copy constructor would otherwise just copy the raw pointers verbatim).
+    T orig = build(3);
+    T copy_of_orig = orig; // exercises the explicit deep-copy constructor
+    ASSERT(count(copy_of_orig) == count(orig));
+    const auto &orig_n = std::get<typename T::Node>(orig.v());
+    const auto &copy_n = std::get<typename T::Node>(copy_of_orig.v());
+    // Same values, but the recursive-field pointers are pointer-distinct:
+    // the copy lives in nodes of its own, not aliases into orig's nodes.
+    ASSERT(orig_n.t1 != copy_n.t1);
+    ASSERT(orig_n.t2 != copy_n.t2);
+    ASSERT(root_val(*orig_n.t1) == root_val(*copy_n.t1));
+    ASSERT(root_val(*orig_n.t2) == root_val(*copy_n.t2));
+    // Rebuilding one instance must not affect the other (no shared state).
+    copy_of_orig = T::leaf();
+    ASSERT(copy_of_orig.is_leaf() == Bool0::TRUE_);
+    ASSERT(orig.is_leaf() == Bool0::FALSE_);
+    ASSERT(count(orig) == 15);
   } // arena dropped here — frees all nodes in O(1)
 
   if (testStatus > 0)
