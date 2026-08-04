@@ -26,6 +26,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdio>
 #include <memory>
 #include <memory_resource>
 #include <new>
@@ -111,6 +112,23 @@ inline arena*& current_arena_ptr() noexcept
 inline arena& fallback_arena()
 {
     static thread_local arena g;
+#ifndef NDEBUG
+    // Debug builds only: warn once per thread the first time the fallback is
+    // actually reached, so an embedding that forgot to install an [arena_scope]
+    // (and would therefore grow this never-resetting region unboundedly) at
+    // least gets a signal in development.  Release builds compile this away
+    // entirely, so the fallback stays zero-overhead there.
+    static thread_local bool warned = false;
+    if (!warned) {
+        warned = true;
+        std::fprintf(
+            stderr,
+            "crane::arena: warning: allocating in the never-resetting fallback "
+            "arena (no crane::arena_scope / crane::arena_use_scope is active on "
+            "this thread). This is correct for program-lifetime values but "
+            "leaks ephemeral garbage; install a scope to bound the lifetime.\n");
+    }
+#endif
     return g;
 }
 
@@ -141,6 +159,26 @@ public:
 
 private:
     arena  a_;
+    arena* prev_;
+};
+
+// RAII: install a *caller-supplied* arena as the current one for the duration
+// of this scope (restoring any previous one on exit, so scopes nest).  Unlike
+// [arena_scope], this owns nothing: the caller controls the arena's lifetime,
+// which lets one arena be reused across several sequential top-level calls
+// (amortizing allocation) or be pre-sized/pre-warmed before the calls.
+class arena_use_scope {
+public:
+    explicit arena_use_scope(arena& a) : prev_(current_arena_ptr())
+    {
+        current_arena_ptr() = &a;
+    }
+    ~arena_use_scope() { current_arena_ptr() = prev_; }
+
+    arena_use_scope(const arena_use_scope&)            = delete;
+    arena_use_scope& operator=(const arena_use_scope&) = delete;
+
+private:
     arena* prev_;
 };
 
