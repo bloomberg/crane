@@ -728,6 +728,11 @@ val find_custom_match_by_ref : GlobRef.t -> string option
     wrapper template (e.g. ["immer::box<%t0>"]) for a custom container. *)
 val find_boxed_wrapper_opt : GlobRef.t -> string option
 
+(** Look up the [Drain "..."] iterative-destructor template for a custom
+    container. Placeholders: [%scrut] = container field expression, [%yield(e)] =
+    push child [e] onto the destructor worklist. *)
+val find_custom_drain_opt : GlobRef.t -> string option
+
 (** Record an inductive that recurses through a boxed-element container. *)
 val add_boxed_recursive_ind : GlobRef.t -> unit
 
@@ -862,6 +867,7 @@ val extract_constant_foreign : qualid -> string -> unit
     @param imports list of C++ headers to [#include] when this type is used *)
 val extract_inductive :
   ?boxed:string ->
+  ?drain:string ->
   qualid -> string -> string list -> string option -> string list -> unit
 
 (** Extract monad with bind and return operations.

@@ -4412,6 +4412,60 @@ let gen_ind_header_v2
             let skip g = GlobRef.CanOrd.equal g name in
             render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
+          (* Expand a [Drain "..."] template for a custom container field into a
+             statement list. [%scrut] -> the container field expression [scrut];
+             [%yield(e)] -> a structured [push_back(make_rc<Self>(e))] onto the
+             worklist. The template is split into raw chunks around the structured
+             pushes so that the [_stack] reference is a real [CPPvar] the lambda
+             capture-analysis can see (a fully-raw body would collapse to an
+             empty [[]] capture). [%yield]'s argument is captured with
+             balanced-paren matching, so it may itself contain parentheses
+             (e.g. [std::move(%scrut.front())]). *)
+          let expand_drain_template ~scrut ~self tmpl =
+            let subst s = Common.render_template [("%scrut", scrut)] s in
+            let n = String.length tmpl in
+            let yield = "%yield(" in
+            let yl = String.length yield in
+            let stmts = ref [] in
+            let buf = Buffer.create 64 in
+            let flush_raw () =
+              if Buffer.length buf > 0 then begin
+                stmts := Sraw (subst (Buffer.contents buf)) :: !stmts;
+                Buffer.clear buf
+              end
+            in
+            let i = ref 0 in
+            while !i < n do
+              if !i + yl <= n && String.equal (String.sub tmpl !i yl) yield
+              then begin
+                let j = ref (!i + yl) in
+                let depth = ref 1 in
+                while !j < n && !depth > 0 do
+                  (match tmpl.[!j] with
+                   | '(' -> incr depth
+                   | ')' -> decr depth
+                   | _ -> ());
+                  if !depth > 0 then incr j
+                done;
+                let arg = String.sub tmpl (!i + yl) (!j - (!i + yl)) in
+                flush_raw ();
+                stmts :=
+                  Sexpr (CPPdot_method_call (
+                    CPPvar _stack_id,
+                    Id.of_string "push_back",
+                    [CPPraw (
+                       Table.make_shared_name () ^ "<" ^ self ^ ">("
+                       ^ subst arg ^ ")")]))
+                  :: !stmts;
+                i := !j + 1
+              end else begin
+                Buffer.add_char buf tmpl.[!i];
+                incr i
+              end
+            done;
+            flush_raw ();
+            List.rev !stmts
+          in
           (** Build drain statements for classified fields.  [Direct] fields get
               a simple [push_back(std::move(field))].  [List g] fields with a
               custom mapping (e.g. std::deque) iterate elements onto the stack. *)
@@ -4443,6 +4497,15 @@ let gen_ind_header_v2
                    deferred here; bounded call-stack depth is the property that
                    matters for the adversarial-depth attack. *)
                 if Table.is_custom list_g then
+                  (* A [Drain "..."] clause on the custom container mapping spells
+                     out how to iteratively yield children -- required for bare
+                     value-type containers (deque, immer::flex_vector) that have
+                     no [use_count]/[reset]. Without it we fall back to assuming a
+                     smart-pointer-wrapped container. *)
+                  begin match Table.find_custom_drain_opt list_g with
+                  | Some tmpl ->
+                    expand_drain_template ~scrut:fes ~self:ss tmpl
+                  | None ->
                   [Sif_then (
                     CPPbinop ("&&", fe,
                       CPPbinop ("==",
@@ -4457,6 +4520,7 @@ let gen_ind_header_v2
                            ^ ">(std::move(_elem))")]));
                       Sraw "}";
                       Sraw (fes ^ ".reset();") ])]
+                  end
                 else
                   let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in

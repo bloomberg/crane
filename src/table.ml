@@ -2246,6 +2246,20 @@ let add_boxed_wrapper r s = boxed_wrappers := Refmap'.add r s !boxed_wrappers
 
 let find_boxed_wrapper_opt r = Refmap'.find_opt r !boxed_wrappers
 
+(* Custom drain templates (iterative-destructor support). Maps a custom container
+   inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
+   C++ statement template that iteratively yields the container's recursive
+   children onto the destructor worklist, declared with the [Drain "..."] clause
+   of [Crane Extract Inductive]. Placeholders: [%scrut] is the container field
+   expression; [%yield(e)] pushes child [e] onto the worklist. Without this the
+   iterative destructor assumes a smart-pointer-wrapped container
+   ([use_count]/[reset]), which is invalid for bare value-type containers. *)
+let custom_drains = Summary.ref Refmap'.empty ~name:"CraneExtrCustomDrains"
+
+let add_custom_drain r s = custom_drains := Refmap'.add r s !custom_drains
+
+let find_custom_drain_opt r = Refmap'.find_opt r !custom_drains
+
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
    codegen; an element type that structurally mentions one of these is
@@ -2431,6 +2445,13 @@ let in_boxed_wrappers : GlobRef.t * string -> obj =
        ~cache:(fun (r, s) -> add_boxed_wrapper r s)
        ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
 
+let in_custom_drains : GlobRef.t * string -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane ML extractions custom drains"
+       ~cache:(fun (r, s) -> add_custom_drain r s)
+       ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
+
 (* Grammar entries. *)
 
 (* Custom imports are now tracked per-GlobRef rather than globally. When a [From
@@ -2566,7 +2587,7 @@ let extract_constant_import inline r ids s imports =
 
 (** Registers a custom inductive type extraction with constructor mappings and
     optional match template. *)
-let extract_inductive ?boxed r s l optstr imports =
+let extract_inductive ?boxed ?drain r s l optstr imports =
   check_inside_section ();
   let g = Smartlocate.global_with_alias r in
   Dumpglob.add_glob ?loc:r.CAst.loc g;
@@ -2584,6 +2605,7 @@ let extract_inductive ?boxed r s l optstr imports =
     Lib.add_leaf (in_customs (g, [], s));
     Option.iter (fun s -> Lib.add_leaf (in_custom_matchs (g, s))) optstr;
     Option.iter (fun w -> Lib.add_leaf (in_boxed_wrappers (g, w))) boxed;
+    Option.iter (fun d -> Lib.add_leaf (in_custom_drains (g, d))) drain;
     List.iteri
       (fun j s ->
         let g = GlobRef.ConstructRef (ip, succ j) in

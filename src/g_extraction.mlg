@@ -282,12 +282,28 @@ END
 VERNAC COMMAND EXTEND ExtractionInductive CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Boxed" "Element" cppname(w) "Drain" string(d) "From" string_list(import) ]
+  -> { extract_inductive ~boxed:w ~drain:d x id idl o import }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Boxed" "Element" cppname(w) "Drain" string(d) ]
+  -> { extract_inductive ~boxed:w ~drain:d x id idl o [] }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
     "Boxed" "Element" cppname(w) "From" string_list(import) ]
   -> { extract_inductive ~boxed:w x id idl o import }
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o)
     "Boxed" "Element" cppname(w) ]
   -> { extract_inductive ~boxed:w x id idl o [] }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Drain" string(d) "From" string_list(import) ]
+  -> { extract_inductive ~drain:d x id idl o import }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Drain" string(d) ]
+  -> { extract_inductive ~drain:d x id idl o [] }
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o) "From" string_list(import) ]
   -> { extract_inductive x id idl o import }
