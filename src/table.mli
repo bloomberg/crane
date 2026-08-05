@@ -262,6 +262,23 @@ val needs_arena : unit -> bool
 (** Reset the arena-needed flag. *)
 val reset_needs_arena : unit -> unit
 
+(** Mark that constructor [r]'s factory takes an explicit [crane::arena&]
+    parameter (Milestone 2 of the explicit-arena-parameter design). *)
+val mark_ctor_needs_arena : Names.GlobRef.t -> unit
+
+(** Check whether constructor [r]'s factory takes an explicit
+    [crane::arena&] parameter. *)
+val ctor_needs_arena : Names.GlobRef.t -> bool
+
+(** Mark that generated function/method [r] takes an explicit
+    [crane::arena&] parameter because its body constructs an arena-mode
+    value (directly or via a called constructor/function). *)
+val mark_func_needs_arena : Names.GlobRef.t -> unit
+
+(** Check whether generated function/method [r] takes an explicit
+    [crane::arena&] parameter. *)
+val func_needs_arena : Names.GlobRef.t -> bool
+
 (** Mark that the [rc.h] runtime header is needed (non-atomic rc codegen). *)
 val mark_needs_rc : unit -> unit
 

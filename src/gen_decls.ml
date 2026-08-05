@@ -3638,7 +3638,48 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (get_local_inductives ())
   in
   tctx.method_self_ns <- full_method_ns;
+  (* Milestone 2 arena threading: determine whether this method's body needs
+     an explicit [crane::arena &] parameter, by scanning [inner_body] for (a)
+     applications of constructors already known to need an arena (see
+     [mk_factory_methods]/[Table.ctor_needs_arena]), or (b) calls to other
+     generated functions/methods already known to need one
+     ([Table.func_needs_arena]).  Self-recursive calls to [func_ref] itself
+     don't short-circuit this: if the body directly builds an arena-mode
+     value (e.g. [node (mirror r) x (mirror l)]), the [MLcons] check alone
+     is enough to detect it, regardless of the recursive [mirror] calls
+     alongside it. Must run and register (via [Table.mark_func_needs_arena])
+     BEFORE [gen_stmts] so that self-recursive call sites inside the body
+     see the function as already needing an arena. *)
+  let method_needs_arena =
+    (* Scan for actual constructor APPLICATIONS ([MLcons]) and function
+       CALLS ([MLglob]/[MLapp (MLglob _, _)]) only.  Do NOT use
+       [Modutil.ast_iter_references], which also fires its [do_cons]
+       callback for constructors appearing in [MLcase] match patterns
+       (e.g. matching against [leaf]/[node] to destructure a scrutinee) —
+       that would wrongly flag every function that merely pattern-matches
+       on an arena-mode type (e.g. [is_leaf], [size]) as needing an arena,
+       even though they never construct one. *)
+    let found = ref false in
+    let rec scan a =
+      ( match a with
+      | MLcons (_, r, _) -> if Table.ctor_needs_arena r then found := true
+      | MLglob (r, _) -> if Table.func_needs_arena r then found := true
+      | _ -> () );
+      Mlutil.ast_iter scan a
+    in
+    scan inner_body;
+    !found
+  in
+  let arena_param_id = Id.of_string "a" in
+  let arena_param_ty =
+    Tref (Tid_external (Id.of_string_soft "crane::arena", []))
+  in
+  if method_needs_arena then Table.mark_func_needs_arena func_ref;
+  let saved_arena_param = tctx.current_arena_param in
+  tctx.current_arena_param <-
+    (if method_needs_arena then Some arena_param_id else None);
   let stmts = gen_stmts env method_k inner_body in
+  tctx.current_arena_param <- saved_arena_param;
   tctx.method_self_ns <- saved_method_ns;
   set_current_type_vars saved_type_vars;
   tctx.move_dead_after <- saved_dead;
@@ -3778,6 +3819,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let stmts =
     if Id.Set.is_empty phantom_name_set then stmts
     else List.map strip_phantom_any_cast_stmt stmts
+  in
+  (* Milestone 2: append the explicit arena parameter (as the last visible
+     parameter, after "this") for methods whose body needs one. *)
+  let params =
+    if method_needs_arena then params @ [ (arena_param_id, arena_param_ty) ]
+    else params
   in
   ( Fmethod
       {
@@ -4751,6 +4798,10 @@ let gen_ind_header_v2
         (* For owned recursive fields in value-type inductives, factory
            params take the inner value by value (sink parameter) so callers
            can move in.  Coinductive shared_ptr fields stay as const ref. *)
+        let arena_param_id = Id.of_string "a" in
+        let arena_param_ty =
+          Tref (Tid_external (Id.of_string_soft "crane::arena", []))
+        in
         let params =
           List.map
             (fun (j, storage_ty, api_ty) ->
@@ -4763,6 +4814,32 @@ let gen_ind_header_v2
               in
               (param_name_of j, param_ty) )
             cpp_tys
+        in
+        (* Arena mode (Milestone 1 of the explicit-arena-parameter design):
+           factories that allocate arena nodes take an explicit
+           [crane::arena&] as their first parameter instead of reading the
+           ambient thread-local arena.  Only affects factories that actually
+           allocate a recursive field (i.e. the ones that would otherwise
+           call [CPParena_alloc]); nullary constructors with no recursive
+           fields don't need an arena at all.
+           Milestone 2 (see [Table.ctor_needs_arena]/[Table.func_needs_arena])
+           threads this arena parameter onward: call sites in
+           [translation.ml] consult those registries to decide whether a
+           given constructor application or function call needs an [a]
+           argument appended, and [gen_single_method] below gives
+           arena-allocating generated methods (e.g. [mirror]) their own
+           explicit arena parameter to pass along. *)
+        let factory_needs_arena =
+          arena_ok
+          && List.exists
+               (fun (_, storage_ty, _) ->
+                 match storage_ty with Tshared_ptr _ -> true | _ -> false )
+               cpp_tys
+        in
+        if factory_needs_arena then Table.mark_ctor_needs_arena c;
+        let params =
+          if factory_needs_arena then (arena_param_id, arena_param_ty) :: params
+          else params
         in
         let ctor_args =
           List.map
@@ -4819,11 +4896,19 @@ let gen_ind_header_v2
                   if inner = api_ty then arg
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
-                (* Arena mode: the field is a raw arena pointer, so allocate the
-                   node in the ambient arena instead of make_shared. *)
+                (* Arena mode: the field is a raw arena pointer, so allocate
+                   the node in the explicit arena parameter (Milestone 1)
+                   instead of make_shared. *)
                 if arena_ok then begin
                   Table.mark_needs_arena ();
-                  CPPfun_call (CPParena_alloc inner, [converted])
+                  let rendered_ty =
+                    Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] inner)
+                  in
+                  CPPfun_call
+                    ( CPPvar
+                        (Id.of_string_soft
+                           ("a.alloc<" ^ rendered_ty ^ ">") ),
+                      [converted] )
                 end
                 else
                   CPPfun_call (CPPmk_shared inner, [converted])

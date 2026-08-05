@@ -300,6 +300,35 @@ let needs_arena () = !needs_arena_flag
 
 let reset_needs_arena () = needs_arena_flag := false
 
+(* Arena-mode explicit-arena-parameter threading (Part 3 "Option 1" design,
+   Milestone 2).  Milestone 1 gave arena-mode factories (e.g. [Tree::node])
+   an explicit [crane::arena&] parameter instead of reading the ambient
+   thread-local arena.  Milestone 2 threads that parameter through generated
+   methods/functions whose body allocates arena-mode values (directly via a
+   factory call, or transitively via a call to another arena-needing
+   function/method) — the "public-entry/worker split" from the plan.
+
+   [ctors_needing_arena] records constructor refs whose factory takes an
+   explicit arena parameter (mirrors the per-constructor decision made in
+   {!Gen_decls.mk_factory_methods}).  [funcs_needing_arena] records function
+   refs (methods generated via {!Gen_decls.gen_single_method}, e.g.
+   [Tree.mirror]) whose generated signature was given an extra arena
+   parameter because their body constructs an arena-mode value or calls
+   another arena-needing function.  Both are consulted by the call-site
+   codegen in [translation.ml] to decide whether to thread an [a] argument
+   through a given call. *)
+let ctors_needing_arena : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 17
+
+let mark_ctor_needs_arena (r : GlobRef.t) = Hashtbl.replace ctors_needing_arena r ()
+
+let ctor_needs_arena (r : GlobRef.t) = Hashtbl.mem ctors_needing_arena r
+
+let funcs_needing_arena : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 17
+
+let mark_func_needs_arena (r : GlobRef.t) = Hashtbl.replace funcs_needing_arena r ()
+
+let func_needs_arena (r : GlobRef.t) = Hashtbl.mem funcs_needing_arena r
+
 (* Set when the non-atomic reference-counted pointer (crane::rc) is used, so the
    emitter includes the [rc.h] runtime header. *)
 let needs_rc_flag = ref false

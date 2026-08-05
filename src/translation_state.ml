@@ -57,6 +57,13 @@ type translation_ctx = {
   mutable current_param_types : (int * ml_type) list;
   (* Name of the enclosing function, for diagnostic messages. *)
   mutable current_outer_function_name : string option;
+  (* If the function/method currently being generated has an explicit
+     [crane::arena &] parameter threaded in for Milestone 2 arena-mode
+     constructor calls, this holds that parameter's identifier so that
+     nested constructor-application and self-recursive call codegen (in
+     translation.ml) can reference it. None when not inside such a
+     function, or when the function doesn't need arena threading. *)
+  mutable current_arena_param : Id.t option;
   (* C++ return type of the enclosing function, set by gen_dfun. Used to
      recover erased template type args at call sites where C++ can't deduce
      them from lambda arguments. *)
@@ -164,6 +171,7 @@ let tctx =
     current_type_vars = [];
     current_param_types = [];
     current_outer_function_name = None;
+    current_arena_param = None;
     current_cpp_return_type = None;
     env_types = [];
     pending_lifted_decls = [];

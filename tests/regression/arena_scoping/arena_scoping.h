@@ -115,9 +115,9 @@ public:
   // CREATORS
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
-  static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{crane::arena_alloc<Tree<A>>(std::move(t1)), std::move(x),
-                     crane::arena_alloc<Tree<A>>(std::move(t2))});
+  static Tree<A> node(crane::arena &a, Tree<A> t1, A x, Tree<A> t2) {
+    return Tree(Node{a.alloc<Tree<A>>(std::move(t1)), std::move(x),
+                     a.alloc<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS

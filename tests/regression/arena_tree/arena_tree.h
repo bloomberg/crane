@@ -117,9 +117,9 @@ public:
   // CREATORS
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
-  static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{crane::arena_alloc<Tree<A>>(std::move(t1)), std::move(x),
-                     crane::arena_alloc<Tree<A>>(std::move(t2))});
+  static Tree<A> node(crane::arena &a, Tree<A> t1, A x, Tree<A> t2) {
+    return Tree(Node{a.alloc<Tree<A>>(std::move(t1)), std::move(x),
+                     a.alloc<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
@@ -171,12 +171,12 @@ public:
     }
   }
 
-  Tree<A> mirror() const {
+  Tree<A> mirror(crane::arena &a) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Tree<A>::leaf();
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return Tree<A>::node(a2->mirror(), a1, a0->mirror());
+      return Tree<A>::node(a, a2->mirror(a), a1, a0->mirror(a));
     }
   }
 };
