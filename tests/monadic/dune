@@ -239,6 +239,17 @@
   (deps stmonad.t.exe)
   (action (run ./stmonad.t.exe))))
 
+(subdir object_model
+ (rule
+  (targets object_model.t.exe)
+  (deps ObjectModelExtractionTests.vo object_model.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} object_model.t.exe object_model.cpp object_model.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps object_model.t.exe)
+  (action (run ./object_model.t.exe))))
+
 (subdir global_state
  (rule
   (targets global_state.t.exe)

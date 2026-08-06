@@ -105,6 +105,7 @@ End STMonadTests.
 
 Set Crane Loopify.
 Crane Extract Inlined Constant STMonadTests.runST' => "%a0".
+Crane Extract Skip callE.
 
 
 Crane Extraction "stmonad" STMonadTests.
@@ -113,3 +114,6 @@ Crane Benchmark
   STMonadTests.test_quicksort_fun,
   STMonadTests.test_quicksort_ST
 On C++ With "".
+
+
+
