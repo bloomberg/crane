@@ -1,49 +1,38 @@
 
 (* TODO: optimize imports *)
-From Crane Require Import Monads.STMonad.   
 
 From Stdlib Require Import
   Arith.PeanoNat
-  Arith.Peano_dec
-  Basics
   Classes.EquivDec
   Extraction
   Init.Peano
   List
   Morphisms
   PrimString
-  RelationClasses
-  Relation_Definitions
-  Setoid
   Strings.String
 .
 
-From Crane Require Import Monads.ITree.
 From ExtLib Require Import
   CmpDec
   Data.Bool
   Data.List
   Data.Map.FMapAList
-  Data.Monads.EitherMonad
-  Data.Pair
   Data.String
-  Structures.Functor
-  Structures.Maps
-  Structures.Traversable
-  Structures.Reducible
 .
 
 
 From ITree Require Import
   Events.Exception
-  Events.FailFacts
-  Events.MapDefault
-  Events.MapDefaultFacts
-  Events.State
-  Events.StateFacts
   ITree
-  ITreeFacts
 .
+
+From Crane Require Import
+  Mapping.NatIntStd
+  Monads.Error
+  Monads.ITree
+  Monads.Indices
+  Monads.STMonad
+.   
 
 From CraneTestsMonadic.stmonad Require Import STMonadExamples.
 
@@ -76,15 +65,11 @@ Module STMonadTests.
     Eval unfold quicksort_ST_list,quicksort_ST,quicksort_ST_body,partition,swap_arr,for_each_with in
       (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
 
-  (* NOTE: axiomatized for purposes of applying the intuitive std::to_string here instead of
-     printing long strings of (S (S ( S.... )))
-   *)
-  Axiom int_to_string: forall (n : nat), PrimString.string.
 
   Fixpoint list_to_string_helper (l : list nat) : PrimString.string :=
     match l with
     | nil => ""
-    | x::xs => PrimString.cat (int_to_string x) (PrimString.cat ", " (list_to_string_helper xs))
+    | x::xs => PrimString.cat (string_of_nat x) (PrimString.cat ", " (list_to_string_helper xs))
     end.
 
   Definition list_to_string (l : list nat) : PrimString.string :=
@@ -120,10 +105,6 @@ End STMonadTests.
 
 Set Crane Loopify.
 Crane Extract Inlined Constant STMonadTests.runST' => "%a0".
-Crane Extract Skip callE.
-Crane Extract Inlined Constant STMonadTests.int_to_string => "std::to_string(%a0)".
-
-Require Import Crane.Mapping.NatIntStd.
 
 
 Crane Extraction "stmonad" STMonadTests.

@@ -154,105 +154,6 @@ template <typename Err> struct ExceptE {
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
 
-struct Ascii {
-  // DATA
-  bool a0;
-  bool a1;
-  bool a2;
-  bool a3;
-  bool a4;
-  bool a5;
-  bool a6;
-  bool a7;
-
-  // ACCESSORS
-  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
-
-  // CREATORS
-  static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
-                      bool a6, bool a7) {
-    return {a0, a1, a2, a3, a4, a5, a6, a7};
-  }
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-struct STMonadExamples {
-  template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
-  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
-                                                 F1 &&quicksort_fun0);
-};
-
-struct String {
-  // TYPES
-  struct EmptyString {};
-
-  struct String0 {
-    Ascii a0;
-    std::shared_ptr<String> a1;
-  };
-
-  using variant_t = std::variant<EmptyString, String0>;
-
-private:
-  // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  String() {}
-
-  explicit String(EmptyString _v) : v_(_v) {}
-
-  explicit String(String0 _v) : v_(std::move(_v)) {}
-
-  static String emptystring() { return String(EmptyString{}); }
-
-  static String string0(Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
-  }
-
-  // MANIPULATORS
-  ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
-      if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
-        }
-      }
-    };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        _drain(_cur->v_mut());
-      }
-    }
-  }
-
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
-};
-
-struct Err {
-  // DATA
-  String x;
-
-  // ACCESSORS
-  Err clone() const { return {x}; }
-
-  // CREATORS
-  static Err error(String x) { return {std::move(x)}; }
-};
-
 template <typename I, typename T>
 concept Ix = requires {
   {
@@ -271,6 +172,29 @@ concept Ix = requires {
   { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
   { I::zero() } -> std::convertible_to<T>;
 };
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Err {
+  // DATA
+  std::string x;
+
+  // ACCESSORS
+  Err clone() const { return {x}; }
+
+  // CREATORS
+  static Err error(std::string x) { return {std::move(x)}; }
+};
+
+struct STMonadExamples {
+  template <typename F1>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
+                                                 F1 &&quicksort_fun0);
+};
+
 template <typename I, typename T>
 concept STRefClass = requires {
   { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<std::any>;
@@ -413,8 +337,7 @@ struct STMonadTests {
     uint64_t v;
     v = UINT64_C(5);
     v = UINT64_C(6);
-    uint64_t val = v;
-    return val;
+    return v;
   }
 
   template <typename _tcI0, typename _tcI1>

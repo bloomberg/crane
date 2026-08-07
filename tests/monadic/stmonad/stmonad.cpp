@@ -7,8 +7,7 @@ uint64_t STMonadTests::array_simp_fixed_init() {
           nat_idx::suc(nat_idx::suc(nat_idx::suc(nat_idx::zero()))))) -
           nat_idx::zero() + 1,
       UINT64_C(5));
-  uint64_t elem = (*arr)[nat_idx::suc(nat_idx::zero())];
-  return elem;
+  return (*arr)[nat_idx::suc(nat_idx::zero())];
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
@@ -353,7 +352,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
       }
     }();
     ;
-    List<uint64_t> newXs = [&]() {
+    return [&]() {
       using _E = typename std::remove_pointer_t<
           std::remove_cvref_t<decltype(arr)>>::value_type;
       List<_E> _r = List<_E>::nil();
@@ -362,7 +361,6 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
       }
       return _r;
     }();
-    return newXs;
   }
 }
 
@@ -452,7 +450,7 @@ STMonadTests::rep_list_nat(List<uint64_t> l,
 
 std::string STMonadTests::test_quicksort_ST(std::monostate) {
   List<uint64_t> out = quicksort_ST_mine(input_lst1);
-  return list_to_string(std::move(out));
+  return list_to_string(out);
 }
 
 std::string STMonadTests::test_quicksort_fun(std::monostate) {
