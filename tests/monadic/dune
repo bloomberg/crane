@@ -260,7 +260,8 @@
   (alias runtest)
   (deps global_state.t.exe)
   (action (run ./global_state.t.exe))))
- 
+
+
 (subdir thread
  (rule
   (targets thread.t.exe)

@@ -52,8 +52,34 @@ int main() {
               << ", " << result.second << ")" << std::endl;
   }
 
+  // Test 3: acc_test1 returns (100,150,false,150)
+  {
+    auto result = acc_test1_ext();
+    ASSERT(result.first.first.first == 100);
+    ASSERT(result.first.first.second == 150);
+    ASSERT(result.first.second == false);
+    ASSERT(result.second == 150);
+    std::cout << "Test 3 (account1 works): (" << result.first.first.first
+              << ", " << result.first.first.second << ", " << result.first.second
+              << ", " << result.second << ")" << std::endl;
+    
+  }
+
+  // Test 3: acc_test2 returns (100,true,250,0)
+  {
+    auto result = acc_test2_ext();
+    ASSERT(result.first.first.first == 100);
+    ASSERT(result.first.first.second == true);
+    ASSERT(result.first.second == 250);
+    ASSERT(result.second == 0);
+    std::cout << "Test 4 (account2 works): (" << result.first.first.first
+              << ", " << result.first.first.second << ", " << result.first.second
+              << ", " << result.second << ")" << std::endl;
+    
+  }
+
   if (testStatus == 0) {
-    std::cout << "\nAll point tests passed!" << std::endl;
+    std::cout << "\nAll object model tests passed!" << std::endl;
   } else {
     std::cout << "\n" << testStatus << " test(s) failed!" << std::endl;
   }

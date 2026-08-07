@@ -339,8 +339,7 @@ struct STMonadTests {
     std::shared_ptr<uint64_t> v;
     v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
     *v = UINT64_C(6);
-    uint64_t val = *v;
-    return val;
+    return *v;
   }
 
   template <typename _tcI0, typename _tcI1>

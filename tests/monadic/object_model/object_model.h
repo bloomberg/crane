@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <variant>
@@ -108,13 +109,23 @@ struct STRefNat {
 };
 
 template <typename S> struct Point {
-  int64_t getX;
+  std::function<int64_t(std::monostate)> getX;
   std::function<void(int64_t)> moveD;
-  int64_t offsetX;
+  std::function<int64_t(std::monostate)> offsetX;
+};
+
+template <typename S> struct Account {
+  std::function<int64_t(std::monostate)> getBalance;
+  std::function<int64_t(int64_t)> deposit;
+  std::function<std::optional<int64_t>(int64_t)> withdraw;
 };
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext();
 std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
 testtoST2_ext();
+std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
+acc_test1_ext();
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
+acc_test2_ext();
 
 #endif // INCLUDED_OBJECT_MODEL
