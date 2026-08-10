@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTNSALIASINFUNCTOR
 #define INCLUDED_SEPEXTNSALIASINFUNCTOR
 
+#include "arena.h"
 #include "small_vector.h"
 
 #include "Datatypes.h"

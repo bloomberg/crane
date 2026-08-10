@@ -1829,6 +1829,23 @@ and pp_cpp_expr env args t =
   | CPParena_shared_alloc t ->
     Table.mark_needs_arena ();
     cpp_angle "crane::arena_shared_alloc" (pp_cpp_type false [] t)
+  | CPParena_make t ->
+    (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
+       for the current pointer flavor.  Falls back to a plain heap allocation at
+       runtime whenever no arena scope is open at the call site. *)
+    let inner = pp_cpp_type false [] t in
+    if Table.non_atomic_rc () then begin
+      (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
+      require_header "memory";
+      cpp_angle "crane::rc" inner ++ str "::make"
+    end
+    else if Table.std_lib () = "BDE" then
+      (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
+      cpp_angle (sn ()).make_shared inner
+    else begin
+      Table.mark_needs_arena ();
+      cpp_angle "crane::arena_make_shared" inner
+    end
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"

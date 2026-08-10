@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTTHISINFREEFN
 #define INCLUDED_SEPEXTTHISINFREEFN
 
+#include "arena.h"
 #include "small_vector.h"
 
 #include "Datatypes.h"

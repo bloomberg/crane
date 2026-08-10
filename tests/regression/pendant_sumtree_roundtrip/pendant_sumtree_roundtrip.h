@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
+#include "arena.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
@@ -76,7 +77,8 @@ public:
   static List<A> nil0() { return List(Nil0{}); }
 
   static List<A> cons0(A a, List<A> l) {
-    return List(Cons0{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons0{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -255,7 +257,8 @@ public:
   static T0<A> nil() { return T0(Nil{}); }
 
   static T0<A> cons(A h, uint64_t n, T0<A> a2) {
-    return T0(Cons{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
+    return T0(
+        Cons{std::move(h), n, crane::arena_make_shared<T0<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -293,7 +296,7 @@ public:
   static T f1(uint64_t n) { return T(F1{n}); }
 
   static T fs(uint64_t n, T a1) {
-    return T(FS{n, std::make_shared<T>(std::move(a1))});
+    return T(FS{n, crane::arena_make_shared<T>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -519,8 +522,9 @@ struct PendantSumtreeRoundtripCase {
     }
 
     static SumTree sumnode(CertifiedPendant a0, List<SumTree> a1) {
-      return SumTree(SumNode{std::move(a0),
-                             std::make_shared<List<SumTree>>(std::move(a1))});
+      return SumTree(
+          SumNode{std::move(a0),
+                  crane::arena_make_shared<List<SumTree>>(std::move(a1))});
     }
 
     // MANIPULATORS

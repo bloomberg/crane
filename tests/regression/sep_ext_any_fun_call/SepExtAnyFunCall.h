@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTANYFUNCALL
 #define INCLUDED_SEPEXTANYFUNCALL
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <functional>

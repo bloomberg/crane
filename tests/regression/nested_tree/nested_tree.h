@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NESTED_TREE
 #define INCLUDED_NESTED_TREE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -32,7 +33,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {
@@ -125,7 +128,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -230,8 +234,9 @@ struct NestedTree {
     static tree<A> leaf() { return tree(Leaf{}); }
 
     static tree<A> node(A a, tree<std::pair<A, A>> t) {
-      return tree(Node{std::move(a),
-                       std::make_shared<tree<std::pair<A, A>>>(std::move(t))});
+      return tree(
+          Node{std::move(a),
+               crane::arena_make_shared<tree<std::pair<A, A>>>(std::move(t))});
     }
 
     // MANIPULATORS

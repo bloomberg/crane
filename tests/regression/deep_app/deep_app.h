@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_APP
 #define INCLUDED_DEEP_APP
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -78,8 +79,8 @@ struct DeepApp {
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+      return mylist(Mycons{std::move(a0),
+                           crane::arena_make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

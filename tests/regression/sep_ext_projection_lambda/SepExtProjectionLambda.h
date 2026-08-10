@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPROJECTIONLAMBDA
 #define INCLUDED_SEPEXTPROJECTIONLAMBDA
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <optional>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PAIR_SELF_DEEP_COPY
 #define INCLUDED_PAIR_SELF_DEEP_COPY
 
+#include "arena.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -37,8 +38,8 @@ struct PairSelfDeepCopy {
     static chain stop() { return chain(Stop{}); }
 
     static chain link(std::pair<chain, bool> a0) {
-      return chain(
-          Link{std::make_shared<std::pair<chain, bool>>(std::move(a0))});
+      return chain(Link{
+          crane::arena_make_shared<std::pair<chain, bool>>(std::move(a0))});
     }
 
     // MANIPULATORS

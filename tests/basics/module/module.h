@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE
 #define INCLUDED_MODULE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <concepts>
 #include <memory>
@@ -78,8 +79,9 @@ template <OrderedType K, BaseType V> struct MakeMap {
     static tree empty() { return tree(Empty{}); }
 
     static tree node(tree a0, key a1, value a2, tree a3) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), std::move(a1),
-                       std::move(a2), std::make_shared<tree>(std::move(a3))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)),
+                       std::move(a1), std::move(a2),
+                       crane::arena_make_shared<tree>(std::move(a3))});
     }
 
     // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_HOF_TREE_LOOPIFY
 #define INCLUDED_HOF_TREE_LOOPIFY
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -79,8 +80,9 @@ struct HofTreeLoopify {
     static tree<A> leaf() { return tree(Leaf{}); }
 
     static tree<A> node(tree<A> l, A x, tree<A> r) {
-      return tree(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
-                       std::make_shared<tree<A>>(std::move(r))});
+      return tree(Node{crane::arena_make_shared<tree<A>>(std::move(l)),
+                       std::move(x),
+                       crane::arena_make_shared<tree<A>>(std::move(r))});
     }
 
     // MANIPULATORS

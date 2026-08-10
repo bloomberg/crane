@@ -34,5 +34,7 @@ Fixpoint mirror {A} (t : tree A) : tree A :=
 End Tree.
 
 Require Crane.Extraction.
-Crane Arena Tree.tree.
+(* Scoped-arena redesign: no per-type arena directive. Tree.tree is an ordinary
+   recursive type; it becomes arena-backed purely by being constructed inside a
+   crane::arena_scope (see arena_tree.t.cpp). *)
 Crane Extraction "arena_tree" Tree.

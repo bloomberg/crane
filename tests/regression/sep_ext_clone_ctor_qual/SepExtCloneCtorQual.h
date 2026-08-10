@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTCLONECTORQUAL
 #define INCLUDED_SEPEXTCLONECTORQUAL
 
+#include "arena.h"
 #include "small_vector.h"
 #include <utility>
 #include <variant>

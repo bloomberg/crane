@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CPS
 #define INCLUDED_CPS
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <functional>
@@ -74,7 +75,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -175,8 +177,8 @@ struct CPS {
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)),
-                       std::make_shared<tree>(std::move(a1))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)),
+                       crane::arena_make_shared<tree>(std::move(a1))});
     }
 
     // MANIPULATORS

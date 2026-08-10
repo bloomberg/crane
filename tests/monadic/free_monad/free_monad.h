@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FREE_MONAD
 #define INCLUDED_FREE_MONAD
 
+#include "arena.h"
 #include "crane_fn.h"
 #include <any>
 #include <functional>
@@ -51,7 +52,7 @@ struct FreeMonad {
     static IO pure(std::any a) { return IO(Pure{std::move(a)}); }
 
     static IO bind(IO a, std::function<IO(std::any)> b) {
-      return IO(Bind{std::make_shared<IO>(std::move(a)), std::move(b)});
+      return IO(Bind{crane::arena_make_shared<IO>(std::move(a)), std::move(b)});
     }
 
     static IO get_line() { return IO(Get_line{}); }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_POLY_INDUCTIVE
 #define INCLUDED_POLY_INDUCTIVE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -256,8 +257,8 @@ struct PolyInductive {
     static ptree<A> pleaf(A a0) { return ptree(PLeaf{std::move(a0)}); }
 
     static ptree<A> pnode(ptree<A> a0, ptree<A> a1) {
-      return ptree(PNode{std::make_shared<ptree<A>>(std::move(a0)),
-                         std::make_shared<ptree<A>>(std::move(a1))});
+      return ptree(PNode{crane::arena_make_shared<ptree<A>>(std::move(a0)),
+                         crane::arena_make_shared<ptree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NESTED_IND
 #define INCLUDED_NESTED_IND
 
+#include "arena.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
@@ -74,7 +75,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -180,8 +182,9 @@ struct NestedInd {
     static custom_list<A> cnil() { return custom_list(Cnil{}); }
 
     static custom_list<A> ccons(A a0, custom_list<A> a1) {
-      return custom_list(Ccons{
-          std::move(a0), std::make_shared<custom_list<A>>(std::move(a1))});
+      return custom_list(
+          Ccons{std::move(a0),
+                crane::arena_make_shared<custom_list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -300,8 +303,9 @@ struct NestedInd {
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {
-      return rose(Node{std::move(a0),
-                       std::make_shared<custom_list<rose<A>>>(std::move(a1))});
+      return rose(
+          Node{std::move(a0),
+               crane::arena_make_shared<custom_list<rose<A>>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -389,11 +393,11 @@ struct NestedInd {
     static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr add(List<expr> a0) {
-      return expr(Add{std::make_shared<List<expr>>(std::move(a0))});
+      return expr(Add{crane::arena_make_shared<List<expr>>(std::move(a0))});
     }
 
     static expr mul(List<expr> a0) {
-      return expr(Mul{std::make_shared<List<expr>>(std::move(a0))});
+      return expr(Mul{crane::arena_make_shared<List<expr>>(std::move(a0))});
     }
 
     // MANIPULATORS

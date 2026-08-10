@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_MULTI_RECURSION
 #define INCLUDED_LOOPIFY_MULTI_RECURSION
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <algorithm>
@@ -48,10 +49,10 @@ struct LoopifyMultiRecursion {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(QQuad{std::make_shared<quadtree>(std::move(a0)),
-                            std::make_shared<quadtree>(std::move(a1)),
-                            std::make_shared<quadtree>(std::move(a2)),
-                            std::make_shared<quadtree>(std::move(a3))});
+      return quadtree(QQuad{crane::arena_make_shared<quadtree>(std::move(a0)),
+                            crane::arena_make_shared<quadtree>(std::move(a1)),
+                            crane::arena_make_shared<quadtree>(std::move(a2)),
+                            crane::arena_make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS

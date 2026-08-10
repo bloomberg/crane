@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FUNCTION_VERNAC
 #define INCLUDED_FUNCTION_VERNAC
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <functional>
@@ -74,7 +75,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -172,8 +174,8 @@ struct FunctionVernac {
     static R_div2 r_div2_1(uint64_t n) { return R_div2(R_div2_1{n}); }
 
     static R_div2 r_div2_2(uint64_t n, uint64_t p, uint64_t a2, R_div2 _res) {
-      return R_div2(
-          R_div2_2{n, p, a2, std::make_shared<R_div2>(std::move(_res))});
+      return R_div2(R_div2_2{
+          n, p, a2, crane::arena_make_shared<R_div2>(std::move(_res))});
     }
 
     // MANIPULATORS
@@ -330,7 +332,7 @@ struct FunctionVernac {
                                    R_list_sum _res) {
       return R_list_sum(
           R_list_sum_1{std::move(l), x, std::move(xs), a3,
-                       std::make_shared<R_list_sum>(std::move(_res))});
+                       crane::arena_make_shared<R_list_sum>(std::move(_res))});
     }
 
     // MANIPULATORS

@@ -1572,12 +1572,13 @@ let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
 (* --- Arena extraction ------------------------------------------------ *)
 
-(* This option makes recursive inductive types use arena (region) allocation:
-   recursive fields become raw pointers into a region owned by the value, giving
-   O(1) destruction and no reference counting, instead of the default shared_ptr.
-   Opt-in because it deep-copies on value-copy (see docs/arena-extraction-sketch). *)
-let {Goptions.get = arena} =
-  declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
+(* Scoped-arena redesign (2026-08-10): arena allocation is a runtime property of
+   whether a [crane::arena_scope] is open, not a compile-time property of a type.
+   The old opt-in surface ([Set Crane Arena] global, [Crane Arena <ind>],
+   [Crane Arena Shared <ind>]) is gone; only [Crane NoArena <ind>] remains, as a
+   per-type opt-*out* so a type can be excluded from ever bump-allocating even
+   when a scope happens to be open (see [no_arena_table] / [should_use_arena_at_runtime]
+   below). *)
 
 (* --- Non-atomic reference counting ----------------------------------- *)
 
@@ -1611,79 +1612,70 @@ let key_suffix n key =
   if len <= n then key
   else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
-(* Per-inductive arena/noarena table. First set = force-arena, second set =
-   force-noarena. *)
+(* Per-inductive NoArena opt-out table (scoped-arena redesign).  Membership
+   means "never bump-allocate this type's nodes even when an arena scope is
+   open" -- for types with program-lifetime identity requirements or a
+   comparator/hash that assumes stable heap addresses across scope boundaries.
+   Reuses the same Refset' + canonical-path 2-component suffix-match machinery
+   the old arena_table used, so functor-internal directives still match. *)
 
-let empty_arena_table = (Refset'.empty, Refset'.empty)
+let empty_no_arena_table = Refset'.empty
 
-let arena_table = Summary.ref empty_arena_table ~name:"CraneExtrArena"
+let no_arena_table = Summary.ref empty_no_arena_table ~name:"CraneExtrNoArena"
 
 (* Canonical-path string key for an inductive, used as a suffix-matching
    fallback below -- mirrors [guard_compare_key_string] but for [IndRef]
-   (a functor-internal recursive type like the lexer's [regex], directive-
-   named via one grammar's instantiation, needs to match [should_arena]
-   queries made later against the functor-body template's own copy of the
-   same inductive; see [key_suffix]/[find_guard_compare] for the identical
-   problem already solved for [Crane Guard Compare]). *)
+   (a functor-internal recursive type directive-named via one grammar's
+   instantiation needs to match [should_use_arena_at_runtime] queries made
+   later against the functor-body template's own copy of the same inductive;
+   see [key_suffix]/[find_guard_compare] for the identical problem already
+   solved for [Crane Guard Compare]). *)
 let arena_ref_key_string = function
   | GlobRef.IndRef (mind, i) ->
     Some (Names.KerName.to_string (Names.MutInd.canonical mind) ^ "#" ^ string_of_int i)
   | GlobRef.ConstRef _ | GlobRef.VarRef _ | GlobRef.ConstructRef _ -> None
 
 (* Plain (non-[Summary]-tracked) ref, for the same reason as
-   [guard_compare_table]: a functor-internal [Crane Arena <ind>] directive's
+   [guard_compare_table]: a functor-internal [Crane NoArena <ind>] directive's
    registration must survive [End F.]'s rollback of [Summary]-tracked state
    introduced while the functor body is open. *)
-let arena_suffix_table : bool CString.Map.t ref = ref CString.Map.empty
+let no_arena_suffix_table : unit CString.Map.t ref = ref CString.Map.empty
 
-(** Determines whether an inductive should use arena allocation: forced on/off
-    per inductive, falling back (on exact-[GlobRef] miss) to a canonical-path
-    2-component suffix match against registered inductives (only trusted when
-    every match agrees), then to the global [Crane Arena] setting. *)
-let should_arena r =
-  let yes, no = !arena_table in
-  if Refset'.mem r yes then
-    true
-  else if Refset'.mem r no then
-    false
+(** Whether an inductive's recursive-field factory should contain the runtime
+    [in_arena_scope()] branch.  True for every type except those explicitly
+    opted out via [Crane NoArena]: those always take the plain heap path.
+    Exact-[GlobRef] miss falls back to a canonical-path 2-component suffix
+    match against registered exclusions. *)
+let should_use_arena_at_runtime r =
+  if Refset'.mem r !no_arena_table then false
   else
     match arena_ref_key_string r with
-    | None -> arena ()
+    | None -> true
     | Some key ->
       let suffix = key_suffix 2 key in
-      let matches =
-        CString.Map.fold
-          (fun k v acc -> if key_suffix 2 k = suffix then v :: acc else acc)
-          !arena_suffix_table []
-      in
-      ( match matches with
-      | [] -> arena ()
-      | v :: rest when List.for_all (( = ) v) rest -> v
-      | _ -> arena () )
+      not (CString.Map.exists (fun k () -> key_suffix 2 k = suffix)
+             !no_arena_suffix_table)
 
-let add_arena_entries b l =
-  let f b = if b then Refset'.add else Refset'.remove in
-  let y, n = !arena_table in
-  arena_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n);
+let add_no_arena_entries l =
+  no_arena_table := List.fold_right Refset'.add l !no_arena_table;
   List.iter
     (fun r ->
       match arena_ref_key_string r with
       | None -> ()
-      | Some key -> arena_suffix_table := CString.Map.add key b !arena_suffix_table )
+      | Some key -> no_arena_suffix_table := CString.Map.add key () !no_arena_suffix_table )
     l
 
-let arena_extraction : bool * GlobRef.t list -> obj =
+let no_arena_extraction : GlobRef.t list -> obj =
   declare_object
   @@ superglobal_object
-       "Crane Extraction Arena"
-       ~cache:(fun (b, l) -> add_arena_entries b l)
+       "Crane Extraction NoArena"
+       ~cache:(fun l -> add_no_arena_entries l)
        ~subst:
          (Some
-            (fun (s, (b, l)) ->
-              (b, List.map (fun x -> fst (subst_global s x)) l) ) )
+            (fun (s, l) -> List.map (fun x -> fst (subst_global s x)) l) )
        ~discharge:(fun x -> Some x)
 
-let extraction_arena b l =
+let extraction_no_arena l =
   let refs = List.map Smartlocate.global_with_alias l in
   List.iter
     (fun r ->
@@ -1691,77 +1683,7 @@ let extraction_arena b l =
       | GlobRef.IndRef _ -> ()
       | _ -> error_inductive r )
     refs;
-  Lib.add_leaf (arena_extraction (b, refs))
-
-let reset_arena : unit -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane Reset Extraction Arena"
-       ~cache:(fun () -> arena_table := empty_arena_table)
-       ~subst:None
-
-let reset_extraction_arena () = Lib.add_leaf (reset_arena ())
-
-(* --- Arena Shared (crane::shared_arena / crane::capsule<T>) ---------- *)
-(* [Crane Arena Shared <ind>.]: opts an arena-mode inductive into
-   freeze-on-store instead of clone-on-copy for its deep-copy constructor
-   (see ~/crane/docs/shared-arena-capsule-plan.md). Tracked as an
-   independent set, not a 3-way variant of [arena_table]: an inductive must
-   already be arena-eligible ([should_arena] true) for this to have any
-   effect, mirroring how [guard_compare_table] is independent of
-   [arena_table] rather than folded into it. *)
-
-let empty_arena_shared_table = Refset'.empty
-
-let arena_shared_table = Summary.ref empty_arena_shared_table ~name:"CraneExtrArenaShared"
-
-(* Same functor-internal-survival caveat as [arena_suffix_table]. *)
-let arena_shared_suffix_table : string list ref = ref []
-
-let should_arena_shared r =
-  Refset'.mem r !arena_shared_table
-  ||
-  match arena_ref_key_string r with
-  | None -> false
-  | Some key ->
-    let suffix = key_suffix 2 key in
-    List.exists (fun k -> key_suffix 2 k = suffix) !arena_shared_suffix_table
-
-let add_arena_shared_entries l =
-  arena_shared_table := List.fold_right Refset'.add l !arena_shared_table;
-  List.iter
-    (fun r ->
-      match arena_ref_key_string r with
-      | None -> ()
-      | Some key -> arena_shared_suffix_table := key :: !arena_shared_suffix_table )
-    l
-
-let arena_shared_extraction : GlobRef.t list -> obj =
-  declare_object
-  @@ superglobal_object
-       "Crane Extraction Arena Shared"
-       ~cache:(fun l -> add_arena_shared_entries l)
-       ~subst:(Some (fun (s, l) -> List.map (fun x -> fst (subst_global s x)) l))
-       ~discharge:(fun x -> Some x)
-
-let extraction_arena_shared l =
-  let refs = List.map Smartlocate.global_with_alias l in
-  List.iter
-    (fun r ->
-      match r with
-      | GlobRef.IndRef _ -> ()
-      | _ -> error_inductive r )
-    refs;
-  Lib.add_leaf (arena_shared_extraction refs)
-
-let reset_arena_shared : unit -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane Reset Extraction Arena Shared"
-       ~cache:(fun () -> arena_shared_table := empty_arena_shared_table)
-       ~subst:None
-
-let reset_extraction_arena_shared () = Lib.add_leaf (reset_arena_shared ())
+  Lib.add_leaf (no_arena_extraction refs)
 
 (* --- Guard Compare --------------------------------------------------- *)
 

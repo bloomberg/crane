@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STREAM
 #define INCLUDED_STREAM
 
+#include "arena.h"
 #include "lazy.h"
 #include "small_vector.h"
 #include <any>
@@ -33,7 +34,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {
@@ -126,7 +129,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS

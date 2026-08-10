@@ -88,11 +88,12 @@ int main() {
     }
   } // `shared` and `other` dropped here: O(1) bulk free of all nodes.
 
-  // -- (b) Fallback-growth warning: scoped is silent, unscoped warns ---------
-  // The warning is debug-only (#ifndef NDEBUG) and fires once per thread the
-  // first time the never-resetting fallback arena is reached. Do the scoped
-  // capture first (must stay silent and must not consume the one-shot), then
-  // the unscoped capture (must trip the fallback and warn).
+  // -- (b) No spurious warnings ---------------------------------------------
+  // Scoped-arena redesign: generated factories never touch the never-resetting
+  // fallback arena.  With a caller-owned scope installed, allocations go to that
+  // region; with NO scope, allocations go to the plain heap (make_shared), not
+  // the fallback arena.  Both must be silent (the fallback-growth warning must
+  // not fire for ordinary generated code either way).
   {
     std::string scoped_err = capture_stderr(
         [] {
@@ -105,16 +106,63 @@ int main() {
 
     std::string unscoped_err = capture_stderr(
         [] {
-          // No scope installed: allocations land in the fallback arena.
+          // No scope installed: allocations are plain-heap and silent (the new
+          // safe default; previously arena-mode types would have grown the
+          // fallback region and warned).
           (void)build(3);
         },
         "arena_scoping_unscoped.err");
-#ifndef NDEBUG
-    ASSERT(unscoped_err.find("fallback") != std::string::npos);
-#else
-    ASSERT(unscoped_err.empty());
-#endif
+    ASSERT(unscoped_err.find("fallback") == std::string::npos);
   }
+
+  // -- (c) Scoped-arena redesign: NO arena type annotation + an open owning
+  //        crane::arena_scope ==> the value is arena-backed, may safely escape
+  //        the scope (region kept alive by the shared keeper), and its payload
+  //        bypasses the heap.  Under the pre-redesign model this exact
+  //        combination (a type with no `Crane Arena` directive) was a silent
+  //        no-op; this is the new behavior the redesign introduces.
+  {
+    // (c1) Observable arena-backing: the SAME build, with NO type-level arena
+    //      annotation, bump-allocates every node from the region when a scope
+    //      is open and bump-allocates NONE when no scope is open.  The runtime
+    //      [arena_bump_count] is a direct, allocator-agnostic witness.
+    const int d = 10;                 // 2^11 - 1 = 2047 nodes
+    // Every node except the root is reached through exactly one recursive-field
+    // smart pointer, i.e. exactly one arena_make_shared call; the root is the
+    // returned stack value.
+    const unsigned long long expected_bumps = ((1ULL << (d + 1)) - 1) - 1;
+
+    unsigned long long before_no_scope = crane::arena_bump_count();
+    { T outside = build(d); (void)count(outside); }
+    // No scope: nothing is arena-backed (this is the plain-heap fallback, the
+    // exact case that used to be a silent no-op for un-annotated types).
+    ASSERT(crane::arena_bump_count() == before_no_scope);
+
+    unsigned long long before_in_scope = crane::arena_bump_count();
+    {
+      crane::arena_scope s;
+      T inside = build(d);
+      (void)count(inside);
+    }
+    // In scope: every non-root node was bump-allocated from the region.
+    ASSERT(crane::arena_bump_count() - before_in_scope == expected_bumps);
+
+    // (c2) Escape safety: a value built inside an owning scope stays fully
+    //      valid after the scope closes (the region is kept alive by the
+    //      keeper the escaped value carries), and is freed only when the last
+    //      reference drops.
+    T escaped;
+    {
+      crane::arena_scope s;
+      escaped = build(5); // 63 nodes bump-allocated in s's region
+      ASSERT(count(escaped) == 63);
+    } // owning scope closes; `escaped` must remain valid.
+    ASSERT(count(escaped) == 63);
+    T aliased = escaped;         // O(1) aliasing copy, same region
+    ASSERT(count(aliased) == 63);
+    escaped = T::leaf();         // rebind one handle; the other is unaffected
+    ASSERT(count(aliased) == 63);
+  } // last reference drops here → region freed
 
   if (testStatus > 0)
     std::cerr << "arena_scoping: " << testStatus << " test(s) FAILED\n";

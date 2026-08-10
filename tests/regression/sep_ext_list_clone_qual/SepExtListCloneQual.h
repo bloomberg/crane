@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTLISTCLONEQUAL
 #define INCLUDED_SEPEXTLISTCLONEQUAL
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -76,10 +77,10 @@ public:
   static Forest<A> leaf() { return Forest(Leaf{}); }
 
   static Forest<A> node(A a0, typename Datatypes::template List<Forest<A>> a1) {
-    return Forest(
-        Node{std::move(a0),
-             std::make_shared<typename Datatypes::template List<Forest<A>>>(
-                 std::move(a1))});
+    return Forest(Node{
+        std::move(a0),
+        crane::arena_make_shared<typename Datatypes::template List<Forest<A>>>(
+            std::move(a1))});
   }
 
   // MANIPULATORS

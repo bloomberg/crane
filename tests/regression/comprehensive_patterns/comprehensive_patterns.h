@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COMPREHENSIVE_PATTERNS
 #define INCLUDED_COMPREHENSIVE_PATTERNS
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -77,7 +78,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -506,8 +508,8 @@ struct ComprehensivePatterns {
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
-                       std::make_shared<Tree>(std::move(a2))});
+      return Tree(Node{crane::arena_make_shared<Tree>(std::move(a0)), a1,
+                       crane::arena_make_shared<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS

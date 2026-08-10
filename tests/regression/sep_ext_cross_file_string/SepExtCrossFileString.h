@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTCROSSFILESTRING
 #define INCLUDED_SEPEXTCROSSFILESTRING
 
+#include "arena.h"
 #include "small_vector.h"
 #include <variant>
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE17
 #define INCLUDED_MEM_SAFETY_PROBE17
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -49,10 +50,10 @@ struct MemSafetyProbe17 {
     static qtree qleaf() { return qtree(QLeaf{}); }
 
     static qtree qnode(qtree a0, qtree a1, uint64_t a2, qtree a3, qtree a4) {
-      return qtree(QNode{std::make_shared<qtree>(std::move(a0)),
-                         std::make_shared<qtree>(std::move(a1)), a2,
-                         std::make_shared<qtree>(std::move(a3)),
-                         std::make_shared<qtree>(std::move(a4))});
+      return qtree(QNode{crane::arena_make_shared<qtree>(std::move(a0)),
+                         crane::arena_make_shared<qtree>(std::move(a1)), a2,
+                         crane::arena_make_shared<qtree>(std::move(a3)),
+                         crane::arena_make_shared<qtree>(std::move(a4))});
     }
 
     // MANIPULATORS
@@ -325,8 +326,8 @@ struct MemSafetyProbe17 {
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+      return mylist(Mycons{std::move(a0),
+                           crane::arena_make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

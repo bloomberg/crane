@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPAIRNESTEDANY
 #define INCLUDED_SEPEXTPAIRNESTEDANY
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>

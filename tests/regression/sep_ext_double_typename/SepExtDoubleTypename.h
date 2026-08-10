@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTDOUBLETYPENAME
 #define INCLUDED_SEPEXTDOUBLETYPENAME
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <optional>

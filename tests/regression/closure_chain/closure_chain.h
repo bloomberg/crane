@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CLOSURE_CHAIN
 #define INCLUDED_CLOSURE_CHAIN
 
+#include "arena.h"
 #include "small_vector.h"
 #include <functional>
 #include <memory>
@@ -36,8 +37,8 @@ struct ClosureChain {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
+                       crane::arena_make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEP_ELIM
 #define INCLUDED_DEP_ELIM
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -74,7 +75,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -132,7 +134,7 @@ struct DepElim {
     static fin fz(uint64_t n) { return fin(FZ{n}); }
 
     static fin fs(uint64_t n, fin a1) {
-      return fin(FS{n, std::make_shared<fin>(std::move(a1))});
+      return fin(FS{n, crane::arena_make_shared<fin>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -264,8 +266,8 @@ struct DepElim {
     static vec<A> vnil() { return vec(Vnil{}); }
 
     static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
-      return vec(
-          Vcons{n, std::move(a1), std::make_shared<vec<A>>(std::move(a2))});
+      return vec(Vcons{n, std::move(a1),
+                       crane::arena_make_shared<vec<A>>(std::move(a2))});
     }
 
     // MANIPULATORS

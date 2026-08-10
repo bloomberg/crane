@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COALITION_BID_HONOR_TRACE
 #define INCLUDED_COALITION_BID_HONOR_TRACE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -74,7 +75,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -194,11 +196,11 @@ public:
   explicit Positive(XH _v) : v_(_v) {}
 
   static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+    return Positive(XI{crane::arena_make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+    return Positive(XO{crane::arena_make_shared<Positive>(std::move(a0))});
   }
 
   static Positive xh() { return Positive(XH{}); }

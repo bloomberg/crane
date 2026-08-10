@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTTEMPLATEKEYWORD
 #define INCLUDED_SEPEXTTEMPLATEKEYWORD
 
+#include "arena.h"
 #include "small_vector.h"
 #include <concepts>
 #include <variant>

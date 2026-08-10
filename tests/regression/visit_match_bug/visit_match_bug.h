@@ -1,6 +1,7 @@
 #ifndef INCLUDED_VISIT_MATCH_BUG
 #define INCLUDED_VISIT_MATCH_BUG
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -37,8 +38,8 @@ struct VisitMatchBug {
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
     static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
-                       std::make_shared<Tree>(std::move(a2))});
+      return Tree(Node{crane::arena_make_shared<Tree>(std::move(a0)), a1,
+                       crane::arena_make_shared<Tree>(std::move(a2))});
     }
 
     // MANIPULATORS

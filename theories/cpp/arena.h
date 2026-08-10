@@ -170,6 +170,80 @@ T* arena_alloc(Args&&... args)
     return current_arena().alloc<T>(std::forward<Args>(args)...);
 }
 
+// -- Runtime scoped-arena allocation ------------------------------------
+// The redesign (scoped-arena, 2026-08-10): whether a recursive node is
+// bump-allocated from an arena is a *runtime* property of whether a scope is
+// currently open, not a compile-time property of the node's type.  A recursive
+// field is always the ordinary smart pointer (std::shared_ptr / crane::rc); the
+// factory (crane::arena_make_shared / crane::rc<T>::make) checks at the call
+// site whether a scope is open and, if so, bump-allocates the node and attaches
+// a keeper that keeps the region alive as long as the node is referenced.
+
+// True iff an [arena_scope] or [arena_use_scope] is currently installed on this
+// thread (thin, readable wrapper around the ambient-pointer check).
+inline bool in_arena_scope() noexcept
+{
+    return current_arena_ptr() != nullptr;
+}
+
+// Per-thread count of nodes that were actually bump-allocated from an arena (as
+// opposed to the plain heap fallback).  Always on and near-free; useful as a
+// direct, allocator-agnostic observable that a value really is arena-backed
+// (see tests/regression/arena_scoping).  Incremented by [arena_make_shared] and
+// [crane::rc<T>::make] whenever they take the arena path.
+inline unsigned long long& arena_bump_count() noexcept
+{
+    static thread_local unsigned long long n = 0;
+    return n;
+}
+
+// A refcounted keeper for the arena an *owning* [arena_scope] installed.  The
+// scope publishes a pointer to its own [shared_ptr<arena>] here so an escaping
+// node can grab a copy: as long as any node holds a keeper copy the region
+// outlives the scope.  A caller-owned [arena_use_scope] publishes nullptr (the
+// caller controls the region's lifetime, so escaping nodes get no keeper).
+inline std::shared_ptr<arena>*& current_arena_keeper_slot() noexcept
+{
+    static thread_local std::shared_ptr<arena>* slot = nullptr;
+    return slot;
+}
+
+// Obtain a keeper for the currently-open scope's arena, or a null handle when
+// the current scope is caller-owned ([arena_use_scope]) or there is no scope.
+inline std::shared_ptr<arena> acquire_arena_keeper()
+{
+    std::shared_ptr<arena>* slot = current_arena_keeper_slot();
+    return slot != nullptr ? *slot : std::shared_ptr<arena>{};
+}
+
+// Arena-aware replacement for [std::make_shared<T>] used by generated factories
+// for recursive fields.  When no scope is open this is exactly
+// [std::make_shared<T>].  When a scope is open the node's payload is
+// bump-allocated from the current arena and returned in a [std::shared_ptr]
+// whose deleter runs only the node's destructor (never [delete]: the region owns
+// the memory) and captures a keeper so the region cannot be freed while the node
+// is still referenced.  Copying such a shared_ptr is an O(1) refcount bump, so
+// no deep-copy/clone is ever needed (this is what removes the composite-hang
+// failure mode of the old per-type arena representation).
+template <typename T, typename... Args>
+std::shared_ptr<T> arena_make_shared(Args&&... args)
+{
+    arena* ap = current_arena_ptr();
+    if (ap == nullptr) {
+        return std::make_shared<T>(std::forward<Args>(args)...);
+    }
+    // A scope is open.  Grab the keeper (null under a caller-owned scope) before
+    // allocating, then bump-allocate the payload from the region.
+    std::shared_ptr<arena> keeper = acquire_arena_keeper();
+    void* mem = ap->resource()->allocate(sizeof(T), alignof(T));
+    T*    p   = ::new (mem) T(std::forward<Args>(args)...);
+    ++arena_bump_count();
+    // The deleter never frees [p] (the region owns it); it runs [T]'s destructor
+    // so the node's own fields (child smart pointers, etc.) are released, then
+    // drops its captured [keeper], releasing this node's claim on the region.
+    return std::shared_ptr<T>(p, [keeper](T* q) noexcept { q->~T(); });
+}
+
 // -- Sharing-preserving deep copy ---------------------------------------
 // Generated arena-mode copy constructors (Crane Arena) recursively clone
 // every reachable node, because raw pointers carry no refcount to bump. A
@@ -399,21 +473,38 @@ capsule<T> arena_shared_alloc(Args&&... args)
 // (restoring any previous one on exit, so scopes nest).
 class arena_scope {
 public:
-    arena_scope() : prev_(current_arena_ptr())
+    // The scope owns its region through a refcounted [shared_ptr<arena>] from
+    // the start (rather than freezing-on-escape a bare [arena] member): a node
+    // that escapes the scope simply keeps a copy of this keeper alive, so the
+    // region is destroyed exactly when the scope AND every escaped node are
+    // gone.  If nothing escapes, [keeper_] is the sole owner and the region is
+    // freed in O(1) when this object is destroyed.  This is strictly simpler
+    // than a move-out-on-first-escape scheme and has no moved-from-arena hazard.
+    arena_scope()
+    : keeper_(std::make_shared<arena>())
+    , prev_(current_arena_ptr())
+    , prev_keeper_(current_arena_keeper_slot())
     {
-        current_arena_ptr() = &a_;
+        current_arena_ptr() = keeper_.get();
+        current_arena_keeper_slot() = &keeper_;
         any_scope_ever_installed().store(true, std::memory_order_relaxed);
     }
-    ~arena_scope() { current_arena_ptr() = prev_; }
+    ~arena_scope()
+    {
+        current_arena_ptr() = prev_;
+        current_arena_keeper_slot() = prev_keeper_;
+        // keeper_ drops here; the region is freed now unless a node escaped.
+    }
 
     arena_scope(const arena_scope&)            = delete;
     arena_scope& operator=(const arena_scope&) = delete;
 
-    arena& get() noexcept { return a_; }
+    arena& get() noexcept { return *keeper_; }
 
 private:
-    arena  a_;
-    arena* prev_;
+    std::shared_ptr<arena>  keeper_;
+    arena*                  prev_;
+    std::shared_ptr<arena>* prev_keeper_;
 };
 
 // RAII: install a *caller-supplied* arena as the current one for the duration
@@ -423,18 +514,28 @@ private:
 // (amortizing allocation) or be pre-sized/pre-warmed before the calls.
 class arena_use_scope {
 public:
-    explicit arena_use_scope(arena& a) : prev_(current_arena_ptr())
+    explicit arena_use_scope(arena& a)
+    : prev_(current_arena_ptr())
+    , prev_keeper_(current_arena_keeper_slot())
     {
         current_arena_ptr() = &a;
+        // Caller-owned region: no refcounted keeper is published, so escaping
+        // nodes get a null keeper and the caller alone controls the lifetime.
+        current_arena_keeper_slot() = nullptr;
         any_scope_ever_installed().store(true, std::memory_order_relaxed);
     }
-    ~arena_use_scope() { current_arena_ptr() = prev_; }
+    ~arena_use_scope()
+    {
+        current_arena_ptr() = prev_;
+        current_arena_keeper_slot() = prev_keeper_;
+    }
 
     arena_use_scope(const arena_use_scope&)            = delete;
     arena_use_scope& operator=(const arena_use_scope&) = delete;
 
 private:
-    arena* prev_;
+    arena*                  prev_;
+    std::shared_ptr<arena>* prev_keeper_;
 };
 
 }  // namespace crane

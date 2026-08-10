@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ADD_ONE
 #define INCLUDED_ADD_ONE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <functional>
 #include <memory>
@@ -31,7 +32,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {

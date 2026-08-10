@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_TREE_VARIANTS
 #define INCLUDED_LOOPIFY_TREE_VARIANTS
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <memory>
@@ -37,9 +38,9 @@ struct LoopifyTreeVariants {
     static ternary tleaf() { return ternary(TLeaf{}); }
 
     static ternary tnode(ternary a0, uint64_t a1, ternary a2, ternary a3) {
-      return ternary(TNode{std::make_shared<ternary>(std::move(a0)), a1,
-                           std::make_shared<ternary>(std::move(a2)),
-                           std::make_shared<ternary>(std::move(a3))});
+      return ternary(TNode{crane::arena_make_shared<ternary>(std::move(a0)), a1,
+                           crane::arena_make_shared<ternary>(std::move(a2)),
+                           crane::arena_make_shared<ternary>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -156,10 +157,10 @@ struct LoopifyTreeVariants {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
-                           std::make_shared<quadtree>(std::move(a1)),
-                           std::make_shared<quadtree>(std::move(a2)),
-                           std::make_shared<quadtree>(std::move(a3))});
+      return quadtree(Quad{crane::arena_make_shared<quadtree>(std::move(a0)),
+                           crane::arena_make_shared<quadtree>(std::move(a1)),
+                           crane::arena_make_shared<quadtree>(std::move(a2)),
+                           crane::arena_make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -273,8 +274,9 @@ struct LoopifyTreeVariants {
     static leaf_tree lleaf(uint64_t a0) { return leaf_tree(LLeaf{a0}); }
 
     static leaf_tree lnode(leaf_tree a0, leaf_tree a1) {
-      return leaf_tree(LNode{std::make_shared<leaf_tree>(std::move(a0)),
-                             std::make_shared<leaf_tree>(std::move(a1))});
+      return leaf_tree(
+          LNode{crane::arena_make_shared<leaf_tree>(std::move(a0)),
+                crane::arena_make_shared<leaf_tree>(std::move(a1))});
     }
 
     // MANIPULATORS

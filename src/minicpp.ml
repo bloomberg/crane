@@ -268,6 +268,15 @@ and cpp_expr =
        raw pointer). Used (like CPParena_alloc) as the callee of a
        CPPfun_call for `Crane Arena Shared`-mode recursive-field
        allocation; see theories/cpp/arena.h. *)
+  | CPParena_make of cpp_type
+    (* Runtime scoped-arena factory for a recursive field (scoped-arena
+       redesign): renders to the ordinary-smart-pointer factory that is
+       *arena-aware at runtime* -- [crane::rc<T>::make] under NonAtomicRc,
+       [crane::arena_make_shared<T>] under std, or plain [make_shared] under
+       BDE (no runtime arena there).  Returns the same smart-pointer type as
+       the field ([crane::rc<T>] / [std::shared_ptr<T>]); when no arena scope
+       is open at the call site it is exactly the plain make_shared/make_rc.
+       Used (like CPPmk_shared) as the callee of a CPPfun_call. *)
   | CPPoverloaded of cpp_expr list
     (* Invariant: all elements must be CPPlambda. Enforced at construction
        in make_visit_expr (loopify.ml). *)
@@ -476,6 +485,7 @@ let map_expr
   | CPParena_alloc ty -> CPParena_alloc (ft ty)
   | CPParena_clone ty -> CPParena_clone (ft ty)
   | CPParena_shared_alloc ty -> CPParena_shared_alloc (ft ty)
+  | CPParena_make ty -> CPParena_make (ft ty)
   | CPPoverloaded exprs -> CPPoverloaded (List.map fe exprs)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
@@ -599,7 +609,7 @@ let map_stmt
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _
+  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -669,7 +679,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   let fe acc e = f acc e in
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _
+  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_PAIRS
 #define INCLUDED_LOOPIFY_PAIRS
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -78,7 +79,8 @@ struct LoopifyPairs {
     static list<A> nil() { return list(Nil{}); }
 
     static list<A> cons(A a, list<A> l) {
-      return list(Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
+      return list(
+          Cons{std::move(a), crane::arena_make_shared<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS

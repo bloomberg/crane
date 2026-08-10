@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE27
 #define INCLUDED_MEM_SAFETY_PROBE27
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <algorithm>
@@ -51,8 +52,8 @@ struct MemSafetyProbe27 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
+                       crane::arena_make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS

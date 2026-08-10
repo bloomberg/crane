@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTDRIVERNOINCLUDE
 #define INCLUDED_SEPEXTDRIVERNOINCLUDE
 
+#include "arena.h"
 #include "small_vector.h"
 
 #include "Datatypes.h"

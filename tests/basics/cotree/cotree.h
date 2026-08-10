@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COTREE
 #define INCLUDED_COTREE
 
+#include "arena.h"
 #include "lazy.h"
 #include "small_vector.h"
 #include <any>
@@ -75,7 +76,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -276,8 +278,8 @@ struct Cotree {
     }
 
     static tree<A> node(A a, List<tree<A>> children) {
-      return tree(Node{std::move(a),
-                       std::make_shared<List<tree<A>>>(std::move(children))});
+      return tree(Node{std::move(a), crane::arena_make_shared<List<tree<A>>>(
+                                         std::move(children))});
     }
 
     // MANIPULATORS

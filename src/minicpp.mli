@@ -266,6 +266,12 @@ and cpp_expr =
       (** crane::arena_shared_alloc<T> factory: allocates a T into T's single
           thread-local shared capsule, returns a crane::capsule<T>. Used for
           `Crane Arena Shared`-mode recursive-field allocation. *)
+  | CPParena_make of cpp_type
+      (** Runtime scoped-arena factory for a recursive field: renders to the
+          arena-aware make_shared/make_rc for the current pointer flavor
+          (crane::rc<T>::make / crane::arena_make_shared<T>), returning the same
+          smart-pointer type as the field.  Falls back to a plain heap
+          allocation at runtime when no arena scope is open. *)
   | CPPoverloaded of cpp_expr list
       (** Overloaded visitor set for variant matching *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list

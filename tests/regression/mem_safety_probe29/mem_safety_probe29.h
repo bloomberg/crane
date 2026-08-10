@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE29
 #define INCLUDED_MEM_SAFETY_PROBE29
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <memory>
@@ -38,8 +39,8 @@ struct MemSafetyProbe29 {
     static inner ileaf() { return inner(ILeaf{}); }
 
     static inner inode(inner a0, uint64_t a1, inner a2) {
-      return inner(INode{std::make_shared<inner>(std::move(a0)), a1,
-                         std::make_shared<inner>(std::move(a2))});
+      return inner(INode{crane::arena_make_shared<inner>(std::move(a0)), a1,
+                         crane::arena_make_shared<inner>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -145,8 +146,9 @@ struct MemSafetyProbe29 {
     static outer oleaf() { return outer(OLeaf{}); }
 
     static outer onode(outer a0, inner a1, outer a2) {
-      return outer(ONode{std::make_shared<outer>(std::move(a0)), std::move(a1),
-                         std::make_shared<outer>(std::move(a2))});
+      return outer(ONode{crane::arena_make_shared<outer>(std::move(a0)),
+                         std::move(a1),
+                         crane::arena_make_shared<outer>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -270,17 +272,17 @@ struct MemSafetyProbe29 {
     static expr lit(uint64_t a0) { return expr(Lit{a0}); }
 
     static expr neg(expr a0) {
-      return expr(Neg{std::make_shared<expr>(std::move(a0))});
+      return expr(Neg{crane::arena_make_shared<expr>(std::move(a0))});
     }
 
     static expr add(expr a0, expr a1) {
-      return expr(Add{std::make_shared<expr>(std::move(a0)),
-                      std::make_shared<expr>(std::move(a1))});
+      return expr(Add{crane::arena_make_shared<expr>(std::move(a0)),
+                      crane::arena_make_shared<expr>(std::move(a1))});
     }
 
     static expr mul(expr a0, expr a1) {
-      return expr(Mul{std::make_shared<expr>(std::move(a0)),
-                      std::make_shared<expr>(std::move(a1))});
+      return expr(Mul{crane::arena_make_shared<expr>(std::move(a0)),
+                      crane::arena_make_shared<expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -453,9 +455,9 @@ struct MemSafetyProbe29 {
     static tree3 t3leaf() { return tree3(T3Leaf{}); }
 
     static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, uint64_t a3) {
-      return tree3(T3Node{std::make_shared<tree3>(std::move(a0)),
-                          std::make_shared<tree3>(std::move(a1)),
-                          std::make_shared<tree3>(std::move(a2)), a3});
+      return tree3(T3Node{crane::arena_make_shared<tree3>(std::move(a0)),
+                          crane::arena_make_shared<tree3>(std::move(a1)),
+                          crane::arena_make_shared<tree3>(std::move(a2)), a3});
     }
 
     // MANIPULATORS

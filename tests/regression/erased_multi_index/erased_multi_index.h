@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ERASED_MULTI_INDEX
 #define INCLUDED_ERASED_MULTI_INDEX
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -86,7 +87,8 @@ struct ErasedMultiIndex {
     static hlist hnil() { return hlist(HNil{}); }
 
     static hlist hcons(std::any a, hlist a1) {
-      return hlist(HCons{std::move(a), std::make_shared<hlist>(std::move(a1))});
+      return hlist(
+          HCons{std::move(a), crane::arena_make_shared<hlist>(std::move(a1))});
     }
 
     // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PATTERN_IMPOSSIBLE
 #define INCLUDED_PATTERN_IMPOSSIBLE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -70,8 +71,8 @@ struct PatternImpossible {
     static nested leaf(uint64_t a0) { return nested(Leaf{a0}); }
 
     static nested node(nested a0, nested a1) {
-      return nested(Node{std::make_shared<nested>(std::move(a0)),
-                         std::make_shared<nested>(std::move(a1))});
+      return nested(Node{crane::arena_make_shared<nested>(std::move(a0)),
+                         crane::arena_make_shared<nested>(std::move(a1))});
     }
 
     // MANIPULATORS

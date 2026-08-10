@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_TREE_PATHS
 #define INCLUDED_LOOPIFY_TREE_PATHS
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <algorithm>
@@ -77,7 +78,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -143,8 +145,8 @@ struct LoopifyTreePaths {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
+                       crane::arena_make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -310,8 +312,9 @@ struct LoopifyTreePaths {
     static bool_tree bleaf(uint64_t a0) { return bool_tree(BLeaf{a0}); }
 
     static bool_tree bnode(bool_tree a0, bool_tree a1) {
-      return bool_tree(BNode{std::make_shared<bool_tree>(std::move(a0)),
-                             std::make_shared<bool_tree>(std::move(a1))});
+      return bool_tree(
+          BNode{crane::arena_make_shared<bool_tree>(std::move(a0)),
+                crane::arena_make_shared<bool_tree>(std::move(a1))});
     }
 
     // MANIPULATORS

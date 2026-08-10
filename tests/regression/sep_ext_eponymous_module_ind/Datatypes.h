@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DATATYPES
 #define INCLUDED_DATATYPES
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <optional>
@@ -33,7 +34,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAT
 #define INCLUDED_NAT
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -32,7 +33,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat n) { return Nat(S{std::make_shared<Nat>(std::move(n))}); }
+  static Nat s(Nat n) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(n))});
+  }
 
   // MANIPULATORS
   ~Nat() {

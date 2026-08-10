@@ -13,6 +13,12 @@
 #include <type_traits>
 #include <new>
 #include <cassert>
+#include <memory>
+// The non-atomic [crane::rc] participates in the runtime scoped-arena feature
+// (arena.h): [rc<T>::make] bump-allocates from the current arena when a scope
+// is open, keeping the region alive through a keeper stored in the control
+// block.  arena.h has no dependency on rc.h, so this include is one-directional.
+#include "arena.h"
 
 namespace crane {
 
@@ -27,7 +33,19 @@ struct ControlBlock {
     std::size_t weak{0};   // number of weak
 
     // Raw storage for T. We construct/destroy T manually via placement new.
+    // Kept as the first-after-counts member so [offsetof(ControlBlock<T>,
+    // storage)] (used by enable_rc_from_this) is unaffected by the arena fields
+    // appended below.
     alignas(T) unsigned char storage[sizeof(T)];
+
+    // Runtime scoped-arena backing (see arena.h).  When [arena_backed] is true
+    // this control block's memory is owned by an arena (bump-allocated by
+    // [rc<T>::make], never [new]/[delete]d), and [arena_keeper] keeps that arena
+    // alive as long as this block is strongly referenced.  For ordinary heap
+    // blocks (make_rc) these stay default (false / null) and cost only their
+    // storage.
+    std::shared_ptr<arena> arena_keeper{};
+    bool                   arena_backed{false};
 
     T*       ptr()       noexcept { return reinterpret_cast<T*>(&storage[0]); }
     const T* ptr() const noexcept { return reinterpret_cast<const T*>(&storage[0]); }
@@ -85,6 +103,16 @@ public:
 
     weak<T> downgrade() const noexcept; // like Rc::downgrade() in Rust
 
+    // Arena-aware factory (runtime scoped-arena feature, arena.h).  When a
+    // [crane::arena_scope] / [crane::arena_use_scope] is open on this thread the
+    // control block (and T inside it) is bump-allocated from the current arena
+    // and, for an owning scope, keeps that region alive via a keeper stored in
+    // the block; otherwise this is exactly [crane::make_rc<T>].  Copying the
+    // resulting rc is an O(1) refcount bump in both cases, so no deep clone is
+    // ever needed.
+    template <typename... Args>
+    static rc<T> make(Args&&... args);
+
 private:
     template <typename U, typename... Args>
     friend rc<U> make_rc(Args&&... args);
@@ -99,6 +127,18 @@ private:
         if (!ctrl_) return;
         assert(ctrl_->strong > 0);
         if (--ctrl_->strong == 0) {
+            if (ctrl_->arena_backed) {
+                // Region-owned block: never [delete] it.  Move the keeper out
+                // *before* running ~T and dropping it, so that if dropping the
+                // last keeper frees the arena (and with it this very control
+                // block), no freed memory is touched afterward.  ~T runs while
+                // [keeper] still holds the region alive, so T's own fields
+                // (child rc's into the same region) are released safely.
+                std::shared_ptr<arena> keeper = std::move(ctrl_->arena_keeper);
+                ctrl_->ptr()->~T();
+                ctrl_ = nullptr;
+                return; // [keeper] drops here, possibly freeing the region.
+            }
             // Destroy T in-place
             ctrl_->ptr()->~T();
             if (ctrl_->weak == 0) {
@@ -148,7 +188,11 @@ private:
     void release() noexcept {
         if (!ctrl_) return;
         assert(ctrl_->weak > 0);
-        if (--ctrl_->weak == 0 && ctrl_->strong == 0) {
+        // Never [delete] an arena-backed block: the region owns its memory.
+        // (Arena-backed values are acyclic Coq inductives that do not use weak
+        // refs; a weak ref into a region that has already been freed is out of
+        // scope for this feature, same as the pre-redesign arena representation.)
+        if (--ctrl_->weak == 0 && ctrl_->strong == 0 && !ctrl_->arena_backed) {
             delete ctrl_;
             ctrl_ = nullptr;
             return;
@@ -202,6 +246,29 @@ rc<T> make_rc(Args&&... args) {
         delete ctrl;
         throw;
     }
+    return rc<T>(ctrl);
+}
+
+// rc<T>::make — arena-aware factory (see the in-class declaration).
+template <typename T>
+template <typename... Args>
+rc<T> rc<T>::make(Args&&... args) {
+    static_assert(!std::is_array<T>::value, "rc<T> does not support arrays");
+    arena* ap = current_arena_ptr();
+    if (ap == nullptr) {
+        // No scope open: ordinary single-allocation heap rc.
+        return make_rc<T>(std::forward<Args>(args)...);
+    }
+    // A scope is open: bump-allocate the control block (and T inside it) from
+    // the region.  Grab the keeper first (null under a caller-owned scope).
+    std::shared_ptr<arena> keeper = acquire_arena_keeper();
+    void* mem = ap->resource()->allocate(sizeof(ControlBlock<T>),
+                                         alignof(ControlBlock<T>));
+    auto* ctrl = ::new (mem) ControlBlock<T>();
+    ctrl->arena_backed = true;
+    ctrl->arena_keeper = std::move(keeper);
+    ::new (static_cast<void*>(ctrl->ptr())) T(std::forward<Args>(args)...);
+    ++arena_bump_count();
     return rc<T>(ctrl);
 }
 

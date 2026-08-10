@@ -591,13 +591,10 @@ val extraction_loopify : bool -> qualid list -> unit
 (** Reset per-function loopify table. *)
 val reset_extraction_loopify : unit -> unit
 
-(** Check if arena (region) allocation is enabled globally for recursive
-    inductives. *)
-val arena : unit -> bool
-
-(** Check whether a specific inductive should use arena allocation (per-inductive
-    override first, then global [Crane Arena] setting). *)
-val should_arena : GlobRef.t -> bool
+(** Scoped-arena redesign: whether an inductive's recursive-field factory should
+    contain the runtime [in_arena_scope()] branch (bump-allocate when a scope is
+    open).  True for every type except those opted out via [Crane NoArena]. *)
+val should_use_arena_at_runtime : GlobRef.t -> bool
 
 (** Check if non-atomic reference counting ([crane::rc]) is enabled, swapping
     [std::shared_ptr]/[std::make_shared] for [crane::rc]/[crane::make_rc]. *)
@@ -608,27 +605,10 @@ val non_atomic_rc : unit -> bool
 val shared_ptr_name : unit -> string
 val make_shared_name : unit -> string
 
-(** Mark inductive types for arena (true) or non-arena (false) extraction.
-    @param b [true] to force arena allocation for the listed inductives,
-             [false] to opt them out (override the global [Crane Arena] setting)
-    @param l list of qualified inductive identifiers to configure *)
-val extraction_arena : bool -> qualid list -> unit
-
-(** Reset per-inductive arena table. *)
-val reset_extraction_arena : unit -> unit
-
-(** Check whether an arena-mode inductive opted into freeze-on-store
-    ([Crane Arena Shared <ind>.]) instead of clone-on-copy for its deep-copy
-    constructor. Independent of, and only meaningful when, [should_arena]
-    is also true for the same inductive. *)
-val should_arena_shared : GlobRef.t -> bool
-
-(** Mark inductive types for [Crane Arena Shared] extraction.
-    @param l list of qualified inductive identifiers to configure *)
-val extraction_arena_shared : qualid list -> unit
-
-(** Reset per-inductive arena-shared table. *)
-val reset_extraction_arena_shared : unit -> unit
+(** Opt inductive types out of runtime arena allocation ([Crane NoArena <ind>]):
+    the listed types never bump-allocate, even inside an open arena scope.
+    @param l list of qualified inductive identifiers to exclude *)
+val extraction_no_arena : qualid list -> unit
 
 (** {2 File comment} *)
 

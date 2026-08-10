@@ -3,6 +3,7 @@
 
 #include "arena.h"
 #include "small_vector.h"
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -34,7 +35,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {
@@ -76,9 +79,9 @@ template <typename A> struct Tree {
   struct Leaf {};
 
   struct Node {
-    Tree<A> *t1;
+    std::shared_ptr<Tree<A>> t1;
     A x;
-    Tree<A> *t2;
+    std::shared_ptr<Tree<A>> t2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -95,34 +98,77 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  Tree(const Tree<A> &_other) {
-    if (std::holds_alternative<typename Tree<A>::Leaf>(_other.v())) {
+  template <typename _U> Tree(const Tree<_U> &_other) {
+    if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
       this->v_ = Leaf{};
     } else {
-      const auto &[t1, x, t2] = std::get<typename Tree<A>::Node>(_other.v());
-      this->v_ = Node{crane::arena_clone<Tree<A>>(t1), x,
-                      crane::arena_clone<Tree<A>>(t2)};
+      const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
+      this->v_ = Node{
+          t1 ? std::make_shared<Tree<A>>(*t1) : nullptr,
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (x.type() == typeid(A))
+                return std::any_cast<A>(x);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(x);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(x);
+            } else
+              return A(x);
+          }(),
+          t2 ? std::make_shared<Tree<A>>(*t2) : nullptr};
     }
   }
 
-  // MANIPULATORS
-  Tree<A> &operator=(const Tree<A> &_other) {
-    if (&*this != &_other) {
-      Tree<A> _tmp = Tree<A>(_other);
-      this->v_ = std::move(_tmp.v_mut());
-    }
-    return *this;
-  }
-
-  // CREATORS
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{crane::arena_alloc<Tree<A>>(std::move(t1)), std::move(x),
-                     crane::arena_alloc<Tree<A>>(std::move(t2))});
+    return Tree(Node{crane::arena_make_shared<Tree<A>>(std::move(t1)),
+                     std::move(x),
+                     crane::arena_make_shared<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
+  ~Tree() {
+    crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Node>(&_v)) {
+        if (_alt->t1) {
+          _stack.push_back(std::move(_alt->t1));
+        }
+        if (_alt->t2) {
+          _stack.push_back(std::move(_alt->t2));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

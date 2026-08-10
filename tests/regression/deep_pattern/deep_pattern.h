@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_PATTERN
 #define INCLUDED_DEEP_PATTERN
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -37,8 +38,8 @@ struct DeepPattern {
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
     static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)),
-                       std::make_shared<tree>(std::move(a1))});
+      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)),
+                       crane::arena_make_shared<tree>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -408,8 +409,8 @@ struct DeepPattern {
     static list<A> nil() { return list(Nil{}); }
 
     static list<A> cons(A a0, list<A> a1) {
-      return list(
-          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
+      return list(Cons{std::move(a0),
+                       crane::arena_make_shared<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

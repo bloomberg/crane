@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTANYLISTCOLLECT
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <utility>

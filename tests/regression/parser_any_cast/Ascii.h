@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ASCII
 #define INCLUDED_ASCII
 
+#include "arena.h"
 #include "small_vector.h"
 
 namespace Ascii {

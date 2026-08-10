@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTTUPLEANY
 #define INCLUDED_SEPEXTTUPLEANY
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <utility>

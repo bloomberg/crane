@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_USE_AFTER_MOVE
 #define INCLUDED_REUSE_USE_AFTER_MOVE
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -37,7 +38,8 @@ struct ReuseUseAfterMove {
     explicit mylist(Mynil _v) : v_(_v) {}
 
     static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(Mycons{a0, std::make_shared<mylist>(std::move(a1))});
+      return mylist(
+          Mycons{a0, crane::arena_make_shared<mylist>(std::move(a1))});
     }
 
     static mylist mynil() { return mylist(Mynil{}); }

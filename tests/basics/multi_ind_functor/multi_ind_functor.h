@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MULTI_IND_FUNCTOR
 #define INCLUDED_MULTI_IND_FUNCTOR
 
+#include "arena.h"
 #include "small_vector.h"
 #include <concepts>
 #include <memory>
@@ -103,7 +104,7 @@ template <Elem E> struct Container {
 
     static mlist mcons(maybe a0, mlist a1) {
       return mlist(
-          MCons{std::move(a0), std::make_shared<mlist>(std::move(a1))});
+          MCons{std::move(a0), crane::arena_make_shared<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS

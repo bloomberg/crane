@@ -3931,33 +3931,23 @@ let gen_ind_header_v2
     method_candidates
     ind_kind =
   let is_coinductive = ind_kind = Coinductive in
-  (* Arena mode is sound in this first slice only for plain self-recursive value
-     types.  Coinductive types (lazy thunks capturing tail refs) and mutually
-     recursive types (cross-type region pointers, [std::any] destructor) still
-     need shared_ptr, so an arena request on those falls back to the default
-     representation with a warning. *)
-  let arena_ok =
-    if Table.should_arena name && (is_coinductive || is_mutual) then begin
-      Printf.eprintf
-        "Crane Arena: %s is %s; arena extraction is not supported for it yet \
-         (falling back to shared_ptr).\n%!"
-        (Names.GlobRef.print name |> Pp.string_of_ppcmds)
-        (if is_coinductive then "coinductive" else "mutually recursive");
-      false
-    end
-    else Table.should_arena name
+  (* Scoped-arena redesign (2026-08-10): arena allocation is no longer a
+     compile-time property of the type.  Every recursive field is the ordinary
+     smart pointer ([std::shared_ptr] / [crane::rc]); the recursive-field factory
+     is the *runtime-arena-aware* one ([crane::arena_make_shared] /
+     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     current arena only when a [crane::arena_scope] is open at the call site and
+     otherwise falls back to a plain heap allocation.  [arena_runtime_ok] just
+     decides whether the generated factory contains that runtime branch at all:
+     it is suppressed for [Crane NoArena] types (which must never bump-allocate),
+     and for coinductive (lazy thunks) and mutually recursive ([std::any]) types
+     whose special field handling the runtime-arena path does not cover -- those
+     keep the plain make_shared factory exactly as before. *)
+  let arena_runtime_ok =
+    Table.should_use_arena_at_runtime name
+    && (not is_coinductive)
+    && not is_mutual
   in
-  (* [Crane Arena Shared]: routes an arena-mode inductive's recursive fields
-     through a single thread-local [crane::capsule<T>] per type instead of a
-     bare arena pointer (see theories/cpp/arena.h and
-     docs/shared-arena-capsule-plan.md). Only meaningful when [arena_ok] is
-     also true. Recursive fields get type [crane::capsule<inner>]
-     ([compute_field_cpp_ty] below), are allocated via
-     [crane::arena_shared_alloc<T>] (the factory codegen site), and are
-     copied plainly in the deep-copy constructor -- a [capsule<T>]'s own copy
-     constructor is already an O(1) refcount bump, since every value of type
-     [T] lives in the one shared capsule for [T]. *)
-  let arena_shared_ok = arena_ok && Table.should_arena_shared name in
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
 
@@ -4162,20 +4152,11 @@ let gen_ind_header_v2
             | _ -> cpp_ty
           else cpp_ty
         in
-        (* Arena mode: the recursive-field indirection is a raw
-           pointer into a region, not a shared_ptr.  Confined to the
-           field declaration so method return/parameter positions are
-           unaffected. *)
-        if arena_shared_ok then
-          match cpp_ty with
-          | Tshared_ptr inner ->
-            Tid_external (Id.of_string_soft "crane::capsule", [ inner ])
-          | _ -> cpp_ty
-        else if arena_ok then
-          match cpp_ty with
-          | Tshared_ptr inner -> Tptr inner
-          | _ -> cpp_ty
-        else cpp_ty
+        (* Scoped-arena redesign: recursive fields are always the ordinary
+           smart pointer ([Tshared_ptr], rendered as std::shared_ptr /
+           crane::rc); arena-ness is decided per-object at the factory call
+           site, not baked into the field type. *)
+        cpp_ty
       in
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
@@ -4327,9 +4308,12 @@ let gen_ind_header_v2
           Mutually recursive types use [std::any] to hold different [shared_ptr]
           types.  Returns [[]] for non-recursive or coinductive types. *)
       let iterative_destructor =
-        (* Arena types own their nodes in a region; dropping the region frees
-           everything in O(1), so no per-node iterative destructor is needed. *)
-        if is_coinductive || arena_ok then []
+        (* Scoped-arena redesign: recursive fields are ordinary smart pointers
+           even for arena-backed values (the region only owns the payload
+           memory; per-node refcounting still drives destruction), so the
+           iterative destructor that drains those smart-pointer chains is
+           needed here exactly as for any other recursive type. *)
+        if is_coinductive then []
         else
           (** Check whether ML type [t] is a reference to [ref_name] applied to
               the same type variables [ref_vars] (i.e., a direct recursive or
@@ -4907,16 +4891,14 @@ let gen_ind_header_v2
                   if inner = api_ty then arg
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
-                (* Arena mode: the field is a raw arena pointer, so allocate the
-                   node in the ambient arena instead of make_shared. *)
-                if arena_shared_ok then begin
-                  Table.mark_needs_arena ();
-                  CPPfun_call (CPParena_shared_alloc inner, [converted])
-                end
-                else if arena_ok then begin
-                  Table.mark_needs_arena ();
-                  CPPfun_call (CPParena_alloc inner, [converted])
-                end
+                (* Scoped-arena redesign: a single unified factory call.  For
+                   arena-eligible types this is the runtime-arena-aware factory
+                   ([CPParena_make]: crane::rc<T>::make / crane::arena_make_shared)
+                   which bump-allocates only when a scope is open and otherwise
+                   is exactly make_shared/make_rc; NoArena / coinductive / mutual
+                   types keep the plain factory. *)
+                if arena_runtime_ok then
+                  CPPfun_call (CPParena_make inner, [converted])
                 else
                   CPPfun_call (CPPmk_shared inner, [converted])
               | _ when storage_ty = api_ty ->
@@ -4997,144 +4979,11 @@ let gen_ind_header_v2
           []
       in
 
-      (* Arena mode: a copy of an arena-mode value must be an independent
-         value, not an alias into the source's region (Coq values have copy
-         semantics).  The implicit compiler-generated copy constructor would
-         just copy the raw recursive-field pointers verbatim, a shallow
-         alias, so provide an explicit one that walks the variant, and for
-         every recursive raw-pointer field allocates a fresh node in the
-         current ambient arena holding a recursive copy of the pointee.  The
-         recursion is free: allocating a fresh node from a dereferenced
-         field pointer invokes the pointee type's copy constructor, which
-         for a nested arena-mode field is this very constructor again.
-         Non-recursive fields are copied by value as usual.  This is a
-         deliberate simplification of the plan's full handle-node type
-         split, see the Part 3 report: it closes the real aliasing bug
-         without introducing a second C++ type, at the cost of still
-         relying on the ambient/scoped arena rather than a self-contained
-         owning handle. *)
-      let arena_deep_copy_ctor =
-        if not arena_ok then []
-        else
-          let n_ctors = Array.length cnames in
-          if n_ctors = 0 then []
-          else
-            let render_self_ty =
-              render_cpp_type_for_raw_template
-                (qualify_inductives
-                   ~skip:(fun g -> GlobRef.CanOrd.equal g name)
-                   self_ty)
-            in
-            let other_id = Id.of_string "_other" in
-            let other_v =
-              CPPdot_method_call (CPPvar other_id, Id.of_string "v", [])
-            in
-            let branch_body i tys_list =
-              let c = cnames.(i) in
-              let cname_id = ctor_struct_id_of_ref ~fallback_idx:i c in
-              let cname_str = Id.to_string cname_id in
-              match tys_list with
-              | [] ->
-                [Sassign_expr
-                   ( CPParrow (CPPthis, vmn_id),
-                     CPPstruct_id (cname_id, [], []) )]
-              | _ ->
-                let ctor_consarg_names =
-                  if i < Array.length consarg_names then consarg_names.(i)
-                  else []
-                in
-                let n_fields = List.length tys_list in
-                let field_ids =
-                  compute_and_register_field_names cname_str
-                    (augment_with_args_renaming c ctor_consarg_names)
-                    ctor_consarg_names n_fields
-                in
-                let bindings =
-                  String.concat ", " (List.map Id.to_string field_ids)
-                in
-                let source_ctor_s =
-                  "typename " ^ render_self_ty ^ "::" ^ cname_str
-                in
-                let cloned =
-                  List.mapi
-                    (fun j ty ->
-                      let cpp_ty = compute_field_cpp_ty ty in
-                      let fid = List.nth field_ids j in
-                      match cpp_ty with
-                      | Tptr inner ->
-                        Table.mark_needs_arena ();
-                        (* [arena_clone], not [arena_alloc]+deref: takes the
-                           source pointer itself so it can memoize on pointer
-                           identity and preserve any DAG sharing in the
-                           source value instead of unconditionally cloning
-                           every reference to a shared node. *)
-                        CPPfun_call (CPParena_clone inner, [CPPvar fid])
-                      | _ -> CPPvar fid )
-                    tys_list
-                in
-                [ Sraw
-                    ( "const auto& [" ^ bindings ^ "] = std::get<"
-                    ^ source_ctor_s ^ ">(_other.v());" );
-                  Sassign_expr
-                    ( CPParrow (CPPthis, vmn_id),
-                      CPPstruct_id (cname_id, [], cloned) ) ]
-            in
-            let rec build_chain i =
-              if i = n_ctors - 1 then branch_body i tys.(i)
-              else
-                let cname_id =
-                  ctor_struct_id_of_ref ~fallback_idx:i cnames.(i)
-                in
-                let guard =
-                  CPPfun_call
-                    ( CPPstd_holds_alternative (self_ty, Some cname_id),
-                      [other_v] )
-                in
-                [Sif (guard, branch_body i tys.(i), build_chain (i + 1))]
-            in
-            let body = build_chain 0 in
-            let ctor_params =
-              [(other_id, Tref (Tmod (TMconst, self_ty)))]
-            in
-            (* Copy assignment: build a temporary via the deep-copy
-               constructor above, then move its variant into [this].  Also
-               closes the correctness gap for the assignment form (a
-               user-provided copy constructor without a matching copy
-               assignment leaves the compiler-generated one deprecated and,
-               worse here, still an aliasing shallow copy). *)
-            let assign_op =
-              let tmp_id = Id.of_string "_tmp" in
-              let assign_body =
-                [ Sif_then
-                    ( CPPbinop ("!=", CPPunop ("&", CPPderef CPPthis),
-                                CPPunop ("&", CPPvar other_id)),
-                      [ Sasgn (tmp_id, Some self_ty,
-                          CPPfun_call (mk_cppglob name ty_vars,
-                            [CPPvar other_id]));
-                        Sassign_expr
-                          ( CPParrow (CPPthis, vmn_id),
-                            CPPmove
-                              (CPPdot_method_call (CPPvar tmp_id,
-                                Id.of_string "v_mut", []))) ] );
-                  Sreturn (Some (CPPderef CPPthis)) ]
-              in
-              ( Fmethod
-                  { mf_name = Id.of_string_soft "operator=";
-                    mf_tparams = [];
-                    mf_ret_type = Tref self_ty;
-                    mf_params = [(other_id, Tref (Tmod (TMconst, self_ty)))];
-                    mf_body = assign_body;
-                    mf_is_const = false;
-                    mf_is_static = false;
-                    mf_is_inline = false;
-                    mf_this_pos = 0;
-                    mf_no_pure = true;
-                    mf_is_noexcept = false; },
-                VPublic, SManipulators )
-            in
-            [(Ftemplate_ctor ([], false, ctor_params, body), VPublic, SCreators);
-             assign_op]
-      in
+      (* Scoped-arena redesign: the old [arena_deep_copy_ctor] (which
+         deep-[arena_clone]d every recursive raw-pointer field on copy, the
+         source of the composite-hang failure mode) is gone entirely.  Recursive
+         fields are now ordinary refcounted smart pointers, so the normal copy
+         path is already correct and O(1) per node. *)
       let value_copy_clone_methods =
         if is_coinductive then
           []
@@ -5143,12 +4992,11 @@ let gen_ind_header_v2
             let all_fields_empty =
               Array.for_all (fun tys_list -> tys_list = []) tys
             in
-            (* Arena mode (first slice): suppress the cross-instantiation
-               converting constructor.  Its deep-copy path still uses make_shared
-               into what are now raw arena-pointer fields; value copies use the
-               default shallow copy (correct: arena values are immutable and
-               share the region).  Arena-aware conversion is future work. *)
-            if vars = [] || all_fields_empty || arena_ok then []
+            (* Scoped-arena redesign: arena-backed types are now ordinary
+               recursive smart-pointer types, so the cross-instantiation
+               converting constructor is generated for them exactly as for any
+               other polymorphic recursive type (no special arena suppression). *)
+            if vars = [] || all_fields_empty then []
             else
               let render_ty ty =
                 render_cpp_type_for_raw_template
@@ -5432,7 +5280,6 @@ let gen_ind_header_v2
         @ default_ctor
         @ public_ctors
         @ value_copy_clone_methods
-        @ arena_deep_copy_ctor
         @ lazy_ctor
         @ factory_methods
         @ lazy_factory

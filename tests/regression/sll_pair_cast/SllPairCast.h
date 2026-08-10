@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SLLPAIRCAST
 #define INCLUDED_SLLPAIRCAST
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ACTION_CONTAINER_CAST
 #define INCLUDED_ACTION_CONTAINER_CAST
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -37,7 +38,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {
@@ -114,7 +117,7 @@ public:
   explicit R(RNum _v) : v_(std::move(_v)) {}
 
   static R rarr(std::deque<R> a0) {
-    return R(RArr{std::make_shared<std::deque<R>>(std::move(a0))});
+    return R(RArr{crane::arena_make_shared<std::deque<R>>(std::move(a0))});
   }
 
   static R rnum(Nat a0) { return R(RNum{std::move(a0)}); }

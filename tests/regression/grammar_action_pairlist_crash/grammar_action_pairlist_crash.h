@@ -1,6 +1,7 @@
 #ifndef INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH
 #define INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH
 
+#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -77,8 +78,9 @@ public:
   explicit Val(VStr _v) : v_(std::move(_v)) {}
 
   static Val vassoc(std::deque<std::pair<std::string, Val>> a0) {
-    return Val(VAssoc{std::make_shared<std::deque<std::pair<std::string, Val>>>(
-        std::move(a0))});
+    return Val(VAssoc{
+        crane::arena_make_shared<std::deque<std::pair<std::string, Val>>>(
+            std::move(a0))});
   }
 
   static Val vbool(bool a0) { return Val(VBool{a0}); }
@@ -88,7 +90,7 @@ public:
   static Val vint(uint64_t a0) { return Val(VInt{a0}); }
 
   static Val vlist(std::deque<Val> a0) {
-    return Val(VList{std::make_shared<std::deque<Val>>(std::move(a0))});
+    return Val(VList{crane::arena_make_shared<std::deque<Val>>(std::move(a0))});
   }
 
   static Val vnull() { return Val(VNull{}); }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 #define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <utility>

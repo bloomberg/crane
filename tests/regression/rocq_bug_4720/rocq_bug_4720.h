@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ROCQ_BUG_4720
 #define INCLUDED_ROCQ_BUG_4720
 
+#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <utility>
@@ -30,7 +31,9 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {

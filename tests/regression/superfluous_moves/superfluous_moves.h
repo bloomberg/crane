@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SUPERFLUOUS_MOVES
 #define INCLUDED_SUPERFLUOUS_MOVES
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -72,7 +73,8 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List(
+        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS

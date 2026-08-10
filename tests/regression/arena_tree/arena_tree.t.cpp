@@ -68,22 +68,25 @@ int main() {
     ASSERT(root_val(*mn.t1) == 3);
     ASSERT(root_val(*mn.t2) == 1);
 
-    // Copying an arena-mode value must deep-copy the node graph, not alias
-    // the source's raw pointers (arena.h documents this as the required
-    // copy semantics for arena-mode handles; the implicit compiler-generated
-    // copy constructor would otherwise just copy the raw pointers verbatim).
+    // Scoped-arena redesign: recursive fields are ordinary refcounted smart
+    // pointers, so copying an arena-backed value is an O(1) refcount bump that
+    // *aliases* the source's nodes (safe: Coq values are immutable, and the
+    // shared arena keeper keeps the region alive as long as any copy exists).
+    // This replaces the old deep-copy-into-a-fresh-region semantics; deleting
+    // that deep copy is exactly what removes the composite-hang failure mode.
     T orig = build(3);
-    T copy_of_orig = orig; // exercises the explicit deep-copy constructor
+    T copy_of_orig = orig; // O(1) aliasing copy (refcount bump)
     ASSERT(count(copy_of_orig) == count(orig));
     const auto &orig_n = std::get<typename T::Node>(orig.v());
     const auto &copy_n = std::get<typename T::Node>(copy_of_orig.v());
-    // Same values, but the recursive-field pointers are pointer-distinct:
-    // the copy lives in nodes of its own, not aliases into orig's nodes.
-    ASSERT(orig_n.t1 != copy_n.t1);
-    ASSERT(orig_n.t2 != copy_n.t2);
+    // The copy shares the source's nodes: the recursive-field pointers are now
+    // pointer-EQUAL (aliased), not distinct.
+    ASSERT(orig_n.t1 == copy_n.t1);
+    ASSERT(orig_n.t2 == copy_n.t2);
     ASSERT(root_val(*orig_n.t1) == root_val(*copy_n.t1));
     ASSERT(root_val(*orig_n.t2) == root_val(*copy_n.t2));
-    // Rebuilding one instance must not affect the other (no shared state).
+    // Rebinding one handle must not affect the other: assignment rebinds this
+    // handle's smart pointers only, leaving the source's untouched.
     copy_of_orig = T::leaf();
     ASSERT(copy_of_orig.is_leaf() == Bool0::TRUE_);
     ASSERT(orig.is_leaf() == Bool0::FALSE_);

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DOC_COMMENTS
 #define INCLUDED_DOC_COMMENTS
 
+#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -90,8 +91,8 @@ struct DocComments {
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
     static mylist<A> mycons(A a, mylist<A> l) {
-      return mylist(
-          Mycons{std::move(a), std::make_shared<mylist<A>>(std::move(l))});
+      return mylist(Mycons{std::move(a),
+                           crane::arena_make_shared<mylist<A>>(std::move(l))});
     }
 
     // MANIPULATORS

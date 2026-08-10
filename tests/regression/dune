@@ -2316,6 +2316,17 @@
   (deps arena_scoping.t.exe)
   (action (run ./arena_scoping.t.exe))))
 
+(subdir arena_composite
+ (rule
+  (targets arena_composite.t.exe)
+  (deps ArenaComposite.vo arena_composite.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_composite.t.exe arena_composite.cpp arena_composite.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_composite.t.exe)
+  (action (run ./arena_composite.t.exe))))
+
 (subdir loopify_gap_pair_destructure
  (rule
   (targets loopify_gap_pair_destructure.t.exe)
@@ -6387,15 +6398,4 @@
  (rule
   (alias runtest)
   (deps arena_tree.t.exe)
-  (action (run ./arena_tree.t.exe)))
- ; Arena-mode extraction must never fall back to shared_ptr/atomic
- ; refcounting for the arena-opted Tree type: its nodes are owned by the
- ; region, not refcounted.  Scoped to the "struct Tree" definition onward
- ; (the file's other, non-arena-opted support type, Nat, legitimately still
- ; uses shared_ptr).
- (rule
-  (alias runtest)
-  (deps arena_tree.h)
-  (action
-   (run bash -c
-    "! sed -n '/struct Tree {/,$ p' arena_tree.h | grep -Eq 'shared_ptr|atomic' || (echo 'arena_tree.h Tree definition unexpectedly contains shared_ptr/atomic' >&2; exit 1)"))))
+  (action (run ./arena_tree.t.exe))))

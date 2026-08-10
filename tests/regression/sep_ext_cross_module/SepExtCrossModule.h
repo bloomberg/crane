@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTCROSSMODULE
 #define INCLUDED_SEPEXTCROSSMODULE
 
+#include "arena.h"
 #include "small_vector.h"
 
 #include "Datatypes.h"
