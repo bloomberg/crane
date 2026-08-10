@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTANYNESTEDMATCH
 #define INCLUDED_SEPEXTANYNESTEDMATCH
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <utility>

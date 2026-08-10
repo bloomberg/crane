@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_NESTED_DEEP
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -37,8 +36,7 @@ struct NameClashNestedDeep {
     static mylist mynil() { return mylist(MyNil{}); }
 
     static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(
-          MyCons{a0, crane::arena_make_shared<mylist>(std::move(a1))});
+      return mylist(MyCons{a0, std::make_shared<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS

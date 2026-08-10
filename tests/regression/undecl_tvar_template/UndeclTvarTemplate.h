@@ -1,7 +1,6 @@
 #ifndef INCLUDED_UNDECLTVARTEMPLATE
 #define INCLUDED_UNDECLTVARTEMPLATE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <variant>
 

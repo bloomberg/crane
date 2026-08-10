@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NAME_CLASH_MATCH_MATCH
 #define INCLUDED_NAME_CLASH_MATCH_MATCH
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -39,8 +38,8 @@ struct NameClashMatchMatch {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS

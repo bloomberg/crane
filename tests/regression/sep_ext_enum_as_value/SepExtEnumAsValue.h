@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTENUMASVALUE
 #define INCLUDED_SEPEXTENUMASVALUE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <concepts>
 #include <utility>

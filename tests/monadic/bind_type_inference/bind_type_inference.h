@@ -1,7 +1,6 @@
 #ifndef INCLUDED_BIND_TYPE_INFERENCE
 #define INCLUDED_BIND_TYPE_INFERENCE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <cstdint>
@@ -80,8 +79,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS

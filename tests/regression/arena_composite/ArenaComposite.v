@@ -98,4 +98,8 @@ Fixpoint size (t : avl) : nat :=
 End Comp.
 
 Require Crane.Extraction.
+(* [Set Crane Arena] turns on the runtime scoped-arena factory; the whole
+   workload below then runs inside a single crane::arena_scope in
+   arena_composite.t.cpp. *)
+Set Crane Arena.
 Crane Extraction "arena_composite" Comp.

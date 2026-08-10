@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
 #define INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
 
-#include "arena.h"
 #include "small_vector.h"
 #include <deque>
 #include <memory>
@@ -38,8 +37,7 @@ struct DequeDeepTreeStackoverflow {
     static rose rleaf(uint64_t a0) { return rose(RLeaf{a0}); }
 
     static rose rnode(std::deque<rose> a0) {
-      return rose(
-          RNode{crane::arena_make_shared<std::deque<rose>>(std::move(a0))});
+      return rose(RNode{std::make_shared<std::deque<rose>>(std::move(a0))});
     }
 
     // MANIPULATORS

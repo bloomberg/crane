@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ANYCASTDANGLINGPAIRREF
 #define INCLUDED_ANYCASTDANGLINGPAIRREF
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <utility>

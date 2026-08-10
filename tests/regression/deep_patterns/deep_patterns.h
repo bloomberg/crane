@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DEEP_PATTERNS
 #define INCLUDED_DEEP_PATTERNS
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -75,8 +74,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -373,8 +371,8 @@ struct DeepPatterns {
     static mylist<A> nil() { return mylist(Nil{}); }
 
     static mylist<A> cons(A a0, mylist<A> a1) {
-      return mylist(Cons{std::move(a0),
-                         crane::arena_make_shared<mylist<A>>(std::move(a1))});
+      return mylist(
+          Cons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

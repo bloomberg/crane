@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MUTUAL_RECURSION
 #define INCLUDED_MUTUAL_RECURSION
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -52,12 +51,12 @@ struct MutualRecursion {
     static expr val(uint64_t a0) { return expr(Val{a0}); }
 
     static expr binop(uint64_t a0, expr a1, expr a2) {
-      return expr(BinOp{a0, crane::arena_make_shared<expr>(std::move(a1)),
-                        crane::arena_make_shared<expr>(std::move(a2))});
+      return expr(BinOp{a0, std::make_shared<expr>(std::move(a1)),
+                        std::make_shared<expr>(std::move(a2))});
     }
 
     static expr unop(uint64_t a0, expr a1) {
-      return expr(UnOp{a0, crane::arena_make_shared<expr>(std::move(a1))});
+      return expr(UnOp{a0, std::make_shared<expr>(std::move(a1))});
     }
 
     // MANIPULATORS

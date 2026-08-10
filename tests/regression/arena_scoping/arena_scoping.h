@@ -1,13 +1,14 @@
 #ifndef INCLUDED_ARENA_SCOPING
 #define INCLUDED_ARENA_SCOPING
 
-#include "arena.h"
-#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
+#define CRANE_ARENA 1
+#include "arena.h"
+#include "small_vector.h"
 
 struct Nat {
   // TYPES

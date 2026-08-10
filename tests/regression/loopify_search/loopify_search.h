@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_SEARCH
 #define INCLUDED_LOOPIFY_SEARCH
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -77,8 +76,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -412,8 +410,8 @@ struct LoopifySearch {
     static btree bleaf(uint64_t a0) { return btree(BLeaf{a0}); }
 
     static btree bnode(btree a0, btree a1) {
-      return btree(BNode{crane::arena_make_shared<btree>(std::move(a0)),
-                         crane::arena_make_shared<btree>(std::move(a1))});
+      return btree(BNode{std::make_shared<btree>(std::move(a0)),
+                         std::make_shared<btree>(std::move(a1))});
     }
 
     // MANIPULATORS

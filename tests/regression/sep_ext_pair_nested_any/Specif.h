@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SPECIF
 #define INCLUDED_SPECIF
 
-#include "arena.h"
 #include "small_vector.h"
 #include <utility>
 

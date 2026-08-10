@@ -1,7 +1,6 @@
 #ifndef INCLUDED_BINOMIAL_HEAP
 #define INCLUDED_BINOMIAL_HEAP
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <functional>
@@ -76,8 +75,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -134,9 +132,8 @@ struct BinomialHeap {
     explicit tree(Leaf _v) : v_(_v) {}
 
     static tree node(key a0, tree a1, tree a2) {
-      return tree(Node{std::move(a0),
-                       crane::arena_make_shared<tree>(std::move(a1)),
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{std::move(a0), std::make_shared<tree>(std::move(a1)),
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     static tree leaf() { return tree(Leaf{}); }

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 #define INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <deque>
@@ -36,9 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) {
-    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {

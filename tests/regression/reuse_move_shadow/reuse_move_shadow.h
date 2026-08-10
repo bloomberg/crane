@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REUSE_MOVE_SHADOW
 #define INCLUDED_REUSE_MOVE_SHADOW
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -36,8 +35,8 @@ struct ReuseMoveShadow {
     explicit tree(Leaf _v) : v_(_v) {}
 
     static tree node(uint64_t a0, tree a1, tree a2) {
-      return tree(Node{a0, crane::arena_make_shared<tree>(std::move(a1)),
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{a0, std::make_shared<tree>(std::move(a1)),
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     static tree leaf() { return tree(Leaf{}); }

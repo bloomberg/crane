@@ -24,6 +24,8 @@ Fixpoint size {A} (t : tree A) : nat :=
 End Tree.
 
 Require Crane.Extraction.
-(* Scoped-arena redesign: no per-type arena directive. Arena backing comes from
-   the caller-owned crane::arena_use_scope installed in arena_scoping.t.cpp. *)
+(* Scoped-arena redesign: no per-type arena directive. [Set Crane Arena] turns
+   on the runtime scoped-arena factory; arena backing then comes from the
+   caller-owned crane::arena_use_scope installed in arena_scoping.t.cpp. *)
+Set Crane Arena.
 Crane Extraction "arena_scoping" Tree.

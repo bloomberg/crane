@@ -600,6 +600,13 @@ val should_use_arena_at_runtime : GlobRef.t -> bool
     [std::shared_ptr]/[std::make_shared] for [crane::rc]/[crane::make_rc]. *)
 val non_atomic_rc : unit -> bool
 
+(** [Set Crane Arena]: whether the runtime scoped-arena factory
+    ([crane::arena_make_shared] / [crane::rc<T>::make]) is emitted for recursive
+    fields.  Off by default, in which case generated code uses the plain
+    [std::make_shared] / [crane::make_rc] and pulls in no arena runtime.  Only
+    swaps the factory, never the pointer representation. *)
+val arena_enabled : unit -> bool
+
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
     [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_GAP_NESTED_FIX
 #define INCLUDED_LOOPIFY_GAP_NESTED_FIX
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -74,8 +73,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -125,8 +123,7 @@ struct LoopifyGapNestedFix {
     explicit rose(Rose0 _v) : v_(std::move(_v)) {}
 
     static rose rose0(uint64_t a0, List<rose> a1) {
-      return rose(
-          Rose0{a0, crane::arena_make_shared<List<rose>>(std::move(a1))});
+      return rose(Rose0{a0, std::make_shared<List<rose>>(std::move(a1))});
     }
 
     // MANIPULATORS

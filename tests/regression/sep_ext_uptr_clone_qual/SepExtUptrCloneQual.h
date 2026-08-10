@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTUPTRCLONEQUAL
 #define INCLUDED_SEPEXTUPTRCLONEQUAL
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -78,8 +77,8 @@ public:
   static MyList<A> mynil() { return MyList(Mynil{}); }
 
   static MyList<A> mycons(A a0, MyList<A> a1) {
-    return MyList(Mycons{std::move(a0),
-                         crane::arena_make_shared<MyList<A>>(std::move(a1))});
+    return MyList(
+        Mycons{std::move(a0), std::make_shared<MyList<A>>(std::move(a1))});
   }
 
   // MANIPULATORS

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REGEXP
 #define INCLUDED_REGEXP
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <cstdint>
@@ -75,8 +74,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -166,19 +164,19 @@ struct Matcher {
     static regexp eps() { return regexp(Eps{}); }
 
     static regexp cat(regexp r1, regexp r2) {
-      return regexp(Cat{crane::arena_make_shared<regexp>(std::move(r1)),
-                        crane::arena_make_shared<regexp>(std::move(r2))});
+      return regexp(Cat{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp alt(regexp r1, regexp r2) {
-      return regexp(Alt{crane::arena_make_shared<regexp>(std::move(r1)),
-                        crane::arena_make_shared<regexp>(std::move(r2))});
+      return regexp(Alt{std::make_shared<regexp>(std::move(r1)),
+                        std::make_shared<regexp>(std::move(r2))});
     }
 
     static regexp zero() { return regexp(Zero{}); }
 
     static regexp star(regexp r) {
-      return regexp(Star{crane::arena_make_shared<regexp>(std::move(r))});
+      return regexp(Star{std::make_shared<regexp>(std::move(r))});
     }
 
     // MANIPULATORS

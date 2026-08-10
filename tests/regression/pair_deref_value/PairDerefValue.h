@@ -1,7 +1,6 @@
 #ifndef INCLUDED_PAIRDEREFVALUE
 #define INCLUDED_PAIRDEREFVALUE
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <concepts>

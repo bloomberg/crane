@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MATCH_MONADIC
 #define INCLUDED_MATCH_MONADIC
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <cstdint>
@@ -88,9 +87,8 @@ public:
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
-    return Tree(Node{crane::arena_make_shared<Tree<A>>(std::move(a0)),
-                     std::move(a1),
-                     crane::arena_make_shared<Tree<A>>(std::move(a2))});
+    return Tree(Node{std::make_shared<Tree<A>>(std::move(a0)), std::move(a1),
+                     std::make_shared<Tree<A>>(std::move(a2))});
   }
 
   // MANIPULATORS

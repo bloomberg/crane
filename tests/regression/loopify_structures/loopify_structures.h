@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_STRUCTURES
 #define INCLUDED_LOOPIFY_STRUCTURES
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -77,8 +76,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -146,8 +144,7 @@ struct LoopifyStructures {
     static nested elem(uint64_t a0) { return nested(Elem{a0}); }
 
     static nested nlist(List<nested> a0) {
-      return nested(
-          NList{crane::arena_make_shared<List<nested>>(std::move(a0))});
+      return nested(NList{std::make_shared<List<nested>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -285,10 +282,10 @@ struct LoopifyStructures {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{crane::arena_make_shared<quadtree>(std::move(a0)),
-                           crane::arena_make_shared<quadtree>(std::move(a1)),
-                           crane::arena_make_shared<quadtree>(std::move(a2)),
-                           crane::arena_make_shared<quadtree>(std::move(a3))});
+      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
+                           std::make_shared<quadtree>(std::move(a1)),
+                           std::make_shared<quadtree>(std::move(a2)),
+                           std::make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -538,8 +535,8 @@ struct LoopifyStructures {
     static ltree lleaf(uint64_t a0) { return ltree(LLeaf{a0}); }
 
     static ltree lnode(uint64_t a0, ltree a1, ltree a2) {
-      return ltree(LNode{a0, crane::arena_make_shared<ltree>(std::move(a1)),
-                         crane::arena_make_shared<ltree>(std::move(a2))});
+      return ltree(LNode{a0, std::make_shared<ltree>(std::move(a1)),
+                         std::make_shared<ltree>(std::move(a2))});
     }
 
     // MANIPULATORS

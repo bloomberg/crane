@@ -15,10 +15,15 @@
 #include <cassert>
 #include <memory>
 // The non-atomic [crane::rc] participates in the runtime scoped-arena feature
-// (arena.h): [rc<T>::make] bump-allocates from the current arena when a scope
+// (arena.h) only when the [Set Crane Arena] master switch is on, in which case
+// the generated header defines CRANE_ARENA before including this file.  Under
+// that switch [rc<T>::make] bump-allocates from the current arena when a scope
 // is open, keeping the region alive through a keeper stored in the control
 // block.  arena.h has no dependency on rc.h, so this include is one-directional.
+// When the switch is off, rc.h carries no arena machinery at all.
+#ifdef CRANE_ARENA
 #include "arena.h"
+#endif
 
 namespace crane {
 
@@ -38,14 +43,18 @@ struct ControlBlock {
     // appended below.
     alignas(T) unsigned char storage[sizeof(T)];
 
-    // Runtime scoped-arena backing (see arena.h).  When [arena_backed] is true
-    // this control block's memory is owned by an arena (bump-allocated by
-    // [rc<T>::make], never [new]/[delete]d), and [arena_keeper] keeps that arena
-    // alive as long as this block is strongly referenced.  For ordinary heap
-    // blocks (make_rc) these stay default (false / null) and cost only their
-    // storage.
+#ifdef CRANE_ARENA
+    // Runtime scoped-arena backing (see arena.h), compiled in only under the
+    // [Set Crane Arena] master switch.  When [arena_backed] is true this control
+    // block's memory is owned by an arena (bump-allocated by [rc<T>::make], never
+    // [new]/[delete]d), and [arena_keeper] keeps that arena alive as long as this
+    // block is strongly referenced.  For ordinary heap blocks (make_rc) these
+    // stay default (false / null) and cost only their storage.  When the switch
+    // is off these fields are absent entirely, so ControlBlock<T> is exactly the
+    // two counts plus storage.
     std::shared_ptr<arena> arena_keeper{};
     bool                   arena_backed{false};
+#endif
 
     T*       ptr()       noexcept { return reinterpret_cast<T*>(&storage[0]); }
     const T* ptr() const noexcept { return reinterpret_cast<const T*>(&storage[0]); }
@@ -127,6 +136,7 @@ private:
         if (!ctrl_) return;
         assert(ctrl_->strong > 0);
         if (--ctrl_->strong == 0) {
+#ifdef CRANE_ARENA
             if (ctrl_->arena_backed) {
                 // Region-owned block: never [delete] it.  Move the keeper out
                 // *before* running ~T and dropping it, so that if dropping the
@@ -139,6 +149,7 @@ private:
                 ctrl_ = nullptr;
                 return; // [keeper] drops here, possibly freeing the region.
             }
+#endif
             // Destroy T in-place
             ctrl_->ptr()->~T();
             if (ctrl_->weak == 0) {
@@ -192,7 +203,11 @@ private:
         // (Arena-backed values are acyclic Coq inductives that do not use weak
         // refs; a weak ref into a region that has already been freed is out of
         // scope for this feature, same as the pre-redesign arena representation.)
-        if (--ctrl_->weak == 0 && ctrl_->strong == 0 && !ctrl_->arena_backed) {
+        if (--ctrl_->weak == 0 && ctrl_->strong == 0
+#ifdef CRANE_ARENA
+            && !ctrl_->arena_backed
+#endif
+           ) {
             delete ctrl_;
             ctrl_ = nullptr;
             return;
@@ -254,6 +269,7 @@ template <typename T>
 template <typename... Args>
 rc<T> rc<T>::make(Args&&... args) {
     static_assert(!std::is_array<T>::value, "rc<T> does not support arrays");
+#ifdef CRANE_ARENA
     arena* ap = current_arena_ptr();
     if (ap == nullptr) {
         // No scope open: ordinary single-allocation heap rc.
@@ -270,6 +286,12 @@ rc<T> rc<T>::make(Args&&... args) {
     ::new (static_cast<void*>(ctrl->ptr())) T(std::forward<Args>(args)...);
     ++arena_bump_count();
     return rc<T>(ctrl);
+#else
+    // Arena machinery not compiled in ([Set Crane Arena] off): make() is just
+    // the ordinary heap factory.  (Generated code only ever calls make() when
+    // the switch is on, but keep a correct definition so rc.h is self-contained.)
+    return make_rc<T>(std::forward<Args>(args)...);
+#endif
 }
 
 } // namespace crane

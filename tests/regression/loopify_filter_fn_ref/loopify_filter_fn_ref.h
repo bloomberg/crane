@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_FILTER_FN_REF
 #define INCLUDED_LOOPIFY_FILTER_FN_REF
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -82,9 +81,8 @@ struct LoopifyFilterFnRef {
     static tree<A> leaf() { return tree(Leaf{}); }
 
     static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree(Node{crane::arena_make_shared<tree<A>>(std::move(a0)),
-                       std::move(a1),
-                       crane::arena_make_shared<tree<A>>(std::move(a2))});
+      return tree(Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
+                       std::make_shared<tree<A>>(std::move(a2))});
     }
 
     // MANIPULATORS

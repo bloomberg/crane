@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR
 #define INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -75,8 +74,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS

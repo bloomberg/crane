@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LEVENSHTEIN
 #define INCLUDED_LEVENSHTEIN
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -34,9 +33,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) {
-    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -232,8 +229,8 @@ public:
   static String emptystring() { return String(EmptyString{}); }
 
   static String string0(Ascii a0, String a1) {
-    return String(String0{std::move(a0),
-                          crane::arena_make_shared<String>(std::move(a1))});
+    return String(
+        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
   }
 
   // MANIPULATORS
@@ -411,14 +408,14 @@ struct Levenshtein {
 
     static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
       return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
-                        crane::arena_make_shared<chain>(std::move(a4))});
+                        std::make_shared<chain>(std::move(a4))});
     }
 
     static chain change(String s, String t, String u, Nat n, edit a4,
                         chain a5) {
       return chain(Change{std::move(s), std::move(t), std::move(u),
                           std::move(n), std::move(a4),
-                          crane::arena_make_shared<chain>(std::move(a5))});
+                          std::make_shared<chain>(std::move(a5))});
     }
 
     // MANIPULATORS

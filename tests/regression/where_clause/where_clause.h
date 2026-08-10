@@ -1,7 +1,6 @@
 #ifndef INCLUDED_WHERE_CLAUSE
 #define INCLUDED_WHERE_CLAUSE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <type_traits>
@@ -44,13 +43,13 @@ struct WhereClause {
     static Expr num(uint64_t a0) { return Expr(Num{a0}); }
 
     static Expr plus(Expr a0, Expr a1) {
-      return Expr(Plus{crane::arena_make_shared<Expr>(std::move(a0)),
-                       crane::arena_make_shared<Expr>(std::move(a1))});
+      return Expr(Plus{std::make_shared<Expr>(std::move(a0)),
+                       std::make_shared<Expr>(std::move(a1))});
     }
 
     static Expr times(Expr a0, Expr a1) {
-      return Expr(Times{crane::arena_make_shared<Expr>(std::move(a0)),
-                        crane::arena_make_shared<Expr>(std::move(a1))});
+      return Expr(Times{std::make_shared<Expr>(std::move(a0)),
+                        std::make_shared<Expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -198,17 +197,17 @@ struct WhereClause {
     static BExpr bfalse() { return BExpr(BFalse{}); }
 
     static BExpr band(BExpr a0, BExpr a1) {
-      return BExpr(BAnd{crane::arena_make_shared<BExpr>(std::move(a0)),
-                        crane::arena_make_shared<BExpr>(std::move(a1))});
+      return BExpr(BAnd{std::make_shared<BExpr>(std::move(a0)),
+                        std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bor(BExpr a0, BExpr a1) {
-      return BExpr(BOr{crane::arena_make_shared<BExpr>(std::move(a0)),
-                       crane::arena_make_shared<BExpr>(std::move(a1))});
+      return BExpr(BOr{std::make_shared<BExpr>(std::move(a0)),
+                       std::make_shared<BExpr>(std::move(a1))});
     }
 
     static BExpr bnot(BExpr a0) {
-      return BExpr(BNot{crane::arena_make_shared<BExpr>(std::move(a0))});
+      return BExpr(BNot{std::make_shared<BExpr>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -352,14 +351,13 @@ struct WhereClause {
     static AExpr anum(uint64_t a0) { return AExpr(ANum{a0}); }
 
     static AExpr aplus(AExpr a0, AExpr a1) {
-      return AExpr(APlus{crane::arena_make_shared<AExpr>(std::move(a0)),
-                         crane::arena_make_shared<AExpr>(std::move(a1))});
+      return AExpr(APlus{std::make_shared<AExpr>(std::move(a0)),
+                         std::make_shared<AExpr>(std::move(a1))});
     }
 
     static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
-      return AExpr(AIf{std::move(a0),
-                       crane::arena_make_shared<AExpr>(std::move(a1)),
-                       crane::arena_make_shared<AExpr>(std::move(a2))});
+      return AExpr(AIf{std::move(a0), std::make_shared<AExpr>(std::move(a1)),
+                       std::make_shared<AExpr>(std::move(a2))});
     }
 
     // MANIPULATORS

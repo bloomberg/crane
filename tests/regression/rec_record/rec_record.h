@@ -1,7 +1,6 @@
 #ifndef INCLUDED_REC_RECORD
 #define INCLUDED_REC_RECORD
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -77,8 +76,8 @@ struct RecRecord {
     static rlist<A> rnil() { return rlist(Rnil{}); }
 
     static rlist<A> rcons(A a0, rlist<A> a1) {
-      return rlist(Rcons{std::move(a0),
-                         crane::arena_make_shared<rlist<A>>(std::move(a1))});
+      return rlist(
+          Rcons{std::move(a0), std::make_shared<rlist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

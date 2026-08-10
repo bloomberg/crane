@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTSELFREFINDUCTIVE
 #define INCLUDED_SEPEXTSELFREFINDUCTIVE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -87,8 +86,8 @@ template <S X> struct HashTrie {
 
     static Trie<V> node(typename X::t k, V v, Trie<V> left, Trie<V> right) {
       return Trie(Node{std::move(k), std::move(v),
-                       crane::arena_make_shared<Trie<V>>(std::move(left)),
-                       crane::arena_make_shared<Trie<V>>(std::move(right))});
+                       std::make_shared<Trie<V>>(std::move(left)),
+                       std::make_shared<Trie<V>>(std::move(right))});
     }
 
     // MANIPULATORS

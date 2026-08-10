@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MEM_SAFETY_PROBE24
 #define INCLUDED_MEM_SAFETY_PROBE24
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -51,8 +50,8 @@ struct MemSafetyProbe24 {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -243,8 +242,8 @@ struct MemSafetyProbe24 {
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(Mycons{std::move(a0),
-                           crane::arena_make_shared<mylist<A>>(std::move(a1))});
+      return mylist(
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

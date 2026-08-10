@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTNSALIAS
 #define INCLUDED_SEPEXTNSALIAS
 
-#include "arena.h"
 #include "small_vector.h"
 
 #include "Datatypes.h"

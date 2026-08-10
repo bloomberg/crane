@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
 #define INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <functional>
 #include <memory>
@@ -43,8 +42,7 @@ struct SimpleLambdaFieldCapture {
     static mylist mynil() { return mylist(Mynil{}); }
 
     static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(
-          Mycons{a0, crane::arena_make_shared<mylist>(std::move(a1))});
+      return mylist(Mycons{a0, std::make_shared<mylist>(std::move(a1))});
     }
 
     // MANIPULATORS

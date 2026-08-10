@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ACCUM_CLOSURE_CAPTURE
 #define INCLUDED_ACCUM_CLOSURE_CAPTURE
 
-#include "arena.h"
 #include "small_vector.h"
 #include <functional>
 #include <memory>
@@ -39,8 +38,8 @@ struct AccumClosureCapture {
     static fn_list fnil() { return fn_list(FNil{}); }
 
     static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
-      return fn_list(FCons{std::move(a0),
-                           crane::arena_make_shared<fn_list>(std::move(a1))});
+      return fn_list(
+          FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -129,8 +128,8 @@ struct AccumClosureCapture {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS

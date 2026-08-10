@@ -3939,12 +3939,15 @@ let gen_ind_header_v2
      current arena only when a [crane::arena_scope] is open at the call site and
      otherwise falls back to a plain heap allocation.  [arena_runtime_ok] just
      decides whether the generated factory contains that runtime branch at all:
-     it is suppressed for [Crane NoArena] types (which must never bump-allocate),
-     and for coinductive (lazy thunks) and mutually recursive ([std::any]) types
-     whose special field handling the runtime-arena path does not cover -- those
-     keep the plain make_shared factory exactly as before. *)
+     it requires the [Set Crane Arena] master switch (off by default, so the
+     common case emits the plain make_shared/make_rc factory and pulls in no
+     arena runtime); it is further suppressed for [Crane NoArena] types (which
+     must never bump-allocate), and for coinductive (lazy thunks) and mutually
+     recursive ([std::any]) types whose special field handling the runtime-arena
+     path does not cover -- those keep the plain make_shared factory too. *)
   let arena_runtime_ok =
-    Table.should_use_arena_at_runtime name
+    Table.arena_enabled ()
+    && Table.should_use_arena_at_runtime name
     && (not is_coinductive)
     && not is_mutual
   in

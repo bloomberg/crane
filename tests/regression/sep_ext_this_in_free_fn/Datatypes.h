@@ -1,7 +1,6 @@
 #ifndef INCLUDED_DATATYPES
 #define INCLUDED_DATATYPES
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -35,9 +34,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) {
-    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
-  }
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -130,8 +127,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS

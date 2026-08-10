@@ -1,7 +1,6 @@
 #ifndef INCLUDED_HIGHER_KINDED
 #define INCLUDED_HIGHER_KINDED
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -84,8 +83,8 @@ struct HigherKinded {
     static Tree<A> leaf(A a0) { return Tree(Leaf{std::move(a0)}); }
 
     static Tree<A> branch(Tree<A> a0, Tree<A> a1) {
-      return Tree(Branch{crane::arena_make_shared<Tree<A>>(std::move(a0)),
-                         crane::arena_make_shared<Tree<A>>(std::move(a1))});
+      return Tree(Branch{std::make_shared<Tree<A>>(std::move(a0)),
+                         std::make_shared<Tree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

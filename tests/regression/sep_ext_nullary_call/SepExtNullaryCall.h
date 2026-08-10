@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTNULLARYCALL
 #define INCLUDED_SEPEXTNULLARYCALL
 
-#include "arena.h"
 #include "small_vector.h"
 #include <concepts>
 

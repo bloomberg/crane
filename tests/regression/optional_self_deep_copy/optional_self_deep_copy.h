@@ -1,7 +1,6 @@
 #ifndef INCLUDED_OPTIONAL_SELF_DEEP_COPY
 #define INCLUDED_OPTIONAL_SELF_DEEP_COPY
 
-#include "arena.h"
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -39,8 +38,7 @@ struct OptionalSelfDeepCopy {
     static chain stop() { return chain(Stop{}); }
 
     static chain more(std::optional<chain> a0) {
-      return chain(
-          More{crane::arena_make_shared<std::optional<chain>>(std::move(a0))});
+      return chain(More{std::make_shared<std::optional<chain>>(std::move(a0))});
     }
 
     // MANIPULATORS

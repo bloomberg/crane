@@ -748,6 +748,17 @@ let spec_header si () =
       (str "")
       (himports @ imps)
   in
+  (* [Set Crane Arena] master switch.  Defined before the runtime headers
+     (arena.h / rc.h) are pulled in below so rc.h's arena-backed control-block
+     fields and its [arena.h] include are compiled in.  When the switch is off
+     this line is absent and rc.h compiles with no arena machinery at all,
+     keeping the runtime minimal for programs that never use an arena. *)
+  let h =
+    if Table.arena_enabled () then
+      h ++ str "#define CRANE_ARENA 1" ++ fnl ()
+    else
+      h
+  in
   let h =
     if Table.has_any_coinductive () then
       h ++ mk_include_quoted "lazy.h" ++ fnl ()

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TYPED_EXPR
 #define INCLUDED_TYPED_EXPR
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -62,19 +61,19 @@ public:
   static Expr ebool(bool a0) { return Expr(EBool{a0}); }
 
   static Expr eadd(Expr a0, Expr a1) {
-    return Expr(EAdd{crane::arena_make_shared<Expr>(std::move(a0)),
-                     crane::arena_make_shared<Expr>(std::move(a1))});
+    return Expr(EAdd{std::make_shared<Expr>(std::move(a0)),
+                     std::make_shared<Expr>(std::move(a1))});
   }
 
   static Expr eeq(Expr a0, Expr a1) {
-    return Expr(EEq{crane::arena_make_shared<Expr>(std::move(a0)),
-                    crane::arena_make_shared<Expr>(std::move(a1))});
+    return Expr(EEq{std::make_shared<Expr>(std::move(a0)),
+                    std::make_shared<Expr>(std::move(a1))});
   }
 
   static Expr eif(Ty t, Expr a1, Expr a2, Expr a3) {
-    return Expr(EIf{t, crane::arena_make_shared<Expr>(std::move(a1)),
-                    crane::arena_make_shared<Expr>(std::move(a2)),
-                    crane::arena_make_shared<Expr>(std::move(a3))});
+    return Expr(EIf{t, std::make_shared<Expr>(std::move(a1)),
+                    std::make_shared<Expr>(std::move(a2)),
+                    std::make_shared<Expr>(std::move(a3))});
   }
 
   // MANIPULATORS

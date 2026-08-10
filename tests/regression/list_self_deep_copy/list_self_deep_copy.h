@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LIST_SELF_DEEP_COPY
 #define INCLUDED_LIST_SELF_DEEP_COPY
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -74,8 +73,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -134,7 +132,7 @@ struct ListSelfDeepCopy {
     static chain stop() { return chain(Stop{}); }
 
     static chain link(List<chain> a0) {
-      return chain(Link{crane::arena_make_shared<List<chain>>(std::move(a0))});
+      return chain(Link{std::make_shared<List<chain>>(std::move(a0))});
     }
 
     // MANIPULATORS

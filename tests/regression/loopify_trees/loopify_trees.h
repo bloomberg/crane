@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_TREES
 #define INCLUDED_LOOPIFY_TREES
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -76,8 +75,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -185,9 +183,8 @@ struct LoopifyTrees {
     static tree<A> leaf() { return tree(Leaf{}); }
 
     static tree<A> node(tree<A> l, A x, tree<A> r) {
-      return tree(Node{crane::arena_make_shared<tree<A>>(std::move(l)),
-                       std::move(x),
-                       crane::arena_make_shared<tree<A>>(std::move(r))});
+      return tree(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
+                       std::make_shared<tree<A>>(std::move(r))});
     }
 
     // MANIPULATORS
@@ -418,10 +415,9 @@ struct LoopifyTrees {
     static ternary tleaf() { return ternary(TLeaf{}); }
 
     static ternary tnode(ternary a0, ternary a1, ternary a2, uint64_t a3) {
-      return ternary(TNode{crane::arena_make_shared<ternary>(std::move(a0)),
-                           crane::arena_make_shared<ternary>(std::move(a1)),
-                           crane::arena_make_shared<ternary>(std::move(a2)),
-                           a3});
+      return ternary(TNode{std::make_shared<ternary>(std::move(a0)),
+                           std::make_shared<ternary>(std::move(a1)),
+                           std::make_shared<ternary>(std::move(a2)), a3});
     }
 
     // MANIPULATORS
@@ -541,8 +537,7 @@ struct LoopifyTrees {
     explicit rose(RNode _v) : v_(std::move(_v)) {}
 
     static rose rnode(uint64_t a0, List<rose> a1) {
-      return rose(
-          RNode{a0, crane::arena_make_shared<List<rose>>(std::move(a1))});
+      return rose(RNode{a0, std::make_shared<List<rose>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -815,10 +810,10 @@ struct LoopifyTrees {
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
     static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{crane::arena_make_shared<quadtree>(std::move(a0)),
-                           crane::arena_make_shared<quadtree>(std::move(a1)),
-                           crane::arena_make_shared<quadtree>(std::move(a2)),
-                           crane::arena_make_shared<quadtree>(std::move(a3))});
+      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
+                           std::make_shared<quadtree>(std::move(a1)),
+                           std::make_shared<quadtree>(std::move(a2)),
+                           std::make_shared<quadtree>(std::move(a3))});
     }
 
     // MANIPULATORS
@@ -950,9 +945,8 @@ struct LoopifyTrees {
     static simple_tree sleaf(uint64_t a0) { return simple_tree(SLeaf{a0}); }
 
     static simple_tree snode(simple_tree a0, simple_tree a1) {
-      return simple_tree(
-          SNode{crane::arena_make_shared<simple_tree>(std::move(a0)),
-                crane::arena_make_shared<simple_tree>(std::move(a1))});
+      return simple_tree(SNode{std::make_shared<simple_tree>(std::move(a0)),
+                               std::make_shared<simple_tree>(std::move(a1))});
     }
 
     // MANIPULATORS

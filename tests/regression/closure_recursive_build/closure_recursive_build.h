@@ -1,7 +1,6 @@
 #ifndef INCLUDED_CLOSURE_RECURSIVE_BUILD
 #define INCLUDED_CLOSURE_RECURSIVE_BUILD
 
-#include "arena.h"
 #include "small_vector.h"
 #include <functional>
 #include <memory>
@@ -37,8 +36,8 @@ struct ClosureRecursiveBuild {
     static fn_list fnil() { return fn_list(FNil{}); }
 
     static fn_list fcons(std::function<uint64_t(uint64_t)> a0, fn_list a1) {
-      return fn_list(FCons{std::move(a0),
-                           crane::arena_make_shared<fn_list>(std::move(a1))});
+      return fn_list(
+          FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
     }
 
     // MANIPULATORS

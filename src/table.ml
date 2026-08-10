@@ -1589,6 +1589,28 @@ let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 let {Goptions.get = non_atomic_rc} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 
+(* --- Scoped-arena master switch -------------------------------------- *)
+
+(* [Set Crane Arena] turns on the runtime scoped-arena machinery for a whole
+   extraction unit.  It does NOT change any type's representation (every
+   recursive field stays the ordinary [std::shared_ptr] / [crane::rc]); it only
+   decides which *factory* the generated recursive-field constructor calls:
+
+   - off (default): the plain [std::make_shared] / [crane::make_rc], and the
+     generated code pulls in no arena runtime at all -- byte-for-byte ordinary
+     smart-pointer C++.  This keeps the Crane runtime minimal for programs that
+     never use an arena.
+   - on: the runtime-arena-aware factory ([crane::arena_make_shared] /
+     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     ambient [crane::arena_scope] when one is open and is otherwise exactly
+     make_shared/make_rc.  Copying is O(1) either way, so there is still no
+     deep-copy path -- the flag only gates the factory, never the layout.
+
+   Because it only swaps the factory (not the pointer type), it does NOT
+   reintroduce the old per-type deep-clone/composite-hang failure mode. *)
+let {Goptions.get = arena_enabled} =
+  declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
+
 (* Resolved smart-pointer names for string-level codegen (kept here, in a low
    module, so both [Cpp_state.init_std_names] and the string-building sites in
    Translation/Gen_decls agree without a module cycle).  [Crane NonAtomicRc]

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
 #define INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -70,8 +69,8 @@ public:
   static String emptystring() { return String(EmptyString{}); }
 
   static String string0(Ascii a0, String a1) {
-    return String(String0{std::move(a0),
-                          crane::arena_make_shared<String>(std::move(a1))});
+    return String(
+        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
   }
 
   // MANIPULATORS

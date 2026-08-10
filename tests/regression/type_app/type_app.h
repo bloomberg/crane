@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TYPE_APP
 #define INCLUDED_TYPE_APP
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <concepts>
@@ -108,8 +107,8 @@ struct TypeApp {
     static list<A> nil() { return list(Nil{}); }
 
     static list<A> cons(A a0, list<A> a1) {
-      return list(Cons{std::move(a0),
-                       crane::arena_make_shared<list<A>>(std::move(a1))});
+      return list(
+          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

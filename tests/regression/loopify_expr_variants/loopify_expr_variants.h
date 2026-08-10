@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_EXPR_VARIANTS
 #define INCLUDED_LOOPIFY_EXPR_VARIANTS
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -76,8 +75,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -156,15 +154,14 @@ struct LoopifyExprVariants {
     static cond_expr lit(uint64_t a0) { return cond_expr(Lit{a0}); }
 
     static cond_expr add(cond_expr a0, cond_expr a1) {
-      return cond_expr(Add{crane::arena_make_shared<cond_expr>(std::move(a0)),
-                           crane::arena_make_shared<cond_expr>(std::move(a1))});
+      return cond_expr(Add{std::make_shared<cond_expr>(std::move(a0)),
+                           std::make_shared<cond_expr>(std::move(a1))});
     }
 
     static cond_expr cond(cond_expr a0, cond_expr a1, cond_expr a2) {
-      return cond_expr(
-          Cond{crane::arena_make_shared<cond_expr>(std::move(a0)),
-               crane::arena_make_shared<cond_expr>(std::move(a1)),
-               crane::arena_make_shared<cond_expr>(std::move(a2))});
+      return cond_expr(Cond{std::make_shared<cond_expr>(std::move(a0)),
+                            std::make_shared<cond_expr>(std::move(a1)),
+                            std::make_shared<cond_expr>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -327,21 +324,18 @@ struct LoopifyExprVariants {
     static arith_expr anum(uint64_t a0) { return arith_expr(ANum{a0}); }
 
     static arith_expr aadd(arith_expr a0, arith_expr a1) {
-      return arith_expr(
-          AAdd{crane::arena_make_shared<arith_expr>(std::move(a0)),
-               crane::arena_make_shared<arith_expr>(std::move(a1))});
+      return arith_expr(AAdd{std::make_shared<arith_expr>(std::move(a0)),
+                             std::make_shared<arith_expr>(std::move(a1))});
     }
 
     static arith_expr amul(arith_expr a0, arith_expr a1) {
-      return arith_expr(
-          AMul{crane::arena_make_shared<arith_expr>(std::move(a0)),
-               crane::arena_make_shared<arith_expr>(std::move(a1))});
+      return arith_expr(AMul{std::make_shared<arith_expr>(std::move(a0)),
+                             std::make_shared<arith_expr>(std::move(a1))});
     }
 
     static arith_expr adiv(arith_expr a0, arith_expr a1) {
-      return arith_expr(
-          ADiv{crane::arena_make_shared<arith_expr>(std::move(a0)),
-               crane::arena_make_shared<arith_expr>(std::move(a1))});
+      return arith_expr(ADiv{std::make_shared<arith_expr>(std::move(a0)),
+                             std::make_shared<arith_expr>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -525,19 +519,17 @@ struct LoopifyExprVariants {
     static bool_expr bfalse() { return bool_expr(BFalse{}); }
 
     static bool_expr band(bool_expr a0, bool_expr a1) {
-      return bool_expr(
-          BAnd{crane::arena_make_shared<bool_expr>(std::move(a0)),
-               crane::arena_make_shared<bool_expr>(std::move(a1))});
+      return bool_expr(BAnd{std::make_shared<bool_expr>(std::move(a0)),
+                            std::make_shared<bool_expr>(std::move(a1))});
     }
 
     static bool_expr bor(bool_expr a0, bool_expr a1) {
-      return bool_expr(BOr{crane::arena_make_shared<bool_expr>(std::move(a0)),
-                           crane::arena_make_shared<bool_expr>(std::move(a1))});
+      return bool_expr(BOr{std::make_shared<bool_expr>(std::move(a0)),
+                           std::make_shared<bool_expr>(std::move(a1))});
     }
 
     static bool_expr bnot(bool_expr a0) {
-      return bool_expr(
-          BNot{crane::arena_make_shared<bool_expr>(std::move(a0))});
+      return bool_expr(BNot{std::make_shared<bool_expr>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -913,14 +905,12 @@ struct LoopifyExprVariants {
     static list_expr lnil() { return list_expr(LNil{}); }
 
     static list_expr lcons(uint64_t a0, list_expr a1) {
-      return list_expr(
-          LCons{a0, crane::arena_make_shared<list_expr>(std::move(a1))});
+      return list_expr(LCons{a0, std::make_shared<list_expr>(std::move(a1))});
     }
 
     static list_expr lappend(list_expr a0, list_expr a1) {
-      return list_expr(
-          LAppend{crane::arena_make_shared<list_expr>(std::move(a0)),
-                  crane::arena_make_shared<list_expr>(std::move(a1))});
+      return list_expr(LAppend{std::make_shared<list_expr>(std::move(a0)),
+                               std::make_shared<list_expr>(std::move(a1))});
     }
 
     static list_expr lreplicate(uint64_t a0, uint64_t a1) {

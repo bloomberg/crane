@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTQUALIFIEDRAW
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <memory>
@@ -85,7 +84,7 @@ template <OrderedType X> struct Make {
 
     static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
       return Fmap(Node{std::move(a0), std::move(a1),
-                       crane::arena_make_shared<Fmap<A>>(std::move(a2))});
+                       std::make_shared<Fmap<A>>(std::move(a2))});
     }
 
     // MANIPULATORS

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_FOLD_CLOSURE_BUILD
 #define INCLUDED_FOLD_CLOSURE_BUILD
 
-#include "arena.h"
 #include "small_vector.h"
 #include <any>
 #include <functional>
@@ -93,8 +92,8 @@ struct FoldClosureBuild {
     static mylist<A> mynil() { return mylist(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(Mycons{std::move(a0),
-                           crane::arena_make_shared<mylist<A>>(std::move(a1))});
+      return mylist(
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

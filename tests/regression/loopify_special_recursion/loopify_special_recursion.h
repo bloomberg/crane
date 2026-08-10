@@ -1,7 +1,6 @@
 #ifndef INCLUDED_LOOPIFY_SPECIAL_RECURSION
 #define INCLUDED_LOOPIFY_SPECIAL_RECURSION
 
-#include "arena.h"
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
@@ -76,8 +75,7 @@ public:
   static List<A> nil() { return List(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(
-        Cons{std::move(a), crane::arena_make_shared<List<A>>(std::move(l))});
+    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -152,8 +150,8 @@ struct LoopifySpecialRecursion {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{crane::arena_make_shared<tree>(std::move(a0)), a1,
-                       crane::arena_make_shared<tree>(std::move(a2))});
+      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
+                       std::make_shared<tree>(std::move(a2))});
     }
 
     // MANIPULATORS

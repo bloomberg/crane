@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTEPONYMOUSMODULEIND
 #define INCLUDED_SEPEXTEPONYMOUSMODULEIND
 
-#include "arena.h"
 #include "small_vector.h"
 #include <memory>
 #include <optional>
@@ -50,9 +49,8 @@ public:
   static Trie<A> leaf() { return Trie(Leaf{}); }
 
   static Trie<A> branch(std::optional<A> t, Trie<A> t0, Trie<A> t1) {
-    return Trie(Branch{std::move(t),
-                       crane::arena_make_shared<Trie<A>>(std::move(t0)),
-                       crane::arena_make_shared<Trie<A>>(std::move(t1))});
+    return Trie(Branch{std::move(t), std::make_shared<Trie<A>>(std::move(t0)),
+                       std::make_shared<Trie<A>>(std::move(t1))});
   }
 
   // MANIPULATORS
