@@ -1,12 +1,12 @@
 #ifndef INCLUDED_CLOSURE_PAIR_THIS
 #define INCLUDED_CLOSURE_PAIR_THIS
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ClosurePairThis {
   struct tree {
@@ -42,7 +42,7 @@ struct ClosurePairThis {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

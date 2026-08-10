@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
 #define INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualValueDeepDestruct {
   /// Same mutual-recursive ownership shape as the copy test, but this test does
@@ -48,7 +48,7 @@ struct MutualValueDeepDestruct {
 
     // MANIPULATORS
     ~a() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ANode>(&_v)) {
           if (_alt->a1) {
@@ -109,7 +109,7 @@ struct MutualValueDeepDestruct {
 
     // MANIPULATORS
     ~b() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BNode>(&_v)) {
           if (_alt->a0) {

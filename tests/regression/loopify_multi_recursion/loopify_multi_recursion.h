@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_MULTI_RECURSION
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <memory>
 #include <type_traits>
@@ -55,7 +56,7 @@ struct LoopifyMultiRecursion {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<QQuad>(&_v)) {
           if (_alt->a0) {

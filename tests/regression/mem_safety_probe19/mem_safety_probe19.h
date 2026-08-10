@@ -2,13 +2,13 @@
 #define INCLUDED_MEM_SAFETY_PROBE19
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe19 {
   /// Probe 19: return_captures_by_value gap.
@@ -53,7 +53,7 @@ struct MemSafetyProbe19 {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

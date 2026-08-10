@@ -1,11 +1,11 @@
 #ifndef INCLUDED_LEVENSHTEIN
 #define INCLUDED_LEVENSHTEIN
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -37,7 +37,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -235,7 +235,7 @@ public:
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
+    crane::small_vector<std::shared_ptr<String>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1) {
@@ -420,7 +420,7 @@ struct Levenshtein {
 
     // MANIPULATORS
     ~chain() {
-      std::vector<std::shared_ptr<chain>> _stack = {};
+      crane::small_vector<std::shared_ptr<chain>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Skip>(&_v)) {
           if (_alt->a4) {

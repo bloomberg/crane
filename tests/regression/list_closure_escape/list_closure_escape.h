@@ -1,12 +1,12 @@
 #ifndef INCLUDED_LIST_CLOSURE_ESCAPE
 #define INCLUDED_LIST_CLOSURE_ESCAPE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ListClosureEscape {
   struct tree {
@@ -42,7 +42,7 @@ struct ListClosureEscape {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -150,7 +150,7 @@ struct ListClosureEscape {
 
     // MANIPULATORS
     ~fn_list() {
-      std::vector<std::shared_ptr<fn_list>> _stack = {};
+      crane::small_vector<std::shared_ptr<fn_list>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a1) {

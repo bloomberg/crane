@@ -1,10 +1,10 @@
 #ifndef INCLUDED_DATATYPES
 #define INCLUDED_DATATYPES
 
+#include "small_vector.h"
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 namespace Datatypes {
 
@@ -36,7 +36,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {

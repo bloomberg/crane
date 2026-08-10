@@ -1,10 +1,10 @@
 #ifndef INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
 #define INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
 
+#include "small_vector.h"
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "Datatypes.h"
 
@@ -43,7 +43,7 @@ struct Exprs {
 
     // MANIPULATORS
     ~Expr() {
-      std::vector<std::shared_ptr<Expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<Expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Neg>(&_v)) {
           if (_alt->a0) {

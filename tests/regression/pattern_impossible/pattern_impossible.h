@@ -1,11 +1,11 @@
 #ifndef INCLUDED_PATTERN_IMPOSSIBLE
 #define INCLUDED_PATTERN_IMPOSSIBLE
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PatternImpossible {
   enum class Three { ONE, TWO, THREE };
@@ -76,7 +76,7 @@ struct PatternImpossible {
 
     // MANIPULATORS
     ~nested() {
-      std::vector<std::shared_ptr<nested>> _stack = {};
+      crane::small_vector<std::shared_ptr<nested>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

@@ -2,12 +2,12 @@
 #define INCLUDED_ERASED_MULTI_INDEX
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 /// Memory safety probe: type-indexed inductives with multiple indices.
 ///
@@ -91,7 +91,7 @@ struct ErasedMultiIndex {
 
     // MANIPULATORS
     ~hlist() {
-      std::vector<std::shared_ptr<hlist>> _stack = {};
+      crane::small_vector<std::shared_ptr<hlist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<HCons>(&_v)) {
           if (_alt->a1) {

@@ -1,13 +1,13 @@
 #ifndef INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 #define INCLUDED_OBJ_NIL_ERASURE_MISMATCH
 
+#include "small_vector.h"
 #include <any>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Unit { TT };
 
@@ -39,7 +39,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {

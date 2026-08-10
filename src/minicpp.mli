@@ -258,6 +258,14 @@ and cpp_expr =
   | CPParena_alloc of cpp_type
       (** crane::arena_alloc<T> factory: allocates a T in the ambient arena,
           returns raw T*.  Used like [CPPmk_shared] for arena-mode fields. *)
+  | CPParena_clone of cpp_type
+      (** crane::arena_clone<T> factory: sharing-preserving deep copy, takes
+          the source pointer (not a dereferenced value); used in arena-mode
+          deep-copy constructors. *)
+  | CPParena_shared_alloc of cpp_type
+      (** crane::arena_shared_alloc<T> factory: allocates a T into T's single
+          thread-local shared capsule, returns a crane::capsule<T>. Used for
+          `Crane Arena Shared`-mode recursive-field allocation. *)
   | CPPoverloaded of cpp_expr list
       (** Overloaded visitor set for variant matching *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list

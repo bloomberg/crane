@@ -1,12 +1,12 @@
 #ifndef INCLUDED_LET_PAIR_SHADOW
 #define INCLUDED_LET_PAIR_SHADOW
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LetPairShadow {
   /// BUG: Two sequential let '(a, b) := f x destructurings of COMPUTED
@@ -102,7 +102,7 @@ struct LetPairShadow {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

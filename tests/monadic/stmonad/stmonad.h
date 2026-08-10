@@ -2,6 +2,7 @@
 #define INCLUDED_STMONAD
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <concepts>
@@ -86,7 +87,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -218,7 +219,7 @@ public:
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
+    crane::small_vector<std::shared_ptr<String>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1) {

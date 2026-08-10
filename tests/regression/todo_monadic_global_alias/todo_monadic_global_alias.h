@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
 #define INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
 
+#include "small_vector.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -8,7 +9,6 @@
 #include <system_error>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct Nat {
   // TYPES
@@ -38,7 +38,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {

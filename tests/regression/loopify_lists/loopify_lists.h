@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_LISTS
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
@@ -85,7 +86,7 @@ struct LoopifyLists {
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->l) {

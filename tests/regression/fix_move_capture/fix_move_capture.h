@@ -1,11 +1,11 @@
 #ifndef INCLUDED_FIX_MOVE_CAPTURE
 #define INCLUDED_FIX_MOVE_CAPTURE
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct FixMoveCapture {
   /// BUG HYPOTHESIS: dead-after analysis vs fixpoint & capture.
@@ -53,7 +53,7 @@ struct FixMoveCapture {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

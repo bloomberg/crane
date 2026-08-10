@@ -1,11 +1,11 @@
 #ifndef INCLUDED_SEPEXTEPONYMOUSMODULEIND
 #define INCLUDED_SEPEXTEPONYMOUSMODULEIND
 
+#include "small_vector.h"
 #include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "Datatypes.h"
 
@@ -55,7 +55,7 @@ public:
 
   // MANIPULATORS
   ~Trie() {
-    std::vector<std::shared_ptr<Trie<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<Trie<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Branch>(&_v)) {
         if (_alt->t0) {

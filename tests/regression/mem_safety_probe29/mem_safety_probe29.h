@@ -2,6 +2,7 @@
 #define INCLUDED_MEM_SAFETY_PROBE29
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -43,7 +44,7 @@ struct MemSafetyProbe29 {
 
     // MANIPULATORS
     ~inner() {
-      std::vector<std::shared_ptr<inner>> _stack = {};
+      crane::small_vector<std::shared_ptr<inner>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<INode>(&_v)) {
           if (_alt->a0) {
@@ -150,7 +151,7 @@ struct MemSafetyProbe29 {
 
     // MANIPULATORS
     ~outer() {
-      std::vector<std::shared_ptr<outer>> _stack = {};
+      crane::small_vector<std::shared_ptr<outer>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {
           if (_alt->a0) {
@@ -284,7 +285,7 @@ struct MemSafetyProbe29 {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::shared_ptr<expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Neg>(&_v)) {
           if (_alt->a0) {
@@ -459,7 +460,7 @@ struct MemSafetyProbe29 {
 
     // MANIPULATORS
     ~tree3() {
-      std::vector<std::shared_ptr<tree3>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree3>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<T3Node>(&_v)) {
           if (_alt->a0) {

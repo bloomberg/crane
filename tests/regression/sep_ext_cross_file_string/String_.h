@@ -1,10 +1,10 @@
 #ifndef INCLUDED_STRING_
 #define INCLUDED_STRING_
 
+#include "small_vector.h"
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "Ascii.h"
 
@@ -42,7 +42,7 @@ public:
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
+    crane::small_vector<std::shared_ptr<String>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1) {

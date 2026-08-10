@@ -1,13 +1,13 @@
 #ifndef INCLUDED_REC_RECORD
 #define INCLUDED_REC_RECORD
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct RecRecord {
   template <typename A> struct rlist {
@@ -82,7 +82,7 @@ struct RecRecord {
 
     // MANIPULATORS
     ~rlist() {
-      std::vector<std::shared_ptr<rlist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<rlist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Rcons>(&_v)) {
           if (_alt->a1) {

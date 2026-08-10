@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_STRUCTURES
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
@@ -80,7 +81,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -148,7 +149,7 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~nested() {
-      std::vector<std::shared_ptr<nested>> _stack = {};
+      crane::small_vector<std::shared_ptr<nested>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<NList>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -289,7 +290,7 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
           if (_alt->a0) {
@@ -540,7 +541,7 @@ struct LoopifyStructures {
 
     // MANIPULATORS
     ~ltree() {
-      std::vector<std::shared_ptr<ltree>> _stack = {};
+      crane::small_vector<std::shared_ptr<ltree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LNode>(&_v)) {
           if (_alt->a1) {

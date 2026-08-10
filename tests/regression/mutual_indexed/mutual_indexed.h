@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MUTUAL_INDEXED
 #define INCLUDED_MUTUAL_INDEXED
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualIndexed {
   struct EvenTree;
@@ -44,7 +44,7 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~EvenTree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ENode>(&_v)) {
           if (_alt->a2) {
@@ -107,7 +107,7 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~OddTree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {
           if (_alt->a2) {

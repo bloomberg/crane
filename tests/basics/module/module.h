@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MODULE
 #define INCLUDED_MODULE
 
+#include "small_vector.h"
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Comparison { EQ, LT, GT };
 
@@ -84,7 +84,7 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

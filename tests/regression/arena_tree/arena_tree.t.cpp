@@ -30,10 +30,10 @@ long count(const T &t) {
   return 1 + count(*n.t1) + count(*n.t2);
 }
 
-// full binary tree of depth d (built in the given arena)
-T build(crane::arena &a, int d) {
+// full binary tree of depth d (built in the ambient arena)
+T build(int d) {
   if (d == 0) return T::leaf();
-  return T::node(a, build(a, d - 1), (long long)d, build(a, d - 1));
+  return T::node(build(d - 1), (long long)d, build(d - 1));
 }
 
 // value at the root's node (undefined on a leaf)
@@ -45,26 +45,22 @@ long long root_val(const T &t) {
 int main() {
   {
     crane::arena_scope s;
-    crane::arena &a = crane::current_arena();
 
     // leaf / node discrimination
     ASSERT(T::leaf().is_leaf() == Bool0::TRUE_);
-    T n = T::node(a, T::leaf(), 42, T::leaf());
+    T n = T::node(T::leaf(), 42, T::leaf());
     ASSERT(n.is_leaf() == Bool0::FALSE_);
     ASSERT(root_val(n) == 42);
 
     // sizes of full trees: depth d has 2^(d+1)-1 nodes
-    ASSERT(count(build(a, 0)) == 1);
-    ASSERT(count(build(a, 3)) == 15);
-    ASSERT(count(build(a, 10)) == 2047);
+    ASSERT(count(build(0)) == 1);
+    ASSERT(count(build(3)) == 15);
+    ASSERT(count(build(10)) == 2047);
 
-    // Milestone 2: mirror()'s generated body threads an explicit
-    // crane::arena& through to its calls to Tree<A>::node(...), so it can
-    // be called here with the arena argument like any other arena-mode
-    // method.
-    T t = T::node(a, T::node(a, T::leaf(), 1, T::leaf()), 2,
-                  T::node(a, T::leaf(), 3, T::leaf()));
-    T m = t.mirror(a);
+    // mirror preserves node count and swaps children
+    T t = T::node(T::node(T::leaf(), 1, T::leaf()), 2,
+                  T::node(T::leaf(), 3, T::leaf()));
+    T m = t.mirror();
     ASSERT(count(m) == count(t));
     ASSERT(root_val(m) == 2);
     // after mirror, left child holds what was the right child (value 3)
@@ -76,7 +72,7 @@ int main() {
     // the source's raw pointers (arena.h documents this as the required
     // copy semantics for arena-mode handles; the implicit compiler-generated
     // copy constructor would otherwise just copy the raw pointers verbatim).
-    T orig = build(a, 3);
+    T orig = build(3);
     T copy_of_orig = orig; // exercises the explicit deep-copy constructor
     ASSERT(count(copy_of_orig) == count(orig));
     const auto &orig_n = std::get<typename T::Node>(orig.v());

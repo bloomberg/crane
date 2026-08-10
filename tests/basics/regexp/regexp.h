@@ -1,13 +1,13 @@
 #ifndef INCLUDED_REGEXP
 #define INCLUDED_REGEXP
 
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -181,7 +181,7 @@ struct Matcher {
 
     // MANIPULATORS
     ~regexp() {
-      std::vector<std::shared_ptr<regexp>> _stack = {};
+      crane::small_vector<std::shared_ptr<regexp>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cat>(&_v)) {
           if (_alt->r1) {

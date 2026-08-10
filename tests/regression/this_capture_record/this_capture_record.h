@@ -1,12 +1,12 @@
 #ifndef INCLUDED_THIS_CAPTURE_RECORD
 #define INCLUDED_THIS_CAPTURE_RECORD
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ThisCaptureRecord {
   /// A methodified function stores this-capturing closures in a
@@ -49,7 +49,7 @@ struct ThisCaptureRecord {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

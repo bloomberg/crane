@@ -1,11 +1,11 @@
 #ifndef INCLUDED_REUSE_SELF_CYCLE
 #define INCLUDED_REUSE_SELF_CYCLE
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ReuseSelfCycle {
   /// mycons at index 0 so reuse fires on the mycons branch.
@@ -40,7 +40,7 @@ struct ReuseSelfCycle {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_EXPR
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <memory>
@@ -80,7 +81,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -176,7 +177,7 @@ struct LoopifyExpr {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::shared_ptr<expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Succ>(&_v)) {
           if (_alt->a0) {
@@ -754,7 +755,7 @@ struct LoopifyExpr {
 
     // MANIPULATORS
     ~simple_expr() {
-      std::vector<std::shared_ptr<simple_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<simple_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Plus>(&_v)) {
           if (_alt->a0) {
@@ -1012,7 +1013,7 @@ struct LoopifyExpr {
 
     // MANIPULATORS
     ~cond_expr() {
-      std::vector<std::shared_ptr<cond_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<cond_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<CPlus>(&_v)) {
           if (_alt->a0) {

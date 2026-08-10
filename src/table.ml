@@ -300,35 +300,6 @@ let needs_arena () = !needs_arena_flag
 
 let reset_needs_arena () = needs_arena_flag := false
 
-(* Arena-mode explicit-arena-parameter threading (Part 3 "Option 1" design,
-   Milestone 2).  Milestone 1 gave arena-mode factories (e.g. [Tree::node])
-   an explicit [crane::arena&] parameter instead of reading the ambient
-   thread-local arena.  Milestone 2 threads that parameter through generated
-   methods/functions whose body allocates arena-mode values (directly via a
-   factory call, or transitively via a call to another arena-needing
-   function/method) — the "public-entry/worker split" from the plan.
-
-   [ctors_needing_arena] records constructor refs whose factory takes an
-   explicit arena parameter (mirrors the per-constructor decision made in
-   {!Gen_decls.mk_factory_methods}).  [funcs_needing_arena] records function
-   refs (methods generated via {!Gen_decls.gen_single_method}, e.g.
-   [Tree.mirror]) whose generated signature was given an extra arena
-   parameter because their body constructs an arena-mode value or calls
-   another arena-needing function.  Both are consulted by the call-site
-   codegen in [translation.ml] to decide whether to thread an [a] argument
-   through a given call. *)
-let ctors_needing_arena : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 17
-
-let mark_ctor_needs_arena (r : GlobRef.t) = Hashtbl.replace ctors_needing_arena r ()
-
-let ctor_needs_arena (r : GlobRef.t) = Hashtbl.mem ctors_needing_arena r
-
-let funcs_needing_arena : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 17
-
-let mark_func_needs_arena (r : GlobRef.t) = Hashtbl.replace funcs_needing_arena r ()
-
-let func_needs_arena (r : GlobRef.t) = Hashtbl.mem funcs_needing_arena r
-
 (* Set when the non-atomic reference-counted pointer (crane::rc) is used, so the
    emitter includes the [rc.h] runtime header. *)
 let needs_rc_flag = ref false
@@ -338,6 +309,17 @@ let mark_needs_rc () = needs_rc_flag := true
 let needs_rc () = !needs_rc_flag
 
 let reset_needs_rc () = needs_rc_flag := false
+
+(* Set when generated code uses [crane::small_vector] (the small-buffer-
+   optimized worklist used by the iterative destructor drain), so the
+   emitter includes the [small_vector.h] runtime header. *)
+let needs_small_vector_flag = ref false
+
+let mark_needs_small_vector () = needs_small_vector_flag := true
+
+let needs_small_vector () = !needs_small_vector_flag
+
+let reset_needs_small_vector () = needs_small_vector_flag := false
 
 (** Track whether any reified [ITree<R>] types appear in the output,
     requiring the [crane_itree.h] header. *)
@@ -1620,6 +1602,15 @@ let make_shared_name () =
   else if std_lib () = "BDE" then "bsl::make_shared"
   else "std::make_shared"
 
+(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
+   components. Used as a fallback match key for functor-internal
+   registrations below (both arena and, further down, guard-compare). *)
+let key_suffix n key =
+  let parts = String.split_on_char '.' key in
+  let len = List.length parts in
+  if len <= n then key
+  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
+
 (* Per-inductive arena/noarena table. First set = force-arena, second set =
    force-noarena. *)
 
@@ -1627,8 +1618,28 @@ let empty_arena_table = (Refset'.empty, Refset'.empty)
 
 let arena_table = Summary.ref empty_arena_table ~name:"CraneExtrArena"
 
+(* Canonical-path string key for an inductive, used as a suffix-matching
+   fallback below -- mirrors [guard_compare_key_string] but for [IndRef]
+   (a functor-internal recursive type like the lexer's [regex], directive-
+   named via one grammar's instantiation, needs to match [should_arena]
+   queries made later against the functor-body template's own copy of the
+   same inductive; see [key_suffix]/[find_guard_compare] for the identical
+   problem already solved for [Crane Guard Compare]). *)
+let arena_ref_key_string = function
+  | GlobRef.IndRef (mind, i) ->
+    Some (Names.KerName.to_string (Names.MutInd.canonical mind) ^ "#" ^ string_of_int i)
+  | GlobRef.ConstRef _ | GlobRef.VarRef _ | GlobRef.ConstructRef _ -> None
+
+(* Plain (non-[Summary]-tracked) ref, for the same reason as
+   [guard_compare_table]: a functor-internal [Crane Arena <ind>] directive's
+   registration must survive [End F.]'s rollback of [Summary]-tracked state
+   introduced while the functor body is open. *)
+let arena_suffix_table : bool CString.Map.t ref = ref CString.Map.empty
+
 (** Determines whether an inductive should use arena allocation: forced on/off
-    per inductive, falling back to the global [Crane Arena] setting. *)
+    per inductive, falling back (on exact-[GlobRef] miss) to a canonical-path
+    2-component suffix match against registered inductives (only trusted when
+    every match agrees), then to the global [Crane Arena] setting. *)
 let should_arena r =
   let yes, no = !arena_table in
   if Refset'.mem r yes then
@@ -1636,12 +1647,30 @@ let should_arena r =
   else if Refset'.mem r no then
     false
   else
-    arena ()
+    match arena_ref_key_string r with
+    | None -> arena ()
+    | Some key ->
+      let suffix = key_suffix 2 key in
+      let matches =
+        CString.Map.fold
+          (fun k v acc -> if key_suffix 2 k = suffix then v :: acc else acc)
+          !arena_suffix_table []
+      in
+      ( match matches with
+      | [] -> arena ()
+      | v :: rest when List.for_all (( = ) v) rest -> v
+      | _ -> arena () )
 
 let add_arena_entries b l =
   let f b = if b then Refset'.add else Refset'.remove in
   let y, n = !arena_table in
-  arena_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+  arena_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n);
+  List.iter
+    (fun r ->
+      match arena_ref_key_string r with
+      | None -> ()
+      | Some key -> arena_suffix_table := CString.Map.add key b !arena_suffix_table )
+    l
 
 let arena_extraction : bool * GlobRef.t list -> obj =
   declare_object
@@ -1672,6 +1701,67 @@ let reset_arena : unit -> obj =
        ~subst:None
 
 let reset_extraction_arena () = Lib.add_leaf (reset_arena ())
+
+(* --- Arena Shared (crane::shared_arena / crane::capsule<T>) ---------- *)
+(* [Crane Arena Shared <ind>.]: opts an arena-mode inductive into
+   freeze-on-store instead of clone-on-copy for its deep-copy constructor
+   (see ~/crane/docs/shared-arena-capsule-plan.md). Tracked as an
+   independent set, not a 3-way variant of [arena_table]: an inductive must
+   already be arena-eligible ([should_arena] true) for this to have any
+   effect, mirroring how [guard_compare_table] is independent of
+   [arena_table] rather than folded into it. *)
+
+let empty_arena_shared_table = Refset'.empty
+
+let arena_shared_table = Summary.ref empty_arena_shared_table ~name:"CraneExtrArenaShared"
+
+(* Same functor-internal-survival caveat as [arena_suffix_table]. *)
+let arena_shared_suffix_table : string list ref = ref []
+
+let should_arena_shared r =
+  Refset'.mem r !arena_shared_table
+  ||
+  match arena_ref_key_string r with
+  | None -> false
+  | Some key ->
+    let suffix = key_suffix 2 key in
+    List.exists (fun k -> key_suffix 2 k = suffix) !arena_shared_suffix_table
+
+let add_arena_shared_entries l =
+  arena_shared_table := List.fold_right Refset'.add l !arena_shared_table;
+  List.iter
+    (fun r ->
+      match arena_ref_key_string r with
+      | None -> ()
+      | Some key -> arena_shared_suffix_table := key :: !arena_shared_suffix_table )
+    l
+
+let arena_shared_extraction : GlobRef.t list -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Extraction Arena Shared"
+       ~cache:(fun l -> add_arena_shared_entries l)
+       ~subst:(Some (fun (s, l) -> List.map (fun x -> fst (subst_global s x)) l))
+       ~discharge:(fun x -> Some x)
+
+let extraction_arena_shared l =
+  let refs = List.map Smartlocate.global_with_alias l in
+  List.iter
+    (fun r ->
+      match r with
+      | GlobRef.IndRef _ -> ()
+      | _ -> error_inductive r )
+    refs;
+  Lib.add_leaf (arena_shared_extraction refs)
+
+let reset_arena_shared : unit -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Reset Extraction Arena Shared"
+       ~cache:(fun () -> arena_shared_table := empty_arena_shared_table)
+       ~subst:None
+
+let reset_extraction_arena_shared () = Lib.add_leaf (reset_arena_shared ())
 
 (* --- Guard Compare --------------------------------------------------- *)
 
@@ -1706,14 +1796,6 @@ let add_guard_compare fn_ref ctor_ref =
   | None -> ()
   | Some key ->
     guard_compare_table := CString.Map.add key ctor_ref !guard_compare_table
-
-(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
-   components. Used as a fallback match key below. *)
-let key_suffix n key =
-  let parts = String.split_on_char '.' key in
-  let len = List.length parts in
-  if len <= n then key
-  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
 (* A functor-internal self-reference (e.g. the guard directive's own target,
    registered from inside the functor body it guards) never survives as a

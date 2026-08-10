@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTNULLARYCALL
 #define INCLUDED_SEPEXTNULLARYCALL
 
+#include "small_vector.h"
 #include <concepts>
 
 #include "Datatypes.h"

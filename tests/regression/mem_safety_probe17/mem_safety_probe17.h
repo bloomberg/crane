@@ -2,6 +2,7 @@
 #define INCLUDED_MEM_SAFETY_PROBE17
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
@@ -56,7 +57,7 @@ struct MemSafetyProbe17 {
 
     // MANIPULATORS
     ~qtree() {
-      std::vector<std::shared_ptr<qtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<qtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<QNode>(&_v)) {
           if (_alt->a0) {
@@ -330,7 +331,7 @@ struct MemSafetyProbe17 {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

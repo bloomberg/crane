@@ -1,11 +1,11 @@
 #ifndef INCLUDED_MUTUAL_RECURSION
 #define INCLUDED_MUTUAL_RECURSION
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualRecursion {
   static bool even(uint64_t n);
@@ -61,7 +61,7 @@ struct MutualRecursion {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::shared_ptr<expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BinOp>(&_v)) {
           if (_alt->a1) {

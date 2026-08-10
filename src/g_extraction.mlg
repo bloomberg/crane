@@ -204,6 +204,16 @@ VERNAC COMMAND EXTEND ResetExtractionArena CLASSIFIED AS SIDEFF
   -> { reset_extraction_arena () }
 END
 
+VERNAC COMMAND EXTEND ExtractionArenaShared CLASSIFIED AS SIDEFF
+| [ "Crane" "Arena" "Shared" ne_global_list(l) ]
+  -> { extraction_arena_shared l }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionArenaShared CLASSIFIED AS SIDEFF
+| [ "Crane" "Reset" "Arena" "Shared" ]
+  -> { reset_extraction_arena_shared () }
+END
+
 VERNAC COMMAND EXTEND ExtractionImplicit CLASSIFIED AS SIDEFF
 (* Custom implicit arguments of some csts/inds/constructors *)
 | [ "Crane" "Extraction" "Implicit" global(r) "[" crane_int_or_id_list(l) "]" ]

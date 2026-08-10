@@ -1,11 +1,11 @@
 #ifndef INCLUDED_POLYMORPHIC_HELPER
 #define INCLUDED_POLYMORPHIC_HELPER
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct Nat {
   // TYPES
@@ -35,7 +35,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -138,7 +138,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {

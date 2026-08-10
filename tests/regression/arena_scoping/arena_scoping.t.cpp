@@ -40,8 +40,7 @@ long count(const T &t) {
 // full binary tree of depth d, built in whatever arena is currently installed
 T build(int d) {
   if (d == 0) return T::leaf();
-  crane::arena &a = crane::current_arena();
-  return T::node(a, build(d - 1), (long long)d, build(d - 1));
+  return T::node(build(d - 1), (long long)d, build(d - 1));
 }
 
 // Capture everything written to stderr while running f() into a string.

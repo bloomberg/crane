@@ -476,6 +476,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPvisit
    |CPPmk_shared _
    |CPParena_alloc _
+   |CPParena_clone _
+   |CPParena_shared_alloc _
    |CPPthis
    |CPPshared_from_this _
    |CPPconvertible_to _

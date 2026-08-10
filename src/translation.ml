@@ -4380,32 +4380,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       in
       (* Generate: Type<temps>::ctor::Constructor_(args) *)
       let gen_ctor_call args =
-        (* Milestone 2 arena threading: [args] here is already in
-           [CPPfun_call]'s physical (reversed) order, i.e. the logical-first
-           argument is last in this list.  Arena-mode factories (Milestone 1,
-           see [Table.ctor_needs_arena]) take [crane::arena &a] as their
-           logical-FIRST parameter, so the arena expression must be appended
-           at the end of this physical list.  The arena variable comes from
-           the enclosing function's own arena parameter
-           ([tctx.current_arena_param], set by [gen_single_method] /
-           [gen_dfun] for functions that themselves need arena threading). *)
-        let args =
-          if Table.ctor_needs_arena r then
-            match tctx.current_arena_param with
-            | Some aid -> args @ [ CPPvar aid ]
-            | None ->
-              (* Should not happen: any function invoking an arena-needing
-                 constructor must itself have been marked as needing an
-                 arena parameter. Fail loudly rather than silently drop it. *)
-              CErrors.user_err
-                Pp.(
-                  str "Crane: constructor "
-                  ++ str (ctor_struct_name_of_ref r)
-                  ++ str
-                       " needs an arena argument but no arena parameter is \
-                        in scope" )
-          else args
-        in
         match ty with
         | Tglob (n, tys, _) ->
           (* Filter out index type args - only keep parameters *)
@@ -6577,38 +6551,6 @@ and eta_fun env f args =
         else
           CPPabort "untranslatable curried proof term" )
     in
-    (* Milestone 2 arena threading: if callee [id] is a generated
-       function/method that itself needs an explicit [crane::arena&]
-       parameter (see [Table.func_needs_arena], set by [gen_single_method]
-       for functions whose body constructs an arena-mode value), fetch the
-       caller's own arena parameter to thread into the call.  The arena is
-       the logical-LAST argument (appended after "this" for methods like
-       [mirror]).  [CPPfun_call]'s [ts]/args field is stored PHYSICALLY
-       REVERSED relative to logical order ([cpp_print.ml]'s
-       [args_normal = List.rev ts]): logical-first = physical-last, and
-       logical-last = physical-FIRST.  So to make the arena the logical-last
-       argument, it must be PREPENDED to the physical arg list (the
-       opposite of the constructor-call case above, where the arena is
-       logical-FIRST and thus appended to the physical list). *)
-    let arena_call_arg =
-      if Table.func_needs_arena id then
-        match tctx.current_arena_param with
-        | Some aid -> Some (CPPvar aid)
-        | None ->
-          CErrors.user_err
-            Pp.(
-              str "Crane: call to "
-              ++ str (Common.pp_global_name Term id)
-              ++ str
-                   " needs an arena argument but no arena parameter is in \
-                    scope" )
-      else None
-    in
-    let append_arena_physical physical_args =
-      match arena_call_arg with
-      | Some a -> a :: physical_args
-      | None -> physical_args
-    in
     let primary_result =
       match ty with
       | Tfun (dom, cod) ->
@@ -6641,7 +6583,7 @@ and eta_fun env f args =
                the glob directly so the template renders as-is. *)
             cglob
           else
-            CPPfun_call (cglob, append_arena_physical (List.rev args))
+            CPPfun_call (cglob, List.rev args)
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -6721,7 +6663,7 @@ and eta_fun env f args =
             captured_args
             @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
-          let call = CPPfun_call (cglob, append_arena_physical (List.rev call_args)) in
+          let call = CPPfun_call (cglob, List.rev call_args) in
           let ret_ty, body =
             if cod = Tvoid then
               (* Void-returning function: execute for side effects, then
@@ -6739,7 +6681,7 @@ and eta_fun env f args =
              template string renders as-is, without an appended (). *)
           cglob
         else
-          CPPfun_call (cglob, append_arena_physical args)
+          CPPfun_call (cglob, args)
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity

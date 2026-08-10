@@ -1,13 +1,13 @@
 #ifndef INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
 #define INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct SimpleLambdaFieldCapture {
   /// Control test: a SIMPLE lambda (not a local fixpoint) captures
@@ -47,7 +47,7 @@ struct SimpleLambdaFieldCapture {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

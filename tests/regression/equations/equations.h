@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EQUATIONS
 #define INCLUDED_EQUATIONS
 
+#include "small_vector.h"
 #include <any>
 #include <concepts>
 #include <functional>
@@ -8,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PeanoNat {
   static bool even(uint64_t n);
@@ -114,7 +114,7 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_graph_refinement_3>(&_v)) {
           if (_alt->hind) {
@@ -206,7 +206,7 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_clause_3_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_1>(&_v)) {
           if (_alt->hind) {
@@ -557,7 +557,7 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Collatz_steps_graph_refinement_3>(&_v)) {
           if (_alt->hind) {
@@ -657,7 +657,7 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_clause_3_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt =
                 std::get_if<Collatz_steps_clause_3_graph_equation_1>(&_v)) {

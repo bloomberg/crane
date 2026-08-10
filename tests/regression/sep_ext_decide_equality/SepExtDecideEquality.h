@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTDECIDEEQUALITY
 #define INCLUDED_SEPEXTDECIDEEQUALITY
 
+#include "small_vector.h"
 #include <concepts>
 #include <variant>
 

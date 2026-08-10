@@ -1,13 +1,13 @@
 #ifndef INCLUDED_AXIOM_TYPES
 #define INCLUDED_AXIOM_TYPES
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
@@ -164,7 +164,7 @@ struct AxiomTypes {
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1) {

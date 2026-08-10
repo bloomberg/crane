@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 #define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 
+#include "small_vector.h"
 #include <any>
 #include <utility>
 #include <variant>

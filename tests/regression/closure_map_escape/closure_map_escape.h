@@ -1,13 +1,13 @@
 #ifndef INCLUDED_CLOSURE_MAP_ESCAPE
 #define INCLUDED_CLOSURE_MAP_ESCAPE
 
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ClosureMapEscape {
   template <typename A> struct mylist {
@@ -83,7 +83,7 @@ struct ClosureMapEscape {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

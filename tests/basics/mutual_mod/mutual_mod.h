@@ -1,11 +1,11 @@
 #ifndef INCLUDED_MUTUAL_MOD
 #define INCLUDED_MUTUAL_MOD
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct EvenOdd {
   struct even_list;
@@ -42,7 +42,7 @@ struct EvenOdd {
 
     // MANIPULATORS
     ~even_list() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ECons>(&_v)) {
           if (_alt->a1) {
@@ -104,7 +104,7 @@ struct EvenOdd {
 
     // MANIPULATORS
     ~odd_list() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<OCons>(&_v)) {
           if (_alt->a1) {

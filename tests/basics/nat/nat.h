@@ -1,11 +1,11 @@
 #ifndef INCLUDED_NAT
 #define INCLUDED_NAT
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct Nat {
   /// Peano natural numbers: O is zero and S n is the successor of n.
@@ -36,7 +36,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->n) {

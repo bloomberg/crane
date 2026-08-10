@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MUTUAL_RECURSION
 #define INCLUDED_MUTUAL_RECURSION
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualRecursion {
   static bool is_even(uint64_t n);
@@ -85,7 +85,7 @@ struct MutualRecursion {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -168,7 +168,7 @@ struct MutualRecursion {
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Trees>(&_v)) {
           if (_alt->a0) {

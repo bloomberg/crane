@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TOPOLOGICAL_SORT_BDE
 #define INCLUDED_TOPOLOGICAL_SORT_BDE
 
+#include "small_vector.h"
 #include <any>
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
@@ -88,7 +89,7 @@ public:
   }
   // MANIPULATORS
   ~List() {
-    bsl::vector<bsl::shared_ptr<List<t_A>>> _stack = {};
+    crane::small_vector<bsl::shared_ptr<List<t_A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = bsl::get_if<Cons>(&_v)) {
         if (_alt->d_l) {

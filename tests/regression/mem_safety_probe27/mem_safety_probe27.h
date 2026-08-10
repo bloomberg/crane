@@ -2,6 +2,7 @@
 #define INCLUDED_MEM_SAFETY_PROBE27
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <functional>
 #include <memory>
@@ -56,7 +57,7 @@ struct MemSafetyProbe27 {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

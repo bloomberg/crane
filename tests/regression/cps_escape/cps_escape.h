@@ -1,12 +1,12 @@
 #ifndef INCLUDED_CPS_ESCAPE
 #define INCLUDED_CPS_ESCAPE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct CpsEscape {
   struct tree {
@@ -42,7 +42,7 @@ struct CpsEscape {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

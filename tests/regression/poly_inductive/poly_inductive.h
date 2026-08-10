@@ -1,12 +1,12 @@
 #ifndef INCLUDED_POLY_INDUCTIVE
 #define INCLUDED_POLY_INDUCTIVE
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PolyInductive {
   template <typename A> struct pbox {
@@ -262,7 +262,7 @@ struct PolyInductive {
 
     // MANIPULATORS
     ~ptree() {
-      std::vector<std::shared_ptr<ptree<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<ptree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<PNode>(&_v)) {
           if (_alt->a0) {

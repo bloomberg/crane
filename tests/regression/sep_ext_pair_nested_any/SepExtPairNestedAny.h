@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPAIRNESTEDANY
 #define INCLUDED_SEPEXTPAIRNESTEDANY
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>

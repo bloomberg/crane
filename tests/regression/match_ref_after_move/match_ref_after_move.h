@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MATCH_REF_AFTER_MOVE
 #define INCLUDED_MATCH_REF_AFTER_MOVE
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MatchRefAfterMove {
   /// This test exercises patterns where a value is destructured
@@ -85,7 +85,7 @@ struct MatchRefAfterMove {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {

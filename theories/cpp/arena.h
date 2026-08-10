@@ -32,6 +32,7 @@
 #include <memory_resource>
 #include <new>
 #include <type_traits>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -167,6 +168,231 @@ template <typename T, typename... Args>
 T* arena_alloc(Args&&... args)
 {
     return current_arena().alloc<T>(std::forward<Args>(args)...);
+}
+
+// -- Sharing-preserving deep copy ---------------------------------------
+// Generated arena-mode copy constructors (Crane Arena) recursively clone
+// every reachable node, because raw pointers carry no refcount to bump. A
+// naive per-field `arena_alloc<T>(*src)` clones each *reference* to a node,
+// not each node: if the source value is a DAG (the same node pointer reached
+// through more than one field/parent — e.g. a hash-consed/interned value,
+// see Crane Intern), every additional reference re-clones the whole subtree
+// hanging off it. That turns one O(size-of-DAG) copy into something
+// exponential in the DAG's sharing depth. `arena_clone<T>` fixes this by
+// memoizing on source-pointer identity for the duration of one top-level
+// copy: the first time a given source node is seen it is cloned (invoking
+// its own copy constructor, which recurses into `arena_clone` again for its
+// own pointer fields); every subsequent reference to that same source
+// pointer within the same top-level copy reuses the already-cloned target,
+// restoring the source's sharing structure in the copy.
+//
+// The memo is thread-local and cleared automatically between unrelated
+// top-level copies (tracked via a call-depth counter): only the outermost
+// `arena_clone` invocation in a given call chain clears it, so nested
+// recursive clones (reached while that outermost call is still on the
+// stack) share one memo, and the memo never leaks entries across unrelated
+// copies, which matters since a `const void*` source address is not a
+// stable identity of node *content* — it silently keys the wrong node if
+// left stale.
+inline std::unordered_map<const void*, void*>& arena_clone_memo() noexcept
+{
+    static thread_local std::unordered_map<const void*, void*> m;
+    return m;
+}
+
+inline int& arena_clone_depth() noexcept
+{
+    static thread_local int d = 0;
+    return d;
+}
+
+// -- Debug instrumentation: quantify clone volume ---------------------------
+// Counts, per-process, how many times arena_clone actually allocates (a
+// memo miss -- a genuine new node copy) vs. how many times it's called at
+// all (misses + memo hits). Compiled in only under CRANE_ARENA_PROFILE, so
+// it costs nothing in normal builds. Read via arena_clone_stats().
+#ifdef CRANE_ARENA_PROFILE
+struct arena_clone_stats_t {
+    std::atomic<unsigned long long> calls{0};
+    std::atomic<unsigned long long> misses{0};
+};
+inline arena_clone_stats_t& arena_clone_stats() noexcept
+{
+    static arena_clone_stats_t s;
+    return s;
+}
+#endif
+
+template <typename T>
+T* arena_clone(const T* src)
+{
+    if (src == nullptr) {
+        return nullptr;
+    }
+#ifdef CRANE_ARENA_PROFILE
+    arena_clone_stats().calls.fetch_add(1, std::memory_order_relaxed);
+#endif
+    struct depth_guard {
+        depth_guard() { if (++arena_clone_depth() == 1) arena_clone_memo().clear(); }
+        ~depth_guard() { --arena_clone_depth(); }
+    } guard;
+
+    auto& memo = arena_clone_memo();
+    auto  it   = memo.find(static_cast<const void*>(src));
+    if (it != memo.end()) {
+        return static_cast<T*>(it->second);
+    }
+#ifdef CRANE_ARENA_PROFILE
+    arena_clone_stats().misses.fetch_add(1, std::memory_order_relaxed);
+#endif
+    // Insert only after the recursive copy fully completes: Coq inductives
+    // are well-founded (no cycles), so no nested clone call can re-enter on
+    // this same `src` while its own copy is still under construction.
+    T* dst = arena_alloc<T>(*src);
+    memo.emplace(static_cast<const void*>(src), static_cast<void*>(dst));
+    return dst;
+}
+
+// -- Shared arena capsules ----------------------------------------------
+// Phase 1 (runtime-only, no codegen/Coq surface yet) of the shared-arena-
+// capsule design (see ~/crane/docs/shared-arena-capsule-plan.md). A
+// `crane::arena` is single-owner: dropping it frees everything in one shot,
+// which is exactly wrong for a value that gets stored into a long-lived
+// structure (a memo table) and aliased from many places over time — every
+// such store would otherwise have to `arena_clone` the whole value into the
+// destination's own arena. `shared_arena` instead lets the *arena itself* be
+// referenced-counted: `freeze()` moves an existing (unshared, already-built)
+// arena into a refcounted capsule in O(1) (no allocation is copied); copying
+// the resulting handle is an O(1) refcount bump regardless of how much is
+// allocated inside. A `capsule<T>` pairs a `shared_arena` handle with a raw
+// pointer to the value's root node inside it, mirroring how `crane::rc<T>` is
+// a (control-block*, T*) pair for the non-arena representation.
+#ifdef CRANE_ARENA_PROFILE
+// Counts capsules ever created (`freezes`) vs. currently referenced by at
+// least one live `capsule<T>`/`shared_arena` handle tree (`live`, best-effort:
+// incremented on freeze, this phase does not yet decrement on last-handle
+// drop -- that needs a dtor hook on shared_arena, deferred until a real
+// consumer of capsule<T> exists to exercise it).
+struct capsule_stats_t {
+    std::atomic<unsigned long long> freezes{0};
+    std::atomic<unsigned long long> live{0};
+};
+inline capsule_stats_t& capsule_stats() noexcept
+{
+    static capsule_stats_t s;
+    return s;
+}
+#endif
+
+class shared_arena {
+public:
+    // Move an existing single-owner arena into a fresh, refcounted capsule.
+    // O(1): transfers the pmr resource's ownership, copies nothing.
+    static shared_arena freeze(arena&& a)
+    {
+#ifdef CRANE_ARENA_PROFILE
+        capsule_stats().freezes.fetch_add(1, std::memory_order_relaxed);
+        capsule_stats().live.fetch_add(1, std::memory_order_relaxed);
+#endif
+        return shared_arena(std::make_shared<arena>(std::move(a)));
+    }
+
+    shared_arena(const shared_arena&)            = default;
+    shared_arena(shared_arena&&) noexcept        = default;
+    shared_arena& operator=(const shared_arena&) = default;
+    shared_arena& operator=(shared_arena&&) noexcept = default;
+
+    arena& get() const noexcept { return *impl_; }
+
+    // Null handle: only for default-constructing a [capsule<T>] field before
+    // it's ever assigned (e.g. a variant's synthesized default constructor
+    // picking an unrelated alternative). Dereferencing [get()] on a null
+    // handle is undefined, same contract as a null [shared_ptr].
+    shared_arena() noexcept = default;
+
+private:
+    explicit shared_arena(std::shared_ptr<arena> impl) : impl_(std::move(impl)) {}
+
+    std::shared_ptr<arena> impl_;
+};
+
+// A value whose root lives inside a `shared_arena`. Copying a `capsule<T>` is
+// an O(1) refcount bump on the underlying arena (via `shared_arena`'s
+// `shared_ptr`), regardless of the size of the tree rooted at `root`. This is
+// the operation a store-many/read-many structure (e.g. an AVL map's rebalance
+// path) needs and a plain arena-mode value (clone-at-boundary) doesn't have.
+template <typename T>
+class capsule {
+public:
+    capsule() noexcept : root_(nullptr) {}
+    capsule(shared_arena owner, T* root) noexcept : owner_(std::move(owner)), root_(root) {}
+
+    T&       operator*() const noexcept { return *root_; }
+    T*       operator->() const noexcept { return root_; }
+    T*       get() const noexcept { return root_; }
+    shared_arena owner() const noexcept { return owner_; }
+
+private:
+    shared_arena owner_;
+    T*           root_;
+};
+
+}  // namespace crane
+
+// Overload of [crane_raw] (declared in crane_fn.h for std::shared_ptr<T> / T*,
+// and in rc.h for crane::rc<T>) for [crane::capsule<T>]: extract the raw
+// pointer. Kept here so it is available whenever capsule<T> is in use (with or
+// without crane_fn.h included), so loopify's raw-pointer extraction works
+// uniformly across pointer flavors -- needed because `Crane Arena Shared`
+// fields are [crane::capsule<T>], not a bare [T*] or [shared_ptr<T>].
+template <typename T> T *crane_raw(const crane::capsule<T> &p) noexcept {
+  return p.get();
+}
+
+namespace crane {
+
+// Build a value of type T inside a fresh, single-owner arena via `build`
+// (which must return the root T*, allocating via `arena_alloc<T>` under an
+// `arena_use_scope` for `a` -- the caller sets that up), then freeze that
+// arena into a capsule in O(1). Convenience wrapper for the common
+// "construct once, then store/share" pattern.
+template <typename T, typename F>
+capsule<T> freeze_into(arena&& a, F&& build)
+{
+    T* root = build(a);
+    return capsule<T>(shared_arena::freeze(std::move(a)), root);
+}
+
+// -- Codegen entry point for `Crane Arena Shared` -----------------------
+// Generated code for an arena-shared inductive allocates every node of that
+// type into ONE thread-local shared capsule per type `T` (lazily created,
+// frozen immediately, never explicitly reset -- same accepted tradeoff as
+// `fallback_arena()`: no reclamation, but a lex/parse run's regex-shaped
+// working set is bounded, and the point of this feature is exactly that
+// such values are long-lived and widely aliased for the run's duration
+// anyway). Because every value of type `T` lives in the same capsule, a
+// generated deep-copy constructor for `T` never needs to clone across
+// nodes of `T` -- copying a `capsule<T>` field is already an O(1) refcount
+// bump, which is the whole point: it turns the "clone on every AVL-
+// rebalance-triggered store" cost that made plain `Crane Arena` pathological
+// for table-stored values (see docs/shared-arena-capsule-plan.md) into a
+// no-op-cost aliasing operation, at the price of never reclaiming individual
+// nodes until every capsule<T> handle across the whole thread drops (whole-
+// type granularity, not whole-program: unrelated arena-shared types get
+// their own independent capsule and lifetime).
+template <typename T>
+shared_arena& shared_capsule_for() noexcept
+{
+    static thread_local shared_arena a = shared_arena::freeze(arena{});
+    return a;
+}
+
+template <typename T, typename... Args>
+capsule<T> arena_shared_alloc(Args&&... args)
+{
+    shared_arena& cap = shared_capsule_for<T>();
+    T*            p   = cap.get().alloc<T>(std::forward<Args>(args)...);
+    return capsule<T>(cap, p);
 }
 
 // RAII: install a fresh arena as the current one for the duration of this scope

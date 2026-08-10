@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTENUMASVALUE
 #define INCLUDED_SEPEXTENUMASVALUE
 
+#include "small_vector.h"
 #include <concepts>
 #include <utility>
 

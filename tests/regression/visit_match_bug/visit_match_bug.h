@@ -1,11 +1,11 @@
 #ifndef INCLUDED_VISIT_MATCH_BUG
 #define INCLUDED_VISIT_MATCH_BUG
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct VisitMatchBug {
   struct Tree {
@@ -43,7 +43,7 @@ struct VisitMatchBug {
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::shared_ptr<Tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<Tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

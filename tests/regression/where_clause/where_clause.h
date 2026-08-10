@@ -1,11 +1,11 @@
 #ifndef INCLUDED_WHERE_CLAUSE
 #define INCLUDED_WHERE_CLAUSE
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct WhereClause {
   struct Expr {
@@ -54,7 +54,7 @@ struct WhereClause {
 
     // MANIPULATORS
     ~Expr() {
-      std::vector<std::shared_ptr<Expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<Expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Plus>(&_v)) {
           if (_alt->a0) {
@@ -212,7 +212,7 @@ struct WhereClause {
 
     // MANIPULATORS
     ~BExpr() {
-      std::vector<std::shared_ptr<BExpr>> _stack = {};
+      crane::small_vector<std::shared_ptr<BExpr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BAnd>(&_v)) {
           if (_alt->a0) {
@@ -362,7 +362,7 @@ struct WhereClause {
 
     // MANIPULATORS
     ~AExpr() {
-      std::vector<std::shared_ptr<AExpr>> _stack = {};
+      crane::small_vector<std::shared_ptr<AExpr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<APlus>(&_v)) {
           if (_alt->a0) {

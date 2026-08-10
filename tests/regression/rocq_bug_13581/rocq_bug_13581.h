@@ -1,13 +1,13 @@
 #ifndef INCLUDED_ROCQ_BUG_13581
 #define INCLUDED_ROCQ_BUG_13581
 
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -40,7 +40,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -134,7 +134,7 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~I() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<D>(&_v)) {
           if (_alt->a0) {
@@ -200,7 +200,7 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~J() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<E>(&_v)) {
           if (_alt->a0) {

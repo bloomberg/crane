@@ -2,13 +2,13 @@
 #define INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <deque>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A, typename P> struct SigT {
   // DATA
@@ -75,7 +75,7 @@ public:
 
   // MANIPULATORS
   ~String() {
-    std::vector<std::shared_ptr<String>> _stack = {};
+    crane::small_vector<std::shared_ptr<String>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1) {

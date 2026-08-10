@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_SEARCH
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
@@ -80,7 +81,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -415,7 +416,7 @@ struct LoopifySearch {
 
     // MANIPULATORS
     ~btree() {
-      std::vector<std::shared_ptr<btree>> _stack = {};
+      crane::small_vector<std::shared_ptr<btree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BNode>(&_v)) {
           if (_alt->a0) {

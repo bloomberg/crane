@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SEPEXTCROSSMODULE
 #define INCLUDED_SEPEXTCROSSMODULE
 
+#include "small_vector.h"
+
 #include "Datatypes.h"
 #include "List.h"
 

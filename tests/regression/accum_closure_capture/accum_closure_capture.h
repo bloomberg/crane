@@ -1,12 +1,12 @@
 #ifndef INCLUDED_ACCUM_CLOSURE_CAPTURE
 #define INCLUDED_ACCUM_CLOSURE_CAPTURE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct AccumClosureCapture {
   /// Define fn_list BEFORE tree so fn_list is not a forward inductive.
@@ -44,7 +44,7 @@ struct AccumClosureCapture {
 
     // MANIPULATORS
     ~fn_list() {
-      std::vector<std::shared_ptr<fn_list>> _stack = {};
+      crane::small_vector<std::shared_ptr<fn_list>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a1) {
@@ -134,7 +134,7 @@ struct AccumClosureCapture {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

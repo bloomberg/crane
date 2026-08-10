@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_TREES
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
@@ -79,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -188,7 +189,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->l) {
@@ -421,7 +422,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~ternary() {
-      std::vector<std::shared_ptr<ternary>> _stack = {};
+      crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
           if (_alt->a0) {
@@ -541,7 +542,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~rose() {
-      std::vector<std::shared_ptr<rose>> _stack = {};
+      crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -817,7 +818,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
           if (_alt->a0) {
@@ -950,7 +951,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~simple_tree() {
-      std::vector<std::shared_ptr<simple_tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<simple_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SNode>(&_v)) {
           if (_alt->a0) {

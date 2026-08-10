@@ -1,11 +1,11 @@
 #ifndef INCLUDED_ROCQ_BUG_7228
 #define INCLUDED_ROCQ_BUG_7228
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct Nat {
   // TYPES
@@ -35,7 +35,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {

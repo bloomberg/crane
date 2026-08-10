@@ -1,12 +1,12 @@
 #ifndef INCLUDED_LARGE_MUTUAL
 #define INCLUDED_LARGE_MUTUAL
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LargeMutual {
   struct stmt;
@@ -82,7 +82,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~stmt() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SAssign>(&_v)) {
           if (_alt->a1) {
@@ -279,7 +279,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<EAdd>(&_v)) {
           if (_alt->a0) {
@@ -492,7 +492,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~bexpr() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BEq>(&_v)) {
           if (_alt->a0) {

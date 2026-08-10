@@ -2,11 +2,11 @@
 #define INCLUDED_ARENA_TREE
 
 #include "arena.h"
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -38,7 +38,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -100,8 +100,8 @@ public:
       this->v_ = Leaf{};
     } else {
       const auto &[t1, x, t2] = std::get<typename Tree<A>::Node>(_other.v());
-      this->v_ = Node{crane::arena_alloc<Tree<A>>(*t1), x,
-                      crane::arena_alloc<Tree<A>>(*t2)};
+      this->v_ = Node{crane::arena_clone<Tree<A>>(t1), x,
+                      crane::arena_clone<Tree<A>>(t2)};
     }
   }
 
@@ -117,9 +117,9 @@ public:
   // CREATORS
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
-  static Tree<A> node(crane::arena &a, Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{a.alloc<Tree<A>>(std::move(t1)), std::move(x),
-                     a.alloc<Tree<A>>(std::move(t2))});
+  static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
+    return Tree(Node{crane::arena_alloc<Tree<A>>(std::move(t1)), std::move(x),
+                     crane::arena_alloc<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
@@ -171,12 +171,12 @@ public:
     }
   }
 
-  Tree<A> mirror(crane::arena &a) const {
+  Tree<A> mirror() const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Tree<A>::leaf();
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return Tree<A>::node(a, a2->mirror(a), a1, a0->mirror(a));
+      return Tree<A>::node(a2->mirror(), a1, a0->mirror());
     }
   }
 };

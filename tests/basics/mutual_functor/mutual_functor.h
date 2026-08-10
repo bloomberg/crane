@@ -1,13 +1,13 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include "small_vector.h"
 #include <any>
 #include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -58,7 +58,7 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a1) {
@@ -130,7 +130,7 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a0) {

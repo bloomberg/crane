@@ -1,11 +1,11 @@
 #ifndef INCLUDED_SEPEXTUPTRCLONEQUAL
 #define INCLUDED_SEPEXTUPTRCLONEQUAL
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 namespace SepExtUptrCloneQual {
 
@@ -83,7 +83,7 @@ public:
 
   // MANIPULATORS
   ~MyList() {
-    std::vector<std::shared_ptr<MyList<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<MyList<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Mycons>(&_v)) {
         if (_alt->a1) {

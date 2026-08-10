@@ -797,6 +797,16 @@ let spec_header si () =
     else
       h
   in
+  (* [crane::small_vector] (the small-buffer-optimized destructor drain
+     worklist) lives in small_vector.h. *)
+  let h =
+    if Table.needs_small_vector ()
+       && not (List.exists (fun s -> String.equal s "small_vector.h") (himports @ imps))
+    then
+      h ++ mk_include_quoted "small_vector.h" ++ fnl ()
+    else
+      h
+  in
   let fun_concept =
     if is_bde () then
       "template <class From, class To>\n\

@@ -3638,48 +3638,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (get_local_inductives ())
   in
   tctx.method_self_ns <- full_method_ns;
-  (* Milestone 2 arena threading: determine whether this method's body needs
-     an explicit [crane::arena &] parameter, by scanning [inner_body] for (a)
-     applications of constructors already known to need an arena (see
-     [mk_factory_methods]/[Table.ctor_needs_arena]), or (b) calls to other
-     generated functions/methods already known to need one
-     ([Table.func_needs_arena]).  Self-recursive calls to [func_ref] itself
-     don't short-circuit this: if the body directly builds an arena-mode
-     value (e.g. [node (mirror r) x (mirror l)]), the [MLcons] check alone
-     is enough to detect it, regardless of the recursive [mirror] calls
-     alongside it. Must run and register (via [Table.mark_func_needs_arena])
-     BEFORE [gen_stmts] so that self-recursive call sites inside the body
-     see the function as already needing an arena. *)
-  let method_needs_arena =
-    (* Scan for actual constructor APPLICATIONS ([MLcons]) and function
-       CALLS ([MLglob]/[MLapp (MLglob _, _)]) only.  Do NOT use
-       [Modutil.ast_iter_references], which also fires its [do_cons]
-       callback for constructors appearing in [MLcase] match patterns
-       (e.g. matching against [leaf]/[node] to destructure a scrutinee) —
-       that would wrongly flag every function that merely pattern-matches
-       on an arena-mode type (e.g. [is_leaf], [size]) as needing an arena,
-       even though they never construct one. *)
-    let found = ref false in
-    let rec scan a =
-      ( match a with
-      | MLcons (_, r, _) -> if Table.ctor_needs_arena r then found := true
-      | MLglob (r, _) -> if Table.func_needs_arena r then found := true
-      | _ -> () );
-      Mlutil.ast_iter scan a
-    in
-    scan inner_body;
-    !found
-  in
-  let arena_param_id = Id.of_string "a" in
-  let arena_param_ty =
-    Tref (Tid_external (Id.of_string_soft "crane::arena", []))
-  in
-  if method_needs_arena then Table.mark_func_needs_arena func_ref;
-  let saved_arena_param = tctx.current_arena_param in
-  tctx.current_arena_param <-
-    (if method_needs_arena then Some arena_param_id else None);
   let stmts = gen_stmts env method_k inner_body in
-  tctx.current_arena_param <- saved_arena_param;
   tctx.method_self_ns <- saved_method_ns;
   set_current_type_vars saved_type_vars;
   tctx.move_dead_after <- saved_dead;
@@ -3819,12 +3778,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let stmts =
     if Id.Set.is_empty phantom_name_set then stmts
     else List.map strip_phantom_any_cast_stmt stmts
-  in
-  (* Milestone 2: append the explicit arena parameter (as the last visible
-     parameter, after "this") for methods whose body needs one. *)
-  let params =
-    if method_needs_arena then params @ [ (arena_param_id, arena_param_ty) ]
-    else params
   in
   ( Fmethod
       {
@@ -3994,6 +3947,17 @@ let gen_ind_header_v2
     end
     else Table.should_arena name
   in
+  (* [Crane Arena Shared]: routes an arena-mode inductive's recursive fields
+     through a single thread-local [crane::capsule<T>] per type instead of a
+     bare arena pointer (see theories/cpp/arena.h and
+     docs/shared-arena-capsule-plan.md). Only meaningful when [arena_ok] is
+     also true. Recursive fields get type [crane::capsule<inner>]
+     ([compute_field_cpp_ty] below), are allocated via
+     [crane::arena_shared_alloc<T>] (the factory codegen site), and are
+     copied plainly in the deep-copy constructor -- a [capsule<T>]'s own copy
+     constructor is already an O(1) refcount bump, since every value of type
+     [T] lives in the one shared capsule for [T]. *)
+  let arena_shared_ok = arena_ok && Table.should_arena_shared name in
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
 
@@ -4202,7 +4166,12 @@ let gen_ind_header_v2
            pointer into a region, not a shared_ptr.  Confined to the
            field declaration so method return/parameter positions are
            unaffected. *)
-        if arena_ok then
+        if arena_shared_ok then
+          match cpp_ty with
+          | Tshared_ptr inner ->
+            Tid_external (Id.of_string_soft "crane::capsule", [ inner ])
+          | _ -> cpp_ty
+        else if arena_ok then
           match cpp_ty with
           | Tshared_ptr inner -> Tptr inner
           | _ -> cpp_ty
@@ -4623,7 +4592,8 @@ let gen_ind_header_v2
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = Tshared_ptr self_ty in
             let stack_ty =
-              Tid_external (Id.of_string_soft "std::vector", [stack_elem_ty])
+              Table.mark_needs_small_vector ();
+              Tid_external (Id.of_string_soft "crane::small_vector", [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
@@ -4634,6 +4604,12 @@ let gen_ind_header_v2
             let body =
               [ Sasgn (_stack_id, Some stack_ty,
                   CPPbraced []);
+                (* Most drains only ever hold a handful of pending nodes at
+                   once (worklist depth tracks tree height, not size), so
+                   [crane::small_vector] keeps the first 8 elements inline
+                   with no heap allocation at all, spilling to a heap
+                   std::vector only if a destructor happens to drain a
+                   worklist deeper than that. *)
                 Sasgn (_drain_id, Some Tauto, drain_lambda);
                 Sexpr (CPPfun_call (CPPvar _drain_id,
                   [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
@@ -4662,7 +4638,8 @@ let gen_ind_header_v2
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
-              Tid_external (Id.of_string_soft "std::vector", [Tany])
+              Table.mark_needs_small_vector ();
+              Tid_external (Id.of_string_soft "crane::small_vector", [Tany])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
@@ -4862,10 +4839,6 @@ let gen_ind_header_v2
         (* For owned recursive fields in value-type inductives, factory
            params take the inner value by value (sink parameter) so callers
            can move in.  Coinductive shared_ptr fields stay as const ref. *)
-        let arena_param_id = Id.of_string "a" in
-        let arena_param_ty =
-          Tref (Tid_external (Id.of_string_soft "crane::arena", []))
-        in
         let params =
           List.map
             (fun (j, storage_ty, api_ty) ->
@@ -4878,32 +4851,6 @@ let gen_ind_header_v2
               in
               (param_name_of j, param_ty) )
             cpp_tys
-        in
-        (* Arena mode (Milestone 1 of the explicit-arena-parameter design):
-           factories that allocate arena nodes take an explicit
-           [crane::arena&] as their first parameter instead of reading the
-           ambient thread-local arena.  Only affects factories that actually
-           allocate a recursive field (i.e. the ones that would otherwise
-           call [CPParena_alloc]); nullary constructors with no recursive
-           fields don't need an arena at all.
-           Milestone 2 (see [Table.ctor_needs_arena]/[Table.func_needs_arena])
-           threads this arena parameter onward: call sites in
-           [translation.ml] consult those registries to decide whether a
-           given constructor application or function call needs an [a]
-           argument appended, and [gen_single_method] below gives
-           arena-allocating generated methods (e.g. [mirror]) their own
-           explicit arena parameter to pass along. *)
-        let factory_needs_arena =
-          arena_ok
-          && List.exists
-               (fun (_, storage_ty, _) ->
-                 match storage_ty with Tshared_ptr _ -> true | _ -> false )
-               cpp_tys
-        in
-        if factory_needs_arena then Table.mark_ctor_needs_arena c;
-        let params =
-          if factory_needs_arena then (arena_param_id, arena_param_ty) :: params
-          else params
         in
         let ctor_args =
           List.map
@@ -4960,19 +4907,15 @@ let gen_ind_header_v2
                   if inner = api_ty then arg
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
-                (* Arena mode: the field is a raw arena pointer, so allocate
-                   the node in the explicit arena parameter (Milestone 1)
-                   instead of make_shared. *)
-                if arena_ok then begin
+                (* Arena mode: the field is a raw arena pointer, so allocate the
+                   node in the ambient arena instead of make_shared. *)
+                if arena_shared_ok then begin
                   Table.mark_needs_arena ();
-                  let rendered_ty =
-                    Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] inner)
-                  in
-                  CPPfun_call
-                    ( CPPvar
-                        (Id.of_string_soft
-                           ("a.alloc<" ^ rendered_ty ^ ">") ),
-                      [converted] )
+                  CPPfun_call (CPParena_shared_alloc inner, [converted])
+                end
+                else if arena_ok then begin
+                  Table.mark_needs_arena ();
+                  CPPfun_call (CPParena_alloc inner, [converted])
                 end
                 else
                   CPPfun_call (CPPmk_shared inner, [converted])
@@ -5120,8 +5063,12 @@ let gen_ind_header_v2
                       match cpp_ty with
                       | Tptr inner ->
                         Table.mark_needs_arena ();
-                        CPPfun_call
-                          (CPParena_alloc inner, [CPPderef (CPPvar fid)])
+                        (* [arena_clone], not [arena_alloc]+deref: takes the
+                           source pointer itself so it can memoize on pointer
+                           identity and preserve any DAG sharing in the
+                           source value instead of unconditionally cloning
+                           every reference to a shared node. *)
+                        CPPfun_call (CPParena_clone inner, [CPPvar fid])
                       | _ -> CPPvar fid )
                     tys_list
                 in

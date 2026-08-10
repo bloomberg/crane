@@ -1,11 +1,11 @@
 #ifndef INCLUDED_NAME_CLASH_NESTED_DEEP
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct NameClashNestedDeep {
   /// Deep nesting of pattern matches to stress name generation.
@@ -41,7 +41,7 @@ struct NameClashNestedDeep {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<MyCons>(&_v)) {
           if (_alt->a1) {

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FOLD_SEQUENCE_STATE_TRACE
 #define INCLUDED_FOLD_SEQUENCE_STATE_TRACE
 
+#include "small_vector.h"
 #include <any>
 #include <crane_real.h>
 #include <cstdint>
@@ -8,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -80,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {

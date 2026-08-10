@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_EXPR_VARIANTS
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
@@ -79,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -165,7 +166,7 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~cond_expr() {
-      std::vector<std::shared_ptr<cond_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<cond_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {
           if (_alt->a0) {
@@ -339,7 +340,7 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~arith_expr() {
-      std::vector<std::shared_ptr<arith_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<arith_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<AAdd>(&_v)) {
           if (_alt->a0) {
@@ -533,7 +534,7 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~bool_expr() {
-      std::vector<std::shared_ptr<bool_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<bool_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BAnd>(&_v)) {
           if (_alt->a0) {
@@ -918,7 +919,7 @@ struct LoopifyExprVariants {
 
     // MANIPULATORS
     ~list_expr() {
-      std::vector<std::shared_ptr<list_expr>> _stack = {};
+      crane::small_vector<std::shared_ptr<list_expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LCons>(&_v)) {
           if (_alt->a1) {

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
+#include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <memory>
@@ -9,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -81,7 +81,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons0>(&_v)) {
         if (_alt->l) {
@@ -298,7 +298,7 @@ public:
 
   // MANIPULATORS
   ~T() {
-    std::vector<std::shared_ptr<T>> _stack = {};
+    crane::small_vector<std::shared_ptr<T>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<FS>(&_v)) {
         if (_alt->a1) {
@@ -525,7 +525,7 @@ struct PendantSumtreeRoundtripCase {
 
     // MANIPULATORS
     ~SumTree() {
-      std::vector<std::shared_ptr<SumTree>> _stack = {};
+      crane::small_vector<std::shared_ptr<SumTree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SumNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {

@@ -262,23 +262,6 @@ val needs_arena : unit -> bool
 (** Reset the arena-needed flag. *)
 val reset_needs_arena : unit -> unit
 
-(** Mark that constructor [r]'s factory takes an explicit [crane::arena&]
-    parameter (Milestone 2 of the explicit-arena-parameter design). *)
-val mark_ctor_needs_arena : Names.GlobRef.t -> unit
-
-(** Check whether constructor [r]'s factory takes an explicit
-    [crane::arena&] parameter. *)
-val ctor_needs_arena : Names.GlobRef.t -> bool
-
-(** Mark that generated function/method [r] takes an explicit
-    [crane::arena&] parameter because its body constructs an arena-mode
-    value (directly or via a called constructor/function). *)
-val mark_func_needs_arena : Names.GlobRef.t -> unit
-
-(** Check whether generated function/method [r] takes an explicit
-    [crane::arena&] parameter. *)
-val func_needs_arena : Names.GlobRef.t -> bool
-
 (** Mark that the [rc.h] runtime header is needed (non-atomic rc codegen). *)
 val mark_needs_rc : unit -> unit
 
@@ -287,6 +270,16 @@ val needs_rc : unit -> bool
 
 (** Reset the rc-needed flag. *)
 val reset_needs_rc : unit -> unit
+
+(** Mark that [small_vector.h] is needed (small-buffer-optimized destructor
+    drain worklist codegen). *)
+val mark_needs_small_vector : unit -> unit
+
+(** Check whether [small_vector.h] is needed. *)
+val needs_small_vector : unit -> bool
+
+(** Reset the small_vector-needed flag. *)
+val reset_needs_small_vector : unit -> unit
 
 (** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
 val require_itree_header : unit -> unit
@@ -623,6 +616,19 @@ val extraction_arena : bool -> qualid list -> unit
 
 (** Reset per-inductive arena table. *)
 val reset_extraction_arena : unit -> unit
+
+(** Check whether an arena-mode inductive opted into freeze-on-store
+    ([Crane Arena Shared <ind>.]) instead of clone-on-copy for its deep-copy
+    constructor. Independent of, and only meaningful when, [should_arena]
+    is also true for the same inductive. *)
+val should_arena_shared : GlobRef.t -> bool
+
+(** Mark inductive types for [Crane Arena Shared] extraction.
+    @param l list of qualified inductive identifiers to configure *)
+val extraction_arena_shared : qualid list -> unit
+
+(** Reset per-inductive arena-shared table. *)
+val reset_extraction_arena_shared : unit -> unit
 
 (** {2 File comment} *)
 

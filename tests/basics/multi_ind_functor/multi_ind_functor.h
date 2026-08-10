@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MULTI_IND_FUNCTOR
 #define INCLUDED_MULTI_IND_FUNCTOR
 
+#include "small_vector.h"
 #include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -108,7 +108,7 @@ template <Elem E> struct Container {
 
     // MANIPULATORS
     ~mlist() {
-      std::vector<std::shared_ptr<mlist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mlist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<MCons>(&_v)) {
           if (_alt->a1) {

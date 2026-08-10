@@ -1,13 +1,13 @@
 #ifndef INCLUDED_FUNCTION_VERNAC
 #define INCLUDED_FUNCTION_VERNAC
 
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -178,7 +178,7 @@ struct FunctionVernac {
 
     // MANIPULATORS
     ~R_div2() {
-      std::vector<std::shared_ptr<R_div2>> _stack = {};
+      crane::small_vector<std::shared_ptr<R_div2>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<R_div2_2>(&_v)) {
           if (_alt->_res) {
@@ -335,7 +335,7 @@ struct FunctionVernac {
 
     // MANIPULATORS
     ~R_list_sum() {
-      std::vector<std::shared_ptr<R_list_sum>> _stack = {};
+      crane::small_vector<std::shared_ptr<R_list_sum>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<R_list_sum_1>(&_v)) {
           if (_alt->_res) {

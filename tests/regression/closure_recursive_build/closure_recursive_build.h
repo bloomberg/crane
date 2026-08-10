@@ -1,12 +1,12 @@
 #ifndef INCLUDED_CLOSURE_RECURSIVE_BUILD
 #define INCLUDED_CLOSURE_RECURSIVE_BUILD
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ClosureRecursiveBuild {
   /// A list of closures, each one of which captures a different value.
@@ -42,7 +42,7 @@ struct ClosureRecursiveBuild {
 
     // MANIPULATORS
     ~fn_list() {
-      std::vector<std::shared_ptr<fn_list>> _stack = {};
+      crane::small_vector<std::shared_ptr<fn_list>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a1) {

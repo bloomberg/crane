@@ -1,13 +1,13 @@
 #ifndef INCLUDED_OPTION_SOME_ESCAPE
 #define INCLUDED_OPTION_SOME_ESCAPE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct OptionSomeEscape {
   struct tree {
@@ -43,7 +43,7 @@ struct OptionSomeEscape {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {

@@ -6399,14 +6399,3 @@
   (action
    (run bash -c
     "! sed -n '/struct Tree {/,$ p' arena_tree.h | grep -Eq 'shared_ptr|atomic' || (echo 'arena_tree.h Tree definition unexpectedly contains shared_ptr/atomic' >&2; exit 1)"))))
-
-(subdir arena_interop
- (rule
-  (targets arena_interop.t.exe)
-  (deps Interop.vo arena_interop.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_interop.t.exe arena_interop.cpp arena_interop.t.cpp)))
- (rule
-  (alias runtest)
-  (deps arena_interop.t.exe)
-  (action (run ./arena_interop.t.exe))))

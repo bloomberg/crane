@@ -2,11 +2,11 @@
 #define INCLUDED_LOOPIFY_TREE_VARIANTS
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyTreeVariants {
   struct ternary {
@@ -44,7 +44,7 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~ternary() {
-      std::vector<std::shared_ptr<ternary>> _stack = {};
+      crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
           if (_alt->a0) {
@@ -164,7 +164,7 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
           if (_alt->a0) {
@@ -279,7 +279,7 @@ struct LoopifyTreeVariants {
 
     // MANIPULATORS
     ~leaf_tree() {
-      std::vector<std::shared_ptr<leaf_tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<leaf_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LNode>(&_v)) {
           if (_alt->a0) {

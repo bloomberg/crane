@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EFFECT_RECURSIVE_LIST
 #define INCLUDED_EFFECT_RECURSIVE_LIST
 
+#include "small_vector.h"
 #include <any>
 #include <cstdlib>
 #include <iostream>
@@ -10,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 using namespace std::string_literals;
 
@@ -84,7 +84,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {

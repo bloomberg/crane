@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SPECIF
 #define INCLUDED_SPECIF
 
+#include "small_vector.h"
 #include <utility>
 #include <variant>
 
