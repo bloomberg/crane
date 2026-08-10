@@ -9,6 +9,7 @@
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 //
 // When a value-dependent function type is erased to [std::any], the
 // application site reads the callable back with
@@ -222,26 +223,38 @@ struct crane_is_boxlike<
 
 template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
   using Elt = typename Dst::value_type;
-  Dst dst;
-  for (auto &&_e : src) {
-    Elt _elt = [&]() -> Elt {
-      if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
-        return _e;
-      else if constexpr (crane_is_boxlike<Elt>::value) {
-        using U = typename Elt::value_type;
-        const std::any &_a = _e; // box<any> -> const any&, or any -> any
-        return Elt(crane_any_cast<U>(_a));
-      } else
-        return crane_any_cast<Elt>(_e);
-    }();
-    // Mutable STL-like containers (deque/vector) append in place; immutable
-    // persistent containers (e.g. immer::flex_vector) return a new value from
-    // push_back, so reassign instead.
-    if constexpr (requires(Dst d, Elt v) { d.insert(d.end(), v); }) {
-      dst.insert(dst.end(), std::move(_elt));
-    } else {
-      dst = std::move(dst).push_back(std::move(_elt));
+  auto _convert = [](auto &&_e) -> Elt {
+    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
+      return _e;
+    else if constexpr (crane_is_boxlike<Elt>::value) {
+      using U = typename Elt::value_type;
+      const std::any &_a = _e; // box<any> -> const any&, or any -> any
+      return Elt(crane_any_cast<U>(_a));
+    } else
+      return crane_any_cast<Elt>(_e);
+  };
+  // Fast path for containers that build in one shot from a range (e.g. the
+  // cons-list crane::list, where repeated push_back would each rebuild the spine
+  // and make this O(n^2)): convert into a temp buffer, then a single O(n)
+  // from_range construction.
+  if constexpr (requires(Elt *_p) { Dst::from_range(_p, _p); }) {
+    std::vector<Elt> _tmp;
+    for (auto &&_e : src)
+      _tmp.push_back(_convert(_e));
+    return Dst::from_range(_tmp.begin(), _tmp.end());
+  } else {
+    Dst dst;
+    for (auto &&_e : src) {
+      Elt _elt = _convert(_e);
+      // Mutable STL-like containers (deque/vector) append in place; immutable
+      // persistent containers (e.g. immer::flex_vector) return a new value from
+      // push_back, so reassign instead.
+      if constexpr (requires(Dst d, Elt v) { d.insert(d.end(), v); }) {
+        dst.insert(dst.end(), std::move(_elt));
+      } else {
+        dst = std::move(dst).push_back(std::move(_elt));
+      }
     }
+    return dst;
   }
-  return dst;
 }
