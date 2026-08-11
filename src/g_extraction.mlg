@@ -189,6 +189,21 @@ VERNAC COMMAND EXTEND ResetExtractionLoopify CLASSIFIED AS SIDEFF
   -> { reset_extraction_loopify () }
 END
 
+VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "Reuse" ne_global_list(l) ]
+  -> { extraction_reuse true l }
+END
+
+VERNAC COMMAND EXTEND ExtractionNoReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "NoReuse" ne_global_list(l) ]
+  -> { extraction_reuse false l }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "Reset" "Reuse" ]
+  -> { reset_extraction_reuse () }
+END
+
 VERNAC COMMAND EXTEND ExtractionNoArena CLASSIFIED AS SIDEFF
 | [ "Crane" "NoArena" ne_global_list(l) ]
   -> { extraction_no_arena l }

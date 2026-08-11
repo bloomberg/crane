@@ -591,6 +591,22 @@ val extraction_loopify : bool -> qualid list -> unit
 (** Reset per-function loopify table. *)
 val reset_extraction_loopify : unit -> unit
 
+(** {2 Reuse pass (Perceus-style in-place reuse)} *)
+
+(** Check if the reuse pass is enabled ([Crane Reuse], default off). *)
+val reuse : unit -> bool
+
+(** Check whether a specific function should reuse (per-function override first,
+    then global setting). *)
+val should_reuse : GlobRef.t -> bool
+
+(** Mark references for reuse (true) or noreuse (false), overriding the global
+    [Crane Reuse] setting. *)
+val extraction_reuse : bool -> qualid list -> unit
+
+(** Reset per-function reuse table. *)
+val reset_extraction_reuse : unit -> unit
+
 (** Scoped-arena redesign: whether an inductive's recursive-field factory should
     contain the runtime [in_arena_scope()] branch (bump-allocate when a scope is
     open).  True for every type except those opted out via [Crane NoArena]. *)

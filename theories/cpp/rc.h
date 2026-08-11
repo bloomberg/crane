@@ -125,6 +125,8 @@ public:
 private:
     template <typename U, typename... Args>
     friend rc<U> make_rc(Args&&... args);
+    template <typename U, typename... Args>
+    friend rc<U> make_rc_reusing(rc<U> token, Args&&... args);
     friend class weak<T>;
     template <typename U> friend class enable_rc_from_this;
 
@@ -262,6 +264,37 @@ rc<T> make_rc(Args&&... args) {
         throw;
     }
     return rc<T>(ctrl);
+}
+
+// Perceus-style drop-guided reuse.  If [token] is the sole owner of its cell
+// (strong==1, weak==0, not arena-backed), recycle that cell for a fresh T:
+// destroy the old T and placement-construct the new one in place — no
+// allocation, no free.  Otherwise fall back to make_rc and let [token] drop
+// normally.  The construction args are fully evaluated before the old T is
+// destroyed (the caller passes already-computed values, e.g. the recursion
+// result), so no aliasing hazard.  Emitted by the codegen for a matched,
+// uniquely-owned recursive child threaded as a reuse token to a same-type
+// constructor's recursive field.
+template <typename T, typename... Args>
+rc<T> make_rc_reusing(rc<T> token, Args&&... args) {
+    static_assert(!std::is_array<T>::value, "rc<T> does not support arrays");
+    ControlBlock<T>* c = token.ctrl_;
+    if (c && c->strong == 1 && c->weak == 0
+#ifdef CRANE_ARENA
+        && !c->arena_backed
+#endif
+    ) {
+        token.ctrl_ = nullptr;         // adopt the block; suppress token's dtor
+        c->ptr()->~T();                // destroy the old payload in place
+        try {
+            ::new (static_cast<void*>(c->ptr())) T(std::forward<Args>(args)...);
+        } catch (...) {
+            delete c;
+            throw;
+        }
+        return rc<T>(c);               // strong stays 1 — reused in place
+    }
+    return make_rc<T>(std::forward<Args>(args)...);  // token drops at return
 }
 
 // rc<T>::make — arena-aware factory (see the in-class declaration).

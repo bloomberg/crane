@@ -321,3 +321,54 @@ let rec is_shared_ptr_type = function
   | Tmeta {contents = Some ty} -> is_shared_ptr_type ty
   | _ -> false
 
+(** {2 Phase 2: reuse candidate discovery} *)
+
+(** [find_reuse_candidates typ pv] finds match branches eligible for in-place
+    reuse: those whose body (walking through [MLletin]/[MLmagic] to the tail)
+    builds an [MLcons] of the {i same inductive type} as the matched
+    constructor. Each result is
+    [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)]:
+
+    - [branch_idx] is the branch's position in [pv], which equals the matched
+      constructor's variant-alternative index (Coq orders match arms by
+      constructor, matching Crane's variant order);
+    - [matched_ctor]/[matched_arity] describe the constructor being destructured
+      (its fields are moved out before the cell is rewritten);
+    - [tail_ctor]/[tail_args] describe the constructor being built (rewritten
+      into the reused cell — same alternative ⇒ field mutation, different
+      alternative of the same inductive ⇒ variant reassignment).
+
+    Generalizes the prior same-constructor-only rule: the tail constructor need
+    only belong to the same inductive as the matched one. Ownership and the
+    runtime [use_count()==1] guard are enforced by the caller. *)
+let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
+  let ctor_ind = function
+    | Names.GlobRef.ConstructRef (ind, _) -> Some ind
+    | _ -> None
+  in
+  let same_inductive a b =
+    match (ctor_ind a, ctor_ind b) with
+    | Some (m1, i1), Some (m2, i2) ->
+      Names.MutInd.CanOrd.equal m1 m2 && Int.equal i1 i2
+    | _ -> false
+  in
+  (* Walk let/magic prefixes down to the tail constructor of the arm body. *)
+  let rec tail_cons = function
+    | MLmagic a -> tail_cons a
+    | MLletin (_, _, _, b) -> tail_cons b
+    | MLcons (_, r, args) -> Some (r, args)
+    | _ -> None
+  in
+  let cands = ref [] in
+  Array.iteri
+    (fun idx (ids, _rty, pat, body) ->
+      match pat with
+      | Pusual mr | Pcons (mr, _) -> (
+        match tail_cons body with
+        | Some (tr, targs) when same_inductive mr tr ->
+          cands := (idx, mr, List.length ids, tr, targs) :: !cands
+        | _ -> () )
+      | Pwild | Prel _ | Ptuple _ -> () )
+    pv;
+  List.rev !cands
+

@@ -1570,6 +1570,66 @@ let reset_loopify : unit -> obj =
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
+(* This option enables the Perceus-style reuse pass: at a match on an owned,
+   uniquely-owned (use_count()==1 at runtime) recursive value whose arm rebuilds
+   a same-type constructor, the matched cell is reused in place instead of
+   allocated afresh. Off by default (opt-in); the runtime uniqueness check is the
+   correctness backstop. *)
+let {Goptions.get = reuse} =
+  declare_bool_option_and_ref ~key:["Crane"; "Reuse"] ~value:false ()
+
+(* Per-function reuse/noreuse table. First set = force-reuse, second = force-off. *)
+
+let empty_reuse_table = (Refset'.empty, Refset'.empty)
+
+let reuse_table = Summary.ref empty_reuse_table ~name:"CraneExtrReuse"
+
+(** Whether reuse should fire for a function: forced on/off per function,
+    else the global [Crane Reuse] setting. *)
+let should_reuse r =
+  let yes, no = !reuse_table in
+  if Refset'.mem r yes then
+    true
+  else if Refset'.mem r no then
+    false
+  else
+    reuse ()
+
+let add_reuse_entries b l =
+  let f b = if b then Refset'.add else Refset'.remove in
+  let y, n = !reuse_table in
+  reuse_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+
+let reuse_extraction : bool * GlobRef.t list -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Extraction Reuse"
+       ~cache:(fun (b, l) -> add_reuse_entries b l)
+       ~subst:
+         (Some
+            (fun (s, (b, l)) ->
+              (b, List.map (fun x -> fst (subst_global s x)) l) ) )
+       ~discharge:(fun x -> Some x)
+
+let extraction_reuse b l =
+  let refs = List.map Smartlocate.global_with_alias l in
+  List.iter
+    (fun r ->
+      match r with
+      | GlobRef.ConstRef _ -> ()
+      | _ -> error_constant r )
+    refs;
+  Lib.add_leaf (reuse_extraction (b, refs))
+
+let reset_reuse : unit -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Reset Extraction Reuse"
+       ~cache:(fun () -> reuse_table := empty_reuse_table)
+       ~subst:None
+
+let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
+
 (* --- Arena extraction ------------------------------------------------ *)
 
 (* Scoped-arena redesign (2026-08-10): arena allocation is a runtime property of

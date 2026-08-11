@@ -113,3 +113,14 @@ val free_rels : int -> ml_ast -> IntSet.t
 (** [is_shared_ptr_type ty] returns true if [ty] is a non-enum, non-coinductive
     inductive (wrapped in shared_ptr in C++). *)
 val is_shared_ptr_type : ml_type -> bool
+
+(** {2 Phase 2: reuse candidate discovery} *)
+
+(** [find_reuse_candidates typ pv] returns the match branches whose body builds
+    an [MLcons] of the same inductive type as the matched constructor, as
+    [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)] tuples.
+    The caller gates reuse on ownership and a runtime [use_count()==1] check. *)
+val find_reuse_candidates :
+     ml_type
+  -> ml_branch array
+  -> (int * Names.GlobRef.t * int * Names.GlobRef.t * ml_ast list) list
