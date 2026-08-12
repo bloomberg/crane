@@ -527,6 +527,17 @@
   (deps tail_rec_map.t.exe)
   (action (run ./tail_rec_map.t.exe))))
 
+(subdir perceus_reuse
+ (rule
+  (targets perceus_reuse.t.exe)
+  (deps Reuse.vo perceus_reuse.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse.t.exe perceus_reuse.cpp perceus_reuse.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps perceus_reuse.t.exe)
+  (action (run ./perceus_reuse.t.exe))))
+
 (subdir tail_rec_rev
  (rule
   (targets tail_rec_rev.t.exe)
