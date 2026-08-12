@@ -113,6 +113,12 @@ type translation_ctx = {
   (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
      for Scustom_case scrutinee caching. Reset at function boundaries. *)
   mutable cs_counter : int;
+  (* Perceus reuse: when [Some (tok, ctor)] a reuse token [tok] (a moved,
+     uniquely-owned matched recursive child) is available for the next
+     [MLcons] of constructor [ctor]; that MLcons emits [<ctor>__reuse(tok, ...)]
+     instead of the normal factory, then clears this. Set only inside a
+     use_count()==1-guarded reuse arm in gen_cpp_case. *)
+  mutable pending_reuse_token : (cpp_expr * Names.GlobRef.t) option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
      argument of convert_ml_type_to_cpp_type so that self-refs inside
@@ -179,6 +185,7 @@ let tctx =
     itree_mode = Sequential;
     eta_keep_moves = false;
     cs_counter = 0;
+    pending_reuse_token = None;
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];

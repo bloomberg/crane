@@ -1820,6 +1820,9 @@ and pp_cpp_expr env args t =
   | CPPmk_shared t ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
+  | CPPmk_reuse t ->
+    (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
+    cpp_angle "crane::make_rc_reusing" (pp_cpp_type false [] t)
   | CPParena_alloc t ->
     Table.mark_needs_arena ();
     cpp_angle "crane::arena_alloc" (pp_cpp_type false [] t)
@@ -3425,6 +3428,23 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | None -> str "UNKNOWN_STRUCT"
     in
     h (sname ++ str "() = delete;")
+  | Fdefaulted_special_members ->
+    let sname =
+      match struct_name with
+      | Some s -> s
+      | None -> str "UNKNOWN_STRUCT"
+    in
+    (* A user-declared destructor suppresses the implicit move ctor/assign and
+       deprecates the implicit copies; declaring the moves would then delete the
+       implicit copies.  Re-default all four so the value keeps cheap move
+       semantics (no refcount bump) while staying copyable. *)
+    h (sname ++ str "(const " ++ sname ++ str "&) = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "& operator=(const " ++ sname ++ str "&) = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
   | Ftemplate_ctor (tparams, is_explicit, params, body) ->
     let sname =
       match struct_name with

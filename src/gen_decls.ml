@@ -3606,7 +3606,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx.move_owned_vars <-
     List.fold_left
       (fun acc (i, owned) ->
-        if owned then
+        (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
+           (borrowed) and must never be treated as owned, or a reuse arm would
+           try to consume it via v_mut() on a const method.  Gated on reuse so
+           reuse-off output stays byte-identical to the pre-reuse baseline. *)
+        if owned && not (Table.reuse () && not (Table.loopify ()) && i = this_pos)
+        then
           let ml_ty = snd (List.nth ids_with_types i) in
           if Escape.is_shared_ptr_type ml_ty
              || is_nontrivial_value_ml_type ml_ty then
@@ -4921,7 +4926,66 @@ let gen_ind_header_v2
             VPublic,
             SCreators )
         in
-        [primary]
+        (* Perceus reuse factory (Crane Reuse): a variant [<ctor>__reuse] that
+           takes a leading reuse-token parameter [_tok] and, for the single
+           recursive field, allocates via [crane::make_rc_reusing(_tok, ...)]
+           instead of make_shared/arena_make — recycling the token's cell in
+           place when it is uniquely owned.  Only for NonAtomicRc (crane::rc
+           carries the reusable control block) and single-recursive-field,
+           non-coinductive constructors; the caller (a reuse-eligible match arm)
+           threads a matched, uniquely-owned recursive child as the token. *)
+        let n_rec_fields =
+          List.length
+            (List.filter
+               (fun (_, storage_ty, _) ->
+                 match storage_ty with Tshared_ptr _ -> true | _ -> false)
+               cpp_tys )
+        in
+        let reuse_factory =
+          if Table.reuse () && not (Table.loopify ()) && Table.non_atomic_rc ()
+             && (not is_coinductive) && n_rec_fields = 1
+          then
+              let tok_id = Id.of_string "_tok" in
+              let rec_inner =
+                List.find_map
+                  (fun (_, storage_ty, _) ->
+                    match storage_ty with
+                    | Tshared_ptr inner -> Some inner
+                    | _ -> None )
+                  cpp_tys
+                |> Option.get
+              in
+              let reuse_params =
+                (tok_id, Tshared_ptr rec_inner) :: params
+              in
+              let reuse_ctor_args =
+                List.map
+                  (fun a ->
+                    match a with
+                    | CPPfun_call (CPPmk_shared inner, cargs)
+                    | CPPfun_call (CPParena_make inner, cargs) ->
+                      (* CPPfun_call args print reversed (List.rev), and
+                         make_rc_reusing takes the token FIRST — so the token
+                         must be the LAST list element to print first. *)
+                      CPPfun_call
+                        (CPPmk_reuse inner, cargs @ [CPPmove (CPPvar tok_id)])
+                    | other -> other )
+                  ctor_args
+              in
+              let reuse_struct =
+                CPPstruct_id (Id.of_string cname, [], reuse_ctor_args)
+              in
+              let reuse_body = [Sreturn (Some (wrap_expr reuse_struct))] in
+              [ ( Ffundef
+                    ( Id.of_string (fname ^ "__reuse"),
+                      Tmod (TMstatic, ret_ty),
+                      reuse_params,
+                      reuse_body ),
+                  VPublic,
+                  SCreators ) ]
+          else []
+        in
+        primary :: reuse_factory
       in
       let factory_methods =
         List.flatten
@@ -5287,6 +5351,18 @@ let gen_ind_header_v2
         @ factory_methods
         @ lazy_factory
         @ iterative_destructor
+        (* A user-declared destructor (the iterative drain above) suppresses the
+           implicit move ctor/assign, which would silently turn every
+           [std::move] of this value into a refcount-bumping copy.  Re-default
+           all copy/move special members so moves stay cheap (and Perceus reuse
+           can observe [use_count()==1]).  Gated on [Crane Reuse]: this is the
+           enabler for the reuse guard, and keeping it off by default keeps
+           reuse-off extraction byte-identical to the pre-reuse baseline.  Only
+           emitted when we actually declare a custom destructor. *)
+        @ (match iterative_destructor with
+           | _ :: _ when Table.reuse () && not (Table.loopify ()) ->
+             [(Fdefaulted_special_members, VPublic, SManipulators)]
+           | _ -> [])
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]

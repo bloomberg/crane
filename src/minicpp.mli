@@ -272,6 +272,12 @@ and cpp_expr =
           (crane::rc<T>::make / crane::arena_make_shared<T>), returning the same
           smart-pointer type as the field.  Falls back to a plain heap
           allocation at runtime when no arena scope is open. *)
+  | CPPmk_reuse of cpp_type
+      (** crane::make_rc_reusing<T> factory (Perceus reuse): first argument is a
+          reuse token (an rc<T> moved from a matched, uniquely-owned recursive
+          child); the rest construct the new T.  Recycles the token's cell in
+          place when it is the sole owner, else allocates.  Only emitted under
+          [Crane NonAtomicRc]. *)
   | CPPoverloaded of cpp_expr list
       (** Overloaded visitor set for variant matching *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
@@ -381,6 +387,12 @@ and cpp_field =
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
+  | Fdefaulted_special_members
+      (** Explicitly-defaulted copy/move constructors and assignment operators.
+          Emitted alongside a user-declared (iterative-drain) destructor, which
+          would otherwise suppress the implicit move operations — turning every
+          [std::move] of the value into a refcount-bumping copy and defeating
+          move semantics (and Perceus reuse). *)
   | Ftemplate_ctor of
       (template_type * Id.t) list
       * bool

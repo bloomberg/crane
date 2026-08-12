@@ -4603,7 +4603,18 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           in
           (* Build: Type<temps>::factory(args) *)
           let type_expr = mk_cppglob n temps in
-          CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args)
+          (* Perceus reuse: if a reuse token is pending for this constructor
+             (set by a use_count()==1-guarded arm in gen_cpp_case), call the
+             [<factory>__reuse] variant with the token appended (stored last =
+             printed first, matching the [_tok] leading parameter). *)
+          ( match tctx.pending_reuse_token with
+          | Some (tok, ctor) when globref_equal r ctor ->
+            tctx.pending_reuse_token <- None;
+            CPPfun_call
+              ( CPPqualified (type_expr, Id.of_string (fname ^ "__reuse")),
+                args @ [CPPmove tok] )
+          | _ ->
+            CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let ctor_struct = ctor_struct_name_of_ref r in
@@ -7873,10 +7884,151 @@ and gen_cpp_case (typ : ml_type) t env pv =
         | Tfun _ -> Some r
         | _ -> None
     in
-    CPPfun_call
-      ( CPPlambda ([], iife_ret_opt,
-          [Smatch (branches, wildcard)], false),
-        [] )
+    (* Perceus reuse (Crane Reuse): when the matched constructor's single
+       recursive child is uniquely owned at runtime, rebuild a same-inductive
+       constructor by recycling that child's cell in place via the
+       [<ctor>__reuse] factory instead of allocating.  Dual path guarded by
+       [scrut.v().index()==branch_idx && child.use_count()==1]; otherwise the
+       normal [Smatch].  Only under NonAtomicRc (crane::rc carries the reusable
+       control block) and an owned, non-coinductive scrutinee whose matched
+       constructor has exactly one recursive field. *)
+    let reuse_stmts_opt =
+      if Table.reuse () && not (Table.loopify ()) && Table.non_atomic_rc ()
+         && scrut_is_owned && (not is_flat_match) && (not is_enum)
+         && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
+      then
+        let typ_ind_kn =
+          match typ with
+          | Tglob (GlobRef.IndRef (kn, _), _, _) -> Some kn
+          | _ -> None
+        in
+        let is_rec_ml_ty ml_ty =
+          let rec head = function
+            | Miniml.Tmeta {contents = Some t} -> head t
+            | t -> t
+          in
+          match head ml_ty with
+          | Miniml.Tglob (GlobRef.IndRef (kn, _), _, _) ->
+            (match typ_ind_kn with Some k -> MutInd.CanOrd.equal kn k | None -> false)
+          | _ -> false
+        in
+        let try_cand (branch_idx, _mc, _ar, tail_ctor, _ta) =
+          let ids, _rty, _pat, body = pv.(branch_idx) in
+          let ids', env' =
+            push_vars'
+              (List.rev_map
+                 (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+                 ids)
+              env
+          in
+          let rev_ids' = List.rev ids' in
+          let dummies_arr =
+            Array.of_list
+              (List.rev
+                 (List.map
+                    (fun (x, _) -> match x with Dummy -> false | _ -> true)
+                    ids))
+          in
+          (* Locate the single recursive field (the reuse token) over rev_ids'. *)
+          let rec_idx =
+            let found = ref None in
+            List.iteri
+              (fun i (_, ml_ty) ->
+                if !found = None && dummies_arr.(i) && is_rec_ml_ty ml_ty then
+                  found := Some i)
+              rev_ids';
+            !found
+          in
+          let n_rec =
+            List.length
+              (List.filteri
+                 (fun i (_, ml_ty) -> dummies_arr.(i) && is_rec_ml_ty ml_ty)
+                 rev_ids')
+          in
+          (match rec_idx with
+          | Some rec_idx when n_rec = 1 ->
+            let saved_env_types = tctx.env_types in
+            push_env_types ids';
+            let scrut_vmut =
+              if scrut_is_ptr then
+                CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])
+              else CPPfun_call (CPPmember (scrut_expr, Id.of_string "v_mut"), [])
+            in
+            let rf i =
+              CPPmember
+                ( CPPfun_call
+                    ( CPPraw ("std::get<" ^ string_of_int branch_idx ^ ">"),
+                      [scrut_vmut] ),
+                  field_param_id i )
+            in
+            let token_expr = ref None in
+            let extract =
+              List.concat
+                (List.mapi
+                   (fun i (var_name, ml_ty) ->
+                     if dummies_arr.(i) then begin
+                       let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+                       if i = rec_idx then begin
+                         (* Recursive child: bind the pattern var to the moved-out
+                            *value* (owned, so the recursion propagates reuse), and
+                            keep the rc field access itself as the reuse token. *)
+                         token_expr := Some (rf i);
+                         [ Sasgn (var_name, Some cpp_ty, CPPmove (CPPderef (rf i))) ]
+                       end
+                       else
+                         (* Non-recursive field: stored by value; move it out. *)
+                         [ Sasgn (var_name, Some cpp_ty, CPPmove (rf i)) ]
+                     end
+                     else [])
+                   rev_ids')
+            in
+            (match !token_expr with
+            | Some tok ->
+              let saved_tok = tctx.pending_reuse_token in
+              tctx.pending_reuse_token <- Some (tok, tail_ctor);
+              let body_stmts =
+                gen_stmts env' (fun x -> Sreturn (Some x)) body
+              in
+              tctx.pending_reuse_token <- saved_tok;
+              tctx.env_types <- saved_env_types;
+              let use_count_cond =
+                CPPbinop
+                  ( "==",
+                    CPPfun_call
+                      (CPPmember (rf rec_idx, Id.of_string "use_count"), []),
+                    CPPint 1 )
+              in
+              Some (branch_idx, extract @ body_stmts, use_count_cond)
+            | None ->
+              tctx.env_types <- saved_env_types;
+              None)
+          | _ -> None )
+        in
+        (* Pick the first candidate whose matched constructor has exactly one
+           recursive field (skips nullary-reconstruction arms like Nil->Nil that
+           have no cell to recycle). *)
+        List.find_map try_cand (Escape.find_reuse_candidates typ pv)
+      else None
+    in
+    ( match reuse_stmts_opt with
+    | Some (branch_idx, reuse_body, use_count_cond) ->
+      let index_cond =
+        CPPbinop
+          ( "==",
+            CPPfun_call (CPPmember (scrut_v, Id.of_string "index"), []),
+            CPPint branch_idx )
+      in
+      let normal = [Smatch (branches, wildcard)] in
+      CPPfun_call
+        ( CPPlambda
+            ( [], iife_ret_opt,
+              [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)],
+              false ),
+          [] )
+    | None ->
+      CPPfun_call
+        ( CPPlambda ([], iife_ret_opt, [Smatch (branches, wildcard)], false),
+          [] ) )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables for std::visit. *)

@@ -277,6 +277,13 @@ and cpp_expr =
        the field ([crane::rc<T>] / [std::shared_ptr<T>]); when no arena scope
        is open at the call site it is exactly the plain make_shared/make_rc.
        Used (like CPPmk_shared) as the callee of a CPPfun_call. *)
+  | CPPmk_reuse of cpp_type
+    (* crane::make_rc_reusing<T> factory (Perceus reuse): first argument is a
+       reuse token (a [crane::rc<T>] moved from a matched, uniquely-owned
+       recursive child); remaining arguments construct the new T. Recycles the
+       token's cell in place when it is the sole owner, else allocates. Used
+       (like CPPmk_shared) as the callee of a CPPfun_call; only emitted under
+       [Crane NonAtomicRc] (needs crane::rc's control block). *)
   | CPPoverloaded of cpp_expr list
     (* Invariant: all elements must be CPPlambda. Enforced at construction
        in make_visit_expr (loopify.ml). *)
@@ -395,6 +402,10 @@ and cpp_field =
   | Fnested_using of Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
+  (* Explicitly-defaulted copy/move ctors and assignment operators, emitted
+     next to a user-declared destructor so the implicit move operations are not
+     suppressed (which would make every std::move a refcount-bumping copy). *)
+  | Fdefaulted_special_members
   (* Template converting constructor: template params, explicit flag,
      constructor params, body statements *)
   | Ftemplate_ctor of
@@ -486,6 +497,7 @@ let map_expr
   | CPParena_clone ty -> CPParena_clone (ft ty)
   | CPParena_shared_alloc ty -> CPParena_shared_alloc (ft ty)
   | CPParena_make ty -> CPParena_make (ft ty)
+  | CPPmk_reuse ty -> CPPmk_reuse (ft ty)
   | CPPoverloaded exprs -> CPPoverloaded (List.map fe exprs)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
@@ -609,7 +621,7 @@ let map_stmt
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _
+  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -679,7 +691,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   let fe acc e = f acc e in
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _
+  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
