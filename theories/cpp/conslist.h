@@ -134,6 +134,28 @@ public:
         return n;
     }
 
+    // Hand each element of a uniquely-owned spine to [yield] by rvalue, freeing
+    // the cell as we go, then drop our reference to whatever shared tail remains.
+    // Iterative, so a long list costs a bounded number of stack frames.
+    //
+    // This is what a generated iterative drain destructor should call for a
+    // bare-value container: yielding by rvalue lets the drain MOVE the element
+    // into its worklist instead of deep-copying it, and skipping shared cells
+    // avoids draining subtrees that are still reachable elsewhere.  The list is
+    // left nil, so the subsequent ordinary teardown of the field is a no-op.
+    template <typename F>
+    void drain_each(F&& yield) {
+        cell* c = p_;
+        p_ = nullptr;
+        while (c && c->rc == 1) {
+            cell* n = c->next;
+            yield(std::move(c->head));  // head is moved-from; ~cell is now cheap
+            delete c;                   // does NOT touch next (raw pointer)
+            c = n;
+        }
+        decref(c);
+    }
+
     // app (++): O(len a).  Rebuilds a's spine on top of b, back-to-front and
     // iteratively (no O(n) recursion).  Shares b unchanged.
     static list app(const list& a, list b) {
