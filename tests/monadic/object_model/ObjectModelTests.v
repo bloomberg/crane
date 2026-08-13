@@ -179,7 +179,7 @@ Section Classes.
   (* Fully transfer amounts between two accounts *)
   Definition testAccount2 : itree E0 (Z * bool * Z * Z) :=
     acc1 <- @class_Account 0%nat 100;;
-    acc2 <- @class_Account 0%nat 150;;
+    acc2 <- @class_Account 1%nat 150;;
     a <- getBalance acc1 tt;;
     result <- withdraw acc1 a;;
     match result with
@@ -384,6 +384,38 @@ Section Classes.
       exists out_val. split; try (repeat split; assumption).
     Qed.
 
+    
+    Record BankAccountCollection :=
+      mkBankAccount {
+        checking : Account;
+        saving   : Account;
+      }.
+
+    Definition class_BankAccount (idx : T) (init_checking init_saving : Z) : itree E0 BankAccountCollection :=
+      checking' <- @class_Account idx init_checking;;
+      saving' <- @class_Account (suc idx) init_saving;;
+      Ret
+        {| checking := checking';
+           saving := saving';
+        |}.
+
+  (* Fully transfer amounts between two accounts *)
+  Definition testBankAccount1 : itree E0 (Z * bool * Z * Z) :=
+    acc <- class_BankAccount 0%nat 100 150;; 
+    a <- getBalance (checking acc) tt;;
+    result <- withdraw (checking acc) a;;
+    match result with
+    | Some 0%Z => (* withdrawal succeeds, transfer money*)
+        b <- deposit (saving acc) (Z.to_nat a);;
+        c <- getBalance (checking acc) tt;;
+        Ret (a,true,b,c)
+    | _ => (* withdrawal failed, do nothing, return balance of a,b *)
+        b <- getBalance (checking acc) tt;;
+        c <- getBalance (saving acc) tt;;
+        Ret (a,false,b,c)
+    end.
+
+
 End Classes.
 
 
@@ -414,6 +446,12 @@ Definition run_acc2 : itree (exceptE Err) (Z * bool * Z * Z) :=
 Lemma acc_run_burn2 : burn 100 run_acc2 = Ret (100, true, 250, 0)%Z.
 Proof. lazy. reflexivity. Qed.
 
+Definition run_bank_acc1 : itree (exceptE Err) (Z * bool * Z * Z) :=
+  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testBankAccount1.
+
+Lemma bank_acc_run_burn1 : burn 100 run_bank_acc1 = Ret (100, true, 250, 0)%Z.
+Proof. lazy. reflexivity. Qed.
+
 
 
 
@@ -432,7 +470,16 @@ Definition acc_test1_ext :=
 Definition acc_test2_ext :=
   Eval unfold testAccount2, class_Account in (testAccount2 unit).
 
-Crane Extraction "object_model" testtoST1_ext testtoST2_ext acc_test1_ext acc_test2_ext.
+Definition bankacc_test1_ext :=
+  Eval unfold testBankAccount1, class_BankAccount, class_Account in (testBankAccount1 unit).
+
+Crane Extraction "object_model"
+  testtoST1_ext
+  testtoST2_ext
+  acc_test1_ext
+  acc_test2_ext
+  bankacc_test1_ext
+.
 
 
 
