@@ -3,8 +3,6 @@
 
 (* An object model using STRefs for mutable state *)
 
-
-
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
@@ -59,7 +57,7 @@ From Crane Require Import
   Utils.HAList
   Extraction.
 
-Section PointDef.
+Section Classes.
 
 
   Context (S : Type).
@@ -386,18 +384,11 @@ Section PointDef.
       exists out_val. split; try (repeat split; assumption).
     Qed.
 
-
-
-
-                                            
-
-End PointDef.
+End Classes.
 
 
 Transparent HAList.halist_lookup HAList.halist_add
             HAList.HMap_halist HAList.HMapOk_halist.
-Existing Instance nat_ix_correct.
-Existing Instance nat_ix_stref.
 
 Definition run_test1 : itree (exceptE Err) (Z * Z * Z) :=
   runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testtoST1.
