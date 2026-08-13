@@ -99,6 +99,11 @@ let id_frame        = Id.of_string "_frame"
 let id_Frame        = Id.of_string "_Frame"
 let id_self         = Id.of_string "_self"
 
+(* Perceus reuse cursor (see {!section:reuse-cursor}). *)
+let id_own          = Id.of_string "_own"
+let id_uniq         = Id.of_string "_uniq"
+let id_rstep        = Id.of_string "_rs"
+
 (* Method names used with CPPmethod_call / CPPmember *)
 let id_get          = Id.of_string "get"
 
@@ -980,10 +985,23 @@ let is_moveable_param_type = function
     value-type inductive.  These can be optimised to [const T*] shadows that
     avoid copying the entire value at each loop iteration.
 
+    Under [Crane Reuse] an owned by-value parameter qualifies too.  Reuse needs
+    the scrutinee owned (that is what gives the loop cells it may recycle), and
+    escape analysis therefore passes it by value; without this case the shadow
+    would be a [T] and every iteration would copy the whole node -- strictly
+    worse than the borrow it replaced.  A by-value parameter lives for the whole
+    call, so a pointer into it (or into a subterm it keeps alive) is as safe as
+    one into a [const T&].  Which parameters may actually be walked by pointer
+    is decided separately by {!tail_pointer_safe_flags}: an accumulator that is
+    rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
+    its value shadow.
+
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
   | Tref (Tmod (TMconst, t)) when is_value_type_ret t -> Some t
   | Tmod (TMconst, Tref t) when is_value_type_ret t -> Some t
+  | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
+    Some t
   | _ -> None
 
 (** Compute the shadow variable type for a tail-recursive loop.
@@ -2693,9 +2711,12 @@ let wrap_base_for_vt vt_ret val_expr =
     inner struct directly and wrap it:
     [std::make_unique<list<T>>(typename list<T>::Cons\{x, nullptr\})]
 
+    @param token [Some e] routes the allocation through
+      [crane::make_rc_reusing_unchecked], recycling the cell [e] denotes
+      instead of allocating (see {!section:reuse-cursor}).  [None] allocates.
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
-let build_cell_call ~vt_ret pp_expr cell =
+let build_cell_call ?token ~vt_ret pp_expr cell =
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
     | Some (type_expr, _, _, _) ->
@@ -2729,10 +2750,119 @@ let build_cell_call ~vt_ret pp_expr cell =
     let struct_init =
       CPPraw ("typename " ^ type_str ^ "::" ^ cell.tca_ctor_name)
     in
-    CPPfun_call (CPPmk_shared ret_ty,
-                 [CPPfun_call (struct_init, args)])
+    let cell_expr = CPPfun_call (struct_init, args) in
+    (match token with
+     | Some tok ->
+       (* T is deduced from the token's [rc<T>]; the cell value is built from
+          the constructor struct exactly as [make_rc] would build it. *)
+       CPPfun_call (CPPraw "crane::make_rc_reusing_unchecked",
+                    [cell_expr; tok])   (* reversed: (token, cell) *)
+     | None -> CPPfun_call (CPPmk_shared ret_ty, [cell_expr]))
   | None ->
     CPPfun_call (cell.tca_factory, args)
+
+(** Turn destructive matches on pointer shadows back into borrowing ones.
+
+    Clears [smb_is_owned] (so the printer emits [const auto& [..] = std::get<C>(
+    p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
+    translation put on the field bindings.  See the ownership discussion in
+    {!transform_tmc}: under the reuse cursor the scrutinee is owned but not
+    known to be unique, and only [crane::reuse_step] may consume it. *)
+let borrow_cursor_matches shadow_params stmts =
+  let ptr_shadows =
+    List.filter_map
+      (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+      shadow_params
+  in
+  let mentions_ptr_shadow e =
+    expr_exists
+      (function
+        | CPPvar id -> List.exists (Id.equal id) ptr_shadows
+        | _ -> false)
+      e
+  in
+  let strip_moves bound =
+    let rec expr = function
+      | CPPmove (CPPvar id) when List.exists (Id.equal id) bound -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt
+  in
+  let rec stmt = function
+    | Smatch (branches, default) ->
+      Smatch
+        ( List.map
+            (fun br ->
+              if not (mentions_ptr_shadow br.smb_scrutinee) then
+                { br with smb_body = List.map stmt br.smb_body }
+              else
+                let bound =
+                  List.map (fun (id, _, _) -> id) br.smb_field_bindings
+                in
+                { br with
+                  smb_is_owned = false;
+                  smb_body = strip_moves bound (List.map stmt br.smb_body) })
+            branches,
+          Option.map (List.map stmt) default )
+    | s -> map_stmt Fun.id stmt Fun.id s
+  in
+  List.map stmt stmts
+
+(** {2:reuse-cursor Perceus reuse cursor}
+
+    A TMC loop walks its input by borrowed pointer and allocates a fresh output
+    cell per iteration.  When the input spine is owned and unshared, that is one
+    allocation and one free per element for cells that are structurally the same
+    shape -- the input cell is dead the moment its output counterpart is built.
+    Recycling it directly is Perceus/FBIP reuse, and turns a linear traversal
+    into a zero-allocation one.
+
+    Two things are needed that the borrowed walk does not have.  First, an
+    owning handle: a raw pointer cannot hand a cell to be recycled, so the loop
+    carries [_own], the [rc] on the cell the cursor stands on ([_own] is null on
+    the first iteration, where the cursor is on the by-value root -- not a heap
+    cell, hence nothing to recycle).  Second, a uniqueness test, since a shared
+    cell must not be touched; [_uniq] carries it, and latches false permanently
+    on the first shared cell, because a cell reachable from another holder makes
+    every deeper cell reachable too.
+
+    Both live in [crane::reuse_step] (rc.h), which returns the recycling token
+    and an owning handle on the recursive field -- taken before the cell is
+    recycled out from under it.  The emitted body is therefore straight-line
+    with no reuse branch of its own:
+
+    {[
+      const auto& [a0, a1] = std::get<Cons>(_loop_l->v());
+      auto _rs   = crane::reuse_step(_own, _uniq, a1);
+      auto _cell = crane::make_rc_reusing_unchecked(std::move(_rs.token),
+                                                    lst::Cons(f(a0), nullptr));
+      *_write = std::move(_cell);
+      _write  = &std::get<Cons>(_cell->v_mut()).a1;   // via the new cell
+      _own    = std::move(_rs.next);
+      _loop_l = _own.get();
+    ]}
+
+    Identify the cursor: the single varying parameter that the loop walks by
+    pointer and whose recursive argument is a dereference of one of the matched
+    cell's fields, i.e. exactly the spine being consumed.  Everything else --
+    accumulators, unchanged parameters, several pointer-walked parameters at
+    once -- yields [None] and the ordinary allocating path. *)
+let tmc_reuse_cursor ~vt_ret varying shadow_params br =
+  if not (Table.reuse () && Table.non_atomic_rc ()) then None
+  else if vt_ret = None then None
+  else
+    let rec_args = filter_by_mask varying br.tmc_rec_args in
+    if List.length rec_args <> List.length shadow_params then None
+    else
+      let candidates =
+        List.filter_map
+          (fun ((sid, sty), arg) ->
+            match sty, arg with
+            | Tptr _, CPPderef inner -> Some (sid, inner)
+            | _ -> None)
+          (List.combine shadow_params rec_args)
+      in
+      match candidates with [c] -> Some c | _ -> None
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
@@ -2749,7 +2879,29 @@ let build_cell_call ~vt_ret pp_expr cell =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
+let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
+    varying shadow_params =
+  (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
+        an owned spine by pointer, the cell it is standing on is dead as soon as
+        the iteration's output cell is built, so it can be recycled into that
+        output instead of being freed and a fresh one allocated. *)
+  let cursor = tmc_reuse_cursor ~vt_ret varying shadow_params br in
+  if cursor <> None then cursor_used := true;
+  let step_decl =
+    match cursor with
+    | Some (_, rec_field) ->
+      (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
+         so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
+      [ Sasgn (id_rstep, Some Tauto,
+               CPPfun_call (CPPraw "crane::reuse_step",
+                            [rec_field; CPPvar id_uniq; CPPvar id_own])) ]
+    | None -> []
+  in
+  let token =
+    Option.map
+      (fun _ -> CPPmove (CPPmember (CPPvar id_rstep, Id.of_string "token")))
+      cursor
+  in
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
   let cell_names =
     List.mapi
@@ -2758,11 +2910,14 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
       br.tmc_cells
   in
   (* 1. Allocate all cells with nullptr holes *)
+  (* Only the outermost cell may take the token: one input cell dies per
+     iteration, so a nested chain still recycles exactly one of its cells. *)
   let cell_decls =
-    List.map2
-      (fun cell_id cell ->
-        Sasgn (cell_id, Some Tauto, build_cell_call ~vt_ret pp_expr cell))
-      cell_names br.tmc_cells
+    List.mapi
+      (fun i (cell_id, cell) ->
+        let token = if i = 0 then token else None in
+        Sasgn (cell_id, Some Tauto, build_cell_call ?token ~vt_ret pp_expr cell))
+      (List.combine cell_names br.tmc_cells)
   in
   (* 2. Link consecutive cells: outer.rec_field = inner.
         For value-type returns, assignments use [CPPmove], so the inner cell
@@ -2832,11 +2987,30 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
              CPPunop
                ("&", CPPget (CPPfun_call (get_expr, [v_mut]), field_id)) ))
   in
-  (* 5. Shadow variable updates *)
+  (* 5. Shadow variable updates.  The cursor advances through [_own] instead:
+        the recursive field has been stolen into [_rs.next] (the cell it lived
+        in may since have been recycled), and [_own] is what keeps the next cell
+        alive now that the current one is gone. *)
   let shadow_updates =
     make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
   in
-  cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
+  let shadow_updates =
+    match cursor with
+    | None -> shadow_updates
+    | Some (cursor_id, _) ->
+      let is_cursor_update = function
+        | Sasgn (id, None, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) ->
+          Id.equal id cursor_id
+        | _ -> false
+      in
+      List.filter (fun s -> not (is_cursor_update s)) shadow_updates
+      @ [ Sexpr (CPPbinop ("=", CPPvar id_own,
+                           CPPmove (CPPmember (CPPvar id_rstep,
+                                               Id.of_string "next"))));
+          Sexpr (CPPbinop ("=", CPPvar cursor_id,
+                           CPPdot_method_call (CPPvar id_own, id_get, []))) ]
+  in
+  step_decl @ cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
 
 (** Rewrite a single statement for TMC loopification.
 
@@ -2851,7 +3025,8 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
     @param check   Call checker for identifying recursive calls
     @param pp_expr Expression pretty-printer (for rendering types in std::get)
     @param ti      TMC info from {!try_tmc_classify} *)
-let rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params =
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check pp_expr ti
+    varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
      [[Scontinue]] at the top level. *)
@@ -2865,7 +3040,8 @@ let rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params =
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match try_tmc_decompose check e with
       | Some br ->
-        build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params
+        build_tmc_branch_stmts ~cursor_used ~vt_ret pp_expr ti br varying
+          shadow_params
         @ suffix
       | None ->
         (* Fallback: shouldn't happen if try_tmc_classify was correct *)
@@ -2942,12 +3118,33 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   (* Substitute param references in body *)
   let body' = List.map (subst_stmt subs) body in
   (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers *)
+  let cursor_used = ref false in
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params)
+      (rewrite_tmc_visit_stmt ~cursor_used ~vt_ret check pp_expr ti varying
+         shadow_params)
       body'
     |> strip_unnecessary_blocks
     |> rewrite_borrowed_shadow_uses shadow_params
+  in
+  (* The reuse cursor's declarations, and the matches it reads through.
+     Escape analysis passed the scrutinee owned so that this loop would have
+     cells to recycle, which also made translation emit a destructive match
+     ([auto&] over [v_mut()], fields moved out).  That is exactly what must not
+     happen here: whether the cell may be consumed is not known until
+     [reuse_step] tests it, and on a shared spine moving its fields out would
+     corrupt the other holder.  So the matches revert to borrowing, and
+     [reuse_step] does the one steal that is licensed -- the recursive field of
+     a cell it has just proven unique. *)
+  let body'' =
+    if not !cursor_used then body''
+    else borrow_cursor_matches shadow_params body''
+  in
+  let cursor_decls =
+    if not !cursor_used then []
+    else
+      [ Sasgn (id_own, Some head_ty, CPPconverting_ctor (head_ty, []));
+        Sasgn (id_uniq, Some (Tid (Id.of_string "bool", [])), CPPbool true) ]
   in
   (* For value-type returns, dereference _head (shared_ptr → value) *)
   let ret_expr = match vt_ret with
@@ -2955,6 +3152,7 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
     | None -> CPPvar (id_head)
   in
   [head_decl; write_decl]
+  @ cursor_decls
   @ shadow_decls
   @ [
       Swhile (CPPbool true, body'');

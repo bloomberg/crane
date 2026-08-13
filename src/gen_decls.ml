@@ -5379,9 +5379,15 @@ let gen_ind_header_v2
            can observe [use_count()==1]).  Gated on [Crane Reuse]: this is the
            enabler for the reuse guard, and keeping it off by default keeps
            reuse-off extraction byte-identical to the pre-reuse baseline.  Only
-           emitted when we actually declare a custom destructor. *)
+           emitted when we actually declare a custom destructor.  This is a
+           property of the *type*, not of any one declaration, so unlike the
+           match-rewriting gates it does not defer to loopify via
+           [reuse_loopify_ok]: loopify's reuse cursor needs cheap moves and an
+           observable [use_count()==1] just as much as the dual-path match does.
+           Without it, passing a value argument copies instead of moving and the
+           spine is never unique. *)
         @ (match iterative_destructor with
-           | _ :: _ when Table.reuse () && Table.reuse_loopify_ok () ->
+           | _ :: _ when Table.reuse () ->
              [(Fdefaulted_special_members, VPublic, SManipulators)]
            | _ -> [])
         @ v_mut_accessor

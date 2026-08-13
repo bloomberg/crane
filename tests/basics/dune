@@ -658,3 +658,14 @@
   (alias runtest)
   (deps string_get_bounds.t.exe)
   (action (run ./string_get_bounds.t.exe))))
+
+(subdir perceus_reuse_loopify
+ (rule
+  (targets perceus_reuse_loopify.t.exe)
+  (deps ReuseLoopify.vo perceus_reuse_loopify.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} perceus_reuse_loopify.t.exe perceus_reuse_loopify.cpp perceus_reuse_loopify.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps perceus_reuse_loopify.t.exe)
+  (action (run ./perceus_reuse_loopify.t.exe))))

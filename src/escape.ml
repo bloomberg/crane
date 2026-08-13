@@ -280,12 +280,17 @@ let is_reuse_scrutinee k body =
 
 let infer_owned_params n_params body =
   (* Reuse and loopify both rewrite tail-recursive-modulo-cons matches (the
-     [Cons x (rec xs)] shape), so they must not both fire on the same function.
-     Loopify is the incumbent default and owns that shape; reuse defers to it and
-     only marks a match-only scrutinee owned when loopify is off.  This keeps
-     reuse-on extraction from perturbing loopified code (which produced
-     pessimizing moves / use-after-move under the earlier unconditional hook). *)
-  let reuse_on = reuse () && reuse_loopify_ok () in
+     [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
+     loopify owns the shape wherever it applies -- but BOTH need the scrutinee
+     passed owned, because both recycle its cells: loopify does so through the
+     owning cursor its TMC loop carries (see Loopify.reuse_cursor).  So this
+     inference does not defer to loopify; it asks only whether reuse can be
+     performed at all, which additionally requires non-atomic refcounts (the
+     recycling helpers in rc.h are single-threaded, matching the rest of Crane's
+     clone-at-boundary model).  The consumers that actually emit a rewrite --
+     translation's dual-path match and gen_decls' argument passing -- keep
+     deferring to loopify via [reuse_loopify_ok]. *)
+  let reuse_on = reuse () && non_atomic_rc () in
   List.init n_params (fun i ->
     let k = i + 1 in
     escapes ~refined:true k body
