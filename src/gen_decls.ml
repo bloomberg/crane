@@ -573,7 +573,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)
       let saved_outer_name = tctx.current_outer_function_name in
+      let saved_decl_ref = !Table.current_decl_ref in
       tctx.current_outer_function_name <- Some (Common.pp_global_name Term name);
+      Table.current_decl_ref := Some name;
       set_current_type_vars type_var_names;
       (* Generate static methods for each field *)
       let gen_method (field_ref, field_ml_ty) field_body =
@@ -948,6 +950,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       in
       (* Restore type variable context *)
       tctx.current_outer_function_name <- saved_outer_name;
+      Table.current_decl_ref := saved_decl_ref;
       clear_current_type_vars ();
       (* Compute promoted vars and generate using fields. Promoted vars are
          ip_vars entries beyond the real type parameter count (as determined by
@@ -2064,7 +2067,9 @@ let gen_dfun n b cty ty temps =
   tctx.promoted_var_map <- promoted_var_resolutions;
   (* Set the outer function name so inner fixpoints can generate lifted names *)
   let saved_outer_name = tctx.current_outer_function_name in
+  let saved_decl_ref = !Table.current_decl_ref in
   tctx.current_outer_function_name <- Some (Common.pp_global_name Term n);
+  Table.current_decl_ref := Some n;
   (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
   let ml_ret = ml_return_type ty in
   let is_cofix_return = Table.is_coinductive_type ml_ret in
@@ -2283,6 +2288,7 @@ let gen_dfun n b cty ty temps =
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
+  Table.current_decl_ref := saved_decl_ref;
   tctx.promoted_var_map <- saved_promoted_var_map;
   (* {b Entry point detection for monadic [main].}
 
@@ -2634,7 +2640,7 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
   | _ -> []
 
 (** Generate C++ declaration from ML definition (main entry point) *)
-let gen_decl n b ty =
+let gen_decl__inner n b ty =
   (* Set itree extraction mode early — before type conversion — so that
      reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
      can correctly voidify unit result types in ITree parameters. *)
@@ -2696,8 +2702,11 @@ let gen_decl n b ty =
   tctx.itree_mode <- saved_mode;
   result
 
+let gen_decl n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
+
 (** Generate C++ declaration with pretty-printing adjustments *)
-let gen_decl_for_pp n b ty =
+let gen_decl_for_pp__inner n b ty =
   let carrier_refs = get_erased_proj_map_from_type ty in
   (* Expand TC-typed carrier refs: when a carrier ref points to a
      typeclass-typed promoted field (e.g., base_category : PreCategory),
@@ -2767,12 +2776,15 @@ let gen_decl_for_pp n b ty =
   tctx.method_self_ns <- saved_method_ns;
   result
 
+let gen_decl_for_pp n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
+
 (** Generate a full C++ function definition for a [Dfix] member.
 
     Simplifies the ML type, resolves promoted carrier references in the body,
     converts to C++ types, and delegates to {!gen_dfun} for the actual
     definition.  Returns [(decl, env, tvars)]. *)
-let gen_dfun_def n b ty =
+let gen_dfun_def__inner n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   (* Rewrite Tunknown in body types to promoted carrier refs. This allows
@@ -2822,8 +2834,11 @@ let gen_dfun_def n b ty =
     tctx.method_self_ns <- saved_method_ns;
     (f, env, tc_param_ids @ tvars)
 
+let gen_dfun_def n b ty =
+  Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
+
 (** Generate C++ function specification (for header files) *)
-let gen_spec n b ty =
+let gen_spec__inner n b ty =
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void =
@@ -2916,6 +2931,9 @@ let gen_spec n b ty =
   in
   tctx.method_self_ns <- saved_method_ns;
   result
+
+let gen_spec n b ty =
+  Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
 
 (** Generate a C++ forward declaration (spec) for a struct-level function.
 
@@ -3029,7 +3047,7 @@ let gen_dfuns_dual ~is_header (ns, bs, tys) =
 (** Generate both spec and def for a single Dterm function in one pass. Calls
     gen_decl_for_pp ONCE, then derives both spec and def. Returns (spec_opt,
     def_opt, tvars) *)
-let gen_decl_for_pp_dual ~is_header n b ty =
+let gen_decl_for_pp_dual__inner ~is_header n b ty =
   let ds_opt, env, tvars = gen_decl_for_pp n b ty in
   match (ds_opt, tvars) with
   | Some ds, _ :: _ ->
@@ -3047,6 +3065,9 @@ let gen_decl_for_pp_dual ~is_header n b ty =
     (* Non-function type: no def needed *)
     let spec_ds, spec_env = gen_spec n b ty in
     (Some (spec_ds, spec_env), None, tvars)
+
+let gen_decl_for_pp_dual ~is_header n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner ~is_header n b ty)
 
 let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
@@ -3610,7 +3631,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
            (borrowed) and must never be treated as owned, or a reuse arm would
            try to consume it via v_mut() on a const method.  Gated on reuse so
            reuse-off output stays byte-identical to the pre-reuse baseline. *)
-        if owned && not (Table.reuse () && not (Table.loopify ()) && i = this_pos)
+        if owned && not (Table.reuse () && Table.reuse_loopify_ok () && i = this_pos)
         then
           let ml_ty = snd (List.nth ids_with_types i) in
           if Escape.is_shared_ptr_type ml_ty
@@ -4942,7 +4963,7 @@ let gen_ind_header_v2
                cpp_tys )
         in
         let reuse_factory =
-          if Table.reuse () && not (Table.loopify ()) && Table.non_atomic_rc ()
+          if Table.reuse () && Table.non_atomic_rc ()
              && (not is_coinductive) && n_rec_fields = 1
           then
               let tok_id = Id.of_string "_tok" in
@@ -5360,7 +5381,7 @@ let gen_ind_header_v2
            reuse-off extraction byte-identical to the pre-reuse baseline.  Only
            emitted when we actually declare a custom destructor. *)
         @ (match iterative_destructor with
-           | _ :: _ when Table.reuse () && not (Table.loopify ()) ->
+           | _ :: _ when Table.reuse () && Table.reuse_loopify_ok () ->
              [(Fdefaulted_special_members, VPublic, SManipulators)]
            | _ -> [])
         @ v_mut_accessor

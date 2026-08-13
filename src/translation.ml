@@ -18,7 +18,6 @@ open Util
 include Translation_state
 include Ml_type_util
 
-
 (** Compute the factory method name for a constructor.
     Factory names are the lowercase of the constructor struct name
     (e.g. [Cons] -> ["cons"]). If the lowercased name collides with a C++
@@ -7893,7 +7892,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
        control block) and an owned, non-coinductive scrutinee whose matched
        constructor has exactly one recursive field. *)
     let reuse_stmts_opt =
-      if Table.reuse () && not (Table.loopify ()) && Table.non_atomic_rc ()
+      if Table.reuse () && Table.reuse_loopify_ok () && Table.non_atomic_rc ()
          && scrut_is_owned && (not is_flat_match) && (not is_enum)
          && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
       then

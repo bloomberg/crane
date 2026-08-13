@@ -285,7 +285,7 @@ let infer_owned_params n_params body =
      only marks a match-only scrutinee owned when loopify is off.  This keeps
      reuse-on extraction from perturbing loopified code (which produced
      pessimizing moves / use-after-move under the earlier unconditional hook). *)
-  let reuse_on = reuse () && not (loopify ()) in
+  let reuse_on = reuse () && reuse_loopify_ok () in
   List.init n_params (fun i ->
     let k = i + 1 in
     escapes ~refined:true k body

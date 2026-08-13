@@ -582,6 +582,16 @@ val loopify : unit -> bool
     first, then global setting). *)
 val should_loopify : GlobRef.t -> bool
 
+(** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
+val current_decl_ref : GlobRef.t option ref
+
+(** Whether the Perceus reuse rewrite may apply inside the declaration being
+    translated: true exactly when loopify will not rewrite it. *)
+val reuse_loopify_ok : unit -> bool
+
+(** [with_decl_ref r f] runs [f] with {!current_decl_ref} set to [r]. *)
+val with_decl_ref : GlobRef.t -> (unit -> 'a) -> 'a
+
 (** Mark references for loopify (true) or noloopify (false).
     @param b [true] to force loopification of the listed functions,
              [false] to opt them out (override the global [Crane Loopify] setting)

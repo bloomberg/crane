@@ -1570,6 +1570,32 @@ let reset_loopify : unit -> obj =
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
+(* GlobRef of the top-level declaration currently being translated, when known.
+   Reuse and loopify rewrite the same tail-recursive-modulo-cons match, so they
+   must not both fire on one declaration.  Loopify is applied per declaration at
+   print time (see Cpp_print.maybe_loopify), so the reuse gates ask the same
+   per-declaration question here instead of consulting the global flag, which
+   would disable reuse everywhere as soon as loopify is set globally. *)
+let current_decl_ref : GlobRef.t option ref = ref None
+
+let reuse_loopify_ok () =
+  match !current_decl_ref with
+  | Some r -> not (should_loopify r)
+  | None -> not (loopify ())
+
+(* Run [f] with [current_decl_ref] set to [r], restoring it afterwards. *)
+let with_decl_ref r f =
+  let saved = !current_decl_ref in
+  current_decl_ref := Some r;
+  let restore () = current_decl_ref := saved in
+  ( try
+      let res = f () in
+      restore ();
+      res
+    with e ->
+      restore ();
+      raise e )
+
 (* This option enables the Perceus-style reuse pass: at a match on an owned,
    uniquely-owned (use_count()==1 at runtime) recursive value whose arm rebuilds
    a same-type constructor, the matched cell is reused in place instead of
