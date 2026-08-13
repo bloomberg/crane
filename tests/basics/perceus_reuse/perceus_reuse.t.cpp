@@ -61,6 +61,31 @@ static crane::rc<Node> map_inc(Node l) {
   return _head;
 }
 
+// The same loop as the emitter will actually produce: loopify keeps its own
+// read-only structured binding on the matched cell, so it uses reuse_step
+// (token + owning next) rather than take_for_reuse (which also does the match).
+static crane::rc<Node> map_inc_step(Node l) {
+  crane::rc<Node>  _head{};
+  crane::rc<Node>* _write = &_head;
+  crane::rc<Node>  _own{};
+  bool             _uniq  = true;
+  Node*            _loop_l = &l;
+  while (true) {
+    if (std::holds_alternative<Node::Nil>(_loop_l->v())) {
+      *_write = crane::make_rc<Node>(Node{Node::Nil{}});
+      break;
+    }
+    const auto& [a0, a1] = std::get<Node::Cons>(_loop_l->v());
+    auto _t = crane::reuse_step(_own, _uniq, a1);
+    *_write = crane::make_rc_reusing_unchecked<Node>(
+        std::move(_t.token), Node{Node::Cons{a0 + 1, crane::rc<Node>()}});
+    _write  = &std::get<Node::Cons>((*_write)->v_mut()).a1;
+    _own    = std::move(_t.next);
+    _loop_l = _own.get();
+  }
+  return _head;
+}
+
 static bool spine_is(const Node& n, long len, long base) {
   const Node* p = &n;
   for (long i = 0; i < len; ++i) {
@@ -124,6 +149,36 @@ int main() {
     ASSERT(spine_is(shared, M, 1));   // original must be bit-for-bit intact
     ASSERT(spine_is(*out2, M, 2));
     ASSERT(during2 >= M);             // shared path allocates fresh cells
+
+    // reuse_step: same three cases, plus a spine that is unique up to a pinned
+    // deep tail -- the head must recycle and the latch must hold from the pin on.
+    Node u = mk(M);
+    a0 = g_allocs;
+    crane::rc<Node> o1 = map_inc_step(std::move(u));
+    long d1 = g_allocs - a0;
+    ASSERT(spine_is(*o1, M, 2));
+    ASSERT(d1 <= 3);
+
+    Node sh = mk(M);
+    crane::rc<Node> pin2 = std::get<Node::Cons>(sh.v()).a1;
+    a0 = g_allocs;
+    crane::rc<Node> o2 = map_inc_step(sh);
+    long d2 = g_allocs - a0;
+    ASSERT(spine_is(sh, M, 1));
+    ASSERT(spine_is(*o2, M, 2));
+    ASSERT(d2 >= M);
+
+    Node mid = mk(M);
+    const Node* w = &mid;
+    for (long i = 0; i < M / 2; ++i) w = std::get<Node::Cons>(w->v()).a1.get();
+    crane::rc<Node> deep = std::get<Node::Cons>(w->v()).a1;   // pin a deep tail
+    a0 = g_allocs;
+    crane::rc<Node> o3 = map_inc_step(std::move(mid));
+    long d3 = g_allocs - a0;
+    std::printf("reuse_step mid-pinned: %ld allocations for M=%ld\n", d3, M);
+    ASSERT(spine_is(*deep, M / 2 - 1, M / 2 + 2));  // pinned tail untouched
+    ASSERT(spine_is(*o3, M, 2));
+    ASSERT(d3 > 3 && d3 <= M / 2 + 2);              // head recycled, tail copied
   }
   if (testStatus) std::printf("FAIL (%d)\n", testStatus); else std::printf("PASS\n");
   return testStatus;

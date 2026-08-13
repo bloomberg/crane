@@ -348,8 +348,35 @@ taken<Ctor, T> take_for_reuse(T& node, rc<T>& own, bool& uniq) {
     if (uniq && (!own || rc_unique(own)))
         return { Ctor(std::move(std::get<Ctor>(node.v_mut()))), std::move(own) };
     uniq = false;
-    own = rc<T>();
+    // [own] is left alone: it may be the handle keeping [node] alive (uniq can
+    // already be false from a shallower cell), and the caller overwrites it
+    // with the next cell immediately after this returns.
     return { Ctor(std::get<Ctor>(node.v())), rc<T>() };
+}
+
+// The same decision, for a loop that keeps the read-only structured binding it
+// already had (`const auto& [a0, a1] = std::get<Ctor>(p->v())`) and needs only
+// two things from the reuse machinery: the recycling token for the current
+// cell, and an owning handle on the recursive field, taken BEFORE the cell is
+// recycled out from under it.  This is the shape the loopify emitter produces,
+// so it does not have to rewrite the match itself.
+template <typename T>
+struct reuse_step_result {
+    rc<T> next;   // owning handle on the recursive field
+    rc<T> token;  // the cell to recycle, or null to allocate fresh
+};
+
+// [rec_field] must be the recursive field of the cell [own] points at (or of
+// the by-value root when [own] is null).  When the cell may be consumed the
+// field is stolen from it -- the const_cast is licensed by [rc_unique], which
+// says no other handle can observe the theft, and the cell is destroyed
+// immediately afterwards by [make_rc_reusing_unchecked].
+template <typename T>
+reuse_step_result<T> reuse_step(rc<T>& own, bool& uniq, const rc<T>& rec_field) {
+    if (uniq && (!own || rc_unique(own)))
+        return { std::move(const_cast<rc<T>&>(rec_field)), std::move(own) };
+    uniq = false;
+    return { rec_field, rc<T>() };
 }
 
 // As [make_rc_reusing], but the caller has already established via [rc_unique]
