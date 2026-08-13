@@ -19,6 +19,7 @@ From ITree Require Import
   Events.Exception
   Events.MapDefault
   Events.State
+  Events.StateFacts
   ITree
   ITreeFacts
 .

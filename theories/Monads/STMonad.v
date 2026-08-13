@@ -311,10 +311,10 @@ Crane Extract Skip STRefToIx.
 (* NOTE: skipping STRefClass seems to drop too much typing information,
  and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)
-Crane Extract Inlined Constant STRef => "%t2".
-Crane Extract Inlined Constant newSTRef => "%result = %a1".
-Crane Extract Inlined Constant readSTRef => "%a1".
-Crane Extract Inlined Constant writeSTRef => "%a1 = %a2".
+Crane Extract Inlined Constant STRef => "std::shared_ptr<%t2>".
+Crane Extract Inlined Constant newSTRef => "%result = std::make_shared<decltype(%a1)>(%a1)".
+Crane Extract Inlined Constant readSTRef => "*%a1".
+Crane Extract Inlined Constant writeSTRef => "*%a1 = %a2".
 (* array extraction *)
 
 Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ].

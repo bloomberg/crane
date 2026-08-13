@@ -1348,6 +1348,7 @@ Section NatProgramProofs.
 End NatProgramProofs.
 
 
+
 Lemma fib_ST_eq_fib_fun : forall {S : Type} (n : nat),
     ret (fib_fun n) ≈ runST (S := S) (fun S0 => fib_ST n).
 Proof.

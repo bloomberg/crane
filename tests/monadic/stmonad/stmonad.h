@@ -276,27 +276,29 @@ struct STMonadTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      uint64_t x;
-      x = UINT64_C(0);
-      uint64_t y;
-      y = UINT64_C(1);
-      auto fib_loop_impl = [&](auto &, uint64_t k, uint64_t x0, uint64_t y0,
-                               uint64_t, uint64_t) -> uint64_t {
+      std::shared_ptr<uint64_t> x;
+      x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
+      std::shared_ptr<uint64_t> y;
+      y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
+      auto fib_loop_impl = [&](auto &, uint64_t k, std::shared_ptr<uint64_t> x0,
+                               std::shared_ptr<uint64_t> y0, uint64_t,
+                               uint64_t) -> uint64_t {
         uint64_t _loop_k = std::move(k);
         while (true) {
           if (_loop_k <= 0) {
-            return x0;
+            return *x0;
           } else {
             uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = x0;
-            uint64_t y_ = y0;
-            x0 = y_;
-            y0 = (x_ + y_);
+            uint64_t x_ = *x0;
+            uint64_t y_ = *y0;
+            *x0 = y_;
+            *y0 = (x_ + y_);
             _loop_k = k_;
           }
         }
       };
-      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0, uint64_t idx_x,
+      auto fib_loop = [&](uint64_t k, std::shared_ptr<uint64_t> x0,
+                          std::shared_ptr<uint64_t> y0, uint64_t idx_x,
                           uint64_t idx_y) -> uint64_t {
         return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
       };
@@ -310,50 +312,50 @@ struct STMonadTests {
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<bool, bool> new_and_read_both_bool() {
-    bool r1;
-    r1 = false;
-    bool r2;
-    r2 = true;
-    bool x1 = r1;
-    bool x2 = r2;
+    std::shared_ptr<bool> r1;
+    r1 = std::make_shared<decltype(false)>(false);
+    std::shared_ptr<bool> r2;
+    r2 = std::make_shared<decltype(true)>(true);
+    bool x1 = *r1;
+    bool x2 = *r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    uint64_t r1;
-    r1 = UINT64_C(5);
-    uint64_t r2;
-    r2 = UINT64_C(6);
-    uint64_t x1 = r1;
-    uint64_t x2 = r2;
+    std::shared_ptr<uint64_t> r1;
+    r1 = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    std::shared_ptr<uint64_t> r2;
+    r2 = std::make_shared<decltype(UINT64_C(6))>(UINT64_C(6));
+    uint64_t x1 = *r1;
+    uint64_t x2 = *r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_another_nat() {
-    uint64_t v;
-    v = UINT64_C(5);
-    v = UINT64_C(6);
-    return v;
+    std::shared_ptr<uint64_t> v;
+    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    *v = UINT64_C(6);
+    return *v;
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static bool tree_simp_bool() {
-    bool v;
-    v = true;
-    return std::move(v);
+    std::shared_ptr<bool> v;
+    v = std::make_shared<decltype(true)>(true);
+    return *std::move(v);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_nat() {
-    uint64_t v;
-    v = UINT64_C(5);
-    return std::move(v);
+    std::shared_ptr<uint64_t> v;
+    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    return *std::move(v);
   }
 
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
