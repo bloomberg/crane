@@ -31,6 +31,8 @@ namespace crane {
 template <typename T> class rc;
 template <typename T> class weak;
 template <typename T> class enable_rc_from_this;
+template <typename T> bool rc_unique(const rc<T>& p) noexcept;
+template <typename T, typename... Args> rc<T> make_rc_reusing_unchecked(rc<T> token, Args&&... args);
 
 template <typename T>
 struct ControlBlock {
@@ -127,6 +129,9 @@ private:
     friend rc<U> make_rc(Args&&... args);
     template <typename U, typename... Args>
     friend rc<U> make_rc_reusing(rc<U> token, Args&&... args);
+    template <typename U, typename... Args>
+    friend rc<U> make_rc_reusing_unchecked(rc<U> token, Args&&... args);
+    template <typename U> friend bool rc_unique(const rc<U>& p) noexcept;
     friend class weak<T>;
     template <typename U> friend class enable_rc_from_this;
 
@@ -295,6 +300,75 @@ rc<T> make_rc_reusing(rc<T> token, Args&&... args) {
         return rc<T>(c);               // strong stays 1 — reused in place
     }
     return make_rc<T>(std::forward<Args>(args)...);  // token drops at return
+}
+
+// Whether [p]'s cell may be destructively consumed: [p] is the sole owner, no
+// weak refs exist, and the block is not arena-backed (arena blocks are owned by
+// the region and must never be recycled individually).  This is the *read*-side
+// guard: it licenses moving fields out of the cell.  [make_rc_reusing]'s own
+// test is the *write*-side guard; when a caller has already established
+// uniqueness here, use [make_rc_reusing_unchecked] to skip the duplicate test.
+template <typename T>
+bool rc_unique(const rc<T>& p) noexcept {
+    const ControlBlock<T>* c = p.ctrl_;
+    return c && c->strong == 1 && c->weak == 0
+#ifdef CRANE_ARENA
+        && !c->arena_backed
+#endif
+        ;
+}
+
+// Result of [take_for_reuse]: the matched constructor's fields, plus the cell
+// they came out of when that cell may be recycled.
+template <typename Ctor, typename T>
+struct taken {
+    Ctor  fields;  // moved out of the cell when [token] is non-null, else copied
+    rc<T> token;   // the cell to recycle, or null to allocate fresh
+};
+
+// The single decision point for Perceus reuse in a generated traversal loop.
+//
+// [node] is the node currently being matched and [own] is the loop's owning
+// handle on it -- null on the first iteration, when [node] is the function's
+// by-value root and is therefore exclusively ours.  [uniq] records whether the
+// spine has been exclusively ours so far.
+//
+// When the node may be consumed, the fields are MOVED out and the cell is
+// returned as a recycling token.  Otherwise the fields are COPIED, a null token
+// is returned, and [uniq] latches false: once a cell is shared, every deeper
+// cell is reachable from the other holder, so no later cell may be recycled
+// either.  Latching avoids re-testing a spine that can no longer qualify.
+//
+// Callers get one uniform value and never branch, so generated code stays
+// straight-line; the branch lives here.
+//
+// Precondition: [node] currently holds alternative [Ctor].
+template <typename Ctor, typename T>
+taken<Ctor, T> take_for_reuse(T& node, rc<T>& own, bool& uniq) {
+    if (uniq && (!own || rc_unique(own)))
+        return { Ctor(std::move(std::get<Ctor>(node.v_mut()))), std::move(own) };
+    uniq = false;
+    own = rc<T>();
+    return { Ctor(std::get<Ctor>(node.v())), rc<T>() };
+}
+
+// As [make_rc_reusing], but the caller has already established via [rc_unique]
+// that a non-null [token] is recyclable, so the test is not repeated.  A null
+// token means "not recyclable" and allocates fresh.
+template <typename T, typename... Args>
+rc<T> make_rc_reusing_unchecked(rc<T> token, Args&&... args) {
+    static_assert(!std::is_array<T>::value, "rc<T> does not support arrays");
+    ControlBlock<T>* c = token.ctrl_;
+    if (c == nullptr) return make_rc<T>(std::forward<Args>(args)...);
+    token.ctrl_ = nullptr;         // adopt the block; suppress token's dtor
+    c->ptr()->~T();                // destroy the old payload in place
+    try {
+        ::new (static_cast<void*>(c->ptr())) T(std::forward<Args>(args)...);
+    } catch (...) {
+        delete c;
+        throw;
+    }
+    return rc<T>(c);               // strong stays 1 — reused in place
 }
 
 // rc<T>::make — arena-aware factory (see the in-class declaration).
