@@ -198,17 +198,16 @@ Section PointDef.
   #[export] Instance hmap_nat_v : HMap (@idx_key T T) (idx_key_type V) mem :=
     HMap_halist (idx_key T) (idx_key_type V).
 
-  (* TODO: make this a structure instead of `and` *)
-
-  Definition backed_by (acc : Account) (idx : T) (ref : STRef S Z) : Prop :=
-    getBalance acc = getBalance_imp idx ref /\
-    withdraw acc = withdraw_imp idx ref /\
-    deposit acc = deposit_imp idx ref.
-
+  Record account_impl  (idx : T) (ref : STRef S Z) (acc : Account) := 
+    mkAccountImpl {
+        getBalance_impld_by : getBalance acc = getBalance_imp idx ref;
+        withdraw_impld_by : withdraw acc = withdraw_imp idx ref;
+        deposit_impld_by : deposit acc = deposit_imp idx ref;
+      }.
 
   Definition account_wf (acc : Account) (idx : T) (ref : STRef S Z)
     (m : @mem T V)  : Prop :=
-    backed_by acc idx ref /\
+    account_impl idx ref acc  /\
     exists v, HMap.lookup (STRefToIx S Z ref, idx) m = Some v /\ (v >= 0)%Z.
 
   Definition max_idx (m : @mem T V) :=
@@ -269,6 +268,7 @@ Section PointDef.
       - econstructor.
         + econstructor.
         + split; reflexivity.
+        + econstructor.
       - exists init. 
         split.
         + eapply st_lookup_add_eq. 
@@ -289,7 +289,7 @@ Section PointDef.
       intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
       unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
       split. try assumption.
-      unfold backed_by in Hback. destruct Hback as [Hgetb [Hwdrw Hdepos]].
+      destruct Hback as [Hgetb Hwdrw Hdepos].
       rewrite Hwdrw in Hintrp.
       unfold withdraw_imp in Hintrp. unfold_instances.
       rewrite interp_st_bind in Hintrp.
@@ -336,7 +336,7 @@ Section PointDef.
       intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
       unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
       split; try assumption.
-      unfold backed_by in Hback. destruct Hback as [Hgetb [Hwdrw Hdepos]].
+      destruct Hback as [Hgetb Hwdrw Hdepos].
       rewrite Hdepos in Hintrp. unfold deposit_imp in Hintrp. unfold_instances.
       rewrite interp_st_bind in Hintrp. unfold readSTRef in *. rewrite interp_st_trigger in Hintrp. cbn in Hintrp.  
       destruct Hlookup as [v [Hlookup Hvnz]].
@@ -371,9 +371,9 @@ Section PointDef.
       account_wf acc idx ref m0 ->
       interp_st ltu _ (getBalance acc tt) m0 ≈ Ret (m1 , out_val) ->
       account_wf acc idx ref m1.
-    Proof.
+    Proof using Type.
       intros acc idx ref out_val m0 m1 Hwf Hintrp.
-      destruct Hwf as [[Hgetbal [Hwth Hdep]] Hlookup]; rewrite Hgetbal in Hintrp.
+      destruct Hwf as [[Hgetbal Hwth Hdep] Hlookup]; rewrite Hgetbal in Hintrp.
       unfold getBalance_imp in Hintrp.
       unfold readSTRef in Hintrp.
       unfold_instances.
