@@ -12,8 +12,7 @@ LoopifyGapAckermann::ack(uint64_t m,
 
   using _Frame = std::variant<_Enter>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{_x0, m});
   /// Loopified ack: _Enter.
   while (!_stack.empty()) {

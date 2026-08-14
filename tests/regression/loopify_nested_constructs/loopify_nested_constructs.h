@@ -1,9 +1,9 @@
 #ifndef INCLUDED_LOOPIFY_NESTED_CONSTRUCTS
 #define INCLUDED_LOOPIFY_NESTED_CONSTRUCTS
 
+#include "small_vector.h"
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyNestedConstructs {
   static uint64_t multi_let(uint64_t n);

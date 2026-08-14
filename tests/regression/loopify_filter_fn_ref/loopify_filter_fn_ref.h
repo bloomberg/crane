@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyFilterFnRef {
   /// A binary tree with elements at nodes.
@@ -150,8 +149,7 @@ struct LoopifyFilterFnRef {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -213,8 +211,7 @@ struct LoopifyFilterFnRef {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -277,8 +274,7 @@ struct LoopifyFilterFnRef {
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
     tree<T1> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified filter: _Enter -> _Cont_Node -> _Cont_Node_1.
     while (!_stack.empty()) {

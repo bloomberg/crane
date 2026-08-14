@@ -17,8 +17,7 @@ uint64_t MemSafetyProbe5::sum_left_vals(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_left_vals: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -104,8 +103,7 @@ uint64_t MemSafetyProbe5::apply_all(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified apply_all: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -150,8 +148,7 @@ MemSafetyProbe5::collect_left_vals(
 
   using _Frame = std::variant<_Enter, _Resume_Node>;
   MemSafetyProbe5::mylist<std::function<uint64_t(uint64_t)>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), std::move(t)});
   /// Loopified collect_left_vals: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
@@ -235,8 +232,7 @@ uint64_t MemSafetyProbe5::sum_getters(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_getters: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {

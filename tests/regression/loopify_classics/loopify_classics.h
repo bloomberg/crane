@@ -1,9 +1,9 @@
 #ifndef INCLUDED_LOOPIFY_CLASSICS
 #define INCLUDED_LOOPIFY_CLASSICS
 
+#include "small_vector.h"
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyClassics {
   static uint64_t factorial(uint64_t n);

@@ -15,8 +15,7 @@ uint64_t LoopifyListWindows::len(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -105,8 +104,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(lst)});
   /// Loopified span_eq: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -235,8 +233,7 @@ List<List<uint64_t>> LoopifyListWindows::inits(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified inits: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

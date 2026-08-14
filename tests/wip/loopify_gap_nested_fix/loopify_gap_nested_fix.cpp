@@ -10,8 +10,7 @@ uint64_t LoopifyGapNestedFix::rose_sum(
 
   using _Frame = std::variant<_Enter>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{r});
   /// Loopified rose_sum: _Enter.
   while (!_stack.empty()) {

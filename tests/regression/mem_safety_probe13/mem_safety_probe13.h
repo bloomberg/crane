@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe13 {
   /// Probe 13: Value-type move semantics and the flatten optimization.

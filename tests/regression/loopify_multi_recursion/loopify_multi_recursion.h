@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyMultiRecursion {
   static uint64_t mixed_arith_fuel(uint64_t fuel, uint64_t n);
@@ -109,8 +108,7 @@ struct LoopifyMultiRecursion {
 
     using _Frame = std::variant<_Enter>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&q});
     /// Loopified quadtree_rect: _Enter.
     while (!_stack.empty()) {
@@ -148,8 +146,7 @@ struct LoopifyMultiRecursion {
 
     using _Frame = std::variant<_Enter>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&q});
     /// Loopified quadtree_rec: _Enter.
     while (!_stack.empty()) {

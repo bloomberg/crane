@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe6 {
   /// These tests probe closures that capture RECURSIVE self-reference

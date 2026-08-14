@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -179,8 +178,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume1>;
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(l)});
     /// Loopified span: _Enter -> _Resume1.
     while (!_stack.empty()) {
@@ -230,8 +228,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume1>;
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(l)});
     /// Loopified break_at: _Enter -> _Resume1.
     while (!_stack.empty()) {
@@ -342,8 +339,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified forall_pred: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -385,8 +381,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified exists_pred: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {

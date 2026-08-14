@@ -17,8 +17,7 @@ LoopifyPatterns::multi_let(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified multi_let: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -104,8 +103,7 @@ LoopifyPatterns::deep_nest(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified deep_nest: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -158,8 +156,7 @@ bool LoopifyPatterns::bool_chain_fuel(
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified bool_chain_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -228,8 +225,7 @@ bool LoopifyPatterns::chained_comp(
 
   using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified chained_comp: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {
@@ -279,8 +275,7 @@ LoopifyPatterns::tuple_constr(
 
   using _Frame = std::variant<_Enter, _Cont_m>;
   std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified tuple_constr: _Enter -> _Cont_m.
   while (!_stack.empty()) {
@@ -458,8 +453,7 @@ uint64_t LoopifyPatterns::mod_pattern(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified mod_pattern: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -510,8 +504,7 @@ uint64_t LoopifyPatterns::alternating_ops(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -600,8 +593,7 @@ uint64_t LoopifyPatterns::nested_pattern(
 
   using _Frame = std::variant<_Enter, _Resume_a>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified nested_pattern: _Enter -> _Resume_a.
   while (!_stack.empty()) {
@@ -647,8 +639,7 @@ uint64_t LoopifyPatterns::let_nested(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified let_nested: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -687,8 +678,7 @@ uint64_t LoopifyPatterns::list_len(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -740,8 +730,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   LoopifyPatterns::list<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
@@ -855,8 +844,7 @@ uint64_t LoopifyPatterns::quad_sum_pattern(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified quad_sum_pattern: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -925,8 +913,7 @@ uint64_t LoopifyPatterns::multi_guard(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified multi_guard: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1009,8 +996,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::double_append(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   LoopifyPatterns::list<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1065,8 +1051,7 @@ LoopifyPatterns::list<uint64_t> LoopifyPatterns::process_twice_alt_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   LoopifyPatterns::list<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified process_twice_alt_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
@@ -1129,8 +1114,7 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_if_positive_else_double: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -1228,8 +1212,7 @@ uint64_t LoopifyPatterns::four_elem(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

@@ -15,8 +15,7 @@ LoopifyClassics::factorial(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified factorial: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -61,8 +60,7 @@ LoopifyClassics::fib(uint64_t n) { /// _Enter: captures varying parameters for
 
   using _Frame = std::variant<_Enter, _After_n__, _Combine_n__>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified fib: _Enter -> _After_n__ -> _Combine_n__.
   while (!_stack.empty()) {
@@ -115,8 +113,7 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
 
   using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, m, fuel});
   /// Loopified ack_fuel: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -196,8 +193,7 @@ uint64_t LoopifyClassics::binomial_fuel(
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{k, n, fuel});
   /// Loopified binomial_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -272,8 +268,7 @@ uint64_t LoopifyClassics::pascal_fuel(
 
   using _Frame = std::variant<_Enter, _After2, _Combine1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{col, row, fuel});
   /// Loopified pascal_fuel: _Enter -> _After2 -> _Combine1.
   while (!_stack.empty()) {
@@ -355,8 +350,7 @@ LoopifyClassics::power(uint64_t base,
 
   using _Frame = std::variant<_Enter, _Resume_exp_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{exp});
   /// Loopified power: _Enter -> _Resume_exp_.
   while (!_stack.empty()) {
@@ -395,8 +389,7 @@ LoopifyClassics::sum_to(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_to: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -435,8 +428,7 @@ uint64_t LoopifyClassics::sum_squares(
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_squares: _Enter -> _Resume_n_.
   while (!_stack.empty()) {

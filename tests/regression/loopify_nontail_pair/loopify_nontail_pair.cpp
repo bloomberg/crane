@@ -29,8 +29,7 @@ LoopifyNontailPair::countdown(
 
   using _Frame = std::variant<_Enter, _Resume_x>;
   std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified countdown: _Enter -> _Resume_x.
   while (!_stack.empty()) {

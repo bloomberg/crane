@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe15 {
   /// Probe 15: Focused on finding RUNTIME memory safety bugs.

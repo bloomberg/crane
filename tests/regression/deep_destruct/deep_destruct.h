@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct DeepDestruct {
   template <typename A> struct mylist {
@@ -133,8 +132,7 @@ struct DeepDestruct {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
@@ -178,8 +176,7 @@ struct DeepDestruct {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {

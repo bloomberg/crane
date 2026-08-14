@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe16 {
   /// Probe 16: Focused on finding RUNTIME memory safety bugs.
@@ -347,8 +346,7 @@ struct MemSafetyProbe16 {
 
     using _Frame = std::variant<_Enter>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(acc), trees});
     /// Loopified compose_summers: _Enter.
     while (!_stack.empty()) {
@@ -476,8 +474,7 @@ struct MemSafetyProbe16 {
 
     using _Frame = std::variant<_Enter>;
     mylist<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(k), &t});
     /// Loopified flatten_cps_aux: _Enter.
     while (!_stack.empty()) {

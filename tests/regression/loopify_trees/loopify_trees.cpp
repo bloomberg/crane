@@ -24,8 +24,7 @@ uint64_t LoopifyTrees::tree_sum(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -89,8 +88,7 @@ uint64_t LoopifyTrees::leaf_sum(
   using _Frame = std::variant<_Enter, _After_Node, _After_Node_1, _Combine_Node,
                               _Combine_Node_1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified leaf_sum: _Enter -> _After_Node -> _After_Node_1 ->
   /// _Combine_Node -> _Combine_Node_1.
@@ -165,8 +163,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::insert_bst(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   LoopifyTrees::tree<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified insert_bst: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -240,8 +237,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
 
   using _Frame = std::variant<_Enter, _After2, _After4, _Combine1, _Combine3>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, &t});
   /// Loopified count_paths: _Enter -> _After2 -> _After4 -> _Combine1 ->
   /// _Combine3.
@@ -319,8 +315,7 @@ uint64_t LoopifyTrees::sum_of_max_branches(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified sum_of_max_branches: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -384,8 +379,7 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(
 
   using _Frame = std::variant<_Enter, _After_RNode, _Combine_RNode>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&cs, fuel});
   /// Loopified sum_rose_list_fuel: _Enter -> _After_RNode -> _Combine_RNode.
   while (!_stack.empty()) {
@@ -450,8 +444,7 @@ List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
 
   using _Frame = std::variant<_Enter, _After_RNode, _Combine_RNode>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&cs, fuel});
   /// Loopified flatten_rose_list_fuel: _Enter -> _After_RNode ->
   /// _Combine_RNode.
@@ -517,8 +510,7 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_RNode, _Cont_RNode_1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&cs, fuel});
   /// Loopified depth_rose_list_fuel: _Enter -> _Cont_RNode -> _Cont_RNode_1.
   while (!_stack.empty()) {
@@ -592,8 +584,7 @@ LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   LoopifyTrees::tree<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t2), std::move(t1)});
   /// Loopified tree_max: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -793,8 +784,7 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_lc>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified count_nodes: _Enter -> _Cont_Node -> _Cont_lc.
   while (!_stack.empty()) {
@@ -915,8 +905,7 @@ List<List<uint64_t>> LoopifyTrees::paths(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified paths: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -973,8 +962,7 @@ List<uint64_t> LoopifyTrees::collect_unsorted(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_unsorted: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -1051,8 +1039,7 @@ List<uint64_t> LoopifyTrees::sort_list(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sort_list: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -1159,8 +1146,7 @@ std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_lmin>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_min_max: _Enter -> _Cont_Node -> _Cont_lmin.
   while (!_stack.empty()) {
@@ -1253,8 +1239,7 @@ bool LoopifyTrees::tree_contains(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_contains: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -154,8 +153,7 @@ struct LoopifyFolds {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified fold_right: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -225,8 +223,7 @@ struct LoopifyFolds {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified scanr: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -311,8 +308,7 @@ struct LoopifyFolds {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified foldr1: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -362,8 +358,7 @@ struct LoopifyFolds {
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<uint64_t, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l, acc});
     /// Loopified map_accum: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {

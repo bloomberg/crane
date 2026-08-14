@@ -17,8 +17,7 @@ uint64_t LoopifyMatchArg::count_dots(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&xs});
   /// Loopified count_dots: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -69,8 +68,7 @@ uint64_t LoopifyMatchArg::my_length(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&xs});
   /// Loopified my_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

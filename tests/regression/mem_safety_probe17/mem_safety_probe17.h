@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe17 {
   /// Probe 17: Wide tree (4-ary) and complex ownership patterns.

@@ -19,8 +19,7 @@ bool NatKey::key_eq_dec(
 
   using _Frame = std::variant<_Enter, _Cont_S>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&x0, &n});
   /// Loopified key_eq_dec: _Enter -> _Cont_S.
   while (!_stack.empty()) {

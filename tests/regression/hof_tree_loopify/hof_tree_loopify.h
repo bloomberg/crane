@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct HofTreeLoopify {
   template <typename A> struct tree {
@@ -148,8 +147,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -211,8 +209,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -271,8 +268,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     tree<T2> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_map: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -328,8 +324,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_fold: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -387,8 +382,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     tree<T3> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t2, &t1});
     /// Loopified tree_zip_with: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -454,8 +448,7 @@ struct HofTreeLoopify {
 
     using _Frame = std::variant<_Enter, _Cont_Node, _Cont_acc2>;
     std::pair<T3, tree<T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t, acc});
     /// Loopified tree_map_accum: _Enter -> _Cont_Node -> _Cont_acc2.
     while (!_stack.empty()) {

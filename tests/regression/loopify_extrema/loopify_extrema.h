@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -134,8 +133,7 @@ struct LoopifyExtrema {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -190,8 +188,7 @@ struct LoopifyExtrema {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified min_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -246,8 +243,7 @@ struct LoopifyExtrema {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified argmax: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -303,8 +299,7 @@ struct LoopifyExtrema {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified argmin: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {

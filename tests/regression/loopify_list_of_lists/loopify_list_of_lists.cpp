@@ -16,8 +16,7 @@ List<uint64_t> LoopifyListOfLists::intercalate(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -196,8 +195,7 @@ uint64_t LoopifyListOfLists::list_len(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_len: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -236,8 +234,7 @@ uint64_t LoopifyListOfLists::total_length(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified total_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -282,8 +279,7 @@ List<uint64_t> LoopifyListOfLists::flatten(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified flatten: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -323,8 +319,7 @@ uint64_t LoopifyListOfLists::count_total(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified count_total: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -457,8 +452,7 @@ uint64_t LoopifyListOfLists::max_length(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified max_length: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

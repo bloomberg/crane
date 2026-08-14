@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -263,8 +262,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<T2> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified flat_map: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -306,8 +304,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<std::pair<T1, T2>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l1});
     /// Loopified all_pairs: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -522,8 +519,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified foldr1: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -575,8 +571,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified scanr: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -623,8 +618,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified scanr1: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -675,8 +669,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<T1> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified mapcat: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -720,8 +713,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified map_maybe: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -772,8 +764,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified bool_all: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -882,8 +873,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -965,8 +955,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified maximum_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -1020,8 +1009,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified fold_right: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -1065,8 +1053,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified partition: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -1205,8 +1192,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<List<uint64_t>, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified span_split: _Enter -> _Cont1.
     while (!_stack.empty()) {
@@ -1342,8 +1328,7 @@ struct LoopifyHofs {
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<uint64_t, List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l, acc});
     /// Loopified map_accum_l: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {

@@ -15,8 +15,7 @@ uint64_t MemSafetyProbe14::sum_fns(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_fns: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -90,8 +89,7 @@ MemSafetyProbe14::tree_level_fns(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{depth, &t});
   /// Loopified tree_level_fns: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -183,8 +181,7 @@ MemSafetyProbe14::collect_closures(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_closures: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

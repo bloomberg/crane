@@ -20,8 +20,7 @@ LoopifyPairs::unzip(
   using _Frame = std::variant<_Enter, _Cont_x>;
   std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>
       _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified unzip: _Enter -> _Cont_x.
   while (!_stack.empty()) {
@@ -78,8 +77,7 @@ LoopifyPairs::partition3(
       LoopifyPairs::list<uint64_t>,
       std::pair<LoopifyPairs::list<uint64_t>, LoopifyPairs::list<uint64_t>>>
       _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -145,8 +143,7 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::min_max(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified min_max: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -197,8 +194,7 @@ std::pair<uint64_t, uint64_t> LoopifyPairs::sum_and_count(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_and_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -243,8 +239,7 @@ std::pair<uint64_t, std::pair<uint64_t, uint64_t>> LoopifyPairs::sum_prod_count(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<uint64_t, std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_prod_count: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

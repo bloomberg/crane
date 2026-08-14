@@ -40,8 +40,7 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified group_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -119,8 +118,7 @@ List<uint64_t> LoopifyGrouping::nub(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified nub: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -196,8 +194,7 @@ LoopifyGrouping::partition3(
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
       _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition3: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -260,8 +257,7 @@ uint64_t LoopifyGrouping::count_elem(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_elem: _Enter -> _Resume1.
   while (!_stack.empty()) {

@@ -61,8 +61,7 @@ List<uint64_t> LoopifyItreeSeq::countdown_list(
 
   using _Frame = std::variant<_Enter, _Cont_n_>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified countdown_list: _Enter -> _Cont_n_.
   while (!_stack.empty()) {

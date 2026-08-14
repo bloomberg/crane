@@ -15,8 +15,7 @@ uint64_t MemSafetyProbe17::sum_list(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -89,8 +88,7 @@ MemSafetyProbe17::mylist<uint64_t> MemSafetyProbe17::qtree_flatten(
   using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
                               _After_QNode_2, _Combine_QNode>;
   MemSafetyProbe17::mylist<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified qtree_flatten: _Enter -> _After_QNode -> _After_QNode_1 ->
   /// _After_QNode_2 -> _Combine_QNode.
@@ -166,8 +164,7 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   MemSafetyProbe17::qtree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified make_qtree: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {

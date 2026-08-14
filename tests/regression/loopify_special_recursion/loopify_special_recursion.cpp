@@ -25,8 +25,7 @@ List<uint64_t> LoopifySpecialRecursion::process_twice_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons, _Cont_Cons_1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{l, fuel});
   /// Loopified process_twice_fuel: _Enter -> _Cont_Cons -> _Cont_Cons_1.
   while (!_stack.empty()) {
@@ -86,8 +85,7 @@ List<uint64_t> LoopifySpecialRecursion::double_append(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l2), &l1});
   /// Loopified double_append: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -205,8 +203,7 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_sorted: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -254,8 +251,7 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{idx, &l});
   /// Loopified sum_odd_indices_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -314,8 +310,7 @@ uint64_t LoopifySpecialRecursion::categorize_by(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2, _Resume3>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified categorize_by: _Enter -> _Resume1 -> _Resume2 -> _Resume3.
   while (!_stack.empty()) {
@@ -404,8 +399,7 @@ List<uint64_t> LoopifySpecialRecursion::merge_levels(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified merge_levels: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

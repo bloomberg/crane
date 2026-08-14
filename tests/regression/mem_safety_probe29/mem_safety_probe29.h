@@ -7,7 +7,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe29 {
   /// An inner tree type — value type with recursive children.

@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe20 {
   /// Probe 20: Closures wrapped in data structures + if/match return.

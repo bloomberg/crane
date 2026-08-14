@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -136,8 +135,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified len_impl: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -196,8 +194,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified maximum_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -336,8 +333,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<List<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified concat_map: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -481,8 +477,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&b});
     /// Loopified btree_rect: _Enter -> _After_BNode -> _Combine_BNode.
     while (!_stack.empty()) {
@@ -541,8 +536,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&b});
     /// Loopified btree_rec: _Enter -> _After_BNode -> _Combine_BNode.
     while (!_stack.empty()) {
@@ -598,8 +592,7 @@ struct LoopifySearch {
 
     using _Frame = std::variant<_Enter, _After_BNode, _Combine_BNode>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified or_search: _Enter -> _After_BNode -> _Combine_BNode.
     while (!_stack.empty()) {

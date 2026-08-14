@@ -129,8 +129,7 @@ uint64_t LoopifySwitchBreak::count_tag(
 
   using _Frame = std::variant<_Enter, _Resume_t_, _Resume_t__1, _Resume_t__2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ops});
   /// Loopified count_tag: _Enter -> _Resume_t_ -> _Resume_t__1 -> _Resume_t__2.
   while (!_stack.empty()) {

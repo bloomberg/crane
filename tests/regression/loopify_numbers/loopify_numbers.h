@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -183,8 +182,7 @@ struct LoopifyNumbers {
 
     using _Frame = std::variant<_Enter, _Resume__x>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{n});
     /// Loopified nest_apply: _Enter -> _Resume__x.
     while (!_stack.empty()) {

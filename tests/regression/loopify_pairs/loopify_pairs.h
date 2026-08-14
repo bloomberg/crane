@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 /// Consolidated UNIQUE pair/tuple operations.
 struct LoopifyPairs {
@@ -131,8 +130,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -175,8 +173,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -220,8 +217,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified partition: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -365,8 +361,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(l), n});
     /// Loopified split_at: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -418,8 +413,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified swizzle: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -475,8 +469,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified span: _Enter -> _Cont1.
     while (!_stack.empty()) {
@@ -541,8 +534,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<uint64_t, list<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l, acc});
     /// Loopified mapAccumL: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {

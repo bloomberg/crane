@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe18 {
   /// Probe 18: Complex ownership handoff patterns.
@@ -363,8 +362,7 @@ struct MemSafetyProbe18 {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     mylist<T1> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&ls});
     /// Loopified concat_flat: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {

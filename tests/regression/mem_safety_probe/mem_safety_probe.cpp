@@ -59,8 +59,7 @@ uint64_t MemSafetyProbe::apply_all(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&fns});
   /// Loopified apply_all: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {

@@ -18,8 +18,7 @@ uint64_t sum_signum(uint64_t n) { /// _Enter: captures varying parameters for
 
   using _Frame = std::variant<_Enter, _Cont_n_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_signum: _Enter -> _Cont_n_.
   while (!_stack.empty()) {
@@ -72,8 +71,7 @@ List<uint64_t> down_let(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Cont1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified down_let: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -127,8 +125,7 @@ List<uint64_t> down_inline(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified down_inline: _Enter -> _Resume1.
   while (!_stack.empty()) {

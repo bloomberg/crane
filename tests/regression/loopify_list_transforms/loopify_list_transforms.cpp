@@ -15,8 +15,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyListTransforms::run_length_encode(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified run_length_encode: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -405,8 +404,7 @@ uint64_t LoopifyListTransforms::step_sum(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -223,8 +222,7 @@ struct LoopifySpecialRecursion {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -284,8 +282,7 @@ struct LoopifySpecialRecursion {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -339,8 +336,7 @@ struct LoopifySpecialRecursion {
 
     using _Frame = std::variant<_Enter, _Resume_n_>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{n});
     /// Loopified nest_apply: _Enter -> _Resume_n_.
     while (!_stack.empty()) {

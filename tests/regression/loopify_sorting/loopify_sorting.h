@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -134,8 +133,7 @@ struct LoopifySorting {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified len_impl: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -180,8 +178,7 @@ struct LoopifySorting {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<List<T1>, List<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified split: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {

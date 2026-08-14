@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 /// Complex control flow and pattern matching edge cases.
 struct LoopifyPatterns {
@@ -132,8 +131,7 @@ struct LoopifyPatterns {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -176,8 +174,7 @@ struct LoopifyPatterns {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -255,8 +252,7 @@ struct LoopifyPatterns {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified max_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -325,8 +321,7 @@ struct LoopifyPatterns {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     list<list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified insert_everywhere: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -515,8 +510,7 @@ struct LoopifyPatterns {
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
         _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified partition_by: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {

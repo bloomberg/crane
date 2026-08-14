@@ -15,10 +15,15 @@
 // heap-allocated std::vector<T> once more than N elements are live
 // simultaneously.
 //
+// The same reasoning applies to loopify's frame stack (make_loop_and_return):
+// a loopified function pushes one frame per level of the recursion it
+// replaced, so shallow recursions -- the common case -- never leave inline
+// storage, where a std::vector always paid one heap allocation per call.
+//
 // This type is intentionally minimal: it supports exactly the operations
-// the drain-worklist codegen uses (push_back, back, pop_back, empty) and
-// nothing else. It is not copyable (not needed by any generated use site);
-// it is not intended as a general-purpose container.
+// the drain-worklist and frame-stack codegen use (push_back, emplace_back,
+// back, pop_back, empty) and nothing else. It is not copyable (not needed by
+// any generated use site); it is not intended as a general-purpose container.
 //
 // Correctness note: T is typically crane::rc<T'> (a refcounted pointer) or
 // std::any wrapping one. All transitions between inline and heap storage
@@ -58,13 +63,16 @@ public:
     return heap_ ? heap_->empty() : inline_size_ == 0;
   }
 
-  void push_back(T &&v) {
+  void push_back(T &&v) { emplace_back(std::move(v)); }
+
+  template <typename... Args> void emplace_back(Args &&...args) {
     if (heap_) {
-      heap_->push_back(std::move(v));
+      heap_->emplace_back(std::forward<Args>(args)...);
       return;
     }
     if (inline_size_ < N) {
-      ::new (static_cast<void *>(inline_ptr(inline_size_))) T(std::move(v));
+      ::new (static_cast<void *>(inline_ptr(inline_size_)))
+          T(std::forward<Args>(args)...);
       ++inline_size_;
       return;
     }
@@ -77,7 +85,7 @@ public:
       inline_ptr(i)->~T();
     }
     inline_size_ = 0;
-    h->push_back(std::move(v));
+    h->emplace_back(std::forward<Args>(args)...);
     heap_ = h;
   }
 

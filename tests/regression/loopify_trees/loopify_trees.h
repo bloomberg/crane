@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -671,8 +670,7 @@ struct LoopifyTrees {
 
     using _Frame = std::variant<_Enter, _After_RNode, _Combine_RNode>;
     List<rose> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&cs, fuel});
     /// Loopified map_rose_list_fuel: _Enter -> _After_RNode -> _Combine_RNode.
     while (!_stack.empty()) {
@@ -766,8 +764,7 @@ struct LoopifyTrees {
 
     using _Frame = std::variant<_Enter, _After2, _Combine1>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified or_search: _Enter -> _After2 -> _Combine1.
     while (!_stack.empty()) {

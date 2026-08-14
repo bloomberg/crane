@@ -69,8 +69,7 @@ List<List<uint64_t>> LoopifyListSubsequences::inits_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified inits_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -217,8 +216,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), n});
   /// Loopified split_at: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

@@ -30,8 +30,7 @@ uint64_t R::sum1(const R::lst &l) { /// _Enter: captures varying parameters for
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum1: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

@@ -14,8 +14,7 @@ uint64_t LoopifyAlgorithms::len_impl(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -112,8 +111,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::run_length_encode(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified run_length_encode: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -495,8 +493,7 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified max_prefix_sum: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -549,8 +546,7 @@ uint64_t LoopifyAlgorithms::weighted_sum(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, i});
   /// Loopified weighted_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -592,8 +588,7 @@ uint64_t LoopifyAlgorithms::step_sum(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified step_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -649,8 +644,7 @@ List<uint64_t> LoopifyAlgorithms::suffix_sums(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified suffix_sums: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

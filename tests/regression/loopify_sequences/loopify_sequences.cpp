@@ -54,8 +54,7 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_list_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -194,8 +193,7 @@ List<uint64_t> LoopifySequences::repeat_string(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -234,8 +232,7 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
 
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
@@ -283,8 +280,7 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -426,8 +422,7 @@ List<uint64_t> LoopifySequences::cycle(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -574,8 +569,7 @@ List<List<uint64_t>> LoopifySequences::string_subsequences(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&s});
   /// Loopified string_subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -761,8 +755,7 @@ bool LoopifySequences::elem(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -980,8 +973,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifySequences::run_length_encode_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified run_length_encode_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

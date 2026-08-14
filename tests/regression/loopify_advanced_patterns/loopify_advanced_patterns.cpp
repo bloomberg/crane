@@ -15,8 +15,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -87,8 +86,7 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified multi_guard: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -139,8 +137,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified four_elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -201,8 +198,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
 
   using _Frame = std::variant<_Enter, _Resume_a>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified nested_pattern: _Enter -> _Resume_a.
   while (!_stack.empty()) {
@@ -329,8 +325,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_shapes: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -373,8 +368,7 @@ LoopifyAdvancedPatterns::count_by_shape(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_by_shape: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

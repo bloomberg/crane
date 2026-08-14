@@ -9,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -146,8 +145,7 @@ struct LoopifyAdvancedLists {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified flat_map: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -189,8 +187,7 @@ struct LoopifyAdvancedLists {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified all_satisfy: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -232,8 +229,7 @@ struct LoopifyAdvancedLists {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified any_satisfy: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {

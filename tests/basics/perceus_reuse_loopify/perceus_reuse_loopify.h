@@ -8,7 +8,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct R {
   struct lst {
@@ -94,8 +93,7 @@ struct R {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified lst_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -137,8 +135,7 @@ struct R {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified lst_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {

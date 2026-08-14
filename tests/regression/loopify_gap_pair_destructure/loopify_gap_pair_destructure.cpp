@@ -13,8 +13,7 @@ std::pair<uint64_t, uint64_t> LoopifyGapPairDestructure::swap_pair(
 
   using _Frame = std::variant<_Enter, _Cont_m>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified swap_pair: _Enter -> _Cont_m.
   while (!_stack.empty()) {

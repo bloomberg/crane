@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MemSafetyProbe10 {
   /// Probe 10: Recursive functions that RETURN closures.
@@ -313,8 +312,7 @@ struct MemSafetyProbe10 {
 
     using _Frame = std::variant<_Enter>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{std::move(acc), l});
     /// Loopified chain_adders: _Enter.
     while (!_stack.empty()) {

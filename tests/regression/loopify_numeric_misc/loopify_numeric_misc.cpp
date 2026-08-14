@@ -15,8 +15,7 @@ uint64_t LoopifyNumericMisc::sum_abs(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_abs: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -61,8 +60,7 @@ uint64_t LoopifyNumericMisc::alternating_ops(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified alternating_ops: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -109,8 +107,7 @@ uint64_t LoopifyNumericMisc::count_even(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_even: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -153,8 +150,7 @@ uint64_t LoopifyNumericMisc::count_odd(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_odd: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -197,8 +193,7 @@ uint64_t LoopifyNumericMisc::product(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified product: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -237,8 +232,7 @@ uint64_t LoopifyNumericMisc::sum_of_squares(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_of_squares: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -285,8 +279,7 @@ uint64_t LoopifyNumericMisc::list_max(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_max: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -330,8 +323,7 @@ uint64_t LoopifyNumericMisc::list_min(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_min: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

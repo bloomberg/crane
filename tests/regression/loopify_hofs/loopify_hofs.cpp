@@ -86,8 +86,7 @@ List<List<uint64_t>> LoopifyHofs::subsequences(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -179,8 +178,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyHofs::cartesian(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l1});
   /// Loopified cartesian: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -288,8 +286,7 @@ List<List<uint64_t>> LoopifyHofs::power_set(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified power_set: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

@@ -6250,13 +6250,19 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   let result_decl = Sdecl_init (id_result, ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
   let frame_ty = Tvar (0, Some (id_Frame)) in
-  let vector_ty = Tid_external (Id.of_string_soft "std::vector", [frame_ty]) in
+  (* [crane::small_vector] rather than [std::vector]: the frame stack is only
+     as deep as the recursion it replaced, so for the overwhelming majority of
+     calls it never exceeds the inline capacity.  A [std::vector] with
+     [reserve(8)] paid one heap allocation on *every* call regardless -- and
+     loopified comparison functions are called once per key comparison, so
+     that allocation showed up as a third of all allocations in a
+     comparison-heavy workload. *)
+  Table.mark_needs_small_vector ();
+  let vector_ty =
+    Tid_external (Id.of_string_soft "crane::small_vector", [frame_ty])
+  in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
-  let stack_reserve =
-    Sexpr (CPPfun_call (CPPmember (CPPvar stack_id, id_reserve),
-                        [CPPint 8]))
-  in
   (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
      since the variant can only hold the listed frame types. *)
   let dispatch_stmt = Smatch (branches, None) in
@@ -6286,7 +6292,6 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   @ [
       result_decl;
       stack_decl;
-      stack_reserve;
       init_push;
       Scomment loop_comment;
       Swhile

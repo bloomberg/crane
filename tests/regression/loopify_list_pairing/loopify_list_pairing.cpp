@@ -16,8 +16,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
 
   using _Frame = std::variant<_Enter, _Cont_a>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified unzip: _Enter -> _Cont_a.
   while (!_stack.empty()) {
@@ -64,8 +63,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified swizzle: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -108,8 +106,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -280,8 +277,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::split_even_odd(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified split_even_odd: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

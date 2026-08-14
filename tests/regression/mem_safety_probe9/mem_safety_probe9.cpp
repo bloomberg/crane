@@ -15,8 +15,7 @@ uint64_t MemSafetyProbe9::sum_fns(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_fns: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -63,8 +62,7 @@ MemSafetyProbe9::collect_subtree_sums(
 
   using _Frame = std::variant<_Enter, _Resume_Node>;
   MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_subtree_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
@@ -120,8 +118,7 @@ MemSafetyProbe9::collect_left_sums(
 
   using _Frame = std::variant<_Enter, _Resume_Node>;
   MemSafetyProbe9::mylist<std::function<uint64_t(uint64_t)>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), &t});
   /// Loopified collect_left_sums: _Enter -> _Resume_Node.
   while (!_stack.empty()) {
@@ -209,8 +206,7 @@ MemSafetyProbe9::tree MemSafetyProbe9::make_balanced(
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   MemSafetyProbe9::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified make_balanced: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {

@@ -23,8 +23,7 @@ uint64_t MemSafetyProbe23::tree_sum(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -77,8 +76,7 @@ uint64_t MemSafetyProbe23::tree_size(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_size: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -137,8 +135,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified sum_with_original: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -207,8 +204,7 @@ MemSafetyProbe23::dup_and_double(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified dup_and_double: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -287,8 +283,7 @@ MemSafetyProbe23::collect_children(
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>, uint64_t>
       _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_children: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -373,8 +368,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_acc(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{acc, &t});
   /// Loopified sum_with_acc: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -443,8 +437,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified interleaved_ops: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -513,8 +506,7 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(inner), &t});
   /// Loopified flatten_tree_of_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -577,8 +569,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, std::move(t)});
   /// Loopified mixed_recurse: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -647,8 +638,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::annotate_sizes(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified annotate_sizes: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {

@@ -27,8 +27,7 @@ List<uint64_t> QuicksortFun::quicksort_fun(
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
   /// Loopified quicksort_fun: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
@@ -80,8 +79,7 @@ std::string QuicksortFun::list_to_string_helper(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   std::string _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_to_string_helper: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

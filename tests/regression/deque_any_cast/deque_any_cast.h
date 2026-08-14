@@ -1,12 +1,12 @@
 #ifndef INCLUDED_DEQUE_ANY_CAST
 #define INCLUDED_DEQUE_ANY_CAST
 
+#include "small_vector.h"
 #include <any>
 #include <concepts>
 #include <deque>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename
 I>concept Monoid = requires {
@@ -48,8 +48,7 @@ struct DequeAnyCast {
 
     using _Frame = std::variant<_Enter, _Resume_x>;
     typename _tcI0::m_carrier _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{l});
     /// Loopified mfold: _Enter -> _Resume_x.
     while (!_stack.empty()) {
