@@ -2761,23 +2761,18 @@ let build_cell_call ?token ~vt_ret pp_expr cell =
   | None ->
     CPPfun_call (cell.tca_factory, args)
 
-(** Turn destructive matches on pointer shadows back into borrowing ones.
+(** Turn destructive matches on any of [ids] back into borrowing ones.
 
     Clears [smb_is_owned] (so the printer emits [const auto& [..] = std::get<C>(
     p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
-    translation put on the field bindings.  See the ownership discussion in
-    {!transform_tmc}: under the reuse cursor the scrutinee is owned but not
-    known to be unique, and only [crane::reuse_step] may consume it. *)
-let borrow_cursor_matches shadow_params stmts =
-  let ptr_shadows =
-    List.filter_map
-      (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
-      shadow_params
-  in
+    translation put on the field bindings.  Reverting a destructive match to a
+    borrowing one is always sound -- it only copies where it could have moved --
+    so this pass is a safety net, never a rewrite that changes meaning. *)
+let borrow_matches_on ids stmts =
   let mentions_ptr_shadow e =
     expr_exists
       (function
-        | CPPvar id -> List.exists (Id.equal id) ptr_shadows
+        | CPPvar id -> List.exists (Id.equal id) ids
         | _ -> false)
       e
   in
@@ -2807,6 +2802,39 @@ let borrow_cursor_matches shadow_params stmts =
     | s -> map_stmt Fun.id stmt Fun.id s
   in
   List.map stmt stmts
+
+(** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
+    pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
+    the reuse cursor the scrutinee is owned but not known to be unique, and only
+    [crane::reuse_step] may consume it. *)
+let borrow_cursor_matches shadow_params stmts =
+  borrow_matches_on
+    (List.filter_map
+       (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+       shadow_params)
+    stmts
+
+(** Borrowing fix-up for the frame-based loop: a varying parameter that the
+    caller passes owned is nevertheless re-bound inside a frame handler as
+    [const T& x = *_f.x] (a borrow of the cell the frame points at), so a
+    destructive match on it would call [v_mut()] on a const reference and fail
+    to compile.  Collect every local bound by const reference or pointer and
+    make matches on them borrow.
+
+    Gated by the caller on [Crane Reuse]: it is only reachable when reuse marks
+    a match-only scrutinee owned, and keeping it off otherwise leaves reuse-off
+    output byte-identical. *)
+let borrow_frame_bound_matches stmts =
+  let ids = ref [] in
+  let rec scan s =
+    ( match s with
+    | Sasgn (id, Some (Tref (Tmod (TMconst, _)) | Tptr _), _) ->
+      ids := id :: !ids
+    | _ -> () );
+    ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
+  in
+  List.iter scan stmts;
+  if !ids = [] then stmts else borrow_matches_on !ids stmts
 
 (** {2:reuse-cursor Perceus reuse cursor}
 
@@ -6711,8 +6739,11 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
                 ~last_use_candidate:is_cf_cand))
       frames
   in
-  make_loop_and_return ?fn_name struct_defs ret_ty init_push (enter_branch :: call_branches)
-    ~frame_names:call_names
+  let result =
+    make_loop_and_return ?fn_name struct_defs ret_ty init_push
+      (enter_branch :: call_branches) ~frame_names:call_names
+  in
+  if Table.reuse () then borrow_frame_bound_matches result else result
   )
 
 (** {2 Main transformation dispatch} *)
