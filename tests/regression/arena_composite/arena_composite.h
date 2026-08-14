@@ -59,6 +59,11 @@ public:
     }
   }
 
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -135,6 +140,11 @@ struct Comp {
         }
       }
     }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -246,6 +256,11 @@ struct Comp {
         }
       }
     }
+
+    avl(const avl &) = default;
+    avl &operator=(const avl &) = default;
+    avl(avl &&) noexcept = default;
+    avl &operator=(avl &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

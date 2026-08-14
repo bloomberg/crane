@@ -55,6 +55,11 @@ public:
     }
   }
 
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -253,6 +258,11 @@ public:
     }
   }
 
+  String(const String &) = default;
+  String &operator=(const String &) = default;
+  String(String &&) noexcept = default;
+  String &operator=(String &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -442,6 +452,11 @@ struct Levenshtein {
         }
       }
     }
+
+    chain(const chain &) = default;
+    chain &operator=(const chain &) = default;
+    chain(chain &&) noexcept = default;
+    chain &operator=(chain &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

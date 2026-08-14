@@ -249,7 +249,7 @@ List<uint64_t> LoopifySequences::repeat_with_sep(
       } else {
         uint64_t m = n - 1;
         if (m <= 0) {
-          _result = std::move(s);
+          _result = s;
         } else {
           uint64_t _x = m - 1;
           _stack.emplace_back(_Resume__x{});
@@ -301,7 +301,7 @@ List<uint64_t> LoopifySequences::string_chain_fuel(
         if (n <= UINT64_C(0)) {
           _result = List<uint64_t>::nil();
         } else {
-          _stack.emplace_back(_Resume1{std::move(sep.app(end_marker))});
+          _stack.emplace_back(_Resume1{sep.app(end_marker)});
           _stack.emplace_back(
               _Enter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), f});
         }

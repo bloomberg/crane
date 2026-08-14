@@ -67,6 +67,11 @@ struct MemSafetyProbe3 {
       }
     }
 
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -307,6 +312,11 @@ struct MemSafetyProbe3 {
       }
     }
 
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -470,7 +480,7 @@ struct MemSafetyProbe3 {
         auto _f = std::move(std::get<_Enter>(_frame));
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::move(x);
+          _result = x;
         } else {
           uint64_t n_ = n - 1;
           _stack.emplace_back(_Resume_n_{});

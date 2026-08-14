@@ -131,6 +131,11 @@ struct TypeApp {
       }
     }
 
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

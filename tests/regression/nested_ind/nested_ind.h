@@ -97,6 +97,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -203,6 +208,11 @@ struct NestedInd {
         }
       }
     }
+
+    custom_list(const custom_list &) = default;
+    custom_list &operator=(const custom_list &) = default;
+    custom_list(custom_list &&) noexcept = default;
+    custom_list &operator=(custom_list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -442,6 +452,11 @@ struct NestedInd {
         }
       }
     }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

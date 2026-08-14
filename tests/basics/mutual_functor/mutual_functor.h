@@ -92,6 +92,11 @@ template <Elem E> struct MutualTree {
       }
     }
 
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -163,6 +168,11 @@ template <Elem E> struct MutualTree {
         }
       }
     }
+
+    forest(const forest &) = default;
+    forest &operator=(const forest &) = default;
+    forest(forest &&) noexcept = default;
+    forest &operator=(forest &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

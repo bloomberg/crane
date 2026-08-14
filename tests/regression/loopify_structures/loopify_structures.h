@@ -99,6 +99,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -177,6 +182,11 @@ struct LoopifyStructures {
         }
       }
     }
+
+    nested(const nested &) = default;
+    nested &operator=(const nested &) = default;
+    nested(nested &&) noexcept = default;
+    nested &operator=(nested &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -316,6 +326,11 @@ struct LoopifyStructures {
         }
       }
     }
+
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -561,6 +576,11 @@ struct LoopifyStructures {
         }
       }
     }
+
+    ltree(const ltree &) = default;
+    ltree &operator=(const ltree &) = default;
+    ltree(ltree &&) noexcept = default;
+    ltree &operator=(ltree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

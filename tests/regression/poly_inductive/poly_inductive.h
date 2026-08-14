@@ -283,6 +283,11 @@ struct PolyInductive {
       }
     }
 
+    ptree(const ptree &) = default;
+    ptree &operator=(const ptree &) = default;
+    ptree(ptree &&) noexcept = default;
+    ptree &operator=(ptree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

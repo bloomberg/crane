@@ -107,6 +107,11 @@ template <OrderedType X> struct Make {
       }
     }
 
+    Fmap(const Fmap &) = default;
+    Fmap &operator=(const Fmap &) = default;
+    Fmap(Fmap &&) noexcept = default;
+    Fmap &operator=(Fmap &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

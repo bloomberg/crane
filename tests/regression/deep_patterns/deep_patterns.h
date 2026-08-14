@@ -97,6 +97,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -178,6 +183,11 @@ struct DeepPatterns {
         }
       }
     }
+
+    outer(const outer &) = default;
+    outer &operator=(const outer &) = default;
+    outer(outer &&) noexcept = default;
+    outer &operator=(outer &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -394,6 +404,11 @@ struct DeepPatterns {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

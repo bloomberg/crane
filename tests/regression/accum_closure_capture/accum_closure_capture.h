@@ -62,6 +62,11 @@ struct AccumClosureCapture {
       }
     }
 
+    fn_list(const fn_list &) = default;
+    fn_list &operator=(const fn_list &) = default;
+    fn_list(fn_list &&) noexcept = default;
+    fn_list &operator=(fn_list &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -154,6 +159,11 @@ struct AccumClosureCapture {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

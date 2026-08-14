@@ -115,6 +115,11 @@ public:
     }
   }
 
+  Forest(const Forest &) = default;
+  Forest &operator=(const Forest &) = default;
+  Forest(Forest &&) noexcept = default;
+  Forest &operator=(Forest &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

@@ -65,6 +65,11 @@ struct MemSafetyProbe29 {
       }
     }
 
+    inner(const inner &) = default;
+    inner &operator=(const inner &) = default;
+    inner(inner &&) noexcept = default;
+    inner &operator=(inner &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -171,6 +176,11 @@ struct MemSafetyProbe29 {
         }
       }
     }
+
+    outer(const outer &) = default;
+    outer &operator=(const outer &) = default;
+    outer(outer &&) noexcept = default;
+    outer &operator=(outer &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -318,6 +328,11 @@ struct MemSafetyProbe29 {
         }
       }
     }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -483,6 +498,11 @@ struct MemSafetyProbe29 {
         }
       }
     }
+
+    tree3(const tree3 &) = default;
+    tree3 &operator=(const tree3 &) = default;
+    tree3(tree3 &&) noexcept = default;
+    tree3 &operator=(tree3 &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

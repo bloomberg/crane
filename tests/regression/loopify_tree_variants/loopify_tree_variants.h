@@ -68,6 +68,11 @@ struct LoopifyTreeVariants {
       }
     }
 
+    ternary(const ternary &) = default;
+    ternary &operator=(const ternary &) = default;
+    ternary(ternary &&) noexcept = default;
+    ternary &operator=(ternary &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -191,6 +196,11 @@ struct LoopifyTreeVariants {
       }
     }
 
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -299,6 +309,11 @@ struct LoopifyTreeVariants {
         }
       }
     }
+
+    leaf_tree(const leaf_tree &) = default;
+    leaf_tree &operator=(const leaf_tree &) = default;
+    leaf_tree(leaf_tree &&) noexcept = default;
+    leaf_tree &operator=(leaf_tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

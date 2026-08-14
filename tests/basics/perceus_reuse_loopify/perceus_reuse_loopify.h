@@ -105,7 +105,7 @@ struct R {
         auto _f = std::move(std::get<_Enter>(_frame));
         const lst &l = *_f.l;
         if (std::holds_alternative<typename lst::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -148,7 +148,7 @@ struct R {
         auto _f = std::move(std::get<_Enter>(_frame));
         const lst &l = *_f.l;
         if (std::holds_alternative<typename lst::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});

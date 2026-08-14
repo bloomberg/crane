@@ -99,6 +99,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -251,9 +256,9 @@ struct LoopifyHofs {
       const List<T1> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<T2> _s0;
+      List<T2> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -272,12 +277,12 @@ struct LoopifyHofs {
           _result = List<T2>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{std::move(f(a0))});
+          _stack.emplace_back(_Resume_Cons{f(a0)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f._s0).app(std::move(_result));
+        _result = std::move(_f.a0).app(std::move(_result));
       }
     }
     return _result;
@@ -330,7 +335,7 @@ struct LoopifyHofs {
           _result = List<std::pair<T1, T2>>::nil();
         } else {
           const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l1.v());
-          _stack.emplace_back(_Resume_Cons{std::move(pair_with(a00, l2))});
+          _stack.emplace_back(_Resume_Cons{pair_with(a00, l2)});
           _stack.emplace_back(_Enter{crane_raw(a10)});
         }
       } else {
@@ -663,9 +668,9 @@ struct LoopifyHofs {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<T1> _s0;
+      List<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -684,12 +689,12 @@ struct LoopifyHofs {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{std::move(f(a0))});
+          _stack.emplace_back(_Resume_Cons{f(a0)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f._s0).app(std::move(_result));
+        _result = std::move(_f.a0).app(std::move(_result));
       }
     }
     return _result;
@@ -1026,7 +1031,7 @@ struct LoopifyHofs {
         auto _f = std::move(std::get<_Enter>(_frame));
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-          _result = std::move(acc);
+          _result = acc;
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{a0});

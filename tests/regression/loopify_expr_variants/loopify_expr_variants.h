@@ -98,6 +98,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -197,6 +202,11 @@ struct LoopifyExprVariants {
         }
       }
     }
+
+    cond_expr(const cond_expr &) = default;
+    cond_expr &operator=(const cond_expr &) = default;
+    cond_expr(cond_expr &&) noexcept = default;
+    cond_expr &operator=(cond_expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -376,6 +386,11 @@ struct LoopifyExprVariants {
         }
       }
     }
+
+    arith_expr(const arith_expr &) = default;
+    arith_expr &operator=(const arith_expr &) = default;
+    arith_expr(arith_expr &&) noexcept = default;
+    arith_expr &operator=(arith_expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -567,6 +582,11 @@ struct LoopifyExprVariants {
         }
       }
     }
+
+    bool_expr(const bool_expr &) = default;
+    bool_expr &operator=(const bool_expr &) = default;
+    bool_expr(bool_expr &&) noexcept = default;
+    bool_expr &operator=(bool_expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -944,6 +964,11 @@ struct LoopifyExprVariants {
         }
       }
     }
+
+    list_expr(const list_expr &) = default;
+    list_expr &operator=(const list_expr &) = default;
+    list_expr(list_expr &&) noexcept = default;
+    list_expr &operator=(list_expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

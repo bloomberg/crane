@@ -83,6 +83,11 @@ struct LoopifyMultiRecursion {
       }
     }
 
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

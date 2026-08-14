@@ -107,6 +107,11 @@ struct DeepMap {
       }
     }
 
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -155,7 +160,7 @@ struct DeepMap {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
           _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});
@@ -218,7 +223,7 @@ struct DeepMap {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree<T1>::Node>(t.v());
           _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});

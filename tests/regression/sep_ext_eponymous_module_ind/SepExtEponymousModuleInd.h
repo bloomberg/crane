@@ -76,6 +76,11 @@ public:
     }
   }
 
+  Trie(const Trie &) = default;
+  Trie &operator=(const Trie &) = default;
+  Trie(Trie &&) noexcept = default;
+  Trie &operator=(Trie &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

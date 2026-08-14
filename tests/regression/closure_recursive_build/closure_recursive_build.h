@@ -60,6 +60,11 @@ struct ClosureRecursiveBuild {
       }
     }
 
+    fn_list(const fn_list &) = default;
+    fn_list &operator=(const fn_list &) = default;
+    fn_list(fn_list &&) noexcept = default;
+    fn_list &operator=(fn_list &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

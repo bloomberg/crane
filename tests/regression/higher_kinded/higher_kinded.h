@@ -110,6 +110,11 @@ struct HigherKinded {
       }
     }
 
+    Tree(const Tree &) = default;
+    Tree &operator=(const Tree &) = default;
+    Tree(Tree &&) noexcept = default;
+    Tree &operator=(Tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -5373,23 +5373,20 @@ let gen_ind_header_v2
         @ lazy_factory
         @ iterative_destructor
         (* A user-declared destructor (the iterative drain above) suppresses the
-           implicit move ctor/assign, which would silently turn every
-           [std::move] of this value into a refcount-bumping copy.  Re-default
-           all copy/move special members so moves stay cheap (and Perceus reuse
-           can observe [use_count()==1]).  Gated on [Crane Reuse]: this is the
-           enabler for the reuse guard, and keeping it off by default keeps
-           reuse-off extraction byte-identical to the pre-reuse baseline.  Only
-           emitted when we actually declare a custom destructor.  This is a
-           property of the *type*, not of any one declaration, so unlike the
-           match-rewriting gates it does not defer to loopify via
-           [reuse_loopify_ok]: loopify's reuse cursor needs cheap moves and an
-           observable [use_count()==1] just as much as the dual-path match does.
-           Without it, passing a value argument copies instead of moving and the
-           spine is never unique. *)
+           implicit move ctor/assign, which silently turns every [std::move] of
+           this value into a refcount-bumping copy.  Re-default all copy/move
+           special members so moves stay cheap (and Perceus reuse can observe
+           [use_count()==1]).  Emitted whenever we declare a custom destructor,
+           for every extraction: the suppression is a property of the *type*,
+           so reuse-off code pays the same needless refcount traffic that reuse
+           needs eliminated.  Restoring real moves does expose code that reads
+           a value after moving from it -- the loopify fix-ups (invariant
+           parameters are never moved from, and neither are prvalues or
+           borrowed cells) exist because the copy fallback used to hide exactly
+           those bugs. *)
         @ (match iterative_destructor with
-           | _ :: _ when Table.reuse () ->
-             [(Fdefaulted_special_members, VPublic, SManipulators)]
-           | _ -> [])
+           | _ :: _ -> [(Fdefaulted_special_members, VPublic, SManipulators)]
+           | [] -> [])
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]

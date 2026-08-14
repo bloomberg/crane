@@ -97,6 +97,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -154,6 +159,11 @@ struct DepElim {
         }
       }
     }
+
+    fin(const fin &) = default;
+    fin &operator=(const fin &) = default;
+    fin(fin &&) noexcept = default;
+    fin &operator=(fin &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -287,6 +297,11 @@ struct DepElim {
         }
       }
     }
+
+    vec(const vec &) = default;
+    vec &operator=(const vec &) = default;
+    vec(vec &&) noexcept = default;
+    vec &operator=(vec &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -73,6 +73,11 @@ struct EvenOdd {
       }
     }
 
+    even_list(const even_list &) = default;
+    even_list &operator=(const even_list &) = default;
+    even_list(even_list &&) noexcept = default;
+    even_list &operator=(even_list &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -134,6 +139,11 @@ struct EvenOdd {
         }
       }
     }
+
+    odd_list(const odd_list &) = default;
+    odd_list &operator=(const odd_list &) = default;
+    odd_list(odd_list &&) noexcept = default;
+    odd_list &operator=(odd_list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

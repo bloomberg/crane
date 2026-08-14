@@ -126,6 +126,11 @@ template <Elem E> struct Container {
       }
     }
 
+    mlist(const mlist &) = default;
+    mlist &operator=(const mlist &) = default;
+    mlist(mlist &&) noexcept = default;
+    mlist &operator=(mlist &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

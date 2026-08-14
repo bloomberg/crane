@@ -81,6 +81,11 @@ struct MutualValueDeepCopy {
       }
     }
 
+    a(const a &) = default;
+    a &operator=(const a &) = default;
+    a(a &&) noexcept = default;
+    a &operator=(a &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -141,6 +146,11 @@ struct MutualValueDeepCopy {
         }
       }
     }
+
+    b(const b &) = default;
+    b &operator=(const b &) = default;
+    b(b &&) noexcept = default;
+    b &operator=(b &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

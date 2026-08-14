@@ -97,6 +97,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -195,6 +200,11 @@ struct FunctionVernac {
         }
       }
     }
+
+    R_div2(const R_div2 &) = default;
+    R_div2 &operator=(const R_div2 &) = default;
+    R_div2(R_div2 &&) noexcept = default;
+    R_div2 &operator=(R_div2 &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -352,6 +362,11 @@ struct FunctionVernac {
         }
       }
     }
+
+    R_list_sum(const R_list_sum &) = default;
+    R_list_sum &operator=(const R_list_sum &) = default;
+    R_list_sum(R_list_sum &&) noexcept = default;
+    R_list_sum &operator=(R_list_sum &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -59,6 +59,11 @@ public:
     }
   }
 
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -141,6 +146,11 @@ public:
       }
     }
   }
+
+  R(const R &) = default;
+  R &operator=(const R &) = default;
+  R(R &&) noexcept = default;
+  R &operator=(R &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

@@ -98,6 +98,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -209,6 +214,11 @@ struct LoopifyTrees {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -446,6 +456,11 @@ struct LoopifyTrees {
       }
     }
 
+    ternary(const ternary &) = default;
+    ternary &operator=(const ternary &) = default;
+    ternary(ternary &&) noexcept = default;
+    ternary &operator=(ternary &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -570,6 +585,11 @@ struct LoopifyTrees {
         }
       }
     }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -845,6 +865,11 @@ struct LoopifyTrees {
       }
     }
 
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -971,6 +996,11 @@ struct LoopifyTrees {
         }
       }
     }
+
+    simple_tree(const simple_tree &) = default;
+    simple_tree &operator=(const simple_tree &) = default;
+    simple_tree(simple_tree &&) noexcept = default;
+    simple_tree &operator=(simple_tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

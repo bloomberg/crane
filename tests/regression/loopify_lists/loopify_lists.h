@@ -104,6 +104,11 @@ struct LoopifyLists {
       }
     }
 
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -140,7 +145,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -184,7 +189,7 @@ struct LoopifyLists {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});

@@ -97,6 +97,11 @@ struct PatternImpossible {
       }
     }
 
+    nested(const nested &) = default;
+    nested &operator=(const nested &) = default;
+    nested(nested &&) noexcept = default;
+    nested &operator=(nested &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

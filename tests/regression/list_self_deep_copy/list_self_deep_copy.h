@@ -96,6 +96,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -165,6 +170,11 @@ struct ListSelfDeepCopy {
         }
       }
     }
+
+    chain(const chain &) = default;
+    chain &operator=(const chain &) = default;
+    chain(chain &&) noexcept = default;
+    chain &operator=(chain &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

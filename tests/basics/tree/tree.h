@@ -56,6 +56,11 @@ public:
     }
   }
 
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -173,6 +178,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -283,6 +293,11 @@ public:
       }
     }
   }
+
+  Tree(const Tree &) = default;
+  Tree &operator=(const Tree &) = default;
+  Tree(Tree &&) noexcept = default;
+  Tree &operator=(Tree &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

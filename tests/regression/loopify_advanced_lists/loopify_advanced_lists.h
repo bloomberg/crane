@@ -99,6 +99,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -134,9 +139,9 @@ struct LoopifyAdvancedLists {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<uint64_t> _s0;
+      List<uint64_t> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -155,12 +160,12 @@ struct LoopifyAdvancedLists {
           _result = List<uint64_t>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{std::move(f(a0))});
+          _stack.emplace_back(_Resume_Cons{f(a0)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f._s0).app(std::move(_result));
+        _result = std::move(_f.a0).app(std::move(_result));
       }
     }
     return _result;

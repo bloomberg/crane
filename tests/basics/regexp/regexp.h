@@ -97,6 +97,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -214,6 +219,11 @@ struct Matcher {
         }
       }
     }
+
+    regexp(const regexp &) = default;
+    regexp &operator=(const regexp &) = default;
+    regexp(regexp &&) noexcept = default;
+    regexp &operator=(regexp &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

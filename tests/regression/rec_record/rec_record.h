@@ -100,6 +100,11 @@ struct RecRecord {
       }
     }
 
+    rlist(const rlist &) = default;
+    rlist &operator=(const rlist &) = default;
+    rlist(rlist &&) noexcept = default;
+    rlist &operator=(rlist &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

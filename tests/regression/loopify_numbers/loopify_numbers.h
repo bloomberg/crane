@@ -98,6 +98,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -189,7 +194,7 @@ struct LoopifyNumbers {
         auto _f = std::move(std::get<_Enter>(_frame));
         uint64_t n = _f.n;
         if (n <= 0) {
-          _result = std::move(x);
+          _result = x;
         } else {
           uint64_t n_ = n - 1;
           if (n_ <= 0) {

@@ -84,6 +84,11 @@ struct MemSafetyProbe17 {
       }
     }
 
+    qtree(const qtree &) = default;
+    qtree &operator=(const qtree &) = default;
+    qtree(qtree &&) noexcept = default;
+    qtree &operator=(qtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -348,6 +353,11 @@ struct MemSafetyProbe17 {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

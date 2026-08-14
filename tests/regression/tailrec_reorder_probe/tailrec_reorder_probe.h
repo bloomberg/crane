@@ -103,6 +103,11 @@ struct TailrecReorderProbe {
       }
     }
 
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -140,7 +145,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Resume_Mycons{*a1, a0});
@@ -185,7 +190,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Resume_Mycons{*a1, a0});

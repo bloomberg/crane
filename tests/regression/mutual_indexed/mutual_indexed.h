@@ -75,6 +75,11 @@ struct MutualIndexed {
       }
     }
 
+    EvenTree(const EvenTree &) = default;
+    EvenTree &operator=(const EvenTree &) = default;
+    EvenTree(EvenTree &&) noexcept = default;
+    EvenTree &operator=(EvenTree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -137,6 +142,11 @@ struct MutualIndexed {
         }
       }
     }
+
+    OddTree(const OddTree &) = default;
+    OddTree &operator=(const OddTree &) = default;
+    OddTree(OddTree &&) noexcept = default;
+    OddTree &operator=(OddTree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

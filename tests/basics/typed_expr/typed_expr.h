@@ -118,6 +118,11 @@ public:
     }
   }
 
+  Expr(const Expr &) = default;
+  Expr &operator=(const Expr &) = default;
+  Expr(Expr &&) noexcept = default;
+  Expr &operator=(Expr &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

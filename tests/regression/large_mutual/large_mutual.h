@@ -205,6 +205,11 @@ struct LargeMutual {
       }
     }
 
+    stmt(const stmt &) = default;
+    stmt &operator=(const stmt &) = default;
+    stmt(stmt &&) noexcept = default;
+    stmt &operator=(stmt &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -401,6 +406,11 @@ struct LargeMutual {
         }
       }
     }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -614,6 +624,11 @@ struct LargeMutual {
         }
       }
     }
+
+    bexpr(const bexpr &) = default;
+    bexpr &operator=(const bexpr &) = default;
+    bexpr(bexpr &&) noexcept = default;
+    bexpr &operator=(bexpr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

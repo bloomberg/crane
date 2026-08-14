@@ -99,6 +99,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -315,6 +320,11 @@ public:
       }
     }
   }
+
+  T(const T &) = default;
+  T &operator=(const T &) = default;
+  T(T &&) noexcept = default;
+  T &operator=(T &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -553,6 +563,11 @@ struct PendantSumtreeRoundtripCase {
         }
       }
     }
+
+    SumTree(const SumTree &) = default;
+    SumTree &operator=(const SumTree &) = default;
+    SumTree(SumTree &&) noexcept = default;
+    SumTree &operator=(SumTree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

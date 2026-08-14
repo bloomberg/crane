@@ -64,6 +64,11 @@ struct DeepPattern {
       }
     }
 
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -431,6 +436,11 @@ struct DeepPattern {
         }
       }
     }
+
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -117,7 +117,7 @@ uint64_t MemSafetyProbe5::apply_all(
           *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               std::function<uint64_t(uint64_t)>>::Mynil>(l.v())) {
-        _result = std::move(x);
+        _result = x;
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
             std::function<uint64_t(uint64_t)>>::Mycons>(l.v());

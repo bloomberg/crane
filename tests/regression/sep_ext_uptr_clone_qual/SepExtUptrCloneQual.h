@@ -101,6 +101,11 @@ public:
     }
   }
 
+  MyList(const MyList &) = default;
+  MyList &operator=(const MyList &) = default;
+  MyList(MyList &&) noexcept = default;
+  MyList &operator=(MyList &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

@@ -2836,6 +2836,33 @@ let borrow_frame_bound_matches stmts =
   List.iter scan stmts;
   if !ids = [] then stmts else borrow_matches_on !ids stmts
 
+(** Drop [std::move] from every read of a loop-invariant parameter.
+
+    An invariant parameter lives in function scope and is read by every
+    iteration of the loop, but the recursion it came from gave each activation
+    its own copy.  Translation's last-use analysis sees only the source
+    program's single syntactic occurrence, so it happily marks e.g. the base
+    case of [repeat_with_sep] as [_result = std::move(s)] -- and the resume
+    handler then reads [s] again on the next turn of the loop.  The last
+    syntactic use is not the last dynamic use once the body is a loop.
+
+    Types whose move constructor was suppressed (the iterative drain
+    destructor) hid this: the "move" was a copy, so the stale read still saw a
+    live value.  Restore cheap moves on those types and the same code
+    segfaults, so this must be fixed for the loop shape itself, not for one
+    special-member policy.
+
+    Dropping a move only ever copies where it could have moved, so the pass
+    cannot change meaning. *)
+let unmove_invariant_params invariant_params stmts =
+  if Id.Set.is_empty invariant_params then stmts
+  else
+    let rec expr = function
+      | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt stmts
+
 (** {2:reuse-cursor Perceus reuse cursor}
 
     A TMC loop walks its input by borrowed pointer and allocates a fresh output
@@ -3850,18 +3877,31 @@ let frame_fields_named ?(offset = 0) names n =
     are std::moved into the frame — the source is always dead after the push.
     Trivially-copyable types are copied cheaply. *)
 let move_for_frame ty expr =
+  (* [std::move] is only meaningful on an lvalue.  Wrapping a prvalue -- a call
+     result, a constructor call, a lambda -- cannot save a copy and actively
+     blocks copy elision, which clang reports as -Wpessimizing-move (an error
+     under the test suite's -Werror).  Moves of such expressions used to slip
+     through unnoticed on types whose drain destructor had suppressed the move
+     constructor, because the "move" silently resolved to the copy. *)
+  let is_lvalue = function
+    | CPPvar _ | CPPderef _ | CPPmember _ -> true
+    | _ -> false
+  in
   match ty with
   | Tshared_ptr _ -> expr
   | Tfun _ ->
     (match expr with
     | CPPlambda _ -> expr
-    | _ -> CPPmove expr)
+    | e when is_lvalue e -> CPPmove e
+    | _ -> expr)
   | Tmod (TMconst, _) -> expr
   | t when not (is_trivially_copyable_type t) ->
     (match expr with
-    | CPPvar _ -> expr
-    | CPPderef _ -> expr
-    | _ -> CPPmove expr)
+    (* A bare variable is left alone (the caller may still need it), and a
+       dereferenced pointer is a borrow of someone else's cell. *)
+    | CPPvar _ | CPPderef _ -> expr
+    | e when is_lvalue e -> CPPmove e
+    | _ -> expr)
   | _ -> expr
 
 (** Apply [move_for_frame] to parallel type and expression lists. *)
@@ -6742,6 +6782,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   let result =
     make_loop_and_return ?fn_name struct_defs ret_ty init_push
       (enter_branch :: call_branches) ~frame_names:call_names
+    |> unmove_invariant_params invariant_params
   in
   if Table.reuse () then borrow_frame_bound_matches result else result
   )

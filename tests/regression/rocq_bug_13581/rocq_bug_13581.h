@@ -58,6 +58,11 @@ public:
     }
   }
 
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -165,6 +170,11 @@ struct RocqBug13581 {
       }
     }
 
+    I(const I &) = default;
+    I &operator=(const I &) = default;
+    I(I &&) noexcept = default;
+    I &operator=(I &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -230,6 +240,11 @@ struct RocqBug13581 {
         }
       }
     }
+
+    J(const J &) = default;
+    J &operator=(const J &) = default;
+    J(J &&) noexcept = default;
+    J &operator=(J &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

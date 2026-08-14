@@ -130,7 +130,7 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
       } else {
         uint64_t n_ = n - 1;
         if (n_ <= 0) {
-          _result = std::move(s);
+          _result = s;
         } else {
           uint64_t _x = n_ - 1;
           _stack.emplace_back(_Resume__x{});

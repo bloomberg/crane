@@ -109,6 +109,11 @@ struct ErasedMultiIndex {
       }
     }
 
+    hlist(const hlist &) = default;
+    hlist &operator=(const hlist &) = default;
+    hlist(hlist &&) noexcept = default;
+    hlist &operator=(hlist &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
