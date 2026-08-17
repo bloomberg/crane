@@ -1,0 +1,6 @@
+(include_subdirs qualified)
+(coq.theory
+ (name Crane.Libraries.ParseALot)
+ (package rocq-crane)
+ (plugins rocq-crane.plugin)
+ (theories Stdlib Crane CoLoR))
