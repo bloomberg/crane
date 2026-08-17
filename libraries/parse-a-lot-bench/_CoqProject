@@ -1,0 +1,16 @@
+# Coq load path for the benchmark extraction drivers.
+#
+# These files live in the logical namespace Crane.Libraries.ParseALot.Benchmarking
+# (CraneExtraction.v does `From Crane.Libraries.ParseALot.Benchmarking Require
+# Import ConsList`). Everything else they need -- the Crane plugin, the
+# Crane.Libraries.ParseALot.* theory, and CoLoR -- is resolved from the installed
+# rocq-crane package, so run `make -C ../.. install` (or `dune install rocq-crane`)
+# before extracting. See README.md.
+
+-R . Crane.Libraries.ParseALot.Benchmarking
+
+ConsList.v
+ImmerFlexList.v
+Extraction.v
+ClosureCheck.v
+CraneExtraction.v

@@ -1,0 +1,12 @@
+; OCaml benchmark runners. These consume the plain Coq->OCaml extraction emitted
+; by Extraction.v / ClosureCheck.v into ./extracted (see the Makefile), so run
+; `make coq-extract` before `dune build` here. Requires the `unix` and `yojson`
+; opam packages, which are NOT rocq-crane dependencies -- this sub-project is
+; deliberately excluded from the top-level crane build (see ../dune).
+(executables
+  (names run_json run_xml run_newick run_ppm bench run_closure run_fuzz)
+  (libraries unix yojson)
+  (flags (:standard -w -a))
+  (ocamlopt_flags (:standard -O2)))
+
+(include_subdirs unqualified)

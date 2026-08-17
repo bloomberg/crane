@@ -59,4 +59,6 @@ Beyond the Rocq standard library and the Crane plugin, this library requires:
 
 The optional C++ extraction paths additionally map Coq `list` onto
 `crane::list` / immer containers; see the benchmarking harness under
-`libraries/parse-a-lot-bench/`.
+`libraries/parse-a-lot-bench/` (a self-contained sub-project, excluded from the
+crane build, with its own `README.md`, `Makefile`, `_CoqProject`, and OCaml/C++
+runners plus the extraction drivers `Extraction.v` / `CraneExtraction.v`).
