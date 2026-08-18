@@ -1,0 +1,17 @@
+# Standalone-build artifacts (see README.md / Makefile). None of this is tracked.
+_build/
+extracted/
+crane_extracted/
+
+# coq_makefile output + Coq build products
+CoqMakefile
+CoqMakefile.conf
+*.vo
+*.vok
+*.vos
+*.glob
+.*.aux
+.lia.cache
+
+# Benchmark result files
+*_results.json

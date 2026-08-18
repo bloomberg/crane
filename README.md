@@ -37,8 +37,21 @@ crane/
 │   └── wip/        # Work-in-progress tests for known unsupported features
 ├── scripts/      # Build/test helper scripts
 ├── benchmark/    # Crane Benchmark support files
+├── libraries/    # Example libraries (see below)
 └── docs/         # Documentation (see docs/README.md)
 ```
+
+### Example libraries
+
+- [`theories/Libraries/ParseALot`](theories/Libraries/ParseALot) — a verified,
+  end-to-end lexing-and-parsing pipeline (Verbatim++ lexer + CoStar++ parser)
+  extracted to C++, building as the `Crane.Libraries.ParseALot` theory. See its
+  [`PROVENANCE.md`](theories/Libraries/ParseALot/PROVENANCE.md).
+- [`libraries/parse-a-lot-bench`](libraries/parse-a-lot-bench) — a self-contained
+  benchmark harness for that library (OCaml/C++/reference runners). It is
+  excluded from the crane build (`data_only_dirs`) and depends on packages and a
+  corpus that crane does not ship; build it standalone per its
+  [`README.md`](libraries/parse-a-lot-bench/README.md).
 
 ## Installation
 
