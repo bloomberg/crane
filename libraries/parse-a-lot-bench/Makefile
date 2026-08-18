@@ -3,7 +3,7 @@
 # =====================================================================
 # This sub-project is NOT part of the rocq-crane dune build (see ../dune).
 # It compares the verified ParseALot lexer/parser against native baselines
-# across four grammars (JSON, Newick, PPM, XML), on three back ends:
+# across three grammars (JSON, CSV, XML), on three back ends:
 #
 #   * OCaml   -- plain Coq->OCaml extraction (Extraction.v -> ./extracted)
 #   * Crane   -- Coq->C++ extraction via the Crane plugin (CraneExtraction.v
@@ -23,8 +23,8 @@
 
 .PHONY: all coq-extract crane-extract ocaml-build crane-build bench-build \
         closure-check clean \
-        bench bench-json bench-json-small bench-newick bench-newick-small \
-        bench-ppm bench-ppm-small bench-xml bench-xml-small
+        bench bench-json bench-json-small bench-csv bench-csv-small \
+        bench-xml bench-xml-small
 
 all: bench-build
 
@@ -67,8 +67,7 @@ _build/default/run_%_crane.exe: run_%_crane.cpp $(CRANE_SRCS)
 
 crane-build: crane-extract \
   _build/default/run_json_crane.exe \
-  _build/default/run_ppm_crane.exe \
-  _build/default/run_newick_crane.exe \
+  _build/default/run_csv_crane.exe \
   _build/default/run_xml_crane.exe
 
 # ---------------------------------------------------------------
@@ -89,28 +88,24 @@ closure-check: coq-extract
 
 # ---------------------------------------------------------------
 # Benchmarks. DATA points at a corpus directory laid out as
-#   $(DATA)/{JSON,Newick,PPM,XML}/{Instances,SmallInstances}
+#   $(DATA)/{JSON,CSV,XML}/{Instances,SmallInstances}
 # The corpus is NOT distributed with crane -- supply your own (README.md).
 # ---------------------------------------------------------------
 DATA        ?= ./data
 BENCH_FLAGS ?= --warmup 3 --runs 10
 BENCH       := _build/default/bench.exe
 
-bench: bench-json bench-json-small bench-newick bench-newick-small \
-       bench-ppm bench-ppm-small bench-xml bench-xml-small
+bench: bench-json bench-json-small bench-csv bench-csv-small \
+       bench-xml bench-xml-small
 
 bench-json: bench-build
 	$(BENCH) -json $(DATA)/JSON/Instances json_results.json $(BENCH_FLAGS)
 bench-json-small: bench-build
 	$(BENCH) -json $(DATA)/JSON/SmallInstances json_results_small.json $(BENCH_FLAGS)
-bench-newick: bench-build
-	$(BENCH) -newick $(DATA)/Newick/Instances newick_results.json $(BENCH_FLAGS)
-bench-newick-small: bench-build
-	$(BENCH) -newick $(DATA)/Newick/SmallInstances newick_results_small.json $(BENCH_FLAGS)
-bench-ppm: bench-build
-	$(BENCH) -ppm $(DATA)/PPM/Instances ppm_results.json $(BENCH_FLAGS)
-bench-ppm-small: bench-build
-	$(BENCH) -ppm $(DATA)/PPM/SmallInstances ppm_results_small.json $(BENCH_FLAGS)
+bench-csv: bench-build
+	$(BENCH) -csv $(DATA)/CSV/Instances csv_results.json $(BENCH_FLAGS)
+bench-csv-small: bench-build
+	$(BENCH) -csv $(DATA)/CSV/SmallInstances csv_results_small.json $(BENCH_FLAGS)
 bench-xml: bench-build
 	$(BENCH) -xml $(DATA)/XML/Instances xml_results.json $(BENCH_FLAGS)
 bench-xml-small: bench-build

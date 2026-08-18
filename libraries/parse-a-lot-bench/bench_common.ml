@@ -22,7 +22,7 @@ let raw_str_of_coqstr (c : coq_string) : string =
   Buffer.contents b
 
 (* The lexer/parser produced by standard Coq->OCaml extraction is genuinely
-   non-tail recursive, so it consumes O(n) native stack.  On the largest PPM
+   non-tail recursive, so it consumes O(n) native stack.  On the largest
    inputs (~200k tokens) this overflows the default 8 MB main-thread stack.
    Re-exec ourselves once under a raised stack rlimit (macOS caps this near
    64 MB, which is sufficient here; Linux honours a larger value) so every input

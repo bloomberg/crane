@@ -19,7 +19,7 @@ let parse_args () =
   let argv = Sys.argv in
   let n = Array.length argv in
   if n < 4 then begin
-    Printf.eprintf "Usage: %s -json|-xml|-newick|-ppm <data_dir> <output_json> [--warmup N] [--runs N]\n%!" argv.(0);
+    Printf.eprintf "Usage: %s -json|-xml|-csv <data_dir> <output_json> [--warmup N] [--runs N]\n%!" argv.(0);
     exit 1
   end;
   let lang     = argv.(1) in
@@ -49,10 +49,9 @@ let parse_args () =
 let runner_of_lang lang =
   let bin_dir = Filename.dirname Sys.argv.(0) in
   let name = match lang with
-    | "-json"   -> "run_json.exe"
-    | "-xml"    -> "run_xml.exe"
-    | "-newick" -> "run_newick.exe"
-    | "-ppm"    -> "run_ppm.exe"
+    | "-json" -> "run_json.exe"
+    | "-xml"  -> "run_xml.exe"
+    | "-csv"  -> "run_csv.exe"
     | l -> failwith ("Unknown language flag: " ^ l)
   in
   Filename.concat bin_dir name
@@ -60,11 +59,9 @@ let runner_of_lang lang =
 let ref_runner_of_lang lang =
   let bin_dir = Filename.dirname Sys.argv.(0) in
   let name = match lang with
-    | "-json"   -> Some "run_json_ref.exe"
-    | "-xml"    -> Some "run_xml_ref.exe"
-    | "-newick" -> Some "run_newick_ref.exe"
-    | "-ppm"    -> Some "run_ppm_ref.exe"
-    | _         -> None
+    | "-json" -> Some "run_json_ref.exe"
+    | "-xml"  -> Some "run_xml_ref.exe"
+    | _       -> None
   in
   match name with
   | None -> None
@@ -75,11 +72,10 @@ let ref_runner_of_lang lang =
 let crane_runner_of_lang lang =
   let bin_dir = Filename.dirname Sys.argv.(0) in
   let name = match lang with
-    | "-json"   -> Some "run_json_crane.exe"
-    | "-xml"    -> Some "run_xml_crane.exe"
-    | "-newick" -> Some "run_newick_crane.exe"
-    | "-ppm"    -> Some "run_ppm_crane.exe"
-    | _         -> None
+    | "-json" -> Some "run_json_crane.exe"
+    | "-xml"  -> Some "run_xml_crane.exe"
+    | "-csv"  -> Some "run_csv_crane.exe"
+    | _       -> None
   in
   match name with
   | None -> None

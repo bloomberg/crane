@@ -9,7 +9,7 @@
     ([int_states]), which [int_states_closed] proves closed unconditionally.
     This diagnostic measures the gap that saturation has to make up: it runs
     [closed_check] on the *unsaturated* [build_states] of every rule. As of
-    writing all 34 rules across the four grammars are already closed, so
+    writing every rule across the three grammars is already closed, so
     saturation converges after a single round.
 
     This lives here rather than in [theories] because it needs OCaml
@@ -21,10 +21,9 @@ From Stdlib Require Import List.
 Import ListNotations.
 From Stdlib Require Import ExtrOcamlBasic ExtrOcamlString.
 
-From Crane.Libraries.ParseALot.Examples.JSON.Lexer   Require Literal.
-From Crane.Libraries.ParseALot.Examples.Newick.Lexer Require Literal.
-From Crane.Libraries.ParseALot.Examples.PPM.Lexer    Require Literal.
-From Crane.Libraries.ParseALot.Examples.XML.Lexer    Require Literal.
+From Crane.Libraries.ParseALot.Examples.JSON.Lexer Require Literal.
+From Crane.Libraries.ParseALot.Examples.CSV.Lexer  Require Literal.
+From Crane.Libraries.ParseALot.Examples.XML.Lexer  Require Literal.
 
 Set Extraction Output Directory "extracted".
 Extraction Blacklist List String.
@@ -39,14 +38,10 @@ Module J. Import Crane.Libraries.ParseALot.Examples.JSON.Lexer.Literal.
   Definition chk : list bool :=
     map (fun ru => let d := regex2dfa (snd ru) in closed_check d (build_states d)) rus.
 End J.
-Module N. Import Crane.Libraries.ParseALot.Examples.Newick.Lexer.Literal.
+Module C. Import Crane.Libraries.ParseALot.Examples.CSV.Lexer.Literal.
   Definition chk : list bool :=
     map (fun ru => let d := regex2dfa (snd ru) in closed_check d (build_states d)) rus.
-End N.
-Module P. Import Crane.Libraries.ParseALot.Examples.PPM.Lexer.Literal.
-  Definition chk : list bool :=
-    map (fun ru => let d := regex2dfa (snd ru) in closed_check d (build_states d)) rus.
-End P.
+End C.
 Module X. Import Crane.Libraries.ParseALot.Examples.XML.Lexer.Literal.
   Definition chk : list bool :=
     map (fun ru => let d := regex2dfa (snd ru) in closed_check d (build_states d)) rus.
@@ -67,8 +62,7 @@ Definition chk1 := F.chk1.
 Definition nstates1 := F.nstates1.
 
 Definition chk_json := J.chk.
-Definition chk_newick := N.chk.
-Definition chk_ppm := P.chk.
+Definition chk_csv := C.chk.
 Definition chk_xml := X.chk.
 
-Separate Extraction chk_json chk_newick chk_ppm chk_xml chk1 nstates1.
+Separate Extraction chk_json chk_csv chk_xml chk1 nstates1.

@@ -6,7 +6,6 @@ let show name l =
     (if ok = n then "" else "   <-- FALLBACK WOULD FIRE");
   List.iteri (fun i b -> if not b then Printf.printf "    rule %d: NOT closed\n" i) l
 let () =
-  show "json"   ClosureCheck.chk_json;
-  show "newick" ClosureCheck.chk_newick;
-  show "ppm"    ClosureCheck.chk_ppm;
-  show "xml"    ClosureCheck.chk_xml
+  show "json" ClosureCheck.chk_json;
+  show "csv"  ClosureCheck.chk_csv;
+  show "xml"  ClosureCheck.chk_xml

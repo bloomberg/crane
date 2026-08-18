@@ -13,9 +13,8 @@ From Crane.Libraries.ParseALot.Utils Require Import NativeMap.
 From Crane.Libraries.ParseALot.Lexer.DFA Require Import IntDFA.
 From Stdlib Require Import Ascii String.
 
-From Crane.Libraries.ParseALot.Examples.PPM.Parser Require Import PPM.
 From Crane.Libraries.ParseALot.Examples.JSON.Parser Require Import JSON.
-From Crane.Libraries.ParseALot.Examples.Newick.Parser Require Import Newick.
+From Crane.Libraries.ParseALot.Examples.CSV.Parser Require Import CSV.
 From Crane.Libraries.ParseALot.Examples.XML.Parser Require Import XML.
 
 (* ----------------------------------------------------------------- *)
@@ -100,7 +99,7 @@ Crane Extract Inlined Constant IntDFA.idx_of_eqb =>
   "(255u - static_cast<unsigned int>(static_cast<unsigned char>(%a1)))".
 
 (* ----------------------------------------------------------------- *)
-(* Separate extraction of all four parsers                            *)
+(* Separate extraction of all three parsers                           *)
 (* ----------------------------------------------------------------- *)
 Set Crane Extraction Output Directory "crane_extracted".
 Set Crane Loopify.
@@ -140,7 +139,6 @@ Crane Guard Compare Literal.LXR.Mem.STT.TabT.R.Defs.Regexes.re_compare => Eq.
    copy of it. *)
 
 Crane Separate Extraction
-  lex_ppm    parse_ppm
-  lex_json   parse_json
-  lex_newick parse_newick
-  lex_xml    parse_xml.
+  lex_json parse_json
+  lex_csv  parse_csv
+  lex_xml  parse_xml.

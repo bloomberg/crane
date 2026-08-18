@@ -2,7 +2,7 @@
 
 This directory benchmarks the verified [`Crane.Libraries.ParseALot`](../../theories/Libraries/ParseALot)
 lexer/parser (Verbatim++ lexer + CoStar++ parser) against native baselines, on
-four grammars — **JSON, Newick, PPM, XML** — across three back ends:
+three grammars — **JSON, CSV, XML** — across three back ends:
 
 | back end    | source                                            | notes                          |
 |-------------|---------------------------------------------------|--------------------------------|
@@ -28,11 +28,14 @@ The original parse-a-lot corpus is **not** redistributed with crane. Supply your
 own and point `DATA` at it. The runners expect:
 
 ```
-$(DATA)/JSON/Instances      $(DATA)/JSON/SmallInstances
-$(DATA)/Newick/Instances    $(DATA)/Newick/SmallInstances
-$(DATA)/PPM/Instances       $(DATA)/PPM/SmallInstances
-$(DATA)/XML/Instances       $(DATA)/XML/SmallInstances
+$(DATA)/JSON/Instances   $(DATA)/JSON/SmallInstances
+$(DATA)/CSV/Instances    $(DATA)/CSV/SmallInstances
+$(DATA)/XML/Instances    $(DATA)/XML/SmallInstances
 ```
+
+The CSV grammar accepts **RFC 4180**: quoted fields (`"…"`) may contain commas,
+CR/LF, and doubled-quote (`""`) escapes; records are separated by LF or CRLF;
+empty fields are allowed. A trailing newline yields one final empty record.
 
 Each `*Instances` directory holds one input file per benchmark case. Until a
 corpus is present, everything up to and including `make bench-build` still works;
