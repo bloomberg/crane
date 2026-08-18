@@ -15,3 +15,7 @@ CoqMakefile.conf
 
 # Benchmark result files
 *_results.json
+
+# Staged corpus produced by `make stage-data` from corpus-src/ submodules.
+# Regenerated on demand; never tracked (the sources are the pinned submodules).
+data/

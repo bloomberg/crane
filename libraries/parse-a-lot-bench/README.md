@@ -22,10 +22,21 @@ parent `../dune` marks this directory `data_only_dirs`, so a plain `dune build` 
 `dune build @all` / `make test` in crane never descends into it. Build it
 standalone, from inside this directory, as described below.
 
-## Corpus (not included)
+## Corpus (git submodules + `make stage-data`)
 
-The original parse-a-lot corpus is **not** redistributed with crane. Supply your
-own and point `DATA` at it. The runners expect:
+Each format's raw data is a pinned **git submodule** under `corpus-src/`, one per
+format (see [`corpus/PROVENANCE.toml`](corpus/PROVENANCE.toml)):
+
+| format | submodule (`corpus-src/…`) | upstream | license |
+|--------|----------------------------|----------|---------|
+| JSON | `json` | [`unitedstates/congress-legislators`](https://github.com/unitedstates/congress-legislators) | CC0-1.0 |
+| CSV  | `csv`  | [`tinytoolkit-org/csv-datasets`](https://github.com/tinytoolkit-org/csv-datasets) | CC0-1.0 |
+| XML  | `xml`  | [`oanc/masc`](https://github.com/oanc/masc) (MASC GrAF corpus) | ANC "free" terms (non-SPDX) |
+
+`bench.ml` reads a **flat** directory and parses **every** file in it, but the
+submodules contain files the grammars don't accept (non-ASCII, semicolon/BOM CSV,
+XML with text nodes, and — for JSON — YAML rather than JSON). So a submodule is
+never pointed at directly: `make stage-data` curates each source into
 
 ```
 $(DATA)/JSON/Instances   $(DATA)/JSON/SmallInstances
@@ -33,13 +44,32 @@ $(DATA)/CSV/Instances    $(DATA)/CSV/SmallInstances
 $(DATA)/XML/Instances    $(DATA)/XML/SmallInstances
 ```
 
-The CSV grammar accepts **RFC 4180**: quoted fields (`"…"`) may contain commas,
-CR/LF, and doubled-quote (`""`) escapes; records are separated by LF or CRLF;
-empty fields are allowed. A trailing newline yields one final empty record.
+keeping only files the grammar accepts — the *authoritative* filter is the built
+OCaml runner (a candidate is kept iff `run_<fmt>.exe` parses it). The staged
+`data/` tree is gitignored and regenerated on demand. To populate it:
 
-Each `*Instances` directory holds one input file per benchmark case. Until a
-corpus is present, everything up to and including `make bench-build` still works;
-only the `bench-*` targets need the data.
+```sh
+git submodule update --init          # fetch corpus-src/{json,csv,xml}
+make stage-data                      # builds the runners, then curates -> ./data
+# or per format: make stage-json / stage-csv / stage-xml
+# override the target root with DATA=/path (also honored by the bench-* targets)
+```
+
+Grammar/dialect constraints the staging enforces (see
+[`../../theories/Libraries/ParseALot/Examples`](../../theories/Libraries/ParseALot/Examples)):
+
+- **all** — 7-bit ASCII only (the lexer's char classes cover ASCII; no BOM).
+- **CSV** — **RFC 4180**, comma-delimited only: quoted fields (`"…"`) may contain
+  commas, CR/LF, and doubled-quote (`""`) escapes; records are separated by LF or
+  CRLF; empty fields are allowed; a trailing newline yields one final empty
+  record. Semicolon/tab dialects and the `broken/` fixtures are dropped.
+- **XML** — **element-only**: nested tags + attributes, no text nodes, comments,
+  CDATA, DOCTYPE, or entity references (matches the GrAF/XCES stand-off shape).
+- **JSON** — the congress-legislators dataset, sliced into size-graded prefixes.
+
+You can still point `DATA` at any other corpus with this layout. Until data is
+staged, everything up to and including `make bench-build` still works; only the
+`bench-*` targets need the data.
 
 ## Prerequisites
 

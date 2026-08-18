@@ -23,6 +23,7 @@
 
 .PHONY: all coq-extract crane-extract ocaml-build crane-build bench-build \
         closure-check clean \
+        stage-data stage-json stage-csv stage-xml \
         bench bench-json bench-json-small bench-csv bench-csv-small \
         bench-xml bench-xml-small
 
@@ -87,9 +88,24 @@ closure-check: coq-extract
 	dune build ./run_closure.exe && ./_build/default/run_closure.exe
 
 # ---------------------------------------------------------------
+# Corpus staging. Curates the pinned corpus-src/ submodules into a flat,
+# parser-acceptable corpus under $(DATA)/{JSON,CSV,XML}/{Instances,SmallInstances}.
+# Depends on ocaml-build: stage_data.py uses the built runners as the
+# authoritative "does the grammar accept this file?" filter. Run once after
+# `git submodule update --init` (and again if you re-pin a submodule).
+# ---------------------------------------------------------------
+STAGE := python3 stage_data.py
+
+stage-data: ocaml-build ; DATA=$(DATA) $(STAGE) all
+stage-json: ocaml-build ; DATA=$(DATA) $(STAGE) json
+stage-csv:  ocaml-build ; DATA=$(DATA) $(STAGE) csv
+stage-xml:  ocaml-build ; DATA=$(DATA) $(STAGE) xml
+
+# ---------------------------------------------------------------
 # Benchmarks. DATA points at a corpus directory laid out as
 #   $(DATA)/{JSON,CSV,XML}/{Instances,SmallInstances}
-# The corpus is NOT distributed with crane -- supply your own (README.md).
+# Populate it with `make stage-data` (from the pinned corpus-src/ submodules)
+# or point DATA at your own corpus (README.md).
 # ---------------------------------------------------------------
 DATA        ?= ./data
 BENCH_FLAGS ?= --warmup 3 --runs 10
