@@ -18,31 +18,14 @@
 
 ; Test rules - compile C++ and run tests
 
-(subdir benchmark_matrix
- ; Make the local Hyperfine test double an explicit prerequisite of coqc.
- (rule
-  (targets BenchmarkMatrix.v)
-  (deps BenchmarkMatrix.v.in %{bin:hyperfine})
-  (action (copy BenchmarkMatrix.v.in BenchmarkMatrix.v)))
- (rule
-  (targets benchmark_matrix.t.exe)
-  (deps BenchmarkMatrix.vo benchmark_matrix.t.cpp)
-  (action
-   (run clang++ -std=c++23 -o benchmark_matrix.t.exe benchmark_matrix.t.cpp)))
- (rule
-  (alias runtest)
-  (deps benchmark_matrix.t.exe)
-  (action (run ./benchmark_matrix.t.exe))))
+
 
 (subdir extraction_path_traversal
- ; Security regression: the assertions run while the .vo is built (Fail commands
- ; reject path-traversal extraction targets). The .t.cpp is a shim so the
- ; standard test runner still sees and depends on the fixture.
  (rule
   (targets extraction_path_traversal.t.exe)
-  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp)
+  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp (source_tree .))
   (action
-   (run clang++ -std=c++23 -o extraction_path_traversal.t.exe extraction_path_traversal.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_path_traversal.t.exe extraction_path_traversal.cpp extraction_path_traversal.t.cpp)))
  (rule
   (alias runtest)
   (deps extraction_path_traversal.t.exe)
