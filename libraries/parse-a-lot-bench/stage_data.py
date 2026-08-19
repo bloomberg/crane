@@ -16,8 +16,9 @@ result (``parse_result`` = ``unique`` or ``ambig`` -- a parse *reject* still
 exits 0, so the exit code alone is not enough). Which runner is authoritative
 depends on size: small files use the fast OCaml runner
 (``_build/default/run_<fmt>.exe``), but the ladders deliberately extend past the
-point where the OCaml runner stack-overflows (~a few hundred KB, up to ~1.5 MB)
-to showcase the C++ (Crane) back end handling inputs OCaml cannot -- so above
+point where the OCaml runner stack-overflows (~a few hundred KB) all the way to
+each format's largest grammar-acceptable source (JSON 13.5 MB, CSV 6.8 MB, XML
+3.5 MB) to showcase the C++ (Crane) back end handling inputs OCaml cannot -- so above
 ``OCAML_SAFE_BYTES`` the Crane runner (``run_<fmt>_crane.exe``) is the acceptance
 authority. A cheap prefilter (ASCII, dialect, element-only) trims the set before
 we spawn runners. Run ``make stage-data`` (which builds both back ends first)
@@ -64,19 +65,23 @@ SMALL_COUNT = 10
 # C++ back end handling inputs the OCaml one cannot*: OCaml parses via deep
 # non-tail recursion and stack-overflows above a few hundred KB (macOS caps the
 # main-thread stack below OCaml's overflow point, so raising `ulimit -s` does not
-# help), while the Crane C++ runner keeps going into the MB range. We cap around
-# 1.5 MB -- comfortably past OCaml's limit yet keeping the slow C++ parse
-# (~20s/MB) tolerable for one-shot runs. Above the cap the parses get long enough
-# that they stop being useful benchmark rungs.
-JSON_MAX_BYTES = 1_500_000
-XML_MAX_BYTES = 1_500_000
-CSV_MAX_BYTES = 1_500_000
+# help), while the Crane C++ runner keeps going into the multi-MB range. Each cap
+# is set to that format's largest grammar-acceptable source, all confirmed to
+# parse to `unique` under the Crane runner:
+#   * JSON -- the full congress-legislators array, 13.5 MB (534 s, ~40 s/MB).
+#   * CSV  -- the largest comma+ASCII log, 6.8 MB (55 s, ~8 s/MB).
+#   * XML  -- the largest element-only GrAF file, 3.5 MB (78 s, ~22 s/MB).
+JSON_MAX_BYTES = 14_000_000
+XML_MAX_BYTES = 4_000_000
+CSV_MAX_BYTES = 7_000_000
 # Below this size the OCaml runner is a fast, equivalent acceptance proxy (OCaml
 # and Crane agree on parse_nodes for every file both accept); at/above it OCaml
 # risks stack overflow, so `accepts` switches to the Crane runner. Measured safe
 # points: XML fine at 400KB / over ~790KB; CSV fine at 500KB / over ~700KB.
 OCAML_SAFE_BYTES = 400_000
-ACCEPT_TIMEOUT = 240             # seconds per runner invocation (C++ ~20s/MB)
+# Seconds per runner invocation. The slowest probe is the full 13.5 MB JSON array
+# at ~40 s/MB (~534 s measured); 900 s leaves comfortable margin.
+ACCEPT_TIMEOUT = 900
 
 
 # --------------------------------------------------------------------------
