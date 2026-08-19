@@ -1388,6 +1388,14 @@ let separate_extraction ~opaque_access lr =
       Common.clear_non_output_modules ();
       reset () )
   @@ fun () ->
+  (* Descend through applications/functors to the underlying struct body,
+     returning its substructure (or [] for a bare module identifier). *)
+  let rec module_substructs = function
+    | MEstruct (_, s) -> s
+    | MEapply (me, _) -> module_substructs me
+    | MEfunctor (_, _, me) -> module_substructs me
+    | MEident _ -> []
+  in
   let refs, mps = locate_ref lr in
   let struc =
     optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
@@ -1469,28 +1477,7 @@ let separate_extraction ~opaque_access lr =
       match se with
       | SEmodule { ml_mod_expr = MEident _; _ } -> ()
       | SEmodule m ->
-        let subs = match m.ml_mod_expr with
-          | MEstruct (_, s) -> s
-          | MEapply (me, _) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) -> get_subs me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEident _ -> []
-          | MEfunctor (_, _, me) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) ->
-                let rec get2 = function
-                  | MEstruct (_, s) -> s | MEapply (m2, _) -> get2 m2
-                  | MEfunctor (_, _, m2) -> get2 m2 | MEident _ -> []
-                in get2 me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-        in
+        let subs = module_substructs m.ml_mod_expr in
         let has_funcs = List.exists (fun (_, se') ->
           match se' with
           | SEdecl (Dterm _ | Dfix _) -> true
@@ -1605,24 +1592,7 @@ let separate_extraction ~opaque_access lr =
           | _ -> ()
         in
         scan_functor_type_params modtype_table m.ml_mod_type;
-        let subs = match m.ml_mod_expr with
-          | MEstruct (_, s) -> s
-          | MEfunctor (_, _, me) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEapply (me2, _) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEapply (me, _) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) -> get_subs me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEident _ -> []
-        in
+        let subs = module_substructs m.ml_mod_expr in
         pre_scan_meyers_singletons ~in_template:sub_in_template subs
       | _ -> ()
     ) sel

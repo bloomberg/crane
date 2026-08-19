@@ -2192,6 +2192,13 @@ let wrap_api_expr ~storage_ty ~api_ty expr =
   else
     expr
 
+(** Strip a single [Tnamespace] wrapper off a namespaced [Tglob], leaving any
+    other type untouched. Used to see through the namespace qualifier when
+    classifying list-like globals. *)
+let strip_ns_tglob = function
+  | Tnamespace (_, (Tglob _ as inner)) -> inner
+  | t -> t
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -4285,11 +4292,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | t -> t
         in
         let clean_ct = clean_self_ns ct in
-        let strip_ns_tg = function
-          | Tnamespace (_, (Tglob _ as inner)) -> inner
-          | t -> t
-        in
-        match strip_ns_tg clean_ct with
+        match strip_ns_tglob clean_ct with
         | Tglob (g, [elem_ty], _)
           when is_list_global g && Table.is_custom g
                && not (resolves_to_any_type elem_ty) ->
@@ -6185,11 +6188,7 @@ and eta_fun env f args =
              && erase_unresolved_tvars (convert_ml_type_to_cpp_type env tvars param_ty)
                 = convert_ml_type_to_cpp_type env tvars param_ty ->
         let cpp_ty = convert_ml_type_to_cpp_type env tvars param_ty in
-        let strip_ns_tg = function
-          | Tnamespace (_, (Tglob _ as inner)) -> inner
-          | t -> t
-        in
-        ( match strip_ns_tg cpp_ty with
+        ( match strip_ns_tglob cpp_ty with
         | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
           let list_any_ty =
             match cpp_ty with
@@ -6258,7 +6257,7 @@ and eta_fun env f args =
           let needs_concrete =
             (not (Table.is_inline_custom id))
             &&
-            match strip_ns_tg clean_cpp_ty with
+            match strip_ns_tglob clean_cpp_ty with
             | Tglob (_, [et], _) ->
               et <> Ml_type_util.erase_type_to_any et
             | _ -> false
@@ -7504,11 +7503,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  value directly, and casting a [std::any] holding a container to
                  [std::any] would throw at runtime.  Only genuinely concrete
                  target types are unwrapped here. *)
-              let strip_ns_tg = function
-                | Tnamespace (_, (Tglob _ as inner)) -> inner
-                | t -> t
-              in
-              (match strip_ns_tg bare_ty with
+              (match strip_ns_tglob bare_ty with
                | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                  let list_any_ty =
                    match bare_ty with
@@ -8524,10 +8519,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           List.fold_left
             (fun stmts (name, cpp_ty) ->
                if not (is_erased_type cpp_ty) then
-                 let strip_ns_tglob = function
-                   | Tnamespace (_, (Tglob _ as inner)) -> inner
-                   | t -> t
-                 in
                  let stripped = strip_ns_tglob cpp_ty in
                  let cast_expr =
                    match stripped with
