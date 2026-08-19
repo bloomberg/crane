@@ -2013,7 +2013,7 @@ and pp_cpp_expr env args t =
     str "([]() -> std::any { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\"); return std::any{}; })()"
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
@@ -2077,15 +2077,30 @@ and pp_cpp_expr env args t =
   | CPPpair _ ->
     CErrors.anomaly (Pp.str "CPPpair reached the printer; this is a loopify-internal node")
   | CPPcond (cond, then_expr, else_expr) ->
-    pp_cpp_expr env args cond
+    (* Wrap the whole ternary in parentheses like the other ternary sites, so a
+       conditional used as a subexpression cannot bind incorrectly against a
+       surrounding operator. *)
+    str "("
+    ++ pp_cpp_expr env args cond
     ++ str " ? "
     ++ pp_cpp_expr env args then_expr
     ++ str " : "
     ++ pp_cpp_expr env args else_expr
+    ++ str ")"
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
   | CPPbrace_init -> str "{}"
-  | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
+  | CPPunop (op, e) ->
+    (* Parenthesize the operand only when it is a lower-precedence compound
+       expression (a binary operator or ternary), so that e.g. [!(a == b)] is
+       not emitted as the mis-parsed [!a == b]. Leaf operands like [&x] / [!flag]
+       stay unparenthesized. *)
+    let operand =
+      match e with
+      | CPPbinop _ | CPPcond _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
+      | _ -> pp_cpp_expr env args e
+    in
+    str op ++ operand
   | CPPany_cast (ty, e) ->
     if is_any_type ty then
       pp_cpp_expr env args e
@@ -2145,7 +2160,7 @@ and pp_cpp_stmt env args = function
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sreturn (Some e) ->
     (* Strip std::move from return statements when the inner expression is a
@@ -2178,7 +2193,7 @@ and pp_cpp_stmt env args = function
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sswitch (scrut, ind, branches, default) ->
     (* Generate switch statement for enum class matching. Use pp_global_name to
@@ -3993,7 +4008,7 @@ and pp_cpp_decl_raw env = function
         ++ str " { throw "
         ++ str (sn ()).logic_error
         ++ str "(\""
-        ++ str msg
+        ++ str (escape_cpp_string msg)
         ++ str "\"); })()"
       | _ -> wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty []
     in
@@ -4062,7 +4077,7 @@ and pp_cpp_decl_raw env = function
         ( str "static_assert("
         ++ pp_cpp_expr env [] e
         ++ str ", \""
-        ++ str s
+        ++ str (escape_cpp_string s)
         ++ str "\");" ) )
   | Denum {de_ref = name; de_ctors = ctors; de_ctor_rocq_names = rocq_names; _}
     ->
