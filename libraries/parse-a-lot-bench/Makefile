@@ -90,16 +90,18 @@ closure-check: coq-extract
 # ---------------------------------------------------------------
 # Corpus staging. Curates the pinned corpus-src/ submodules into a flat,
 # parser-acceptable corpus under $(DATA)/{JSON,CSV,XML}/{Instances,SmallInstances}.
-# Depends on ocaml-build: stage_data.py uses the built runners as the
-# authoritative "does the grammar accept this file?" filter. Run once after
+# Depends on bench-build (ocaml-build + crane-build): stage_data.py uses the built
+# runners as the authoritative "does the grammar accept this file?" filter -- the
+# fast OCaml runner for small files, and the C++ (Crane) runner for the large
+# rungs the OCaml runner would stack-overflow on. Run once after
 # `git submodule update --init` (and again if you re-pin a submodule).
 # ---------------------------------------------------------------
 STAGE := python3 stage_data.py
 
-stage-data: ocaml-build ; DATA=$(DATA) $(STAGE) all
-stage-json: ocaml-build ; DATA=$(DATA) $(STAGE) json
-stage-csv:  ocaml-build ; DATA=$(DATA) $(STAGE) csv
-stage-xml:  ocaml-build ; DATA=$(DATA) $(STAGE) xml
+stage-data: bench-build ; DATA=$(DATA) $(STAGE) all
+stage-json: bench-build ; DATA=$(DATA) $(STAGE) json
+stage-csv:  bench-build ; DATA=$(DATA) $(STAGE) csv
+stage-xml:  bench-build ; DATA=$(DATA) $(STAGE) xml
 
 # ---------------------------------------------------------------
 # Benchmarks. DATA points at a corpus directory laid out as

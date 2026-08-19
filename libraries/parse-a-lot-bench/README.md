@@ -44,9 +44,17 @@ $(DATA)/CSV/Instances    $(DATA)/CSV/SmallInstances
 $(DATA)/XML/Instances    $(DATA)/XML/SmallInstances
 ```
 
-keeping only files the grammar accepts — the *authoritative* filter is the built
-OCaml runner (a candidate is kept iff `run_<fmt>.exe` parses it). The staged
-`data/` tree is gitignored and regenerated on demand. To populate it:
+keeping only files the grammar accepts — the *authoritative* filter is a built
+runner (a candidate is kept iff it parses to `unique`/`ambig`). Small files use
+the fast OCaml runner; the ladders deliberately extend into the ~1.5 MB range to
+**showcase the C++ back end parsing inputs the OCaml one cannot** (OCaml parses
+by deep non-tail recursion and stack-overflows above a few hundred KB — macOS
+caps the main-thread stack below that point, so it can't be raised), so above
+~400 KB the `run_<fmt>_crane.exe` runner is the acceptance authority. Because
+OCaml overflows there, `make bench` cross-checks OCaml-vs-C++ only on the
+≤~400 KB overlap; the larger rungs are a C++ robustness showcase — run
+`run_<fmt>_crane.exe` on them directly. The staged `data/` tree is gitignored and
+regenerated on demand. To populate it:
 
 ```sh
 git submodule update --init          # fetch corpus-src/{json,csv,xml}

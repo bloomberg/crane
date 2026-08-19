@@ -11,12 +11,17 @@ and (for JSON) YAML rather than JSON. This script curates each source into
     data/{JSON,CSV,XML}/{Instances,SmallInstances}
 
 keeping only files the grammar actually accepts. The *authoritative* acceptance
-test is the built OCaml runner (``_build/default/run_<fmt>.exe``): a candidate is
-kept iff the runner parses it to a full result (``parse_result`` = ``unique`` or
-``ambig`` -- a parse *reject* still exits 0, so the exit code alone is not
-enough). A cheap prefilter (ASCII, dialect, element-only) trims the set before we
-spawn runners. Run ``make stage-data`` (which builds the runners first) rather
-than invoking this directly.
+test is a built runner: a candidate is kept iff the runner parses it to a full
+result (``parse_result`` = ``unique`` or ``ambig`` -- a parse *reject* still
+exits 0, so the exit code alone is not enough). Which runner is authoritative
+depends on size: small files use the fast OCaml runner
+(``_build/default/run_<fmt>.exe``), but the ladders deliberately extend past the
+point where the OCaml runner stack-overflows (~a few hundred KB, up to ~1.5 MB)
+to showcase the C++ (Crane) back end handling inputs OCaml cannot -- so above
+``OCAML_SAFE_BYTES`` the Crane runner (``run_<fmt>_crane.exe``) is the acceptance
+authority. A cheap prefilter (ASCII, dialect, element-only) trims the set before
+we spawn runners. Run ``make stage-data`` (which builds both back ends first)
+rather than invoking this directly.
 
 Grammar constraints enforced (see theories/Libraries/ParseALot/Examples):
   * all  -- 7-bit ASCII only (the lexer alphabet's char classes cover ASCII);
@@ -43,19 +48,35 @@ RUNNER = {
     "csv": os.path.join(HERE, "_build", "default", "run_csv.exe"),
     "xml": os.path.join(HERE, "_build", "default", "run_xml.exe"),
 }
+# The C++ (Crane) runners parse via an explicit stack and keep going into the
+# multi-MB range where the OCaml runners stack-overflow, so above OCAML_SAFE_BYTES
+# they are the only back end that can validate a candidate (see `accepts`).
+CRANE_RUNNER = {
+    "json": os.path.join(HERE, "_build", "default", "run_json_crane.exe"),
+    "csv": os.path.join(HERE, "_build", "default", "run_csv_crane.exe"),
+    "xml": os.path.join(HERE, "_build", "default", "run_xml_crane.exe"),
+}
 
 # Rough targets, matching the upstream corpus shape (~100 regular + ~10 small).
 MAX_INSTANCES = 100
 SMALL_COUNT = 10
-JSON_MAX_BYTES = 520_000          # cap the largest JSON slice near upstream's 477KB
-# The OCaml runners parse via deep (non-tail) recursion over the token list and
-# hit `Stack overflow` on very large inputs (measured: XML fine at 400KB / over
-# at ~790KB; CSV fine at 500KB / over at 700KB). Cap the size ladders safely
-# below that so a graded corpus doesn't silently lose its largest rungs. The
-# acceptance filter is still the backstop for anything that overflows anyway.
-XML_MAX_BYTES = 450_000
-CSV_MAX_BYTES = 450_000
-ACCEPT_TIMEOUT = 120              # seconds per runner invocation
+# Size ceilings for the ladders. The point of the large rungs is to *showcase the
+# C++ back end handling inputs the OCaml one cannot*: OCaml parses via deep
+# non-tail recursion and stack-overflows above a few hundred KB (macOS caps the
+# main-thread stack below OCaml's overflow point, so raising `ulimit -s` does not
+# help), while the Crane C++ runner keeps going into the MB range. We cap around
+# 1.5 MB -- comfortably past OCaml's limit yet keeping the slow C++ parse
+# (~20s/MB) tolerable for one-shot runs. Above the cap the parses get long enough
+# that they stop being useful benchmark rungs.
+JSON_MAX_BYTES = 1_500_000
+XML_MAX_BYTES = 1_500_000
+CSV_MAX_BYTES = 1_500_000
+# Below this size the OCaml runner is a fast, equivalent acceptance proxy (OCaml
+# and Crane agree on parse_nodes for every file both accept); at/above it OCaml
+# risks stack overflow, so `accepts` switches to the Crane runner. Measured safe
+# points: XML fine at 400KB / over ~790KB; CSV fine at 500KB / over ~700KB.
+OCAML_SAFE_BYTES = 400_000
+ACCEPT_TIMEOUT = 240             # seconds per runner invocation (C++ ~20s/MB)
 
 
 # --------------------------------------------------------------------------
@@ -74,16 +95,21 @@ def is_ascii_bytes(b: bytes) -> bool:
 
 
 def accepts(fmt: str, path: str) -> bool:
-    """Authoritative filter: the OCaml runner *parses* the file to a full result.
+    """Authoritative filter: the runner *parses* the file to a full result.
 
-    The runner only exits non-zero on a lex failure or exception; a parse
-    *reject* still prints a metadata line and exits 0. Success is signalled by
-    the ``parse_result`` field being ``unique`` or ``ambig`` (see
-    Parser.show_result); anything else (``result_reject: …`` / ``result_error:
-    …``) is a rejection we must drop.
+    Which runner is authoritative depends on size. Below OCAML_SAFE_BYTES the
+    OCaml runner is a fast, equivalent proxy (OCaml and Crane agree on
+    parse_nodes for every file both accept); at/above it the OCaml runner
+    stack-overflows, so we probe with the Crane C++ runner, which is the back end
+    the large rungs exist to showcase. Either runner only exits non-zero on a lex
+    failure or exception; a parse *reject* still prints a metadata line and exits
+    0, so success is signalled by the ``parse_result`` field being ``unique`` or
+    ``ambig`` (see Parser.show_result), not by the exit code.
     """
+    runner = RUNNER[fmt] if os.path.getsize(path) <= OCAML_SAFE_BYTES \
+        else CRANE_RUNNER[fmt]
     try:
-        r = subprocess.run([RUNNER[fmt], path], capture_output=True,
+        r = subprocess.run([runner, path], capture_output=True,
                            timeout=ACCEPT_TIMEOUT)
     except subprocess.TimeoutExpired:
         return False
@@ -98,6 +124,9 @@ def ensure_runner(fmt: str):
     if not os.path.exists(RUNNER[fmt]):
         die(f"missing runner {RUNNER[fmt]} -- run `make ocaml-build` first "
             "(or use `make stage-data`).")
+    if not os.path.exists(CRANE_RUNNER[fmt]):
+        die(f"missing runner {CRANE_RUNNER[fmt]} -- run `make crane-build` first "
+            "(the large rungs are acceptance-checked with the C++ runner).")
 
 
 def reset_dir(fmt: str):
@@ -284,6 +313,9 @@ def stage_csv():
     for p, b in candidates:
         if biggest is None or len(b) > biggest[0]:
             biggest = (len(b), b)      # largest comma+ASCII file, accepted or not
+        if len(b) > CSV_MAX_BYTES:
+            continue                   # over the ceiling: skip the (slow) probe;
+                                       # `biggest` still feeds the slice ladder below
         tmp = os.path.join(DATA, "CSV", "Instances", "._probe.csv")
         with open(tmp, "wb") as f:
             f.write(b)
@@ -299,7 +331,7 @@ def stage_csv():
     if biggest and biggest[0] > 20_000:
         lines = biggest[1].split(b"\n")
         seen = {s for s, _, _ in staged}
-        for target in geometric_targets(20_000, min(biggest[0], CSV_MAX_BYTES), 8):
+        for target in geometric_targets(20_000, min(biggest[0], CSV_MAX_BYTES), 12):
             acc = bytearray()
             for ln in lines:
                 acc += ln + b"\n"
