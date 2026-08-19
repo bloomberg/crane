@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTCLONECTORQUAL
 #define INCLUDED_SEPEXTCLONECTORQUAL
 
-#include "small_vector.h"
 #include <utility>
 #include <variant>
 

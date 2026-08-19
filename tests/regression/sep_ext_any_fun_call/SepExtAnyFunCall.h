@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTANYFUNCALL
 #define INCLUDED_SEPEXTANYFUNCALL
 
-#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <type_traits>

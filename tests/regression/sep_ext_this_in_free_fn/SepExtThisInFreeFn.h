@@ -1,8 +1,6 @@
 #ifndef INCLUDED_SEPEXTTHISINFREEFN
 #define INCLUDED_SEPEXTTHISINFREEFN
 
-#include "small_vector.h"
-
 #include "Datatypes.h"
 #include "ListDef.h"
 

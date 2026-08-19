@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTDOUBLETYPENAME
 #define INCLUDED_SEPEXTDOUBLETYPENAME
 
-#include "small_vector.h"
 #include <memory>
 #include <optional>
 #include <utility>

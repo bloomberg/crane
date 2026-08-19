@@ -1,7 +1,6 @@
 #ifndef INCLUDED_PARSERANYCAST
 #define INCLUDED_PARSERANYCAST
 
-#include "small_vector.h"
 #include <any>
 #include <utility>
 #include <variant>

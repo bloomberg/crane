@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTANYLISTCOLLECT
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
-#include "small_vector.h"
 #include <any>
 #include <utility>
 #include <variant>

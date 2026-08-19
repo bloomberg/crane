@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTPROJECTIONLAMBDA
 #define INCLUDED_SEPEXTPROJECTIONLAMBDA
 
-#include "small_vector.h"
 #include <memory>
 #include <optional>
 #include <variant>

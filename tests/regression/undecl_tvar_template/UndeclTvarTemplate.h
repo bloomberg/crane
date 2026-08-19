@@ -1,7 +1,6 @@
 #ifndef INCLUDED_UNDECLTVARTEMPLATE
 #define INCLUDED_UNDECLTVARTEMPLATE
 
-#include "small_vector.h"
 #include <variant>
 
 #include "Datatypes.h"

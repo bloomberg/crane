@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SEPEXTTUPLEANY
 #define INCLUDED_SEPEXTTUPLEANY
 
-#include "small_vector.h"
 #include <any>
 #include <utility>
 

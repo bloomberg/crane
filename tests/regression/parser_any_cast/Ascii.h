@@ -1,8 +1,6 @@
 #ifndef INCLUDED_ASCII
 #define INCLUDED_ASCII
 
-#include "small_vector.h"
-
 namespace Ascii {
 
 struct Ascii {

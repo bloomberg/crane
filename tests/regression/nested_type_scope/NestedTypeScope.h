@@ -1,7 +1,6 @@
 #ifndef INCLUDED_NESTEDTYPESCOPE
 #define INCLUDED_NESTEDTYPESCOPE
 
-#include "small_vector.h"
 #include <concepts>
 #include <utility>
 
