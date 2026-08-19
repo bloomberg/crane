@@ -635,6 +635,10 @@ val arena_enabled : unit -> bool
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
     [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string
+
+(** Name of the smart-pointer factory function to emit: [crane::make_rc] under
+    [Crane NonAtomicRc], [bsl::make_shared] for the BDE standard library, and
+    [std::make_shared] otherwise. Companion of [shared_ptr_name]. *)
 val make_shared_name : unit -> string
 
 (** Opt inductive types out of runtime arena allocation ([Crane NoArena <ind>]):

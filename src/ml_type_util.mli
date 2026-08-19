@@ -221,16 +221,54 @@ val contains_shared_ptr : Minicpp.cpp_type -> bool
 
 (** Well-known Coq constructor tag indices (positive/Z/uint/decimal/hex/signed). *)
 val positive_xI_idx : int
+
+(** 1-based constructor index of [xO] (the [2n] case) in Rocq's
+    [BinNums.positive]. *)
 val positive_xO_idx : int
+
+(** 1-based constructor index of [xH] (the [1] case) in Rocq's
+    [BinNums.positive]. *)
 val positive_xH_idx : int
+
+(** 1-based constructor index of [Zpos] in Rocq's [BinNums.Z]
+    (constructors [Z0], [Zpos], [Zneg]). *)
 val z_pos_idx : int
+
+(** 1-based constructor index of [Zneg] in Rocq's [BinNums.Z]. *)
 val z_neg_idx : int
+
+(** 1-based constructor index of [Nil] in Rocq's [Decimal.uint] and
+    [Hexadecimal.uint]. *)
 val uint_nil_idx : int
+
+(** 1-based constructor index of [D0] in Rocq's [Decimal.uint]; the digit
+    constructors [D0]..[D9] occupy the contiguous range
+    [decimal_d0_idx]..[decimal_d9_idx]. *)
 val decimal_d0_idx : int
+
+(** 1-based constructor index of [D9], the last digit constructor of Rocq's
+    [Decimal.uint]. *)
 val decimal_d9_idx : int
+
+(** 1-based constructor index of [D0] in Rocq's [Hexadecimal.uint]; the digit
+    constructors [D0]..[Df] occupy the contiguous range
+    [hex_d0_idx]..[hex_df_idx]. *)
 val hex_d0_idx : int
+
+(** 1-based constructor index of [Df], the last digit constructor of Rocq's
+    [Hexadecimal.uint]. *)
 val hex_df_idx : int
+
+(** 1-based constructor index of [UIntDecimal] in Rocq's [Number.uint]. *)
 val num_uint_decimal_idx : int
+
+(** 1-based constructor index of [UIntHexadecimal] in Rocq's [Number.uint]. *)
 val num_uint_hex_idx : int
+
+(** 1-based constructor index of [Pos] in Rocq's [Decimal.signed_int] /
+    [Hexadecimal.signed_int]. *)
 val signed_pos_idx : int
+
+(** 1-based constructor index of [Neg] in Rocq's [Decimal.signed_int] /
+    [Hexadecimal.signed_int]. *)
 val signed_neg_idx : int
