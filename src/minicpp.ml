@@ -679,10 +679,16 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
 
-(** Fold over immediate child expressions of a [cpp_expr].  Mirrors
-    {!iter_expr_children} but threads an accumulator. *)
-let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
-  let fe acc e = f acc e in
+(** Fold over immediate children of a [cpp_expr].  Mirrors
+    {!iter_expr_children} but threads an accumulator: [on_expr] folds over
+    child expressions, [on_stmts] over child statement lists (e.g. a
+    [CPPlambda] body).  Keeping this in lock-step with {!iter_expr_children}
+    matters — a traversal that silently skips lambda bodies would undercount
+    variable uses and can make callers (e.g. the move-safety guard in
+    [Translation.count_state_uses]) emit an unsound [std::move]. *)
+let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
+    ~(on_stmts : 'a -> cpp_stmt list -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
+  let fe acc e = on_expr acc e in
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
   | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
@@ -690,7 +696,8 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
   | CPPbool _ | CPPint _
-  | CPPbrace_init | CPPthis | CPPshared_from_this _ | CPPlambda _ -> acc
+  | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
+  | CPPlambda (_, _, stmts, _) -> on_stmts acc stmts
   | CPPfun_call (fn, args) -> List.fold_left fe (fe acc fn) args
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')

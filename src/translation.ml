@@ -730,8 +730,18 @@ let rewrite_state_threading_moves
     | CPPmove inner -> count_state_uses subst inner
     | _ ->
       fold_expr_children
-        (fun acc child -> acc + count_state_uses subst child)
+        ~on_expr:(fun acc child -> acc + count_state_uses subst child)
+        ~on_stmts:(fun acc stmts ->
+          List.fold_left
+            (fun acc s -> acc + count_state_uses_stmt subst s) acc stmts)
         0 e
+  and count_state_uses_stmt subst s =
+    fold_stmt_children
+      ~on_expr:(fun acc e -> acc + count_state_uses subst e)
+      ~on_stmts:(fun acc stmts ->
+        List.fold_left
+          (fun acc s -> acc + count_state_uses_stmt subst s) acc stmts)
+      0 s
   in
   let rec rewrite_expr subst e =
     match e with

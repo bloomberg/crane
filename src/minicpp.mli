@@ -506,13 +506,17 @@ val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
-(** [fold_expr_children f acc e] folds [f] over the immediate child
-    expressions of [e], threading [acc].  Mirrors {!iter_expr_children}.
-    @param f the folding function applied to each child expression
+(** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
+    children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
+    folds over child expressions and [on_stmts] over child statement lists
+    (e.g. a [CPPlambda] body), so lambda bodies are not silently skipped.
+    @param on_expr fold step for each immediate child expression
+    @param on_stmts fold step for each immediate child statement list
     @param acc the initial accumulator value
-    @return the final accumulator after visiting all child expressions *)
+    @return the final accumulator after visiting all children *)
 val fold_expr_children :
-  ('a -> cpp_expr -> 'a) -> 'a -> cpp_expr -> 'a
+  on_expr:('a -> cpp_expr -> 'a) -> on_stmts:('a -> cpp_stmt list -> 'a) ->
+  'a -> cpp_expr -> 'a
 
 (** [fold_stmt_children ~on_expr ~on_stmts acc s] folds over the immediate
     children of [s], threading [acc].  Mirrors {!iter_stmt_children}.

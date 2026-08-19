@@ -684,7 +684,7 @@ let is_nontrivial_value_ml_type ty =
     Table.is_custom r
     && not (Table.is_custom_scalar_ref r)
     && not (Escape.is_shared_ptr_type ty)
-    && not (is_list_global r && not (Table.is_custom r))
+    && not (is_list_global r)
   | _ -> false
 
 let is_prod_ml_type ty =

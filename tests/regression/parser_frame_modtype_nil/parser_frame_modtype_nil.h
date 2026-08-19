@@ -100,7 +100,7 @@ template <SymbolTypes Ty> struct DefsFn {
     return std::make_pair(std::move(f), [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;
-    }(std::move(top), std::move(rest)));
+    }(std::move(top), rest));
   }
 
   static uint64_t tail_lengths(const std::deque<frame> &frs) {

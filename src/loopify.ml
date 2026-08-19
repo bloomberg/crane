@@ -1692,24 +1692,30 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
     walk expr;
     tbl
   in
-  let collect_reads_stmt stmt =
-    let merge t1 t2 =
-      Hashtbl.iter (fun k v ->
-        let prev = try Hashtbl.find t1 k with Not_found -> 0 in
-        Hashtbl.replace t1 k (prev + v)) t2;
-      t1
-    in
+  let merge t1 t2 =
+    Hashtbl.iter (fun k v ->
+      let prev = try Hashtbl.find t1 k with Not_found -> 0 in
+      Hashtbl.replace t1 k (prev + v)) t2;
+    t1
+  in
+  let rec collect_reads_stmt stmt =
     match stmt with
     | Sexpr (CPPbinop ("=", CPPvar _, rhs)) -> collect_reads rhs
     | Sasgn (_, _, rhs) -> collect_reads rhs
     | Sexpr e -> collect_reads e
     | Sreturn (Some e) -> collect_reads e
-    | Sif (cond, _, _) -> collect_reads cond
     | s ->
+      (* Recurse through nested statement lists — both arms of an [Sif], the
+         [Smatch]/[Sswitch] branch bodies, [Sblock]/[Swhile] bodies — so a
+         read in a *later* sibling branch is visible to [read_after].  A
+         condition-only walk (the previous [Sif (cond, _, _)] arm) missed
+         those reads and could [std::move] a value still read in a following
+         branch. *)
       let tbl = Hashtbl.create 4 in
       iter_stmt_children
-        ~on_expr:(fun e -> merge tbl (collect_reads e) |> ignore)
-        ~on_stmts:(fun _ -> ())
+        ~on_expr:(fun e -> ignore (merge tbl (collect_reads e)))
+        ~on_stmts:(fun stmts ->
+          List.iter (fun s -> ignore (merge tbl (collect_reads_stmt s))) stmts)
         s;
       tbl
   in
