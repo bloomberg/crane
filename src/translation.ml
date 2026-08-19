@@ -6407,10 +6407,9 @@ and eta_fun env f args =
          (Tdummy Ktype) domain position, and if so, return the position index,
          the concrete C++ type to use, and the full ML domain. *)
       let try_recover_erased_return_type () =
-        let rec resolve_tmeta = function
-          | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
-          | t -> t
-        in
+        (* [resolve_tmeta] is the one included from Ml_type_util (via the
+           module-level [include]); it is identical to the local shadow that
+           used to be defined here. *)
         match tctx.current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
