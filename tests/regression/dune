@@ -6382,3 +6382,16 @@
   (alias runtest)
   (deps arena_tree.t.exe)
   (action (run ./arena_tree.t.exe))))
+
+(subdir typeclass_enum_eq
+ (rule
+  (targets typeclass_enum_eq.t.exe)
+  (deps TypeclassEnumEq.vo typeclass_enum_eq.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclass_enum_eq.t.exe typeclass_enum_eq.cpp typeclass_enum_eq.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typeclass_enum_eq.t.exe)
+  (action (run ./typeclass_enum_eq.t.exe))))
+
+
