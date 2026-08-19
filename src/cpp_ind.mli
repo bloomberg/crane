@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Pretty-printing of inductive-type and top-level declarations to C++.
+(** Pretty-printing of inductive-type and top-level declarations to C++.
 
    This module renders MiniML inductives ([ml_ind]) and declarations
    ([ml_decl]/[ml_spec]) into their C++ surface syntax. It has two families of

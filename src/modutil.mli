@@ -40,6 +40,9 @@ val struct_iter :
   ml_structure ->
   unit
 
+(** Callback applied to each global reference encountered by the
+    reference-traversal iterators below ({!type_iter_references},
+    {!ast_iter_references}, and friends). *)
 type do_ref = GlobRef.t -> unit
 
 (** Apply [do_ref] to every [GlobRef.t] in an ML type.

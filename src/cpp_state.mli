@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* This module holds the mutable, per-extraction rendering state and registries
+(** This module holds the mutable, per-extraction rendering state and registries
    shared across the C++ pretty-printers. It owns the current render context
    ([render_ctx], with save/restore snapshots), the method and name-resolution
    registries, the [std::]-namespace name configuration ([std_names]),

@@ -1,22 +1,39 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Pre-computed C++ name resolution cache.
+(** {1 Name Resolution}
 
-   This module moves name resolution logic out of cpp.ml's pretty-printer into a
-   pre-computation phase that runs during translation. The cache maps GlobRef.t
-   values to resolved C++ names, eliminating the need for complex name
-   resolution at render time.
+    Pre-computed C++ name resolution cache.
 
-   The cache is populated once per extraction pass by [create], which scans the
-   full ml_structure and resolves every inductive type name and global function
-   name according to the same rules that cpp.ml previously applied at render
-   time (wrapper qualification, eponymous record merging, collision detection,
-   etc.).
+    This module moves name resolution logic out of [cpp.ml]'s pretty-printer
+    into a pre-computation phase that runs during translation. The cache maps
+    [GlobRef.t] values to resolved C++ names, eliminating the need for complex
+    name resolution at render time.
 
-   Usage: let nrc = Name_resolution.create analysis wrapper_module_table ... in
-   match Name_resolution.resolve_type nrc r with | Some name -> (* use
-   pre-resolved name *) | None -> (* fall back to current logic *) *)
+    The cache is populated once per extraction pass by {!create}, which scans
+    the full [ml_structure] and resolves every inductive type name and global
+    function name according to the same rules that [cpp.ml] previously applied at
+    render time (wrapper qualification, eponymous record merging, collision
+    detection, etc.).
+
+    Runs {i after} {!Structure_analysis.analyze} (whose {!Structure_analysis.t}
+    result it consumes) and {i before} [cpp.ml]'s rendering pass, which queries
+    it in preference to re-deriving names.
+
+    {2 Usage}
+
+    {[
+      let nrc = Name_resolution.create analysis wrapper_module_table ... in
+      match Name_resolution.resolve_type nrc r with
+      | Some name -> (* use pre-resolved name *)
+      | None -> (* fall back to current logic *)
+    ]}
+
+    {b Side-effect caveat.} Unlike a naive render-time resolver, {!create} must
+    avoid [Common.pp_global] / [Common.pp_global_name], because those mutate
+    [Common]'s renaming tables; touching them at cache-creation time would emit
+    premature renaming entries and change the output. This is why term names are
+    deliberately {i not} pre-computed (see {!resolve_term}). *)
 
 open Names
 open Minicpp

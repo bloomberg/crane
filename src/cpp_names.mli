@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* This module turns Coq [GlobRef.t]s and inductive references into their C++
+(** This module turns Coq [GlobRef.t]s and inductive references into their C++
    names and qualified paths. It provides string and [Pp.t] renderings of
    globals, field names, and inductive/enum type names, together with the
    namespace and struct qualification needed to reference them from a given

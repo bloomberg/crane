@@ -16,6 +16,24 @@ open Minicpp
 open Names
 open Table
 
+(** {1 Translation: MiniML to MiniCpp}
+
+    Expression-level lowering from the extracted {!Miniml} AST to the
+    C++-oriented {!Minicpp} AST. This is the second stage of the pipeline
+    ({v Rocq CIC --> MiniML --> MiniCpp --> C++ v}), sitting below the
+    declaration-level generators in {!Gen_decls} (which call into {!gen_expr},
+    {!gen_stmts}, and the type-conversion helpers here) and above {!Cpp_print},
+    which renders the resulting MiniCpp.
+
+    Besides the core expression/statement/type generators, this module exposes
+    a family of pure analysis helpers — ownership and escape inference, type
+    variable collection, monad detection, numeral folding, and constructor
+    field-name registration — that {!Gen_decls} shares so declaration and
+    expression codegen agree on names, signatures, and calling conventions.
+    A small amount of mutable per-module state (the local-inductive set and
+    [method_self_ns]) controls whether inductive references are namespace- or
+    sibling-qualified. *)
+
 (** {2 Local Inductive Context}
     Tracks inductives defined in the current module scope. When set, references
     to these inductives won't be wrapped in Tnamespace, so they appear as

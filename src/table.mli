@@ -11,15 +11,23 @@
 (************************************************************************)
 
 (** Extraction environment tables, custom extraction mappings, and configuration
-    parameters. *)
+    parameters.
+
+    This module is the plugin's central mutable registry: it holds the custom
+    [Extract Inductive]/[Extract Constant] mappings, cached inductive metadata,
+    the global extraction flags, and the per-run reset hooks that clear all of
+    the above between extractions.  Most other modules read and write this state
+    rather than threading it explicitly. *)
 
 open Names
 open Libnames
 open Miniml
 open Declarations
 
+(** Sets of global references, keyed on the canonical form of [GlobRef.t]. *)
 module Refset' : CSig.USetS with type elt = GlobRef.t
 
+(** Maps from global references (canonical [GlobRef.t]) to arbitrary values. *)
 module Refmap' : CSig.UMapS with type key = GlobRef.t
 
 (** Get a safe basename identifier from a global reference. *)

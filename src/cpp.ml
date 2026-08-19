@@ -482,17 +482,6 @@ let rec prlist_with_doc_safe_sep sep = function
     in
     p ++ boundary ++ prlist_with_doc_safe_sep sep rest
 
-(** Pretty-print a structure element (label, elem) pair. Handles modules, module
-    types, and declarations.
-
-    @param is_header  When [true], emit header-mode output (struct definitions,
-                      concept declarations, [using] aliases).  When [false],
-                      emit implementation-mode output (out-of-line function
-                      bodies, skipping header-only constructs).
-    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
-                      nodes; typically [pp_decl] or [pp_hdecl].
-    @return Pretty-printer document for the element, or [mt ()] if the element
-            produces no output in the current pass. *)
 (** Try to extract a named concept from a module type.
 
     Strips [MTwith] constraints (which have no C++ concept equivalent) and
@@ -586,6 +575,17 @@ let pp_template_param (mbid, mt) =
       else
         concept_body ++ str " " ++ param_name
 
+(** Pretty-print a structure element (label, elem) pair. Handles modules, module
+    types, and declarations.
+
+    @param is_header  When [true], emit header-mode output (struct definitions,
+                      concept declarations, [using] aliases).  When [false],
+                      emit implementation-mode output (out-of-line function
+                      bodies, skipping header-only constructs).
+    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
+                      nodes; typically [pp_decl] or [pp_hdecl].
+    @return Pretty-printer document for the element, or [mt ()] if the element
+            produces no output in the current pass. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
     let body = f d in

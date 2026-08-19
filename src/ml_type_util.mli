@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* This module collects the predicates and transformations over MiniML types
+(** This module collects the predicates and transformations over MiniML types
    ([Miniml.ml_type]) and C++ types ([Minicpp.cpp_type]) that are used
    throughout the Coq -> C++ extraction pipeline. It provides type
    classification (erased / unit / void / list / option / prod / monadic /

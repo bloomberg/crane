@@ -672,6 +672,15 @@ let rec is_any_type = function
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
+(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
+    with a concrete (non-[std::any]) element type.  Used to detect when a
+    grammar-framework [List<std::any>] value needs its element type restored
+    via the converting constructor rather than a plain [any_cast]. *)
+let is_list_with_concrete_elem = function
+  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
+  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
+  | _ -> false
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -684,15 +693,6 @@ let rec is_any_type = function
     ([Tvar(0..N, _)]) and loopification-internal types
     ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
     outside, it is qualified as [StructName::id]. *)
-(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
-    with a concrete (non-[std::any]) element type.  Used to detect when a
-    grammar-framework [List<std::any>] value needs its element type restored
-    via the converting constructor rather than a plain [any_cast]. *)
-let is_list_with_concrete_elem = function
-  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
-  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
-  | _ -> false
-
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1049,6 +1049,15 @@ and deque_elem_extract_expr elem_ty src_expr =
   end else
     extract_from_any elem_ty src_expr
 
+(** Pretty-print a MiniCpp expression as C++ source.  The central expression
+    printer of the module; dispatches on every {!Minicpp.cpp_expr} form and
+    recurses into {!pp_cpp_stmt} for block/statement-valued expressions.
+
+    @param env   name environment: the de Bruijn name list plus the set of
+                 identifiers currently in scope
+    @param args  arguments accumulated by callers (already pretty-printed) to be
+                 applied once the head expression is reached, via [pp_apply_cpp]
+    @param t     the expression to render *)
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -3142,6 +3151,8 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
   in
   fold_cmds (mt ()) cmds
 
+(** Pretty-print an already-converted MiniCpp type with no parenthesization and
+    no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)
 let pp_type t = pp_cpp_type false [] t
 
 (** Print a template parameter type keyword (typename or concept constraint). *)

@@ -460,9 +460,6 @@ let rec is_typeclass_type_cpp = function
 let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
   make_refset_can ()
 
-(** Check if an inductive packet qualifies as flat: single constructor, no kept
-    type parameters, not coinductive, not mutual, no self-referencing fields.
-    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type
     arguments (e.g. [list (tree A)] counts for [tree]).
@@ -481,6 +478,9 @@ let rec type_mentions_kn ?packet_idx ~descend_arr kn ty =
   | Miniml.Tmeta { contents = Some t } -> mentions t
   | _ -> false
 
+(** Check if an inductive packet qualifies as flat: single constructor, no kept
+    type parameters, not coinductive, not mutual, no self-referencing fields.
+    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
 let is_flat_inductive_packet kn ind i =
   try
     let p = ind.ind_packets.(i) in

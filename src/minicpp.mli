@@ -1,21 +1,24 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Target language for extraction: a core C++ called MiniCpp.
+(** Target language for extraction: a core C++ called MiniCpp.
 
-   Crane's extraction pipeline has two intermediate representations:
+    Crane's extraction pipeline has two intermediate representations:
 
-   Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
-   --[cpp.ml]--> C++
+    {[ Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+       --[cpp.ml]--> C++ ]}
 
-   MiniML (miniml.ml) handles type erasure, signature computation, and ML-level
-   optimizations on a language-agnostic functional AST. MiniCpp (this file)
-   captures C++-specific idioms: shared_ptr memory management,
-   std::variant, templates, concepts, namespaces, structs with visibility, move
-   semantics, enum classes, and constructors.
+    {!Miniml} handles type erasure, signature computation, and ML-level
+    optimizations on a language-agnostic functional AST.  MiniCpp (this file)
+    captures C++-specific idioms: [shared_ptr] memory management,
+    [std::variant], templates, concepts, namespaces, structs with visibility,
+    move semantics, enum classes, and constructors.  Every name is
+    pre-resolved ({!cpp_name}) and every inductive pre-classified
+    ({!cpp_ind_kind}) during {!Translation}, so {!Cpp} — the pretty-printer —
+    needs no name-resolution or type-analysis logic of its own.
 
-   See minicpp.ml for a detailed explanation of why both representations are
-   needed and cannot be merged. *)
+    See [minicpp.ml] for a detailed explanation of why both representations are
+    needed and cannot be merged. *)
 
 open Names
 

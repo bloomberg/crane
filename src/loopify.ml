@@ -1172,8 +1172,6 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
   in
   List.map stmt stmts
 
-(** Assign [expr] to the [_result] accumulator variable.
-    Generates the statement list [[\[_result = expr;\]]]. *)
 (** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
     reference).  Wrapping rvalues (function calls, literals, binary ops) in
     [std::move] is a pessimising move — it prevents copy elision on the
@@ -1182,6 +1180,8 @@ let move_if_lvalue = function
   | CPPvar _ as e -> CPPmove e
   | e -> e
 
+(** Assign [expr] to the [_result] accumulator variable.
+    Generates the statement list [[\[_result = expr;\]]]. *)
 let assign_result expr =
   [Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr))]
 

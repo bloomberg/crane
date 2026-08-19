@@ -4347,13 +4347,13 @@ let gen_ind_header_v2
           []
       in
 
-      (** Iterative destructor preventing stack overflow from deeply recursive
-          [shared_ptr] chains.  Drains recursive fields into an explicit stack,
-          only entering nodes with [use_count() == 1] (sole ownership).
+      (* Iterative destructor preventing stack overflow from deeply recursive
+         [shared_ptr] chains.  Drains recursive fields into an explicit stack,
+         only entering nodes with [use_count() == 1] (sole ownership).
 
-          Self-recursive types use [shared_ptr<Self>] directly on the stack.
-          Mutually recursive types use [std::any] to hold different [shared_ptr]
-          types.  Returns [[]] for non-recursive or coinductive types. *)
+         Self-recursive types use [shared_ptr<Self>] directly on the stack.
+         Mutually recursive types use [std::any] to hold different [shared_ptr]
+         types.  Returns [[]] for non-recursive or coinductive types. *)
       let iterative_destructor =
         (* Scoped-arena redesign: recursive fields are ordinary smart pointers
            even for arena-backed values (the region only owns the payload
@@ -4362,9 +4362,9 @@ let gen_ind_header_v2
            needed here exactly as for any other recursive type. *)
         if is_coinductive then []
         else
-          (** Check whether ML type [t] is a reference to [ref_name] applied to
-              the same type variables [ref_vars] (i.e., a direct recursive or
-              mutual recursive occurrence). *)
+          (* Check whether ML type [t] is a reference to [ref_name] applied to
+             the same type variables [ref_vars] (i.e., a direct recursive or
+             mutual recursive occurrence). *)
           let rec is_ref_to ref_name ref_vars = function
             | Miniml.Tglob (r, args, _) ->
               globref_equal r ref_name
@@ -4466,9 +4466,9 @@ let gen_ind_header_v2
             flush_raw ();
             List.rev !stmts
           in
-          (** Build drain statements for classified fields.  [Direct] fields get
-              a simple [push_back(std::move(field))].  [List g] fields with a
-              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
+          (* Build drain statements for classified fields.  [Direct] fields get
+             a simple [push_back(std::move(field))].  [List g] fields with a
+             custom mapping (e.g. std::deque) iterate elements onto the stack. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
               let fe = CPParrow (CPPvar _alt_id, field_id) in
@@ -4560,15 +4560,15 @@ let gen_ind_header_v2
                       Sraw (fes ^ ".reset();") ])]
               | _ -> []) classified_fields
           in
-          (** For each constructor, classify recursive fields and build an
-              [Sif_decl] that uses [get_if] to test the variant alternative
-              and drain recursive fields onto the stack.  Returns [Some stmt]
-              for constructors with recursive fields, [None] otherwise.
+          (* For each constructor, classify recursive fields and build an
+             [Sif_decl] that uses [get_if] to test the variant alternative
+             and drain recursive fields onto the stack.  Returns [Some stmt]
+             for constructors with recursive fields, [None] otherwise.
 
-              @param parent_ty    type to qualify the constructor in [get_if]
-              @param ctor_opt     [Some ctor_id] for qualified access
-                                  ([typename Parent::Ctor]), [None] for bare
-              @param variant_var  identifier of the variant to test *)
+             [parent_ty]    type to qualify the constructor in [get_if]
+             [ctor_opt]     [Some ctor_id] for qualified access
+                            ([typename Parent::Ctor]), [None] for bare
+             [variant_var]  identifier of the variant to test *)
           let mk_ctor_drain parent_ty ctor_opt variant_var i tys_list cnames_arr =
             let classified_fields =
               List.filter_map
@@ -4678,10 +4678,10 @@ let gen_ind_header_v2
                 [(Tref variant_t_ty, Some _v_id)],
                 None, drain_stmts, false)
             in
-            (** Build the per-partner drain logic used inside the while loop.
-                For each partner type, generates an [Sif_decl] that casts the
-                [std::any] stack entry to [shared_ptr<Partner>], then drains
-                the partner's recursive fields into the shared stack. *)
+            (* Build the per-partner drain logic used inside the while loop.
+               For each partner type, generates an [Sif_decl] that casts the
+               [std::any] stack entry to [shared_ptr<Partner>], then drains
+               the partner's recursive fields into the shared stack. *)
             let gen_partner_branch (pname, pcnames, ptys, _) =
               let partner_ty = Tglob (pname, ty_vars, []) in
               let partner_drains =
