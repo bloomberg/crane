@@ -15,6 +15,7 @@ CoqMakefile.conf
 
 # Benchmark result files
 *_results.json
+benchmarks.csv
 
 # Fetched third-party reference headers (Vince La's csv-parser csv.hpp), pulled
 # by `make vendor/csv-parser/csv.hpp` and checksum-verified; never committed.
