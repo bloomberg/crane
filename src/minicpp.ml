@@ -257,11 +257,6 @@ and cpp_expr =
     (* crane::arena_alloc<T> factory: allocates a T in the ambient arena and
        returns a raw T*.  Used (like CPPmk_shared) as the callee of a
        CPPfun_call for arena-mode recursive-field allocation. *)
-  | CPParena_clone of cpp_type
-    (* crane::arena_clone<T> factory: sharing-preserving deep copy, used
-       (like CPParena_alloc) as the callee of a CPPfun_call, taking the
-       *source pointer* (not a dereferenced value) for a recursive-field
-       clone in an arena-mode deep-copy constructor. *)
   | CPParena_shared_alloc of cpp_type
     (* crane::arena_shared_alloc<T> factory: allocates a T into T's single
        thread-local shared capsule and returns a crane::capsule<T> (not a
@@ -494,7 +489,6 @@ let map_expr
   | CPPvisit -> e
   | CPPmk_shared ty -> CPPmk_shared (ft ty)
   | CPParena_alloc ty -> CPParena_alloc (ft ty)
-  | CPParena_clone ty -> CPParena_clone (ft ty)
   | CPParena_shared_alloc ty -> CPParena_shared_alloc (ft ty)
   | CPParena_make ty -> CPParena_make (ft ty)
   | CPPmk_reuse ty -> CPPmk_reuse (ft ty)
@@ -621,7 +615,7 @@ let map_stmt
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
+  | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
@@ -691,7 +685,7 @@ let fold_expr_children (f : 'a -> cpp_expr -> 'a) (acc : 'a) (e : cpp_expr) : 'a
   let fe acc e = f acc e in
   match e with
   | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_clone _ | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
+  | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _

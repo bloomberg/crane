@@ -2,15 +2,25 @@
 // Distributed under the terms of the GNU LGPL v2.1 license.
 // arena.h — region ("arena") allocation for Crane-extracted recursive inductives.
 //
-// Memory model (handle-owns-arena):
-//   A recursive inductive extracted in arena mode is a *handle* value that owns a
-//   `crane::arena`.  Its recursive fields are raw pointers into that arena.  The
-//   whole value is destroyed in O(1) by dropping the arena (one bulk free), with
-//   no per-node `free` and no reference counting.
+// Memory model (scope-owns-arena):
+//   Arena-ness is a property of a *region*, decided at run time, not a property
+//   of a type.  Layout never changes: a recursive field is the same smart-pointer
+//   handle it is in a non-arena build, and every call site is byte-identical.
+//   What the `Crane Arena` master switch changes is only which factory the
+//   recursive-field constructor calls.  Whether that factory bump-allocates
+//   depends on whether a `crane::arena_scope` is installed on the current thread
+//   when it runs; with no scope, allocation goes to the heap as usual.
+//
+//   An earlier design keyed arenas to *types* (`Crane Arena t` made t's recursive
+//   fields raw pointers into an owned region).  That forced deep copies, forbade
+//   escape, infected every reachable type, and made arena and non-arena code
+//   non-interoperable because the layout differed.  It is gone.
 //
 // Safety:
-//   - Nodes are only reachable through the owning handle, so a raw node pointer
-//     cannot outlive its arena (lifetime bugs are hard to express).
+//   - Values may escape their scope.  An escaping node holds a refcounted
+//     *keeper* for the region (see `acquire_arena_keeper` below), so the region
+//     outlives the scope exactly as long as something still points into it.  The
+//     pathological case is a delayed free, not a dangling pointer.
 //   - `std::pmr::monotonic_buffer_resource` never runs element destructors, so a
 //     node whose payload is *not* trivially destructible (e.g. holds a
 //     std::string or another value type) would leak.  We prevent that with a
@@ -19,9 +29,10 @@
 //     run in reverse on arena drop.  Memory stays leak-free either way.
 //
 // Threading:
-//   A `crane::arena` has a single owner (its handle).  It is not shared across
-//   threads; this matches Crane's clone-at-boundary concurrency model.  Not
-//   thread-safe by design.
+//   The active arena and its keeper are thread-local: a scope installed on one
+//   thread does not affect allocation on another.  A single `crane::arena` is
+//   not itself thread-safe, which matches Crane's clone-at-boundary concurrency
+//   model.  Not thread-safe by design.
 
 #pragma once
 
@@ -32,7 +43,6 @@
 #include <memory_resource>
 #include <new>
 #include <type_traits>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -51,8 +61,8 @@ public:
     arena(arena&&) noexcept            = default;
     arena& operator=(arena&&) noexcept = default;
 
-    // Regions are not copyable: value-copying an arena-mode handle deep-copies
-    // its node graph into a *fresh* arena at the handle level, not here.
+    // Regions are not copyable.  Copying an extracted value never reaches here:
+    // handles alias in O(1) whether or not the pointee is arena-backed.
     arena(const arena&)            = delete;
     arena& operator=(const arena&) = delete;
 
@@ -91,13 +101,12 @@ private:
 };
 
 // -- Ambient arena -----------------------------------------------------------
-// First-slice threading strategy: instead of passing an arena through every
-// allocating function's signature, allocation sites use the current thread's
-// ambient arena, whose lifetime is bounded by an [arena_scope] RAII guard the
-// caller installs around a build.  Not a general solution (a value must not
-// outlive the scope that built it) but the minimal delta to a working,
-// benchmarkable arena representation; explicit-parameter / handle-owned models
-// are the follow-up for the general safe API.
+// Rather than thread an arena through every allocating function's signature,
+// allocation sites consult the current thread's ambient arena, whose lifetime is
+// bounded by an [arena_scope] RAII guard the caller installs around a build.
+// This is what makes region membership dynamic, and hence layout-invariant: the
+// same generated code allocates from a region or from the heap depending only on
+// whether a scope is open.  Escape is permitted; see [acquire_arena_keeper].
 
 inline arena*& current_arena_ptr() noexcept
 {
@@ -244,96 +253,13 @@ std::shared_ptr<T> arena_make_shared(Args&&... args)
     return std::shared_ptr<T>(p, [keeper](T* q) noexcept { q->~T(); });
 }
 
-// -- Sharing-preserving deep copy ---------------------------------------
-// Generated arena-mode copy constructors (Crane Arena) recursively clone
-// every reachable node, because raw pointers carry no refcount to bump. A
-// naive per-field `arena_alloc<T>(*src)` clones each *reference* to a node,
-// not each node: if the source value is a DAG (the same node pointer reached
-// through more than one field/parent — e.g. a hash-consed/interned value,
-// see Crane Intern), every additional reference re-clones the whole subtree
-// hanging off it. That turns one O(size-of-DAG) copy into something
-// exponential in the DAG's sharing depth. `arena_clone<T>` fixes this by
-// memoizing on source-pointer identity for the duration of one top-level
-// copy: the first time a given source node is seen it is cloned (invoking
-// its own copy constructor, which recurses into `arena_clone` again for its
-// own pointer fields); every subsequent reference to that same source
-// pointer within the same top-level copy reuses the already-cloned target,
-// restoring the source's sharing structure in the copy.
-//
-// The memo is thread-local and cleared automatically between unrelated
-// top-level copies (tracked via a call-depth counter): only the outermost
-// `arena_clone` invocation in a given call chain clears it, so nested
-// recursive clones (reached while that outermost call is still on the
-// stack) share one memo, and the memo never leaks entries across unrelated
-// copies, which matters since a `const void*` source address is not a
-// stable identity of node *content* — it silently keys the wrong node if
-// left stale.
-inline std::unordered_map<const void*, void*>& arena_clone_memo() noexcept
-{
-    static thread_local std::unordered_map<const void*, void*> m;
-    return m;
-}
-
-inline int& arena_clone_depth() noexcept
-{
-    static thread_local int d = 0;
-    return d;
-}
-
-// -- Debug instrumentation: quantify clone volume ---------------------------
-// Counts, per-process, how many times arena_clone actually allocates (a
-// memo miss -- a genuine new node copy) vs. how many times it's called at
-// all (misses + memo hits). Compiled in only under CRANE_ARENA_PROFILE, so
-// it costs nothing in normal builds. Read via arena_clone_stats().
-#ifdef CRANE_ARENA_PROFILE
-struct arena_clone_stats_t {
-    std::atomic<unsigned long long> calls{0};
-    std::atomic<unsigned long long> misses{0};
-};
-inline arena_clone_stats_t& arena_clone_stats() noexcept
-{
-    static arena_clone_stats_t s;
-    return s;
-}
-#endif
-
-template <typename T>
-T* arena_clone(const T* src)
-{
-    if (src == nullptr) {
-        return nullptr;
-    }
-#ifdef CRANE_ARENA_PROFILE
-    arena_clone_stats().calls.fetch_add(1, std::memory_order_relaxed);
-#endif
-    struct depth_guard {
-        depth_guard() { if (++arena_clone_depth() == 1) arena_clone_memo().clear(); }
-        ~depth_guard() { --arena_clone_depth(); }
-    } guard;
-
-    auto& memo = arena_clone_memo();
-    auto  it   = memo.find(static_cast<const void*>(src));
-    if (it != memo.end()) {
-        return static_cast<T*>(it->second);
-    }
-#ifdef CRANE_ARENA_PROFILE
-    arena_clone_stats().misses.fetch_add(1, std::memory_order_relaxed);
-#endif
-    // Insert only after the recursive copy fully completes: Coq inductives
-    // are well-founded (no cycles), so no nested clone call can re-enter on
-    // this same `src` while its own copy is still under construction.
-    T* dst = arena_alloc<T>(*src);
-    memo.emplace(static_cast<const void*>(src), static_cast<void*>(dst));
-    return dst;
-}
-
 // -- Shared arena capsules ----------------------------------------------
 // Phase 1 (runtime-only, no codegen/Coq surface yet) of the shared-arena-
 // capsule design (see ~/crane/docs/shared-arena-capsule-plan.md). A
 // `crane::arena` is single-owner: dropping it frees everything in one shot,
 // which is exactly wrong for a value that gets stored into a long-lived
 // structure (a memo table) and aliased from many places over time — every
-// such store would otherwise have to `arena_clone` the whole value into the
+// such store would otherwise have to deep-copy the whole value into the
 // destination's own arena. `shared_arena` instead lets the *arena itself* be
 // referenced-counted: `freeze()` moves an existing (unshared, already-built)
 // arena into a refcounted capsule in O(1) (no allocation is copied); copying

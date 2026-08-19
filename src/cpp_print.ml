@@ -1826,9 +1826,6 @@ and pp_cpp_expr env args t =
   | CPParena_alloc t ->
     Table.mark_needs_arena ();
     cpp_angle "crane::arena_alloc" (pp_cpp_type false [] t)
-  | CPParena_clone t ->
-    Table.mark_needs_arena ();
-    cpp_angle "crane::arena_clone" (pp_cpp_type false [] t)
   | CPParena_shared_alloc t ->
     Table.mark_needs_arena ();
     cpp_angle "crane::arena_shared_alloc" (pp_cpp_type false [] t)

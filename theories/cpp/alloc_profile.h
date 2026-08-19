@@ -3,7 +3,7 @@
 // alloc_profile.h -- opt-in global allocation counters for measuring
 // Crane-generated code's total heap allocation volume (count + bytes),
 // independent of any one type's own instrumentation (e.g. arena.h's
-// CRANE_ARENA_PROFILE, which only counts arena_clone calls). Compiled in
+// CRANE_ARENA_PROFILE, which only counts arena bumps and capsule freezes). Compiled in
 // only when CRANE_ALLOC_PROFILE is defined; zero overhead otherwise.
 //
 // Usage: define CRANE_ALLOC_PROFILE, include this header once from the

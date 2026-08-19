@@ -62,11 +62,6 @@ static void *run_main(void *arg) {
         auto [ts, _rest] = JSON::lex_json(input);
         ts_opt = std::move(ts);
     }
-#ifdef CRANE_ARENA_PROFILE
-    fprintf(stderr, "[arena_clone] after lex: calls=%llu misses=%llu\n",
-            crane::arena_clone_stats().calls.load(),
-            crane::arena_clone_stats().misses.load());
-#endif
     if (!ts_opt.has_value()) {
         fprintf(stderr, "Lex failure\n");
         a->result = 1;
@@ -75,11 +70,6 @@ static void *run_main(void *arg) {
     long num_tokens = static_cast<long>(ts_opt->size());
 
     auto pr = JSON::parse_json(*ts_opt);
-#ifdef CRANE_ARENA_PROFILE
-    fprintf(stderr, "[arena_clone] after parse: calls=%llu misses=%llu\n",
-            crane::arena_clone_stats().calls.load(),
-            crane::arena_clone_stats().misses.load());
-#endif
 
     using PR = JSON::JSON_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;

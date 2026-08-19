@@ -5068,7 +5068,7 @@ let gen_ind_header_v2
       in
 
       (* Scoped-arena redesign: the old [arena_deep_copy_ctor] (which
-         deep-[arena_clone]d every recursive raw-pointer field on copy, the
+         deep-copied every recursive raw-pointer field on copy, the
          source of the composite-hang failure mode) is gone entirely.  Recursive
          fields are now ordinary refcounted smart pointers, so the normal copy
          path is already correct and O(1) per node. *)
