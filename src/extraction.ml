@@ -2055,10 +2055,13 @@ let rec gentypvar_ok sg c =
   | Cast (c, _, _) -> gentypvar_ok sg c
   | _ -> false
 
-(** {2 From a constant to a ML declaration}
+(** {2 From a constant to a ML declaration} *)
 
-    Adds universally quantified type variables to a type. *)
-let add_tvars n t =
+(** Currently the identity on the type: the historical behaviour of prefixing
+    universally-quantified type-variable arrows (see the commented reference
+    body) is disabled, so the count argument is ignored and [t] is returned
+    unchanged. *)
+let add_tvars _n t =
   t (* if n <= 1 then t else Tarr (Tvar (n-1), add_tvars (n-1) t) *)
 
 (** Removes erased type arguments from a type scheme. *)

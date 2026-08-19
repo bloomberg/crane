@@ -71,10 +71,12 @@ val create :
     @return [Some info] if the type has been pre-classified, [None] otherwise *)
 val resolve_type : t -> GlobRef.t -> resolved_type_name option
 
-(** Look up a pre-resolved term name. Returns None if not cached.
+(** Look up a pre-resolved term name.
     @param t the name resolution cache
     @param r the global reference to look up
-    @return always [None] currently — term names are not pre-computed *)
+    @return always [None]: term names are deliberately not pre-computed (to
+            avoid renaming side effects at cache-creation time), so this is a
+            stub kept only to mirror {!resolve_type}. *)
 val resolve_term : t -> GlobRef.t -> resolved_term_name option
 
 (** Register a type name resolution. Used for late entries (e.g., local
@@ -84,10 +86,12 @@ val resolve_term : t -> GlobRef.t -> resolved_term_name option
     @param name the resolved name information to store *)
 val register_type : t -> GlobRef.t -> resolved_type_name -> unit
 
-(** Register a term name resolution.
-    @param t the cache to update
-    @param r the global reference to register
-    @param name the resolved name information to store *)
+(** Register a term name resolution. Currently a no-op: term names are not
+    cached (see {!resolve_term}); this is a stub kept to mirror
+    {!register_type}.
+    @param t the cache (left unchanged)
+    @param r the global reference (ignored)
+    @param name the resolved name information (ignored) *)
 val register_term : t -> GlobRef.t -> resolved_term_name -> unit
 
 (** Check if a type is an eponymous record (pre-computed).

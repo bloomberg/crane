@@ -72,7 +72,7 @@ and inductive_kind =
   | TypeClass of GlobRef.t option list  (** Type class methods *)
 
 (** A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body]. If
-    the inductive is logical ([ip_logical = false]), then all other fields are
+    the inductive is logical ([ip_logical = true]), then all other fields are
     unused. Otherwise, [ip_sign] is a signature concerning the arguments of the
     inductive, [ip_vars] contains the names of the type variables surviving in
     ML, [ip_types] contains the ML types of all constructors.

@@ -4150,10 +4150,10 @@ let gen_ind_header_v2
       let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
       (* Compute a field's final C++ type, including the arena-mode
-         pointerization of recursive fields.  Shared between the constructor
-         struct declarations below and the arena deep-copy constructor
-         (which needs to tell apart a recursive raw-pointer field, which it
-         must clone, from a plain scalar field, which it can copy). *)
+         pointerization of recursive fields.  Used for the per-constructor
+         nested struct field declarations below. (The old arena deep-copy
+         constructor that also consumed this was removed in the scoped-arena
+         redesign; see the note near [value_copy_clone_methods].) *)
       let compute_field_cpp_ty ty =
         let cpp_ty =
           convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
