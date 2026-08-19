@@ -72,14 +72,33 @@ crane-build: crane-extract \
   _build/default/run_xml_crane.exe
 
 # ---------------------------------------------------------------
-# Reference baselines (simdjson / libxml2)
+# Reference baselines: the fastest common third-party C++ parser per format.
+#   * JSON -- simdjson   (run_json_ref.cpp)
+#   * XML  -- pugixml     (run_xml_pugi.cpp);  libxml2 also kept (run_xml_ref.cpp)
+#   * CSV  -- Vince La's csv-parser (run_csv_ref.cpp), a vendored single header
+# simdjson/pugixml/libxml2 are brew/system deps; csv-parser's `csv.hpp` is
+# fetched (checksum-verified) into vendor/ by the rule below -- not committed.
 # ---------------------------------------------------------------
 SIMDJSON_FLAGS := $(shell pkg-config --cflags --libs simdjson 2>/dev/null || echo "-I/opt/homebrew/include -lsimdjson")
 XML2_FLAGS     := $(shell xml2-config --cflags --libs 2>/dev/null || pkg-config --cflags --libs libxml-2.0 2>/dev/null || echo "-I/usr/include/libxml2 -lxml2")
+PUGIXML_FLAGS  := $(shell pkg-config --cflags --libs pugixml 2>/dev/null || echo "-I/opt/homebrew/include -L/opt/homebrew/lib -lpugixml")
 
-bench-build: ocaml-build crane-build
+# Vince La's csv-parser single header (MIT), pinned to release 5.3.0 by SHA-256.
+CSVPARSER_VER    := 5.3.0
+CSVPARSER_SHA256 := 330b0d8950ff8b566ae726c022e2396f1dcdee36cb9ad6f6c1badc8febbf4319
+CSVPARSER_HDR    := vendor/csv-parser/csv.hpp
+
+$(CSVPARSER_HDR):
+	@mkdir -p $(dir $@)
+	curl -fsSL -o $@ https://github.com/vincentlaucsb/csv-parser/releases/download/$(CSVPARSER_VER)/csv.hpp
+	@echo "$(CSVPARSER_SHA256)  $@" | shasum -a 256 -c - \
+	  || { echo "csv.hpp checksum mismatch -- refusing to use it"; rm -f $@; exit 1; }
+
+bench-build: ocaml-build crane-build $(CSVPARSER_HDR)
 	c++ -O2 -std=c++17 $(SIMDJSON_FLAGS) -o _build/default/run_json_ref.exe run_json_ref.cpp
 	c++ -O2 -std=c++17 $(XML2_FLAGS)     -o _build/default/run_xml_ref.exe  run_xml_ref.cpp
+	c++ -O2 -std=c++17 $(PUGIXML_FLAGS)  -o _build/default/run_xml_pugi.exe run_xml_pugi.cpp
+	c++ -O2 -std=c++17 -pthread -Ivendor/csv-parser -o _build/default/run_csv_ref.exe run_csv_ref.cpp
 
 # ---------------------------------------------------------------
 # Interned-DFA closure certificate report

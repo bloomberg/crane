@@ -130,11 +130,15 @@ int main(int argc, char **argv) {
      * `volatile` prevents the compiler from dead-code-eliminating the call
      * since the result is otherwise unused.
      */
-    volatile int n = count_nodes(doc);
+    int n = count_nodes(doc);
     if (n < 0) {
         fprintf(stderr, "rejected: duplicate object key\n");
         return 1;
     }
-    (void)n;
+    /* Emit a result line so report_bench.py can read the outcome, matching the
+     * OCaml/Crane runners' convention. `parse_nodes` here is simdjson's DOM node
+     * count; it need not equal ParseALot's (the report's shared node column comes
+     * from the ParseALot back ends). */
+    printf("{\"parse_result\":\"ok\",\"parse_nodes\":%d}\n", n);
     return 0;
 }
