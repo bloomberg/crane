@@ -58,6 +58,25 @@ let pp_global k r = str (str_global k r)
 (** Pretty-print a global name (without custom mapping) as a Pp.t. *)
 let pp_global_name k r = str (Common.pp_global k r)
 
+(** Memoized fully-qualified Rocq path of a global reference.
+
+    [GlobRef.print] resolves to absolute kernel names (via [to_string]), so its
+    rendering is a stable pure function of the reference for the whole process —
+    not visibility-dependent. It stringifies a [Pp.t] and is invoked on nearly
+    every reference during name qualification, so the result is cached. The cache
+    never needs resetting: the same reference always prints the same path,
+    consistent with the polymorphic [Hashtbl] keying already used in this file for
+    [GlobRef.t]. *)
+let globref_full_path_cache : (GlobRef.t, string) Hashtbl.t = Hashtbl.create 512
+
+let globref_full_path r =
+  match Hashtbl.find_opt globref_full_path_cache r with
+  | Some s -> s
+  | None ->
+    let s = Pp.string_of_ppcmds (GlobRef.print r) in
+    Hashtbl.add globref_full_path_cache r s;
+    s
+
 (** Pretty-print a module path as a Pp.t. *)
 let pp_modname mp = str (Common.pp_module mp)
 
@@ -342,7 +361,7 @@ let rocq_to_cpp_path s =
                            enclosing struct context
     @return [true] iff [r]'s Rocq path is nested under [struct_name_str] *)
 let is_nested_in_struct r struct_name_str =
-  let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+  let full_path = globref_full_path r in
   Common.contains_substring full_path (cpp_to_rocq_path struct_name_str)
 
 (** Find the right ancestor qualifier for a type that lives inside a parent
@@ -430,7 +449,7 @@ let struct_qualifier_for r name_str =
        or when the type already carries a qualified C++ name whose Rocq path
        nests under the struct's parent module. *)
     else
-      let full_path = Pp.string_of_ppcmds (GlobRef.print r) in
+      let full_path = globref_full_path r in
       let struct_name_dotted = cpp_to_rocq_path struct_name_str in
       let parent_struct_dotted =
         match String.rindex_opt struct_name_dotted '.' with
@@ -474,7 +493,7 @@ let needs_global_qualifier x =
     if is_qualified_name name_str then
       false
     else
-      let full_path = Pp.string_of_ppcmds (GlobRef.print x) in
+      let full_path = globref_full_path x in
       let struct_name_str = Pp.string_of_ppcmds struct_name in
       let struct_name_dotted = cpp_to_rocq_path struct_name_str in
       if Common.contains_substring full_path struct_name_dotted then
