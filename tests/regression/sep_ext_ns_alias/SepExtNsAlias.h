@@ -1,8 +1,6 @@
 #ifndef INCLUDED_SEPEXTNSALIAS
 #define INCLUDED_SEPEXTNSALIAS
 
-#include "small_vector.h"
-
 #include "Datatypes.h"
 
 namespace SepExtNsAlias {

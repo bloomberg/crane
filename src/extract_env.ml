@@ -1058,6 +1058,9 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
   reset_renaming_tables AllButExternal;
+  (* The mutual-recursion registry is scoped to one compilation unit; clear it
+     before this unit's dry run repopulates it (see loopify.ml). *)
+  Loopify.clear_mutual_table ();
   let unsafe_needs =
     {
       mldummy = struct_ast_search Mlutil.isMLdummy struc;
@@ -1093,6 +1096,11 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   (* [crane_erase_fn] is emitted on demand; translation sets the flag when it
      wraps a non-lambda function value stored into an erased field. *)
   Table.reset_needs_erase_fn ();
+  (* [arena.h] / [small_vector.h] includes are gated on flags marked during
+     this structure's dry run (loopify/inductive codegen).  Reset them here so
+     one file's needs don't leak into a later file in separate extraction. *)
+  Table.reset_needs_arena ();
+  Table.reset_needs_small_vector ();
   (* First, a dry run, for computing objects to rename or duplicate.
      Also accumulates needed standard headers via require_header. *)
   Common.reset_needed_headers ();
@@ -1370,6 +1378,16 @@ let full_extraction_with_result ?(validate = true) ~opaque_access f lr after_pri
     .v file gets its own C++ output file. *)
 let separate_extraction ~opaque_access lr =
   init true false;
+  (* Run all per-unit cleanup in [~finally] so state is reset even when the
+     body aborts (e.g. the "from inside a module" [user_err] below). *)
+  Fun.protect
+    ~finally:(fun () ->
+      Cpp_state.clear_global_method_registry ();
+      Cpp_state.clear_valid_output_modules ();
+      Cpp_state.clear_global_unmerged ();
+      Common.clear_non_output_modules ();
+      reset () )
+  @@ fun () ->
   let refs, mps = locate_ref lr in
   let struc =
     optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
@@ -1691,12 +1709,7 @@ let separate_extraction ~opaque_access lr =
   ) struc;
   set_phase Impl;
   Common.mpfiles_restore saved_mpfiles;
-  List.iter print struc;
-  Cpp_state.clear_global_method_registry ();
-  Cpp_state.clear_valid_output_modules ();
-  Cpp_state.clear_global_unmerged ();
-  Common.clear_non_output_modules ();
-  reset ()
+  List.iter print struc
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -1707,14 +1720,14 @@ let simple_extraction ~opaque_access r =
   | ([], [mp]) as p -> full_extr opaque_access None p
   | [r], [] ->
     init false false;
-    let struc =
-      optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
-    in
-    warns ();
-    if is_any_custom r then
-      Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-    print_structure_to_file (mono_filename None) false struc;
-    reset ()
+    Fun.protect ~finally:reset (fun () ->
+        let struc =
+          optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
+        in
+        warns ();
+        if is_any_custom r then
+          Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
+        print_structure_to_file (mono_filename None) false struc )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -1724,6 +1737,7 @@ let simple_extraction ~opaque_access r =
     [is_rec] is true, recursively extracts all dependencies. *)
 let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   init true true;
+  Fun.protect ~finally:reset @@ fun () ->
   let dir_m =
     let q = qualid_of_ident m in
     try Nametab.full_name_module q
@@ -1747,8 +1761,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
       print_structure_to_file (module_filename mp) dry [e]
     | _ -> assert false
   in
-  List.iter print struc;
-  reset ()
+  List.iter print struc
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable

@@ -1,8 +1,6 @@
 #ifndef INCLUDED_SEPEXTDRIVERNOINCLUDE
 #define INCLUDED_SEPEXTDRIVERNOINCLUDE
 
-#include "small_vector.h"
-
 #include "Datatypes.h"
 
 namespace SepExtDriverNoInclude {

@@ -3129,4 +3129,7 @@ let reset_tables () =
   init_opaques ();
   reset_modfile ();
   init_glob_tys ();
-  reset_used_custom_imports ()
+  reset_used_custom_imports ();
+  (* Recomputed within each extraction run (see its definition); clear it here
+     so a prior run's boxing decisions don't leak into the next. *)
+  boxed_recursive_inds := Refset'.empty

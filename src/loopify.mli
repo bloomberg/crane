@@ -46,3 +46,8 @@ val register_fundef :
   (Id.t * cpp_type) list ->
   cpp_stmt list ->
   unit
+
+(** Clear the mutual-recursion registry populated by {!register_fundef}. The
+    registry is scoped to one compilation unit, so callers reset it at each
+    unit boundary before repopulating it. *)
+val clear_mutual_table : unit -> unit
