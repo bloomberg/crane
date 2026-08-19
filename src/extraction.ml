@@ -594,7 +594,7 @@ and extract_type_app env sg db (r, s) args =
           let ty = type_of env sg c in
           let ty = extract_type_scheme env sg db ty p in
           extract_term env sg Mlenv.empty ty c [] :: a
-        with e when CErrors.noncritical e -> a
+        with _ -> a
         (* | _ -> a) *) )
       (List.combine s args)
       []
@@ -1388,7 +1388,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
          The fallback preserves positional consistency: we always emit exactly
          one ML type for each type argument position, even if it's Tdummy. *)
       ( try extract_type env sg db 0 a [] :: f (la, lt, lo)
-        with e when CErrors.noncritical e ->
+        with _ ->
           let fallback =
             match EConstr.kind sg (whd_betaiotazeta env sg a) with
             | Ind ((kn, i), _) ->
@@ -1524,7 +1524,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
                   (* Extract its Rocq type and check if it returns Type/Set *)
                   returns_type_sort
                     (Context.Rel.Declaration.get_type decl)
-                with e when CErrors.noncritical e ->
+                with _ ->
                   (* Lookup failed (out of bounds, etc.) - conservatively erase *)
                   false
               in
@@ -1769,7 +1769,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
                         in
                         pending_cpp_meta_fills :=
                           (r, erase_leaves concrete) :: !pending_cpp_meta_fills )
-                    with e when CErrors.noncritical e -> () )
+                    with _ -> () )
                 | _ -> () )
             | Kill _ -> () ))
           param_sign param_args
@@ -1808,7 +1808,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
           | [], _ | _, [] -> List.rev acc
           | Kill Ktype :: s_rest, a :: a_rest ->
             let ty =
-              try extract_type env sg db 0 a [] with e when CErrors.noncritical e -> Tdummy Ktype
+              try extract_type env sg db 0 a [] with _ -> Tdummy Ktype
             in
             extract_promoted s_rest a_rest (ty :: acc)
           | _ :: s_rest, _ :: a_rest -> extract_promoted s_rest a_rest acc
@@ -1961,7 +1961,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
               | Tmeta ({contents = None} as r) ->
                 let ml_ty =
                   try extract_type env sg [] 0 coq_arg []
-                  with e when CErrors.noncritical e -> Tunknown
+                  with _ -> Tunknown
                 in
                 let rec has_unknown = function
                   | Tunknown -> true
@@ -1976,7 +1976,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
-        with e when CErrors.noncritical e -> () );
+        with _ -> () );
       (* The extraction of each branch. *)
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in
@@ -2077,7 +2077,7 @@ and type_expunge_from_sign env = type_expunge_from_sign (mlt_env env)
     reference with the given name. *)
 let is_ref name gr =
   try globref_equal gr (Rocqlib.lib_ref name)
-  with e when CErrors.noncritical e -> false
+  with _ -> false
 
 (* Check if a term's head is a specific global reference *)
 let head_is_ref sg name t =
@@ -2272,7 +2272,7 @@ let extract_std_constant env sg kn body typ =
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let numtvars, t = record_constant_type env sg kn (Some typ) in
   (* Detect sigma type preconditions and register assertions *)
-  (try detect_sigma_assertions env sg kn typ with e when CErrors.noncritical e -> ());
+  (try detect_sigma_assertions env sg kn typ with _ -> ());
   (* The real type [t']: without head products, expanded, *)
   (* and with [Tvar] translated to [Tvar'] (not instantiable). *)
   let l, t' = type_decomp (expand env (var2var' t)) in

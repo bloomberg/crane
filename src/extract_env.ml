@@ -589,7 +589,7 @@ and extract_module access env mp ~all mb =
                   match func_mb.mod_type_alg with
                   | Some alg -> get_functor_return_type alg
                   | None -> None
-                with e when CErrors.noncritical e -> None )
+                with _ -> None )
             | None -> None )
           | _ -> None )
         | MEMoreFunctor _ -> None
@@ -1320,7 +1320,7 @@ let derive_source_file filename =
       else
         resolved
     | _ -> "" (* Not exactly one .v file - can't determine source uniquely *)
-  with e when CErrors.noncritical e -> ""
+  with _ -> ""
 
 (** {2 Recursive extraction in the Rocq toplevel. The vernacular command is
     \verb!Recursive Extraction! [qualid1] ... [qualidn]. Also used when
@@ -1868,7 +1868,7 @@ let extract_and_compile ~opaque_access file l =
       try
         let o = Toolchain.compile_and_test filename in
         (true, o)
-      with e when CErrors.noncritical e -> (false, "")
+      with _ -> (false, "")
     in
     let base = Filename.chop_suffix filename ".cpp" in
     (* Clean up temporary files if this was a temp extraction *)
