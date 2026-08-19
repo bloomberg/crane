@@ -140,7 +140,7 @@ let collect_referenced_ids body =
           do incr i done;
           let word = String.sub s start (!i - start) in
           (try ids := Id.Set.add (Id.of_string word) !ids
-           with e when CErrors.noncritical e -> ())
+           with _ -> ())
         end else incr i
       done
     | _ -> ());
@@ -190,8 +190,7 @@ let lambda_needs_capture
            && String.sub s 0 2 = "(*"
            && s.[String.length s - 1] = ')' ->
       let name = String.sub s 2 (String.length s - 3) in
-      (try (IdSet.add (Id.of_string name) refs, decls)
-       with e when CErrors.noncritical e -> (refs, decls))
+      (try (IdSet.add (Id.of_string name) refs, decls) with _ -> (refs, decls))
     | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
@@ -1062,7 +1061,7 @@ and pp_cpp_expr env args t =
         let ml_ty = Table.find_type ref_name in
         Translation.convert_ml_type_to_cpp_type
           env [] (Translation.ml_codomain ml_ty)
-      with e when CErrors.noncritical e -> Tauto
+      with _ -> Tauto
     in
     let result_str = "_r" in
     let substituted =
@@ -1416,7 +1415,7 @@ and pp_cpp_expr env args t =
               List.nth tys (i - 1)
             | t -> t)) raw in
           result
-        with e when CErrors.noncritical e -> []
+        with _ -> []
       in
       pp_custom
         ~container:n
