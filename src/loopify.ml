@@ -132,6 +132,31 @@ let rec list_drop n = function
   | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
 
+(** [combine_exn ~what l1 l2] is [List.combine] but raises a descriptive
+    [CErrors.anomaly] instead of a bare [Invalid_argument] when the two lists
+    differ in length. These sites pair up structurally-parallel lists (masks,
+    params/args, saved exprs/types) whose lengths are an internal invariant, so a
+    mismatch is a compiler bug worth naming rather than an opaque backtrace. *)
+let combine_exn ~what l1 l2 =
+  let n1 = List.length l1 and n2 = List.length l2 in
+  if n1 <> n2 then
+    CErrors.anomaly
+      (Pp.str
+         (Printf.sprintf "loopify: %s expects equal-length lists (%d vs %d)"
+            what n1 n2));
+  List.combine l1 l2
+
+(** [map2_exn ~what f l1 l2] is [List.map2] with the same descriptive-error
+    contract as {!combine_exn}. *)
+let map2_exn ~what f l1 l2 =
+  let n1 = List.length l1 and n2 = List.length l2 in
+  if n1 <> n2 then
+    CErrors.anomaly
+      (Pp.str
+         (Printf.sprintf "loopify: %s expects equal-length lists (%d vs %d)"
+            what n1 n2));
+  List.map2 f l1 l2
+
 (** {2 Generic AST predicate search}
 
     A single pair of mutually recursive functions that answer the question
@@ -833,7 +858,7 @@ let find_varying_params check params body =
 
 (** Filter a list keeping only elements at positions where [mask] is [true]. *)
 let filter_by_mask mask lst =
-  List.combine mask lst
+  combine_exn ~what:"filter_by_mask" mask lst
   |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
@@ -1189,7 +1214,7 @@ let make_shadow_updates shadow_params args =
     List.map
       (fun ((shadow_id, ty), arg) ->
         ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
-      (List.combine shadow_params args)
+      (combine_exn ~what:"make_shadow_updates" shadow_params args)
   in
   (* Identify which params actually change (filter self-assignments). *)
   let non_trivial =
@@ -3830,7 +3855,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
     @param env The existing type environment
     @return Extended type environment *)
 let make_cont_env cont_vars cont_types env =
-  List.map2 (fun id ty -> (id, ty)) cont_vars cont_types @ env
+  map2_exn ~what:"make_cont_env" (fun id ty -> (id, ty)) cont_vars cont_types @ env
 
 (** Register a call frame in the mutable [frames_ref] accumulator.
 
@@ -4498,7 +4523,7 @@ type enter_rewrite_ctx = {
 }
 
 let partition_saved_invariant invariant_params saved_exprs saved_types =
-  let analysis = List.map2 (fun e ty ->
+  let analysis = map2_exn ~what:"partition_saved_invariant" (fun e ty ->
     match e with
     | CPPvar id when Id.Set.mem id invariant_params -> `Inv (id, ty)
     | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> `Inv (id, ty)

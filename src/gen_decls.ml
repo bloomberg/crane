@@ -112,7 +112,16 @@ let gen_record_cpp name fields ind =
       | _ -> Tany )
     | ty -> ty
   in
-  let l = List.combine fields (non_dummy_constructor_types ind) in
+  let field_types = non_dummy_constructor_types ind in
+  let l =
+    if List.length fields = List.length field_types then
+      List.combine fields field_types
+    else
+      (* Length mismatch (e.g. erased/dummy fields dropped from one side):
+         pair each field with Tunknown rather than crash, mirroring the
+         fallback in [gen_typeclass_cpp]. *)
+      List.map (fun f -> (f, Miniml.Tunknown)) fields
+  in
   let l =
     List.mapi
       (fun i (x, t) ->
@@ -846,7 +855,18 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         else (* Fallback: pair fields with Tunknown if lengths don't match *)
           List.map (fun f -> (f, Miniml.Tunknown)) fields
       in
-      let method_pairs = List.combine fields_with_types method_bodies in
+      let method_pairs =
+        if List.length fields_with_types = List.length method_bodies then
+          List.combine fields_with_types method_bodies
+        else
+          CErrors.anomaly
+            (Pp.str
+               (Printf.sprintf
+                  "gen_decls: eponymous record has %d fields but its \
+                   constructor has %d arguments"
+                  (List.length fields_with_types)
+                  (List.length method_bodies)))
+      in
       let methods =
         List.filter_map
           (fun ((fld, fty), body) -> gen_method (fld, fty) body)

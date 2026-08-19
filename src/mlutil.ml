@@ -171,7 +171,7 @@ let rec mgu = function
     mgu (a, a');
     mgu (b, b')
   | Tglob (r, l, a), Tglob (r', l', a') when GlobRef.CanOrd.equal r r' ->
-    if List.length l <> List.length l' then
+    if List.length l <> List.length l' then (
       Feedback.msg_debug
         Pp.(
           str "mgu: Tglob arg length mismatch for "
@@ -180,6 +180,9 @@ let rec mgu = function
           ++ int (List.length l)
           ++ str " vs "
           ++ int (List.length l') );
+      (* Differing arity means the two applications cannot unify; falling
+         through to [List.combine] would raise a bare [Invalid_argument]. *)
+      raise Impossible );
     List.iter mgu (List.combine l l')
   | Tdummy _, Tdummy _ -> ()
   | Tvar i, Tvar j when Int.equal i j -> ()
