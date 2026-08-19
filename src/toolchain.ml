@@ -136,7 +136,12 @@ let compile_ocaml
     ?outfile
     ?errfile
     infile =
-  if not (Subprocess.executable_available "ocamlopt") then
+  (* Probe the binary actually invoked below ([ocamlfind]), not [ocamlopt] on
+     PATH: otherwise a missing ocamlfind slips past this check and fails later
+     with a raw error instead of the friendly [NoOcamloptFound] handled by
+     callers. *)
+  let ocamlfind = Envars.ocamlfind () in
+  if not (Subprocess.executable_available ocamlfind) then
     raise NoOcamloptFound;
   let errfile =
     match errfile with
@@ -155,7 +160,7 @@ let compile_ocaml
     @ flags
     @ ["-o"; outfile; infile]
   in
-  match compiler_output errfile (Envars.ocamlfind ()) args with
+  match compiler_output errfile ocamlfind args with
   | Unix.WEXITED 0, _ -> ()
   | status, errors ->
     raise (OcamloptError (Subprocess.exit_code status, errors))

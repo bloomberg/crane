@@ -1828,16 +1828,18 @@ let extract_and_compile ~opaque_access file l =
       if in_dune then
         emit_test_status "FAIL_EXTRACT" test_id_str source_file
       else
-        ignore
-          (CErrors.user_err
-             Pp.(
-               test_id
-               ++ spc ()
-               ++ str "failed to extract:"
-               ++ fnl ()
-               ++ str (Printexc.to_string exn)
-               ++ fnl ()
-               ++ str (Printexc.get_backtrace ()) ) );
+        (* Report but do not raise: [CErrors.user_err] would abort the whole
+           command, skipping cleanup and the final status report below, and
+           making the [false] here dead. *)
+        Feedback.msg_warning
+          Pp.(
+            test_id
+            ++ spc ()
+            ++ str "failed to extract:"
+            ++ fnl ()
+            ++ str (Printexc.to_string exn)
+            ++ fnl ()
+            ++ str (Printexc.get_backtrace ()) );
       false
   in
   if extraction_ok then (
@@ -1852,46 +1854,43 @@ let extract_and_compile ~opaque_access file l =
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               Pp.(
-                 test_id ++ spc () ++ str "extracted but clang cannot be found." ) );
+          Feedback.msg_warning
+            Pp.(
+              test_id ++ spc () ++ str "extracted but clang cannot be found." );
         false
       | Toolchain.ClangError (_exit_code, clang_errors) ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               ( if !Flags.quiet then
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but clang failed to compile." )
-                 else
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but clang failed to compile with:"
-                     ++ fnl ()
-                     ++ str clang_errors ) ) );
+          Feedback.msg_warning
+            ( if !Flags.quiet then
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but clang failed to compile." )
+              else
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but clang failed to compile with:"
+                  ++ fnl ()
+                  ++ str clang_errors ) );
         false
       | exn ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               ( if !Flags.quiet then
-                   Pp.(
-                     test_id ++ spc () ++ str "extracted but failed to compile." )
-                 else
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but failed to compile:"
-                     ++ fnl ()
-                     ++ str (Printexc.to_string exn) ) ) );
+          Feedback.msg_warning
+            ( if !Flags.quiet then
+                Pp.(
+                  test_id ++ spc () ++ str "extracted but failed to compile." )
+              else
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but failed to compile:"
+                  ++ fnl ()
+                  ++ str (Printexc.to_string exn) ) );
         false
     in
     (* Phase 3: Run test assertions (if any) embedded in the .v file *)
@@ -1905,7 +1904,11 @@ let extract_and_compile ~opaque_access file l =
     (* Clean up temporary files if this was a temp extraction *)
     if not (Option.has_some file) then (
       if Sys.file_exists filename then Sys.remove filename;
-      if Sys.file_exists base then Sys.remove base );
+      if Sys.file_exists base then Sys.remove base;
+      (* The generated header sits next to the .cpp; remove it too so temp
+         extractions don't leave a .h behind. *)
+      let header = base ^ ".h" in
+      if Sys.file_exists header then Sys.remove header );
     (* Report final status: structured for dune, pretty for interactive *)
     if compilation_ok && tests_ok then
       Feedback.msg_notice

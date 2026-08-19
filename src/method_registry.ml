@@ -460,7 +460,12 @@ let register_methods_for_epon
         | Some l -> l
         | None -> []
       in
-      Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
+      (* Dedup by function reference: the same top-level function can be
+         visited more than once (parent decls overlap module decls), and the
+         candidate list must not emit it twice. *)
+      if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing)
+      then
+        Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
     in
     List.iter
       (fun (_l, se) ->
@@ -557,7 +562,9 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     let existing = match Hashtbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
-    Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
+    (* Dedup by function reference (see the note in [register_methods_for_epon]). *)
+    if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing) then
+      Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
   in
   (* Check if the inductive argument at position [pos] in [ty] uses concrete
      type parameters. Functions specialized to e.g. [tree nat] instead of
@@ -939,7 +946,12 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
     | Some l -> l
     | None -> []
   in
-  Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
+  let cand_ref, _, _, _ = cand in
+  (* Dedup by function reference so a manually-registered method (e.g. from
+     cpp.ml/cpp_ind.ml) isn't appended twice into the candidate list. *)
+  if not (List.exists (fun (r', _, _, _) -> globref_equal r' cand_ref) existing)
+  then
+    Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
 
 (** Check if a function qualifies as a method on [epon_ref] and register it
     if so.  This is the single entry point for the

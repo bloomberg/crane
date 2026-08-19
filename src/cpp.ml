@@ -1147,11 +1147,14 @@ let rec pp_structure_elem ~is_header f = function
                     ++ int (List.length ctor_types)
                     ++ str ")");
                 let field_list = List.combine fields ctor_types in
-                let pp_field (field_ref, field_ty) =
+                let pp_field i (field_ref, field_ty) =
                   let field_name =
                     match field_ref with
                     | Some r -> str (Common.pp_global_name Term r)
-                    | None -> str "_field"
+                    (* Index anonymous fields so multiple of them don't all
+                       collapse to a single duplicate "_field" member (which
+                       would not compile).  Matches gen_decls.ml. *)
+                    | None -> str ("_field" ^ string_of_int i)
                   in
                   let cpp_ty =
                     pp_cpp_type
@@ -1165,7 +1168,8 @@ let rec pp_structure_elem ~is_header f = function
                   cpp_ty ++ spc () ++ field_name ++ str ";"
                 in
                 let fields_pp =
-                  prlist_with_sep fnl pp_field field_list ++ fnl ()
+                  prlist_with_sep fnl (fun p -> p) (List.mapi pp_field field_list)
+                  ++ fnl ()
                 in
                 let non_projection_candidates =
                   List.filter
