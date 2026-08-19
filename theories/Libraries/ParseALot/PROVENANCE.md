@@ -7,6 +7,14 @@ was **not** brought across. The code is licensed under the BSD 3-Clause License
 (see `LICENSE` in this directory); the surrounding Crane repository is licensed
 under LGPL-2.1.
 
+## Scope
+
+The example grammars (JSON, CSV, XML) lex **7-bit ASCII input only**: the lexer
+character classes in `Lexer/RegexBuilders.v` and `Examples/*/Lexer/Literal.v`
+enumerate printable ASCII, with no high-byte/UTF-8 class, so any byte ≥ 128 fails
+to lex (JSON accepts Unicode only via `\uXXXX` escapes). See the "ASCII-only
+scope" note in `Lexer/RegexBuilders.v`.
+
 ## Upstream projects
 
 `parse-a-lot` combines and adapts two independently published, BSD-3-Clause

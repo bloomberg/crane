@@ -8,6 +8,19 @@ From Stdlib Require Import Ascii.
 
 From Crane.Libraries.ParseALot.Utils Require Import AsciiSigma.
 
+(** * ASCII-only scope
+
+    The alphabet ([AsciiSigma.Alphabet]) ranges over all 256 byte values, but the
+    character classes built here and in [PrebuiltRegexes] below ([digit_re],
+    [az_re]/[AZ_re], [ws_re], [punc_re], and the per-grammar unions in
+    [Examples/*/Lexer/Literal.v]) enumerate only 7-bit printable ASCII. There is
+    no high-byte / UTF-8-continuation class, so any input byte >= 128 (indeed any
+    byte outside the enumerated classes) has no matching lexer rule and fails to
+    lex. The example grammars therefore accept ASCII text only; JSON handles
+    Unicode solely through [\uXXXX] escapes (see [json_char_re]), never raw
+    non-ASCII bytes. This is a deliberate choice for ASCII text formats, not a
+    framework limit: extend these unions to cover a wider alphabet. *)
+
 (** Functor providing combinators for building regexes from characters and strings. *)
 Module RegexBuilders (Import R : Regex.T).
 
