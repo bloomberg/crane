@@ -500,7 +500,7 @@ let is_flat_inductive_packet kn ind i =
           p.ip_types
       in
       num_param_vars = 0 && not is_mutual && not is_coinductive_ind && not has_self_ref
-  with _ -> false
+  with e when CErrors.noncritical e -> false
 
 (** Check if [r] is a flat inductive.  First checks the flat-inductives
     registry (populated during Pre phase / global pre-pass).  If not found
@@ -577,7 +577,7 @@ let has_dependent_params r =
           | Context.Rel.Declaration.LocalDef (_, body, ty) ->
             not (Vars.closed0 ty) || not (Vars.closed0 body)
         ) ctx
-      with _ -> false )
+      with e when CErrors.noncritical e -> false )
   | _ -> false
 
 let {Goptions.get = std_lib} =
@@ -1361,7 +1361,7 @@ let output_directory_for_module () =
       System.mkdir full_path;
       full_path
     | _ -> base_dir
-  with _ -> base_dir
+  with e when CErrors.noncritical e -> base_dir
 
 (** Reject a user-supplied extraction target filename that could place generated
     files outside the configured output directory.
@@ -2828,7 +2828,7 @@ let resolve_unit_type () =
   | None ->
     (try let r = Rocqlib.lib_ref "core.unit.type" in
          unit_type_ref := Some r; Some r
-     with _ -> None)
+     with e when CErrors.noncritical e -> None)
 
 let resolve_tt_ctor () =
   match !tt_ctor_ref with
@@ -2836,7 +2836,7 @@ let resolve_tt_ctor () =
   | None ->
     (try let r = Rocqlib.lib_ref "core.unit.tt" in
          tt_ctor_ref := Some r; Some r
-     with _ -> None)
+     with e when CErrors.noncritical e -> None)
 
 let is_unit_type r =
   match resolve_unit_type () with
