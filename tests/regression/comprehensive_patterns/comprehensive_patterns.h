@@ -10,7 +10,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -99,6 +98,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -532,6 +536,11 @@ struct ComprehensivePatterns {
         }
       }
     }
+
+    Tree(const Tree &) = default;
+    Tree &operator=(const Tree &) = default;
+    Tree(Tree &&) noexcept = default;
+    Tree &operator=(Tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
