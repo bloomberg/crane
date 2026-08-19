@@ -179,7 +179,7 @@ let augment_with_args_renaming cref kernel_arg_names =
         match cref with
         | GlobRef.ConstructRef ((kn, _), _) ->
           (try (Global.lookup_mind kn).mind_nparams
-           with _ -> 0)
+           with e when CErrors.noncritical e -> 0)
         | _ -> 0
       in
       let all_override = Arguments_renaming.arguments_names cref in
@@ -321,7 +321,7 @@ let rec ml_callee_is_void = function
         (match ty with Miniml.Tarr _ -> true
          | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
         && ml_type_is_unit (ml_result_type ty)
-      with _ -> false )
+      with e when CErrors.noncritical e -> false )
   | _ -> false
 
 (** {3 Reified ITree helpers}
@@ -2155,7 +2155,7 @@ let rec ml_body_returns_erased_field = function
         ( try
             let field_ty = List.nth non_erased idx in
             ml_return_type_is_erased field_ty
-          with _ -> false )
+          with e when CErrors.noncritical e -> false )
       | _ -> false )
     | None -> false )
   | _ -> false
@@ -2700,7 +2700,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       ( try
           let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
           String.trim tmpl = Printf.sprintf "%%a%d" i
-        with _ -> false )
+        with e when CErrors.noncritical e -> false )
     | _ -> false
   in
   (* PROMOTED TYPE VARIABLES in constructor expressions: Use module-level
@@ -4313,7 +4313,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           (* Only run type propagation for list constructors *)
           let is_list =
             try String.equal (Common.pp_global_name Type n) "list"
-            with _ -> false
+            with e when CErrors.noncritical e -> false
           in
           if not is_list then
             ts
@@ -4850,7 +4850,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                 let erased_ret_ty =
                   let actual_ml_ty =
                     try List.nth ty_ml_tparams (i - 1)
-                    with _ -> Miniml.Tunknown
+                    with e when CErrors.noncritical e -> Miniml.Tunknown
                   in
                   match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
                   | Some ret_ml ->
@@ -5013,7 +5013,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                 let erased_ret_ty =
                   let actual_ml_ty =
                     try List.nth ty_ml_tparams (i - 1)
-                    with _ -> Miniml.Tunknown
+                    with e when CErrors.noncritical e -> Miniml.Tunknown
                   in
                   match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
                   | Some ret_ml ->
@@ -5477,7 +5477,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     ( match body' with
     | MLrel i when i <= n ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields (n - i)) with e when CErrors.noncritical e -> None
       in
       ( match fld with
       | Some fld ->
@@ -5489,7 +5489,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              them *)
           let fld_ty =
             try List.nth non_erased_field_types (n - i)
-            with _ -> Miniml.Tunknown
+            with e when CErrors.noncritical e -> Miniml.Tunknown
           in
           let is_value_field =
             match fld_ty with
@@ -5506,7 +5506,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         CErrors.anomaly (Pp.str "record field index out of bounds") )
     | MLapp ((MLrel i | MLmagic (MLrel i)), args) when i <= n ->
       let fld =
-        try Some (List.nth non_erased_fields (n - i)) with _ -> None
+        try Some (List.nth non_erased_fields (n - i)) with e when CErrors.noncritical e -> None
       in
       let _, env' =
         push_vars'
@@ -5532,7 +5532,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               List.rev_map (gen_expr env') value_args )
         in
         let fld_ty_opt =
-          try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+          try Some (List.nth non_erased_field_types (n - i)) with e when CErrors.noncritical e -> None
         in
         let n_value_args = List.length value_args in
         let erased_cod =
@@ -5570,7 +5570,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         List.concat_map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
-              try Some (List.nth non_erased_fields i) with _ -> None
+              try Some (List.nth non_erased_fields i) with e when CErrors.noncritical e -> None
             in
             let e =
               match fld with
@@ -5722,7 +5722,7 @@ and eta_fun env f args =
           (* This is a heuristic - ideally we'd track types in the env *)
           let name_str = Id.to_string _name in
           String.length name_str >= 5 && String.sub name_str 0 4 = "_tcI"
-        with _ -> false )
+        with e when CErrors.noncritical e -> false )
     | MLapp (MLglob (r, _), _) ->
       (* Parameterized instance application, e.g. numList A H. Check if r's
          return type (after stripping Tarr) is a typeclass type, or if it
@@ -5751,7 +5751,7 @@ and eta_fun env f args =
             ( try
                 let fty = List.nth non_dummy idx in
                 Table.is_typeclass_type fty
-              with _ -> false )
+              with e when CErrors.noncritical e -> false )
           | _ -> false
         in
         field_is_tc
@@ -5880,7 +5880,7 @@ and eta_fun env f args =
               match arg with
               | MLdummy _ -> None
               | _ -> ( try Some (ml_arg_to_template_type arg)
-                        with _ -> None ) )
+                        with e when CErrors.noncritical e -> None ) )
             args
         in
         ( match head_ty with
@@ -5914,7 +5914,7 @@ and eta_fun env f args =
        (e.g., unsigned int after resolving a promoted type var). *)
     let fn_ml_ty = find_type id in
     ();
-    let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with _ -> fn_ml_ty in
+    let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with e when CErrors.noncritical e -> fn_ml_ty in
     let fn_param_ml_tys =
       let rec collect = function
         | Miniml.Tarr (t, rest) ->
@@ -6816,7 +6816,7 @@ and eta_fun env f args =
     in
     let callee_env_ty =
       match callee_rel_idx with
-      | Some i -> (try Some (get_env_type i) with _ -> None)
+      | Some i -> (try Some (get_env_type i) with e when CErrors.noncritical e -> None)
       | None -> None
     in
     let callee_cpp_erased =
@@ -6912,7 +6912,7 @@ and eta_fun env f args =
             if n < List.length args && ml_codomain_is_tvar ty then
               List.length args
             else n
-          with _ -> List.length args )
+          with e when CErrors.noncritical e -> List.length args )
       | None -> List.length args
     in
     let n_args = List.length args in
@@ -6952,7 +6952,7 @@ and eta_fun env f args =
                 | _ -> []
               in
               skip_and_collect n_args ml_ty
-            with _ -> [] )
+            with e when CErrors.noncritical e -> [] )
         | _ -> []
       in
       if remaining_ml_tys <> [] then
@@ -7028,7 +7028,7 @@ and eta_fun env f args =
               let all_ft = Table.record_field_types r in
               let non_erased = filter_value_types all_ft in
               ( try ml_codomain_erases_to_any n (List.nth non_erased idx)
-                with _ -> false )
+                with e when CErrors.noncritical e -> false )
             | _ -> false )
           | None -> false )
         | MLrel i ->
@@ -7631,7 +7631,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           match env_ty with
           | Miniml.Tglob _ -> Some env_ty
           | _ -> None
-        with _ -> None
+        with e when CErrors.noncritical e -> None
       in
       ( match env_ty_opt with
       | Some let_ty -> resolve_tvar_type typ let_ty
@@ -7672,7 +7672,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           | Pcons (GlobRef.ConstructRef (ip, _), _) ->
             Miniml.Tglob (GlobRef.IndRef ip, [], [])
           | _ -> typ
-        with _ -> typ )
+        with e when CErrors.noncritical e -> typ )
     | _ -> typ
   in
   (* Check if this is an enum inductive type *)
@@ -8220,7 +8220,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           erase_unresolved_tvars (convert_ml_type_to_cpp_type env tvars ty)
         ) ids0 in
         Tglob (ind_ref, tyargs, [])
-      with _ -> typ
+      with e when CErrors.noncritical e -> typ
     else typ
   in
   (* Custom match templates may use %scrut multiple times (e.g., option: "if
@@ -10681,7 +10681,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         List.concat_map
           (fun (i, ((renamed_name, _), (_, ty))) ->
             let fld =
-              try Some (List.nth non_erased_fields i) with _ -> None
+              try Some (List.nth non_erased_fields i) with e when CErrors.noncritical e -> None
             in
             let e =
               match fld with
