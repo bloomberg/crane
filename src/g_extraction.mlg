@@ -255,13 +255,6 @@ VERNAC COMMAND EXTEND PrintExtractionForeign CLASSIFIED AS QUERY
   -> {Feedback.msg_notice (print_extraction_foreign ()) }
 END
 
-(*
-VERNAC COMMAND EXTEND ResetExtractionForeign CLASSIFIED AS SIDEFF
-| [ "Reset" "Extraction" "Foreign" ]
-  -> { reset_extraction_foreign () }
-END
-*)
-
 (* Overriding of a Rocq object by an ML one *)
 (* TODO: currently is inlined, no option for otherwise *)
 VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF

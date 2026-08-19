@@ -411,11 +411,7 @@ let struct_qualifier_for r name_str =
   | Some struct_name when not render_ctx.rc_in_struct ->
     let struct_name_str = Pp.string_of_ppcmds struct_name in
     (* Already contains the struct prefix — nothing to add. *)
-    if
-      Common.contains_substring
-        name_str
-        (Str.global_replace (Str.regexp_string "::") "::" struct_name_str ^ "::")
-    then
+    if Common.contains_substring name_str (struct_name_str ^ "::") then
       mt ()
     (* Eponymous records are merged into the module struct at global scope,
        so they don't get an extra wrapper prefix.  However, when the record

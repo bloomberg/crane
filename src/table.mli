@@ -262,15 +262,6 @@ val needs_arena : unit -> bool
 (** Reset the arena-needed flag. *)
 val reset_needs_arena : unit -> unit
 
-(** Mark that the [rc.h] runtime header is needed (non-atomic rc codegen). *)
-val mark_needs_rc : unit -> unit
-
-(** Check whether the [rc.h] runtime header is needed. *)
-val needs_rc : unit -> bool
-
-(** Reset the rc-needed flag. *)
-val reset_needs_rc : unit -> unit
-
 (** Mark that [small_vector.h] is needed (small-buffer-optimized destructor
     drain worklist codegen). *)
 val mark_needs_small_vector : unit -> unit

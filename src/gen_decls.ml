@@ -3434,8 +3434,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     match ty with
     | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
       (match ty with Tshared_ptr inner -> inner | _ -> ty)
-    | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
-      (match ty with Tshared_ptr inner -> inner | _ -> ty)
     | Tglob (r, args, es) ->
       Tglob (r, List.map strip_self_ptr args, es)
     | Tfun (args, ret) ->

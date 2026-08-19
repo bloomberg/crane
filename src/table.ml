@@ -300,16 +300,6 @@ let needs_arena () = !needs_arena_flag
 
 let reset_needs_arena () = needs_arena_flag := false
 
-(* Set when the non-atomic reference-counted pointer (crane::rc) is used, so the
-   emitter includes the [rc.h] runtime header. *)
-let needs_rc_flag = ref false
-
-let mark_needs_rc () = needs_rc_flag := true
-
-let needs_rc () = !needs_rc_flag
-
-let reset_needs_rc () = needs_rc_flag := false
-
 (* Set when generated code uses [crane::small_vector] (the small-buffer-
    optimized worklist used by the iterative destructor drain), so the
    emitter includes the [small_vector.h] runtime header. *)
@@ -2752,8 +2742,6 @@ let monads = Summary.ref Refmap'.empty ~name:"CraneExtrMonad"
 let binds = Summary.ref Refmap'.empty ~name:"CraneExtrMonadBind"
 
 let rets = Summary.ref Refmap'.empty ~name:"CraneExtrMonadRet"
-
-let effects = Summary.ref Refmap'.empty ~name:"CraneExtrEffect"
 
 let add_monad m b r s = monads := Refmap'.add m (b, r, s) !monads
 
