@@ -1,0 +1,236 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(* This module collects the predicates and transformations over MiniML types
+   ([Miniml.ml_type]) and C++ types ([Minicpp.cpp_type]) that are used
+   throughout the Coq -> C++ extraction pipeline. It provides type
+   classification (erased / unit / void / list / option / prod / monadic /
+   value types), arrow and codomain analysis, type-variable substitution and
+   erasure, and constructor-name resolution. It also exposes a block of
+   well-known Coq constructor indices (positive, Z, decimal, hex, signed,
+   etc.) so that numeric-literal encodings can be recognised by tag. *)
+
+(** {2 Constructor name resolution} *)
+
+(** Struct name for the C++ representation of a constructor global reference. *)
+val ctor_struct_name_of_ref : ?fallback_idx:int -> Names.GlobRef.t -> string
+
+(** Struct identifier for the C++ representation of a constructor global reference. *)
+val ctor_struct_id_of_ref :
+  ?fallback_idx:int -> Names.GlobRef.t -> Names.variable
+
+(** {2 Type resolution and variable maps} *)
+
+(** Resolve a MiniML type through any metavariable indirection. *)
+val resolve_tmeta : Miniml.ml_type -> Miniml.ml_type
+
+(** Build the substitution mapping type variables of one C++ type to the
+    corresponding sub-types of another. *)
+val extract_tvar_map :
+  Minicpp.cpp_type ->
+  Minicpp.cpp_type -> (Names.variable * Minicpp.cpp_type) list
+
+(** Find the arguments of a self- or mutually-recursive occurrence in a type. *)
+val find_self_ref_args :
+  is_self_or_mutual:(Names.GlobRef.t -> bool) ->
+  Miniml.ml_type -> Miniml.ml_type list option
+
+(** {2 Erasure classification} *)
+
+(** Whether a MiniML type is fully erased. *)
+val is_erased_ml_type : Miniml.ml_type -> bool
+
+(** Whether a MiniML type contains an erased component anywhere within it. *)
+val ml_type_contains_erased : Miniml.ml_type -> bool
+
+(** {2 Arrow and codomain analysis} *)
+
+(** The codomain (final result type) of a MiniML arrow type. *)
+val ml_codomain : Miniml.ml_type -> Miniml.ml_type
+
+(** Count the number of value-carrying arrows in a MiniML type. *)
+val count_ml_value_arrows : Miniml.ml_type -> int
+
+(** Whether the codomain of a MiniML type is a type variable. *)
+val ml_codomain_is_tvar : Miniml.ml_type -> bool
+
+(** Count the total number of arrows in a MiniML type. *)
+val count_ml_arrows : Miniml.ml_type -> int
+
+(** Whether a MiniML type is monadic. *)
+val is_monadic_ml_type : Miniml.ml_type -> bool
+
+(** {2 Unit and void classification} *)
+
+(** Whether a MiniML type is void. *)
+val ml_type_is_void : Miniml.ml_type -> bool
+
+(** Whether a MiniML type is unit. *)
+val ml_type_is_unit : Miniml.ml_type -> bool
+
+(** Whether a C++ type is the unit type. *)
+val is_cpp_unit_type : Minicpp.cpp_type -> bool
+
+(** Rewrite occurrences of the unit type into void within a C++ type. *)
+val voidify_unit_in_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Whether a MiniML type is unit or void. *)
+val ml_type_is_unit_or_void : Miniml.ml_type -> bool
+
+(** {2 Value-type filtering} *)
+
+(** Keep only the value-carrying types from a list of MiniML types. *)
+val filter_value_types : Miniml.ml_type list -> Miniml.ml_type list
+
+(** Whether the codomain of a MiniML type erases to [any]. *)
+val ml_codomain_erases_to_any :
+  ?has_dummy:bool -> int -> Miniml.ml_type -> bool
+
+(** {2 Type variables in C++ types} *)
+
+(** Whether a C++ type contains a type variable. *)
+val contains_tvar : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type contains a type variable not bound by the given list. *)
+val has_unbound_tvar : Names.variable list -> Minicpp.cpp_type -> bool
+
+(** {2 Well-known global references} *)
+
+(** Whether a global reference is [option]. *)
+val is_option_global : Names.GlobRef.t -> bool
+
+(** Whether a global reference is [prod]. *)
+val is_prod_global : Names.GlobRef.t -> bool
+
+(** Structural equality of two C++ types. *)
+val cpp_ty_eq : Minicpp.cpp_type -> Minicpp.cpp_type -> bool
+
+(** Whether a global reference is [list]. *)
+val is_list_global : Names.GlobRef.t -> bool
+
+(** Struct names for the two [list] constructors (cons and nil). *)
+val list_ctor_struct_names : Names.GlobRef.t -> string * string
+
+(** {2 Dummy and erased C++ types} *)
+
+(** Whether a C++ type is the dummy type. *)
+val is_cpp_dummy_type : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type is erased. *)
+val is_erased_type : Minicpp.cpp_type -> bool
+
+(** Whether every component of a C++ type is erased. *)
+val is_all_erased : Minicpp.cpp_type -> bool
+
+(** The template arguments of a C++ type. *)
+val extract_template_args : Minicpp.cpp_type -> Minicpp.cpp_type list
+
+(** Erase a C++ type to [any]. *)
+val erase_type_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Whether a MiniML type is an erased type. *)
+val is_ml_erased_ty : Miniml.ml_type -> bool
+
+(** {2 Skipped types} *)
+
+(** Whether a C++ type should be skipped during extraction. *)
+val is_skipped_cpp_type : Minicpp.cpp_type -> bool
+
+(** Whether a MiniML type should be skipped during extraction. *)
+val is_skipped_ml_type : Miniml.ml_type -> bool
+
+(** {2 [any] and erasure detection} *)
+
+(** Whether a C++ type contains [any] anywhere within it. *)
+val has_tany_in_type : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type contains an erased type anywhere within it. *)
+val has_erased_type_in_type : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type is a dummy Prop type. *)
+val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
+
+(** Filter erased type arguments out of a C++ type-argument list, optionally
+    preserving positions. *)
+val filter_erased_type_args :
+  ?preserve_positions:bool -> Minicpp.cpp_type list -> Minicpp.cpp_type list
+
+(** Whether a C++ type has higher-kinded-type erasure. *)
+val has_hkt_erasure : Minicpp.cpp_type -> bool
+
+(** {2 Type-variable presence, substitution, and erasure} *)
+
+(** Whether a MiniML type contains a type variable. *)
+val has_tvar : Miniml.ml_type -> bool
+
+(** Map a transformation over all MiniML types embedded in an AST. *)
+val map_types_in_ast :
+  (Miniml.ml_type -> Miniml.ml_type) -> Miniml.ml_ast -> Miniml.ml_ast
+
+(** Substitute type variables (by index) within a MiniML type. *)
+val subst_tvars_type :
+  (int * Miniml.ml_type) list -> Miniml.ml_type -> Miniml.ml_type
+
+(** Erase type variables within a C++ type. *)
+val tvar_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Whether a C++ type contains an unnamed type variable. *)
+val has_unnamed_tvar : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type is erased. *)
+val type_is_erased : Minicpp.cpp_type -> bool
+
+(** {2 Function argument and return decomposition} *)
+
+(** The final return type of a MiniML type. *)
+val ml_return_type : Miniml.ml_type -> Miniml.ml_type
+
+(** Split a MiniML type into its argument types and return type, given the
+    already-known leading argument types. *)
+val get_args_and_ret :
+  Miniml.ml_type list ->
+  Miniml.ml_type -> Miniml.ml_type list * Miniml.ml_type
+
+(** Strip [n] leading arrows from a MiniML type, if possible. *)
+val strip_tarr_n : int -> Miniml.ml_type -> Miniml.ml_type option
+
+(** Strip reference and const qualifiers from a C++ type. *)
+val strip_cpp_ref_const : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Count the real (non-erased) arguments among a list of MiniML AST nodes. *)
+val count_real_ml_args : Miniml.ml_ast list -> int
+
+(** {2 Value-type and copyability classification} *)
+
+(** Whether a C++ type is an inductive value type. *)
+val is_inductive_value_type : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type is trivially copyable. *)
+val is_trivially_copyable_type : Minicpp.cpp_type -> bool
+
+(** Whether a MiniML type is a non-trivial value type. *)
+val is_nontrivial_value_ml_type : Miniml.ml_type -> bool
+
+(** Whether a MiniML type is a product type. *)
+val is_prod_ml_type : Miniml.ml_type -> bool
+
+(** Whether a C++ type contains a [shared_ptr] anywhere within it. *)
+val contains_shared_ptr : Minicpp.cpp_type -> bool
+
+(** {2 Well-known Coq constructor tag indices} *)
+
+(** Well-known Coq constructor tag indices (positive/Z/uint/decimal/hex/signed). *)
+val positive_xI_idx : int
+val positive_xO_idx : int
+val positive_xH_idx : int
+val z_pos_idx : int
+val z_neg_idx : int
+val uint_nil_idx : int
+val decimal_d0_idx : int
+val decimal_d9_idx : int
+val hex_d0_idx : int
+val hex_df_idx : int
+val num_uint_decimal_idx : int
+val num_uint_hex_idx : int
+val signed_pos_idx : int
+val signed_neg_idx : int
