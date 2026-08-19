@@ -369,6 +369,16 @@ public:
     }
   }
 
+  /// Mirror image of t: swap the left and right subtree at every node.
+  Tree<A> mirror() const {
+    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
+      return Tree<A>::leaf();
+    } else {
+      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      return Tree<A>::node(a2->mirror(), a1, a0->mirror());
+    }
+  }
+
   /// Merge two trees t1 and t2 element-wise using combine.
   /// Subtrees beyond the shape of the other tree are truncated.
   template <typename F0>

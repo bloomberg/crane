@@ -42,6 +42,13 @@ Fixpoint flatten {A : Type} (t : tree A) : list A :=
   | node l x r => flatten l ++ (x :: flatten r)
   end.
 
+(** Mirror image of [t]: swap the left and right subtree at every node. *)
+Fixpoint mirror {A : Type} (t : tree A) : tree A :=
+  match t with
+  | leaf => leaf
+  | node l x r => node (mirror r) x (mirror l)
+  end.
+
 (** Merge two trees [t1] and [t2] element-wise using [combine].
     Subtrees beyond the shape of the other tree are truncated. *)
 Fixpoint merge {A : Type}
