@@ -90,3 +90,25 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
+
+(subdir rose_shared_suffix_drain
+ (rule
+  (targets rose_shared_suffix_drain.t.exe)
+  (deps RoseSharedSuffixDrain.vo rose_shared_suffix_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rose_shared_suffix_drain.t.exe rose_shared_suffix_drain.cpp rose_shared_suffix_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rose_shared_suffix_drain.t.exe)
+  (action (run ./rose_shared_suffix_drain.t.exe))))
+
+(subdir rose_shared_suffix_drain_size
+ (rule
+  (targets rose_shared_suffix_drain_size.t.exe)
+  (deps RoseSharedSuffixDrainSize.vo rose_shared_suffix_drain_size.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rose_shared_suffix_drain_size.t.exe rose_shared_suffix_drain_size.cpp rose_shared_suffix_drain_size.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rose_shared_suffix_drain_size.t.exe)
+  (action (run ./rose_shared_suffix_drain_size.t.exe))))
