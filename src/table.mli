@@ -577,6 +577,17 @@ val conservative_types : unit -> bool
 *)
 val loopify : unit -> bool
 
+(** Whether the loopify pass should report, for every recursive function it
+    sees, the strategy that fired or the reason it declined
+    ([Set Crane Loopify Diagnostics]). Diagnostic only; does not affect
+    emitted code. *)
+val loopify_diagnostics : unit -> bool
+
+(** Whether a declined loopification (or a residual self-call surviving the
+    transform) is a hard error rather than a silent fallback to C++ recursion
+    ([Set Crane Loopify Strict]). *)
+val loopify_strict : unit -> bool
+
 (** Check whether a specific function should be loopified (per-function override
     first, then global setting). *)
 val should_loopify : GlobRef.t -> bool

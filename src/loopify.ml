@@ -311,6 +311,73 @@ type recursion_kind =
   | Tail_recursion  (** All recursive calls are in tail position *)
   | Nontail_recursion  (** At least one non-tail recursive call *)
 
+(** {2 Diagnostics}
+
+    Historically every bail-out in this pass silently returned the original
+    recursive body, so a function that loopify could not handle was
+    indistinguishable from one it chose not to touch.  That made the pass's
+    coverage unmeasurable.  The machinery below records, for every recursive
+    function the pass sees, which strategy fired or why it declined.
+
+    Two mechanisms cooperate:
+    - {!decline} marks an explicit bail-out with a reason;
+    - {!report_outcome} additionally re-classifies the {e transformed} body, so
+      a strategy that silently left a self-call behind is still reported as a
+      decline.  This postcondition is what makes the report trustworthy: it
+      does not depend on every bail site remembering to announce itself. *)
+
+(** What the pass did with one recursive function. *)
+type loopify_outcome =
+  | Lp_tail  (** Rewritten to a flat [while] loop by {!transform_tail}. *)
+  | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
+  | Lp_frame  (** Rewritten to an explicit frame stack. *)
+  | Lp_deferred of string
+      (** Intentionally not rewritten because the shape already runs in O(1)
+          stack (e.g. a [lazy_]-wrapped cofixpoint body). Not a failure. *)
+  | Lp_declined of string  (** Left as C++ recursion; the string is the reason. *)
+
+let string_of_outcome = function
+  | Lp_tail -> "tail loop"
+  | Lp_tmc -> "tail-modulo-cons"
+  | Lp_frame -> "frame stack"
+  | Lp_deferred why -> "deferred (" ^ why ^ ")"
+  | Lp_declined why -> "DECLINED: " ^ why
+
+(** Outcomes recorded during the current extraction, most recent first. *)
+let outcomes : (string * loopify_outcome) list ref = ref []
+
+let clear_outcomes () = outcomes := []
+let get_outcomes () = List.rev !outcomes
+
+(** Record one outcome, printing it when [Crane Loopify Diagnostics] is set and
+    raising when [Crane Loopify Strict] is set and the outcome is a decline. *)
+let record_outcome name outcome =
+  outcomes := (name, outcome) :: !outcomes;
+  if Table.loopify_diagnostics () then
+    Feedback.msg_notice
+      (Pp.str ("[loopify] " ^ name ^ ": " ^ string_of_outcome outcome));
+  match outcome with
+  | Lp_declined why when Table.loopify_strict () ->
+    CErrors.user_err
+      (Pp.str ("loopify: cannot linearise " ^ name ^ " (" ^ why ^ ")"))
+  | _ -> ()
+
+(** The reason the innermost strategy declined, if it did.  Set by {!decline}
+    just before a bail-out returns the original body, and consumed by
+    {!report_outcome}. *)
+let pending_decline : string option ref = ref None
+
+(** Mark the current transformation as declined for [reason] and return [x]
+    (conventionally the untransformed body). *)
+let decline reason x =
+  pending_decline := Some reason;
+  x
+
+(** Which strategy {!apply_nontail_loopification} last settled on.  It picks
+    between TMC and the frame transform internally, so it reports its choice
+    here for the caller to pass to {!report_outcome}. *)
+let last_nontail_strategy : loopify_outcome ref = ref Lp_frame
+
 (** {2 Call checker abstraction}
 
     A [call_checker] is a function that recognises recursive calls in
@@ -819,6 +886,32 @@ let classify check body =
       Tail_recursion
     else
       Nontail_recursion
+
+(** Record what happened to one recursive function, checking the postcondition.
+
+    [strategy] is the outcome the pass {e believes} it achieved.  Before
+    accepting it we re-run {!classify} on the transformed body: if a recursive
+    call survived, the strategy did not actually linearise the function and the
+    outcome is downgraded to {!Lp_declined}.  A reason left behind by
+    {!decline} takes precedence, since it is more specific than "a self-call
+    remains".
+
+    @param name     Display name of the function, for the report
+    @param check    The same call checker the transform was driven by
+    @param strategy The outcome to record if the postcondition holds
+    @param body     The {e transformed} body
+    @return [body], unchanged *)
+let report_outcome ~name ~check ~strategy body =
+  let residual = classify check body <> No_recursion in
+  let outcome =
+    match (!pending_decline, residual, strategy) with
+    | Some why, _, _ -> Lp_declined why
+    | None, true, _ -> Lp_declined "a self-call survived the transform"
+    | None, false, s -> s
+  in
+  pending_decline := None;
+  record_outcome name outcome;
+  body
 
 (** {2 Invariant parameter detection}
 
@@ -7253,12 +7346,16 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         | Some ty -> ty
         | None -> Tvoid
       in
+      let name = Id.to_string id in
       let lbody' =
         match kind with
-        | Tail_recursion -> transform_tail check pp_type params ret_ty lbody
+        | Tail_recursion ->
+          report_outcome ~name ~check ~strategy:Lp_tail
+            (transform_tail check pp_type params ret_ty lbody)
         | Nontail_recursion ->
-            let fn_name = Id.to_string id in
-            transform_nontail ~fn_name check pp_type pp_expr tparams params ret_ty lbody
+          report_outcome ~name ~check ~strategy:Lp_frame
+            (transform_nontail ~fn_name:name check pp_type pp_expr tparams
+               params ret_ty lbody)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       Some lbody'
@@ -7622,11 +7719,14 @@ let body_contains_lazy_factory body =
     initialiser statement. *)
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
     tparams params ret_ty body =
+  last_nontail_strategy := Lp_frame;
   if has_recursive_branch_dependency check body then
-    (body, false)
+    (decline "recursive call in a branch condition or dispatch scrutinee" body,
+     false)
   else
   match try_tmc_classify check body with
   | Some ti ->
+    last_nontail_strategy := Lp_tmc;
     (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
   | None ->
     let body' =
@@ -8047,29 +8147,37 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
      the full rationale).  We still run [loopify_inner_lambdas] to handle
      any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
-    if has_lazy_body body || body_contains_lazy_factory body then
+    let fn_name = match names with
+      | (r, _) :: _ ->
+        let label = match r with
+          | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
+          | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
+          | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
+          | GlobRef.VarRef v -> v
+        in
+        Some (Id.to_string label)
+      | [] -> None
+    in
+    let name = match fn_name with Some s -> s | None -> "<anonymous>" in
+    if has_lazy_body body || body_contains_lazy_factory body then begin
+      if classify check body <> No_recursion then
+        record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
-    else
+    end else
       (* Normal (non-lazy) function — existing path *)
       let kind = classify check body in
       let body =
         match kind with
         | No_recursion -> body
-        | Tail_recursion -> transform_tail check pp_type params ret_ty body
+        | Tail_recursion ->
+          report_outcome ~name ~check ~strategy:Lp_tail
+            (transform_tail check pp_type params ret_ty body)
         | Nontail_recursion ->
-            let fn_name = match names with
-              | (r, _) :: _ ->
-                let label = match r with
-                  | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-                  | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-                  | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
-                  | GlobRef.VarRef v -> v
-                in
-                Some (Id.to_string label)
-              | [] -> None
+            let body' =
+              fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
+                     tparams params ret_ty body)
             in
-            fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
-                   tparams params ret_ty body)
+            report_outcome ~name ~check ~strategy:!last_nontail_strategy body'
       in
       loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
   in
@@ -8107,9 +8215,15 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
      method body is [lazy_]-wrapped, the entire body is deferred inside a
      closure and the method returns in O(1) stack frames.  Loopification
      is unnecessary and TMC would be invalid.  See {!has_lazy_body}. *)
-  if has_lazy_body mf.mf_body then
+  let name = Id.to_string mf.mf_name in
+  if has_lazy_body mf.mf_body then begin
+    let basic_check =
+      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+    in
+    if classify basic_check mf.mf_body <> No_recursion then
+      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
     Fmethod mf
-  else
+  end else
     let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
     ( match classify basic_check mf.mf_body with
     | No_recursion ->
@@ -8132,30 +8246,39 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
           | [] -> false)
           calls
       in
-      if has_value_receiver then
+      if has_value_receiver then begin
+        record_outcome name
+          (Lp_declined
+             "recursive call passes a value-type receiver, whose address \
+              cannot be stored in a frame");
         Fmethod mf
-      else
+      end else
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
       let body', needs_init_self =
         match kind with
         | Tail_recursion ->
-          ( transform_tail
-              ~param_inits:[(self_id, CPPthis)]
-              self_check
-              pp_type
-              augmented_params
-              mf.mf_ret_type
-              body_with_self,
+          ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
+              (transform_tail
+                 ~param_inits:[(self_id, CPPthis)]
+                 self_check
+                 pp_type
+                 augmented_params
+                 mf.mf_ret_type
+                 body_with_self),
             false )
         | Nontail_recursion ->
-          let fn_name = Some (Id.to_string mf.mf_name) in
+          let fn_name = Some name in
           let (body', used_inits) =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
               ?fn_name
               self_check pp_type pp_expr tparams
               augmented_params mf.mf_ret_type body_with_self
+          in
+          let body' =
+            report_outcome ~name ~check:self_check
+              ~strategy:!last_nontail_strategy body'
           in
           (body', not used_inits)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
@@ -8184,14 +8307,19 @@ let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   | Ffundef (name, ret_ty, params, body) ->
     let check = lambda_checker name in
     let kind = classify check body in
+    let dname = Id.to_string name in
     let body' =
       match kind with
       | No_recursion -> body
-      | Tail_recursion -> transform_tail check pp_type params ret_ty body
+      | Tail_recursion ->
+        report_outcome ~name:dname ~check ~strategy:Lp_tail
+          (transform_tail check pp_type params ret_ty body)
       | Nontail_recursion ->
-        let fn_name = Some (Id.to_string name) in
-        fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
-               tparams params ret_ty body)
+        let body' =
+          fst (apply_nontail_loopification ~fn_name:dname check pp_type pp_expr
+                 tparams params ret_ty body)
+        in
+        report_outcome ~name:dname ~check ~strategy:!last_nontail_strategy body'
     in
     let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
     (Ffundef (name, ret_ty, params, body'), vis, tag)

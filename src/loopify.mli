@@ -51,3 +51,31 @@ val register_fundef :
     registry is scoped to one compilation unit, so callers reset it at each
     unit boundary before repopulating it. *)
 val clear_mutual_table : unit -> unit
+
+(** {2 Diagnostics}
+
+    Every bail-out in this pass used to return the original recursive body
+    silently, making the pass's coverage unmeasurable. The pass now records an
+    outcome per recursive function, validated against the postcondition that no
+    self-call survives the transform. [Set Crane Loopify Diagnostics] prints
+    them as they are produced; [Set Crane Loopify Strict] turns a decline into
+    an error. *)
+
+(** What the pass did with one recursive function. *)
+type loopify_outcome =
+  | Lp_tail  (** Rewritten to a flat [while] loop. *)
+  | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
+  | Lp_frame  (** Rewritten to an explicit frame stack. *)
+  | Lp_deferred of string
+      (** Intentionally not rewritten because the shape already runs in O(1)
+          stack (e.g. a [lazy_]-wrapped cofixpoint). Not a failure. *)
+  | Lp_declined of string  (** Left as C++ recursion, for the given reason. *)
+
+(** Render an outcome for the diagnostic report. *)
+val string_of_outcome : loopify_outcome -> string
+
+(** Outcomes recorded so far, in the order the functions were processed. *)
+val get_outcomes : unit -> (string * loopify_outcome) list
+
+(** Discard all recorded outcomes; called at each compilation-unit boundary. *)
+val clear_outcomes : unit -> unit

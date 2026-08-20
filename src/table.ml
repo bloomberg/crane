@@ -1507,6 +1507,21 @@ let {Goptions.get = conservative_types} =
 let {Goptions.get = loopify} =
   declare_bool_option_and_ref ~key:["Crane"; "Loopify"] ~value:false ()
 
+(* When set, the loopify pass reports the outcome it reached for every
+   recursive function it saw: the strategy that fired, or the reason it
+   declined.  Purely diagnostic; it does not change what is emitted. *)
+let {Goptions.get = loopify_diagnostics} =
+  declare_bool_option_and_ref
+    ~key:["Crane"; "Loopify"; "Diagnostics"]
+    ~value:false
+    ()
+
+(* When set, a function that loopify declines (or that still contains a
+   self-call after transformation) is a hard error rather than a silent
+   fallback to C++ recursion. *)
+let {Goptions.get = loopify_strict} =
+  declare_bool_option_and_ref ~key:["Crane"; "Loopify"; "Strict"] ~value:false ()
+
 (* Per-function loopify/noloopify table. First set = force-loopify, second set =
    force-noloopify. *)
 
