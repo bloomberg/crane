@@ -389,13 +389,14 @@ let record_outcome name outcome =
 (** Print the collapsed outcomes when [Crane Loopify Diagnostics] is set, and
     raise when [Crane Loopify Strict] is set and any function was declined.
     Called once per compilation unit, after all decls have been transformed. *)
-let report_outcomes () =
+let report_outcomes ?(unit_name = "") () =
   let final = get_outcomes () in
+  let where = if unit_name = "" then "" else unit_name ^ " " in
   if Table.loopify_diagnostics () then
     List.iter
       (fun (name, outcome) ->
         Feedback.msg_notice
-          (Pp.str ("[loopify] " ^ name ^ ": " ^ string_of_outcome outcome)))
+          (Pp.str ("[loopify] " ^ where ^ name ^ ": " ^ string_of_outcome outcome)))
       final;
   if Table.loopify_strict () then
     List.iter

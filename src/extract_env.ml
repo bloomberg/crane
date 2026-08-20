@@ -1223,7 +1223,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      the header and implementation passes) and only the best of those outcomes
      describes the code actually emitted.  Report now that they are all in, and
      only for the real run -- the dry run's results are discarded. *)
-  if not dry then Loopify.report_outcomes ()
+  if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ()
 
 (*********************************************)
 (** {2 Part III: the actual extraction commands} *)

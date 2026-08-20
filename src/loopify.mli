@@ -83,8 +83,11 @@ val string_of_outcome : loopify_outcome -> string
 val get_outcomes : unit -> (string * loopify_outcome) list
 
 (** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any
-    decline ([Crane Loopify Strict]). Call once per unit, after transforming. *)
-val report_outcomes : unit -> unit
+    decline ([Crane Loopify Strict]). Call once per unit, after transforming.
+
+    The [unit_name] prefixes each line so a decline can be traced to the
+    compilation unit that produced it. *)
+val report_outcomes : ?unit_name:string -> unit -> unit
 
 (** Discard all recorded outcomes; called at each compilation-unit boundary. *)
 val clear_outcomes : unit -> unit
