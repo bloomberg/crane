@@ -1510,11 +1510,19 @@ let {Goptions.get = loopify} =
 (* When set, the loopify pass reports the outcome it reached for every
    recursive function it saw: the strategy that fired, or the reason it
    declined.  Purely diagnostic; it does not change what is emitted. *)
-let {Goptions.get = loopify_diagnostics} =
+let {Goptions.get = loopify_diagnostics_opt} =
   declare_bool_option_and_ref
     ~key:["Crane"; "Loopify"; "Diagnostics"]
     ~value:false
     ()
+
+(* Also honour an environment variable, so a whole corpus can be swept for
+   loopify coverage without editing every .v file to set the option. *)
+let loopify_diagnostics_env =
+  lazy (try Sys.getenv "CRANE_LOOPIFY_DIAGNOSTICS" <> "" with Not_found -> false)
+
+let loopify_diagnostics () =
+  loopify_diagnostics_opt () || Lazy.force loopify_diagnostics_env
 
 (* When set, a function that loopify declines (or that still contains a
    self-call after transformation) is a hard error rather than a silent

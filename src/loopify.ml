@@ -303,6 +303,13 @@ let ctor_ptr_fields : (string, int list) Hashtbl.t = Hashtbl.create 32
 type call_site = {
   cs_args : cpp_expr list;  (** Arguments to the recursive call *)
   cs_is_tail : bool;  (** Whether this call appears in tail position *)
+  cs_recv : cpp_expr option;
+      (** For a method call, the receiver expression {e as written}, before
+          {!method_checker} converts it to the raw pointer stored in frames.
+          Callers that need to reason about the receiver's storage duration
+          must consult this rather than the head of {!cs_args}, which is always
+          a synthesised [&recv] or [crane_raw(recv)] and therefore says nothing
+          about the original expression. [None] for non-method calls. *)
 }
 
 (** Classification of a function body's recursion pattern. *)
@@ -410,7 +417,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
  fun e ->
    match e with
    | CPPfun_call (CPPglob (r, _, _), args) when ref_matches fn_refs r ->
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPvar id, args) ->
      let matches_name =
        List.exists
@@ -418,7 +425,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
          fn_refs
      in
      if matches_name then
-       Some {cs_args = args; cs_is_tail = false}
+       Some {cs_args = args; cs_is_tail = false; cs_recv = None}
      else
        None
    | _ -> None
@@ -470,22 +477,22 @@ let method_checker
    match e with
    | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
      if has_self_param then
-       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false}
+       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false; cs_recv = Some recv}
      else
-       Some {cs_args = args; cs_is_tail = false}
+       Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
      let args_normal = List.rev args in
      if has_self_param && List.length args_normal > n_params then
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
        | Some recv ->
-         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
-       | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false; cs_recv = Some recv}
+       | None -> Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None} )
      else if (not has_self_param) && List.length args_normal > n_params then
        Some {cs_args = list_remove_at this_pos args_normal;
-             cs_is_tail = false}
+             cs_is_tail = false; cs_recv = None}
      else
-       Some {cs_args = args_normal; cs_is_tail = false}
+       Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPglob (r, _, _), args) ->
      let label = Label.to_id (Common.label_of_r r) in
      if Id.equal label method_name then
@@ -494,8 +501,8 @@ let method_checker
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
          | Some recv ->
-           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
-         | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false; cs_recv = Some recv}
+         | None -> Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None} )
        else
          let args_stripped =
            if List.length args_normal > n_params then
@@ -503,7 +510,7 @@ let method_checker
            else
              args_normal
          in
-         Some {cs_args = args_stripped; cs_is_tail = false}
+         Some {cs_args = args_stripped; cs_is_tail = false; cs_recv = None}
      else
        None
    | _ -> None
@@ -544,7 +551,7 @@ let rec collect_expr (check : call_checker) expr =
        direct visit-in-return case goes through collect_stmt's special case for
        Sreturn(Some(visit(...))), not through here. *)
     List.map
-      (fun cs -> {cs with cs_is_tail = false})
+      (fun cs -> {cs with cs_is_tail = false; cs_recv = None})
       (collect_stmts check ~in_visitor:false stmts)
   | CPPget (e, _)
    |CPPget' (e, _)
@@ -7298,10 +7305,10 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
    match e with
    | CPPfun_call (CPPvar id, args) when Id.equal id lambda_name ->
      (* Direct call: [f(args)] — by-reference fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
      (* Dereferenced call — shared_ptr fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | _ -> None
 
 (** Walk through a statement list and loopify any self-recursive [std::function]
@@ -7402,7 +7409,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     | CPPfun_call (CPPvar id, args) when Id.equal id self_id -> (
       (* Drop the trailing self-forward argument. *)
       match List.rev args with
-      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false}
+      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false; cs_recv = None}
       | [] -> None )
     | _ -> None
   in
@@ -8232,18 +8239,26 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
       let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
-      (* Check if any recursive call passes a value-type receiver (not
-         CPPderef of a pointer/smart_ptr, CPPvar, or CPPthis).
-         Value-type receivers (e.g. Trie::leaf()) are temporaries whose
-         address cannot be stored in the _Enter frame. Skip loopification
-         for such methods. *)
+      (* Check whether any recursive call has a value-type receiver — a
+         temporary such as [Trie::leaf()], whose address would dangle once
+         stored in the _Enter frame.  Receivers that name existing storage
+         ([CPPvar], [CPPthis]) or dereference a smart pointer ([CPPderef]) are
+         fine, since the frame holds a pointer into memory that outlives it.
+
+         This must inspect [cs_recv], the receiver as written.  Inspecting
+         [cs_args] instead — as this guard used to — is vacuous: the head of
+         [cs_args] is whatever [recv_to_self] produced, always a [CPPunop
+         ("&", _)] or a [crane_raw] call and so never one of the three safe
+         shapes.  The guard therefore fired for *every* method whose recursion
+         went through a [CPPmethod_call], declining 120 functions across the
+         test corpus that have no value receiver at all. *)
       let calls = collect_stmts self_check ~in_visitor:false body_with_self in
       let has_value_receiver =
         List.exists (fun cs ->
-          match cs.cs_args with
-          | (CPPderef _ | CPPvar _ | CPPthis) :: _ -> false
-          | _ :: _ -> true
-          | [] -> false)
+          match cs.cs_recv with
+          | None -> false
+          | Some (CPPderef _ | CPPvar _ | CPPthis) -> false
+          | Some _ -> true)
           calls
       in
       if has_value_receiver then begin
