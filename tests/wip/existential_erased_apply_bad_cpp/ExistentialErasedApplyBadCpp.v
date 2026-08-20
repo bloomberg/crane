@@ -1,0 +1,40 @@
+From Crane Require Import Extraction.
+From Crane.Mapping Require Import Std.
+Require Import Crane.Mapping.NatIntStd.
+From Stdlib Require Import List.
+Import ListNotations.
+
+Module ExistentialErasedApplyBadCpp.
+
+(** [dyn] packages a value with a consumer for it, hiding the value's type.
+    The quantified [A] has no C++ counterpart, so both the value field and
+    the consumer's argument erase to [std::any].
+
+    The consumer is emitted with the erased signature it actually has --
+    [const std::any &] in, [uint64_t] out -- but its body is the identity
+    [fun k => k], and Crane returns the erased [std::any] directly without an
+    [any_cast] back to the concrete return type:
+
+      [](const std::any &k) -> uint64_t { return k; }
+
+    which does not compile. The [any_cast] is inserted for erased values
+    flowing out of pattern matches but not for one reaching a return
+    position through a lambda whose parameter was erased. *)
+Inductive dyn : Type := Dyn : forall (A : Type), A -> (A -> nat) -> dyn.
+
+Definition force (d : dyn) : nat :=
+  match d with Dyn _ x f => f x end.
+
+Definition mk (n : nat) : list dyn :=
+  [ Dyn nat n (fun k => k)
+  ; Dyn (nat * nat) (n, S n) (fun p => fst p + snd p)
+  ; Dyn (list nat) [n; n; n] (fun l => length l) ].
+
+Fixpoint total (l : list dyn) : nat :=
+  match l with [] => 0 | d :: r => force d + total r end.
+
+Definition run (n : nat) : nat := total (mk n).
+
+End ExistentialErasedApplyBadCpp.
+
+Crane Extraction "existential_erased_apply_bad_cpp" ExistentialErasedApplyBadCpp.
