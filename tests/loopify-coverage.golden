@@ -1,0 +1,16 @@
+ack: DECLINED: a self-call survived the transform
+chain_adders: DECLINED: a self-call survived the transform
+compose_summers: DECLINED: a self-call survived the transform
+cps_sum: DECLINED: a self-call survived the transform
+flatten_cps_aux: DECLINED: a self-call survived the transform
+fold_compose: DECLINED: a self-call survived the transform
+group_by_eq_fuel: DECLINED: a self-call survived the transform
+group_fuel: DECLINED: a self-call survived the transform
+longest_run_fuel: DECLINED: a self-call survived the transform
+max: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
+quadtree_rec: DECLINED: a self-call survived the transform
+quadtree_rect: DECLINED: a self-call survived the transform
+quicksort_fun: DECLINED: a self-call survived the transform
+rose_sum: DECLINED: a self-call survived the transform
+sub: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
+tree_to_adder: DECLINED: a self-call survived the transform
