@@ -78,6 +78,19 @@ int main() {
     
   }
 
+  // Test 4: bank_acc_test1 returns (100,true,250,0)
+  {
+    auto result = bankacc_test1_ext();
+    ASSERT(result.first.first.first == 100);
+    ASSERT(result.first.first.second == true);
+    ASSERT(result.first.second == 250);
+    ASSERT(result.second == 0);
+    std::cout << "Test 5 (bank_account1 works): (" << result.first.first.first
+              << ", " << result.first.first.second << ", " << result.first.second
+              << ", " << result.second << ")" << std::endl;
+    
+  }
+
   if (testStatus == 0) {
     std::cout << "\nAll object model tests passed!" << std::endl;
   } else {
