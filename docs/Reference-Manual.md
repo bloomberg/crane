@@ -519,6 +519,13 @@ Set Crane Loopify.
 Crane Extraction "my_module" MyModule.
 ```
 
+### Checking what was loopified
+
+`Set Crane Loopify Diagnostics` reports what the pass did with each recursive
+function, and `Set Crane Loopify Strict` turns a function it could not
+linearise into an error. See [Loopify coverage](loopify-coverage.md) for how
+the outcomes are decided and which shapes remain out of reach.
+
 ---
 
 ## `Set Crane Arena` / `Crane Arena`
