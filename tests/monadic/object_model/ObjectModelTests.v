@@ -3,8 +3,6 @@
 
 (* An object model using STRefs for mutable state *)
 
-
-
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
@@ -59,7 +57,7 @@ From Crane Require Import
   Utils.HAList
   Extraction.
 
-Section PointDef.
+Section Classes.
 
 
   Context (S : Type).
@@ -120,17 +118,17 @@ Section PointDef.
   
   Record Account := mkAccount {
       getBalance : unit -> itree E0 Z;
-      deposit : Z -> itree E0 Z;
+      deposit : nat -> itree E0 Z;
       withdraw : Z -> itree E0 (option Z);
     }.
 
   Definition getBalance_imp (idx : T) (ref : STRef S Z) : unit -> itree E0 Z :=
     fun _ => readSTRef (idx := idx) ref.
 
-  Definition deposit_imp (idx : T) (ref : STRef S Z) : Z -> itree E0 Z :=
-    fun amt : Z =>
+  Definition deposit_imp (idx : T) (ref : STRef S Z) : nat -> itree E0 Z :=
+    fun amt : nat =>
       bal <- readSTRef (idx := idx) ref;;
-      let new_bal := (bal + amt)%Z in
+      let new_bal := (bal + (Z.of_nat amt))%Z in
       writeSTRef (idx := idx) ref new_bal;;
       Ret new_bal.
 
@@ -151,7 +149,7 @@ Section PointDef.
       {| getBalance _ := !bal_ref;
          deposit amt := 
             bal <- !bal_ref;;
-            let new_bal := (bal + amt)%Z in
+            let new_bal := (bal + (Z.of_nat amt))%Z in
              bal_ref :== new_bal;;
              Ret new_bal;
         withdraw amt := 
@@ -181,12 +179,12 @@ Section PointDef.
   (* Fully transfer amounts between two accounts *)
   Definition testAccount2 : itree E0 (Z * bool * Z * Z) :=
     acc1 <- @class_Account 0%nat 100;;
-    acc2 <- @class_Account 0%nat 150;;
+    acc2 <- @class_Account 1%nat 150;;
     a <- getBalance acc1 tt;;
     result <- withdraw acc1 a;;
     match result with
     | Some 0%Z => (* withdrawal succeeds, transfer money*)
-        b <- deposit acc2 a;;
+        b <- deposit acc2 (Z.to_nat a);;
         c <- getBalance acc1 tt;;
         Ret (a,true,b,c)
     | _ => (* withdrawal failed, do nothing, return balance of a,b *)
@@ -198,19 +196,16 @@ Section PointDef.
   #[export] Instance hmap_nat_v : HMap (@idx_key T T) (idx_key_type V) mem :=
     HMap_halist (idx_key T) (idx_key_type V).
 
-
-  (* TODO: make this a structure instead of `and` *)
-
-
-  Definition backed_by (acc : Account) (idx : T) (ref : STRef S Z) : Prop :=
-    getBalance acc = getBalance_imp idx ref /\
-    withdraw acc = withdraw_imp idx ref /\
-    deposit acc = deposit_imp idx ref.
-
+  Record account_impl  (idx : T) (ref : STRef S Z) (acc : Account) := 
+    mkAccountImpl {
+        getBalance_impld_by : getBalance acc = getBalance_imp idx ref;
+        withdraw_impld_by : withdraw acc = withdraw_imp idx ref;
+        deposit_impld_by : deposit acc = deposit_imp idx ref;
+      }.
 
   Definition account_wf (acc : Account) (idx : T) (ref : STRef S Z)
     (m : @mem T V)  : Prop :=
-    backed_by acc idx ref /\
+    account_impl idx ref acc  /\
     exists v, HMap.lookup (STRefToIx S Z ref, idx) m = Some v /\ (v >= 0)%Z.
 
   Definition max_idx (m : @mem T V) :=
@@ -271,6 +266,7 @@ Section PointDef.
       - econstructor.
         + econstructor.
         + split; reflexivity.
+        + econstructor.
       - exists init. 
         split.
         + eapply st_lookup_add_eq. 
@@ -291,7 +287,7 @@ Section PointDef.
       intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
       unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
       split. try assumption.
-      unfold backed_by in Hback. destruct Hback as [Hgetb [Hwdrw Hdepos]].
+      destruct Hback as [Hgetb Hwdrw Hdepos].
       rewrite Hwdrw in Hintrp.
       unfold withdraw_imp in Hintrp. unfold_instances.
       rewrite interp_st_bind in Hintrp.
@@ -330,16 +326,15 @@ Section PointDef.
 
 
   Lemma deposit_preserves_wf :
-    forall (acc : Account) (idx : T) (ref : STRef S Z) (amt new_bal : Z) (m0 m1 : @mem T V) (out_val : Z),
-      (amt >= 0)%Z ->
+    forall (acc : Account) (idx : T) (ref : STRef S Z) (amt : nat) (new_bal : Z) (m0 m1 : @mem T V) (out_val : Z),
       account_wf acc idx ref m0 ->
       interp_st ltu _ (deposit acc amt) m0 ≈ Ret (m1 , out_val) ->
       account_wf acc idx ref m1.
     Proof using Type.
-      intros acc idx ref amt b m0 m1 o Hamt Hwdrw Hintrp.
+      intros acc idx ref amt b m0 m1 o Hwdrw Hintrp.
       unfold account_wf in *. destruct Hwdrw as [Hback Hlookup].
       split; try assumption.
-      unfold backed_by in Hback. destruct Hback as [Hgetb [Hwdrw Hdepos]].
+      destruct Hback as [Hgetb Hwdrw Hdepos].
       rewrite Hdepos in Hintrp. unfold deposit_imp in Hintrp. unfold_instances.
       rewrite interp_st_bind in Hintrp. unfold readSTRef in *. rewrite interp_st_trigger in Hintrp. cbn in Hintrp.  
       destruct Hlookup as [v [Hlookup Hvnz]].
@@ -351,7 +346,7 @@ Section PointDef.
       repeat (repeat setoid_rewrite Monad.bind_bind in Hintrp;
           repeat setoid_rewrite bind_Ret_l in Hintrp;
           repeat setoid_rewrite bind_Ret_r in Hintrp).
-      exists (v + amt)%Z. unfold_instances.
+      exists (v + Z.of_nat amt)%Z. unfold_instances.
       change (@Monad.bind (itree ?E) _) with (@ITree.bind E) in Hintrp.
       rewrite interp_st_bind_eutt in Hintrp.
       unfold writeSTRef in Hintrp.
@@ -374,9 +369,9 @@ Section PointDef.
       account_wf acc idx ref m0 ->
       interp_st ltu _ (getBalance acc tt) m0 ≈ Ret (m1 , out_val) ->
       account_wf acc idx ref m1.
-    Proof.
+    Proof using Type.
       intros acc idx ref out_val m0 m1 Hwf Hintrp.
-      destruct Hwf as [[Hgetbal [Hwth Hdep]] Hlookup]; rewrite Hgetbal in Hintrp.
+      destruct Hwf as [[Hgetbal Hwth Hdep] Hlookup]; rewrite Hgetbal in Hintrp.
       unfold getBalance_imp in Hintrp.
       unfold readSTRef in Hintrp.
       unfold_instances.
@@ -389,18 +384,43 @@ Section PointDef.
       exists out_val. split; try (repeat split; assumption).
     Qed.
 
+    
+    Record BankAccountCollection :=
+      mkBankAccount {
+        checking : Account;
+        saving   : Account;
+      }.
+
+    Definition class_BankAccount (idx : T) (init_checking init_saving : Z) : itree E0 BankAccountCollection :=
+      checking' <- @class_Account idx init_checking;;
+      saving' <- @class_Account (suc idx) init_saving;;
+      Ret
+        {| checking := checking';
+           saving := saving';
+        |}.
+
+  (* Fully transfer amounts between two accounts *)
+  Definition testBankAccount1 : itree E0 (Z * bool * Z * Z) :=
+    acc <- class_BankAccount 0%nat 100 150;; 
+    a <- getBalance (checking acc) tt;;
+    result <- withdraw (checking acc) a;;
+    match result with
+    | Some 0%Z => (* withdrawal succeeds, transfer money*)
+        b <- deposit (saving acc) (Z.to_nat a);;
+        c <- getBalance (checking acc) tt;;
+        Ret (a,true,b,c)
+    | _ => (* withdrawal failed, do nothing, return balance of a,b *)
+        b <- getBalance (checking acc) tt;;
+        c <- getBalance (saving acc) tt;;
+        Ret (a,false,b,c)
+    end.
 
 
-
-                                            
-
-End PointDef.
+End Classes.
 
 
 Transparent HAList.halist_lookup HAList.halist_add
             HAList.HMap_halist HAList.HMapOk_halist.
-Existing Instance nat_ix_correct.
-Existing Instance nat_ix_stref.
 
 Definition run_test1 : itree (exceptE Err) (Z * Z * Z) :=
   runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testtoST1.
@@ -426,12 +446,18 @@ Definition run_acc2 : itree (exceptE Err) (Z * bool * Z * Z) :=
 Lemma acc_run_burn2 : burn 100 run_acc2 = Ret (100, true, 250, 0)%Z.
 Proof. lazy. reflexivity. Qed.
 
+Definition run_bank_acc1 : itree (exceptE Err) (Z * bool * Z * Z) :=
+  runST (T := nat) (ltu := Nat.le) (V := fun _ : nat => Z) (S := unit) testBankAccount1.
+
+Lemma bank_acc_run_burn1 : burn 100 run_bank_acc1 = Ret (100, true, 250, 0)%Z.
+Proof. lazy. reflexivity. Qed.
 
 
 
 
 
-From Crane Require Import Mapping.ZInt.
+
+From Crane Require Import Mapping.ZInt Mapping.NatIntStd.
 
 Definition testtoST1_ext :=
   Eval unfold testtoST1, class_pointST in (testtoST1 unit).
@@ -444,7 +470,16 @@ Definition acc_test1_ext :=
 Definition acc_test2_ext :=
   Eval unfold testAccount2, class_Account in (testAccount2 unit).
 
-Crane Extraction "object_model" testtoST1_ext testtoST2_ext acc_test1_ext acc_test2_ext.
+Definition bankacc_test1_ext :=
+  Eval unfold testBankAccount1, class_BankAccount, class_Account in (testBankAccount1 unit).
+
+Crane Extraction "object_model"
+  testtoST1_ext
+  testtoST2_ext
+  acc_test1_ext
+  acc_test2_ext
+  bankacc_test1_ext
+.
 
 
 
