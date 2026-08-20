@@ -577,52 +577,177 @@ already does for ordinary parameters.
 
 ---
 
-## `Set Crane Arena` / `Crane Arena`
+## `Set Crane Arena` / `Crane NoArena`
 
-Control arena (region) allocation for recursive inductive types. In arena mode, an eligible recursive inductive's recursive fields are stored as raw pointers into a bump-allocated region instead of `std::shared_ptr`. The whole value is then destroyed in O(1) by dropping the region, with no per-node deallocation, no reference counting, and no iterative destructor.
+Enable arena (region) allocation for the recursive fields of inductive types.
 
-Opt-in: arena values deep-copy on value-copy (a copy allocates into a fresh region), trading cheap structural sharing for cheap allocation and destruction.
+Arena membership is a **runtime** property of the calling scope, not a property
+of a type. The pointer representation never changes: a recursive field is the
+same smart pointer either way, and a type's layout is identical whether or not
+arenas are in use. What `Set Crane Arena` changes is the *factory* at each
+allocation site, which becomes a branch on whether an arena scope is currently
+installed on this thread — bump-allocating from the region if so, and allocating
+normally if not. Because layout is invariant, arena and non-arena values
+interoperate freely, and a value that outlives its scope stays alive through a
+refcounted keeper rather than dangling.
+
+```coq
+Set Crane Arena.    (* emit the scope-checking factory at recursive-field allocations *)
+Unset Crane Arena.  (* emit the plain factory; no arena runtime is pulled in (default) *)
+```
+
+With the flag off, allocation sites call `std::make_shared` (or `crane::make_rc`
+under [`Set Crane NonAtomicRc`](#set-crane-nonatomicrc), or `bsl::make_shared`
+under BDE) and the generated code has no arena dependency at all.
+
+### Opting types out
+
+```coq
+Crane NoArena <ind0> <ind1> ...   (* these types never bump-allocate *)
+```
+
+The listed inductives keep the plain factory even inside an open arena scope.
+Use this for values expected to outlive the scope that builds them, where
+keeping them in the region would extend the region's lifetime unnecessarily.
+
+### Using it from C++
+
+When the flag is on, Crane emits `#include "arena.h"`, the runtime header
+providing `crane::arena` and the scope guards. The driver opens a scope around
+the code that builds the values:
+
+```cpp
+{
+    crane::arena_scope _scope;      // owns a fresh region
+    auto t = build_big_tree(input); // recursive fields bump-allocate
+    consume(t);
+}                                   // region released in O(1)
+```
+
+`crane::arena_use_scope` installs an existing region instead of creating one,
+for nesting or for sharing a region across several calls. With no scope
+installed, allocations fall back to a per-thread region that is *not* reclaimed
+until the thread exits, so an embedding that forgets the guard leaks rather than
+crashes. Debug builds warn once per thread when the fallback is reached after
+some scope has already been installed elsewhere in the process; hits before any
+scope has ever been installed (a dynamically-initialized global building a
+program-lifetime table, say) are expected and stay quiet.
+
+### Example
+
+```coq
+Set Crane Arena.
+Crane NoArena result.     (* [result] values escape the scope, so keep them off the region *)
+Crane Extraction "trees" Trees.
+```
+
+---
+
+## `Set Crane Reuse` / `Crane Reuse`
+
+Enable the Perceus-style in-place reuse pass. At a match on an owned recursive
+value whose arm rebuilds a constructor of the same type, the matched cell is
+written in place instead of a fresh one being allocated — provided the value is
+uniquely owned. Uniqueness is checked at run time (`use_count() == 1`), so the
+rewrite is safe even where the analysis cannot prove exclusivity statically:
+a shared cell simply takes the allocating path.
 
 ### Global flag
 
 ```coq
-Set Crane Arena.    (* Use arena allocation for all eligible recursive inductives *)
-Unset Crane Arena.  (* Use the default shared_ptr representation (default) *)
+Set Crane Reuse.    (* apply the reuse rewrite wherever it is eligible *)
+Unset Crane Reuse.  (* never reuse (default) *)
 ```
 
-### Per-inductive control
+### Per-function control
 
 ```coq
-Crane Arena <ind0> <ind1> ...     (* Force arena allocation for specific inductives *)
-Crane NoArena <ind0> <ind1> ...   (* Force the default representation for specific inductives *)
-Crane Reset Arena.                (* Clear all per-inductive arena settings *)
+Crane Reuse <fn0> <fn1> ...    (* Enable for specific functions *)
+Crane NoReuse <fn0> <fn1> ...  (* Disable for specific functions *)
+Crane Reset Reuse.             (* Reset all reuse settings *)
 ```
 
-* **`<ind>`**
-  The name of a recursive inductive type.
+A per-function setting overrides the global flag.
 
-For a given inductive, a per-inductive `Crane Arena`/`Crane NoArena` setting takes precedence over the global flag (and `Crane Arena` wins over `Crane NoArena` if both are set); without a per-inductive setting, the global `Set Crane Arena` flag applies.
+### Interaction with loopification
 
-### Eligibility
+Reuse and [loopification](#set-crane-loopify--crane-loopify) are mutually
+exclusive per declaration: where a function is loopified, the reuse rewrite does
+not apply to it, because the loopified body no longer holds the matched cell in
+a form the rewrite can claim. Loopification wins, since stack safety is the
+stronger guarantee. If you want reuse for a particular function, exclude it from
+loopification with `Crane NoLoopify`.
 
-Arena allocation currently applies only to plain self-recursive value types. If an inductive selected for arena mode is coinductive or mutually recursive, Crane falls back to the default `shared_ptr` representation for that type and prints a warning; the rest of the extraction is unaffected.
+---
 
-### Generated code
+## `Set Crane NonAtomicRc`
 
-When any type is extracted in arena mode, Crane automatically emits `#include "arena.h"` — the Crane runtime header providing `crane::arena` and the ambient-region helpers. Allocation sites allocate into the current ambient region, which a driver installs with a `crane::arena_scope` RAII guard around the code that builds arena values.
-
-### Examples
+Swap the smart pointer used for recursive fields from `std::shared_ptr`, whose
+reference count is atomic, to `crane::rc`, which is non-atomic and puts the
+count in the same allocation as the object.
 
 ```coq
-Set Crane Arena.
-Crane Extraction "my_module" MyModule.
+Set Crane NonAtomicRc.
 ```
 
+Off by default. This is sound only for extracted code that does not share values
+across threads, which is Crane's clone-at-boundary model: values crossing a
+thread boundary are copied rather than shared. It takes precedence over the
+`bsl::shared_ptr` that [`Set Crane StdLib "BDE"`](#set-crane-stdlib) would
+otherwise select.
+
+---
+
+## `Set Crane Format Style`
+
+Set the style passed to `clang-format` when formatting the generated C++.
+
 ```coq
-Unset Crane Arena.
-Crane Arena tree.          (* only [tree] uses arena allocation *)
-Crane Extraction "trees" Trees.
+Set Crane Format Style "{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}".
+Set Crane Format Style "BDE".
 ```
+
+The default is the LLVM-based style shown above. The value `"BDE"` is special:
+it invokes `bde-format` rather than `clang-format`. Any other value is handed to
+`clang-format -style=` verbatim, so a `file` value picks up a `.clang-format`
+from the output directory.
+
+---
+
+## Output options
+
+```coq
+Set Crane Extraction Output Directory "<dir>".
+Set Crane Extraction File Comment "<text>".
+```
+
+* **Output Directory** — where the generated `.h`/`.cpp` are written. The
+  directory is created if it does not exist. Equivalent to Rocq's
+  `-output-directory` command-line flag, which Crane also honors.
+* **File Comment** — a comment emitted at the top of every generated file, for
+  license headers or provenance notes. Empty by default.
+
+---
+
+## Optimization options
+
+```coq
+Set Crane Extraction Optimize.       (* on by default *)
+Unset Crane Extraction Optimize.     (* disable all MiniML-level optimizations *)
+Set Crane Extraction Flag <n>.       (* select individual optimizations by bitmask *)
+Set Crane Extraction Conservative Types.
+```
+
+`Optimize` is a coarse switch over the MiniML-level simplifications inherited
+from Rocq's extraction (inlining, dummy-argument removal, let-reduction);
+`Flag` exposes the same set as a bitmask for finer control, where `0` is
+equivalent to `Unset Crane Extraction Optimize`. `Conservative Types` keeps
+dummy lambdas that would otherwise be removed when a top-level constant is
+defined, which is occasionally needed to preserve a type signature that
+downstream C++ depends on.
+
+These are debugging and compatibility knobs; the defaults are what the test
+corpus is validated against.
 
 ---
 
