@@ -7731,15 +7731,27 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_ex
     (decline "recursive call in a branch condition or dispatch scrutinee" body,
      false)
   else
+  let frame () =
+    last_nontail_strategy := Lp_frame;
+    ( transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body,
+      false )
+  in
   match try_tmc_classify check body with
   | Some ti ->
-    last_nontail_strategy := Lp_tmc;
-    (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
-  | None ->
-    let body' =
-        transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body
-    in
-    (body', false)
+    (* TMC only rewrites calls that sit directly under a constructor.  A body
+       can mix shapes -- one branch conses onto the recursive result while
+       another scrutinises it -- and {!try_tmc_classify} accepts it on the
+       strength of the branch it does understand, leaving the other branch as a
+       real C++ self-call.  That is exactly the stack growth this pass exists to
+       remove, so check the postcondition and fall back to the frame transform,
+       which handles the scrutinising shape via a continuation frame. *)
+    let tmc = transform_tmc ~param_inits check pp_expr ti params ret_ty body in
+    if classify check tmc = No_recursion then begin
+      last_nontail_strategy := Lp_tmc;
+      (tmc, true)
+    end
+    else frame ()
+  | None -> frame ()
 
 (** Inline an Equations-style "functional" into its knot-tying wrapper.
 

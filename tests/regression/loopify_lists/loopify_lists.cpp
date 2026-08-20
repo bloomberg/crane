@@ -1119,81 +1119,95 @@ uint64_t LoopifyLists::lookup(
 }
 
 /// group l groups consecutive equal elements: 1,1,2,2,2,3 -> [1,1],[2,2,2],[3].
-LoopifyLists::list<LoopifyLists::list<uint64_t>>
-LoopifyLists::group_fuel(uint64_t fuel, const LoopifyLists::list<uint64_t> &l) {
-  std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> _head{};
-  std::shared_ptr<LoopifyLists::list<LoopifyLists::list<uint64_t>>> *_write =
-      &_head;
-  const LoopifyLists::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_fuel = std::move(fuel);
-  while (true) {
-    if (_loop_fuel <= 0) {
-      *_write =
-          std::make_shared<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-              list<LoopifyLists::list<uint64_t>>::nil());
-      break;
-    } else {
-      uint64_t f = _loop_fuel - 1;
-      if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-              _loop_l->v())) {
-        *_write =
-            std::make_shared<LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-                list<LoopifyLists::list<uint64_t>>::nil());
-        break;
+LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
+    uint64_t fuel,
+    const LoopifyLists::list<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const LoopifyLists::list<uint64_t> *l;
+    uint64_t fuel;
+  };
+
+  /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont1 {
+    uint64_t a0;
+  };
+
+  /// _Resume2: saves [_s0], resumes after recursive call with _result.
+  struct _Resume2 {
+    std::decay_t<decltype(list<uint64_t>::cons(std::declval<uint64_t &>(),
+                                               list<uint64_t>::nil()))>
+        _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Cont1, _Resume2>;
+  LoopifyLists::list<LoopifyLists::list<uint64_t>> _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{&l, fuel});
+  /// Loopified group_fuel: _Enter -> _Cont1 -> _Resume2.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const LoopifyLists::list<uint64_t> &l = *_f.l;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = list<LoopifyLists::list<uint64_t>>::nil();
       } else {
-        const auto &[a0, a1] =
-            std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
-        auto &&_sv0 = *a1;
+        uint64_t f = fuel - 1;
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-                _sv0.v())) {
-          *_write = std::make_shared<
-              LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-              list<LoopifyLists::list<uint64_t>>::cons(
-                  list<uint64_t>::cons(a0, list<uint64_t>::nil()),
-                  list<LoopifyLists::list<uint64_t>>::nil()));
-          break;
+                l.v())) {
+          _result = list<LoopifyLists::list<uint64_t>>::nil();
         } else {
-          const auto &[a00, a10] =
-              std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
-          if (a0 == a00) {
-            LoopifyLists::list<LoopifyLists::list<uint64_t>> _rc1 =
-                group_fuel(f, *a1);
-            if (std::holds_alternative<typename LoopifyLists::list<
-                    LoopifyLists::list<uint64_t>>::Nil>(_rc1.v())) {
-              *_write = std::make_shared<
-                  LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-                  list<LoopifyLists::list<uint64_t>>::cons(
-                      list<uint64_t>::cons(a0, list<uint64_t>::nil()),
-                      list<LoopifyLists::list<uint64_t>>::nil()));
-              break;
-            } else {
-              const auto &[a01, a11] = std::get<typename LoopifyLists::list<
-                  LoopifyLists::list<uint64_t>>::Cons>(_rc1.v());
-              *_write = std::make_shared<
-                  LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-                  list<LoopifyLists::list<uint64_t>>::cons(
-                      list<uint64_t>::cons(a0, a01), *a11));
-              break;
-            }
+          const auto &[a0, a1] =
+              std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
+          auto &&_sv0 = *a1;
+          if (std::holds_alternative<
+                  typename LoopifyLists::list<uint64_t>::Nil>(_sv0.v())) {
+            _result = list<LoopifyLists::list<uint64_t>>::cons(
+                list<uint64_t>::cons(a0, list<uint64_t>::nil()),
+                list<LoopifyLists::list<uint64_t>>::nil());
           } else {
-            auto _cell = std::make_shared<
-                LoopifyLists::list<LoopifyLists::list<uint64_t>>>(
-                typename list<LoopifyLists::list<uint64_t>>::Cons(
-                    list<uint64_t>::cons(a0, list<uint64_t>::nil()), nullptr));
-            *_write = std::move(_cell);
-            _write =
-                &std::get<typename list<LoopifyLists::list<uint64_t>>::Cons>(
-                     (*_write)->v_mut())
-                     .l;
-            _loop_l = crane_raw(a1);
-            _loop_fuel = f;
-            continue;
+            const auto &[a00, a10] =
+                std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
+            if (a0 == a00) {
+              _stack.emplace_back(_Cont1{a0});
+              _stack.emplace_back(_Enter{crane_raw(a1), f});
+            } else {
+              _stack.emplace_back(
+                  _Resume2{list<uint64_t>::cons(a0, list<uint64_t>::nil())});
+              _stack.emplace_back(_Enter{crane_raw(a1), f});
+            }
           }
         }
       }
+    } else if (std::holds_alternative<_Cont1>(_frame)) {
+      auto _f = std::move(std::get<_Cont1>(_frame));
+      uint64_t a0 = _f.a0;
+      LoopifyLists::list<LoopifyLists::list<uint64_t>> _rc1 =
+          std::move(_result);
+      if (std::holds_alternative<
+              typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Nil>(
+              _rc1.v())) {
+        _result = list<LoopifyLists::list<uint64_t>>::cons(
+            list<uint64_t>::cons(a0, list<uint64_t>::nil()),
+            list<LoopifyLists::list<uint64_t>>::nil());
+      } else {
+        const auto &[a01, a11] = std::get<
+            typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Cons>(
+            _rc1.v());
+        _result = list<LoopifyLists::list<uint64_t>>::cons(
+            list<uint64_t>::cons(a0, a01), *a11);
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume2>(_frame));
+      _result =
+          list<LoopifyLists::list<uint64_t>>::cons(_f._s0, std::move(_result));
     }
   }
-  return std::move(*_head);
+  return _result;
 }
 
 LoopifyLists::list<LoopifyLists::list<uint64_t>>
