@@ -354,20 +354,57 @@ let string_of_outcome = function
 let outcomes : (string * loopify_outcome) list ref = ref []
 
 let clear_outcomes () = outcomes := []
-let get_outcomes () = List.rev !outcomes
 
-(** Record one outcome, printing it when [Crane Loopify Diagnostics] is set and
-    raising when [Crane Loopify Strict] is set and the outcome is a decline. *)
+(** How good an outcome is.  A function can be transformed more than once —
+    {!transform_decl} is invoked independently from [Cpp_ind] and [Cpp_print],
+    and only one of those results is emitted — so the same name can produce
+    several outcomes per unit.  Only the best one describes the emitted code:
+    if any attempt linearised the function, the C++ holds no self-call. *)
+let outcome_rank = function
+  | Lp_declined _ -> 0
+  | Lp_deferred _ -> 1
+  | Lp_tail | Lp_tmc | Lp_frame -> 2
+
+let get_outcomes () =
+  (* Keep first-seen order, but collapse each name to its best outcome. *)
+  let best = Hashtbl.create 64 in
+  let order = ref [] in
+  List.iter
+    (fun (name, outcome) ->
+      match Hashtbl.find_opt best name with
+      | Some prev when outcome_rank prev >= outcome_rank outcome -> ()
+      | Some _ -> Hashtbl.replace best name outcome
+      | None ->
+        Hashtbl.add best name outcome;
+        order := name :: !order)
+    (List.rev !outcomes);
+  List.rev_map (fun name -> (name, Hashtbl.find best name)) !order
+
+(** Record one outcome.  Nothing is printed here: an outcome is only meaningful
+    once every attempt at the same function has been seen, so reporting waits
+    for {!report_outcomes} at the end of the unit. *)
 let record_outcome name outcome =
-  outcomes := (name, outcome) :: !outcomes;
+  outcomes := (name, outcome) :: !outcomes
+
+(** Print the collapsed outcomes when [Crane Loopify Diagnostics] is set, and
+    raise when [Crane Loopify Strict] is set and any function was declined.
+    Called once per compilation unit, after all decls have been transformed. *)
+let report_outcomes () =
+  let final = get_outcomes () in
   if Table.loopify_diagnostics () then
-    Feedback.msg_notice
-      (Pp.str ("[loopify] " ^ name ^ ": " ^ string_of_outcome outcome));
-  match outcome with
-  | Lp_declined why when Table.loopify_strict () ->
-    CErrors.user_err
-      (Pp.str ("loopify: cannot linearise " ^ name ^ " (" ^ why ^ ")"))
-  | _ -> ()
+    List.iter
+      (fun (name, outcome) ->
+        Feedback.msg_notice
+          (Pp.str ("[loopify] " ^ name ^ ": " ^ string_of_outcome outcome)))
+      final;
+  if Table.loopify_strict () then
+    List.iter
+      (function
+        | (name, Lp_declined why) ->
+          CErrors.user_err
+            (Pp.str ("loopify: cannot linearise " ^ name ^ " (" ^ why ^ ")"))
+        | _ -> ())
+      final
 
 (** The reason the innermost strategy declined, if it did.  Set by {!decline}
     just before a bail-out returns the original body, and consumed by
@@ -8195,20 +8232,30 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
     end else
       (* Normal (non-lazy) function — existing path *)
       let kind = classify check body in
-      let body =
+      let body, strategy =
         match kind with
-        | No_recursion -> body
+        | No_recursion -> (body, None)
         | Tail_recursion ->
-          report_outcome ~name ~check ~strategy:Lp_tail
-            (transform_tail check pp_type params ret_ty body)
+          (transform_tail check pp_type params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
             let body' =
               fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
                      tparams params ret_ty body)
             in
-            report_outcome ~name ~check ~strategy:!last_nontail_strategy body'
+            (body', Some !last_nontail_strategy)
       in
-      loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
+      (* A self-call can sit inside an inner lambda, where the transforms above
+         deliberately leave it alone; [loopify_inner_lambdas] is what removes
+         it.  Judge the postcondition only once that has run, or every such
+         function is reported as declined even though the emitted code holds no
+         self-call.  The inner pass records outcomes of its own, which clobbers
+         [pending_decline], so carry our reason across it. *)
+      let pending = !pending_decline in
+      let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
+      pending_decline := pending;
+      (match strategy with
+       | None -> pending_decline := None; body
+       | Some s -> report_outcome ~name ~check ~strategy:s body)
   in
   Dfundef (names, ret_ty, params, body, no_pure)
 
@@ -8361,20 +8408,28 @@ let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     let check = lambda_checker name in
     let kind = classify check body in
     let dname = Id.to_string name in
-    let body' =
+    let body', strategy =
       match kind with
-      | No_recursion -> body
+      | No_recursion -> (body, None)
       | Tail_recursion ->
-        report_outcome ~name:dname ~check ~strategy:Lp_tail
-          (transform_tail check pp_type params ret_ty body)
+        (transform_tail check pp_type params ret_ty body, Some Lp_tail)
       | Nontail_recursion ->
         let body' =
           fst (apply_nontail_loopification ~fn_name:dname check pp_type pp_expr
                  tparams params ret_ty body)
         in
-        report_outcome ~name:dname ~check ~strategy:!last_nontail_strategy body'
+        (body', Some !last_nontail_strategy)
     in
+    (* As in {!transform_fundef}: the postcondition is only meaningful once
+       inner lambdas have been linearised too. *)
+    let pending = !pending_decline in
     let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
+    pending_decline := pending;
+    let body' =
+      match strategy with
+      | None -> pending_decline := None; body'
+      | Some s -> report_outcome ~name:dname ~check ~strategy:s body'
+    in
     (Ffundef (name, ret_ty, params, body'), vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =

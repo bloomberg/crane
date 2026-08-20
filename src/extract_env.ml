@@ -1217,7 +1217,13 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   if not (Int.equal (Buffer.length buf) 0) then (
     let formatted_output = format_buffer_to_string buf in
     Feedback.msg_notice (str formatted_output);
-    Buffer.reset buf )
+    Buffer.reset buf );
+  (* Loopify records an outcome per recursive function but reports nothing as
+     it goes: a function is transformed several times per unit (dry run, then
+     the header and implementation passes) and only the best of those outcomes
+     describes the code actually emitted.  Report now that they are all in, and
+     only for the real run -- the dry run's results are discarded. *)
+  if not dry then Loopify.report_outcomes ()
 
 (*********************************************)
 (** {2 Part III: the actual extraction commands} *)

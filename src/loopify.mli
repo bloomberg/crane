@@ -74,8 +74,17 @@ type loopify_outcome =
 (** Render an outcome for the diagnostic report. *)
 val string_of_outcome : loopify_outcome -> string
 
-(** Outcomes recorded so far, in the order the functions were processed. *)
+(** Outcomes recorded so far, in the order the functions were first processed.
+
+    A function may be transformed more than once per unit — the dry run and the
+    header/implementation passes each invoke {!transform_decl} — so each name is
+    collapsed to its best outcome, which is the one describing the emitted C++.
+*)
 val get_outcomes : unit -> (string * loopify_outcome) list
+
+(** Print the collapsed outcomes ([Crane Loopify Diagnostics]) and raise on any
+    decline ([Crane Loopify Strict]). Call once per unit, after transforming. *)
+val report_outcomes : unit -> unit
 
 (** Discard all recorded outcomes; called at each compilation-unit boundary. *)
 val clear_outcomes : unit -> unit

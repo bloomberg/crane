@@ -7,7 +7,6 @@ fold_compose: DECLINED: a self-call survived the transform
 max: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
 quadtree_rec: DECLINED: a self-call survived the transform
 quadtree_rect: DECLINED: a self-call survived the transform
-quicksort_fun: DECLINED: a self-call survived the transform
 rose_sum: DECLINED: a self-call survived the transform
 sub: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
 tree_to_adder: DECLINED: a self-call survived the transform
