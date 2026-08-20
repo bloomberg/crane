@@ -460,7 +460,12 @@ let register_methods_for_epon
         | Some l -> l
         | None -> []
       in
-      Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
+      (* Dedup by function reference: the same top-level function can be
+         visited more than once (parent decls overlap module decls), and the
+         candidate list must not emit it twice. *)
+      if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing)
+      then
+        Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
     in
     List.iter
       (fun (_l, se) ->
@@ -557,7 +562,9 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     let existing = match Hashtbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
-    Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
+    (* Dedup by function reference (see the note in [register_methods_for_epon]). *)
+    if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing) then
+      Hashtbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
   in
   (* Check if the inductive argument at position [pos] in [ty] uses concrete
      type parameters. Functions specialized to e.g. [tree nat] instead of
@@ -776,8 +783,12 @@ and pre_register_methods_from_module_expr
     [Translation.type_is_erased] reports it as erased. 3. If erased, set
     [returns_any = true] in the method's entry. *)
 let compute_returns_any tbl (s : ml_structure) =
-  (* Step 1: Build mapping from IndRef -> param_vars for all inductives. *)
+  (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
+     for all inductives and (b) a term-ref -> ML type index so step 2 can look
+     up each method's type in O(1) instead of re-walking the whole structure
+     per method (which was O(methods x structure)). *)
   let ind_param_vars : (GlobRef.t, Id.t list) Hashtbl.t = Hashtbl.create 32 in
+  let method_types : (GlobRef.t, Miniml.ml_type) Hashtbl.t = Hashtbl.create 256 in
   let rec collect_from_sel sel =
     List.iter
       (fun (_l, se) ->
@@ -789,6 +800,9 @@ let compute_returns_any tbl (s : ml_structure) =
               let (param_vars, _) = Table.ind_param_vars ind p in
               Hashtbl.replace ind_param_vars ind_ref param_vars )
             ind.ind_packets
+        | SEdecl (Dterm (r, _, ty)) -> Hashtbl.replace method_types r ty
+        | SEdecl (Dfix (rv, _, typs)) ->
+          Array.iteri (fun i r -> Hashtbl.replace method_types r typs.(i)) rv
         | SEmodule m ->
           ( match m.ml_mod_expr with
           | MEstruct (_mp, inner_sel) -> collect_from_sel inner_sel
@@ -809,36 +823,9 @@ let compute_returns_any tbl (s : ml_structure) =
           | Miniml.Tarr (_, t2) -> get_return_type t2
           | ret -> ret
         in
-        (* Search the entire structure for this method's ML type. We need the
-           original ML type to convert it to MiniCpp and check for erasure. *)
-        let find_method_type () =
-          let result = ref None in
-          let rec search_sel sel =
-            List.iter
-              (fun (_l, se) ->
-                match se with
-                | SEdecl (Dterm (r, _, ty))
-                  when globref_equal r func_ref ->
-                  result := Some ty
-                | SEdecl (Dfix (rv, _, typs)) ->
-                  Array.iteri
-                    (fun i r ->
-                      if globref_equal r func_ref
-                      then
-                        result := Some typs.(i) )
-                    rv
-                | SEmodule m ->
-                  ( match m.ml_mod_expr with
-                  | MEstruct (_mp, inner_sel) -> search_sel inner_sel
-                  | _ -> () )
-                | _ -> () )
-              sel
-          in
-          List.iter (fun (_mp, sel) -> search_sel sel) s;
-          !result
-        in
-        (* Step 3: Convert return type to MiniCpp and check for erasure. *)
-        ( match find_method_type () with
+        (* Step 3: Look up this method's ML type (indexed in step 1) and check
+           whether its return type is erased. *)
+        ( match Hashtbl.find_opt method_types func_ref with
         | None -> ()
         | Some ty ->
           let ret_ml = get_return_type ty in
@@ -939,7 +926,12 @@ let add_candidate (reg : t) (ind_ref : GlobRef.t) (cand : method_candidate) =
     | Some l -> l
     | None -> []
   in
-  Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
+  let cand_ref, _, _, _ = cand in
+  (* Dedup by function reference so a manually-registered method (e.g. from
+     cpp.ml/cpp_ind.ml) isn't appended twice into the candidate list. *)
+  if not (List.exists (fun (r', _, _, _) -> globref_equal r' cand_ref) existing)
+  then
+    Hashtbl.replace reg.candidates ind_ref (existing @ [cand])
 
 (** Check if a function qualifies as a method on [epon_ref] and register it
     if so.  This is the single entry point for the

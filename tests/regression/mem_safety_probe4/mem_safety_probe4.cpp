@@ -19,8 +19,7 @@ uint64_t MemSafetyProbe4::sum_through(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -65,8 +64,7 @@ uint64_t MemSafetyProbe4::add_through(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified add_through: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -114,8 +112,7 @@ uint64_t MemSafetyProbe4::double_partial(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified double_partial: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -168,8 +165,7 @@ uint64_t MemSafetyProbe4::weighted_sum(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{w, &l});
   /// Loopified weighted_sum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -250,8 +246,7 @@ uint64_t MemSafetyProbe4::mysum(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified mysum: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -292,8 +287,7 @@ uint64_t MemSafetyProbe4::process_list(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified process_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {

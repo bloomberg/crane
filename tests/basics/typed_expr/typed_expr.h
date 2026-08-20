@@ -1,11 +1,11 @@
 #ifndef INCLUDED_TYPED_EXPR
 #define INCLUDED_TYPED_EXPR
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Ty { TNAT, TBOOL };
 
@@ -78,7 +78,7 @@ public:
 
   // MANIPULATORS
   ~Expr() {
-    std::vector<std::shared_ptr<Expr>> _stack = {};
+    crane::small_vector<std::shared_ptr<Expr>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<EAdd>(&_v)) {
         if (_alt->a0) {
@@ -117,6 +117,11 @@ public:
       }
     }
   }
+
+  Expr(const Expr &) = default;
+  Expr &operator=(const Expr &) = default;
+  Expr(Expr &&) noexcept = default;
+  Expr &operator=(Expr &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

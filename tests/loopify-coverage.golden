@@ -1,0 +1,12 @@
+fibst_cofix_repro.cpp max: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
+fibst_cofix_repro.cpp sub: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
+loopify_gap_ackermann.cpp ack: DECLINED: a self-call survived the transform
+loopify_gap_nested_fix.cpp rose_sum: DECLINED: a self-call survived the transform
+loopify_multi_recursion.cpp quadtree_rec: DECLINED: a self-call survived the transform
+loopify_multi_recursion.cpp quadtree_rect: DECLINED: a self-call survived the transform
+mem_safety_probe.cpp fold_compose: DECLINED: a self-call survived the transform
+mem_safety_probe10.cpp chain_adders: DECLINED: a self-call survived the transform
+mem_safety_probe10.cpp tree_to_adder: DECLINED: a self-call survived the transform
+mem_safety_probe16.cpp compose_summers: DECLINED: a self-call survived the transform
+mem_safety_probe16.cpp flatten_cps_aux: DECLINED: a self-call survived the transform
+mem_safety_probe21.cpp cps_sum: DECLINED: a self-call survived the transform

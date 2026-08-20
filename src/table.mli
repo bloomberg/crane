@@ -11,15 +11,23 @@
 (************************************************************************)
 
 (** Extraction environment tables, custom extraction mappings, and configuration
-    parameters. *)
+    parameters.
+
+    This module is the plugin's central mutable registry: it holds the custom
+    [Extract Inductive]/[Extract Constant] mappings, cached inductive metadata,
+    the global extraction flags, and the per-run reset hooks that clear all of
+    the above between extractions.  Most other modules read and write this state
+    rather than threading it explicitly. *)
 
 open Names
 open Libnames
 open Miniml
 open Declarations
 
+(** Sets of global references, keyed on the canonical form of [GlobRef.t]. *)
 module Refset' : CSig.USetS with type elt = GlobRef.t
 
+(** Maps from global references (canonical [GlobRef.t]) to arbitrary values. *)
 module Refmap' : CSig.UMapS with type key = GlobRef.t
 
 (** Get a safe basename identifier from a global reference. *)
@@ -262,14 +270,15 @@ val needs_arena : unit -> bool
 (** Reset the arena-needed flag. *)
 val reset_needs_arena : unit -> unit
 
-(** Mark that the [rc.h] runtime header is needed (non-atomic rc codegen). *)
-val mark_needs_rc : unit -> unit
+(** Mark that [small_vector.h] is needed (small-buffer-optimized destructor
+    drain worklist codegen). *)
+val mark_needs_small_vector : unit -> unit
 
-(** Check whether the [rc.h] runtime header is needed. *)
-val needs_rc : unit -> bool
+(** Check whether [small_vector.h] is needed. *)
+val needs_small_vector : unit -> bool
 
-(** Reset the rc-needed flag. *)
-val reset_needs_rc : unit -> unit
+(** Reset the small_vector-needed flag. *)
+val reset_needs_small_vector : unit -> unit
 
 (** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
 val require_itree_header : unit -> unit
@@ -568,9 +577,30 @@ val conservative_types : unit -> bool
 *)
 val loopify : unit -> bool
 
+(** Whether the loopify pass should report, for every recursive function it
+    sees, the strategy that fired or the reason it declined
+    ([Set Crane Loopify Diagnostics]). Diagnostic only; does not affect
+    emitted code. *)
+val loopify_diagnostics : unit -> bool
+
+(** Whether a declined loopification (or a residual self-call surviving the
+    transform) is a hard error rather than a silent fallback to C++ recursion
+    ([Set Crane Loopify Strict]). *)
+val loopify_strict : unit -> bool
+
 (** Check whether a specific function should be loopified (per-function override
     first, then global setting). *)
 val should_loopify : GlobRef.t -> bool
+
+(** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
+val current_decl_ref : GlobRef.t option ref
+
+(** Whether the Perceus reuse rewrite may apply inside the declaration being
+    translated: true exactly when loopify will not rewrite it. *)
+val reuse_loopify_ok : unit -> bool
+
+(** [with_decl_ref r f] runs [f] with {!current_decl_ref} set to [r]. *)
+val with_decl_ref : GlobRef.t -> (unit -> 'a) -> 'a
 
 (** Mark references for loopify (true) or noloopify (false).
     @param b [true] to force loopification of the listed functions,
@@ -581,31 +611,51 @@ val extraction_loopify : bool -> qualid list -> unit
 (** Reset per-function loopify table. *)
 val reset_extraction_loopify : unit -> unit
 
-(** Check if arena (region) allocation is enabled globally for recursive
-    inductives. *)
-val arena : unit -> bool
+(** {2 Reuse pass (Perceus-style in-place reuse)} *)
 
-(** Check whether a specific inductive should use arena allocation (per-inductive
-    override first, then global [Crane Arena] setting). *)
-val should_arena : GlobRef.t -> bool
+(** Check if the reuse pass is enabled ([Crane Reuse], default off). *)
+val reuse : unit -> bool
+
+(** Check whether a specific function should reuse (per-function override first,
+    then global setting). *)
+val should_reuse : GlobRef.t -> bool
+
+(** Mark references for reuse (true) or noreuse (false), overriding the global
+    [Crane Reuse] setting. *)
+val extraction_reuse : bool -> qualid list -> unit
+
+(** Reset per-function reuse table. *)
+val reset_extraction_reuse : unit -> unit
+
+(** Scoped-arena redesign: whether an inductive's recursive-field factory should
+    contain the runtime [in_arena_scope()] branch (bump-allocate when a scope is
+    open).  True for every type except those opted out via [Crane NoArena]. *)
+val should_use_arena_at_runtime : GlobRef.t -> bool
 
 (** Check if non-atomic reference counting ([crane::rc]) is enabled, swapping
     [std::shared_ptr]/[std::make_shared] for [crane::rc]/[crane::make_rc]. *)
 val non_atomic_rc : unit -> bool
 
+(** [Set Crane Arena]: whether the runtime scoped-arena factory
+    ([crane::arena_make_shared] / [crane::rc<T>::make]) is emitted for recursive
+    fields.  Off by default, in which case generated code uses the plain
+    [std::make_shared] / [crane::make_rc] and pulls in no arena runtime.  Only
+    swaps the factory, never the pointer representation. *)
+val arena_enabled : unit -> bool
+
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
     [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string
+
+(** Name of the smart-pointer factory function to emit: [crane::make_rc] under
+    [Crane NonAtomicRc], [bsl::make_shared] for the BDE standard library, and
+    [std::make_shared] otherwise. Companion of [shared_ptr_name]. *)
 val make_shared_name : unit -> string
 
-(** Mark inductive types for arena (true) or non-arena (false) extraction.
-    @param b [true] to force arena allocation for the listed inductives,
-             [false] to opt them out (override the global [Crane Arena] setting)
-    @param l list of qualified inductive identifiers to configure *)
-val extraction_arena : bool -> qualid list -> unit
-
-(** Reset per-inductive arena table. *)
-val reset_extraction_arena : unit -> unit
+(** Opt inductive types out of runtime arena allocation ([Crane NoArena <ind>]):
+    the listed types never bump-allocate, even inside an open arena scope.
+    @param l list of qualified inductive identifiers to exclude *)
+val extraction_no_arena : qualid list -> unit
 
 (** {2 File comment} *)
 
@@ -710,6 +760,11 @@ val find_custom_match_by_ref : GlobRef.t -> string option
 (** Completeness-aware element wrapping (WRAP.md). Look up the [Boxed Element]
     wrapper template (e.g. ["immer::box<%t0>"]) for a custom container. *)
 val find_boxed_wrapper_opt : GlobRef.t -> string option
+
+(** Look up the [Drain "..."] iterative-destructor template for a custom
+    container. Placeholders: [%scrut] = container field expression, [%yield(e)] =
+    push child [e] onto the destructor worklist. *)
+val find_custom_drain_opt : GlobRef.t -> string option
 
 (** Record an inductive that recurses through a boxed-element container. *)
 val add_boxed_recursive_ind : GlobRef.t -> unit
@@ -845,6 +900,7 @@ val extract_constant_foreign : qualid -> string -> unit
     @param imports list of C++ headers to [#include] when this type is used *)
 val extract_inductive :
   ?boxed:string ->
+  ?drain:string ->
   qualid -> string -> string list -> string option -> string list -> unit
 
 (** Extract monad with bind and return operations.

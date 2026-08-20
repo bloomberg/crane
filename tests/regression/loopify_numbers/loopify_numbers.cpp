@@ -17,8 +17,7 @@ LoopifyNumbers::factorial(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified factorial: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -63,8 +62,7 @@ LoopifyNumbers::fib(uint64_t n) { /// _Enter: captures varying parameters for
 
   using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified fib: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {
@@ -131,8 +129,7 @@ uint64_t LoopifyNumbers::tribonacci_fuel(
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified tribonacci_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
   while (!_stack.empty()) {
@@ -235,8 +232,7 @@ LoopifyNumbers::binomial(uint64_t n,
 
   using _Frame = std::variant<_Enter, _After_k_, _Combine_k_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{k, n});
   /// Loopified binomial: _Enter -> _After_k_ -> _Combine_k_.
   while (!_stack.empty()) {
@@ -299,8 +295,7 @@ LoopifyNumbers::pascal(uint64_t row,
 
   using _Frame = std::variant<_Enter, _After_r, _Combine_r>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{col, row});
   /// Loopified pascal: _Enter -> _After_r -> _Combine_r.
   while (!_stack.empty()) {
@@ -353,8 +348,7 @@ uint64_t LoopifyNumbers::ackermann_fuel(
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, m, fuel});
   /// Loopified ackermann_fuel: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -412,8 +406,7 @@ uint64_t LoopifyNumbers::collatz_length_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_length_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -474,8 +467,7 @@ uint64_t LoopifyNumbers::digitsum_fuel(
 
   using _Frame = std::variant<_Enter, _Resume__x>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified digitsum_fuel: _Enter -> _Resume__x.
   while (!_stack.empty()) {
@@ -528,8 +520,7 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(
 
   using _Frame = std::variant<_Enter, _Cont__x>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified dec_to_bin_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
@@ -581,8 +572,7 @@ LoopifyNumbers::sum_to(uint64_t n) { /// _Enter: captures varying parameters for
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_to: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -621,8 +611,7 @@ uint64_t LoopifyNumbers::sum_squares(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_squares: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -703,8 +692,7 @@ uint64_t LoopifyNumbers::staircase_fuel(
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified staircase_fuel: _Enter -> _After_m -> _After_m_1 -> _Combine_m.
   while (!_stack.empty()) {
@@ -789,8 +777,7 @@ uint64_t LoopifyNumbers::sum_while_positive(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_while_positive: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -831,8 +818,7 @@ uint64_t LoopifyNumbers::count_down_by_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified count_down_by_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -905,8 +891,7 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(
 
   using _Frame = std::variant<_Enter, _After_m, _After_m_1, _Combine_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified mixed_arith_fuel: _Enter -> _After_m -> _After_m_1 ->
   /// _Combine_m.
@@ -1049,8 +1034,7 @@ LoopifyNumbers::power(uint64_t b,
 
   using _Frame = std::variant<_Enter, _Resume_e_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{e});
   /// Loopified power: _Enter -> _Resume_e_.
   while (!_stack.empty()) {
@@ -1093,8 +1077,7 @@ uint64_t LoopifyNumbers::power_mod_fuel(
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{e, fuel});
   /// Loopified power_mod_fuel: _Enter -> _Cont1 -> _Cont2.
   while (!_stack.empty()) {
@@ -1154,8 +1137,7 @@ uint64_t LoopifyNumbers::sum_divisors_aux(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{k});
   /// Loopified sum_divisors_aux: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -1239,8 +1221,7 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified sum_even_indices_fuel: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -1366,8 +1347,7 @@ uint64_t LoopifyNumbers::sum_divisible_by(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified sum_divisible_by: _Enter -> _Resume1.
   while (!_stack.empty()) {

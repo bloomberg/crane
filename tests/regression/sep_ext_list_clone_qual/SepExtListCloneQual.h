@@ -1,11 +1,11 @@
 #ifndef INCLUDED_SEPEXTLISTCLONEQUAL
 #define INCLUDED_SEPEXTLISTCLONEQUAL
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 #include "Datatypes.h"
 
@@ -84,7 +84,7 @@ public:
 
   // MANIPULATORS
   ~Forest() {
-    std::vector<std::shared_ptr<Forest<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<Forest<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {
         if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -114,6 +114,11 @@ public:
       }
     }
   }
+
+  Forest(const Forest &) = default;
+  Forest &operator=(const Forest &) = default;
+  Forest(Forest &&) noexcept = default;
+  Forest &operator=(Forest &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

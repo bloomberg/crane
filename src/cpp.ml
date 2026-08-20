@@ -482,17 +482,6 @@ let rec prlist_with_doc_safe_sep sep = function
     in
     p ++ boundary ++ prlist_with_doc_safe_sep sep rest
 
-(** Pretty-print a structure element (label, elem) pair. Handles modules, module
-    types, and declarations.
-
-    @param is_header  When [true], emit header-mode output (struct definitions,
-                      concept declarations, [using] aliases).  When [false],
-                      emit implementation-mode output (out-of-line function
-                      bodies, skipping header-only constructs).
-    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
-                      nodes; typically [pp_decl] or [pp_hdecl].
-    @return Pretty-printer document for the element, or [mt ()] if the element
-            produces no output in the current pass. *)
 (** Try to extract a named concept from a module type.
 
     Strips [MTwith] constraints (which have no C++ concept equivalent) and
@@ -586,6 +575,17 @@ let pp_template_param (mbid, mt) =
       else
         concept_body ++ str " " ++ param_name
 
+(** Pretty-print a structure element (label, elem) pair. Handles modules, module
+    types, and declarations.
+
+    @param is_header  When [true], emit header-mode output (struct definitions,
+                      concept declarations, [using] aliases).  When [false],
+                      emit implementation-mode output (out-of-line function
+                      bodies, skipping header-only constructs).
+    @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
+                      nodes; typically [pp_decl] or [pp_hdecl].
+    @return Pretty-printer document for the element, or [mt ()] if the element
+            produces no output in the current pass. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
     let body = f d in
@@ -1138,12 +1138,23 @@ let rec pp_structure_elem ~is_header f = function
                     ++ str ">"
                     ++ fnl ()
                 in
-                let field_list = List.combine fields packet.ip_types.(0) in
-                let pp_field (field_ref, field_ty) =
+                let ctor_types = packet.ip_types.(0) in
+                if List.length fields <> List.length ctor_types then
+                  CErrors.anomaly
+                    (str "cpp: eponymous record field count ("
+                    ++ int (List.length fields)
+                    ++ str ") does not match its constructor arity ("
+                    ++ int (List.length ctor_types)
+                    ++ str ")");
+                let field_list = List.combine fields ctor_types in
+                let pp_field i (field_ref, field_ty) =
                   let field_name =
                     match field_ref with
                     | Some r -> str (Common.pp_global_name Term r)
-                    | None -> str "_field"
+                    (* Index anonymous fields so multiple of them don't all
+                       collapse to a single duplicate "_field" member (which
+                       would not compile).  Matches gen_decls.ml. *)
+                    | None -> str ("_field" ^ string_of_int i)
                   in
                   let cpp_ty =
                     pp_cpp_type
@@ -1157,7 +1168,8 @@ let rec pp_structure_elem ~is_header f = function
                   cpp_ty ++ spc () ++ field_name ++ str ";"
                 in
                 let fields_pp =
-                  prlist_with_sep fnl pp_field field_list ++ fnl ()
+                  prlist_with_sep fnl (fun p -> p) (List.mapi pp_field field_list)
+                  ++ fnl ()
                 in
                 let non_projection_candidates =
                   List.filter

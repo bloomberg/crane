@@ -2,13 +2,13 @@
 #define INCLUDED_LOOPIFY_PREDICATES
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -80,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -97,6 +97,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -157,39 +162,105 @@ struct LoopifyPredicates {
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<List<uint64_t>, List<uint64_t>> span(F0 &&p,
-                                                        List<uint64_t> l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-      return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-    } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-      if (p(a0)) {
-        auto [yes, no] = span(p, *a1);
-        return std::make_pair(
-            List<uint64_t>::cons(std::move(a0), std::move(yes)), std::move(no));
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  span(F0 &&p,
+       List<uint64_t>
+           l) { /// _Enter: captures varying parameters for each recursive call.
+
+    struct _Enter {
+      List<uint64_t> l;
+    };
+
+    /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
+    struct _Cont1 {
+      uint64_t a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont1>;
+    std::pair<List<uint64_t>, List<uint64_t>> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{std::move(l)});
+    /// Loopified span: _Enter -> _Cont1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        List<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+        } else {
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+          if (p(a0)) {
+            _stack.emplace_back(_Cont1{a0});
+            _stack.emplace_back(_Enter{*a1});
+          } else {
+            _result = std::make_pair(List<uint64_t>::nil(), l);
+          }
+        }
       } else {
-        return std::make_pair(List<uint64_t>::nil(), l);
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        uint64_t a0 = _f.a0;
+        std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
+        auto [yes, no] = _rc1;
+        _result = std::make_pair(
+            List<uint64_t>::cons(std::move(a0), std::move(yes)), std::move(no));
       }
     }
+    return _result;
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static std::pair<List<uint64_t>, List<uint64_t>> break_at(F0 &&p,
-                                                            List<uint64_t> l) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
-      return std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
-    } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-      if (p(a0)) {
-        return std::make_pair(List<uint64_t>::nil(), l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  break_at(F0 &&p,
+           List<uint64_t> l) { /// _Enter: captures varying parameters for each
+                               /// recursive call.
+
+    struct _Enter {
+      List<uint64_t> l;
+    };
+
+    /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
+    struct _Cont1 {
+      uint64_t a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont1>;
+    std::pair<List<uint64_t>, List<uint64_t>> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{std::move(l)});
+    /// Loopified break_at: _Enter -> _Cont1.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        List<uint64_t> l = std::move(_f.l);
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+          _result =
+              std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
+        } else {
+          auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+          if (p(a0)) {
+            _result = std::make_pair(List<uint64_t>::nil(), l);
+          } else {
+            _stack.emplace_back(_Cont1{a0});
+            _stack.emplace_back(_Enter{*a1});
+          }
+        }
       } else {
-        auto [before, after] = break_at(p, *a1);
-        return std::make_pair(
+        auto _f = std::move(std::get<_Cont1>(_frame));
+        uint64_t a0 = _f.a0;
+        std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
+        auto [before, after] = _rc1;
+        _result = std::make_pair(
             List<uint64_t>::cons(std::move(a0), std::move(before)),
             std::move(after));
       }
     }
+    return _result;
   }
 
   template <typename F0>
@@ -270,8 +341,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified forall_pred: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -313,8 +383,7 @@ struct LoopifyPredicates {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified exists_pred: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {

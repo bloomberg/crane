@@ -18,31 +18,14 @@
 
 ; Test rules - compile C++ and run tests
 
-(subdir benchmark_matrix
- ; Make the local Hyperfine test double an explicit prerequisite of coqc.
- (rule
-  (targets BenchmarkMatrix.v)
-  (deps BenchmarkMatrix.v.in %{bin:hyperfine})
-  (action (copy BenchmarkMatrix.v.in BenchmarkMatrix.v)))
- (rule
-  (targets benchmark_matrix.t.exe)
-  (deps BenchmarkMatrix.vo benchmark_matrix.t.cpp)
-  (action
-   (run clang++ -std=c++23 -o benchmark_matrix.t.exe benchmark_matrix.t.cpp)))
- (rule
-  (alias runtest)
-  (deps benchmark_matrix.t.exe)
-  (action (run ./benchmark_matrix.t.exe))))
+
 
 (subdir extraction_path_traversal
- ; Security regression: the assertions run while the .vo is built (Fail commands
- ; reject path-traversal extraction targets). The .t.cpp is a shim so the
- ; standard test runner still sees and depends on the fixture.
  (rule
   (targets extraction_path_traversal.t.exe)
-  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp)
+  (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp (source_tree .))
   (action
-   (run clang++ -std=c++23 -o extraction_path_traversal.t.exe extraction_path_traversal.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_path_traversal.t.exe extraction_path_traversal.cpp extraction_path_traversal.t.cpp)))
  (rule
   (alias runtest)
   (deps extraction_path_traversal.t.exe)
@@ -2293,6 +2276,39 @@
   (alias runtest)
   (deps loopify_gap_if_condition.t.exe)
   (action (run ./loopify_gap_if_condition.t.exe))))
+
+(subdir loopify_nontail_pair
+ (rule
+  (targets loopify_nontail_pair.t.exe)
+  (deps LoopifyNontailPair.vo loopify_nontail_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nontail_pair.t.exe loopify_nontail_pair.cpp loopify_nontail_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_nontail_pair.t.exe)
+  (action (run ./loopify_nontail_pair.t.exe))))
+
+(subdir arena_scoping
+ (rule
+  (targets arena_scoping.t.exe)
+  (deps ArenaScoping.vo arena_scoping.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_scoping.t.exe arena_scoping.cpp arena_scoping.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_scoping.t.exe)
+  (action (run ./arena_scoping.t.exe))))
+
+(subdir arena_composite
+ (rule
+  (targets arena_composite.t.exe)
+  (deps ArenaComposite.vo arena_composite.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_composite.t.exe arena_composite.cpp arena_composite.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_composite.t.exe)
+  (action (run ./arena_composite.t.exe))))
 
 (subdir loopify_gap_pair_destructure
  (rule
@@ -6344,3 +6360,38 @@
   (alias runtest)
   (deps parser_frame_modtype_nil.t.exe)
   (action (run ./parser_frame_modtype_nil.t.exe))))
+
+(subdir guard_compare_label_collision
+ (rule
+  (targets guard_compare_label_collision.t.exe)
+  (deps GuardCompareLabelCollision.vo guard_compare_label_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} guard_compare_label_collision.t.exe guard_compare_label_collision.cpp guard_compare_label_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps guard_compare_label_collision.t.exe)
+  (action (run ./guard_compare_label_collision.t.exe))))
+
+(subdir arena_tree
+ (rule
+  (targets arena_tree.t.exe)
+  (deps Tree.vo arena_tree.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_tree.t.exe arena_tree.cpp arena_tree.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps arena_tree.t.exe)
+  (action (run ./arena_tree.t.exe))))
+
+(subdir typeclass_enum_eq
+ (rule
+  (targets typeclass_enum_eq.t.exe)
+  (deps TypeclassEnumEq.vo typeclass_enum_eq.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typeclass_enum_eq.t.exe typeclass_enum_eq.cpp typeclass_enum_eq.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps typeclass_enum_eq.t.exe)
+  (action (run ./typeclass_enum_eq.t.exe))))
+
+

@@ -1,12 +1,14 @@
 #ifndef INCLUDED_ARENA_TREE
 #define INCLUDED_ARENA_TREE
 
-#include "arena.h"
+#include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
+#define CRANE_ARENA 1
+#include "arena.h"
+#include "small_vector.h"
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -34,11 +36,13 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(Nat a0) {
+    return Nat(S{crane::arena_make_shared<Nat>(std::move(a0))});
+  }
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -55,6 +59,11 @@ public:
       }
     }
   }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -76,9 +85,9 @@ template <typename A> struct Tree {
   struct Leaf {};
 
   struct Node {
-    Tree<A> *t1;
+    std::shared_ptr<Tree<A>> t1;
     A x;
-    Tree<A> *t2;
+    std::shared_ptr<Tree<A>> t2;
   };
 
   using variant_t = std::variant<Leaf, Node>;
@@ -95,14 +104,82 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
+  template <typename _U> Tree(const Tree<_U> &_other) {
+    if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+      this->v_ = Leaf{};
+    } else {
+      const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
+      this->v_ = Node{
+          t1 ? std::make_shared<Tree<A>>(*t1) : nullptr,
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (x.type() == typeid(A))
+                return std::any_cast<A>(x);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(x);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(x);
+            } else
+              return A(x);
+          }(),
+          t2 ? std::make_shared<Tree<A>>(*t2) : nullptr};
+    }
+  }
+
   static Tree<A> leaf() { return Tree(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree(Node{crane::arena_alloc<Tree<A>>(std::move(t1)), std::move(x),
-                     crane::arena_alloc<Tree<A>>(std::move(t2))});
+    return Tree(Node{crane::arena_make_shared<Tree<A>>(std::move(t1)),
+                     std::move(x),
+                     crane::arena_make_shared<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
+  ~Tree() {
+    crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Node>(&_v)) {
+        if (_alt->t1) {
+          _stack.push_back(std::move(_alt->t1));
+        }
+        if (_alt->t2) {
+          _stack.push_back(std::move(_alt->t2));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  Tree(const Tree &) = default;
+  Tree &operator=(const Tree &) = default;
+  Tree(Tree &&) noexcept = default;
+  Tree &operator=(Tree &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS

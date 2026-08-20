@@ -1,0 +1,10 @@
+[submodule "libraries/parse-a-lot-bench/corpus-src/json"]
+	path = libraries/parse-a-lot-bench/corpus-src/json
+	url = https://github.com/unitedstates/congress-legislators.git
+[submodule "libraries/parse-a-lot-bench/corpus-src/csv"]
+	path = libraries/parse-a-lot-bench/corpus-src/csv
+	url = https://github.com/tinytoolkit-org/csv-datasets.git
+[submodule "libraries/parse-a-lot-bench/corpus-src/xml"]
+	path = libraries/parse-a-lot-bench/corpus-src/xml
+	url = https://github.com/oanc/masc.git
+	shallow = true

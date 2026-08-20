@@ -56,7 +56,25 @@ This will reduce the boilerplate needed when integrating large developments.
 
 ---
 
-## 5. Verified Components at Scale
+## 5. Performance of the Generated Code
+
+Extracted C++ should be competitive with what an engineer would write by hand,
+and with the OCaml extraction of the same Rocq source. Current and planned work
+includes:
+
+* reducing allocation volume — Perceus-style in-place reuse, container mappings
+  that match the source's asymptotics, and scoped arenas,
+* eliminating recursion so deep inputs cannot overflow the stack, and closing
+  the [remaining gap](Reference-Manual.md#shapes-that-still-decline) in that
+  pass,
+* narrowing the cost of type erasure for dependent types that survive
+  extraction,
+* extending the benchmark suite beyond the `ParseALot` pipeline so regressions
+  are caught on realistic workloads.
+
+---
+
+## 6. Verified Components at Scale
 
 A future goal is to **deploy verified libraries into production** across Bloomberg's C++ systems.
 This requires:
@@ -68,7 +86,7 @@ This requires:
 
 ---
 
-## 6. Developer Experience and Tooling
+## 7. Developer Experience and Tooling
 
 Planned enhancements include:
 

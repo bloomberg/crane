@@ -18,7 +18,6 @@ open Util
 include Translation_state
 include Ml_type_util
 
-
 (** Compute the factory method name for a constructor.
     Factory names are the lowercase of the constructor struct name
     (e.g. [Cons] -> ["cons"]). If the lowercased name collides with a C++
@@ -579,7 +578,7 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           "int64_t"
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
-let build_guard_compare_stmts n ids =
+let build_guard_compare_stmts ?type_string_of n ids cod =
   match Table.find_guard_compare n with
   | None -> []
   | Some ctor_ref ->
@@ -610,6 +609,44 @@ let build_guard_compare_stmts n ids =
           when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
           let ctor_name = Id.of_string (Table.enum_ctor_name_of_ref kn i cidx) in
           CPPenum_val (GlobRef.IndRef (kn, i), ctor_name)
+        | GlobRef.ConstructRef ((kn, i), _cidx) ->
+          (* Parametric constructor (e.g. [OrderedType.EQ : eq x y -> Compare
+             lt eq x y]): render as [Type<temps>::factory()], mirroring the
+             ordinary [MLcons] constructor-call codegen. The template args
+             ([temps]) come from the enclosing function's own return type
+             ([cod]), since the guard only fires when the function returns
+             this same inductive. *)
+          let ind = GlobRef.IndRef (kn, i) in
+          let ctor_struct = ctor_struct_name_of_ref ctor_ref in
+          let ind_type_name = Common.pp_global_name Type ind in
+          let fname = factory_name_of_ctor ~type_name:ind_type_name ctor_struct in
+          (* [ind_type_name] alone is the bare struct name (e.g. "Compare"),
+             not namespace-qualified -- reuse [qualify_inductives] to prepend
+             its enclosing module (e.g. "OrderedType::Compare"), matching how
+             every other call site of this type prints it (see
+             [OrderedTypeEx.h]/[FSetInterface.h]: "OrderedType::Compare<T>"). *)
+          let ind_qual_name =
+            render_cpp_type_for_raw_template
+              (qualify_inductives (Tglob (ind, [], [])))
+          in
+          (* Render the compared value's OWN type (from [ids], properly
+             qualified with any enclosing-functor "D::Defs::" prefix) via the
+             real [Cpp_print.pp_cpp_type] printer (passed in as
+             [type_string_of] since this module cannot depend on
+             [Cpp_print]), rather than [cod]'s converted return type, which
+             loses that prefix during ml_type -> cpp_type conversion of
+             return types (a pre-existing asymmetry with parameter-type
+             conversion, confirmed via debug dumps: the same underlying type
+             prints as a bare unqualified name from [cod] but as
+             "typename D::Defs::sll_subparser" from the parameter list). *)
+          let p1_ty = strip_wrappers (snd (List.find (fun (i, _) -> i = p1) ids)) in
+          let elem_str =
+            match type_string_of with
+            | Some f -> f p1_ty
+            | None ->
+              render_cpp_type_for_raw_template (qualify_inductives p1_ty)
+          in
+          CPPraw (Printf.sprintf "%s<%s>::%s()" ind_qual_name elem_str fname)
         | _ -> mk_cppglob ctor_ref []
       in
       [ Sif_then
@@ -693,8 +730,18 @@ let rewrite_state_threading_moves
     | CPPmove inner -> count_state_uses subst inner
     | _ ->
       fold_expr_children
-        (fun acc child -> acc + count_state_uses subst child)
+        ~on_expr:(fun acc child -> acc + count_state_uses subst child)
+        ~on_stmts:(fun acc stmts ->
+          List.fold_left
+            (fun acc s -> acc + count_state_uses_stmt subst s) acc stmts)
         0 e
+  and count_state_uses_stmt subst s =
+    fold_stmt_children
+      ~on_expr:(fun acc e -> acc + count_state_uses subst e)
+      ~on_stmts:(fun acc stmts ->
+        List.fold_left
+          (fun acc s -> acc + count_state_uses_stmt subst s) acc stmts)
+      0 s
   in
   let rec rewrite_expr subst e =
     match e with
@@ -2144,6 +2191,13 @@ let wrap_api_expr ~storage_ty ~api_ty expr =
     gen_type_conversion_expr ~src_ty:storage_ty ~dst_ty:api_ty expr
   else
     expr
+
+(** Strip a single [Tnamespace] wrapper off a namespaced [Tglob], leaving any
+    other type untouched. Used to see through the namespace qualifier when
+    classifying list-like globals. *)
+let strip_ns_tglob = function
+  | Tnamespace (_, (Tglob _ as inner)) -> inner
+  | t -> t
 
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
@@ -4238,11 +4292,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | t -> t
         in
         let clean_ct = clean_self_ns ct in
-        let strip_ns_tg = function
-          | Tnamespace (_, (Tglob _ as inner)) -> inner
-          | t -> t
-        in
-        match strip_ns_tg clean_ct with
+        match strip_ns_tglob clean_ct with
         | Tglob (g, [elem_ty], _)
           when is_list_global g && Table.is_custom g
                && not (resolves_to_any_type elem_ty) ->
@@ -4565,7 +4615,18 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           in
           (* Build: Type<temps>::factory(args) *)
           let type_expr = mk_cppglob n temps in
-          CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args)
+          (* Perceus reuse: if a reuse token is pending for this constructor
+             (set by a use_count()==1-guarded arm in gen_cpp_case), call the
+             [<factory>__reuse] variant with the token appended (stored last =
+             printed first, matching the [_tok] leading parameter). *)
+          ( match tctx.pending_reuse_token with
+          | Some (tok, ctor) when globref_equal r ctor ->
+            tctx.pending_reuse_token <- None;
+            CPPfun_call
+              ( CPPqualified (type_expr, Id.of_string (fname ^ "__reuse")),
+                args @ [CPPmove tok] )
+          | _ ->
+            CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let ctor_struct = ctor_struct_name_of_ref r in
@@ -6127,11 +6188,7 @@ and eta_fun env f args =
              && erase_unresolved_tvars (convert_ml_type_to_cpp_type env tvars param_ty)
                 = convert_ml_type_to_cpp_type env tvars param_ty ->
         let cpp_ty = convert_ml_type_to_cpp_type env tvars param_ty in
-        let strip_ns_tg = function
-          | Tnamespace (_, (Tglob _ as inner)) -> inner
-          | t -> t
-        in
-        ( match strip_ns_tg cpp_ty with
+        ( match strip_ns_tglob cpp_ty with
         | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
           let list_any_ty =
             match cpp_ty with
@@ -6200,7 +6257,7 @@ and eta_fun env f args =
           let needs_concrete =
             (not (Table.is_inline_custom id))
             &&
-            match strip_ns_tg clean_cpp_ty with
+            match strip_ns_tglob clean_cpp_ty with
             | Tglob (_, [et], _) ->
               et <> Ml_type_util.erase_type_to_any et
             | _ -> false
@@ -6350,10 +6407,9 @@ and eta_fun env f args =
          (Tdummy Ktype) domain position, and if so, return the position index,
          the concrete C++ type to use, and the full ML domain. *)
       let try_recover_erased_return_type () =
-        let rec resolve_tmeta = function
-          | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
-          | t -> t
-        in
+        (* [resolve_tmeta] is the one included from Ml_type_util (via the
+           module-level [include]); it is identical to the local shadow that
+           used to be defined here. *)
         match tctx.current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
@@ -7446,11 +7502,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  value directly, and casting a [std::any] holding a container to
                  [std::any] would throw at runtime.  Only genuinely concrete
                  target types are unwrapped here. *)
-              let strip_ns_tg = function
-                | Tnamespace (_, (Tglob _ as inner)) -> inner
-                | t -> t
-              in
-              (match strip_ns_tg bare_ty with
+              (match strip_ns_tglob bare_ty with
                | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                  let list_any_ty =
                    match bare_ty with
@@ -7835,10 +7887,151 @@ and gen_cpp_case (typ : ml_type) t env pv =
         | Tfun _ -> Some r
         | _ -> None
     in
-    CPPfun_call
-      ( CPPlambda ([], iife_ret_opt,
-          [Smatch (branches, wildcard)], false),
-        [] )
+    (* Perceus reuse (Crane Reuse): when the matched constructor's single
+       recursive child is uniquely owned at runtime, rebuild a same-inductive
+       constructor by recycling that child's cell in place via the
+       [<ctor>__reuse] factory instead of allocating.  Dual path guarded by
+       [scrut.v().index()==branch_idx && child.use_count()==1]; otherwise the
+       normal [Smatch].  Only under NonAtomicRc (crane::rc carries the reusable
+       control block) and an owned, non-coinductive scrutinee whose matched
+       constructor has exactly one recursive field. *)
+    let reuse_stmts_opt =
+      if Table.reuse () && Table.reuse_loopify_ok () && Table.non_atomic_rc ()
+         && scrut_is_owned && (not is_flat_match) && (not is_enum)
+         && (match typ with Tglob (r, _, _) -> not (Table.is_coinductive r) | _ -> true)
+      then
+        let typ_ind_kn =
+          match typ with
+          | Tglob (GlobRef.IndRef (kn, _), _, _) -> Some kn
+          | _ -> None
+        in
+        let is_rec_ml_ty ml_ty =
+          let rec head = function
+            | Miniml.Tmeta {contents = Some t} -> head t
+            | t -> t
+          in
+          match head ml_ty with
+          | Miniml.Tglob (GlobRef.IndRef (kn, _), _, _) ->
+            (match typ_ind_kn with Some k -> MutInd.CanOrd.equal kn k | None -> false)
+          | _ -> false
+        in
+        let try_cand (branch_idx, _mc, _ar, tail_ctor, _ta) =
+          let ids, _rty, _pat, body = pv.(branch_idx) in
+          let ids', env' =
+            push_vars'
+              (List.rev_map
+                 (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+                 ids)
+              env
+          in
+          let rev_ids' = List.rev ids' in
+          let dummies_arr =
+            Array.of_list
+              (List.rev
+                 (List.map
+                    (fun (x, _) -> match x with Dummy -> false | _ -> true)
+                    ids))
+          in
+          (* Locate the single recursive field (the reuse token) over rev_ids'. *)
+          let rec_idx =
+            let found = ref None in
+            List.iteri
+              (fun i (_, ml_ty) ->
+                if !found = None && dummies_arr.(i) && is_rec_ml_ty ml_ty then
+                  found := Some i)
+              rev_ids';
+            !found
+          in
+          let n_rec =
+            List.length
+              (List.filteri
+                 (fun i (_, ml_ty) -> dummies_arr.(i) && is_rec_ml_ty ml_ty)
+                 rev_ids')
+          in
+          (match rec_idx with
+          | Some rec_idx when n_rec = 1 ->
+            let saved_env_types = tctx.env_types in
+            push_env_types ids';
+            let scrut_vmut =
+              if scrut_is_ptr then
+                CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])
+              else CPPfun_call (CPPmember (scrut_expr, Id.of_string "v_mut"), [])
+            in
+            let rf i =
+              CPPmember
+                ( CPPfun_call
+                    ( CPPraw ("std::get<" ^ string_of_int branch_idx ^ ">"),
+                      [scrut_vmut] ),
+                  field_param_id i )
+            in
+            let token_expr = ref None in
+            let extract =
+              List.concat
+                (List.mapi
+                   (fun i (var_name, ml_ty) ->
+                     if dummies_arr.(i) then begin
+                       let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+                       if i = rec_idx then begin
+                         (* Recursive child: bind the pattern var to the moved-out
+                            *value* (owned, so the recursion propagates reuse), and
+                            keep the rc field access itself as the reuse token. *)
+                         token_expr := Some (rf i);
+                         [ Sasgn (var_name, Some cpp_ty, CPPmove (CPPderef (rf i))) ]
+                       end
+                       else
+                         (* Non-recursive field: stored by value; move it out. *)
+                         [ Sasgn (var_name, Some cpp_ty, CPPmove (rf i)) ]
+                     end
+                     else [])
+                   rev_ids')
+            in
+            (match !token_expr with
+            | Some tok ->
+              let saved_tok = tctx.pending_reuse_token in
+              tctx.pending_reuse_token <- Some (tok, tail_ctor);
+              let body_stmts =
+                gen_stmts env' (fun x -> Sreturn (Some x)) body
+              in
+              tctx.pending_reuse_token <- saved_tok;
+              tctx.env_types <- saved_env_types;
+              let use_count_cond =
+                CPPbinop
+                  ( "==",
+                    CPPfun_call
+                      (CPPmember (rf rec_idx, Id.of_string "use_count"), []),
+                    CPPint 1 )
+              in
+              Some (branch_idx, extract @ body_stmts, use_count_cond)
+            | None ->
+              tctx.env_types <- saved_env_types;
+              None)
+          | _ -> None )
+        in
+        (* Pick the first candidate whose matched constructor has exactly one
+           recursive field (skips nullary-reconstruction arms like Nil->Nil that
+           have no cell to recycle). *)
+        List.find_map try_cand (Escape.find_reuse_candidates typ pv)
+      else None
+    in
+    ( match reuse_stmts_opt with
+    | Some (branch_idx, reuse_body, use_count_cond) ->
+      let index_cond =
+        CPPbinop
+          ( "==",
+            CPPfun_call (CPPmember (scrut_v, Id.of_string "index"), []),
+            CPPint branch_idx )
+      in
+      let normal = [Smatch (branches, wildcard)] in
+      CPPfun_call
+        ( CPPlambda
+            ( [], iife_ret_opt,
+              [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)],
+              false ),
+          [] )
+    | None ->
+      CPPfun_call
+        ( CPPlambda ([], iife_ret_opt, [Smatch (branches, wildcard)], false),
+          [] ) )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables for std::visit. *)
@@ -8325,10 +8518,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           List.fold_left
             (fun stmts (name, cpp_ty) ->
                if not (is_erased_type cpp_ty) then
-                 let strip_ns_tglob = function
-                   | Tnamespace (_, (Tglob _ as inner)) -> inner
-                   | t -> t
-                 in
                  let stripped = strip_ns_tglob cpp_ty in
                  let cast_expr =
                    match stripped with

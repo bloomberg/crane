@@ -23,8 +23,7 @@ uint64_t MemSafetyProbe23::tree_sum(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -77,8 +76,7 @@ uint64_t MemSafetyProbe23::tree_size(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_size: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -137,8 +135,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified sum_with_original: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -207,8 +204,7 @@ MemSafetyProbe23::dup_and_double(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t)});
   /// Loopified dup_and_double: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -287,8 +283,7 @@ MemSafetyProbe23::collect_children(
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree>, uint64_t>
       _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified collect_children: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -373,8 +368,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_acc(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{acc, &t});
   /// Loopified sum_with_acc: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -443,8 +437,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified interleaved_ops: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {
@@ -499,9 +492,9 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
     const MemSafetyProbe23::tree *t;
   };
 
-  /// _After_Node: saves [_s0, a0], dispatches next recursive call.
+  /// _After_Node: saves [new_inner, a0], dispatches next recursive call.
   struct _After_Node {
-    MemSafetyProbe23::tree _s0;
+    MemSafetyProbe23::tree new_inner;
     const MemSafetyProbe23::tree *a0;
   };
 
@@ -513,8 +506,7 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(inner), &t});
   /// Loopified flatten_tree_of_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -531,14 +523,13 @@ uint64_t MemSafetyProbe23::flatten_tree_of_trees(
         const auto &[a0, a1, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v());
         MemSafetyProbe23::tree new_inner = tree::node(inner, a1, tree::leaf());
-        _stack.emplace_back(
-            _After_Node{std::move(std::move(new_inner)), crane_raw(a0)});
+        _stack.emplace_back(_After_Node{std::move(new_inner), crane_raw(a0)});
         _stack.emplace_back(_Enter{std::move(inner), crane_raw(a2)});
       }
     } else if (std::holds_alternative<_After_Node>(_frame)) {
       auto _f = std::move(std::get<_After_Node>(_frame));
       _stack.emplace_back(_Combine_Node{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f.a0});
+      _stack.emplace_back(_Enter{std::move(_f.new_inner), _f.a0});
     } else {
       auto _f = std::move(std::get<_Combine_Node>(_frame));
       _result = (std::move(_result) + std::move(_f._result));
@@ -578,8 +569,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, std::move(t)});
   /// Loopified mixed_recurse: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -648,8 +638,7 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::annotate_sizes(
 
   using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
   std::pair<MemSafetyProbe23::tree, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified annotate_sizes: _Enter -> _Cont_Node -> _Cont_Node_1.
   while (!_stack.empty()) {

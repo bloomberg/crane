@@ -1,12 +1,12 @@
 #ifndef INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
 #define INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
 
+#include "small_vector.h"
 #include <deque>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct DequeDeepTreeStackoverflow {
   struct rose {
@@ -41,7 +41,7 @@ struct DequeDeepTreeStackoverflow {
 
     // MANIPULATORS
     ~rose() {
-      std::vector<std::shared_ptr<rose>> _stack = {};
+      crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -61,6 +61,11 @@ struct DequeDeepTreeStackoverflow {
         }
       }
     }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

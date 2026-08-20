@@ -675,9 +675,25 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
 let global_eponymous_record_registry : (GlobRef.t, unit) Hashtbl.t =
   Hashtbl.create 100
 
+(** Reverse index for {!get_containing_eponymous_struct}: maps a module path to
+    the eponymous record declared in it. Kept in sync by
+    {!register_eponymous_record} so the lookup is O(1) instead of scanning the
+    whole registry on every call. There is at most one eponymous record per
+    module (a record sharing its module's name), so a single-valued index is
+    exact. Reset alongside [global_eponymous_record_registry]. *)
+let eponymous_record_by_modpath : (ModPath.t, GlobRef.t) Hashtbl.t =
+  Hashtbl.create 100
+
 (** Register a record as eponymous with its containing module. *)
 let register_eponymous_record (record_ref : GlobRef.t) =
-  Hashtbl.replace global_eponymous_record_registry record_ref ()
+  Hashtbl.replace global_eponymous_record_registry record_ref ();
+  match record_ref with
+  | GlobRef.IndRef (ind, _) ->
+    Hashtbl.replace
+      eponymous_record_by_modpath
+      (Names.MutInd.modpath ind)
+      record_ref
+  | _ -> ()
 
 (** Check if a GlobRef is registered as an eponymous record. *)
 let is_eponymous_record_global (r : GlobRef.t) : bool =
@@ -690,21 +706,8 @@ let is_eponymous_record_global (r : GlobRef.t) : bool =
 let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
   match r with
   | GlobRef.ConstRef kn ->
-    (* Get the module path containing this constant *)
-    let mp = Names.Constant.modpath kn in
-    (* Check if there's an eponymous record whose module path matches *)
-    let result = ref None in
-    Hashtbl.iter
-      (fun record_ref () ->
-        let record_mp =
-          match record_ref with
-          | GlobRef.IndRef (ind, _) -> Names.MutInd.modpath ind
-          | _ -> mp (* Won't match *)
-        in
-        (* Check if the constant is in the same module as the record *)
-        if ModPath.equal mp record_mp then result := Some record_ref )
-      global_eponymous_record_registry;
-    !result
+    (* O(1) lookup by the constant's module path against the reverse index. *)
+    Hashtbl.find_opt eponymous_record_by_modpath (Names.Constant.modpath kn)
   | _ -> None
 
 (** Track current structure's declarations for finding methods from sibling
@@ -736,6 +739,7 @@ let reset_cpp_state () =
   global_method_registry := None;
   name_cache := None;
   Hashtbl.clear global_eponymous_record_registry;
+  Hashtbl.clear eponymous_record_by_modpath;
   Hashtbl.clear wrapper_module_table;
   Hashtbl.clear collision_wrapper_table;
   Hashtbl.clear global_scope_enum_table;

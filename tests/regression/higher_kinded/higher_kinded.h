@@ -1,13 +1,13 @@
 #ifndef INCLUDED_HIGHER_KINDED
 #define INCLUDED_HIGHER_KINDED
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct HigherKinded {
   template <typename T1, typename T2 = void, typename T3 = void, typename F0,
@@ -89,7 +89,7 @@ struct HigherKinded {
 
     // MANIPULATORS
     ~Tree() {
-      std::vector<std::shared_ptr<Tree<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Branch>(&_v)) {
           if (_alt->a0) {
@@ -109,6 +109,11 @@ struct HigherKinded {
         }
       }
     }
+
+    Tree(const Tree &) = default;
+    Tree &operator=(const Tree &) = default;
+    Tree(Tree &&) noexcept = default;
+    Tree &operator=(Tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

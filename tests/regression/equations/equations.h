@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EQUATIONS
 #define INCLUDED_EQUATIONS
 
+#include "small_vector.h"
 #include <any>
 #include <concepts>
 #include <functional>
@@ -8,7 +9,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct PeanoNat {
   static bool even(uint64_t n);
@@ -114,7 +114,7 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_graph_refinement_3>(&_v)) {
           if (_alt->hind) {
@@ -154,6 +154,11 @@ struct Equations {
         }
       }
     }
+
+    gcd_graph(const gcd_graph &) = default;
+    gcd_graph &operator=(const gcd_graph &) = default;
+    gcd_graph(gcd_graph &&) noexcept = default;
+    gcd_graph &operator=(gcd_graph &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -206,7 +211,7 @@ struct Equations {
 
     // MANIPULATORS
     ~gcd_clause_3_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Gcd_clause_3_graph_equation_1>(&_v)) {
           if (_alt->hind) {
@@ -244,6 +249,11 @@ struct Equations {
         }
       }
     }
+
+    gcd_clause_3_graph(const gcd_clause_3_graph &) = default;
+    gcd_clause_3_graph &operator=(const gcd_clause_3_graph &) = default;
+    gcd_clause_3_graph(gcd_clause_3_graph &&) noexcept = default;
+    gcd_clause_3_graph &operator=(gcd_clause_3_graph &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -557,7 +567,7 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Collatz_steps_graph_refinement_3>(&_v)) {
           if (_alt->hind) {
@@ -601,6 +611,11 @@ struct Equations {
         }
       }
     }
+
+    collatz_steps_graph(const collatz_steps_graph &) = default;
+    collatz_steps_graph &operator=(const collatz_steps_graph &) = default;
+    collatz_steps_graph(collatz_steps_graph &&) noexcept = default;
+    collatz_steps_graph &operator=(collatz_steps_graph &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -657,7 +672,7 @@ struct Equations {
 
     // MANIPULATORS
     ~collatz_steps_clause_3_graph() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt =
                 std::get_if<Collatz_steps_clause_3_graph_equation_1>(&_v)) {
@@ -699,6 +714,15 @@ struct Equations {
         }
       }
     }
+
+    collatz_steps_clause_3_graph(const collatz_steps_clause_3_graph &) =
+        default;
+    collatz_steps_clause_3_graph &
+    operator=(const collatz_steps_clause_3_graph &) = default;
+    collatz_steps_clause_3_graph(collatz_steps_clause_3_graph &&) noexcept =
+        default;
+    collatz_steps_clause_3_graph &
+    operator=(collatz_steps_clause_3_graph &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

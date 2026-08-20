@@ -139,10 +139,10 @@ let pp_apply_cpp st args =
     hov 2 (st ++ str "(" ++ prlist_with_sep (fun _ -> str ", ") identity args)
     ++ str ")"
 
-(** Same as [pp_apply], but with also protection of the head by parenthesis.
-    @param st   The head expression, always parenthesized when [args] is non-empty
-    @param par  Whether to parenthesize the whole application
-    @param args The argument documents *)
+(* Stale note (no matching function in this module): "Same as [pp_apply], but
+   with also protection of the head by parenthesis" — a paren-protecting apply
+   taking [st]/[par]/[args]. Kept as an internal comment; not an API doc. *)
+
 (** Print a list of identifiers as space-separated bindings. *)
 let pr_binding = function
   | [] -> mt ()

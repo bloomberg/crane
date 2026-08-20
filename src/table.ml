@@ -300,15 +300,16 @@ let needs_arena () = !needs_arena_flag
 
 let reset_needs_arena () = needs_arena_flag := false
 
-(* Set when the non-atomic reference-counted pointer (crane::rc) is used, so the
-   emitter includes the [rc.h] runtime header. *)
-let needs_rc_flag = ref false
+(* Set when generated code uses [crane::small_vector] (the small-buffer-
+   optimized worklist used by the iterative destructor drain), so the
+   emitter includes the [small_vector.h] runtime header. *)
+let needs_small_vector_flag = ref false
 
-let mark_needs_rc () = needs_rc_flag := true
+let mark_needs_small_vector () = needs_small_vector_flag := true
 
-let needs_rc () = !needs_rc_flag
+let needs_small_vector () = !needs_small_vector_flag
 
-let reset_needs_rc () = needs_rc_flag := false
+let reset_needs_small_vector () = needs_small_vector_flag := false
 
 (** Track whether any reified [ITree<R>] types appear in the output,
     requiring the [crane_itree.h] header. *)
@@ -459,9 +460,6 @@ let rec is_typeclass_type_cpp = function
 let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
   make_refset_can ()
 
-(** Check if an inductive packet qualifies as flat: single constructor, no kept
-    type parameters, not coinductive, not mutual, no self-referencing fields.
-    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type
     arguments (e.g. [list (tree A)] counts for [tree]).
@@ -480,6 +478,9 @@ let rec type_mentions_kn ?packet_idx ~descend_arr kn ty =
   | Miniml.Tmeta { contents = Some t } -> mentions t
   | _ -> false
 
+(** Check if an inductive packet qualifies as flat: single constructor, no kept
+    type parameters, not coinductive, not mutual, no self-referencing fields.
+    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
 let is_flat_inductive_packet kn ind i =
   try
     let p = ind.ind_packets.(i) in
@@ -1506,6 +1507,29 @@ let {Goptions.get = conservative_types} =
 let {Goptions.get = loopify} =
   declare_bool_option_and_ref ~key:["Crane"; "Loopify"] ~value:false ()
 
+(* When set, the loopify pass reports the outcome it reached for every
+   recursive function it saw: the strategy that fired, or the reason it
+   declined.  Purely diagnostic; it does not change what is emitted. *)
+let {Goptions.get = loopify_diagnostics_opt} =
+  declare_bool_option_and_ref
+    ~key:["Crane"; "Loopify"; "Diagnostics"]
+    ~value:false
+    ()
+
+(* Also honour an environment variable, so a whole corpus can be swept for
+   loopify coverage without editing every .v file to set the option. *)
+let loopify_diagnostics_env =
+  lazy (try Sys.getenv "CRANE_LOOPIFY_DIAGNOSTICS" <> "" with Not_found -> false)
+
+let loopify_diagnostics () =
+  loopify_diagnostics_opt () || Lazy.force loopify_diagnostics_env
+
+(* When set, a function that loopify declines (or that still contains a
+   self-call after transformation) is a hard error rather than a silent
+   fallback to C++ recursion. *)
+let {Goptions.get = loopify_strict} =
+  declare_bool_option_and_ref ~key:["Crane"; "Loopify"; "Strict"] ~value:false ()
+
 (* Per-function loopify/noloopify table. First set = force-loopify, second set =
    force-noloopify. *)
 
@@ -1559,14 +1583,101 @@ let reset_loopify : unit -> obj =
 
 let reset_extraction_loopify () = Lib.add_leaf (reset_loopify ())
 
+(* GlobRef of the top-level declaration currently being translated, when known.
+   Reuse and loopify rewrite the same tail-recursive-modulo-cons match, so they
+   must not both fire on one declaration.  Loopify is applied per declaration at
+   print time (see Cpp_print.maybe_loopify), so the reuse gates ask the same
+   per-declaration question here instead of consulting the global flag, which
+   would disable reuse everywhere as soon as loopify is set globally. *)
+let current_decl_ref : GlobRef.t option ref = ref None
+
+let reuse_loopify_ok () =
+  match !current_decl_ref with
+  | Some r -> not (should_loopify r)
+  | None -> not (loopify ())
+
+(* Run [f] with [current_decl_ref] set to [r], restoring it afterwards. *)
+let with_decl_ref r f =
+  let saved = !current_decl_ref in
+  current_decl_ref := Some r;
+  let restore () = current_decl_ref := saved in
+  ( try
+      let res = f () in
+      restore ();
+      res
+    with e ->
+      restore ();
+      raise e )
+
+(* This option enables the Perceus-style reuse pass: at a match on an owned,
+   uniquely-owned (use_count()==1 at runtime) recursive value whose arm rebuilds
+   a same-type constructor, the matched cell is reused in place instead of
+   allocated afresh. Off by default (opt-in); the runtime uniqueness check is the
+   correctness backstop. *)
+let {Goptions.get = reuse} =
+  declare_bool_option_and_ref ~key:["Crane"; "Reuse"] ~value:false ()
+
+(* Per-function reuse/noreuse table. First set = force-reuse, second = force-off. *)
+
+let empty_reuse_table = (Refset'.empty, Refset'.empty)
+
+let reuse_table = Summary.ref empty_reuse_table ~name:"CraneExtrReuse"
+
+(** Whether reuse should fire for a function: forced on/off per function,
+    else the global [Crane Reuse] setting. *)
+let should_reuse r =
+  let yes, no = !reuse_table in
+  if Refset'.mem r yes then
+    true
+  else if Refset'.mem r no then
+    false
+  else
+    reuse ()
+
+let add_reuse_entries b l =
+  let f b = if b then Refset'.add else Refset'.remove in
+  let y, n = !reuse_table in
+  reuse_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+
+let reuse_extraction : bool * GlobRef.t list -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Extraction Reuse"
+       ~cache:(fun (b, l) -> add_reuse_entries b l)
+       ~subst:
+         (Some
+            (fun (s, (b, l)) ->
+              (b, List.map (fun x -> fst (subst_global s x)) l) ) )
+       ~discharge:(fun x -> Some x)
+
+let extraction_reuse b l =
+  let refs = List.map Smartlocate.global_with_alias l in
+  List.iter
+    (fun r ->
+      match r with
+      | GlobRef.ConstRef _ -> ()
+      | _ -> error_constant r )
+    refs;
+  Lib.add_leaf (reuse_extraction (b, refs))
+
+let reset_reuse : unit -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane Reset Extraction Reuse"
+       ~cache:(fun () -> reuse_table := empty_reuse_table)
+       ~subst:None
+
+let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
+
 (* --- Arena extraction ------------------------------------------------ *)
 
-(* This option makes recursive inductive types use arena (region) allocation:
-   recursive fields become raw pointers into a region owned by the value, giving
-   O(1) destruction and no reference counting, instead of the default shared_ptr.
-   Opt-in because it deep-copies on value-copy (see docs/arena-extraction-sketch). *)
-let {Goptions.get = arena} =
-  declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
+(* Scoped-arena redesign (2026-08-10): arena allocation is a runtime property of
+   whether a [crane::arena_scope] is open, not a compile-time property of a type.
+   The old opt-in surface ([Set Crane Arena] global, [Crane Arena <ind>],
+   [Crane Arena Shared <ind>]) is gone; only [Crane NoArena <ind>] remains, as a
+   per-type opt-*out* so a type can be excluded from ever bump-allocating even
+   when a scope happens to be open (see [no_arena_table] / [should_use_arena_at_runtime]
+   below). *)
 
 (* --- Non-atomic reference counting ----------------------------------- *)
 
@@ -1576,6 +1687,28 @@ let {Goptions.get = arena} =
    Global string swap via [Cpp_state.init_std_names]; opt-in, default off. *)
 let {Goptions.get = non_atomic_rc} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
+
+(* --- Scoped-arena master switch -------------------------------------- *)
+
+(* [Set Crane Arena] turns on the runtime scoped-arena machinery for a whole
+   extraction unit.  It does NOT change any type's representation (every
+   recursive field stays the ordinary [std::shared_ptr] / [crane::rc]); it only
+   decides which *factory* the generated recursive-field constructor calls:
+
+   - off (default): the plain [std::make_shared] / [crane::make_rc], and the
+     generated code pulls in no arena runtime at all -- byte-for-byte ordinary
+     smart-pointer C++.  This keeps the Crane runtime minimal for programs that
+     never use an arena.
+   - on: the runtime-arena-aware factory ([crane::arena_make_shared] /
+     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     ambient [crane::arena_scope] when one is open and is otherwise exactly
+     make_shared/make_rc.  Copying is O(1) either way, so there is still no
+     deep-copy path -- the flag only gates the factory, never the layout.
+
+   Because it only swaps the factory (not the pointer type), it does NOT
+   reintroduce the old per-type deep-clone/composite-hang failure mode. *)
+let {Goptions.get = arena_enabled} =
+  declare_bool_option_and_ref ~key:["Crane"; "Arena"] ~value:false ()
 
 (* Resolved smart-pointer names for string-level codegen (kept here, in a low
    module, so both [Cpp_state.init_std_names] and the string-building sites in
@@ -1591,41 +1724,79 @@ let make_shared_name () =
   else if std_lib () = "BDE" then "bsl::make_shared"
   else "std::make_shared"
 
-(* Per-inductive arena/noarena table. First set = force-arena, second set =
-   force-noarena. *)
+(* Suffix of a dotted kernel-name-string path: the last [n] '.'-separated
+   components. Used as a fallback match key for functor-internal
+   registrations below (both arena and, further down, guard-compare). *)
+let key_suffix n key =
+  let parts = String.split_on_char '.' key in
+  let len = List.length parts in
+  if len <= n then key
+  else String.concat "." (List.filteri (fun i _ -> i >= len - n) parts)
 
-let empty_arena_table = (Refset'.empty, Refset'.empty)
+(* Per-inductive NoArena opt-out table (scoped-arena redesign).  Membership
+   means "never bump-allocate this type's nodes even when an arena scope is
+   open" -- for types with program-lifetime identity requirements or a
+   comparator/hash that assumes stable heap addresses across scope boundaries.
+   Reuses the same Refset' + canonical-path 2-component suffix-match machinery
+   the old arena_table used, so functor-internal directives still match. *)
 
-let arena_table = Summary.ref empty_arena_table ~name:"CraneExtrArena"
+let empty_no_arena_table = Refset'.empty
 
-(** Determines whether an inductive should use arena allocation: forced on/off
-    per inductive, falling back to the global [Crane Arena] setting. *)
-let should_arena r =
-  let yes, no = !arena_table in
-  if Refset'.mem r yes then
-    true
-  else if Refset'.mem r no then
-    false
+let no_arena_table = Summary.ref empty_no_arena_table ~name:"CraneExtrNoArena"
+
+(* Canonical-path string key for an inductive, used as a suffix-matching
+   fallback below -- mirrors [guard_compare_key_string] but for [IndRef]
+   (a functor-internal recursive type directive-named via one grammar's
+   instantiation needs to match [should_use_arena_at_runtime] queries made
+   later against the functor-body template's own copy of the same inductive;
+   see [key_suffix]/[find_guard_compare] for the identical problem already
+   solved for [Crane Guard Compare]). *)
+let arena_ref_key_string = function
+  | GlobRef.IndRef (mind, i) ->
+    Some (Names.KerName.to_string (Names.MutInd.canonical mind) ^ "#" ^ string_of_int i)
+  | GlobRef.ConstRef _ | GlobRef.VarRef _ | GlobRef.ConstructRef _ -> None
+
+(* Plain (non-[Summary]-tracked) ref, for the same reason as
+   [guard_compare_table]: a functor-internal [Crane NoArena <ind>] directive's
+   registration must survive [End F.]'s rollback of [Summary]-tracked state
+   introduced while the functor body is open. *)
+let no_arena_suffix_table : unit CString.Map.t ref = ref CString.Map.empty
+
+(** Whether an inductive's recursive-field factory should contain the runtime
+    [in_arena_scope()] branch.  True for every type except those explicitly
+    opted out via [Crane NoArena]: those always take the plain heap path.
+    Exact-[GlobRef] miss falls back to a canonical-path 2-component suffix
+    match against registered exclusions. *)
+let should_use_arena_at_runtime r =
+  if Refset'.mem r !no_arena_table then false
   else
-    arena ()
+    match arena_ref_key_string r with
+    | None -> true
+    | Some key ->
+      let suffix = key_suffix 2 key in
+      not (CString.Map.exists (fun k () -> key_suffix 2 k = suffix)
+             !no_arena_suffix_table)
 
-let add_arena_entries b l =
-  let f b = if b then Refset'.add else Refset'.remove in
-  let y, n = !arena_table in
-  arena_table := (List.fold_right (f b) l y, List.fold_right (f (not b)) l n)
+let add_no_arena_entries l =
+  no_arena_table := List.fold_right Refset'.add l !no_arena_table;
+  List.iter
+    (fun r ->
+      match arena_ref_key_string r with
+      | None -> ()
+      | Some key -> no_arena_suffix_table := CString.Map.add key () !no_arena_suffix_table )
+    l
 
-let arena_extraction : bool * GlobRef.t list -> obj =
+let no_arena_extraction : GlobRef.t list -> obj =
   declare_object
   @@ superglobal_object
-       "Crane Extraction Arena"
-       ~cache:(fun (b, l) -> add_arena_entries b l)
+       "Crane Extraction NoArena"
+       ~cache:(fun l -> add_no_arena_entries l)
        ~subst:
          (Some
-            (fun (s, (b, l)) ->
-              (b, List.map (fun x -> fst (subst_global s x)) l) ) )
+            (fun (s, l) -> List.map (fun x -> fst (subst_global s x)) l) )
        ~discharge:(fun x -> Some x)
 
-let extraction_arena b l =
+let extraction_no_arena l =
   let refs = List.map Smartlocate.global_with_alias l in
   List.iter
     (fun r ->
@@ -1633,29 +1804,80 @@ let extraction_arena b l =
       | GlobRef.IndRef _ -> ()
       | _ -> error_inductive r )
     refs;
-  Lib.add_leaf (arena_extraction (b, refs))
-
-let reset_arena : unit -> obj =
-  declare_object
-  @@ superglobal_object_nodischarge
-       "Crane Reset Extraction Arena"
-       ~cache:(fun () -> arena_table := empty_arena_table)
-       ~subst:None
-
-let reset_extraction_arena () = Lib.add_leaf (reset_arena ())
+  Lib.add_leaf (no_arena_extraction refs)
 
 (* --- Guard Compare --------------------------------------------------- *)
 
-let guard_compare_table =
-  Summary.ref Label.Map.empty ~name:"CraneGuardCompare"
+(* Keyed by the constant's printable kernel-name path (dirpath + label), NOT
+   by [GlobRef.t]/[KerName.t] equality: a functor-internal definition guarded
+   from inside its own module (e.g. via a self-reference during the functor
+   body's own elaboration) prints an identical path to, but carries a
+   different internal kernel-name discriminator than, the same constant as
+   later re-resolved by Crane's codegen (which sees it via the module's
+   external/extraction-time-elaborated copy) -- confirmed via debug tracing:
+   both resolve to the same [Constant.canonical] printed string, yet neither
+   [GlobRef.Map] (canonical-KerName-based) nor [Refmap'] (user-KerName-based)
+   report a match. String-keying on the canonical path collapses these two
+   while still requiring an exact dirpath+label match, so it does not
+   resurrect the earlier same-named-different-modules Label-keying collision
+   bug. *)
+let guard_compare_key_string = function
+  | GlobRef.ConstRef c -> Some (Names.KerName.to_string (Names.Constant.canonical c))
+  | GlobRef.VarRef _ | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> None
+
+(* Plain (non-[Summary]-tracked) ref: functor-body-internal registrations
+   must survive [End F.], which rolls back [Summary]-tracked state introduced
+   while a functor body is open (mirroring section-discharge semantics) --
+   confirmed via debug tracing showing the self-registered entry vanish from
+   a [Summary.ref]-backed table by the time codegen looks it up, while entries
+   added by the (post-rollback) [~subst] re-registration for each instantiation
+   survive. A plain ref is not subject to that rollback. *)
+let guard_compare_table : GlobRef.t CString.Map.t ref = ref CString.Map.empty
 
 let add_guard_compare fn_ref ctor_ref =
-  let lbl = label_of_r fn_ref in
-  guard_compare_table := Label.Map.add lbl ctor_ref !guard_compare_table
+  match guard_compare_key_string fn_ref with
+  | None -> ()
+  | Some key ->
+    guard_compare_table := CString.Map.add key ctor_ref !guard_compare_table
 
+(* A functor-internal self-reference (e.g. the guard directive's own target,
+   registered from inside the functor body it guards) never survives as a
+   persistent library object across [End F.] -- Coq's module system discharges
+   it the same way a Section would, and since this happens before the
+   surrounding file's [.vo] is even written, no amount of [Summary]-tracking
+   or [~cache]/[~subst] plumbing can make it reappear when that [.vo] is later
+   [Require]d from a different [coqc] process (confirmed via debug tracing:
+   the self-registration key is entirely absent from the table by the time
+   any other process looks it up, even though [add_guard_compare] visibly
+   fired for it during the defining file's own compilation). What DOES
+   survive across process/.vo boundaries are the [~subst]-rewritten
+   per-instantiation copies (e.g. one per grammar applying the functor),
+   which are ordinary top-level module-application objects, not functor-body-
+   internal ones. Since every such copy is produced by substituting the same
+   generic definition, they all share the identical trailing
+   "OuterModule.function" suffix (e.g. "SllSubparserAsUOT.compare") that the
+   original [Crane Guard Compare] directive named. So: if the exact
+   (functor-internal) key isn't found, fall back to matching by that 2-label
+   suffix against whatever instantiated copies did survive -- and only trust
+   the fallback if every match agrees on the same guard constructor, to avoid
+   silently guarding an unrelated same-named function. *)
 let find_guard_compare r =
-  let lbl = label_of_r r in
-  Label.Map.find_opt lbl !guard_compare_table
+  match guard_compare_key_string r with
+  | None -> None
+  | Some key ->
+    (match CString.Map.find_opt key !guard_compare_table with
+     | Some _ as found -> found
+     | None ->
+       let suffix = key_suffix 2 key in
+       let matches =
+         CString.Map.fold
+           (fun k v acc -> if key_suffix 2 k = suffix then v :: acc else acc)
+           !guard_compare_table []
+       in
+       (match matches with
+        | [] -> None
+        | v :: rest when List.for_all (fun v' -> Names.GlobRef.CanOrd.equal v v') rest -> Some v
+        | _ -> None))
 
 let guard_compare_obj : GlobRef.t * GlobRef.t -> obj =
   declare_object
@@ -2149,6 +2371,20 @@ let add_boxed_wrapper r s = boxed_wrappers := Refmap'.add r s !boxed_wrappers
 
 let find_boxed_wrapper_opt r = Refmap'.find_opt r !boxed_wrappers
 
+(* Custom drain templates (iterative-destructor support). Maps a custom container
+   inductive (e.g. [list] mapped to [std::deque] / [immer::flex_vector]) to the
+   C++ statement template that iteratively yields the container's recursive
+   children onto the destructor worklist, declared with the [Drain "..."] clause
+   of [Crane Extract Inductive]. Placeholders: [%scrut] is the container field
+   expression; [%yield(e)] pushes child [e] onto the worklist. Without this the
+   iterative destructor assumes a smart-pointer-wrapped container
+   ([use_count]/[reset]), which is invalid for bare value-type containers. *)
+let custom_drains = Summary.ref Refmap'.empty ~name:"CraneExtrCustomDrains"
+
+let add_custom_drain r s = custom_drains := Refmap'.add r s !custom_drains
+
+let find_custom_drain_opt r = Refmap'.find_opt r !custom_drains
+
 (* Set of inductives that recurse *through* a boxed-element container (e.g.
    [json_value] with a [list json_value] field). Populated during inductive
    codegen; an element type that structurally mentions one of these is
@@ -2334,6 +2570,13 @@ let in_boxed_wrappers : GlobRef.t * string -> obj =
        ~cache:(fun (r, s) -> add_boxed_wrapper r s)
        ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
 
+let in_custom_drains : GlobRef.t * string -> obj =
+  declare_object
+  @@ superglobal_object_nodischarge
+       "Crane ML extractions custom drains"
+       ~cache:(fun (r, s) -> add_custom_drain r s)
+       ~subst:(Some (fun (subs, (r, s)) -> (fst (subst_global subs r), s)))
+
 (* Grammar entries. *)
 
 (* Custom imports are now tracked per-GlobRef rather than globally. When a [From
@@ -2469,7 +2712,7 @@ let extract_constant_import inline r ids s imports =
 
 (** Registers a custom inductive type extraction with constructor mappings and
     optional match template. *)
-let extract_inductive ?boxed r s l optstr imports =
+let extract_inductive ?boxed ?drain r s l optstr imports =
   check_inside_section ();
   let g = Smartlocate.global_with_alias r in
   Dumpglob.add_glob ?loc:r.CAst.loc g;
@@ -2487,6 +2730,7 @@ let extract_inductive ?boxed r s l optstr imports =
     Lib.add_leaf (in_customs (g, [], s));
     Option.iter (fun s -> Lib.add_leaf (in_custom_matchs (g, s))) optstr;
     Option.iter (fun w -> Lib.add_leaf (in_boxed_wrappers (g, w))) boxed;
+    Option.iter (fun d -> Lib.add_leaf (in_custom_drains (g, d))) drain;
     List.iteri
       (fun j s ->
         let g = GlobRef.ConstructRef (ip, succ j) in
@@ -2521,8 +2765,6 @@ let monads = Summary.ref Refmap'.empty ~name:"CraneExtrMonad"
 let binds = Summary.ref Refmap'.empty ~name:"CraneExtrMonadBind"
 
 let rets = Summary.ref Refmap'.empty ~name:"CraneExtrMonadRet"
-
-let effects = Summary.ref Refmap'.empty ~name:"CraneExtrEffect"
 
 let add_monad m b r s = monads := Refmap'.add m (b, r, s) !monads
 
@@ -2898,4 +3140,7 @@ let reset_tables () =
   init_opaques ();
   reset_modfile ();
   init_glob_tys ();
-  reset_used_custom_imports ()
+  reset_used_custom_imports ();
+  (* Recomputed within each extraction run (see its definition); clear it here
+     so a prior run's boxing decisions don't leak into the next. *)
+  boxed_recursive_inds := Refset'.empty

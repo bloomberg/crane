@@ -1,11 +1,11 @@
 #ifndef INCLUDED_REUSE_FN_IN_BODY
 #define INCLUDED_REUSE_FN_IN_BODY
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ReuseFnInBody {
   /// mycons first so reuse picks it (variant index 0).
@@ -40,7 +40,7 @@ struct ReuseFnInBody {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {
@@ -57,6 +57,11 @@ struct ReuseFnInBody {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -1,10 +1,10 @@
 #ifndef INCLUDED_ROCQ_BUG_4720
 #define INCLUDED_ROCQ_BUG_4720
 
+#include "small_vector.h"
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct Nat {
   // TYPES
@@ -34,7 +34,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -51,6 +51,11 @@ public:
       }
     }
   }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

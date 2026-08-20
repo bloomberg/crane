@@ -2,12 +2,12 @@
 #define INCLUDED_LOOPIFY_TREES
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -97,18 +97,37 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -188,7 +207,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->l) {
@@ -209,6 +228,11 @@ struct LoopifyTrees {
       }
     }
 
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -218,161 +242,623 @@ struct LoopifyTrees {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     tree<T1> tree_map(F0 &&f) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return tree<T1>::leaf();
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return tree<T1>::node(a0->template tree_map<T1>(f), f(a1),
-                              a2->template tree_map<T1>(f));
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0, a1], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a0;
+        std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a1;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        tree<T1> _result;
+        std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      tree<T1> _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_map: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = tree<T1>::leaf();
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0), f(a1)});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result =
+              tree<T1>::node(std::move(_result), _f.a1, std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     /// mirror_equal t1 t2 checks if t1 and t2 are mirror images.
     bool mirror_equal(const tree<A> &t2) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        if (std::holds_alternative<typename tree<A>::Leaf>(t2.v())) {
-          return true;
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+        const tree<A> *t2;
+      };
+
+      /// _After_Node: saves [a0, a20, _s2], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a0;
+        const tree<A> *a20;
+        std::decay_t<decltype(true)> _s2;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        bool _result;
+        std::decay_t<decltype(true)> _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      bool _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, &t2});
+      /// Loopified mirror_equal: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          const tree<A> &t2 = *_f.t2;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            if (std::holds_alternative<typename tree<A>::Leaf>(t2.v())) {
+              _result = true;
+            } else {
+              _result = false;
+            }
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            if (std::holds_alternative<typename tree<A>::Leaf>(t2.v())) {
+              _result = false;
+            } else {
+              const auto &[a00, a10, a20] =
+                  std::get<typename tree<A>::Node>(t2.v());
+              _stack.emplace_back(
+                  _After_Node{crane_raw(a0), crane_raw(a20), true});
+              _stack.emplace_back(_Enter{crane_raw(a2), crane_raw(a00)});
+            }
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result), _f._s2});
+          _stack.emplace_back(_Enter{_f.a0, _f.a20});
         } else {
-          return false;
-        }
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        if (std::holds_alternative<typename tree<A>::Leaf>(t2.v())) {
-          return false;
-        } else {
-          const auto &[a00, a10, a20] =
-              std::get<typename tree<A>::Node>(t2.v());
-          return ((a0->mirror_equal(*a20) && a2->mirror_equal(*a00)) && true);
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = ((std::move(_result) && std::move(_f._result)) && _f._s1);
         }
       }
+      return _result;
     }
 
     /// tree_to_list inorder traversal.
     List<A> tree_to_list() const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return List<A>::nil();
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return a0->tree_to_list().app(List<A>::cons(a1, a2->tree_to_list()));
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0, a1], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a0;
+        std::decay_t<A> a1;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        List<A> _result;
+        std::decay_t<A> a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      List<A> _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = List<A>::nil();
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0), a1});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(
+              _Combine_Node{std::move(_result), std::move(_f.a1)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = std::move(_result).app(
+              List<A>::cons(std::move(_f.a1), std::move(_f._result)));
+        }
       }
+      return _result;
     }
 
     /// count_leaves counts leaf nodes.
     uint64_t count_leaves() const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return UINT64_C(1);
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return (a0->count_leaves() + a2->count_leaves());
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a0;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        uint64_t _result;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified count_leaves: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = UINT64_C(1);
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = (std::move(_result) + std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     A rightmost(A default0) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return default0;
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        auto &&_sv = *a2;
+      const tree *_loop_self = this;
+      while (true) {
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          return a1;
+          return default0;
         } else {
-          return a2->rightmost(default0);
+          const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
+          auto &&_sv = *a2;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            return a1;
+          } else {
+            _loop_self = crane_raw(a2);
+          }
         }
       }
     }
 
     /// leftmost/rightmost finds edge values.
     A leftmost(A default0) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return default0;
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        auto &&_sv = *a0;
+      const tree *_loop_self = this;
+      while (true) {
+        auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-          return a1;
+          return default0;
         } else {
-          return a0->leftmost(default0);
+          const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
+          auto &&_sv = *a0;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            return a1;
+          } else {
+            _loop_self = crane_raw(a0);
+          }
         }
       }
     }
 
     /// same_shape tests structural equality.
     template <typename T1> bool same_shape(const tree<T1> &t2) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
-          return false;
-        } else {
-          const auto &[a00, a10, a20] =
-              std::get<typename tree<T1>::Node>(t2.v());
-          if (a0->template same_shape<T1>(*a00)) {
-            return a2->template same_shape<T1>(*a20);
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+        const tree<T1> *t2;
+      };
+
+      /// _Cont_Node: saves [a2, a20], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node {
+        std::shared_ptr<tree<A>> a2;
+        const tree<T1> *a20;
+      };
+
+      using _Frame = std::variant<_Enter, _Cont_Node>;
+      bool _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, &t2});
+      /// Loopified same_shape: _Enter -> _Cont_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          const tree<T1> &t2 = *_f.t2;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
+              _result = true;
+            } else {
+              _result = false;
+            }
           } else {
-            return false;
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
+              _result = false;
+            } else {
+              const auto &[a00, a10, a20] =
+                  std::get<typename tree<T1>::Node>(t2.v());
+              _stack.emplace_back(_Cont_Node{a2, crane_raw(a20)});
+              _stack.emplace_back(_Enter{crane_raw(a0), crane_raw(a00)});
+            }
+          }
+        } else {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<tree<A>> a2 = std::move(_f.a2);
+          const tree<T1> &a20 = *_f.a20;
+          bool _rc1 = std::move(_result);
+          if (_rc1) {
+            _stack.emplace_back(_Enter{crane_raw(a2), &a20});
+          } else {
+            _result = false;
           }
         }
       }
+      return _result;
     }
 
     tree<A> mirror() const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return tree<A>::leaf();
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return tree<A>::node(a2->mirror(), a1, a0->mirror());
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a2, a1], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a2;
+        std::decay_t<A> a1;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        tree<A> _result;
+        std::decay_t<A> a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      tree<A> _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified mirror: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = tree<A>::leaf();
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a2), a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(
+              _Combine_Node{std::move(_result), std::move(_f.a1)});
+          _stack.emplace_back(_Enter{_f.a2});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = tree<A>::node(std::move(_result), std::move(_f.a1),
+                                  std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     uint64_t tree_size() const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return ((a0->tree_size() + a2->tree_size()) + 1);
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0], dispatches next recursive call.
+      struct _After_Node {
+        tree<A> *a0;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        uint64_t _result;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_size: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = ((std::move(_result) + std::move(_f._result)) + 1);
+        }
       }
+      return _result;
     }
 
     uint64_t tree_height() const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        uint64_t lh = a0->tree_height();
-        uint64_t rh = a2->tree_height();
-        return ((lh <= rh ? rh : lh) + 1);
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _Cont_Node: saves [a2], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Node {
+        std::shared_ptr<tree<A>> a2;
+      };
+
+      /// _Cont_Node_1: saves [lh], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_Node_1 {
+        uint64_t lh;
+      };
+
+      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_height: _Enter -> _Cont_Node -> _Cont_Node_1.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_Cont_Node{a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          }
+        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<tree<A>> a2 = std::move(_f.a2);
+          uint64_t lh = std::move(_result);
+          _stack.emplace_back(_Cont_Node_1{lh});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
+        } else {
+          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          uint64_t lh = _f.lh;
+          uint64_t rh = std::move(_result);
+          _result = ((lh <= rh ? rh : lh) + 1);
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree<A> &, T1 &, A &, tree<A> &,
                                      T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
-                  a2->template tree_rec<T1>(f, f0));
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_Node {
+        tree<A> *a0_0;
+        tree<A> a2;
+        std::decay_t<A> a1;
+        tree<A> a0_1;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        std::decay_t<T1> _result;
+        tree<A> a2;
+        std::decay_t<A> a1;
+        tree<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result),
+                                            std::move(_f.a2), std::move(_f.a1),
+                                            std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f.a2), std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, tree<A> &, T1 &, A &, tree<A> &,
                                      T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename tree<A>::Leaf>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(this->v());
-        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
-                  a2->template tree_rect<T1>(f, f0));
+      const tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+      };
+
+      /// _After_Node: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_Node {
+        tree<A> *a0_0;
+        tree<A> a2;
+        std::decay_t<A> a1;
+        tree<A> a0_1;
+      };
+
+      /// _Combine_Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Node {
+        std::decay_t<T1> _result;
+        tree<A> a2;
+        std::decay_t<A> a1;
+        tree<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_Node>(_frame)) {
+          auto _f = std::move(std::get<_After_Node>(_frame));
+          _stack.emplace_back(_Combine_Node{std::move(_result),
+                                            std::move(_f.a2), std::move(_f.a1),
+                                            std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Node>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f.a2), std::move(_f._result));
+        }
       }
+      return _result;
     }
   };
 
@@ -421,7 +907,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~ternary() {
-      std::vector<std::shared_ptr<ternary>> _stack = {};
+      crane::small_vector<std::shared_ptr<ternary>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TNode>(&_v)) {
           if (_alt->a0) {
@@ -445,73 +931,349 @@ struct LoopifyTrees {
       }
     }
 
+    ternary(const ternary &) = default;
+    ternary &operator=(const ternary &) = default;
+    ternary(ternary &&) noexcept = default;
+    ternary &operator=(ternary &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
     uint64_t ternary_depth() const {
-      if (std::holds_alternative<typename ternary::TLeaf>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename ternary::TNode>(this->v());
-        uint64_t d1 = a0->ternary_depth();
-        uint64_t d2 = a1->ternary_depth();
-        uint64_t d3 = a2->ternary_depth();
-        return ([&]() -> uint64_t {
-          if ((d1 <= d2 ? d2 : d1) <= d3) {
-            return d3;
+      const ternary *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      /// _Cont_TNode: saves [a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode {
+        std::shared_ptr<ternary> a1;
+        std::shared_ptr<ternary> a2;
+      };
+
+      /// _Cont_TNode_1: saves [a2, d1], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode_1 {
+        std::shared_ptr<ternary> a2;
+        uint64_t d1;
+      };
+
+      /// _Cont_TNode_2: saves [d1, d2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_TNode_2 {
+        uint64_t d1;
+        uint64_t d2;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _Cont_TNode, _Cont_TNode_1, _Cont_TNode_2>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified ternary_depth: _Enter -> _Cont_TNode -> _Cont_TNode_1 ->
+      /// _Cont_TNode_2.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const ternary *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
+            _result = UINT64_C(0);
           } else {
-            if (d1 <= d2) {
-              return d2;
-            } else {
-              return d1;
-            }
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename ternary::TNode>(_sv.v());
+            _stack.emplace_back(_Cont_TNode{a1, a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        }() + 1);
+        } else if (std::holds_alternative<_Cont_TNode>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode>(_frame));
+          std::shared_ptr<ternary> a1 = std::move(_f.a1);
+          std::shared_ptr<ternary> a2 = std::move(_f.a2);
+          uint64_t d1 = std::move(_result);
+          _stack.emplace_back(_Cont_TNode_1{std::move(a2), d1});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        } else if (std::holds_alternative<_Cont_TNode_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_TNode_1>(_frame));
+          std::shared_ptr<ternary> a2 = std::move(_f.a2);
+          uint64_t d1 = _f.d1;
+          uint64_t d2 = std::move(_result);
+          _stack.emplace_back(_Cont_TNode_2{d1, d2});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
+        } else {
+          auto _f = std::move(std::get<_Cont_TNode_2>(_frame));
+          uint64_t d1 = _f.d1;
+          uint64_t d2 = _f.d2;
+          uint64_t d3 = std::move(_result);
+          _result = ([&]() -> uint64_t {
+            if ((d1 <= d2 ? d2 : d1) <= d3) {
+              return d3;
+            } else {
+              if (d1 <= d2) {
+                return d2;
+              } else {
+                return d1;
+              }
+            }
+          }() + 1);
+        }
       }
+      return _result;
     }
 
     uint64_t ternary_sum() const {
-      if (std::holds_alternative<typename ternary::TLeaf>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename ternary::TNode>(this->v());
-        return (a3 +
-                (a0->ternary_sum() + (a1->ternary_sum() + a2->ternary_sum())));
+      const ternary *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      /// _After_TNode: saves [a1, a0, a3], dispatches next recursive call.
+      struct _After_TNode {
+        const ternary *a1;
+        const ternary *a0;
+        uint64_t a3;
+      };
+
+      /// _After_TNode_1: saves [_result, a0, a3], dispatches next recursive
+      /// call.
+      struct _After_TNode_1 {
+        uint64_t _result;
+        const ternary *a0;
+        uint64_t a3;
+      };
+
+      /// _Combine_TNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_TNode {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t a3;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified ternary_sum: _Enter -> _After_TNode -> _After_TNode_1 ->
+      /// _Combine_TNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const ternary *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename ternary::TNode>(_sv.v());
+            _stack.emplace_back(_After_TNode{crane_raw(a1), crane_raw(a0), a3});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_TNode>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode>(_frame));
+          _stack.emplace_back(_After_TNode_1{std::move(_result), _f.a0, _f.a3});
+          _stack.emplace_back(_Enter{_f.a1});
+        } else if (std::holds_alternative<_After_TNode_1>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode_1>(_frame));
+          _stack.emplace_back(
+              _Combine_TNode{_f._result, std::move(_result), _f.a3});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_TNode>(_frame));
+          _result =
+              (_f.a3 + (std::move(_result) + (_f._result_1 + _f._result_0)));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
                                      ternary &, T1 &, uint64_t &>
     T1 ternary_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename ternary::TLeaf>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename ternary::TNode>(this->v());
-        return f0(*a0, a0->template ternary_rec<T1>(f, f0), *a1,
-                  a1->template ternary_rec<T1>(f, f0), *a2,
-                  a2->template ternary_rec<T1>(f, f0), a3);
+      const ternary *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      /// _After_TNode: saves [a1_0, a0_0, a3, a2, a1_1, a0_1], dispatches next
+      /// recursive call.
+      struct _After_TNode {
+        const ternary *a1_0;
+        const ternary *a0_0;
+        uint64_t a3;
+        ternary a2;
+        ternary a1_1;
+        ternary a0_1;
+      };
+
+      /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
+      /// next recursive call.
+      struct _After_TNode_1 {
+        std::decay_t<T1> _result;
+        const ternary *a0_0;
+        uint64_t a3;
+        ternary a2;
+        ternary a1;
+        ternary a0_1;
+      };
+
+      /// _Combine_TNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_TNode {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        uint64_t a3;
+        ternary a2;
+        ternary a1;
+        ternary a0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified ternary_rec: _Enter -> _After_TNode -> _After_TNode_1 ->
+      /// _Combine_TNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const ternary *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename ternary::TNode>(_sv.v());
+            _stack.emplace_back(
+                _After_TNode{crane_raw(a1), crane_raw(a0), a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_TNode>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode>(_frame));
+          _stack.emplace_back(_After_TNode_1{
+              std::move(_result), _f.a0_0, _f.a3, std::move(_f.a2),
+              std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_TNode_1>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode_1>(_frame));
+          _stack.emplace_back(_Combine_TNode{
+              std::move(_f._result), std::move(_result), _f.a3,
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_TNode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_1), std::move(_f.a2),
+                       std::move(_f._result_0), _f.a3);
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, ternary &, T1 &, ternary &, T1 &,
                                      ternary &, T1 &, uint64_t &>
     T1 ternary_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename ternary::TLeaf>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename ternary::TNode>(this->v());
-        return f0(*a0, a0->template ternary_rect<T1>(f, f0), *a1,
-                  a1->template ternary_rect<T1>(f, f0), *a2,
-                  a2->template ternary_rect<T1>(f, f0), a3);
+      const ternary *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const ternary *_self;
+      };
+
+      /// _After_TNode: saves [a1_0, a0_0, a3, a2, a1_1, a0_1], dispatches next
+      /// recursive call.
+      struct _After_TNode {
+        const ternary *a1_0;
+        const ternary *a0_0;
+        uint64_t a3;
+        ternary a2;
+        ternary a1_1;
+        ternary a0_1;
+      };
+
+      /// _After_TNode_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
+      /// next recursive call.
+      struct _After_TNode_1 {
+        std::decay_t<T1> _result;
+        const ternary *a0_0;
+        uint64_t a3;
+        ternary a2;
+        ternary a1;
+        ternary a0_1;
+      };
+
+      /// _Combine_TNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_TNode {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        uint64_t a3;
+        ternary a2;
+        ternary a1;
+        ternary a0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_TNode, _After_TNode_1, _Combine_TNode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified ternary_rect: _Enter -> _After_TNode -> _After_TNode_1 ->
+      /// _Combine_TNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const ternary *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename ternary::TNode>(_sv.v());
+            _stack.emplace_back(
+                _After_TNode{crane_raw(a1), crane_raw(a0), a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_TNode>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode>(_frame));
+          _stack.emplace_back(_After_TNode_1{
+              std::move(_result), _f.a0_0, _f.a3, std::move(_f.a2),
+              std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_TNode_1>(_frame)) {
+          auto _f = std::move(std::get<_After_TNode_1>(_frame));
+          _stack.emplace_back(_Combine_TNode{
+              std::move(_f._result), std::move(_result), _f.a3,
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_TNode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_1), std::move(_f.a2),
+                       std::move(_f._result_0), _f.a3);
+        }
       }
+      return _result;
     }
   };
 
@@ -541,7 +1303,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~rose() {
-      std::vector<std::shared_ptr<rose>> _stack = {};
+      crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -569,6 +1331,11 @@ struct LoopifyTrees {
         }
       }
     }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -650,8 +1417,7 @@ struct LoopifyTrees {
 
     using _Frame = std::variant<_Enter, _After_RNode, _Combine_RNode>;
     List<rose> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&cs, fuel});
     /// Loopified map_rose_list_fuel: _Enter -> _After_RNode -> _Combine_RNode.
     while (!_stack.empty()) {
@@ -745,8 +1511,7 @@ struct LoopifyTrees {
 
     using _Frame = std::variant<_Enter, _After2, _Combine1>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified or_search: _Enter -> _After2 -> _Combine1.
     while (!_stack.empty()) {
@@ -817,7 +1582,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Quad>(&_v)) {
           if (_alt->a0) {
@@ -844,6 +1609,11 @@ struct LoopifyTrees {
       }
     }
 
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -851,28 +1621,176 @@ struct LoopifyTrees {
 
     /// quad_depth t computes depth of quadtree.
     uint64_t quad_depth() const {
-      if (std::holds_alternative<typename quadtree::QLeaf>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename quadtree::Quad>(this->v());
-        return (max4_impl(a0->quad_depth(), a1->quad_depth(), a2->quad_depth(),
-                          a3->quad_depth()) +
-                1);
+      const quadtree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      /// _After_Quad: saves [a2, a1, a0], dispatches next recursive call.
+      struct _After_Quad {
+        const quadtree *a2;
+        const quadtree *a1;
+        const quadtree *a0;
+      };
+
+      /// _After_Quad_1: saves [_result, a1, a0], dispatches next recursive
+      /// call.
+      struct _After_Quad_1 {
+        uint64_t _result;
+        const quadtree *a1;
+        const quadtree *a0;
+      };
+
+      /// _After_Quad_2: saves [_result_0, _result_1, a0], dispatches next
+      /// recursive call.
+      struct _After_Quad_2 {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        const quadtree *a0;
+      };
+
+      /// _Combine_Quad: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Quad {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
+                                  _After_Quad_2, _Combine_Quad>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified quad_depth: _Enter -> _After_Quad -> _After_Quad_1 ->
+      /// _After_Quad_2 -> _Combine_Quad.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const quadtree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename quadtree::Quad>(_sv.v());
+            _stack.emplace_back(
+                _After_Quad{crane_raw(a2), crane_raw(a1), crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a3)});
+          }
+        } else if (std::holds_alternative<_After_Quad>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad>(_frame));
+          _stack.emplace_back(_After_Quad_1{std::move(_result), _f.a1, _f.a0});
+          _stack.emplace_back(_Enter{_f.a2});
+        } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_1>(_frame));
+          _stack.emplace_back(
+              _After_Quad_2{_f._result, std::move(_result), _f.a0});
+          _stack.emplace_back(_Enter{_f.a1});
+        } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_2>(_frame));
+          _stack.emplace_back(
+              _Combine_Quad{_f._result_0, _f._result_1, std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Quad>(_frame));
+          _result = (max4_impl(std::move(_result), _f._result_2, _f._result_1,
+                               _f._result_0) +
+                     1);
+        }
       }
+      return _result;
     }
 
     /// quad_sum t sums all values in a quadtree.
     uint64_t quad_sum() const {
-      if (std::holds_alternative<typename quadtree::QLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename quadtree::QLeaf>(this->v());
-        return a0;
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename quadtree::Quad>(this->v());
-        return (a0->quad_sum() +
-                (a1->quad_sum() + (a2->quad_sum() + a3->quad_sum())));
+      const quadtree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      /// _After_Quad: saves [a2, a1, a0], dispatches next recursive call.
+      struct _After_Quad {
+        const quadtree *a2;
+        const quadtree *a1;
+        const quadtree *a0;
+      };
+
+      /// _After_Quad_1: saves [_result, a1, a0], dispatches next recursive
+      /// call.
+      struct _After_Quad_1 {
+        uint64_t _result;
+        const quadtree *a1;
+        const quadtree *a0;
+      };
+
+      /// _After_Quad_2: saves [_result_0, _result_1, a0], dispatches next
+      /// recursive call.
+      struct _After_Quad_2 {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        const quadtree *a0;
+      };
+
+      /// _Combine_Quad: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Quad {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t _result_2;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
+                                  _After_Quad_2, _Combine_Quad>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified quad_sum: _Enter -> _After_Quad -> _After_Quad_1 ->
+      /// _After_Quad_2 -> _Combine_Quad.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const quadtree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
+            _result = std::move(a0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename quadtree::Quad>(_sv.v());
+            _stack.emplace_back(
+                _After_Quad{crane_raw(a2), crane_raw(a1), crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a3)});
+          }
+        } else if (std::holds_alternative<_After_Quad>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad>(_frame));
+          _stack.emplace_back(_After_Quad_1{std::move(_result), _f.a1, _f.a0});
+          _stack.emplace_back(_Enter{_f.a2});
+        } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_1>(_frame));
+          _stack.emplace_back(
+              _After_Quad_2{_f._result, std::move(_result), _f.a0});
+          _stack.emplace_back(_Enter{_f.a1});
+        } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_2>(_frame));
+          _stack.emplace_back(
+              _Combine_Quad{_f._result_0, _f._result_1, std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Quad>(_frame));
+          _result = (std::move(_result) +
+                     (_f._result_2 + (_f._result_1 + _f._result_0)));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -880,17 +1798,114 @@ struct LoopifyTrees {
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename quadtree::QLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename quadtree::QLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename quadtree::Quad>(this->v());
-        return f0(*a0, a0->template quadtree_rec<T1>(f, f0), *a1,
-                  a1->template quadtree_rec<T1>(f, f0), *a2,
-                  a2->template quadtree_rec<T1>(f, f0), *a3,
-                  a3->template quadtree_rec<T1>(f, f0));
+      const quadtree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      /// _After_Quad: saves [a2_0, a1_0, a0_0, a3, a2_1, a1_1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad {
+        const quadtree *a2_0;
+        const quadtree *a1_0;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2_1;
+        quadtree a1_1;
+        quadtree a0_1;
+      };
+
+      /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad_1 {
+        std::decay_t<T1> _result;
+        const quadtree *a1_0;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1_1;
+        quadtree a0_1;
+      };
+
+      /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad_2 {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1;
+        quadtree a0_1;
+      };
+
+      /// _Combine_Quad: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Quad {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        std::decay_t<T1> _result_2;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1;
+        quadtree a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
+                                  _After_Quad_2, _Combine_Quad>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified quadtree_rec: _Enter -> _After_Quad -> _After_Quad_1 ->
+      /// _After_Quad_2 -> _Combine_Quad.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const quadtree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
+            _result = f(a0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename quadtree::Quad>(_sv.v());
+            _stack.emplace_back(_After_Quad{crane_raw(a2), crane_raw(a1),
+                                            crane_raw(a0), *a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a3)});
+          }
+        } else if (std::holds_alternative<_After_Quad>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad>(_frame));
+          _stack.emplace_back(_After_Quad_1{
+              std::move(_result), _f.a1_0, _f.a0_0, std::move(_f.a3),
+              std::move(_f.a2_1), std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a2_0});
+        } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_1>(_frame));
+          _stack.emplace_back(
+              _After_Quad_2{std::move(_f._result), std::move(_result), _f.a0_0,
+                            std::move(_f.a3), std::move(_f.a2),
+                            std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_2>(_frame));
+          _stack.emplace_back(_Combine_Quad{
+              std::move(_f._result_0), std::move(_f._result_1),
+              std::move(_result), std::move(_f.a3), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Quad>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_2), std::move(_f.a2),
+                       std::move(_f._result_1), std::move(_f.a3),
+                       std::move(_f._result_0));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -898,17 +1913,114 @@ struct LoopifyTrees {
                std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &,
                                      T1 &, quadtree &, T1 &, quadtree &, T1 &>
     T1 quadtree_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename quadtree::QLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename quadtree::QLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1, a2, a3] =
-            std::get<typename quadtree::Quad>(this->v());
-        return f0(*a0, a0->template quadtree_rect<T1>(f, f0), *a1,
-                  a1->template quadtree_rect<T1>(f, f0), *a2,
-                  a2->template quadtree_rect<T1>(f, f0), *a3,
-                  a3->template quadtree_rect<T1>(f, f0));
+      const quadtree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const quadtree *_self;
+      };
+
+      /// _After_Quad: saves [a2_0, a1_0, a0_0, a3, a2_1, a1_1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad {
+        const quadtree *a2_0;
+        const quadtree *a1_0;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2_1;
+        quadtree a1_1;
+        quadtree a0_1;
+      };
+
+      /// _After_Quad_1: saves [_result, a1_0, a0_0, a3, a2, a1_1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad_1 {
+        std::decay_t<T1> _result;
+        const quadtree *a1_0;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1_1;
+        quadtree a0_1;
+      };
+
+      /// _After_Quad_2: saves [_result_0, _result_1, a0_0, a3, a2, a1, a0_1],
+      /// dispatches next recursive call.
+      struct _After_Quad_2 {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        const quadtree *a0_0;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1;
+        quadtree a0_1;
+      };
+
+      /// _Combine_Quad: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Quad {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        std::decay_t<T1> _result_2;
+        quadtree a3;
+        quadtree a2;
+        quadtree a1;
+        quadtree a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Quad, _After_Quad_1,
+                                  _After_Quad_2, _Combine_Quad>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified quadtree_rect: _Enter -> _After_Quad -> _After_Quad_1 ->
+      /// _After_Quad_2 -> _Combine_Quad.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const quadtree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename quadtree::QLeaf>(_sv.v());
+            _result = f(a0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename quadtree::Quad>(_sv.v());
+            _stack.emplace_back(_After_Quad{crane_raw(a2), crane_raw(a1),
+                                            crane_raw(a0), *a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a3)});
+          }
+        } else if (std::holds_alternative<_After_Quad>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad>(_frame));
+          _stack.emplace_back(_After_Quad_1{
+              std::move(_result), _f.a1_0, _f.a0_0, std::move(_f.a3),
+              std::move(_f.a2_1), std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a2_0});
+        } else if (std::holds_alternative<_After_Quad_1>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_1>(_frame));
+          _stack.emplace_back(
+              _After_Quad_2{std::move(_f._result), std::move(_result), _f.a0_0,
+                            std::move(_f.a3), std::move(_f.a2),
+                            std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_Quad_2>(_frame)) {
+          auto _f = std::move(std::get<_After_Quad_2>(_frame));
+          _stack.emplace_back(_Combine_Quad{
+              std::move(_f._result_0), std::move(_f._result_1),
+              std::move(_result), std::move(_f.a3), std::move(_f.a2),
+              std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_Quad>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_2), std::move(_f.a2),
+                       std::move(_f._result_1), std::move(_f.a3),
+                       std::move(_f._result_0));
+        }
       }
+      return _result;
     }
   };
 
@@ -950,7 +2062,7 @@ struct LoopifyTrees {
 
     // MANIPULATORS
     ~simple_tree() {
-      std::vector<std::shared_ptr<simple_tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<simple_tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SNode>(&_v)) {
           if (_alt->a0) {
@@ -971,6 +2083,11 @@ struct LoopifyTrees {
       }
     }
 
+    simple_tree(const simple_tree &) = default;
+    simple_tree &operator=(const simple_tree &) = default;
+    simple_tree(simple_tree &&) noexcept = default;
+    simple_tree &operator=(simple_tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -978,35 +2095,128 @@ struct LoopifyTrees {
 
     /// count_paths_simple t n counts paths with sum n (simpler variant).
     uint64_t count_paths_simple(uint64_t n) const {
-      if (std::holds_alternative<typename simple_tree::SLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename simple_tree::SLeaf>(this->v());
-        if (a0 == n) {
-          return UINT64_C(1);
+      const simple_tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const simple_tree *_self;
+        uint64_t n;
+      };
+
+      /// _After2: saves [a0, _s1], dispatches next recursive call.
+      struct _After2 {
+        simple_tree *a0;
+        std::decay_t<decltype((
+            ((std::declval<uint64_t &>() - UINT64_C(1)) >
+                     std::declval<uint64_t &>()
+                 ? 0
+                 : (std::declval<uint64_t &>() - UINT64_C(1)))))>
+            _s1;
+      };
+
+      /// _Combine1: receives partial results, combines with _result from final
+      /// call.
+      struct _Combine1 {
+        uint64_t _result;
+      };
+
+      using _Frame = std::variant<_Enter, _After2, _Combine1>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, n});
+      /// Loopified count_paths_simple: _Enter -> _After2 -> _Combine1.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const simple_tree *_self = _f._self;
+          uint64_t n = _f.n;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
+            if (a0 == n) {
+              _result = UINT64_C(1);
+            } else {
+              _result = UINT64_C(0);
+            }
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename simple_tree::SNode>(_sv.v());
+            if (n <= UINT64_C(0)) {
+              _result = UINT64_C(0);
+            } else {
+              _stack.emplace_back(
+                  _After2{crane_raw(a0),
+                          (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+              _stack.emplace_back(
+                  _Enter{crane_raw(a1),
+                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+            }
+          }
+        } else if (std::holds_alternative<_After2>(_frame)) {
+          auto _f = std::move(std::get<_After2>(_frame));
+          _stack.emplace_back(_Combine1{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0, _f._s1});
         } else {
-          return UINT64_C(0);
-        }
-      } else {
-        const auto &[a0, a1] = std::get<typename simple_tree::SNode>(this->v());
-        if (n <= UINT64_C(0)) {
-          return UINT64_C(0);
-        } else {
-          return (a0->count_paths_simple(
-                      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))) +
-                  a1->count_paths_simple(
-                      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))));
+          auto _f = std::move(std::get<_Combine1>(_frame));
+          _result = (std::move(_result) + std::move(_f._result));
         }
       }
+      return _result;
     }
 
     /// simple_tree_sum t sums all leaf values.
     uint64_t simple_tree_sum() const {
-      if (std::holds_alternative<typename simple_tree::SLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename simple_tree::SLeaf>(this->v());
-        return a0;
-      } else {
-        const auto &[a0, a1] = std::get<typename simple_tree::SNode>(this->v());
-        return (a0->simple_tree_sum() + a1->simple_tree_sum());
+      const simple_tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      /// _After_SNode: saves [a0], dispatches next recursive call.
+      struct _After_SNode {
+        simple_tree *a0;
+      };
+
+      /// _Combine_SNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_SNode {
+        uint64_t _result;
+      };
+
+      using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified simple_tree_sum: _Enter -> _After_SNode -> _Combine_SNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const simple_tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
+            _result = std::move(a0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename simple_tree::SNode>(_sv.v());
+            _stack.emplace_back(_After_SNode{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_SNode>(_frame)) {
+          auto _f = std::move(std::get<_After_SNode>(_frame));
+          _stack.emplace_back(_Combine_SNode{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_SNode>(_frame));
+          _result = (std::move(_result) + std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -1014,14 +2224,61 @@ struct LoopifyTrees {
                std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
                                      simple_tree &, T1 &>
     T1 simple_tree_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename simple_tree::SLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename simple_tree::SLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1] = std::get<typename simple_tree::SNode>(this->v());
-        return f0(*a0, a0->template simple_tree_rec<T1>(f, f0), *a1,
-                  a1->template simple_tree_rec<T1>(f, f0));
+      const simple_tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      /// _After_SNode: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_SNode {
+        simple_tree *a0_0;
+        simple_tree a1;
+        simple_tree a0_1;
+      };
+
+      /// _Combine_SNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_SNode {
+        std::decay_t<T1> _result;
+        simple_tree a1;
+        simple_tree a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified simple_tree_rec: _Enter -> _After_SNode -> _Combine_SNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const simple_tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
+            _result = f(a0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename simple_tree::SNode>(_sv.v());
+            _stack.emplace_back(_After_SNode{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_SNode>(_frame)) {
+          auto _f = std::move(std::get<_After_SNode>(_frame));
+          _stack.emplace_back(_Combine_SNode{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_SNode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -1029,14 +2286,61 @@ struct LoopifyTrees {
                std::is_invocable_r_v<T1, F1 &, simple_tree &, T1 &,
                                      simple_tree &, T1 &>
     T1 simple_tree_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename simple_tree::SLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename simple_tree::SLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1] = std::get<typename simple_tree::SNode>(this->v());
-        return f0(*a0, a0->template simple_tree_rect<T1>(f, f0), *a1,
-                  a1->template simple_tree_rect<T1>(f, f0));
+      const simple_tree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const simple_tree *_self;
+      };
+
+      /// _After_SNode: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_SNode {
+        simple_tree *a0_0;
+        simple_tree a1;
+        simple_tree a0_1;
+      };
+
+      /// _Combine_SNode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_SNode {
+        std::decay_t<T1> _result;
+        simple_tree a1;
+        simple_tree a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_SNode, _Combine_SNode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified simple_tree_rect: _Enter -> _After_SNode -> _Combine_SNode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const simple_tree *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
+            const auto &[a0] = std::get<typename simple_tree::SLeaf>(_sv.v());
+            _result = f(a0);
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename simple_tree::SNode>(_sv.v());
+            _stack.emplace_back(_After_SNode{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_SNode>(_frame)) {
+          auto _f = std::move(std::get<_After_SNode>(_frame));
+          _stack.emplace_back(_Combine_SNode{
+              std::move(_result), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_SNode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        }
       }
+      return _result;
     }
   };
 

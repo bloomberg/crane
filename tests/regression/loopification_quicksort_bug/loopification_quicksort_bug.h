@@ -2,13 +2,13 @@
 #define INCLUDED_LOOPIFICATION_QUICKSORT_BUG
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <string>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 using namespace std::string_literals;
 
@@ -82,7 +82,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -100,6 +100,11 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
@@ -108,25 +113,53 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   List<A> filter(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return List<A>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      if (f(a0)) {
-        return List<A>::cons(a0, a1->filter(f));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(List<A>::nil());
+        break;
       } else {
-        return a1->filter(f);
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        if (f(a0)) {
+          auto _cell =
+              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          _loop_self = crane_raw(a1);
+          continue;
+        } else {
+          _loop_self = crane_raw(a1);
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 

@@ -23,8 +23,7 @@ uint64_t MemSafetyProbe28::tree_sum(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_sum: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -77,8 +76,7 @@ uint64_t MemSafetyProbe28::tree_depth(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_depth: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -162,8 +160,7 @@ uint64_t MemSafetyProbe28::zip_trees(
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_trees: _Enter -> _After_Leaf -> _After_Node -> _Combine_Leaf
   /// -> _Combine_Node.
@@ -261,8 +258,7 @@ uint64_t MemSafetyProbe28::zip_depth(
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_depth: _Enter -> _After_Leaf -> _After_Node -> _Combine_Leaf
   /// -> _Combine_Node.
@@ -365,8 +361,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{t2, &t1});
   /// Loopified zip_and_sum: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -466,8 +461,7 @@ uint64_t MemSafetyProbe28::double_zip(
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t2, &t1});
   /// Loopified double_zip: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -556,8 +550,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
   using _Frame = std::variant<_Enter, _Resume_Leaf, _Resume_Leaf_1,
                               _Resume_Node, _Resume_Node_1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(acc), t2, &t1});
   /// Loopified zip_collect: _Enter -> _Resume_Leaf -> _Resume_Leaf_1 ->
   /// _Resume_Node -> _Resume_Node_1.
@@ -622,8 +615,7 @@ uint64_t MemSafetyProbe28::list_sum(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_sum: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -689,8 +681,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
   using _Frame = std::variant<_Enter, _After_Leaf, _After_Node, _Combine_Leaf,
                               _Combine_Node>;
   MemSafetyProbe28::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t2), &t1});
   /// Loopified merge_trees: _Enter -> _After_Leaf -> _After_Node ->
   /// _Combine_Leaf -> _Combine_Node.
@@ -762,8 +753,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::build_balanced(
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   MemSafetyProbe28::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified build_balanced: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {

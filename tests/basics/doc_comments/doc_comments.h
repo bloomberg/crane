@@ -1,12 +1,12 @@
 #ifndef INCLUDED_DOC_COMMENTS
 #define INCLUDED_DOC_COMMENTS
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct DocComments {
   /// add computes the sum of two natural numbers n and m.
@@ -96,7 +96,7 @@ struct DocComments {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->l) {
@@ -113,6 +113,11 @@ struct DocComments {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

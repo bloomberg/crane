@@ -18,8 +18,7 @@ uint64_t LoopifyItreeReified::count_taus(
 
   using _Frame = std::variant<_Enter, _Resume_t_>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{t, fuel});
   /// Loopified count_taus: _Enter -> _Resume_t_.
   while (!_stack.empty()) {

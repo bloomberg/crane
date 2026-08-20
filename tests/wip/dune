@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir arena_tree
- (rule
-  (targets arena_tree.t.exe)
-  (deps Tree.vo arena_tree.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} arena_tree.t.exe arena_tree.cpp arena_tree.t.cpp)))
- (rule
-  (alias runtest)
-  (deps arena_tree.t.exe)
-  (action (run ./arena_tree.t.exe))))

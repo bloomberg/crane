@@ -1,22 +1,39 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Pre-computed C++ name resolution cache.
+(** {1 Name Resolution}
 
-   This module moves name resolution logic out of cpp.ml's pretty-printer into a
-   pre-computation phase that runs during translation. The cache maps GlobRef.t
-   values to resolved C++ names, eliminating the need for complex name
-   resolution at render time.
+    Pre-computed C++ name resolution cache.
 
-   The cache is populated once per extraction pass by [create], which scans the
-   full ml_structure and resolves every inductive type name and global function
-   name according to the same rules that cpp.ml previously applied at render
-   time (wrapper qualification, eponymous record merging, collision detection,
-   etc.).
+    This module moves name resolution logic out of [cpp.ml]'s pretty-printer
+    into a pre-computation phase that runs during translation. The cache maps
+    [GlobRef.t] values to resolved C++ names, eliminating the need for complex
+    name resolution at render time.
 
-   Usage: let nrc = Name_resolution.create analysis wrapper_module_table ... in
-   match Name_resolution.resolve_type nrc r with | Some name -> (* use
-   pre-resolved name *) | None -> (* fall back to current logic *) *)
+    The cache is populated once per extraction pass by {!create}, which scans
+    the full [ml_structure] and resolves every inductive type name and global
+    function name according to the same rules that [cpp.ml] previously applied at
+    render time (wrapper qualification, eponymous record merging, collision
+    detection, etc.).
+
+    Runs {i after} {!Structure_analysis.analyze} (whose {!Structure_analysis.t}
+    result it consumes) and {i before} [cpp.ml]'s rendering pass, which queries
+    it in preference to re-deriving names.
+
+    {2 Usage}
+
+    {[
+      let nrc = Name_resolution.create analysis wrapper_module_table ... in
+      match Name_resolution.resolve_type nrc r with
+      | Some name -> (* use pre-resolved name *)
+      | None -> (* fall back to current logic *)
+    ]}
+
+    {b Side-effect caveat.} Unlike a naive render-time resolver, {!create} must
+    avoid [Common.pp_global] / [Common.pp_global_name], because those mutate
+    [Common]'s renaming tables; touching them at cache-creation time would emit
+    premature renaming entries and change the output. This is why term names are
+    deliberately {i not} pre-computed (see {!resolve_term}). *)
 
 open Names
 open Minicpp
@@ -71,10 +88,12 @@ val create :
     @return [Some info] if the type has been pre-classified, [None] otherwise *)
 val resolve_type : t -> GlobRef.t -> resolved_type_name option
 
-(** Look up a pre-resolved term name. Returns None if not cached.
+(** Look up a pre-resolved term name.
     @param t the name resolution cache
     @param r the global reference to look up
-    @return always [None] currently — term names are not pre-computed *)
+    @return always [None]: term names are deliberately not pre-computed (to
+            avoid renaming side effects at cache-creation time), so this is a
+            stub kept only to mirror {!resolve_type}. *)
 val resolve_term : t -> GlobRef.t -> resolved_term_name option
 
 (** Register a type name resolution. Used for late entries (e.g., local
@@ -84,10 +103,12 @@ val resolve_term : t -> GlobRef.t -> resolved_term_name option
     @param name the resolved name information to store *)
 val register_type : t -> GlobRef.t -> resolved_type_name -> unit
 
-(** Register a term name resolution.
-    @param t the cache to update
-    @param r the global reference to register
-    @param name the resolved name information to store *)
+(** Register a term name resolution. Currently a no-op: term names are not
+    cached (see {!resolve_term}); this is a stub kept to mirror
+    {!register_type}.
+    @param t the cache (left unchanged)
+    @param r the global reference (ignored)
+    @param name the resolved name information (ignored) *)
 val register_term : t -> GlobRef.t -> resolved_term_name -> unit
 
 (** Check if a type is an eponymous record (pre-computed).

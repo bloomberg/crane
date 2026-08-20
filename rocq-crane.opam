@@ -13,6 +13,7 @@ depends: [
   "coq-equations" {with-test}
   "coq-itree"
   "coq-paco"
+  "coq-color"
 ]
 build: ["dune" "build"]
 install: ["dune" "install"]

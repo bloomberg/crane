@@ -189,19 +189,24 @@ VERNAC COMMAND EXTEND ResetExtractionLoopify CLASSIFIED AS SIDEFF
   -> { reset_extraction_loopify () }
 END
 
-VERNAC COMMAND EXTEND ExtractionArena CLASSIFIED AS SIDEFF
-| [ "Crane" "Arena" ne_global_list(l) ]
-  -> { extraction_arena true l }
+VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "Reuse" ne_global_list(l) ]
+  -> { extraction_reuse true l }
+END
+
+VERNAC COMMAND EXTEND ExtractionNoReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "NoReuse" ne_global_list(l) ]
+  -> { extraction_reuse false l }
+END
+
+VERNAC COMMAND EXTEND ResetExtractionReuse CLASSIFIED AS SIDEFF
+| [ "Crane" "Reset" "Reuse" ]
+  -> { reset_extraction_reuse () }
 END
 
 VERNAC COMMAND EXTEND ExtractionNoArena CLASSIFIED AS SIDEFF
 | [ "Crane" "NoArena" ne_global_list(l) ]
-  -> { extraction_arena false l }
-END
-
-VERNAC COMMAND EXTEND ResetExtractionArena CLASSIFIED AS SIDEFF
-| [ "Crane" "Reset" "Arena" ]
-  -> { reset_extraction_arena () }
+  -> { extraction_no_arena l }
 END
 
 VERNAC COMMAND EXTEND ExtractionImplicit CLASSIFIED AS SIDEFF
@@ -250,13 +255,6 @@ VERNAC COMMAND EXTEND PrintExtractionForeign CLASSIFIED AS QUERY
   -> {Feedback.msg_notice (print_extraction_foreign ()) }
 END
 
-(*
-VERNAC COMMAND EXTEND ResetExtractionForeign CLASSIFIED AS SIDEFF
-| [ "Reset" "Extraction" "Foreign" ]
-  -> { reset_extraction_foreign () }
-END
-*)
-
 (* Overriding of a Rocq object by an ML one *)
 (* TODO: currently is inlined, no option for otherwise *)
 VERNAC COMMAND EXTEND ExtractionConstant CLASSIFIED AS SIDEFF
@@ -282,12 +280,28 @@ END
 VERNAC COMMAND EXTEND ExtractionInductive CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Boxed" "Element" cppname(w) "Drain" string(d) "From" string_list(import) ]
+  -> { extract_inductive ~boxed:w ~drain:d x id idl o import }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Boxed" "Element" cppname(w) "Drain" string(d) ]
+  -> { extract_inductive ~boxed:w ~drain:d x id idl o [] }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
     "Boxed" "Element" cppname(w) "From" string_list(import) ]
   -> { extract_inductive ~boxed:w x id idl o import }
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o)
     "Boxed" "Element" cppname(w) ]
   -> { extract_inductive ~boxed:w x id idl o [] }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Drain" string(d) "From" string_list(import) ]
+  -> { extract_inductive ~drain:d x id idl o import }
+| [ "Crane" "Extract" "Inductive" global(x) "=>"
+    cppname(id) "[" cppname_list(idl) "]" string_opt(o)
+    "Drain" string(d) ]
+  -> { extract_inductive ~drain:d x id idl o [] }
 | [ "Crane" "Extract" "Inductive" global(x) "=>"
     cppname(id) "[" cppname_list(idl) "]" string_opt(o) "From" string_list(import) ]
   -> { extract_inductive x id idl o import }

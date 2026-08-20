@@ -172,6 +172,9 @@ type kind =
   | Cons
   | Mod  (** Kind of global identifier: term, type, constructor, or module. *)
 
+(** Kernel [Label.t] of a global reference: the constant's own label for a
+    [ConstRef], and the enclosing mutual-inductive block's label for an
+    [IndRef] or [ConstructRef]. *)
 val label_of_r : GlobRef.t -> Label.t
 
 (** Print a reference using a specific kernel name key. *)

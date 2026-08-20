@@ -2,12 +2,12 @@
 #define INCLUDED_MUTUAL_VALUE_DEEP_COPY
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualValueDeepCopy {
   /// Direct self-recursive value ADTs now get iterative clone/destruct paths.
@@ -50,7 +50,7 @@ struct MutualValueDeepCopy {
 
     // MANIPULATORS
     ~a() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ANode>(&_v)) {
           if (_alt->a1) {
@@ -80,6 +80,11 @@ struct MutualValueDeepCopy {
         }
       }
     }
+
+    a(const a &) = default;
+    a &operator=(const a &) = default;
+    a(a &&) noexcept = default;
+    a &operator=(a &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -111,7 +116,7 @@ struct MutualValueDeepCopy {
 
     // MANIPULATORS
     ~b() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BNode>(&_v)) {
           if (_alt->a0) {
@@ -141,6 +146,11 @@ struct MutualValueDeepCopy {
         }
       }
     }
+
+    b(const b &) = default;
+    b &operator=(const b &) = default;
+    b(b &&) noexcept = default;
+    b &operator=(b &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

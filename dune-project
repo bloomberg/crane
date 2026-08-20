@@ -14,4 +14,5 @@
    (rocq-core (>= "9.0~"))
    (rocq-stdlib (>= "9.0~"))
    (coq-ext-lib (>= "0.13.0"))
+   (coq-color (>= "1.8.0"))
    (ocaml-lsp-server :with-dev-setup)))

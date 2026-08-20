@@ -2,12 +2,12 @@
 #define INCLUDED_LOOPIFY_TMC
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 /// Tests for Tail Modulo Cons (TMC) loopification optimization.
 /// Functions where the recursive call is wrapped in a single constructor
@@ -84,7 +84,7 @@ struct LoopifyTmc {
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->l) {
@@ -101,6 +101,11 @@ struct LoopifyTmc {
         }
       }
     }
+
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -127,8 +132,7 @@ struct LoopifyTmc {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -138,7 +142,7 @@ struct LoopifyTmc {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -171,8 +175,7 @@ struct LoopifyTmc {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -182,7 +185,7 @@ struct LoopifyTmc {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});

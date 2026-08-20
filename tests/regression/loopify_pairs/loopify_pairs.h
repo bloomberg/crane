@@ -2,12 +2,12 @@
 #define INCLUDED_LOOPIFY_PAIRS
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 /// Consolidated UNIQUE pair/tuple operations.
 struct LoopifyPairs {
@@ -82,7 +82,7 @@ struct LoopifyPairs {
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->l) {
@@ -99,6 +99,11 @@ struct LoopifyPairs {
         }
       }
     }
+
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -125,8 +130,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rect: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -136,7 +140,7 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -169,8 +173,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified list_rec: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -180,7 +183,7 @@ struct LoopifyPairs {
         auto _f = std::move(std::get<_Enter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -214,8 +217,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified partition: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -342,20 +344,56 @@ struct LoopifyPairs {
 
   /// split_at n l splits at position n.
   template <typename T1>
-  static std::pair<list<T1>, list<T1>> split_at(uint64_t n, list<T1> l) {
-    if (n <= 0) {
-      return std::make_pair(list<T1>::nil(), std::move(l));
-    } else {
-      uint64_t m = n - 1;
-      if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
-        return std::make_pair(list<T1>::nil(), list<T1>::nil());
+  static std::pair<list<T1>, list<T1>>
+  split_at(uint64_t n,
+           list<T1> l) { /// _Enter: captures varying parameters for each
+                         /// recursive call.
+
+    struct _Enter {
+      list<T1> l;
+      uint64_t n;
+    };
+
+    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct _Cont_Cons {
+      std::decay_t<T1> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    std::pair<list<T1>, list<T1>> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{std::move(l), n});
+    /// Loopified split_at: _Enter -> _Cont_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        list<T1> l = std::move(_f.l);
+        uint64_t n = _f.n;
+        if (n <= 0) {
+          _result = std::make_pair(list<T1>::nil(), std::move(l));
+        } else {
+          uint64_t m = n - 1;
+          if (std::holds_alternative<typename list<T1>::Nil>(l.v_mut())) {
+            _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
+          } else {
+            auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
+            _stack.emplace_back(_Cont_Cons{std::move(a0)});
+            _stack.emplace_back(_Enter{*a1, m});
+          }
+        }
       } else {
-        auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v_mut());
-        auto [taken, rest] = split_at<T1>(m, *a1);
-        return std::make_pair(list<T1>::cons(std::move(a0), std::move(taken)),
-                              std::move(rest));
+        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto a0 = std::move(_f.a0);
+        std::pair<list<T1>, list<T1>> _rc1 = std::move(_result);
+        auto [taken, rest] = _rc1;
+        _result = std::make_pair(
+            list<T1>::cons(std::move(a0), std::move(taken)), std::move(rest));
       }
     }
+    return _result;
   }
 
   /// swizzle separates into even/odd positions.
@@ -377,8 +415,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified swizzle: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {
@@ -434,8 +471,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont1>;
     std::pair<list<T1>, list<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified span: _Enter -> _Cont1.
     while (!_stack.empty()) {
@@ -500,8 +536,7 @@ struct LoopifyPairs {
 
     using _Frame = std::variant<_Enter, _Cont_acc_>;
     std::pair<uint64_t, list<uint64_t>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l, acc});
     /// Loopified mapAccumL: _Enter -> _Cont_acc_.
     while (!_stack.empty()) {

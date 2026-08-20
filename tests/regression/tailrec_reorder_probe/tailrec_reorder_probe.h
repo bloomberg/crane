@@ -2,12 +2,12 @@
 #define INCLUDED_TAILREC_REORDER_PROBE
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct TailrecReorderProbe {
   /// Custom list to control exact code generation.
@@ -84,7 +84,7 @@ struct TailrecReorderProbe {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {
@@ -101,6 +101,11 @@ struct TailrecReorderProbe {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -128,8 +133,7 @@ struct TailrecReorderProbe {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
@@ -139,7 +143,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Resume_Mycons{*a1, a0});
@@ -173,8 +177,7 @@ struct TailrecReorderProbe {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     T2 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&m});
     /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {
@@ -184,7 +187,7 @@ struct TailrecReorderProbe {
         auto _f = std::move(std::get<_Enter>(_frame));
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
           _stack.emplace_back(_Resume_Mycons{*a1, a0});
@@ -253,8 +256,7 @@ struct TailrecReorderProbe {
 
     using _Frame = std::variant<_Enter, _Resume_Mycons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified mylist_sum: _Enter -> _Resume_Mycons.
     while (!_stack.empty()) {

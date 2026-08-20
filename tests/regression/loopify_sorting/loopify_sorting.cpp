@@ -44,8 +44,7 @@ List<uint64_t> LoopifySorting::insertion_sort(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified insertion_sort: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -137,9 +136,9 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_l1: saves [_s0, f], dispatches next recursive call.
+  /// _After_l1: saves [l1, f], dispatches next recursive call.
   struct _After_l1 {
-    List<uint64_t> _s0;
+    List<uint64_t> l1;
     uint64_t f;
   };
 
@@ -151,8 +150,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
 
   using _Frame = std::variant<_Enter, _After_l1, _Combine_l1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_l1 -> _Combine_l1.
   while (!_stack.empty()) {
@@ -175,7 +173,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto [l1, l2] = split<uint64_t>(l);
-            _stack.emplace_back(_After_l1{std::move(std::move(l1)), f});
+            _stack.emplace_back(_After_l1{std::move(l1), f});
             _stack.emplace_back(_Enter{std::move(l2), f});
           }
         }
@@ -183,7 +181,7 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(
     } else if (std::holds_alternative<_After_l1>(_frame)) {
       auto _f = std::move(std::get<_After_l1>(_frame));
       _stack.emplace_back(_Combine_l1{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f.l1), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_l1>(_frame));
       _result = merge(std::move(_result), std::move(_f._result));
@@ -212,8 +210,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified partition: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -256,9 +253,9 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_lo: saves [_s0, f, a0], dispatches next recursive call.
+  /// _After_lo: saves [lo, f, a0], dispatches next recursive call.
   struct _After_lo {
-    List<uint64_t> _s0;
+    List<uint64_t> lo;
     uint64_t f;
     uint64_t a0;
   };
@@ -272,8 +269,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
 
   using _Frame = std::variant<_Enter, _After_lo, _Combine_lo>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_lo -> _Combine_lo.
   while (!_stack.empty()) {
@@ -292,15 +288,14 @@ List<uint64_t> LoopifySorting::quicksort_fuel(
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
           auto [lo, hi] = partition(a0, *a1);
-          _stack.emplace_back(
-              _After_lo{std::move(std::move(lo)), f, std::move(a0)});
+          _stack.emplace_back(_After_lo{std::move(lo), f, std::move(a0)});
           _stack.emplace_back(_Enter{std::move(hi), f});
         }
       }
     } else if (std::holds_alternative<_After_lo>(_frame)) {
       auto _f = std::move(std::get<_After_lo>(_frame));
       _stack.emplace_back(_Combine_lo{std::move(_result), _f.a0});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f.lo), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_lo>(_frame));
       _result = std::move(_result).app(

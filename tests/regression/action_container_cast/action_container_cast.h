@@ -2,13 +2,13 @@
 #define INCLUDED_ACTION_CONTAINER_CAST
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <deque>
 #include <functional>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -41,7 +41,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -58,6 +58,11 @@ public:
       }
     }
   }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -121,7 +126,7 @@ public:
 
   // MANIPULATORS
   ~R() {
-    std::vector<std::shared_ptr<R>> _stack = {};
+    crane::small_vector<std::shared_ptr<R>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<RArr>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -141,6 +146,11 @@ public:
       }
     }
   }
+
+  R(const R &) = default;
+  R &operator=(const R &) = default;
+  R(R &&) noexcept = default;
+  R &operator=(R &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

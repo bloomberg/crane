@@ -101,8 +101,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{orig, choices, fuel});
   /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
   /// _Resume_Nil.
@@ -177,8 +176,7 @@ uint64_t LoopifyCombinatorics::len_list(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_list: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -217,8 +215,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified factorial_impl: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -263,8 +260,7 @@ List<List<uint64_t>> LoopifyCombinatorics::subsequences(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified subsequences: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -356,8 +352,7 @@ List<std::pair<uint64_t, uint64_t>> LoopifyCombinatorics::cartesian(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l2});
   /// Loopified cartesian: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -397,8 +392,7 @@ List<List<uint64_t>> LoopifyCombinatorics::power_set(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified power_set: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -462,8 +456,7 @@ List<List<uint64_t>> LoopifyCombinatorics::insert_everywhere(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l)});
   /// Loopified insert_everywhere: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -530,8 +523,7 @@ bool LoopifyCombinatorics::elem(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified elem: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -569,8 +561,7 @@ uint64_t LoopifyCombinatorics::len_impl(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -612,8 +603,7 @@ List<uint64_t> LoopifyCombinatorics::dedup_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified dedup_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

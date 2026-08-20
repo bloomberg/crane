@@ -1,13 +1,13 @@
 #ifndef INCLUDED_DEEP_PATTERNS
 #define INCLUDED_DEEP_PATTERNS
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -96,6 +96,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -153,7 +158,7 @@ struct DeepPatterns {
 
     // MANIPULATORS
     ~outer() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<OLeft>(&_v)) {
           if (_alt->a0) {
@@ -178,6 +183,11 @@ struct DeepPatterns {
         }
       }
     }
+
+    outer(const outer &) = default;
+    outer &operator=(const outer &) = default;
+    outer(outer &&) noexcept = default;
+    outer &operator=(outer &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -377,7 +387,7 @@ struct DeepPatterns {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1) {
@@ -394,6 +404,11 @@ struct DeepPatterns {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

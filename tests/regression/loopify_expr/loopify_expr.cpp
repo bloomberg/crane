@@ -17,8 +17,7 @@ uint64_t LoopifyExpr::sum_shapes(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_shapes: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -77,8 +76,7 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified count_by_shape: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RECURSIVE_MONADIC
 #define INCLUDED_RECURSIVE_MONADIC
 
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <filesystem>
@@ -13,7 +14,6 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 using namespace std::string_literals;
 
@@ -87,7 +87,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -104,6 +104,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

@@ -78,8 +78,7 @@ List<uint64_t> LoopifyListCombining::intercalate(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -125,8 +124,7 @@ List<uint64_t> LoopifyListCombining::concat(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified concat: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -170,8 +168,7 @@ List<uint64_t> LoopifyListCombining::mapcat(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified mapcat: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -254,8 +251,7 @@ List<uint64_t> LoopifyListCombining::concat_sep(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified concat_sep: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

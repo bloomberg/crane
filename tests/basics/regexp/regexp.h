@@ -1,13 +1,13 @@
 #ifndef INCLUDED_REGEXP
 #define INCLUDED_REGEXP
 
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -96,6 +96,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -181,7 +186,7 @@ struct Matcher {
 
     // MANIPULATORS
     ~regexp() {
-      std::vector<std::shared_ptr<regexp>> _stack = {};
+      crane::small_vector<std::shared_ptr<regexp>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cat>(&_v)) {
           if (_alt->r1) {
@@ -214,6 +219,11 @@ struct Matcher {
         }
       }
     }
+
+    regexp(const regexp &) = default;
+    regexp &operator=(const regexp &) = default;
+    regexp(regexp &&) noexcept = default;
+    regexp &operator=(regexp &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

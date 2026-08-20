@@ -99,6 +99,11 @@ let id_frame        = Id.of_string "_frame"
 let id_Frame        = Id.of_string "_Frame"
 let id_self         = Id.of_string "_self"
 
+(* Perceus reuse cursor (see {!section:reuse-cursor}). *)
+let id_own          = Id.of_string "_own"
+let id_uniq         = Id.of_string "_uniq"
+let id_rstep        = Id.of_string "_rs"
+
 (* Method names used with CPPmethod_call / CPPmember *)
 let id_get          = Id.of_string "get"
 
@@ -126,6 +131,31 @@ let rec list_drop n = function
   | [] -> []
   | _ :: xs -> list_drop (n - 1) xs
 let list_remove_at idx xs = List.filteri (fun i _ -> i <> idx) xs
+
+(** [combine_exn ~what l1 l2] is [List.combine] but raises a descriptive
+    [CErrors.anomaly] instead of a bare [Invalid_argument] when the two lists
+    differ in length. These sites pair up structurally-parallel lists (masks,
+    params/args, saved exprs/types) whose lengths are an internal invariant, so a
+    mismatch is a compiler bug worth naming rather than an opaque backtrace. *)
+let combine_exn ~what l1 l2 =
+  let n1 = List.length l1 and n2 = List.length l2 in
+  if n1 <> n2 then
+    CErrors.anomaly
+      (Pp.str
+         (Printf.sprintf "loopify: %s expects equal-length lists (%d vs %d)"
+            what n1 n2));
+  List.combine l1 l2
+
+(** [map2_exn ~what f l1 l2] is [List.map2] with the same descriptive-error
+    contract as {!combine_exn}. *)
+let map2_exn ~what f l1 l2 =
+  let n1 = List.length l1 and n2 = List.length l2 in
+  if n1 <> n2 then
+    CErrors.anomaly
+      (Pp.str
+         (Printf.sprintf "loopify: %s expects equal-length lists (%d vs %d)"
+            what n1 n2));
+  List.map2 f l1 l2
 
 (** {2 Generic AST predicate search}
 
@@ -273,6 +303,13 @@ let ctor_ptr_fields : (string, int list) Hashtbl.t = Hashtbl.create 32
 type call_site = {
   cs_args : cpp_expr list;  (** Arguments to the recursive call *)
   cs_is_tail : bool;  (** Whether this call appears in tail position *)
+  cs_recv : cpp_expr option;
+      (** For a method call, the receiver expression {e as written}, before
+          {!method_checker} converts it to the raw pointer stored in frames.
+          Callers that need to reason about the receiver's storage duration
+          must consult this rather than the head of {!cs_args}, which is always
+          a synthesised [&recv] or [crane_raw(recv)] and therefore says nothing
+          about the original expression. [None] for non-method calls. *)
 }
 
 (** Classification of a function body's recursion pattern. *)
@@ -280,6 +317,111 @@ type recursion_kind =
   | No_recursion  (** No recursive calls found *)
   | Tail_recursion  (** All recursive calls are in tail position *)
   | Nontail_recursion  (** At least one non-tail recursive call *)
+
+(** {2 Diagnostics}
+
+    Historically every bail-out in this pass silently returned the original
+    recursive body, so a function that loopify could not handle was
+    indistinguishable from one it chose not to touch.  That made the pass's
+    coverage unmeasurable.  The machinery below records, for every recursive
+    function the pass sees, which strategy fired or why it declined.
+
+    Two mechanisms cooperate:
+    - {!decline} marks an explicit bail-out with a reason;
+    - {!report_outcome} additionally re-classifies the {e transformed} body, so
+      a strategy that silently left a self-call behind is still reported as a
+      decline.  This postcondition is what makes the report trustworthy: it
+      does not depend on every bail site remembering to announce itself. *)
+
+(** What the pass did with one recursive function. *)
+type loopify_outcome =
+  | Lp_tail  (** Rewritten to a flat [while] loop by {!transform_tail}. *)
+  | Lp_tmc  (** Rewritten by the tail-modulo-cons transform. *)
+  | Lp_frame  (** Rewritten to an explicit frame stack. *)
+  | Lp_deferred of string
+      (** Intentionally not rewritten because the shape already runs in O(1)
+          stack (e.g. a [lazy_]-wrapped cofixpoint body). Not a failure. *)
+  | Lp_declined of string  (** Left as C++ recursion; the string is the reason. *)
+
+let string_of_outcome = function
+  | Lp_tail -> "tail loop"
+  | Lp_tmc -> "tail-modulo-cons"
+  | Lp_frame -> "frame stack"
+  | Lp_deferred why -> "deferred (" ^ why ^ ")"
+  | Lp_declined why -> "DECLINED: " ^ why
+
+(** Outcomes recorded during the current extraction, most recent first. *)
+let outcomes : (string * loopify_outcome) list ref = ref []
+
+let clear_outcomes () = outcomes := []
+
+(** How good an outcome is.  A function can be transformed more than once —
+    {!transform_decl} is invoked independently from [Cpp_ind] and [Cpp_print],
+    and only one of those results is emitted — so the same name can produce
+    several outcomes per unit.  Only the best one describes the emitted code:
+    if any attempt linearised the function, the C++ holds no self-call. *)
+let outcome_rank = function
+  | Lp_declined _ -> 0
+  | Lp_deferred _ -> 1
+  | Lp_tail | Lp_tmc | Lp_frame -> 2
+
+let get_outcomes () =
+  (* Keep first-seen order, but collapse each name to its best outcome. *)
+  let best = Hashtbl.create 64 in
+  let order = ref [] in
+  List.iter
+    (fun (name, outcome) ->
+      match Hashtbl.find_opt best name with
+      | Some prev when outcome_rank prev >= outcome_rank outcome -> ()
+      | Some _ -> Hashtbl.replace best name outcome
+      | None ->
+        Hashtbl.add best name outcome;
+        order := name :: !order)
+    (List.rev !outcomes);
+  List.rev_map (fun name -> (name, Hashtbl.find best name)) !order
+
+(** Record one outcome.  Nothing is printed here: an outcome is only meaningful
+    once every attempt at the same function has been seen, so reporting waits
+    for {!report_outcomes} at the end of the unit. *)
+let record_outcome name outcome =
+  outcomes := (name, outcome) :: !outcomes
+
+(** Print the collapsed outcomes when [Crane Loopify Diagnostics] is set, and
+    raise when [Crane Loopify Strict] is set and any function was declined.
+    Called once per compilation unit, after all decls have been transformed. *)
+let report_outcomes ?(unit_name = "") () =
+  let final = get_outcomes () in
+  let where = if unit_name = "" then "" else unit_name ^ " " in
+  if Table.loopify_diagnostics () then
+    List.iter
+      (fun (name, outcome) ->
+        Feedback.msg_notice
+          (Pp.str ("[loopify] " ^ where ^ name ^ ": " ^ string_of_outcome outcome)))
+      final;
+  if Table.loopify_strict () then
+    List.iter
+      (function
+        | (name, Lp_declined why) ->
+          CErrors.user_err
+            (Pp.str ("loopify: cannot linearise " ^ name ^ " (" ^ why ^ ")"))
+        | _ -> ())
+      final
+
+(** The reason the innermost strategy declined, if it did.  Set by {!decline}
+    just before a bail-out returns the original body, and consumed by
+    {!report_outcome}. *)
+let pending_decline : string option ref = ref None
+
+(** Mark the current transformation as declined for [reason] and return [x]
+    (conventionally the untransformed body). *)
+let decline reason x =
+  pending_decline := Some reason;
+  x
+
+(** Which strategy {!apply_nontail_loopification} last settled on.  It picks
+    between TMC and the frame transform internally, so it reports its choice
+    here for the caller to pass to {!report_outcome}. *)
+let last_nontail_strategy : loopify_outcome ref = ref Lp_frame
 
 (** {2 Call checker abstraction}
 
@@ -313,7 +455,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
  fun e ->
    match e with
    | CPPfun_call (CPPglob (r, _, _), args) when ref_matches fn_refs r ->
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPvar id, args) ->
      let matches_name =
        List.exists
@@ -321,7 +463,7 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
          fn_refs
      in
      if matches_name then
-       Some {cs_args = args; cs_is_tail = false}
+       Some {cs_args = args; cs_is_tail = false; cs_recv = None}
      else
        None
    | _ -> None
@@ -373,22 +515,22 @@ let method_checker
    match e with
    | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
      if has_self_param then
-       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false}
+       Some {cs_args = recv_to_self recv :: args; cs_is_tail = false; cs_recv = Some recv}
      else
-       Some {cs_args = args; cs_is_tail = false}
+       Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPvar id, args) when Id.equal id method_name ->
      let args_normal = List.rev args in
      if has_self_param && List.length args_normal > n_params then
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
        | Some recv ->
-         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
-       | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+         Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false; cs_recv = Some recv}
+       | None -> Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None} )
      else if (not has_self_param) && List.length args_normal > n_params then
        Some {cs_args = list_remove_at this_pos args_normal;
-             cs_is_tail = false}
+             cs_is_tail = false; cs_recv = None}
      else
-       Some {cs_args = args_normal; cs_is_tail = false}
+       Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPglob (r, _, _), args) ->
      let label = Label.to_id (Common.label_of_r r) in
      if Id.equal label method_name then
@@ -397,8 +539,8 @@ let method_checker
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
          | Some recv ->
-           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false}
-         | None -> Some {cs_args = args_normal; cs_is_tail = false} )
+           Some {cs_args = recv_to_self recv :: rest; cs_is_tail = false; cs_recv = Some recv}
+         | None -> Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None} )
        else
          let args_stripped =
            if List.length args_normal > n_params then
@@ -406,7 +548,7 @@ let method_checker
            else
              args_normal
          in
-         Some {cs_args = args_stripped; cs_is_tail = false}
+         Some {cs_args = args_stripped; cs_is_tail = false; cs_recv = None}
      else
        None
    | _ -> None
@@ -447,7 +589,7 @@ let rec collect_expr (check : call_checker) expr =
        direct visit-in-return case goes through collect_stmt's special case for
        Sreturn(Some(visit(...))), not through here. *)
     List.map
-      (fun cs -> {cs with cs_is_tail = false})
+      (fun cs -> {cs with cs_is_tail = false; cs_recv = None})
       (collect_stmts check ~in_visitor:false stmts)
   | CPPget (e, _)
    |CPPget' (e, _)
@@ -476,6 +618,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPvisit
    |CPPmk_shared _
    |CPParena_alloc _
+   |CPParena_shared_alloc _
+   |CPParena_make _
    |CPPthis
    |CPPshared_from_this _
    |CPPconvertible_to _
@@ -499,6 +643,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPuint _
    |CPPfloat _
    |CPPrequires _
+   |CPPmk_reuse _
    |CPPpair _ -> []
 
 (** Collect recursive call sites from a list of statements.
@@ -729,11 +874,28 @@ and has_recursive_branch_dependency check stmts =
         | None -> false)
       | Scustom_case (_, scrut, _, branches, _) ->
         let branch_bodies = List.map (fun (_, _, body) -> body) branches in
-        expr_has_call_or_branch_dep check scrut
+        (* An irrefutable single-branch destructure (e.g. [let (a, b) := f x in
+           ...], or a tuple/record pattern on a recursive call's result) selects
+           no continuation: its one branch always runs after the scrutinee is
+           fully evaluated.  A recursive call in that scrutinee is therefore
+           safe — {!transform_nontail} lifts it into a resume frame (see the
+           [Scustom_case]/[check scrut] handling there) — so it must not count
+           as a disqualifying branch dependency.  Only treat the scrutinee as a
+           dependency for genuine multi-way dispatch ([List.length > 1]). *)
+        (List.length branches > 1
+         && expr_has_call_or_branch_dep check scrut)
         || List.exists (has_recursive_branch_dependency check) branch_bodies
       | Smatch (branches, default) ->
+        (* Same reasoning as {!Scustom_case}: a single-branch [Smatch] with no
+           default is an irrefutable destructure (no branch selection), so a
+           recursive call in its scrutinee is safe.  Genuine dispatch — more
+           than one branch, or a fall-through [default] — keeps the guard. *)
+        let is_irrefutable_destructure =
+          List.length branches = 1 && default = None
+        in
         let branch_has_recursive_scrut br =
-          expr_has_call_or_branch_dep check br.smb_scrutinee
+          (not is_irrefutable_destructure
+           && expr_has_call_or_branch_dep check br.smb_scrutinee)
           || List.exists (expr_has_call_or_branch_dep check) br.smb_extra_conds
         in
         List.exists branch_has_recursive_scrut branches
@@ -769,6 +931,32 @@ let classify check body =
       Tail_recursion
     else
       Nontail_recursion
+
+(** Record what happened to one recursive function, checking the postcondition.
+
+    [strategy] is the outcome the pass {e believes} it achieved.  Before
+    accepting it we re-run {!classify} on the transformed body: if a recursive
+    call survived, the strategy did not actually linearise the function and the
+    outcome is downgraded to {!Lp_declined}.  A reason left behind by
+    {!decline} takes precedence, since it is more specific than "a self-call
+    remains".
+
+    @param name     Display name of the function, for the report
+    @param check    The same call checker the transform was driven by
+    @param strategy The outcome to record if the postcondition holds
+    @param body     The {e transformed} body
+    @return [body], unchanged *)
+let report_outcome ~name ~check ~strategy body =
+  let residual = classify check body <> No_recursion in
+  let outcome =
+    match (!pending_decline, residual, strategy) with
+    | Some why, _, _ -> Lp_declined why
+    | None, true, _ -> Lp_declined "a self-call survived the transform"
+    | None, false, s -> s
+  in
+  pending_decline := None;
+  record_outcome name outcome;
+  body
 
 (** {2 Invariant parameter detection}
 
@@ -808,7 +996,7 @@ let find_varying_params check params body =
 
 (** Filter a list keeping only elements at positions where [mask] is [true]. *)
 let filter_by_mask mask lst =
-  List.combine mask lst
+  combine_exn ~what:"filter_by_mask" mask lst
   |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
@@ -959,10 +1147,23 @@ let is_moveable_param_type = function
     value-type inductive.  These can be optimised to [const T*] shadows that
     avoid copying the entire value at each loop iteration.
 
+    Under [Crane Reuse] an owned by-value parameter qualifies too.  Reuse needs
+    the scrutinee owned (that is what gives the loop cells it may recycle), and
+    escape analysis therefore passes it by value; without this case the shadow
+    would be a [T] and every iteration would copy the whole node -- strictly
+    worse than the borrow it replaced.  A by-value parameter lives for the whole
+    call, so a pointer into it (or into a subterm it keeps alive) is as safe as
+    one into a [const T&].  Which parameters may actually be walked by pointer
+    is decided separately by {!tail_pointer_safe_flags}: an accumulator that is
+    rebuilt each iteration ([acc := Cons(x, acc)]) is not pointer-safe and keeps
+    its value shadow.
+
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
   | Tref (Tmod (TMconst, t)) when is_value_type_ret t -> Some t
   | Tmod (TMconst, Tref t) when is_value_type_ret t -> Some t
+  | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
+    Some t
   | _ -> None
 
 (** Compute the shadow variable type for a tail-recursive loop.
@@ -1109,8 +1310,6 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
   in
   List.map stmt stmts
 
-(** Assign [expr] to the [_result] accumulator variable.
-    Generates the statement list [[\[_result = expr;\]]]. *)
 (** Wrap [e] in [std::move] only when it is an lvalue (a plain variable
     reference).  Wrapping rvalues (function calls, literals, binary ops) in
     [std::move] is a pessimising move — it prevents copy elision on the
@@ -1119,6 +1318,8 @@ let move_if_lvalue = function
   | CPPvar _ as e -> CPPmove e
   | e -> e
 
+(** Assign [expr] to the [_result] accumulator variable.
+    Generates the statement list [[\[_result = expr;\]]]. *)
 let assign_result expr =
   [Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr))]
 
@@ -1151,7 +1352,7 @@ let make_shadow_updates shadow_params args =
     List.map
       (fun ((shadow_id, ty), arg) ->
         ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
-      (List.combine shadow_params args)
+      (combine_exn ~what:"make_shadow_updates" shadow_params args)
   in
   (* Identify which params actually change (filter self-assignments). *)
   let non_trivial =
@@ -1654,24 +1855,30 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
     walk expr;
     tbl
   in
-  let collect_reads_stmt stmt =
-    let merge t1 t2 =
-      Hashtbl.iter (fun k v ->
-        let prev = try Hashtbl.find t1 k with Not_found -> 0 in
-        Hashtbl.replace t1 k (prev + v)) t2;
-      t1
-    in
+  let merge t1 t2 =
+    Hashtbl.iter (fun k v ->
+      let prev = try Hashtbl.find t1 k with Not_found -> 0 in
+      Hashtbl.replace t1 k (prev + v)) t2;
+    t1
+  in
+  let rec collect_reads_stmt stmt =
     match stmt with
     | Sexpr (CPPbinop ("=", CPPvar _, rhs)) -> collect_reads rhs
     | Sasgn (_, _, rhs) -> collect_reads rhs
     | Sexpr e -> collect_reads e
     | Sreturn (Some e) -> collect_reads e
-    | Sif (cond, _, _) -> collect_reads cond
     | s ->
+      (* Recurse through nested statement lists — both arms of an [Sif], the
+         [Smatch]/[Sswitch] branch bodies, [Sblock]/[Swhile] bodies — so a
+         read in a *later* sibling branch is visible to [read_after].  A
+         condition-only walk (the previous [Sif (cond, _, _)] arm) missed
+         those reads and could [std::move] a value still read in a following
+         branch. *)
       let tbl = Hashtbl.create 4 in
       iter_stmt_children
-        ~on_expr:(fun e -> merge tbl (collect_reads e) |> ignore)
-        ~on_stmts:(fun _ -> ())
+        ~on_expr:(fun e -> ignore (merge tbl (collect_reads e)))
+        ~on_stmts:(fun stmts ->
+          List.iter (fun s -> ignore (merge tbl (collect_reads_stmt s))) stmts)
         s;
       tbl
   in
@@ -2672,9 +2879,12 @@ let wrap_base_for_vt vt_ret val_expr =
     inner struct directly and wrap it:
     [std::make_unique<list<T>>(typename list<T>::Cons\{x, nullptr\})]
 
+    @param token [Some e] routes the allocation through
+      [crane::make_rc_reusing_unchecked], recycling the cell [e] denotes
+      instead of allocating (see {!section:reuse-cursor}).  [None] allocates.
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
-let build_cell_call ~vt_ret pp_expr cell =
+let build_cell_call ?token ~vt_ret pp_expr cell =
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
     | Some (type_expr, _, _, _) ->
@@ -2708,10 +2918,174 @@ let build_cell_call ~vt_ret pp_expr cell =
     let struct_init =
       CPPraw ("typename " ^ type_str ^ "::" ^ cell.tca_ctor_name)
     in
-    CPPfun_call (CPPmk_shared ret_ty,
-                 [CPPfun_call (struct_init, args)])
+    let cell_expr = CPPfun_call (struct_init, args) in
+    (match token with
+     | Some tok ->
+       (* T is deduced from the token's [rc<T>]; the cell value is built from
+          the constructor struct exactly as [make_rc] would build it. *)
+       CPPfun_call (CPPraw "crane::make_rc_reusing_unchecked",
+                    [cell_expr; tok])   (* reversed: (token, cell) *)
+     | None -> CPPfun_call (CPPmk_shared ret_ty, [cell_expr]))
   | None ->
     CPPfun_call (cell.tca_factory, args)
+
+(** Turn destructive matches on any of [ids] back into borrowing ones.
+
+    Clears [smb_is_owned] (so the printer emits [const auto& [..] = std::get<C>(
+    p->v())] rather than [auto& [..]] over [v_mut()]) and drops the [std::move]
+    translation put on the field bindings.  Reverting a destructive match to a
+    borrowing one is always sound -- it only copies where it could have moved --
+    so this pass is a safety net, never a rewrite that changes meaning. *)
+let borrow_matches_on ids stmts =
+  let mentions_ptr_shadow e =
+    expr_exists
+      (function
+        | CPPvar id -> List.exists (Id.equal id) ids
+        | _ -> false)
+      e
+  in
+  let strip_moves bound =
+    let rec expr = function
+      | CPPmove (CPPvar id) when List.exists (Id.equal id) bound -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt
+  in
+  let rec stmt = function
+    | Smatch (branches, default) ->
+      Smatch
+        ( List.map
+            (fun br ->
+              if not (mentions_ptr_shadow br.smb_scrutinee) then
+                { br with smb_body = List.map stmt br.smb_body }
+              else
+                let bound =
+                  List.map (fun (id, _, _) -> id) br.smb_field_bindings
+                in
+                { br with
+                  smb_is_owned = false;
+                  smb_body = strip_moves bound (List.map stmt br.smb_body) })
+            branches,
+          Option.map (List.map stmt) default )
+    | s -> map_stmt Fun.id stmt Fun.id s
+  in
+  List.map stmt stmts
+
+(** Borrowing fix-up for the TMC loop: the scrutinee is reached through a
+    pointer shadow.  See the ownership discussion in {!transform_tmc} -- under
+    the reuse cursor the scrutinee is owned but not known to be unique, and only
+    [crane::reuse_step] may consume it. *)
+let borrow_cursor_matches shadow_params stmts =
+  borrow_matches_on
+    (List.filter_map
+       (fun (id, ty) -> match ty with Tptr _ -> Some id | _ -> None)
+       shadow_params)
+    stmts
+
+(** Borrowing fix-up for the frame-based loop: a varying parameter that the
+    caller passes owned is nevertheless re-bound inside a frame handler as
+    [const T& x = *_f.x] (a borrow of the cell the frame points at), so a
+    destructive match on it would call [v_mut()] on a const reference and fail
+    to compile.  Collect every local bound by const reference or pointer and
+    make matches on them borrow.
+
+    Gated by the caller on [Crane Reuse]: it is only reachable when reuse marks
+    a match-only scrutinee owned, and keeping it off otherwise leaves reuse-off
+    output byte-identical. *)
+let borrow_frame_bound_matches stmts =
+  let ids = ref [] in
+  let rec scan s =
+    ( match s with
+    | Sasgn (id, Some (Tref (Tmod (TMconst, _)) | Tptr _), _) ->
+      ids := id :: !ids
+    | _ -> () );
+    ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
+  in
+  List.iter scan stmts;
+  if !ids = [] then stmts else borrow_matches_on !ids stmts
+
+(** Drop [std::move] from every read of a loop-invariant parameter.
+
+    An invariant parameter lives in function scope and is read by every
+    iteration of the loop, but the recursion it came from gave each activation
+    its own copy.  Translation's last-use analysis sees only the source
+    program's single syntactic occurrence, so it happily marks e.g. the base
+    case of [repeat_with_sep] as [_result = std::move(s)] -- and the resume
+    handler then reads [s] again on the next turn of the loop.  The last
+    syntactic use is not the last dynamic use once the body is a loop.
+
+    Types whose move constructor was suppressed (the iterative drain
+    destructor) hid this: the "move" was a copy, so the stale read still saw a
+    live value.  Restore cheap moves on those types and the same code
+    segfaults, so this must be fixed for the loop shape itself, not for one
+    special-member policy.
+
+    Dropping a move only ever copies where it could have moved, so the pass
+    cannot change meaning. *)
+let unmove_invariant_params invariant_params stmts =
+  if Id.Set.is_empty invariant_params then stmts
+  else
+    let rec expr = function
+      | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> CPPvar id
+      | e -> map_expr expr stmt Fun.id e
+    and stmt s = map_stmt expr stmt Fun.id s in
+    List.map stmt stmts
+
+(** {2:reuse-cursor Perceus reuse cursor}
+
+    A TMC loop walks its input by borrowed pointer and allocates a fresh output
+    cell per iteration.  When the input spine is owned and unshared, that is one
+    allocation and one free per element for cells that are structurally the same
+    shape -- the input cell is dead the moment its output counterpart is built.
+    Recycling it directly is Perceus/FBIP reuse, and turns a linear traversal
+    into a zero-allocation one.
+
+    Two things are needed that the borrowed walk does not have.  First, an
+    owning handle: a raw pointer cannot hand a cell to be recycled, so the loop
+    carries [_own], the [rc] on the cell the cursor stands on ([_own] is null on
+    the first iteration, where the cursor is on the by-value root -- not a heap
+    cell, hence nothing to recycle).  Second, a uniqueness test, since a shared
+    cell must not be touched; [_uniq] carries it, and latches false permanently
+    on the first shared cell, because a cell reachable from another holder makes
+    every deeper cell reachable too.
+
+    Both live in [crane::reuse_step] (rc.h), which returns the recycling token
+    and an owning handle on the recursive field -- taken before the cell is
+    recycled out from under it.  The emitted body is therefore straight-line
+    with no reuse branch of its own:
+
+    {[
+      const auto& [a0, a1] = std::get<Cons>(_loop_l->v());
+      auto _rs   = crane::reuse_step(_own, _uniq, a1);
+      auto _cell = crane::make_rc_reusing_unchecked(std::move(_rs.token),
+                                                    lst::Cons(f(a0), nullptr));
+      *_write = std::move(_cell);
+      _write  = &std::get<Cons>(_cell->v_mut()).a1;   // via the new cell
+      _own    = std::move(_rs.next);
+      _loop_l = _own.get();
+    ]}
+
+    Identify the cursor: the single varying parameter that the loop walks by
+    pointer and whose recursive argument is a dereference of one of the matched
+    cell's fields, i.e. exactly the spine being consumed.  Everything else --
+    accumulators, unchanged parameters, several pointer-walked parameters at
+    once -- yields [None] and the ordinary allocating path. *)
+let tmc_reuse_cursor ~vt_ret varying shadow_params br =
+  if not (Table.reuse () && Table.non_atomic_rc ()) then None
+  else if vt_ret = None then None
+  else
+    let rec_args = filter_by_mask varying br.tmc_rec_args in
+    if List.length rec_args <> List.length shadow_params then None
+    else
+      let candidates =
+        List.filter_map
+          (fun ((sid, sty), arg) ->
+            match sty, arg with
+            | Tptr _, CPPderef inner -> Some (sid, inner)
+            | _ -> None)
+          (List.combine shadow_params rec_args)
+      in
+      match candidates with [c] -> Some c | _ -> None
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
     Allocates all cells with [nullptr] holes, links consecutive pairs via
@@ -2728,7 +3102,29 @@ let build_cell_call ~vt_ret pp_expr cell =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
+let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
+    varying shadow_params =
+  (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
+        an owned spine by pointer, the cell it is standing on is dead as soon as
+        the iteration's output cell is built, so it can be recycled into that
+        output instead of being freed and a fresh one allocated. *)
+  let cursor = tmc_reuse_cursor ~vt_ret varying shadow_params br in
+  if cursor <> None then cursor_used := true;
+  let step_decl =
+    match cursor with
+    | Some (_, rec_field) ->
+      (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
+         so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
+      [ Sasgn (id_rstep, Some Tauto,
+               CPPfun_call (CPPraw "crane::reuse_step",
+                            [rec_field; CPPvar id_uniq; CPPvar id_own])) ]
+    | None -> []
+  in
+  let token =
+    Option.map
+      (fun _ -> CPPmove (CPPmember (CPPvar id_rstep, Id.of_string "token")))
+      cursor
+  in
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
   let cell_names =
     List.mapi
@@ -2737,11 +3133,14 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
       br.tmc_cells
   in
   (* 1. Allocate all cells with nullptr holes *)
+  (* Only the outermost cell may take the token: one input cell dies per
+     iteration, so a nested chain still recycles exactly one of its cells. *)
   let cell_decls =
-    List.map2
-      (fun cell_id cell ->
-        Sasgn (cell_id, Some Tauto, build_cell_call ~vt_ret pp_expr cell))
-      cell_names br.tmc_cells
+    List.mapi
+      (fun i (cell_id, cell) ->
+        let token = if i = 0 then token else None in
+        Sasgn (cell_id, Some Tauto, build_cell_call ?token ~vt_ret pp_expr cell))
+      (List.combine cell_names br.tmc_cells)
   in
   (* 2. Link consecutive cells: outer.rec_field = inner.
         For value-type returns, assignments use [CPPmove], so the inner cell
@@ -2811,11 +3210,30 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
              CPPunop
                ("&", CPPget (CPPfun_call (get_expr, [v_mut]), field_id)) ))
   in
-  (* 5. Shadow variable updates *)
+  (* 5. Shadow variable updates.  The cursor advances through [_own] instead:
+        the recursive field has been stolen into [_rs.next] (the cell it lived
+        in may since have been recycled), and [_own] is what keeps the next cell
+        alive now that the current one is gone. *)
   let shadow_updates =
     make_shadow_updates shadow_params (filter_by_mask varying br.tmc_rec_args)
   in
-  cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
+  let shadow_updates =
+    match cursor with
+    | None -> shadow_updates
+    | Some (cursor_id, _) ->
+      let is_cursor_update = function
+        | Sasgn (id, None, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) ->
+          Id.equal id cursor_id
+        | _ -> false
+      in
+      List.filter (fun s -> not (is_cursor_update s)) shadow_updates
+      @ [ Sexpr (CPPbinop ("=", CPPvar id_own,
+                           CPPmove (CPPmember (CPPvar id_rstep,
+                                               Id.of_string "next"))));
+          Sexpr (CPPbinop ("=", CPPvar cursor_id,
+                           CPPdot_method_call (CPPvar id_own, id_get, []))) ]
+  in
+  step_decl @ cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
 
 (** Rewrite a single statement for TMC loopification.
 
@@ -2830,7 +3248,8 @@ let build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params =
     @param check   Call checker for identifying recursive calls
     @param pp_expr Expression pretty-printer (for rendering types in std::get)
     @param ti      TMC info from {!try_tmc_classify} *)
-let rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params =
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check pp_expr ti
+    varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
      [[Scontinue]] at the top level. *)
@@ -2844,7 +3263,8 @@ let rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params =
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match try_tmc_decompose check e with
       | Some br ->
-        build_tmc_branch_stmts ~vt_ret pp_expr ti br varying shadow_params
+        build_tmc_branch_stmts ~cursor_used ~vt_ret pp_expr ti br varying
+          shadow_params
         @ suffix
       | None ->
         (* Fallback: shouldn't happen if try_tmc_classify was correct *)
@@ -2921,12 +3341,33 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   (* Substitute param references in body *)
   let body' = List.map (subst_stmt subs) body in
   (* Rewrite body for TMC, then flatten unnecessary Sblock wrappers *)
+  let cursor_used = ref false in
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt ~vt_ret check pp_expr ti varying shadow_params)
+      (rewrite_tmc_visit_stmt ~cursor_used ~vt_ret check pp_expr ti varying
+         shadow_params)
       body'
     |> strip_unnecessary_blocks
     |> rewrite_borrowed_shadow_uses shadow_params
+  in
+  (* The reuse cursor's declarations, and the matches it reads through.
+     Escape analysis passed the scrutinee owned so that this loop would have
+     cells to recycle, which also made translation emit a destructive match
+     ([auto&] over [v_mut()], fields moved out).  That is exactly what must not
+     happen here: whether the cell may be consumed is not known until
+     [reuse_step] tests it, and on a shared spine moving its fields out would
+     corrupt the other holder.  So the matches revert to borrowing, and
+     [reuse_step] does the one steal that is licensed -- the recursive field of
+     a cell it has just proven unique. *)
+  let body'' =
+    if not !cursor_used then body''
+    else borrow_cursor_matches shadow_params body''
+  in
+  let cursor_decls =
+    if not !cursor_used then []
+    else
+      [ Sasgn (id_own, Some head_ty, CPPconverting_ctor (head_ty, []));
+        Sasgn (id_uniq, Some (Tid (Id.of_string "bool", [])), CPPbool true) ]
   in
   (* For value-type returns, dereference _head (shared_ptr → value) *)
   let ret_expr = match vt_ret with
@@ -2934,6 +3375,7 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
     | None -> CPPvar (id_head)
   in
   [head_decl; write_decl]
+  @ cursor_decls
   @ shadow_decls
   @ [
       Swhile (CPPbool true, body'');
@@ -3551,7 +3993,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
     @param env The existing type environment
     @return Extended type environment *)
 let make_cont_env cont_vars cont_types env =
-  List.map2 (fun id ty -> (id, ty)) cont_vars cont_types @ env
+  map2_exn ~what:"make_cont_env" (fun id ty -> (id, ty)) cont_vars cont_types @ env
 
 (** Register a call frame in the mutable [frames_ref] accumulator.
 
@@ -3603,18 +4045,31 @@ let frame_fields_named ?(offset = 0) names n =
     are std::moved into the frame — the source is always dead after the push.
     Trivially-copyable types are copied cheaply. *)
 let move_for_frame ty expr =
+  (* [std::move] is only meaningful on an lvalue.  Wrapping a prvalue -- a call
+     result, a constructor call, a lambda -- cannot save a copy and actively
+     blocks copy elision, which clang reports as -Wpessimizing-move (an error
+     under the test suite's -Werror).  Moves of such expressions used to slip
+     through unnoticed on types whose drain destructor had suppressed the move
+     constructor, because the "move" silently resolved to the copy. *)
+  let is_lvalue = function
+    | CPPvar _ | CPPderef _ | CPPmember _ -> true
+    | _ -> false
+  in
   match ty with
   | Tshared_ptr _ -> expr
   | Tfun _ ->
     (match expr with
     | CPPlambda _ -> expr
-    | _ -> CPPmove expr)
+    | e when is_lvalue e -> CPPmove e
+    | _ -> expr)
   | Tmod (TMconst, _) -> expr
   | t when not (is_trivially_copyable_type t) ->
     (match expr with
-    | CPPvar _ -> expr
-    | CPPderef _ -> expr
-    | _ -> CPPmove expr)
+    (* A bare variable is left alone (the caller may still need it), and a
+       dereferenced pointer is a borrow of someone else's cell. *)
+    | CPPvar _ | CPPderef _ -> expr
+    | e when is_lvalue e -> CPPmove e
+    | _ -> expr)
   | _ -> expr
 
 (** Apply [move_for_frame] to parallel type and expression lists. *)
@@ -4206,7 +4661,7 @@ type enter_rewrite_ctx = {
 }
 
 let partition_saved_invariant invariant_params saved_exprs saved_types =
-  let analysis = List.map2 (fun e ty ->
+  let analysis = map2_exn ~what:"partition_saved_invariant" (fun e ty ->
     match e with
     | CPPvar id when Id.Set.mem id invariant_params -> `Inv (id, ty)
     | CPPmove (CPPvar id) when Id.Set.mem id invariant_params -> `Inv (id, ty)
@@ -5963,13 +6418,19 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   let result_decl = Sdecl_init (id_result, ret_ty) in
   (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
   let frame_ty = Tvar (0, Some (id_Frame)) in
-  let vector_ty = Tid_external (Id.of_string_soft "std::vector", [frame_ty]) in
+  (* [crane::small_vector] rather than [std::vector]: the frame stack is only
+     as deep as the recursion it replaced, so for the overwhelming majority of
+     calls it never exceeds the inline capacity.  A [std::vector] with
+     [reserve(8)] paid one heap allocation on *every* call regardless -- and
+     loopified comparison functions are called once per key comparison, so
+     that allocation showed up as a third of all allocations in a
+     comparison-heavy workload. *)
+  Table.mark_needs_small_vector ();
+  let vector_ty =
+    Tid_external (Id.of_string_soft "crane::small_vector", [frame_ty])
+  in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
-  let stack_reserve =
-    Sexpr (CPPfun_call (CPPmember (CPPvar stack_id, id_reserve),
-                        [CPPint 8]))
-  in
   (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
      since the variant can only hold the listed frame types. *)
   let dispatch_stmt = Smatch (branches, None) in
@@ -5999,7 +6460,6 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   @ [
       result_decl;
       stack_decl;
-      stack_reserve;
       init_push;
       Scomment loop_comment;
       Swhile
@@ -6492,8 +6952,12 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
                 ~last_use_candidate:is_cf_cand))
       frames
   in
-  make_loop_and_return ?fn_name struct_defs ret_ty init_push (enter_branch :: call_branches)
-    ~frame_names:call_names
+  let result =
+    make_loop_and_return ?fn_name struct_defs ret_ty init_push
+      (enter_branch :: call_branches) ~frame_names:call_names
+    |> unmove_invariant_params invariant_params
+  in
+  if Table.reuse () then borrow_frame_bound_matches result else result
   )
 
 (** {2 Main transformation dispatch} *)
@@ -6879,10 +7343,10 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
    match e with
    | CPPfun_call (CPPvar id, args) when Id.equal id lambda_name ->
      (* Direct call: [f(args)] — by-reference fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | CPPfun_call (CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
      (* Dereferenced call — shared_ptr fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false}
+     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
    | _ -> None
 
 (** Walk through a statement list and loopify any self-recursive [std::function]
@@ -6927,12 +7391,16 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         | Some ty -> ty
         | None -> Tvoid
       in
+      let name = Id.to_string id in
       let lbody' =
         match kind with
-        | Tail_recursion -> transform_tail check pp_type params ret_ty lbody
+        | Tail_recursion ->
+          report_outcome ~name ~check ~strategy:Lp_tail
+            (transform_tail check pp_type params ret_ty lbody)
         | Nontail_recursion ->
-            let fn_name = Id.to_string id in
-            transform_nontail ~fn_name check pp_type pp_expr tparams params ret_ty lbody
+          report_outcome ~name ~check ~strategy:Lp_frame
+            (transform_nontail ~fn_name:name check pp_type pp_expr tparams
+               params ret_ty lbody)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       Some lbody'
@@ -6979,7 +7447,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
     | CPPfun_call (CPPvar id, args) when Id.equal id self_id -> (
       (* Drop the trailing self-forward argument. *)
       match List.rev args with
-      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false}
+      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false; cs_recv = None}
       | [] -> None )
     | _ -> None
   in
@@ -7296,17 +7764,32 @@ let body_contains_lazy_factory body =
     initialiser statement. *)
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
     tparams params ret_ty body =
+  last_nontail_strategy := Lp_frame;
   if has_recursive_branch_dependency check body then
-    (body, false)
+    (decline "recursive call in a branch condition or dispatch scrutinee" body,
+     false)
   else
+  let frame () =
+    last_nontail_strategy := Lp_frame;
+    ( transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body,
+      false )
+  in
   match try_tmc_classify check body with
   | Some ti ->
-    (transform_tmc ~param_inits check pp_expr ti params ret_ty body, true)
-  | None ->
-    let body' =
-        transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body
-    in
-    (body', false)
+    (* TMC only rewrites calls that sit directly under a constructor.  A body
+       can mix shapes -- one branch conses onto the recursive result while
+       another scrutinises it -- and {!try_tmc_classify} accepts it on the
+       strength of the branch it does understand, leaving the other branch as a
+       real C++ self-call.  That is exactly the stack growth this pass exists to
+       remove, so check the postcondition and fall back to the frame transform,
+       which handles the scrutinising shape via a continuation frame. *)
+    let tmc = transform_tmc ~param_inits check pp_expr ti params ret_ty body in
+    if classify check tmc = No_recursion then begin
+      last_nontail_strategy := Lp_tmc;
+      (tmc, true)
+    end
+    else frame ()
+  | None -> frame ()
 
 (** Inline an Equations-style "functional" into its knot-tying wrapper.
 
@@ -7562,12 +8045,22 @@ let try_inline_functional_into names body =
 let hoist_rec_conditions (check : call_checker)
     (params : (Id.t * cpp_type) list) (ret_ty : cpp_type)
     (stmts : cpp_stmt list) : cpp_stmt list =
-  (* Only safe when the recursive call's arguments (≈ the parameters) are
-     trivially copyable: those are what the [_Enter] frame stores, so there is
-     no move-only subtree that could dangle — the exact hazard
-     [has_recursive_branch_dependency] guards against. *)
-  if not (List.for_all (fun (_, ty) -> is_trivially_copyable_type ty) params)
-  then stmts
+  (* The hazard [has_recursive_branch_dependency] guards against is a raw
+     pointer stored in the [_Enter] frame that dangles once the smart pointer
+     it was derived from is moved from.  So the gate is precisely that no
+     parameter is a raw pointer: every other parameter shape — scalars, and
+     smart pointers or values, which own their referent — stays alive in the
+     frame for as long as the frame does.
+
+     Requiring *trivial copyability* instead, as this gate used to, excluded
+     every recursion over an inductive type, since those are passed as smart
+     pointers. That is the common case and not the dangerous one. *)
+  let rec is_raw_ptr = function
+    | Tptr _ -> true
+    | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) -> is_raw_ptr t
+    | _ -> false
+  in
+  if List.exists (fun (_, ty) -> is_raw_ptr ty) params then stmts
   else
     let counter = ref 0 in
     let fresh () =
@@ -7721,31 +8214,49 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
      the full rationale).  We still run [loopify_inner_lambdas] to handle
      any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
-    if has_lazy_body body || body_contains_lazy_factory body then
+    let fn_name = match names with
+      | (r, _) :: _ ->
+        let label = match r with
+          | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
+          | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
+          | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
+          | GlobRef.VarRef v -> v
+        in
+        Some (Id.to_string label)
+      | [] -> None
+    in
+    let name = match fn_name with Some s -> s | None -> "<anonymous>" in
+    if has_lazy_body body || body_contains_lazy_factory body then begin
+      if classify check body <> No_recursion then
+        record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
       loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
-    else
+    end else
       (* Normal (non-lazy) function — existing path *)
       let kind = classify check body in
-      let body =
+      let body, strategy =
         match kind with
-        | No_recursion -> body
-        | Tail_recursion -> transform_tail check pp_type params ret_ty body
+        | No_recursion -> (body, None)
+        | Tail_recursion ->
+          (transform_tail check pp_type params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
-            let fn_name = match names with
-              | (r, _) :: _ ->
-                let label = match r with
-                  | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-                  | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-                  | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
-                  | GlobRef.VarRef v -> v
-                in
-                Some (Id.to_string label)
-              | [] -> None
+            let body' =
+              fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
+                     tparams params ret_ty body)
             in
-            fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
-                   tparams params ret_ty body)
+            (body', Some !last_nontail_strategy)
       in
-      loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
+      (* A self-call can sit inside an inner lambda, where the transforms above
+         deliberately leave it alone; [loopify_inner_lambdas] is what removes
+         it.  Judge the postcondition only once that has run, or every such
+         function is reported as declined even though the emitted code holds no
+         self-call.  The inner pass records outcomes of its own, which clobbers
+         [pending_decline], so carry our reason across it. *)
+      let pending = !pending_decline in
+      let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
+      pending_decline := pending;
+      (match strategy with
+       | None -> pending_decline := None; body
+       | Some s -> report_outcome ~name ~check ~strategy:s body)
   in
   Dfundef (names, ret_ty, params, body, no_pure)
 
@@ -7781,9 +8292,31 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
      method body is [lazy_]-wrapped, the entire body is deferred inside a
      closure and the method returns in O(1) stack frames.  Loopification
      is unnecessary and TMC would be invalid.  See {!has_lazy_body}. *)
-  if has_lazy_body mf.mf_body then
+  let name = Id.to_string mf.mf_name in
+  (* Hoist recursive calls out of conditions and dispatch scrutinees, exactly
+     as {!transform_fundef} does. Methods went without this, so a method whose
+     recursion fed a branch condition bailed out where the equivalent free
+     function loopified. Hoisting runs on the pre-[_self] parameter list: the
+     synthetic [_self] raw pointer is added later and would otherwise trip
+     the hoister's own raw-pointer gate. *)
+  let mf =
+    let n_params = List.length mf.mf_params in
+    let this_pos = mf.mf_this_pos in
+    let check =
+      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+    in
+    { mf with
+      mf_body =
+        hoist_rec_conditions check mf.mf_params mf.mf_ret_type mf.mf_body }
+  in
+  if has_lazy_body mf.mf_body then begin
+    let basic_check =
+      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+    in
+    if classify basic_check mf.mf_body <> No_recursion then
+      record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
     Fmethod mf
-  else
+  end else
     let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
     ( match classify basic_check mf.mf_body with
     | No_recursion ->
@@ -7792,44 +8325,61 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
       let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
-      (* Check if any recursive call passes a value-type receiver (not
-         CPPderef of a pointer/smart_ptr, CPPvar, or CPPthis).
-         Value-type receivers (e.g. Trie::leaf()) are temporaries whose
-         address cannot be stored in the _Enter frame. Skip loopification
-         for such methods. *)
+      (* Check whether any recursive call has a value-type receiver — a
+         temporary such as [Trie::leaf()], whose address would dangle once
+         stored in the _Enter frame.  Receivers that name existing storage
+         ([CPPvar], [CPPthis]) or dereference a smart pointer ([CPPderef]) are
+         fine, since the frame holds a pointer into memory that outlives it.
+
+         This must inspect [cs_recv], the receiver as written.  Inspecting
+         [cs_args] instead — as this guard used to — is vacuous: the head of
+         [cs_args] is whatever [recv_to_self] produced, always a [CPPunop
+         ("&", _)] or a [crane_raw] call and so never one of the three safe
+         shapes.  The guard therefore fired for *every* method whose recursion
+         went through a [CPPmethod_call], declining 120 functions across the
+         test corpus that have no value receiver at all. *)
       let calls = collect_stmts self_check ~in_visitor:false body_with_self in
       let has_value_receiver =
         List.exists (fun cs ->
-          match cs.cs_args with
-          | (CPPderef _ | CPPvar _ | CPPthis) :: _ -> false
-          | _ :: _ -> true
-          | [] -> false)
+          match cs.cs_recv with
+          | None -> false
+          | Some (CPPderef _ | CPPvar _ | CPPthis) -> false
+          | Some _ -> true)
           calls
       in
-      if has_value_receiver then
+      if has_value_receiver then begin
+        record_outcome name
+          (Lp_declined
+             "recursive call passes a value-type receiver, whose address \
+              cannot be stored in a frame");
         Fmethod mf
-      else
+      end else
       let self_param = (self_id, self_ty) in
       let augmented_params = self_param :: mf.mf_params in
       let body', needs_init_self =
         match kind with
         | Tail_recursion ->
-          ( transform_tail
-              ~param_inits:[(self_id, CPPthis)]
-              self_check
-              pp_type
-              augmented_params
-              mf.mf_ret_type
-              body_with_self,
+          ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
+              (transform_tail
+                 ~param_inits:[(self_id, CPPthis)]
+                 self_check
+                 pp_type
+                 augmented_params
+                 mf.mf_ret_type
+                 body_with_self),
             false )
         | Nontail_recursion ->
-          let fn_name = Some (Id.to_string mf.mf_name) in
+          let fn_name = Some name in
           let (body', used_inits) =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
               ?fn_name
               self_check pp_type pp_expr tparams
               augmented_params mf.mf_ret_type body_with_self
+          in
+          let body' =
+            report_outcome ~name ~check:self_check
+              ~strategy:!last_nontail_strategy body'
           in
           (body', not used_inits)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
@@ -7858,16 +8408,29 @@ let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   | Ffundef (name, ret_ty, params, body) ->
     let check = lambda_checker name in
     let kind = classify check body in
-    let body' =
+    let dname = Id.to_string name in
+    let body', strategy =
       match kind with
-      | No_recursion -> body
-      | Tail_recursion -> transform_tail check pp_type params ret_ty body
+      | No_recursion -> (body, None)
+      | Tail_recursion ->
+        (transform_tail check pp_type params ret_ty body, Some Lp_tail)
       | Nontail_recursion ->
-        let fn_name = Some (Id.to_string name) in
-        fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
-               tparams params ret_ty body)
+        let body' =
+          fst (apply_nontail_loopification ~fn_name:dname check pp_type pp_expr
+                 tparams params ret_ty body)
+        in
+        (body', Some !last_nontail_strategy)
     in
+    (* As in {!transform_fundef}: the postcondition is only meaningful once
+       inner lambdas have been linearised too. *)
+    let pending = !pending_decline in
     let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
+    pending_decline := pending;
+    let body' =
+      match strategy with
+      | None -> pending_decline := None; body'
+      | Some s -> report_outcome ~name:dname ~check ~strategy:s body'
+    in
     (Ffundef (name, ret_ty, params, body'), vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =

@@ -2,13 +2,13 @@
 #define INCLUDED_MEM_SAFETY_PROBE28
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -80,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -97,6 +97,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -152,7 +157,7 @@ struct MemSafetyProbe28 {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -172,6 +177,11 @@ struct MemSafetyProbe28 {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -209,8 +219,7 @@ struct MemSafetyProbe28 {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rect: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -220,7 +229,7 @@ struct MemSafetyProbe28 {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
           _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});
@@ -270,8 +279,7 @@ struct MemSafetyProbe28 {
 
     using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&t});
     /// Loopified tree_rec: _Enter -> _After_Node -> _Combine_Node.
     while (!_stack.empty()) {
@@ -281,7 +289,7 @@ struct MemSafetyProbe28 {
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-          _result = std::move(f);
+          _result = f;
         } else {
           const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
           _stack.emplace_back(_After_Node{crane_raw(a0), *a2, a1, *a0});

@@ -1,11 +1,11 @@
 #ifndef INCLUDED_BINARY_NUMS
 #define INCLUDED_BINARY_NUMS
 
+#include "small_vector.h"
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Comparison { EQ, LT, GT };
 
@@ -49,7 +49,7 @@ public:
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::shared_ptr<Positive>> _stack = {};
+    crane::small_vector<std::shared_ptr<Positive>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<XI>(&_v)) {
         if (_alt->a0) {
@@ -71,6 +71,11 @@ public:
       }
     }
   }
+
+  Positive(const Positive &) = default;
+  Positive &operator=(const Positive &) = default;
+  Positive(Positive &&) noexcept = default;
+  Positive &operator=(Positive &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

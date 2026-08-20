@@ -672,6 +672,15 @@ let rec is_any_type = function
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
+(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
+    with a concrete (non-[std::any]) element type.  Used to detect when a
+    grammar-framework [List<std::any>] value needs its element type restored
+    via the converting constructor rather than a plain [any_cast]. *)
+let is_list_with_concrete_elem = function
+  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
+  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
+  | _ -> false
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -684,15 +693,6 @@ let rec is_any_type = function
     ([Tvar(0..N, _)]) and loopification-internal types
     ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
     outside, it is qualified as [StructName::id]. *)
-(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
-    with a concrete (non-[std::any]) element type.  Used to detect when a
-    grammar-framework [List<std::any>] value needs its element type restored
-    via the converting constructor rather than a plain [any_cast]. *)
-let is_list_with_concrete_elem = function
-  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
-  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
-  | _ -> false
-
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1049,6 +1049,15 @@ and deque_elem_extract_expr elem_ty src_expr =
   end else
     extract_from_any elem_ty src_expr
 
+(** Pretty-print a MiniCpp expression as C++ source.  The central expression
+    printer of the module; dispatches on every {!Minicpp.cpp_expr} form and
+    recurses into {!pp_cpp_stmt} for block/statement-valued expressions.
+
+    @param env   name environment: the de Bruijn name list plus the set of
+                 identifiers currently in scope
+    @param args  arguments accumulated by callers (already pretty-printed) to be
+                 applied once the head expression is reached, via [pp_apply_cpp]
+    @param t     the expression to render *)
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -1820,9 +1829,32 @@ and pp_cpp_expr env args t =
   | CPPmk_shared t ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
+  | CPPmk_reuse t ->
+    (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
+    cpp_angle "crane::make_rc_reusing" (pp_cpp_type false [] t)
   | CPParena_alloc t ->
     Table.mark_needs_arena ();
     cpp_angle "crane::arena_alloc" (pp_cpp_type false [] t)
+  | CPParena_shared_alloc t ->
+    Table.mark_needs_arena ();
+    cpp_angle "crane::arena_shared_alloc" (pp_cpp_type false [] t)
+  | CPParena_make t ->
+    (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
+       for the current pointer flavor.  Falls back to a plain heap allocation at
+       runtime whenever no arena scope is open at the call site. *)
+    let inner = pp_cpp_type false [] t in
+    if Table.non_atomic_rc () then begin
+      (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
+      require_header "memory";
+      cpp_angle "crane::rc" inner ++ str "::make"
+    end
+    else if Table.std_lib () = "BDE" then
+      (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
+      cpp_angle (sn ()).make_shared inner
+    else begin
+      Table.mark_needs_arena ();
+      cpp_angle "crane::arena_make_shared" inner
+    end
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
@@ -1990,7 +2022,7 @@ and pp_cpp_expr env args t =
     str "([]() -> std::any { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\"); return std::any{}; })()"
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
@@ -2054,15 +2086,30 @@ and pp_cpp_expr env args t =
   | CPPpair _ ->
     CErrors.anomaly (Pp.str "CPPpair reached the printer; this is a loopify-internal node")
   | CPPcond (cond, then_expr, else_expr) ->
-    pp_cpp_expr env args cond
+    (* Wrap the whole ternary in parentheses like the other ternary sites, so a
+       conditional used as a subexpression cannot bind incorrectly against a
+       surrounding operator. *)
+    str "("
+    ++ pp_cpp_expr env args cond
     ++ str " ? "
     ++ pp_cpp_expr env args then_expr
     ++ str " : "
     ++ pp_cpp_expr env args else_expr
+    ++ str ")"
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
   | CPPbrace_init -> str "{}"
-  | CPPunop (op, e) -> str op ++ pp_cpp_expr env args e
+  | CPPunop (op, e) ->
+    (* Parenthesize the operand only when it is a lower-precedence compound
+       expression (a binary operator or ternary), so that e.g. [!(a == b)] is
+       not emitted as the mis-parsed [!a == b]. Leaf operands like [&x] / [!flag]
+       stay unparenthesized. *)
+    let operand =
+      match e with
+      | CPPbinop _ | CPPcond _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
+      | _ -> pp_cpp_expr env args e
+    in
+    str op ++ operand
   | CPPany_cast (ty, e) ->
     if is_any_type ty then
       pp_cpp_expr env args e
@@ -2122,7 +2169,7 @@ and pp_cpp_stmt env args = function
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sreturn (Some e) ->
     (* Strip std::move from return statements when the inner expression is a
@@ -2155,7 +2202,7 @@ and pp_cpp_stmt env args = function
     str "throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
-    ++ str msg
+    ++ str (escape_cpp_string msg)
     ++ str "\");"
   | Sswitch (scrut, ind, branches, default) ->
     (* Generate switch statement for enum class matching. Use pp_global_name to
@@ -3104,6 +3151,8 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
   in
   fold_cmds (mt ()) cmds
 
+(** Pretty-print an already-converted MiniCpp type with no parenthesization and
+    no type-variable context; the common-case shorthand for {!pp_cpp_type}. *)
 let pp_type t = pp_cpp_type false [] t
 
 (** Print a template parameter type keyword (typename or concept constraint). *)
@@ -3402,6 +3451,23 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | None -> str "UNKNOWN_STRUCT"
     in
     h (sname ++ str "() = delete;")
+  | Fdefaulted_special_members ->
+    let sname =
+      match struct_name with
+      | Some s -> s
+      | None -> str "UNKNOWN_STRUCT"
+    in
+    (* A user-declared destructor suppresses the implicit move ctor/assign and
+       deprecates the implicit copies; declaring the moves would then delete the
+       implicit copies.  Re-default all four so the value keeps cheap move
+       semantics (no refcount bump) while staying copyable. *)
+    h (sname ++ str "(const " ++ sname ++ str "&) = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "& operator=(const " ++ sname ++ str "&) = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
+    ++ fnl ()
+    ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
   | Ftemplate_ctor (tparams, is_explicit, params, body) ->
     let sname =
       match struct_name with
@@ -3953,7 +4019,7 @@ and pp_cpp_decl_raw env = function
         ++ str " { throw "
         ++ str (sn ()).logic_error
         ++ str "(\""
-        ++ str msg
+        ++ str (escape_cpp_string msg)
         ++ str "\"); })()"
       | _ -> wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty []
     in
@@ -4022,7 +4088,7 @@ and pp_cpp_decl_raw env = function
         ( str "static_assert("
         ++ pp_cpp_expr env [] e
         ++ str ", \""
-        ++ str s
+        ++ str (escape_cpp_string s)
         ++ str "\");" ) )
   | Denum {de_ref = name; de_ctors = ctors; de_ctor_rocq_names = rocq_names; _}
     ->

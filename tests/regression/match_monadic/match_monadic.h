@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MATCH_MONADIC
 #define INCLUDED_MATCH_MONADIC
 
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <filesystem>
@@ -12,7 +13,6 @@
 #include <system_error>
 #include <utility>
 #include <variant>
-#include <vector>
 
 using namespace std::string_literals;
 
@@ -93,7 +93,7 @@ public:
 
   // MANIPULATORS
   ~Tree() {
-    std::vector<std::shared_ptr<Tree<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {
         if (_alt->a0) {
@@ -113,6 +113,11 @@ public:
       }
     }
   }
+
+  Tree(const Tree &) = default;
+  Tree &operator=(const Tree &) = default;
+  Tree(Tree &&) noexcept = default;
+  Tree &operator=(Tree &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

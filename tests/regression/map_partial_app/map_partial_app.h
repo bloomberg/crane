@@ -1,13 +1,13 @@
 #ifndef INCLUDED_MAP_PARTIAL_APP
 #define INCLUDED_MAP_PARTIAL_APP
 
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -96,6 +96,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -148,7 +153,7 @@ struct MapPartialApp {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -168,6 +173,11 @@ struct MapPartialApp {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

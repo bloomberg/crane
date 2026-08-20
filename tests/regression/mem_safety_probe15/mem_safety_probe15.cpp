@@ -15,8 +15,7 @@ uint64_t MemSafetyProbe15::sum_list(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -70,8 +69,7 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe15::mylist<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified flatten: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -127,8 +125,7 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe15::mylist<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified subtree_sums: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -208,8 +205,7 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
 
   using _Frame = std::variant<_Enter, _After_n_, _Combine_n_>;
   MemSafetyProbe15::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified make_tree: _Enter -> _After_n_ -> _Combine_n_.
   while (!_stack.empty()) {

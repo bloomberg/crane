@@ -213,10 +213,88 @@ let sub_bindings_escape k body =
   in
   check k body
 
+(** {2 Phase 2: reuse candidate discovery} *)
+
+(** [find_reuse_candidates typ pv]: match branches whose body builds an [MLcons]
+    of the same inductive type as the matched constructor, as
+    [(branch_idx, matched_ctor, matched_arity, tail_ctor, tail_args)]. *)
+let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
+  let ctor_ind = function
+    | Names.GlobRef.ConstructRef (ind, _) -> Some ind
+    | _ -> None
+  in
+  let same_inductive a b =
+    match (ctor_ind a, ctor_ind b) with
+    | Some (m1, i1), Some (m2, i2) ->
+      Names.MutInd.CanOrd.equal m1 m2 && Int.equal i1 i2
+    | _ -> false
+  in
+  let rec tail_cons = function
+    | MLmagic a -> tail_cons a
+    | MLletin (_, _, _, b) -> tail_cons b
+    | MLcons (_, r, args) -> Some (r, args)
+    | _ -> None
+  in
+  let cands = ref [] in
+  Array.iteri
+    (fun idx (ids, _rty, pat, body) ->
+      match pat with
+      | Pusual mr | Pcons (mr, _) -> (
+        match tail_cons body with
+        | Some (tr, targs) when same_inductive mr tr ->
+          cands := (idx, mr, List.length ids, tr, targs) :: !cands
+        | _ -> () )
+      | Pwild | Prel _ | Ptuple _ -> () )
+    pv;
+  List.rev !cands
+
+(** [is_reuse_scrutinee k body]: does [body] match on parameter [k] (de Bruijn,
+    1 = innermost) with at least one reuse candidate arm?  Such a scrutinee must
+    be passed OWNED (by value) so the reuse path can consume its recursive
+    child; escape analysis would otherwise borrow a match-only param. *)
+let is_reuse_scrutinee k body =
+  let found = ref false in
+  let rec scan d = function
+    | MLcase (typ, scrut, branches) ->
+      ( match scrut with
+      | MLrel j | MLmagic (MLrel j) ->
+        if j > d && j - d = k && find_reuse_candidates typ branches <> [] then
+          found := true
+      | _ -> () );
+      scan d scrut;
+      Array.iter
+        (fun (ids, _, _, b) -> scan (d + List.length ids) b)
+        branches
+    | MLletin (_, _, rhs, cont) -> scan d rhs; scan (d + 1) cont
+    | MLlam (_, _, b) -> scan (d + 1) b
+    | MLapp (f, args) -> scan d f; List.iter (scan d) args
+    | MLfix (_, ids, bodies, _) ->
+      Array.iter (scan (d + Array.length ids)) bodies
+    | MLcons (_, _, ts) | MLtuple ts -> List.iter (scan d) ts
+    | MLmagic a -> scan d a
+    | MLparray (arr, def) -> Array.iter (scan d) arr; scan d def
+    | _ -> ()
+  in
+  scan 0 body;
+  !found
+
 let infer_owned_params n_params body =
+  (* Reuse and loopify both rewrite tail-recursive-modulo-cons matches (the
+     [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
+     loopify owns the shape wherever it applies -- but BOTH need the scrutinee
+     passed owned, because both recycle its cells: loopify does so through the
+     owning cursor its TMC loop carries (see Loopify.reuse_cursor).  So this
+     inference does not defer to loopify; it asks only whether reuse can be
+     performed at all, which additionally requires non-atomic refcounts (the
+     recycling helpers in rc.h are single-threaded, matching the rest of Crane's
+     clone-at-boundary model).  The consumers that actually emit a rewrite --
+     translation's dual-path match and gen_decls' argument passing -- keep
+     deferring to loopify via [reuse_loopify_ok]. *)
+  let reuse_on = reuse () && non_atomic_rc () in
   List.init n_params (fun i ->
     let k = i + 1 in
-    escapes ~refined:true k body)
+    escapes ~refined:true k body
+    || (reuse_on && is_reuse_scrutinee k body))
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]
     contribution.  Callers can OR this into the base owned flags selectively

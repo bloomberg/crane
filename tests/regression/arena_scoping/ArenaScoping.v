@@ -1,6 +1,8 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(* WIP: exercises Crane Arena (opt-in arena extraction) on a recursive tree. *)
+(* WIP: exercises caller-owned scoped arenas (crane::arena_use_scope) and the
+   debug-build fallback-growth warning, on a recursive tree extracted in arena
+   mode. *)
 From Stdlib Require Import Lists.List.
 Import ListNotations.
 
@@ -13,26 +15,17 @@ Inductive tree (A : Type) : Type :=
 Arguments leaf {A}.
 Arguments node {A} t1 x t2.
 
-Definition is_leaf {A} (t : tree A) : bool :=
-  match t with
-  | leaf => true
-  | node _ _ _ => false
-  end.
-
 Fixpoint size {A} (t : tree A) : nat :=
   match t with
   | leaf => 1
   | node l _ r => 1 + size l + size r
   end.
 
-Fixpoint mirror {A} (t : tree A) : tree A :=
-  match t with
-  | leaf => leaf
-  | node l x r => node (mirror r) x (mirror l)
-  end.
-
 End Tree.
 
 Require Crane.Extraction.
-Crane Arena Tree.tree.
-Crane Extraction "arena_tree" Tree.
+(* Scoped-arena redesign: no per-type arena directive. [Set Crane Arena] turns
+   on the runtime scoped-arena factory; arena backing then comes from the
+   caller-owned crane::arena_use_scope installed in arena_scoping.t.cpp. *)
+Set Crane Arena.
+Crane Extraction "arena_scoping" Tree.

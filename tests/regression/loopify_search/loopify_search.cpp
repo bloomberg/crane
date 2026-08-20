@@ -43,8 +43,7 @@ uint64_t LoopifySearch::knapsack_fuel(
 
   using _Frame = std::variant<_Enter, _Cont1, _Cont2, _Resume3>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&items, capacity, fuel});
   /// Loopified knapsack_fuel: _Enter -> _Cont1 -> _Cont2 -> _Resume3.
   while (!_stack.empty()) {
@@ -138,8 +137,7 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified majority: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -409,8 +407,7 @@ uint64_t LoopifySearch::collatz_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified collatz_fuel: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -512,8 +509,7 @@ bool LoopifySearch::subset_sum_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, target, fuel});
   /// Loopified subset_sum_fuel: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -721,9 +717,9 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_Cons: saves [_s0, f, a0], dispatches next recursive call.
+  /// _After_Cons: saves [smaller, f, a0], dispatches next recursive call.
   struct _After_Cons {
-    List<uint64_t> _s0;
+    List<uint64_t> smaller;
     uint64_t f;
     uint64_t a0;
   };
@@ -737,8 +733,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified quicksort_fuel: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
@@ -762,14 +757,14 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
           List<uint64_t> greater = filter_impl(
               [=](uint64_t y) mutable { return a0 <= y; }, a1_value);
           _stack.emplace_back(
-              _After_Cons{std::move(std::move(smaller)), f, std::move(a0)});
+              _After_Cons{std::move(smaller), f, std::move(a0)});
           _stack.emplace_back(_Enter{std::move(greater), f});
         }
       }
     } else if (std::holds_alternative<_After_Cons>(_frame)) {
       auto _f = std::move(std::get<_After_Cons>(_frame));
       _stack.emplace_back(_Combine_Cons{std::move(_result), _f.a0});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f.smaller), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_Cons>(_frame));
       _result = std::move(_result).app(
@@ -801,8 +796,7 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified split_list: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
@@ -913,9 +907,9 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
     uint64_t fuel;
   };
 
-  /// _After_a: saves [_s0, f], dispatches next recursive call.
+  /// _After_a: saves [a, f], dispatches next recursive call.
   struct _After_a {
-    List<uint64_t> _s0;
+    List<uint64_t> a;
     uint64_t f;
   };
 
@@ -927,8 +921,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
 
   using _Frame = std::variant<_Enter, _After_a, _Combine_a>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), fuel});
   /// Loopified merge_sort_fuel: _Enter -> _After_a -> _Combine_a.
   while (!_stack.empty()) {
@@ -951,7 +944,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
             _result = std::move(l);
           } else {
             auto [a, b] = split_list(l);
-            _stack.emplace_back(_After_a{std::move(std::move(a)), f});
+            _stack.emplace_back(_After_a{std::move(a), f});
             _stack.emplace_back(_Enter{std::move(b), f});
           }
         }
@@ -959,7 +952,7 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(
     } else if (std::holds_alternative<_After_a>(_frame)) {
       auto _f = std::move(std::get<_After_a>(_frame));
       _stack.emplace_back(_Combine_a{std::move(_result)});
-      _stack.emplace_back(_Enter{std::move(_f._s0), _f.f});
+      _stack.emplace_back(_Enter{std::move(_f.a), _f.f});
     } else {
       auto _f = std::move(std::get<_Combine_a>(_frame));
       _result = merge_sorted(std::move(_result), std::move(_f._result));
@@ -1070,8 +1063,7 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
   List<List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{orig, choices, fuel});
   /// Loopified perms_choices_fuel: _Enter -> _After_Cons -> _Combine_Cons ->
   /// _Resume_Nil.
@@ -1216,8 +1208,7 @@ uint64_t LoopifySearch::min_element(
 
   using _Frame = std::variant<_Enter, _Cont_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified min_element: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {

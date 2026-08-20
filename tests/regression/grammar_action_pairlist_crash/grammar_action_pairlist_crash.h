@@ -2,6 +2,7 @@
 #define INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <cstdint>
 #include <deque>
@@ -9,7 +10,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A, typename P> struct SigT {
   // DATA
@@ -97,7 +97,7 @@ public:
 
   // MANIPULATORS
   ~Val() {
-    std::vector<std::shared_ptr<Val>> _stack = {};
+    crane::small_vector<std::shared_ptr<Val>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<VList>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -117,6 +117,11 @@ public:
       }
     }
   }
+
+  Val(const Val &) = default;
+  Val &operator=(const Val &) = default;
+  Val(Val &&) noexcept = default;
+  Val &operator=(Val &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

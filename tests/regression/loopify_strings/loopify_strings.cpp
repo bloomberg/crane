@@ -76,8 +76,7 @@ List<uint64_t> LoopifyStrings::repeat_string(
 
   using _Frame = std::variant<_Enter, _Resume_n_>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_string: _Enter -> _Resume_n_.
   while (!_stack.empty()) {
@@ -115,8 +114,7 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
 
   using _Frame = std::variant<_Enter, _Resume__x>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified repeat_with_sep: _Enter -> _Resume__x.
   while (!_stack.empty()) {
@@ -130,7 +128,7 @@ List<uint64_t> LoopifyStrings::repeat_with_sep(
       } else {
         uint64_t n_ = n - 1;
         if (n_ <= 0) {
-          _result = std::move(s);
+          _result = s;
         } else {
           uint64_t _x = n_ - 1;
           _stack.emplace_back(_Resume__x{});
@@ -161,8 +159,7 @@ List<uint64_t> LoopifyStrings::string_chain_fuel(
 
   using _Frame = std::variant<_Enter, _Resume1>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified string_chain_fuel: _Enter -> _Resume1.
   while (!_stack.empty()) {
@@ -215,8 +212,7 @@ List<uint64_t> LoopifyStrings::reverse(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified reverse: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -260,8 +256,7 @@ bool LoopifyStrings::list_eq(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l2, &l1});
   /// Loopified list_eq: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -354,8 +349,7 @@ List<uint64_t> LoopifyStrings::intercalate(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified intercalate: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

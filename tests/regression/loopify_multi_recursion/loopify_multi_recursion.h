@@ -2,12 +2,12 @@
 #define INCLUDED_LOOPIFY_MULTI_RECURSION
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <algorithm>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LoopifyMultiRecursion {
   static uint64_t mixed_arith_fuel(uint64_t fuel, uint64_t n);
@@ -55,7 +55,7 @@ struct LoopifyMultiRecursion {
 
     // MANIPULATORS
     ~quadtree() {
-      std::vector<std::shared_ptr<quadtree>> _stack = {};
+      crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<QQuad>(&_v)) {
           if (_alt->a0) {
@@ -82,6 +82,11 @@ struct LoopifyMultiRecursion {
       }
     }
 
+    quadtree(const quadtree &) = default;
+    quadtree &operator=(const quadtree &) = default;
+    quadtree(quadtree &&) noexcept = default;
+    quadtree &operator=(quadtree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -103,8 +108,7 @@ struct LoopifyMultiRecursion {
 
     using _Frame = std::variant<_Enter>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&q});
     /// Loopified quadtree_rect: _Enter.
     while (!_stack.empty()) {
@@ -142,8 +146,7 @@ struct LoopifyMultiRecursion {
 
     using _Frame = std::variant<_Enter>;
     T1 _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&q});
     /// Loopified quadtree_rec: _Enter.
     while (!_stack.empty()) {

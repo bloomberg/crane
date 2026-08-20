@@ -347,6 +347,48 @@ Defines a string view type for non-owning string references with axiomatic prope
 
 Crane includes C++ header files that support extracted code at runtime. These are located in `theories/cpp/`.
 
+Generated code includes them by name, so the directory has to be on the
+compiler's include path (`-Itheories/cpp`) when you build extracted C++.
+
+### `small_vector.h`
+
+`crane::small_vector<T, N>`, a stack with inline storage for its first `N`
+elements. Used for the worklists in generated iterative destructors and for the
+frame stacks that [loopification](Reference-Manual.md#set-crane-loopify--crane-loopify)
+introduces. Both have depth proportional to a structure's *height* rather than
+its size, so in practice they stay within the inline capacity and never touch
+the heap; the vector spills to a heap buffer if they don't. Included by nearly
+every generated header.
+
+### `crane_fn.h`
+
+Helpers for storing a concrete callable into a type-erased `std::any` field. A
+value-dependent function type erased to `std::any` is read back at the
+application site as `std::function<std::any(std::any...)>`, so the construction
+site must store exactly that canonical representation rather than the raw
+closure — otherwise the `any_cast` throws.
+
+### `conslist.h`
+
+`crane::list<T>`, an immutable persistent singly-linked cons list: a chain of
+refcounted cells, which is the natural C++ image of a Rocq `list` and the same
+representation OCaml uses. `cons`, `head`, and `tail` are O(1) with full
+structural sharing. Available as a container mapping for code where consing is
+the hot path, which persistent random-access vectors handle badly.
+
+### `arena.h`
+
+The scoped-arena runtime: `crane::arena`, the `arena_scope` / `arena_use_scope`
+guards, and the factories that bump-allocate when a scope is open. Emitted only
+under [`Set Crane Arena`](Reference-Manual.md#set-crane-arena--crane-noarena).
+
+### `alloc_profile.h`
+
+Opt-in global allocation counters, for measuring the total heap allocation
+volume (count and bytes) of a generated program. Compiled in only when
+`CRANE_ALLOC_PROFILE` is defined — it overrides the global `operator new`/
+`delete` for the whole binary — and zero overhead otherwise.
+
 ### `crane_itree.h`
 
 C++ runtime for reified interaction trees. Defines the `ITree<R>` template class with `Ret`, `Tau`, and `Vis` variants, `observe()` for pattern matching, `run()` for execution, and `itree_bind` for monadic composition.

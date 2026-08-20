@@ -1,13 +1,13 @@
 #ifndef INCLUDED_FIX_SHARED_PTR_FIELD
 #define INCLUDED_FIX_SHARED_PTR_FIELD
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct FixSharedPtrField {
   /// A value-type inductive with recursive self-reference (shared_ptr).
@@ -57,7 +57,7 @@ struct FixSharedPtrField {
 
     // MANIPULATORS
     ~mylist() {
-      std::vector<std::shared_ptr<mylist>> _stack = {};
+      crane::small_vector<std::shared_ptr<mylist>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1) {
@@ -74,6 +74,11 @@ struct FixSharedPtrField {
         }
       }
     }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

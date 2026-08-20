@@ -1,13 +1,13 @@
 #ifndef INCLUDED_NESTED_MATCH_CLOSURE
 #define INCLUDED_NESTED_MATCH_CLOSURE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct NestedMatchClosure {
   /// NESTED MATCH WITH CLOSURES
@@ -56,7 +56,7 @@ struct NestedMatchClosure {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -76,6 +76,11 @@ struct NestedMatchClosure {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

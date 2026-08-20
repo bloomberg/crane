@@ -1,11 +1,11 @@
 #ifndef INCLUDED_LOOPIFY_GAP_NESTED_FIX
 #define INCLUDED_LOOPIFY_GAP_NESTED_FIX
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -77,7 +77,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -94,6 +94,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -127,7 +132,7 @@ struct LoopifyGapNestedFix {
 
     // MANIPULATORS
     ~rose() {
-      std::vector<std::shared_ptr<rose>> _stack = {};
+      crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Rose0>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -155,6 +160,11 @@ struct LoopifyGapNestedFix {
         }
       }
     }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

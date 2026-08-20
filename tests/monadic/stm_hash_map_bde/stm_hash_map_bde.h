@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STM_HASH_MAP_BDE
 #define INCLUDED_STM_HASH_MAP_BDE
 
+#include "small_vector.h"
 #include <any>
 #include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
@@ -91,7 +92,7 @@ public:
   }
   // MANIPULATORS
   ~List() {
-    bsl::vector<bsl::shared_ptr<List<t_A>>> _stack = {};
+    crane::small_vector<bsl::shared_ptr<List<t_A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = bsl::get_if<Cons>(&_v)) {
         if (_alt->d_l) {
@@ -108,6 +109,10 @@ public:
       }
     }
   }
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }

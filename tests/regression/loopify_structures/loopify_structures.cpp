@@ -33,8 +33,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
   using _Frame =
       std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified sum_nested_list_fuel: _Enter -> _After_NList -> _Combine_NList
   /// -> _Resume_Elem.
@@ -113,8 +112,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
 
   using _Frame = std::variant<_Enter, _Cont_Elem, _Cont_NList, _Cont_NList_1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified depth_nested_list_fuel: _Enter -> _Cont_Elem -> _Cont_NList ->
   /// _Cont_NList_1.
@@ -207,8 +205,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
   using _Frame =
       std::variant<_Enter, _After_NList, _Combine_NList, _Resume_Elem>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, fuel});
   /// Loopified flatten_nested_list_fuel: _Enter -> _After_NList ->
   /// _Combine_NList -> _Resume_Elem.

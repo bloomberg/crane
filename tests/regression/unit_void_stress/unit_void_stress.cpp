@@ -34,7 +34,7 @@ void UnitVoidStress::id_void_call(uint64_t _x0) {
 
 std::pair<uint64_t, std::monostate>
 UnitVoidStress::pair_with_discard(uint64_t n) {
-  return std::make_pair(std::move(n), [=]() mutable {
+  return std::make_pair(n, [=]() mutable {
     discard(n);
     return std::monostate{};
   }());

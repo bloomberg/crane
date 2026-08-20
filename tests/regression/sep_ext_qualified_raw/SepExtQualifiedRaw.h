@@ -1,12 +1,12 @@
 #ifndef INCLUDED_SEPEXTQUALIFIEDRAW
 #define INCLUDED_SEPEXTQUALIFIEDRAW
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 namespace SepExtQualifiedRaw {
 
@@ -89,7 +89,7 @@ template <OrderedType X> struct Make {
 
     // MANIPULATORS
     ~Fmap() {
-      std::vector<std::shared_ptr<Fmap<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<Fmap<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a2) {
@@ -106,6 +106,11 @@ template <OrderedType X> struct Make {
         }
       }
     }
+
+    Fmap(const Fmap &) = default;
+    Fmap &operator=(const Fmap &) = default;
+    Fmap(Fmap &&) noexcept = default;
+    Fmap &operator=(Fmap &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

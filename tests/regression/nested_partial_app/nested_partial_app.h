@@ -1,12 +1,12 @@
 #ifndef INCLUDED_NESTED_PARTIAL_APP
 #define INCLUDED_NESTED_PARTIAL_APP
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct NestedPartialApp {
   struct tree {
@@ -42,7 +42,7 @@ struct NestedPartialApp {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -62,6 +62,11 @@ struct NestedPartialApp {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

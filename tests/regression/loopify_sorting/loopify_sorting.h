@@ -2,12 +2,12 @@
 #define INCLUDED_LOOPIFY_SORTING
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -97,18 +97,37 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -128,8 +147,7 @@ struct LoopifySorting {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     uint64_t _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified len_impl: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -174,8 +192,7 @@ struct LoopifySorting {
 
     using _Frame = std::variant<_Enter, _Cont_Cons>;
     std::pair<List<T1>, List<T1>> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified split: _Enter -> _Cont_Cons.
     while (!_stack.empty()) {

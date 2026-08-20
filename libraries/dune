@@ -1,0 +1,6 @@
+; The parse-a-lot benchmark harness is a self-contained sub-project with its own
+; build files (dune-project, _CoqProject, Makefile). It depends on OCaml packages
+; (yojson, unix), C++ libraries (immer), and a benchmark corpus that are not part
+; of the rocq-crane build. Mark it data-only so a plain `dune build` / `dune build
+; @all` never descends into it; build it standalone per libraries/parse-a-lot-bench/README.md.
+(data_only_dirs parse-a-lot-bench)

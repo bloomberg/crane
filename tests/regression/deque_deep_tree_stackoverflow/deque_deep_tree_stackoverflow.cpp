@@ -15,8 +15,7 @@ DequeDeepTreeStackoverflow::rose DequeDeepTreeStackoverflow::deep_tree(
 
   using _Frame = std::variant<_Enter, _Resume_n>;
   DequeDeepTreeStackoverflow::rose _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{depth});
   /// Loopified deep_tree: _Enter -> _Resume_n.
   while (!_stack.empty()) {

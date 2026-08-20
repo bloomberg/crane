@@ -1,13 +1,13 @@
 #ifndef INCLUDED_DEP_ELIM
 #define INCLUDED_DEP_ELIM
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -96,6 +96,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -137,7 +142,7 @@ struct DepElim {
 
     // MANIPULATORS
     ~fin() {
-      std::vector<std::shared_ptr<fin>> _stack = {};
+      crane::small_vector<std::shared_ptr<fin>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FS>(&_v)) {
           if (_alt->a1) {
@@ -154,6 +159,11 @@ struct DepElim {
         }
       }
     }
+
+    fin(const fin &) = default;
+    fin &operator=(const fin &) = default;
+    fin(fin &&) noexcept = default;
+    fin &operator=(fin &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -270,7 +280,7 @@ struct DepElim {
 
     // MANIPULATORS
     ~vec() {
-      std::vector<std::shared_ptr<vec<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<vec<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Vcons>(&_v)) {
           if (_alt->a2) {
@@ -287,6 +297,11 @@ struct DepElim {
         }
       }
     }
+
+    vec(const vec &) = default;
+    vec &operator=(const vec &) = default;
+    vec(vec &&) noexcept = default;
+    vec &operator=(vec &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

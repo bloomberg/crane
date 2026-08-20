@@ -54,8 +54,7 @@ uint64_t MemSafetyProbe6::apply_chain(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&fns});
   /// Loopified apply_chain: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -67,7 +66,7 @@ uint64_t MemSafetyProbe6::apply_chain(
           *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe6::mylist<
               std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
-        _result = std::move(x);
+        _result = x;
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe6::mylist<
             std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());

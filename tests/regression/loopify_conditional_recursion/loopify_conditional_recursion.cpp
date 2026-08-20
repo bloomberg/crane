@@ -17,8 +17,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
 
   using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, cache});
   /// Loopified cached_sum: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -71,8 +70,7 @@ LoopifyConditionalRecursion::find_or_recurse(
 
   using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<uint64_t, List<uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, target});
   /// Loopified find_or_recurse: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -122,8 +120,7 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
 
   using _Frame = std::variant<_Enter, _Cont1>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified nested_cond: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -192,8 +189,7 @@ LoopifyConditionalRecursion::multi_return(
 
   using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<uint64_t, std::optional<std::pair<uint64_t, uint64_t>>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, memo});
   /// Loopified multi_return: _Enter -> _Cont1.
   while (!_stack.empty()) {
@@ -278,8 +274,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
 
   using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<uint64_t, uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l, key});
   /// Loopified accum_with_cache: _Enter -> _Cont1.
   while (!_stack.empty()) {

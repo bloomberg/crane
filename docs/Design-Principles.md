@@ -55,8 +55,10 @@ for invariants, and review diffs in code review.
 Rocq programs are fundamentally functional. Crane keeps that structure visible,
 but renders it in idiomatic modern C++:
 
-- algebraic data types become inheritance-based structs with static factory methods,
-- pattern matches become `switch` statements or structured conditionals,
+- algebraic data types become value-typed structs holding a `std::variant` of
+  their constructors, reached through static factory methods, with a smart
+  pointer inserted only where the type recurses,
+- pattern matches become structured conditionals over that variant,
 - higher-order functions become lambdas and callable objects,
 - monadic effects become libraries with concrete C++ APIs.
 
@@ -115,9 +117,13 @@ Different projects have different C++ "worlds":
 Crane avoids hard-coding mappings from Rocq to C++.
 Instead it provides:
 
-- a **macro language** for custom extraction of Rocq definitions, and
+- a **macro language** for custom extraction of Rocq definitions,
 - a way to define **effect interfaces** and monadic APIs with user-chosen
-  C++ representations.
+  C++ representations, and
+- a choice of **allocation strategy** — atomic `std::shared_ptr`, a non-atomic
+  reference-counted handle, BDE's allocator-aware pointers, or scoped arenas —
+  selected per extraction without changing the source program, since no
+  generated call site names an allocation directly.
 
 This makes Crane **adaptable**:
 

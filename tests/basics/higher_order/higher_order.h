@@ -1,12 +1,12 @@
 #ifndef INCLUDED_HIGHER_ORDER
 #define INCLUDED_HIGHER_ORDER
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct HigherOrder {
   /// A simple polymorphic list type.
@@ -82,7 +82,7 @@ struct HigherOrder {
 
     // MANIPULATORS
     ~list() {
-      std::vector<std::shared_ptr<list<A>>> _stack = {};
+      crane::small_vector<std::shared_ptr<list<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1) {
@@ -99,6 +99,11 @@ struct HigherOrder {
         }
       }
     }
+
+    list(const list &) = default;
+    list &operator=(const list &) = default;
+    list(list &&) noexcept = default;
+    list &operator=(list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

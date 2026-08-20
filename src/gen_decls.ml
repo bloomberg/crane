@@ -112,7 +112,16 @@ let gen_record_cpp name fields ind =
       | _ -> Tany )
     | ty -> ty
   in
-  let l = List.combine fields (non_dummy_constructor_types ind) in
+  let field_types = non_dummy_constructor_types ind in
+  let l =
+    if List.length fields = List.length field_types then
+      List.combine fields field_types
+    else
+      (* Length mismatch (e.g. erased/dummy fields dropped from one side):
+         pair each field with Tunknown rather than crash, mirroring the
+         fallback in [gen_typeclass_cpp]. *)
+      List.map (fun f -> (f, Miniml.Tunknown)) fields
+  in
   let l =
     List.mapi
       (fun i (x, t) ->
@@ -573,7 +582,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)
       let saved_outer_name = tctx.current_outer_function_name in
+      let saved_decl_ref = !Table.current_decl_ref in
       tctx.current_outer_function_name <- Some (Common.pp_global_name Term name);
+      Table.current_decl_ref := Some name;
       set_current_type_vars type_var_names;
       (* Generate static methods for each field *)
       let gen_method (field_ref, field_ml_ty) field_body =
@@ -844,7 +855,18 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         else (* Fallback: pair fields with Tunknown if lengths don't match *)
           List.map (fun f -> (f, Miniml.Tunknown)) fields
       in
-      let method_pairs = List.combine fields_with_types method_bodies in
+      let method_pairs =
+        if List.length fields_with_types = List.length method_bodies then
+          List.combine fields_with_types method_bodies
+        else
+          CErrors.anomaly
+            (Pp.str
+               (Printf.sprintf
+                  "gen_decls: eponymous record has %d fields but its \
+                   constructor has %d arguments"
+                  (List.length fields_with_types)
+                  (List.length method_bodies)))
+      in
       let methods =
         List.filter_map
           (fun ((fld, fty), body) -> gen_method (fld, fty) body)
@@ -948,6 +970,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       in
       (* Restore type variable context *)
       tctx.current_outer_function_name <- saved_outer_name;
+      Table.current_decl_ref := saved_decl_ref;
       clear_current_type_vars ();
       (* Compute promoted vars and generate using fields. Promoted vars are
          ip_vars entries beyond the real type parameter count (as determined by
@@ -2064,7 +2087,9 @@ let gen_dfun n b cty ty temps =
   tctx.promoted_var_map <- promoted_var_resolutions;
   (* Set the outer function name so inner fixpoints can generate lifted names *)
   let saved_outer_name = tctx.current_outer_function_name in
+  let saved_decl_ref = !Table.current_decl_ref in
   tctx.current_outer_function_name <- Some (Common.pp_global_name Term n);
+  Table.current_decl_ref := Some n;
   (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
   let ml_ret = ml_return_type ty in
   let is_cofix_return = Table.is_coinductive_type ml_ret in
@@ -2223,9 +2248,13 @@ let gen_dfun n b cty ty temps =
           | None -> (ids, b) )
         | _ -> (ids, b)
       in
+      let guard =
+        build_guard_compare_stmts
+          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
+          n ids cod
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
-      let guard = build_guard_compare_stmts n ids in
       Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
@@ -2268,13 +2297,18 @@ let gen_dfun n b cty ty temps =
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
+      let guard =
+        build_guard_compare_stmts
+          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
+          n ids cod
+      in
       clear_current_type_vars ();
       clear_current_param_types ();
-      let guard = build_guard_compare_stmts n ids in
       Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure)
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;
+  Table.current_decl_ref := saved_decl_ref;
   tctx.promoted_var_map <- saved_promoted_var_map;
   (* {b Entry point detection for monadic [main].}
 
@@ -2626,7 +2660,7 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
   | _ -> []
 
 (** Generate C++ declaration from ML definition (main entry point) *)
-let gen_decl n b ty =
+let gen_decl__inner n b ty =
   (* Set itree extraction mode early — before type conversion — so that
      reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
      can correctly voidify unit result types in ITree parameters. *)
@@ -2688,8 +2722,11 @@ let gen_decl n b ty =
   tctx.itree_mode <- saved_mode;
   result
 
+let gen_decl n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
+
 (** Generate C++ declaration with pretty-printing adjustments *)
-let gen_decl_for_pp n b ty =
+let gen_decl_for_pp__inner n b ty =
   let carrier_refs = get_erased_proj_map_from_type ty in
   (* Expand TC-typed carrier refs: when a carrier ref points to a
      typeclass-typed promoted field (e.g., base_category : PreCategory),
@@ -2759,12 +2796,15 @@ let gen_decl_for_pp n b ty =
   tctx.method_self_ns <- saved_method_ns;
   result
 
+let gen_decl_for_pp n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp__inner n b ty)
+
 (** Generate a full C++ function definition for a [Dfix] member.
 
     Simplifies the ML type, resolves promoted carrier references in the body,
     converts to C++ types, and delegates to {!gen_dfun} for the actual
     definition.  Returns [(decl, env, tvars)]. *)
-let gen_dfun_def n b ty =
+let gen_dfun_def__inner n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
   (* Rewrite Tunknown in body types to promoted carrier refs. This allows
@@ -2814,8 +2854,11 @@ let gen_dfun_def n b ty =
     tctx.method_self_ns <- saved_method_ns;
     (f, env, tc_param_ids @ tvars)
 
+let gen_dfun_def n b ty =
+  Table.with_decl_ref n (fun () -> gen_dfun_def__inner n b ty)
+
 (** Generate C++ function specification (for header files) *)
-let gen_spec n b ty =
+let gen_spec__inner n b ty =
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
   let unit_void =
@@ -2908,6 +2951,9 @@ let gen_spec n b ty =
   in
   tctx.method_self_ns <- saved_method_ns;
   result
+
+let gen_spec n b ty =
+  Table.with_decl_ref n (fun () -> gen_spec__inner n b ty)
 
 (** Generate a C++ forward declaration (spec) for a struct-level function.
 
@@ -3021,7 +3067,7 @@ let gen_dfuns_dual ~is_header (ns, bs, tys) =
 (** Generate both spec and def for a single Dterm function in one pass. Calls
     gen_decl_for_pp ONCE, then derives both spec and def. Returns (spec_opt,
     def_opt, tvars) *)
-let gen_decl_for_pp_dual ~is_header n b ty =
+let gen_decl_for_pp_dual__inner ~is_header n b ty =
   let ds_opt, env, tvars = gen_decl_for_pp n b ty in
   match (ds_opt, tvars) with
   | Some ds, _ :: _ ->
@@ -3039,6 +3085,9 @@ let gen_decl_for_pp_dual ~is_header n b ty =
     (* Non-function type: no def needed *)
     let spec_ds, spec_env = gen_spec n b ty in
     (Some (spec_ds, spec_env), None, tvars)
+
+let gen_decl_for_pp_dual ~is_header n b ty =
+  Table.with_decl_ref n (fun () -> gen_decl_for_pp_dual__inner ~is_header n b ty)
 
 let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
@@ -3385,8 +3434,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     match ty with
     | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
       (match ty with Tshared_ptr inner -> inner | _ -> ty)
-    | Tshared_ptr (Tglob (g, _, _)) when not (is_enum_inductive g) ->
-      (match ty with Tshared_ptr inner -> inner | _ -> ty)
     | Tglob (r, args, es) ->
       Tglob (r, List.map strip_self_ptr args, es)
     | Tfun (args, ret) ->
@@ -3598,7 +3645,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx.move_owned_vars <-
     List.fold_left
       (fun acc (i, owned) ->
-        if owned then
+        (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
+           (borrowed) and must never be treated as owned, or a reuse arm would
+           try to consume it via v_mut() on a const method.  Gated on reuse so
+           reuse-off output stays byte-identical to the pre-reuse baseline. *)
+        if owned && not (Table.reuse () && Table.reuse_loopify_ok () && i = this_pos)
+        then
           let ml_ty = snd (List.nth ids_with_types i) in
           if Escape.is_shared_ptr_type ml_ty
              || is_nontrivial_value_ml_type ml_ty then
@@ -3923,21 +3975,25 @@ let gen_ind_header_v2
     method_candidates
     ind_kind =
   let is_coinductive = ind_kind = Coinductive in
-  (* Arena mode is sound in this first slice only for plain self-recursive value
-     types.  Coinductive types (lazy thunks capturing tail refs) and mutually
-     recursive types (cross-type region pointers, [std::any] destructor) still
-     need shared_ptr, so an arena request on those falls back to the default
-     representation with a warning. *)
-  let arena_ok =
-    if Table.should_arena name && (is_coinductive || is_mutual) then begin
-      Printf.eprintf
-        "Crane Arena: %s is %s; arena extraction is not supported for it yet \
-         (falling back to shared_ptr).\n%!"
-        (Names.GlobRef.print name |> Pp.string_of_ppcmds)
-        (if is_coinductive then "coinductive" else "mutually recursive");
-      false
-    end
-    else Table.should_arena name
+  (* Scoped-arena redesign (2026-08-10): arena allocation is no longer a
+     compile-time property of the type.  Every recursive field is the ordinary
+     smart pointer ([std::shared_ptr] / [crane::rc]); the recursive-field factory
+     is the *runtime-arena-aware* one ([crane::arena_make_shared] /
+     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     current arena only when a [crane::arena_scope] is open at the call site and
+     otherwise falls back to a plain heap allocation.  [arena_runtime_ok] just
+     decides whether the generated factory contains that runtime branch at all:
+     it requires the [Set Crane Arena] master switch (off by default, so the
+     common case emits the plain make_shared/make_rc factory and pulls in no
+     arena runtime); it is further suppressed for [Crane NoArena] types (which
+     must never bump-allocate), and for coinductive (lazy thunks) and mutually
+     recursive ([std::any]) types whose special field handling the runtime-arena
+     path does not cover -- those keep the plain make_shared factory too. *)
+  let arena_runtime_ok =
+    Table.arena_enabled ()
+    && Table.should_use_arena_at_runtime name
+    && (not is_coinductive)
+    && not is_mutual
   in
   let templates = List.map (fun n -> (TTtypename, n)) vars in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
@@ -4093,6 +4149,62 @@ let gen_ind_header_v2
 
       let _ = ind_type_name_str in (* suppress unused warning if non-flat path also needs it *)
 
+      (* Compute a field's final C++ type, including the arena-mode
+         pointerization of recursive fields.  Used for the per-constructor
+         nested struct field declarations below. (The old arena deep-copy
+         constructor that also consumed this was removed in the scoped-arena
+         redesign; see the note near [value_copy_clone_methods].) *)
+      let compute_field_cpp_ty ty =
+        let cpp_ty =
+          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+            vars
+            ty
+        in
+        (* Wrap fields that contain a nested self-reference in
+           their type arguments (e.g. list(tree(A)) inside tree).
+           The cycle is broken at the field level using a bare
+           (no-ns) type so the outer shared_ptr provides pointer
+           indirection without extra inner shared_ptrs for elements.
+           E.g. option(chain) → shared_ptr<optional<chain>>,
+                list(tree)   → shared_ptr<List<tree>>.
+           The body sees *a0 at the bare type directly with no
+           element-wise conversion needed. *)
+        (* Completeness-aware element wrapping (WRAP.md). *)
+        maybe_record_boxed_recursive_ind ~ind_ref:name ty;
+        let cpp_ty =
+          if ml_type_has_nested_self_ref ~ind_ref:name ty then
+            let bare_cpp_ty =
+              convert_ml_type_to_cpp_type
+                (empty_env ())
+                vars
+                ty
+            in
+            (* If the field recurses THROUGH a boxed-element
+               container, the element box already breaks the
+               completeness cycle, so the outer shared_ptr/arena
+               pointer is redundant: store the container by value. *)
+            if (not is_coinductive)
+               && ml_type_recurses_through_boxed_container
+                    ~ind_ref:name ty
+            then bare_cpp_ty
+            else Tshared_ptr bare_cpp_ty
+          else cpp_ty
+        in
+        let cpp_ty =
+          if vars = [] then
+            match cpp_ty with
+            | Tshared_ptr _ ->
+              tvar_erase_type cpp_ty
+            | _ when has_unnamed_tvar cpp_ty -> Tany
+            | _ -> cpp_ty
+          else cpp_ty
+        in
+        (* Scoped-arena redesign: recursive fields are always the ordinary
+           smart pointer ([Tshared_ptr], rendered as std::shared_ptr /
+           crane::rc); arena-ness is decided per-object at the factory call
+           site, not baked into the field type. *)
+        cpp_ty
+      in
       (* 1. Constructor alternative structs (simple, just fields, no make) *)
       let constructor_structs =
         Array.to_list
@@ -4116,61 +4228,7 @@ let gen_ind_header_v2
                let fields =
                  List.mapi
                    (fun j ty ->
-                     let cpp_ty =
-                       convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-                         vars
-                         ty
-                     in
-                     (* Wrap fields that contain a nested self-reference in
-                        their type arguments (e.g. list(tree(A)) inside tree).
-                        The cycle is broken at the field level using a bare
-                        (no-ns) type so the outer shared_ptr provides pointer
-                        indirection without extra inner shared_ptrs for elements.
-                        E.g. option(chain) → shared_ptr<optional<chain>>,
-                             list(tree)   → shared_ptr<List<tree>>.
-                        The body sees *a0 at the bare type directly with no
-                        element-wise conversion needed. *)
-                     (* Completeness-aware element wrapping (WRAP.md). *)
-                     maybe_record_boxed_recursive_ind ~ind_ref:name ty;
-                     let cpp_ty =
-                       if ml_type_has_nested_self_ref ~ind_ref:name ty then
-                         let bare_cpp_ty =
-                           convert_ml_type_to_cpp_type
-                             (empty_env ())
-                             vars
-                             ty
-                         in
-                         (* If the field recurses THROUGH a boxed-element
-                            container, the element box already breaks the
-                            completeness cycle, so the outer shared_ptr/arena
-                            pointer is redundant: store the container by value. *)
-                         if (not is_coinductive)
-                            && ml_type_recurses_through_boxed_container
-                                 ~ind_ref:name ty
-                         then bare_cpp_ty
-                         else Tshared_ptr bare_cpp_ty
-                       else cpp_ty
-                     in
-                     let cpp_ty =
-                       if vars = [] then
-                         match cpp_ty with
-                         | Tshared_ptr _ ->
-                           tvar_erase_type cpp_ty
-                         | _ when has_unnamed_tvar cpp_ty -> Tany
-                         | _ -> cpp_ty
-                       else cpp_ty
-                     in
-                     (* Arena mode: the recursive-field indirection is a raw
-                        pointer into a region, not a shared_ptr.  Confined to the
-                        field declaration so method return/parameter positions are
-                        unaffected. *)
-                     let cpp_ty =
-                       if arena_ok then
-                         match cpp_ty with
-                         | Tshared_ptr inner -> Tptr inner
-                         | _ -> cpp_ty
-                       else cpp_ty
-                     in
+                     let cpp_ty = compute_field_cpp_ty ty in
                      let field_name = List.nth field_ids j in
                      (Fvar (field_name, cpp_ty), VPublic, SNoTag) )
                    tys_list
@@ -4289,21 +4347,24 @@ let gen_ind_header_v2
           []
       in
 
-      (** Iterative destructor preventing stack overflow from deeply recursive
-          [shared_ptr] chains.  Drains recursive fields into an explicit stack,
-          only entering nodes with [use_count() == 1] (sole ownership).
+      (* Iterative destructor preventing stack overflow from deeply recursive
+         [shared_ptr] chains.  Drains recursive fields into an explicit stack,
+         only entering nodes with [use_count() == 1] (sole ownership).
 
-          Self-recursive types use [shared_ptr<Self>] directly on the stack.
-          Mutually recursive types use [std::any] to hold different [shared_ptr]
-          types.  Returns [[]] for non-recursive or coinductive types. *)
+         Self-recursive types use [shared_ptr<Self>] directly on the stack.
+         Mutually recursive types use [std::any] to hold different [shared_ptr]
+         types.  Returns [[]] for non-recursive or coinductive types. *)
       let iterative_destructor =
-        (* Arena types own their nodes in a region; dropping the region frees
-           everything in O(1), so no per-node iterative destructor is needed. *)
-        if is_coinductive || arena_ok then []
+        (* Scoped-arena redesign: recursive fields are ordinary smart pointers
+           even for arena-backed values (the region only owns the payload
+           memory; per-node refcounting still drives destruction), so the
+           iterative destructor that drains those smart-pointer chains is
+           needed here exactly as for any other recursive type. *)
+        if is_coinductive then []
         else
-          (** Check whether ML type [t] is a reference to [ref_name] applied to
-              the same type variables [ref_vars] (i.e., a direct recursive or
-              mutual recursive occurrence). *)
+          (* Check whether ML type [t] is a reference to [ref_name] applied to
+             the same type variables [ref_vars] (i.e., a direct recursive or
+             mutual recursive occurrence). *)
           let rec is_ref_to ref_name ref_vars = function
             | Miniml.Tglob (r, args, _) ->
               globref_equal r ref_name
@@ -4351,9 +4412,63 @@ let gen_ind_header_v2
             let skip g = GlobRef.CanOrd.equal g name in
             render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
           in
-          (** Build drain statements for classified fields.  [Direct] fields get
-              a simple [push_back(std::move(field))].  [List g] fields with a
-              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
+          (* Expand a [Drain "..."] template for a custom container field into a
+             statement list. [%scrut] -> the container field expression [scrut];
+             [%yield(e)] -> a structured [push_back(make_rc<Self>(e))] onto the
+             worklist. The template is split into raw chunks around the structured
+             pushes so that the [_stack] reference is a real [CPPvar] the lambda
+             capture-analysis can see (a fully-raw body would collapse to an
+             empty [[]] capture). [%yield]'s argument is captured with
+             balanced-paren matching, so it may itself contain parentheses
+             (e.g. [std::move(%scrut.front())]). *)
+          let expand_drain_template ~scrut ~self tmpl =
+            let subst s = Common.render_template [("%scrut", scrut)] s in
+            let n = String.length tmpl in
+            let yield = "%yield(" in
+            let yl = String.length yield in
+            let stmts = ref [] in
+            let buf = Buffer.create 64 in
+            let flush_raw () =
+              if Buffer.length buf > 0 then begin
+                stmts := Sraw (subst (Buffer.contents buf)) :: !stmts;
+                Buffer.clear buf
+              end
+            in
+            let i = ref 0 in
+            while !i < n do
+              if !i + yl <= n && String.equal (String.sub tmpl !i yl) yield
+              then begin
+                let j = ref (!i + yl) in
+                let depth = ref 1 in
+                while !j < n && !depth > 0 do
+                  (match tmpl.[!j] with
+                   | '(' -> incr depth
+                   | ')' -> decr depth
+                   | _ -> ());
+                  if !depth > 0 then incr j
+                done;
+                let arg = String.sub tmpl (!i + yl) (!j - (!i + yl)) in
+                flush_raw ();
+                stmts :=
+                  Sexpr (CPPdot_method_call (
+                    CPPvar _stack_id,
+                    Id.of_string "push_back",
+                    [CPPraw (
+                       Table.make_shared_name () ^ "<" ^ self ^ ">("
+                       ^ subst arg ^ ")")]))
+                  :: !stmts;
+                i := !j + 1
+              end else begin
+                Buffer.add_char buf tmpl.[!i];
+                incr i
+              end
+            done;
+            flush_raw ();
+            List.rev !stmts
+          in
+          (* Build drain statements for classified fields.  [Direct] fields get
+             a simple [push_back(std::move(field))].  [List g] fields with a
+             custom mapping (e.g. std::deque) iterate elements onto the stack. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
               let fe = CPParrow (CPPvar _alt_id, field_id) in
@@ -4382,6 +4497,15 @@ let gen_ind_header_v2
                    deferred here; bounded call-stack depth is the property that
                    matters for the adversarial-depth attack. *)
                 if Table.is_custom list_g then
+                  (* A [Drain "..."] clause on the custom container mapping spells
+                     out how to iteratively yield children -- required for bare
+                     value-type containers (deque, immer::flex_vector) that have
+                     no [use_count]/[reset]. Without it we fall back to assuming a
+                     smart-pointer-wrapped container. *)
+                  begin match Table.find_custom_drain_opt list_g with
+                  | Some tmpl ->
+                    expand_drain_template ~scrut:fes ~self:ss tmpl
+                  | None ->
                   [Sif_then (
                     CPPbinop ("&&", fe,
                       CPPbinop ("==",
@@ -4396,6 +4520,7 @@ let gen_ind_header_v2
                            ^ ">(std::move(_elem))")]));
                       Sraw "}";
                       Sraw (fes ^ ".reset();") ])]
+                  end
                 else
                   let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
@@ -4435,15 +4560,15 @@ let gen_ind_header_v2
                       Sraw (fes ^ ".reset();") ])]
               | _ -> []) classified_fields
           in
-          (** For each constructor, classify recursive fields and build an
-              [Sif_decl] that uses [get_if] to test the variant alternative
-              and drain recursive fields onto the stack.  Returns [Some stmt]
-              for constructors with recursive fields, [None] otherwise.
+          (* For each constructor, classify recursive fields and build an
+             [Sif_decl] that uses [get_if] to test the variant alternative
+             and drain recursive fields onto the stack.  Returns [Some stmt]
+             for constructors with recursive fields, [None] otherwise.
 
-              @param parent_ty    type to qualify the constructor in [get_if]
-              @param ctor_opt     [Some ctor_id] for qualified access
-                                  ([typename Parent::Ctor]), [None] for bare
-              @param variant_var  identifier of the variant to test *)
+             [parent_ty]    type to qualify the constructor in [get_if]
+             [ctor_opt]     [Some ctor_id] for qualified access
+                            ([typename Parent::Ctor]), [None] for bare
+             [variant_var]  identifier of the variant to test *)
           let mk_ctor_drain parent_ty ctor_opt variant_var i tys_list cnames_arr =
             let classified_fields =
               List.filter_map
@@ -4498,7 +4623,8 @@ let gen_ind_header_v2
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = Tshared_ptr self_ty in
             let stack_ty =
-              Tid_external (Id.of_string_soft "std::vector", [stack_elem_ty])
+              Table.mark_needs_small_vector ();
+              Tid_external (Id.of_string_soft "crane::small_vector", [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
@@ -4509,6 +4635,12 @@ let gen_ind_header_v2
             let body =
               [ Sasgn (_stack_id, Some stack_ty,
                   CPPbraced []);
+                (* Most drains only ever hold a handful of pending nodes at
+                   once (worklist depth tracks tree height, not size), so
+                   [crane::small_vector] keeps the first 8 elements inline
+                   with no heap allocation at all, spilling to a heap
+                   std::vector only if a destructor happens to drain a
+                   worklist deeper than that. *)
                 Sasgn (_drain_id, Some Tauto, drain_lambda);
                 Sexpr (CPPfun_call (CPPvar _drain_id,
                   [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
@@ -4537,7 +4669,8 @@ let gen_ind_header_v2
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
-              Tid_external (Id.of_string_soft "std::vector", [Tany])
+              Table.mark_needs_small_vector ();
+              Tid_external (Id.of_string_soft "crane::small_vector", [Tany])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
@@ -4545,10 +4678,10 @@ let gen_ind_header_v2
                 [(Tref variant_t_ty, Some _v_id)],
                 None, drain_stmts, false)
             in
-            (** Build the per-partner drain logic used inside the while loop.
-                For each partner type, generates an [Sif_decl] that casts the
-                [std::any] stack entry to [shared_ptr<Partner>], then drains
-                the partner's recursive fields into the shared stack. *)
+            (* Build the per-partner drain logic used inside the while loop.
+               For each partner type, generates an [Sif_decl] that casts the
+               [std::any] stack entry to [shared_ptr<Partner>], then drains
+               the partner's recursive fields into the shared stack. *)
             let gen_partner_branch (pname, pcnames, ptys, _) =
               let partner_ty = Tglob (pname, ty_vars, []) in
               let partner_drains =
@@ -4805,12 +4938,14 @@ let gen_ind_header_v2
                   if inner = api_ty then arg
                   else gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:inner arg
                 in
-                (* Arena mode: the field is a raw arena pointer, so allocate the
-                   node in the ambient arena instead of make_shared. *)
-                if arena_ok then begin
-                  Table.mark_needs_arena ();
-                  CPPfun_call (CPParena_alloc inner, [converted])
-                end
+                (* Scoped-arena redesign: a single unified factory call.  For
+                   arena-eligible types this is the runtime-arena-aware factory
+                   ([CPParena_make]: crane::rc<T>::make / crane::arena_make_shared)
+                   which bump-allocates only when a scope is open and otherwise
+                   is exactly make_shared/make_rc; NoArena / coinductive / mutual
+                   types keep the plain factory. *)
+                if arena_runtime_ok then
+                  CPPfun_call (CPParena_make inner, [converted])
                 else
                   CPPfun_call (CPPmk_shared inner, [converted])
               | _ when storage_ty = api_ty ->
@@ -4830,7 +4965,66 @@ let gen_ind_header_v2
             VPublic,
             SCreators )
         in
-        [primary]
+        (* Perceus reuse factory (Crane Reuse): a variant [<ctor>__reuse] that
+           takes a leading reuse-token parameter [_tok] and, for the single
+           recursive field, allocates via [crane::make_rc_reusing(_tok, ...)]
+           instead of make_shared/arena_make — recycling the token's cell in
+           place when it is uniquely owned.  Only for NonAtomicRc (crane::rc
+           carries the reusable control block) and single-recursive-field,
+           non-coinductive constructors; the caller (a reuse-eligible match arm)
+           threads a matched, uniquely-owned recursive child as the token. *)
+        let n_rec_fields =
+          List.length
+            (List.filter
+               (fun (_, storage_ty, _) ->
+                 match storage_ty with Tshared_ptr _ -> true | _ -> false)
+               cpp_tys )
+        in
+        let reuse_factory =
+          if Table.reuse () && Table.non_atomic_rc ()
+             && (not is_coinductive) && n_rec_fields = 1
+          then
+              let tok_id = Id.of_string "_tok" in
+              let rec_inner =
+                List.find_map
+                  (fun (_, storage_ty, _) ->
+                    match storage_ty with
+                    | Tshared_ptr inner -> Some inner
+                    | _ -> None )
+                  cpp_tys
+                |> Option.get
+              in
+              let reuse_params =
+                (tok_id, Tshared_ptr rec_inner) :: params
+              in
+              let reuse_ctor_args =
+                List.map
+                  (fun a ->
+                    match a with
+                    | CPPfun_call (CPPmk_shared inner, cargs)
+                    | CPPfun_call (CPParena_make inner, cargs) ->
+                      (* CPPfun_call args print reversed (List.rev), and
+                         make_rc_reusing takes the token FIRST — so the token
+                         must be the LAST list element to print first. *)
+                      CPPfun_call
+                        (CPPmk_reuse inner, cargs @ [CPPmove (CPPvar tok_id)])
+                    | other -> other )
+                  ctor_args
+              in
+              let reuse_struct =
+                CPPstruct_id (Id.of_string cname, [], reuse_ctor_args)
+              in
+              let reuse_body = [Sreturn (Some (wrap_expr reuse_struct))] in
+              [ ( Ffundef
+                    ( Id.of_string (fname ^ "__reuse"),
+                      Tmod (TMstatic, ret_ty),
+                      reuse_params,
+                      reuse_body ),
+                  VPublic,
+                  SCreators ) ]
+          else []
+        in
+        primary :: reuse_factory
       in
       let factory_methods =
         List.flatten
@@ -4891,6 +5085,11 @@ let gen_ind_header_v2
           []
       in
 
+      (* Scoped-arena redesign: the old [arena_deep_copy_ctor] (which
+         deep-copied every recursive raw-pointer field on copy, the
+         source of the composite-hang failure mode) is gone entirely.  Recursive
+         fields are now ordinary refcounted smart pointers, so the normal copy
+         path is already correct and O(1) per node. *)
       let value_copy_clone_methods =
         if is_coinductive then
           []
@@ -4899,12 +5098,11 @@ let gen_ind_header_v2
             let all_fields_empty =
               Array.for_all (fun tys_list -> tys_list = []) tys
             in
-            (* Arena mode (first slice): suppress the cross-instantiation
-               converting constructor.  Its deep-copy path still uses make_shared
-               into what are now raw arena-pointer fields; value copies use the
-               default shallow copy (correct: arena values are immutable and
-               share the region).  Arena-aware conversion is future work. *)
-            if vars = [] || all_fields_empty || arena_ok then []
+            (* Scoped-arena redesign: arena-backed types are now ordinary
+               recursive smart-pointer types, so the cross-instantiation
+               converting constructor is generated for them exactly as for any
+               other polymorphic recursive type (no special arena suppression). *)
+            if vars = [] || all_fields_empty then []
             else
               let render_ty ty =
                 render_cpp_type_for_raw_template
@@ -5192,6 +5390,21 @@ let gen_ind_header_v2
         @ factory_methods
         @ lazy_factory
         @ iterative_destructor
+        (* A user-declared destructor (the iterative drain above) suppresses the
+           implicit move ctor/assign, which silently turns every [std::move] of
+           this value into a refcount-bumping copy.  Re-default all copy/move
+           special members so moves stay cheap (and Perceus reuse can observe
+           [use_count()==1]).  Emitted whenever we declare a custom destructor,
+           for every extraction: the suppression is a property of the *type*,
+           so reuse-off code pays the same needless refcount traffic that reuse
+           needs eliminated.  Restoring real moves does expose code that reads
+           a value after moving from it -- the loopify fix-ups (invariant
+           parameters are never moved from, and neither are prvalues or
+           borrowed cells) exist because the copy fallback used to hide exactly
+           those bugs. *)
+        @ (match iterative_destructor with
+           | _ :: _ -> [(Fdefaulted_special_members, VPublic, SManipulators)]
+           | [] -> [])
         @ v_mut_accessor
         @ method_manipulators
         @ [v_accessor]

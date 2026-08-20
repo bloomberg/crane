@@ -1,0 +1,51 @@
+# Provenance for the parse-a-lot benchmark corpora.
+#
+# Each format's raw data is a git submodule under ../corpus-src/<fmt>, pinned to
+# the commit below. `make stage-data` curates each source into a flat,
+# parser-acceptable corpus under $(DATA)/<FMT>/{Instances,SmallInstances}; the
+# staged files are gitignored (regenerated on demand), so this manifest + the
+# pinned submodules are the reproducible source of truth. Verify the pins with
+# `git submodule status`.
+
+[format.json]
+source       = "unitedstates/congress-legislators"
+url          = "https://github.com/unitedstates/congress-legislators.git"
+submodule    = "libraries/parse-a-lot-bench/corpus-src/json"
+commit       = "55eac087b0333bdabf88114ea30903c3cd59dde8"  # branch main
+license      = "CC0-1.0"
+license_file = "corpus-src/json/LICENSE"
+# The repo commits YAML (legislators-historical.yaml); stage_data.py converts it
+# to a JSON array (yq/ruby/pyyaml), drops non-ASCII members, and emits
+# increasing-length prefixes legislators_NNNN.json as a size ladder (~4KB-500KB).
+# This is the same dataset the original parse-a-lot corpus used (legislators_*.json).
+curation     = "yaml->json array; ASCII-only members; size-ladder prefixes; accepted by run_json.exe"
+
+[format.csv]
+source       = "tinytoolkit-org/csv-datasets"
+url          = "https://github.com/tinytoolkit-org/csv-datasets.git"
+submodule    = "libraries/parse-a-lot-bench/corpus-src/csv"
+commit       = "e661b80024ba35360dba2057f27706534aea6ea1"  # branch main
+license      = "CC0-1.0"
+license_file = "corpus-src/csv/LICENSE"
+# The RFC-4180 grammar is comma-only + ASCII. stage_data.py keeps comma-delimited,
+# pure-ASCII files from classic/, tabular/, logs/ (drops semicolon files like
+# wine-quality, BOM/UTF-8 files, and the broken/ + generators/ dirs), plus
+# line-boundary prefixes of the largest file to fill smaller size classes.
+curation     = "comma+ASCII+RFC4180 only; drop broken/generators; size-ladder slices; accepted by run_csv.exe"
+
+[format.xml]
+source       = "oanc/masc"  # MASC: Manually Annotated Sub-Corpus (Open ANC)
+url          = "https://github.com/oanc/masc.git"
+submodule    = "libraries/parse-a-lot-bench/corpus-src/xml"
+commit       = "7a718b01af317f7ed8e330b0edd8db30c162da24"  # branch master
+# No SPDX/OSI license file. Redistribution rests on the ANC distributor terms:
+# metadata/MASC3-resource-header.xml declares <availability status="free"/> with
+# distributors "American National Corpus Project" and "Linguistic Data Consortium".
+# MASC is the same GrAF/XCES stand-off annotation corpus family the original
+# parse-a-lot XML corpus was drawn from (cf. its journal.pbio.*-np.xml files).
+license      = "ANC free-availability terms (non-SPDX)"
+license_file = "corpus-src/xml/metadata/MASC3-resource-header.xml"  # <availability status='free'>
+# The XML grammar is element-only (no text nodes, comments, CDATA, DOCTYPE, or
+# entity refs). stage_data.py keeps pure-ASCII, element-only GrAF files (e.g. the
+# NounChunk/NP/VP/Sentence annotation layers) accepted by run_xml.exe.
+curation     = "element-only+ASCII GrAF files; no text/comment/CDATA/DOCTYPE/entity; accepted by run_xml.exe"

@@ -104,8 +104,8 @@ end
 val type_mem_kn : MutInd.t -> ml_type -> bool
 
 (** Return the maximum type variable index in a type.
-    @return the largest [i] such that [Tvar i] or [Tvar' i] occurs in [t],
-            or [0] if no type variable is present *)
+    @return the largest [i] such that [Tvar i] occurs in [t], or [0] if none
+            does. [Tvar'] (generalizable) nodes are not considered. *)
 val type_maxvar : ml_type -> int
 
 (** Decompose an ML type into a list of argument types and a result type.

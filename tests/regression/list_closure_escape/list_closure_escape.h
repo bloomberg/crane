@@ -1,12 +1,12 @@
 #ifndef INCLUDED_LIST_CLOSURE_ESCAPE
 #define INCLUDED_LIST_CLOSURE_ESCAPE
 
+#include "small_vector.h"
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct ListClosureEscape {
   struct tree {
@@ -42,7 +42,7 @@ struct ListClosureEscape {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::shared_ptr<tree>> _stack = {};
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a0) {
@@ -62,6 +62,11 @@ struct ListClosureEscape {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -150,7 +155,7 @@ struct ListClosureEscape {
 
     // MANIPULATORS
     ~fn_list() {
-      std::vector<std::shared_ptr<fn_list>> _stack = {};
+      crane::small_vector<std::shared_ptr<fn_list>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a1) {
@@ -167,6 +172,11 @@ struct ListClosureEscape {
         }
       }
     }
+
+    fn_list(const fn_list &) = default;
+    fn_list &operator=(const fn_list &) = default;
+    fn_list(fn_list &&) noexcept = default;
+    fn_list &operator=(fn_list &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

@@ -1,12 +1,12 @@
 #ifndef INCLUDED_LARGE_MUTUAL
 #define INCLUDED_LARGE_MUTUAL
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct LargeMutual {
   struct stmt;
@@ -82,7 +82,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~stmt() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SAssign>(&_v)) {
           if (_alt->a1) {
@@ -205,6 +205,11 @@ struct LargeMutual {
       }
     }
 
+    stmt(const stmt &) = default;
+    stmt &operator=(const stmt &) = default;
+    stmt(stmt &&) noexcept = default;
+    stmt &operator=(stmt &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -279,7 +284,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~expr() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<EAdd>(&_v)) {
           if (_alt->a0) {
@@ -402,6 +407,11 @@ struct LargeMutual {
       }
     }
 
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -492,7 +502,7 @@ struct LargeMutual {
 
     // MANIPULATORS
     ~bexpr() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BEq>(&_v)) {
           if (_alt->a0) {
@@ -614,6 +624,11 @@ struct LargeMutual {
         }
       }
     }
+
+    bexpr(const bexpr &) = default;
+    bexpr &operator=(const bexpr &) = default;
+    bexpr(bexpr &&) noexcept = default;
+    bexpr &operator=(bexpr &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

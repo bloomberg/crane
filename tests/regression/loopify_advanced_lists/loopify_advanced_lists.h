@@ -2,13 +2,13 @@
 #define INCLUDED_LOOPIFY_ADVANCED_LISTS
 
 #include "crane_fn.h"
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -80,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -98,18 +98,37 @@ public:
     }
   }
 
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -133,15 +152,14 @@ struct LoopifyAdvancedLists {
       const List<uint64_t> *l;
     };
 
-    /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      List<uint64_t> _s0;
+      List<uint64_t> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     List<uint64_t> _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified flat_map: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -154,12 +172,12 @@ struct LoopifyAdvancedLists {
           _result = List<uint64_t>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-          _stack.emplace_back(_Resume_Cons{std::move(f(a0))});
+          _stack.emplace_back(_Resume_Cons{f(a0)});
           _stack.emplace_back(_Enter{crane_raw(a1)});
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_f._s0).app(std::move(_result));
+        _result = std::move(_f.a0).app(std::move(_result));
       }
     }
     return _result;
@@ -183,8 +201,7 @@ struct LoopifyAdvancedLists {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified all_satisfy: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {
@@ -226,8 +243,7 @@ struct LoopifyAdvancedLists {
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
     bool _result{};
-    std::vector<_Frame> _stack;
-    _stack.reserve(8);
+    crane::small_vector<_Frame> _stack;
     _stack.emplace_back(_Enter{&l});
     /// Loopified any_satisfy: _Enter -> _Resume_Cons.
     while (!_stack.empty()) {

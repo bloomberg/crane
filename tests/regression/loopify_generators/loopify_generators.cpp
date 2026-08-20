@@ -16,8 +16,7 @@ List<uint64_t> LoopifyGenerators::cycle(
 
   using _Frame = std::variant<_Enter, _Resume_m>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified cycle: _Enter -> _Resume_m.
   while (!_stack.empty()) {
@@ -132,8 +131,7 @@ uint64_t LoopifyGenerators::len_impl(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified len_impl: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -181,8 +179,7 @@ List<uint64_t> LoopifyGenerators::build_list_fuel(
 
   using _Frame = std::variant<_Enter, _Cont__x>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n, fuel});
   /// Loopified build_list_fuel: _Enter -> _Cont__x.
   while (!_stack.empty()) {
@@ -319,8 +316,7 @@ List<uint64_t> LoopifyGenerators::replicate_each(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified replicate_each: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

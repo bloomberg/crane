@@ -27,8 +27,7 @@ List<uint64_t> QuicksortFun::quicksort_fun(
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{x});
   /// Loopified quicksort_fun: _Enter -> _After_Cons -> _Combine_Cons.
   while (!_stack.empty()) {
@@ -44,10 +43,11 @@ List<uint64_t> QuicksortFun::quicksort_fun(
         const auto &[_inl_a0, _inl_a1] =
             std::get<typename List<uint64_t>::Cons>(_inl_l.v());
         const List<uint64_t> &_inl_a1_value = *_inl_a1;
-        _stack.emplace_back(_After_Cons{
-            std::move(_inl_a1_value.filter(
-                [=](uint64_t _inl_x) mutable { return _inl_x < _inl_a0; })),
-            List<uint64_t>::cons(_inl_a0, List<uint64_t>::nil())});
+        _stack.emplace_back(
+            _After_Cons{_inl_a1_value.filter([=](uint64_t _inl_x) mutable {
+                          return _inl_x < _inl_a0;
+                        }),
+                        List<uint64_t>::cons(_inl_a0, List<uint64_t>::nil())});
         _stack.emplace_back(_Enter{_inl_a1_value.filter(
             [=](uint64_t _inl_x) mutable { return _inl_a0 <= _inl_x; })});
       }
@@ -79,8 +79,7 @@ std::string QuicksortFun::list_to_string_helper(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   std::string _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified list_to_string_helper: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

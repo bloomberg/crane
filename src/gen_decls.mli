@@ -1,8 +1,16 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** Declaration-level C++ code generation: inductives, records, typeclasses,
-    instances, and top-level function definitions. Depends on the
-    expression-level codegen in {!Translation}. *)
+(** Declaration-level C++ code generation from extracted MiniML.
+
+    This module turns Coq/MiniML declarations into {!Minicpp} C++ declarations:
+    inductive types (both the older make-function style and the v2 encapsulated
+    struct-with-methods style), records, typeclass concepts, typeclass
+    instances, and top-level (possibly mutually recursive) function definitions
+    and their forward-declaration specs for header emission.
+
+    It sits above the expression-level codegen in {!Translation} (which it uses
+    to lower function bodies) and below {!Cpp}, which drives the whole pipeline
+    and consumes the declarations produced here. *)
 
 open Common
 open Miniml

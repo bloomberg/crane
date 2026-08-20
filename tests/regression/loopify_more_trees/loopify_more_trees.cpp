@@ -23,8 +23,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::mirror(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   LoopifyMoreTrees::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified mirror: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -78,8 +77,7 @@ bool LoopifyMoreTrees::same_shape(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   bool _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t2, &t1});
   /// Loopified same_shape: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -149,8 +147,7 @@ List<uint64_t> LoopifyMoreTrees::tree_to_list(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -208,8 +205,7 @@ uint64_t LoopifyMoreTrees::count_nodes(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified count_nodes: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -269,8 +265,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   LoopifyMoreTrees::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(t2), std::move(t1)});
   /// Loopified tree_max: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -332,8 +327,7 @@ uint64_t LoopifyMoreTrees::sum_of_max_branches(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified sum_of_max_branches: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -386,8 +380,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::insert_bst(
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
   LoopifyMoreTrees::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified insert_bst: _Enter -> _Resume1 -> _Resume2.
   while (!_stack.empty()) {
@@ -436,8 +429,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::build_bst(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   LoopifyMoreTrees::tree _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified build_bst: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -500,8 +492,7 @@ List<uint64_t> LoopifyMoreTrees::flatten(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&ll});
   /// Loopified flatten: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
@@ -611,8 +602,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   List<LoopifyMoreTrees::tree> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&lt});
   /// Loopified concat_map_children: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {

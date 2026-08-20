@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAT_BDE
 #define INCLUDED_NAT_BDE
 
+#include "small_vector.h"
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -41,7 +42,7 @@ public:
   static Nat s(Nat n) { return Nat(S{bsl::make_shared<Nat>(bsl::move(n))}); }
   // MANIPULATORS
   ~Nat() {
-    bsl::vector<bsl::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<bsl::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = bsl::get_if<S>(&_v)) {
         if (_alt->d_n) {
@@ -58,6 +59,10 @@ public:
       }
     }
   }
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
   inline variant_t &v_mut() { return d_v_; }
   // ACCESSORS
   const variant_t &v() const { return d_v_; }

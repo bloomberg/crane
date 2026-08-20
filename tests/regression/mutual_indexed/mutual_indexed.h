@@ -1,12 +1,12 @@
 #ifndef INCLUDED_MUTUAL_INDEXED
 #define INCLUDED_MUTUAL_INDEXED
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct MutualIndexed {
   struct EvenTree;
@@ -44,7 +44,7 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~EvenTree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ENode>(&_v)) {
           if (_alt->a2) {
@@ -74,6 +74,11 @@ struct MutualIndexed {
         }
       }
     }
+
+    EvenTree(const EvenTree &) = default;
+    EvenTree &operator=(const EvenTree &) = default;
+    EvenTree(EvenTree &&) noexcept = default;
+    EvenTree &operator=(EvenTree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -107,7 +112,7 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~OddTree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {
           if (_alt->a2) {
@@ -137,6 +142,11 @@ struct MutualIndexed {
         }
       }
     }
+
+    OddTree(const OddTree &) = default;
+    OddTree &operator=(const OddTree &) = default;
+    OddTree(OddTree &&) noexcept = default;
+    OddTree &operator=(OddTree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

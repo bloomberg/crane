@@ -113,6 +113,12 @@ type translation_ctx = {
   (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
      for Scustom_case scrutinee caching. Reset at function boundaries. *)
   mutable cs_counter : int;
+  (* Perceus reuse: when [Some (tok, ctor)] a reuse token [tok] (a moved,
+     uniquely-owned matched recursive child) is available for the next
+     [MLcons] of constructor [ctor]; that MLcons emits [<ctor>__reuse(tok, ...)]
+     instead of the normal factory, then clears this. Set only inside a
+     use_count()==1-guarded reuse arm in gen_cpp_case. *)
+  mutable pending_reuse_token : (cpp_expr * Names.GlobRef.t) option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns
      argument of convert_ml_type_to_cpp_type so that self-refs inside
@@ -179,6 +185,7 @@ let tctx =
     itree_mode = Sequential;
     eta_keep_moves = false;
     cs_counter = 0;
+    pending_reuse_token = None;
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
@@ -188,10 +195,15 @@ let tctx =
     cpp_erased_type_env = IntMap.empty;
   }
 
+(** Accessors for {!translation_ctx.current_type_vars}: the template type
+    variables in scope for the function currently being translated. *)
 let set_current_type_vars (tvars : Id.t list) = tctx.current_type_vars <- tvars
 let get_current_type_vars () = tctx.current_type_vars
 let clear_current_type_vars () = tctx.current_type_vars <- []
 
+(** Accessors for {!translation_ctx.current_param_types}: the 1-indexed
+    parameter types of the current function, used to recover erased type info
+    at call sites. [set_current_param_types] assigns the 1-based indices. *)
 let set_current_param_types (params : (Id.t * ml_type) list) =
   tctx.current_param_types <- List.mapi (fun i (_, ty) -> (i + 1, ty)) params
 
@@ -200,6 +212,8 @@ let get_param_type_by_index (idx : int) : ml_type option =
 
 let clear_current_param_types () = tctx.current_param_types <- []
 
+(** The defining [GlobRef.t] of a lifted declaration, if it has one.
+    Used by {!add_lifted_decl} to deduplicate identical hoisted helpers. *)
 let lifted_decl_ref = function
   | Dtemplate (_, _, Dfundef ((r, _) :: _, _, _, _, _)) -> Some r
   | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
@@ -248,6 +262,8 @@ let push_env_types (ids : (Id.t * ml_type) list) =
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
 let get_env_type (i : int) : ml_type = snd (List.nth tctx.env_types (pred i))
 
+(** Like {!get_env_type} but returns [None] instead of raising when [i] is out
+    of range (or non-positive). *)
 let get_env_type_opt (i : int) : ml_type option =
   if i <= 0 then None
   else match List.nth_opt tctx.env_types (pred i) with

@@ -1,13 +1,13 @@
 #ifndef INCLUDED_ROCQ_BUG_13581
 #define INCLUDED_ROCQ_BUG_13581
 
+#include "small_vector.h"
 #include <any>
 #include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -40,7 +40,7 @@ public:
 
   // MANIPULATORS
   ~Nat() {
-    std::vector<std::shared_ptr<Nat>> _stack = {};
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0) {
@@ -57,6 +57,11 @@ public:
       }
     }
   }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -134,7 +139,7 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~I() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<D>(&_v)) {
           if (_alt->a0) {
@@ -164,6 +169,11 @@ struct RocqBug13581 {
         }
       }
     }
+
+    I(const I &) = default;
+    I &operator=(const I &) = default;
+    I(I &&) noexcept = default;
+    I &operator=(I &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -200,7 +210,7 @@ struct RocqBug13581 {
 
     // MANIPULATORS
     ~J() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<E>(&_v)) {
           if (_alt->a0) {
@@ -230,6 +240,11 @@ struct RocqBug13581 {
         }
       }
     }
+
+    J(const J &) = default;
+    J &operator=(const J &) = default;
+    J(J &&) noexcept = default;
+    J &operator=(J &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

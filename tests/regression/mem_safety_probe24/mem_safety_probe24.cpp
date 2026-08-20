@@ -15,8 +15,7 @@ uint64_t MemSafetyProbe24::sum_list(
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&l});
   /// Loopified sum_list: _Enter -> _Resume_Mycons.
   while (!_stack.empty()) {
@@ -66,8 +65,7 @@ MemSafetyProbe24::mylist<uint64_t> MemSafetyProbe24::tree_to_list(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe24::mylist<uint64_t> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t});
   /// Loopified tree_to_list: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {
@@ -152,8 +150,7 @@ MemSafetyProbe24::zip_trees(
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
   MemSafetyProbe24::mylist<std::pair<uint64_t, uint64_t>> _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{&t2, &t1});
   /// Loopified zip_trees: _Enter -> _After_Node -> _Combine_Node.
   while (!_stack.empty()) {

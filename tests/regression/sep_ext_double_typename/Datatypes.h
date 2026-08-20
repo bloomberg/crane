@@ -1,12 +1,12 @@
 #ifndef INCLUDED_DATATYPES
 #define INCLUDED_DATATYPES
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <utility>
 #include <variant>
-#include <vector>
 
 namespace Datatypes {
 
@@ -80,7 +80,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -97,6 +97,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

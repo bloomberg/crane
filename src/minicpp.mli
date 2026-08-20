@@ -1,21 +1,24 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(* Target language for extraction: a core C++ called MiniCpp.
+(** Target language for extraction: a core C++ called MiniCpp.
 
-   Crane's extraction pipeline has two intermediate representations:
+    Crane's extraction pipeline has two intermediate representations:
 
-   Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
-   --[cpp.ml]--> C++
+    {[ Rocq CIC --[extraction.ml]--> MiniML --[translation.ml]--> MiniCpp
+       --[cpp.ml]--> C++ ]}
 
-   MiniML (miniml.ml) handles type erasure, signature computation, and ML-level
-   optimizations on a language-agnostic functional AST. MiniCpp (this file)
-   captures C++-specific idioms: shared_ptr memory management,
-   std::variant, templates, concepts, namespaces, structs with visibility, move
-   semantics, enum classes, and constructors.
+    {!Miniml} handles type erasure, signature computation, and ML-level
+    optimizations on a language-agnostic functional AST.  MiniCpp (this file)
+    captures C++-specific idioms: [shared_ptr] memory management,
+    [std::variant], templates, concepts, namespaces, structs with visibility,
+    move semantics, enum classes, and constructors.  Every name is
+    pre-resolved ({!cpp_name}) and every inductive pre-classified
+    ({!cpp_ind_kind}) during {!Translation}, so {!Cpp} — the pretty-printer —
+    needs no name-resolution or type-analysis logic of its own.
 
-   See minicpp.ml for a detailed explanation of why both representations are
-   needed and cannot be merged. *)
+    See [minicpp.ml] for a detailed explanation of why both representations are
+    needed and cannot be merged. *)
 
 open Names
 
@@ -258,6 +261,22 @@ and cpp_expr =
   | CPParena_alloc of cpp_type
       (** crane::arena_alloc<T> factory: allocates a T in the ambient arena,
           returns raw T*.  Used like [CPPmk_shared] for arena-mode fields. *)
+  | CPParena_shared_alloc of cpp_type
+      (** crane::arena_shared_alloc<T> factory: allocates a T into T's single
+          thread-local shared capsule, returns a crane::capsule<T>. Used for
+          `Crane Arena Shared`-mode recursive-field allocation. *)
+  | CPParena_make of cpp_type
+      (** Runtime scoped-arena factory for a recursive field: renders to the
+          arena-aware make_shared/make_rc for the current pointer flavor
+          (crane::rc<T>::make / crane::arena_make_shared<T>), returning the same
+          smart-pointer type as the field.  Falls back to a plain heap
+          allocation at runtime when no arena scope is open. *)
+  | CPPmk_reuse of cpp_type
+      (** crane::make_rc_reusing<T> factory (Perceus reuse): first argument is a
+          reuse token (an rc<T> moved from a matched, uniquely-owned recursive
+          child); the rest construct the new T.  Recycles the token's cell in
+          place when it is the sole owner, else allocates.  Only emitted under
+          [Crane NonAtomicRc]. *)
   | CPPoverloaded of cpp_expr list
       (** Overloaded visitor set for variant matching *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
@@ -367,6 +386,12 @@ and cpp_field =
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
+  | Fdefaulted_special_members
+      (** Explicitly-defaulted copy/move constructors and assignment operators.
+          Emitted alongside a user-declared (iterative-drain) destructor, which
+          would otherwise suppress the implicit move operations — turning every
+          [std::move] of the value into a refcount-bumping copy and defeating
+          move semantics (and Perceus reuse). *)
   | Ftemplate_ctor of
       (template_type * Id.t) list
       * bool
@@ -484,13 +509,17 @@ val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
-(** [fold_expr_children f acc e] folds [f] over the immediate child
-    expressions of [e], threading [acc].  Mirrors {!iter_expr_children}.
-    @param f the folding function applied to each child expression
+(** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
+    children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
+    folds over child expressions and [on_stmts] over child statement lists
+    (e.g. a [CPPlambda] body), so lambda bodies are not silently skipped.
+    @param on_expr fold step for each immediate child expression
+    @param on_stmts fold step for each immediate child statement list
     @param acc the initial accumulator value
-    @return the final accumulator after visiting all child expressions *)
+    @return the final accumulator after visiting all children *)
 val fold_expr_children :
-  ('a -> cpp_expr -> 'a) -> 'a -> cpp_expr -> 'a
+  on_expr:('a -> cpp_expr -> 'a) -> on_stmts:('a -> cpp_stmt list -> 'a) ->
+  'a -> cpp_expr -> 'a
 
 (** [fold_stmt_children ~on_expr ~on_stmts acc s] folds over the immediate
     children of [s], threading [acc].  Mirrors {!iter_stmt_children}.

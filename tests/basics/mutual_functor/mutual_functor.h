@@ -1,13 +1,13 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include "small_vector.h"
 #include <any>
 #include <concepts>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename M>
 concept Elem = requires {
@@ -58,7 +58,7 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~tree() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a1) {
@@ -91,6 +91,11 @@ template <Elem E> struct MutualTree {
         }
       }
     }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -130,7 +135,7 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~forest() {
-      std::vector<std::any> _stack = {};
+      crane::small_vector<std::any> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {
           if (_alt->a0) {
@@ -163,6 +168,11 @@ template <Elem E> struct MutualTree {
         }
       }
     }
+
+    forest(const forest &) = default;
+    forest &operator=(const forest &) = default;
+    forest(forest &&) noexcept = default;
+    forest &operator=(forest &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 

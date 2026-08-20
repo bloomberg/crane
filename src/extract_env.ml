@@ -748,6 +748,17 @@ let spec_header si () =
       (str "")
       (himports @ imps)
   in
+  (* [Set Crane Arena] master switch.  Defined before the runtime headers
+     (arena.h / rc.h) are pulled in below so rc.h's arena-backed control-block
+     fields and its [arena.h] include are compiled in.  When the switch is off
+     this line is absent and rc.h compiles with no arena machinery at all,
+     keeping the runtime minimal for programs that never use an arena. *)
+  let h =
+    if Table.arena_enabled () then
+      h ++ str "#define CRANE_ARENA 1" ++ fnl ()
+    else
+      h
+  in
   let h =
     if Table.has_any_coinductive () then
       h ++ mk_include_quoted "lazy.h" ++ fnl ()
@@ -794,6 +805,16 @@ let spec_header si () =
        && not (List.exists (fun s -> String.equal s "rc.h") (himports @ imps))
     then
       h ++ mk_include_quoted "rc.h" ++ fnl ()
+    else
+      h
+  in
+  (* [crane::small_vector] (the small-buffer-optimized destructor drain
+     worklist) lives in small_vector.h. *)
+  let h =
+    if Table.needs_small_vector ()
+       && not (List.exists (fun s -> String.equal s "small_vector.h") (himports @ imps))
+    then
+      h ++ mk_include_quoted "small_vector.h" ++ fnl ()
     else
       h
   in
@@ -1037,6 +1058,10 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   Buffer.clear buf;
   let d = descr () in
   reset_renaming_tables AllButExternal;
+  (* The mutual-recursion registry is scoped to one compilation unit; clear it
+     before this unit's dry run repopulates it (see loopify.ml). *)
+  Loopify.clear_mutual_table ();
+  Loopify.clear_outcomes ();
   let unsafe_needs =
     {
       mldummy = struct_ast_search Mlutil.isMLdummy struc;
@@ -1072,6 +1097,11 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   (* [crane_erase_fn] is emitted on demand; translation sets the flag when it
      wraps a non-lambda function value stored into an erased field. *)
   Table.reset_needs_erase_fn ();
+  (* [arena.h] / [small_vector.h] includes are gated on flags marked during
+     this structure's dry run (loopify/inductive codegen).  Reset them here so
+     one file's needs don't leak into a later file in separate extraction. *)
+  Table.reset_needs_arena ();
+  Table.reset_needs_small_vector ();
   (* First, a dry run, for computing objects to rename or duplicate.
      Also accumulates needed standard headers via require_header. *)
   Common.reset_needed_headers ();
@@ -1187,7 +1217,13 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   if not (Int.equal (Buffer.length buf) 0) then (
     let formatted_output = format_buffer_to_string buf in
     Feedback.msg_notice (str formatted_output);
-    Buffer.reset buf )
+    Buffer.reset buf );
+  (* Loopify records an outcome per recursive function but reports nothing as
+     it goes: a function is transformed several times per unit (dry run, then
+     the header and implementation passes) and only the best of those outcomes
+     describes the code actually emitted.  Report now that they are all in, and
+     only for the real run -- the dry run's results are discarded. *)
+  if not dry then Loopify.report_outcomes ~unit_name:(match fn with Some f -> Filename.basename f | None -> "") ()
 
 (*********************************************)
 (** {2 Part III: the actual extraction commands} *)
@@ -1349,6 +1385,24 @@ let full_extraction_with_result ?(validate = true) ~opaque_access f lr after_pri
     .v file gets its own C++ output file. *)
 let separate_extraction ~opaque_access lr =
   init true false;
+  (* Run all per-unit cleanup in [~finally] so state is reset even when the
+     body aborts (e.g. the "from inside a module" [user_err] below). *)
+  Fun.protect
+    ~finally:(fun () ->
+      Cpp_state.clear_global_method_registry ();
+      Cpp_state.clear_valid_output_modules ();
+      Cpp_state.clear_global_unmerged ();
+      Common.clear_non_output_modules ();
+      reset () )
+  @@ fun () ->
+  (* Descend through applications/functors to the underlying struct body,
+     returning its substructure (or [] for a bare module identifier). *)
+  let rec module_substructs = function
+    | MEstruct (_, s) -> s
+    | MEapply (me, _) -> module_substructs me
+    | MEfunctor (_, _, me) -> module_substructs me
+    | MEident _ -> []
+  in
   let refs, mps = locate_ref lr in
   let struc =
     optimize_struct (refs, mps) (mono_environment ~opaque_access refs mps)
@@ -1430,28 +1484,7 @@ let separate_extraction ~opaque_access lr =
       match se with
       | SEmodule { ml_mod_expr = MEident _; _ } -> ()
       | SEmodule m ->
-        let subs = match m.ml_mod_expr with
-          | MEstruct (_, s) -> s
-          | MEapply (me, _) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) -> get_subs me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEident _ -> []
-          | MEfunctor (_, _, me) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) ->
-                let rec get2 = function
-                  | MEstruct (_, s) -> s | MEapply (m2, _) -> get2 m2
-                  | MEfunctor (_, _, m2) -> get2 m2 | MEident _ -> []
-                in get2 me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-        in
+        let subs = module_substructs m.ml_mod_expr in
         let has_funcs = List.exists (fun (_, se') ->
           match se' with
           | SEdecl (Dterm _ | Dfix _) -> true
@@ -1566,24 +1599,7 @@ let separate_extraction ~opaque_access lr =
           | _ -> ()
         in
         scan_functor_type_params modtype_table m.ml_mod_type;
-        let subs = match m.ml_mod_expr with
-          | MEstruct (_, s) -> s
-          | MEfunctor (_, _, me) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEapply (me2, _) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEapply (me, _) ->
-            let rec get_subs = function
-              | MEstruct (_, s) -> s
-              | MEapply (me2, _) -> get_subs me2
-              | MEfunctor (_, _, me2) -> get_subs me2
-              | MEident _ -> []
-            in get_subs me
-          | MEident _ -> []
-        in
+        let subs = module_substructs m.ml_mod_expr in
         pre_scan_meyers_singletons ~in_template:sub_in_template subs
       | _ -> ()
     ) sel
@@ -1670,12 +1686,7 @@ let separate_extraction ~opaque_access lr =
   ) struc;
   set_phase Impl;
   Common.mpfiles_restore saved_mpfiles;
-  List.iter print struc;
-  Cpp_state.clear_global_method_registry ();
-  Cpp_state.clear_valid_output_modules ();
-  Cpp_state.clear_global_unmerged ();
-  Common.clear_non_output_modules ();
-  reset ()
+  List.iter print struc
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
     \verb!Extraction! [qualid]} *)
@@ -1686,14 +1697,14 @@ let simple_extraction ~opaque_access r =
   | ([], [mp]) as p -> full_extr opaque_access None p
   | [r], [] ->
     init false false;
-    let struc =
-      optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
-    in
-    warns ();
-    if is_any_custom r then
-      Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
-    print_structure_to_file (mono_filename None) false struc;
-    reset ()
+    Fun.protect ~finally:reset (fun () ->
+        let struc =
+          optimize_struct ([r], []) (mono_environment ~opaque_access [r] [])
+        in
+        warns ();
+        if is_any_custom r then
+          Feedback.msg_notice (str "/* User defined extraction */" ++ fnl ());
+        print_structure_to_file (mono_filename None) false struc )
   | _ -> assert false
 
 (** {2 (Recursive) Extraction of a library. The vernacular command is
@@ -1703,6 +1714,7 @@ let simple_extraction ~opaque_access r =
     [is_rec] is true, recursively extracts all dependencies. *)
 let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
   init true true;
+  Fun.protect ~finally:reset @@ fun () ->
   let dir_m =
     let q = qualid_of_ident m in
     try Nametab.full_name_module q
@@ -1726,8 +1738,7 @@ let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
       print_structure_to_file (module_filename mp) dry [e]
     | _ -> assert false
   in
-  List.iter print struc;
-  reset ()
+  List.iter print struc
 
 (* Helper to detect if we're running under dune (for test output formatting).
    When INSIDE_DUNE=1 is set in the environment, we emit machine-parseable
@@ -1794,16 +1805,18 @@ let extract_and_compile ~opaque_access file l =
       if in_dune then
         emit_test_status "FAIL_EXTRACT" test_id_str source_file
       else
-        ignore
-          (CErrors.user_err
-             Pp.(
-               test_id
-               ++ spc ()
-               ++ str "failed to extract:"
-               ++ fnl ()
-               ++ str (Printexc.to_string exn)
-               ++ fnl ()
-               ++ str (Printexc.get_backtrace ()) ) );
+        (* Report but do not raise: [CErrors.user_err] would abort the whole
+           command, skipping cleanup and the final status report below, and
+           making the [false] here dead. *)
+        Feedback.msg_warning
+          Pp.(
+            test_id
+            ++ spc ()
+            ++ str "failed to extract:"
+            ++ fnl ()
+            ++ str (Printexc.to_string exn)
+            ++ fnl ()
+            ++ str (Printexc.get_backtrace ()) );
       false
   in
   if extraction_ok then (
@@ -1818,46 +1831,43 @@ let extract_and_compile ~opaque_access file l =
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               Pp.(
-                 test_id ++ spc () ++ str "extracted but clang cannot be found." ) );
+          Feedback.msg_warning
+            Pp.(
+              test_id ++ spc () ++ str "extracted but clang cannot be found." );
         false
       | Toolchain.ClangError (_exit_code, clang_errors) ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               ( if !Flags.quiet then
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but clang failed to compile." )
-                 else
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but clang failed to compile with:"
-                     ++ fnl ()
-                     ++ str clang_errors ) ) );
+          Feedback.msg_warning
+            ( if !Flags.quiet then
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but clang failed to compile." )
+              else
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but clang failed to compile with:"
+                  ++ fnl ()
+                  ++ str clang_errors ) );
         false
       | exn ->
         if in_dune then
           emit_test_status "FAIL_COMPILE" test_id_str source_file
         else
-          ignore
-            (CErrors.user_err
-               ( if !Flags.quiet then
-                   Pp.(
-                     test_id ++ spc () ++ str "extracted but failed to compile." )
-                 else
-                   Pp.(
-                     test_id
-                     ++ spc ()
-                     ++ str "extracted but failed to compile:"
-                     ++ fnl ()
-                     ++ str (Printexc.to_string exn) ) ) );
+          Feedback.msg_warning
+            ( if !Flags.quiet then
+                Pp.(
+                  test_id ++ spc () ++ str "extracted but failed to compile." )
+              else
+                Pp.(
+                  test_id
+                  ++ spc ()
+                  ++ str "extracted but failed to compile:"
+                  ++ fnl ()
+                  ++ str (Printexc.to_string exn) ) );
         false
     in
     (* Phase 3: Run test assertions (if any) embedded in the .v file *)
@@ -1871,7 +1881,11 @@ let extract_and_compile ~opaque_access file l =
     (* Clean up temporary files if this was a temp extraction *)
     if not (Option.has_some file) then (
       if Sys.file_exists filename then Sys.remove filename;
-      if Sys.file_exists base then Sys.remove base );
+      if Sys.file_exists base then Sys.remove base;
+      (* The generated header sits next to the .cpp; remove it too so temp
+         extractions don't leave a .h behind. *)
+      let header = base ^ ".h" in
+      if Sys.file_exists header then Sys.remove header );
     (* Report final status: structured for dune, pretty for interactive *)
     if compilation_ok && tests_ok then
       Feedback.msg_notice

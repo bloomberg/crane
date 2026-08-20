@@ -1,13 +1,13 @@
 #ifndef INCLUDED_COALITION_BID_HONOR_TRACE
 #define INCLUDED_COALITION_BID_HONOR_TRACE
 
+#include "small_vector.h"
 #include <any>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List {
   // TYPES
@@ -79,7 +79,7 @@ public:
 
   // MANIPULATORS
   ~List() {
-    std::vector<std::shared_ptr<List<A>>> _stack = {};
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l) {
@@ -96,6 +96,11 @@ public:
       }
     }
   }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -205,7 +210,7 @@ public:
 
   // MANIPULATORS
   ~Positive() {
-    std::vector<std::shared_ptr<Positive>> _stack = {};
+    crane::small_vector<std::shared_ptr<Positive>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<XI>(&_v)) {
         if (_alt->a0) {
@@ -227,6 +232,11 @@ public:
       }
     }
   }
+
+  Positive(const Positive &) = default;
+  Positive &operator=(const Positive &) = default;
+  Positive(Positive &&) noexcept = default;
+  Positive &operator=(Positive &&) noexcept = default;
 
   inline variant_t &v_mut() { return v_; }
 

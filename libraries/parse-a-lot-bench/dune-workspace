@@ -1,0 +1,4 @@
+(lang dune 3.13)
+; Marks this directory as its own dune workspace root. Without it, running dune
+; from here resolves the root up to the crane project, where ../dune's
+; data_only_dirs excludes this harness ("Don't know how to build run_*.exe").
