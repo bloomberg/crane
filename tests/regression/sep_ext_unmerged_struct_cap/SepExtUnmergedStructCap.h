@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
 
 #include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -56,6 +57,7 @@ struct Exprs {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

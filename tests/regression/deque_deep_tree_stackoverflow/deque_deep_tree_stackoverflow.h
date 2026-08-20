@@ -2,6 +2,7 @@
 #define INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
 
 #include "small_vector.h"
+#include <atomic>
 #include <deque>
 #include <memory>
 #include <type_traits>
@@ -45,6 +46,7 @@ struct DequeDeepTreeStackoverflow {
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             for (auto &_elem : *_alt->a0) {
               _stack.push_back(std::make_shared<rose>(std::move(_elem)));
             }
@@ -57,6 +59,7 @@ struct DequeDeepTreeStackoverflow {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

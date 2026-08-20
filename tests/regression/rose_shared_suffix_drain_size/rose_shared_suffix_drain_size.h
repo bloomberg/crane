@@ -1,8 +1,9 @@
-#ifndef INCLUDED_ROSE_SHARED_SUFFIX_DRAIN
-#define INCLUDED_ROSE_SHARED_SUFFIX_DRAIN
+#ifndef INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE
+#define INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -91,6 +92,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -107,13 +109,12 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// A rose tree whose recursive occurrence sits inside list rose.
-///
-/// The generated iterative destructor for rose drains the list rose child
-/// by walking the cons spine and moving each element out.  The use_count
-/// ownership check only covers the head cell, so destroying one rose guts a
-/// list suffix that is still shared with another live value.
-struct RoseSharedSuffixDrain {
+/// Same underlying defect as rose_shared_suffix_drain, reached with a
+/// different consumer and three successive sharers of the same spine: the
+/// generated ~rose() drains the list rose child cell by cell, checking
+/// ownership only on the head shared_ptr, so the shared tail cells are
+/// left moved-from for the next reader.
+struct RoseSharedSuffixDrainSize {
   struct rose {
     // TYPES
     struct Node {
@@ -143,12 +144,14 @@ struct RoseSharedSuffixDrain {
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             auto *_lp = _alt->a1.get();
             while (
                 std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
-              if (_lc.l) {
+              if (_lc.l && _lc.l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
                 _lp = _lc.l.get();
               } else {
                 break;
@@ -163,6 +166,7 @@ struct RoseSharedSuffixDrain {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -193,10 +197,8 @@ struct RoseSharedSuffixDrain {
     return f(a0, *a1);
   }
 
-  static uint64_t rsum(const rose &t);
-  /// t is shared between two roses.  The first one is a temporary whose
-  /// destructor runs before b is computed.
+  static uint64_t rsize(const rose &t);
   static uint64_t run(uint64_t n);
 };
 
-#endif // INCLUDED_ROSE_SHARED_SUFFIX_DRAIN
+#endif // INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE

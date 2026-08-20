@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <concepts>
 #include <functional>
 #include <memory>
@@ -128,6 +129,7 @@ struct Equations {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<gcd_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -231,6 +233,7 @@ struct Equations {
         if (auto *_sp =
                 std::any_cast<std::shared_ptr<gcd_clause_3_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -582,6 +585,7 @@ struct Equations {
         if (auto *_sp =
                 std::any_cast<std::shared_ptr<collatz_steps_graph>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -695,6 +699,7 @@ struct Equations {
                 std::any_cast<std::shared_ptr<collatz_steps_clause_3_graph>>(
                     &_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {

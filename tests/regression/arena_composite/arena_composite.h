@@ -8,6 +8,7 @@
 #define CRANE_ARENA 1
 #include "arena.h"
 #include "small_vector.h"
+#include <atomic>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
@@ -54,6 +55,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -136,6 +138,7 @@ struct Comp {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -252,6 +255,7 @@ struct Comp {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

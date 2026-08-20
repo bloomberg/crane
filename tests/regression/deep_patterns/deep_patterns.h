@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -92,6 +93,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -172,6 +174,7 @@ struct DeepPatterns {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<outer>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -400,6 +403,7 @@ struct DeepPatterns {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -92,6 +93,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -223,6 +225,7 @@ struct LoopifyTrees {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -926,6 +929,7 @@ struct LoopifyTrees {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -1307,12 +1311,14 @@ struct LoopifyTrees {
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             auto *_lp = _alt->a1.get();
             while (
                 std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
-              if (_lc.l) {
+              if (_lc.l && _lc.l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
                 _lp = _lc.l.get();
               } else {
                 break;
@@ -1327,6 +1333,7 @@ struct LoopifyTrees {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -1604,6 +1611,7 @@ struct LoopifyTrees {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -2078,6 +2086,7 @@ struct LoopifyTrees {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

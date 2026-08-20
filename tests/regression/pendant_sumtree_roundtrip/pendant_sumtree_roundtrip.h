@@ -4,6 +4,7 @@
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -94,6 +95,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -316,6 +318,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -539,12 +542,14 @@ struct PendantSumtreeRoundtripCase {
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SumNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             auto *_lp = _alt->a1.get();
             while (std::holds_alternative<typename List<SumTree>::Cons0>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
               _stack.push_back(std::make_shared<SumTree>(std::move(_lc.a)));
-              if (_lc.l) {
+              if (_lc.l && _lc.l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
                 _lp = _lc.l.get();
               } else {
                 break;
@@ -559,6 +564,7 @@ struct PendantSumtreeRoundtripCase {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

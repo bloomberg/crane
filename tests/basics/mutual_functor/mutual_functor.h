@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <concepts>
 #include <memory>
 #include <type_traits>
@@ -72,6 +73,7 @@ template <Elem E> struct MutualTree {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<tree>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -152,6 +154,7 @@ template <Elem E> struct MutualTree {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<forest>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -123,6 +124,7 @@ struct LargeMutual {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<stmt>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -320,6 +322,7 @@ struct LargeMutual {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<expr>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -548,6 +551,7 @@ struct LargeMutual {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<bexpr>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {

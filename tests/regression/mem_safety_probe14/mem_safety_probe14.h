@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <type_traits>
@@ -69,6 +70,7 @@ struct MemSafetyProbe14 {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -406,6 +408,7 @@ struct MemSafetyProbe14 {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }

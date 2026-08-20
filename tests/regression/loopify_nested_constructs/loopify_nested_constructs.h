@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_NESTED_CONSTRUCTS
 
 #include "small_vector.h"
+#include <atomic>
 #include <utility>
 #include <variant>
 

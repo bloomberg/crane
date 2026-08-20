@@ -4466,6 +4466,61 @@ let gen_ind_header_v2
             flush_raw ();
             List.rev !stmts
           in
+          (* Every drain below establishes sole ownership with
+             [p && p.use_count() == 1] and then mutates the pointee, moving a
+             value out of it.  Emitted right after each such test, before the
+             first access to the pointee.  Why that is thread-safe:
+
+             1. The count cannot rise behind our back, so this is not a
+                check-then-use race.  Incrementing a refcount requires copying
+                an existing owning pointer, i.e. already holding a reference.
+                If the count is 1 and *we* hold that one reference, no other
+                owning pointer exists anywhere, so there is nothing for another
+                thread to copy from.  The only ways to obtain a reference from
+                a non-owning handle -- weak_ptr::lock, shared_from_this -- both
+                require an existing strong reference to succeed.  So once we
+                observe 1 from the sole-owner position, the value is stable.
+
+                The error is one-sided, in the safe direction: a spuriously
+                *high* reading is possible (another owner's decrement not yet
+                visible to us) and merely stops the drain early, leaving the
+                node to die with its real owner.  A spuriously *low* reading,
+                the dangerous one, cannot occur.
+
+             2. What the bare count test does not give us, against an atomic
+                control block, is *synchronization*.  [use_count] is a relaxed
+                load, so on its own it establishes no happens-before with the
+                release-decrement of the owner that just dropped the other
+                reference: our writes into the node could formally race with
+                that owner's last reads of it.  The fence supplies the missing
+                acquire edge.
+
+             The fence must come *after* the load, not before.  Per
+             [atomics.fences]p4, a release operation A synchronizes with an
+             acquire fence B only if some atomic operation X reads the value
+             written by A and X is *sequenced before* B.  Here A is the other
+             thread's release-decrement, X is our [use_count] load, and B is
+             this fence -- so X has to precede B.  A fence hoisted above the
+             load has no such X and is a no-op for this purpose.  The fence is
+             retroactive: the load carries the value, and the fence upgrades it
+             to an acquire.  (Rule of thumb: acquire fence after the load,
+             release fence before the store.)  This mirrors shared_ptr's own
+             destructor, which acquire-fences after observing the last
+             reference and before running the deleter.
+
+             With three or more owners we synchronize with every dropper, not
+             just the last: refcount decrements are read-modify-writes and so
+             form a release sequence, and reading its final value picks up the
+             whole chain.  That is the same argument that makes refcounting
+             work at all.
+
+             Under [Crane NonAtomicRc] the control block is single-threaded --
+             no atomics, no decrement to pair with -- so no fence is emitted
+             and <atomic> is not included (see extract_env.ml). *)
+          let unique_fence =
+            if Table.non_atomic_rc () then []
+            else [Sraw "std::atomic_thread_fence(std::memory_order_acquire);"]
+          in
           (* Build drain statements for classified fields.  [Direct] fields get
              a simple [push_back(std::move(field))].  [List g] fields with a
              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
@@ -4511,7 +4566,8 @@ let gen_ind_header_v2
                       CPPbinop ("==",
                         CPPraw (fes ^ ".use_count()"),
                         CPPint 1)),
-                    [ Sraw ("for (auto& _elem : *" ^ fes ^ ") {");
+                    unique_fence
+                    @ [ Sraw ("for (auto& _elem : *" ^ fes ^ ") {");
                       Sexpr (CPPdot_method_call (
                         CPPvar _stack_id,
                         Id.of_string "push_back",
@@ -4532,12 +4588,34 @@ let gen_ind_header_v2
                     Id.to_string
                       (Common.lookup_ctor_field_name cons_s 1)
                   in
+                  (* Walk the cons spine, moving each element onto the
+                     worklist.  Ownership must be re-established at every cell,
+                     not just the head: list cells share their tails through
+                     [shared_ptr], so a suffix reachable from here may still be
+                     owned by a live value.  Moving out of such a cell would gut
+                     a list someone else is holding, so stop the walk as soon as
+                     a tail is not uniquely owned -- the remaining cells then
+                     die with their real owner. *)
+                  let tail_unique =
+                    "_lc." ^ tail_field ^ " && _lc." ^ tail_field
+                    ^ ".use_count() == 1"
+                  in
+                  (* [unique_fence] as a string, to sit inline in the raw
+                     advance statement below; see its definition above for why
+                     the fence follows the [use_count] test rather than
+                     preceding it. *)
+                  let tail_fence =
+                    if Table.non_atomic_rc () then ""
+                    else
+                      " std::atomic_thread_fence(std::memory_order_acquire);"
+                  in
                   [Sif_then (
                     CPPbinop ("&&", fe,
                       CPPbinop ("==",
                         CPPraw (fes ^ ".use_count()"),
                         CPPint 1)),
-                    [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
+                    unique_fence
+                    @ [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
                       Swhile (
                         CPPraw (
                           "std::holds_alternative<typename "
@@ -4554,7 +4632,7 @@ let gen_ind_header_v2
                                Table.make_shared_name () ^ "<" ^ ss
                                ^ ">(std::move(_lc." ^ elem_field ^ "))")]));
                           Sraw (
-                            "if (_lc." ^ tail_field ^ ") {"
+                            "if (" ^ tail_unique ^ ") {" ^ tail_fence
                             ^ " _lp = _lc." ^ tail_field ^ ".get();"
                             ^ " } else { break; }") ]);
                       Sraw (fes ^ ".reset();") ])]
@@ -4658,7 +4736,8 @@ let gen_ind_header_v2
                         CPPdot_method_call (CPPvar _cur_id,
                           Id.of_string "use_count", []),
                         CPPint 1),
-                      [Sexpr (CPPfun_call (CPPvar _drain_id,
+                      unique_fence
+                      @ [Sexpr (CPPfun_call (CPPvar _drain_id,
                         [CPPmethod_call (CPPvar _cur_id,
                           Id.of_string "v_mut", [])]))])
                   ])
@@ -4711,7 +4790,8 @@ let gen_ind_header_v2
             in
             let self_branch_body =
               [Sif_then (sp_alive_and_unique,
-                [Sexpr (CPPfun_call (CPPvar _drain_self_id,
+                unique_fence
+                @ [Sexpr (CPPfun_call (CPPvar _drain_self_id,
                   [CPPmethod_call (deref_sp,
                     Id.of_string "v_mut", [])]))])]
             in

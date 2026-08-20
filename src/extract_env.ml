@@ -818,6 +818,20 @@ let spec_header si () =
     else
       h
   in
+  (* The generated destructor drains establish sole ownership with
+     [use_count() == 1] before mutating a node in place.  Against an atomic
+     control block that relaxed load needs an acquire fence to pair with the
+     release-decrement of the owner that dropped the other reference, so those
+     drains reach for [std::atomic_thread_fence].  [Crane NonAtomicRc] emits no
+     fence and so needs no include. *)
+  let h =
+    if Table.needs_small_vector () && not (Table.non_atomic_rc ())
+       && not (List.exists (fun s -> String.equal s "atomic") (himports @ imps))
+    then
+      h ++ mk_include "atomic" ++ fnl ()
+    else
+      h
+  in
   let fun_concept =
     if is_bde () then
       "template <class From, class To>\n\

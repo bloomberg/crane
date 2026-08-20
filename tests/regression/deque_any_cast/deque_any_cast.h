@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <concepts>
 #include <deque>
 #include <utility>

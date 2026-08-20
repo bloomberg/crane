@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
@@ -105,6 +106,7 @@ public:
       auto _cur = bsl::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -58,6 +59,7 @@ struct MutualIndexed {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<EvenTree>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {
@@ -126,6 +128,7 @@ struct MutualIndexed {
         _stack.pop_back();
         if (auto *_sp = std::any_cast<std::shared_ptr<OddTree>>(&_cur)) {
           if (*_sp && (*_sp).use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             _drain_self((*_sp)->v_mut());
           }
         } else {

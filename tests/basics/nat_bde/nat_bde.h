@@ -2,6 +2,7 @@
 #define INCLUDED_NAT_BDE
 
 #include "small_vector.h"
+#include <atomic>
 #include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
@@ -55,6 +56,7 @@ public:
       auto _cur = bsl::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }

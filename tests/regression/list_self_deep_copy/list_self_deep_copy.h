@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -91,6 +92,7 @@ public:
       auto _cur = std::move(_stack.back());
       _stack.pop_back();
       if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
         _drain(_cur->v_mut());
       }
     }
@@ -146,12 +148,14 @@ struct ListSelfDeepCopy {
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Link>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
             auto *_lp = _alt->a0.get();
             while (
                 std::holds_alternative<typename List<chain>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<chain>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<chain>(std::move(_lc.a)));
-              if (_lc.l) {
+              if (_lc.l && _lc.l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
                 _lp = _lc.l.get();
               } else {
                 break;
@@ -166,6 +170,7 @@ struct ListSelfDeepCopy {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
