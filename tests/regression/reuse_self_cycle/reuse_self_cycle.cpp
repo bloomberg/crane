@@ -32,7 +32,7 @@ ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
             l.v_mut())) {
       auto &[a0, a1] =
           std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v_mut());
-      return mylist::mycons(std::move(a0), l);
+      return mylist::mycons(a0, l);
     } else {
       return mylist::mynil();
     }

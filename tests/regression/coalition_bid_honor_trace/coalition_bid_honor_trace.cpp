@@ -203,10 +203,10 @@ Z BinInt::add(Z x, Z y) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
       auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(std::move(a0), std::move(a00)));
+      return Z::zpos(Pos::add(a0, std::move(a00)));
     } else {
       auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(std::move(a0), std::move(a00));
+      return BinInt::pos_sub(a0, std::move(a00));
     }
   } else {
     auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
@@ -214,10 +214,10 @@ Z BinInt::add(Z x, Z y) {
       return x;
     } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
       auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), std::move(a0));
+      return BinInt::pos_sub(std::move(a00), a0);
     } else {
       auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(std::move(a0), std::move(a00)));
+      return Z::zneg(Pos::add(a0, std::move(a00)));
     }
   }
 }

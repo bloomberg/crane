@@ -69,7 +69,7 @@ List<uint64_t> LoopifySearchOpt::longest_run_fuel(uint64_t fuel,
         } else {
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_loop_current.v_mut());
-          if (a0 == std::move(a00)) {
+          if (a0 == a00) {
             _loop_l = crane_raw(a1);
             _loop_current = List<uint64_t>::cons(a0, _loop_current);
             _loop_fuel = fuel_;

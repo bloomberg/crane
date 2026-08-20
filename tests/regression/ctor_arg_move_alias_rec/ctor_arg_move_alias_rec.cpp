@@ -6,7 +6,7 @@
 ///
 /// annotate rebuilds the list, interleaving a running total.  Because h
 /// occurs exactly once and o is owned (it escapes through the mynil
-/// branch), Crane emits
+/// branch), Crane used to emit
 ///
 /// {
 /// auto& [a0, a1] = std::get<Mycons>(o.v_mut());
@@ -16,13 +16,13 @@
 /// annotate( *a1 )));
 /// }
 ///
-/// std::move(a0) hollows out o's head element while the sibling argument
-/// computes osum(o) over that same o.  The two are unsequenced; clang
-/// performs the move first, so osum walks a moved-from inner whose tail
-/// shared_ptr is null.
+/// std::move(a0) hollowed out o's head element while the sibling argument
+/// computed osum(o) over that same o.  The two are unsequenced; clang
+/// performed the move first, so osum walked a moved-from inner whose tail
+/// shared_ptr was null.
 ///
-/// Expected run 1 = 8; the extracted program segfaults instead
-/// (UBSan: "member call on null pointer of type 'inner'").
+/// The field move is now suppressed because the branch body still reads o,
+/// so run 1 = 8.
 uint64_t CtorArgMoveAliasRec::osum(
     const CtorArgMoveAliasRec::mylist<CtorArgMoveAliasRec::inner> &o) {
   if (std::holds_alternative<typename CtorArgMoveAliasRec::mylist<
@@ -47,9 +47,8 @@ CtorArgMoveAliasRec::annotate(
     auto &[a0, a1] = std::get<typename CtorArgMoveAliasRec::mylist<
         CtorArgMoveAliasRec::inner>::Mycons>(o.v_mut());
     return mylist<CtorArgMoveAliasRec::inner>::mycons(
-        std::move(a0),
-        mylist<CtorArgMoveAliasRec::inner>::mycons(
-            inner::icons(osum(o), inner::inil()), annotate(*a1)));
+        a0, mylist<CtorArgMoveAliasRec::inner>::mycons(
+                inner::icons(osum(o), inner::inil()), annotate(*a1)));
   }
 }
 

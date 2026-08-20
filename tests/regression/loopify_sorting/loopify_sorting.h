@@ -274,7 +274,7 @@ struct LoopifySorting {
                 std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
             if (cmp(a0, a00)) {
               auto _cell = std::make_shared<List<uint64_t>>(
-                  typename List<uint64_t>::Cons(std::move(a0), nullptr));
+                  typename List<uint64_t>::Cons(a0, nullptr));
               *_write = std::move(_cell);
               _write =
                   &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
@@ -284,7 +284,7 @@ struct LoopifySorting {
               continue;
             } else {
               auto _cell = std::make_shared<List<uint64_t>>(
-                  typename List<uint64_t>::Cons(std::move(a00), nullptr));
+                  typename List<uint64_t>::Cons(a00, nullptr));
               *_write = std::move(_cell);
               _write =
                   &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())

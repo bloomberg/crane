@@ -525,7 +525,7 @@ struct MemSafetyProbe9 {
   }
 
   template <typename T1> static uint64_t _anon_f2(const T1, const tree r) {
-    return std::move(r).tree_sum();
+    return r.tree_sum();
   }
 
   template <typename T1> static uint64_t _anon_f3(const T1, const tree t) {

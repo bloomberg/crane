@@ -129,8 +129,8 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
       uint64_t a0 = _f.a0;
       std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
       auto [s, r] = _rc1;
-      _result = std::make_pair(
-          List<uint64_t>::cons(std::move(a0), std::move(s)), std::move(r));
+      _result =
+          std::make_pair(List<uint64_t>::cons(a0, std::move(s)), std::move(r));
     }
   }
   return _result;

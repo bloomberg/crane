@@ -1316,8 +1316,8 @@ struct LoopifyLists {
         uint64_t a0 = _f.a0;
         std::pair<list<uint64_t>, list<uint64_t>> _rc1 = std::move(_result);
         auto [a, b] = _rc1;
-        _result = std::make_pair(
-            list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
+        _result = std::make_pair(list<uint64_t>::cons(a0, std::move(a)),
+                                 std::move(b));
       }
     }
     return _result;

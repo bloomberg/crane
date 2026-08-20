@@ -249,7 +249,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   struct _After_Node {
     LoopifyMoreTrees::tree a00;
     LoopifyMoreTrees::tree a0;
-    std::decay_t<decltype(std::max(std::move(std::declval<uint64_t &>()),
+    std::decay_t<decltype(std::max(std::declval<uint64_t &>(),
                                    std::move(std::declval<uint64_t &>())))>
         _s2;
   };
@@ -258,7 +258,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   /// call.
   struct _Combine_Node {
     LoopifyMoreTrees::tree _result;
-    std::decay_t<decltype(std::max(std::move(std::declval<uint64_t &>()),
+    std::decay_t<decltype(std::max(std::declval<uint64_t &>(),
                                    std::move(std::declval<uint64_t &>())))>
         _s1;
   };
@@ -288,7 +288,7 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
           auto &[a00, a10, a20] =
               std::get<typename LoopifyMoreTrees::tree::Node>(t2.v_mut());
           _stack.emplace_back(
-              _After_Node{*a00, *a0, std::max(std::move(a1), std::move(a10))});
+              _After_Node{*a00, *a0, std::max(a1, std::move(a10))});
           _stack.emplace_back(_Enter{*a20, *a2});
         }
       }

@@ -37,7 +37,7 @@ List<uint64_t> MergesortFuel::merge(List<uint64_t> l1,
         if (Compare_dec::le_lt_dec(a0, a00)) {
           return List<uint64_t>::cons(a0, merge(*a2, l3));
         } else {
-          return List<uint64_t>::cons(std::move(a00),
+          return List<uint64_t>::cons(a00,
                                       _self_merge_aux(_self_merge_aux, *a10));
         }
       }
@@ -61,7 +61,7 @@ List<uint64_t> MergesortFuel::msort_go(uint64_t fuel, List<uint64_t> l) {
       auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        return List<uint64_t>::cons(std::move(a0), List<uint64_t>::nil());
+        return List<uint64_t>::cons(a0, List<uint64_t>::nil());
       } else {
         auto [l1, l2] = split(l);
         return merge(msort_go(fuel_, std::move(l1)),

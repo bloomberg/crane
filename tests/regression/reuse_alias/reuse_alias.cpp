@@ -37,7 +37,7 @@ ReuseAlias::alias_and_match(ReuseAlias::mylist<uint64_t> l) {
   } else {
     auto &[a0, a1] =
         std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v_mut());
-    return std::make_pair(std::move(l), std::move(a0));
+    return std::make_pair(std::move(l), a0);
   }
 }
 

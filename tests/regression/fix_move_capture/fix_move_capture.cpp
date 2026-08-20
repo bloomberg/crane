@@ -29,7 +29,7 @@ FixMoveCapture::mylist FixMoveCapture::dup_head(FixMoveCapture::mylist l) {
   } else {
     auto &[a0, a1] =
         std::get<typename FixMoveCapture::mylist::Mycons>(l.v_mut());
-    return mylist::mycons(std::move(a0), l);
+    return mylist::mycons(a0, l);
   }
 }
 

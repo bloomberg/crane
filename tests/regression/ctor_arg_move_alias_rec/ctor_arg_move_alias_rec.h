@@ -1,5 +1,5 @@
-#ifndef INCLUDED_CTOR_ARG_MOVE_ALIAS
-#define INCLUDED_CTOR_ARG_MOVE_ALIAS
+#ifndef INCLUDED_CTOR_ARG_MOVE_ALIAS_REC
+#define INCLUDED_CTOR_ARG_MOVE_ALIAS_REC
 
 #include "small_vector.h"
 #include <any>
@@ -8,40 +8,30 @@
 #include <utility>
 #include <variant>
 
-/// Use-after-move: a constructor field is moved out of an owned scrutinee
-/// while a sibling argument of the same call still reads that scrutinee.
+/// Recursive variant of ctor_arg_move_alias: the same use-after-move, but
+/// reached through a tail-modulo-cons Fixpoint rather than a one-shot
+/// Definition, so every level of the recursion re-triggers it.
 ///
-/// Ingredients, all of which are needed:
-///
-/// - mylist is polymorphic, so grab stays a free function instead of
-/// being methodified onto a const this (a const receiver silently
-/// degrades std::move to a copy and hides the problem).
-/// - o escapes through the mynil branch, so escape analysis marks it
-/// {i owned} and it is passed by value.  Owned scrutinees are destructured
-/// with auto& [a0, a1] = std::get<Mycons>(o.v_mut()), i.e. a0 is a
-/// mutable reference {i into} o.
-/// - the element type inner is a non-trivial inductive, so moving a0
-/// really does hollow out o's head (a trivial nat element would make
-/// the move a no-op).
-/// - h occurs exactly once in the branch, so move-on-last-use fires and
-/// emits std::move(a0).
-///
-/// Crane emits
+/// annotate rebuilds the list, interleaving a running total.  Because h
+/// occurs exactly once and o is owned (it escapes through the mynil
+/// branch), Crane used to emit
 ///
 /// {
 /// auto& [a0, a1] = std::get<Mycons>(o.v_mut());
-/// return pack::pack0(std::move(a0), osum(o));
+/// return mylist<inner>::mycons(
+/// std::move(a0),
+/// mylist<inner>::mycons(inner::icons(osum(o), inner::inil()),
+/// annotate( *a1 )));
 /// }
 ///
-/// The two arguments are {i unsequenced}: std::move(a0) consumes o's
-/// head element, and osum(o) walks the very same o.  Whichever order
-/// the compiler picks, one of them is wrong; with clang the move happens
-/// first, so osum reads a moved-from inner whose tail shared_ptr is
-/// now null and dereferences it.
+/// std::move(a0) hollowed out o's head element while the sibling argument
+/// computed osum(o) over that same o.  The two are unsequenced; clang
+/// performed the move first, so osum walked a moved-from inner whose tail
+/// shared_ptr was null.
 ///
-/// Expected run 1 = 6; the extracted program segfaults instead
-/// (UBSan: "member call on null pointer of type 'inner'").
-struct CtorArgMoveAlias {
+/// The field move is now suppressed because the branch body still reads o,
+/// so run 1 = 8.
+struct CtorArgMoveAliasRec {
   struct inner {
     // TYPES
     struct INil {};
@@ -257,77 +247,13 @@ struct CtorArgMoveAlias {
     }
   };
 
-  struct pack {
-    // TYPES
-    struct Pack0 {
-      inner a0;
-      uint64_t a1;
-    };
-
-    struct PList {
-      mylist<inner> a0;
-    };
-
-    using variant_t = std::variant<Pack0, PList>;
-
-  private:
-    // DATA
-    variant_t v_;
-
-  public:
-    // CREATORS
-    pack() {}
-
-    explicit pack(Pack0 _v) : v_(std::move(_v)) {}
-
-    explicit pack(PList _v) : v_(std::move(_v)) {}
-
-    static pack pack0(inner a0, uint64_t a1) {
-      return pack(Pack0{std::move(a0), a1});
-    }
-
-    static pack plist(mylist<inner> a0) { return pack(PList{std::move(a0)}); }
-
-    // MANIPULATORS
-    inline variant_t &v_mut() { return v_; }
-
-    // ACCESSORS
-    const variant_t &v() const { return v_; }
-  };
-
-  template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, mylist<inner> &>
-  static T1 pack_rect(F0 &&f, F1 &&f0, const pack &p) {
-    if (std::holds_alternative<typename pack::Pack0>(p.v())) {
-      const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0] = std::get<typename pack::PList>(p.v());
-      return f0(a0);
-    }
-  }
-
-  template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, inner &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, mylist<inner> &>
-  static T1 pack_rec(F0 &&f, F1 &&f0, const pack &p) {
-    if (std::holds_alternative<typename pack::Pack0>(p.v())) {
-      const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0] = std::get<typename pack::PList>(p.v());
-      return f0(a0);
-    }
-  }
-
   static uint64_t osum(const mylist<inner> &o);
-  /// h is the sole occurrence of the head field, so Crane moves it out of
-  /// o; the sibling argument osum o still reads the whole o.
-  static pack grab(mylist<inner> o);
-  /// o = [ICons n (ICons (S n) INil)], so osum o = 2n+1 and
-  /// isum h = 2n+1; the result is 4n+2, i.e. 6 for n = 1.
+  /// The head element h is consumed into the freshly built cell while the
+  /// sibling argument still reads o.
+  static mylist<inner> annotate(mylist<inner> o);
+  /// For n = 1 the input is [ICons 1 INil; ICons 2 INil], so
+  /// annotate yields [I 1; I 3; I 2; I 2] and run 1 = 1+3+2+2 = 8.
   static uint64_t run(uint64_t n);
 };
 
-#endif // INCLUDED_CTOR_ARG_MOVE_ALIAS
+#endif // INCLUDED_CTOR_ARG_MOVE_ALIAS_REC

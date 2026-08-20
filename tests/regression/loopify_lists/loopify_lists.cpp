@@ -1075,7 +1075,7 @@ LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _loop_l2.v_mut());
         auto _cell = std::make_shared<LoopifyLists::list<uint64_t>>(
-            typename list<uint64_t>::Cons(std::move(a0), nullptr));
+            typename list<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_shared<LoopifyLists::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).l =
@@ -1447,8 +1447,8 @@ LoopifyLists::split_at(
       std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
           _rc1 = std::move(_result);
       auto [a, b] = _rc1;
-      _result = std::make_pair(
-          list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
+      _result =
+          std::make_pair(list<uint64_t>::cons(a0, std::move(a)), std::move(b));
     }
   }
   return _result;

@@ -90,25 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir ctor_arg_move_alias_rec
- (rule
-  (targets ctor_arg_move_alias_rec.t.exe)
-  (deps CtorArgMoveAliasRec.vo ctor_arg_move_alias_rec.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_arg_move_alias_rec.t.exe ctor_arg_move_alias_rec.cpp ctor_arg_move_alias_rec.t.cpp)))
- (rule
-  (alias runtest)
-  (deps ctor_arg_move_alias_rec.t.exe)
-  (action (run ./ctor_arg_move_alias_rec.t.exe))))
-
-(subdir ctor_arg_move_alias
- (rule
-  (targets ctor_arg_move_alias.t.exe)
-  (deps CtorArgMoveAlias.vo ctor_arg_move_alias.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_arg_move_alias.t.exe ctor_arg_move_alias.cpp ctor_arg_move_alias.t.cpp)))
- (rule
-  (alias runtest)
-  (deps ctor_arg_move_alias.t.exe)
-  (action (run ./ctor_arg_move_alias.t.exe))))

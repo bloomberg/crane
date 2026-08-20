@@ -720,7 +720,7 @@ List<uint64_t> LoopifySequences::lis(List<uint64_t> l) {
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
           auto _cell = std::make_shared<List<uint64_t>>(
-              typename List<uint64_t>::Cons(std::move(a0), nullptr));
+              typename List<uint64_t>::Cons(a0, nullptr));
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;

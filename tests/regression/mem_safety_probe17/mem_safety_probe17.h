@@ -270,9 +270,9 @@ struct MemSafetyProbe17 {
             } else {
               auto &[a00, a10, a20, a30, a40] =
                   std::get<typename qtree::QNode>(t2.v_mut());
-              _stack.emplace_back(_After_QNode{
-                  crane_raw(a4), *a30, crane_raw(a2), *a10, crane_raw(a0), *a00,
-                  (std::move(a3) + std::move(a20))});
+              _stack.emplace_back(
+                  _After_QNode{crane_raw(a4), *a30, crane_raw(a2), *a10,
+                               crane_raw(a0), *a00, (a3 + std::move(a20))});
               _stack.emplace_back(_Enter{crane_raw(a5), *a40});
             }
           }

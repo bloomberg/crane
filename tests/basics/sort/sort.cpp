@@ -45,7 +45,7 @@ List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
         if (a0 <= a00) {
           return List<uint64_t>::cons(a0, merge(*a2, l3));
         } else {
-          return List<uint64_t>::cons(std::move(a00),
+          return List<uint64_t>::cons(a00,
                                       _self_merge_aux(_self_merge_aux, *a10));
         }
       }

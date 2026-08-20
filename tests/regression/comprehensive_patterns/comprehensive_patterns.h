@@ -555,7 +555,7 @@ struct ComprehensivePatterns {
     Tree flip_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
         auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::node(*this, std::move(a0), *this);
+        return Tree::node(*this, a0, *this);
       } else {
         auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
         return Tree::leaf(std::move(a1));

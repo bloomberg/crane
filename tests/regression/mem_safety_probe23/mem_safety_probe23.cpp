@@ -167,9 +167,8 @@ std::pair<MemSafetyProbe23::tree, uint64_t> MemSafetyProbe23::sum_with_original(
       std::pair<MemSafetyProbe23::tree, uint64_t> pl = std::move(_f.pl);
       MemSafetyProbe23::tree t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, uint64_t> pr = std::move(_result);
-      _result =
-          std::make_pair(std::move(t), ((std::move(pl).second + std::move(a1)) +
-                                        std::move(pr).second));
+      _result = std::make_pair(
+          std::move(t), ((std::move(pl).second + a1) + std::move(pr).second));
     }
   }
   return _result;
@@ -239,10 +238,9 @@ MemSafetyProbe23::dup_and_double(
       MemSafetyProbe23::tree t = std::move(_f.t);
       std::pair<MemSafetyProbe23::tree, MemSafetyProbe23::tree> pr =
           std::move(_result);
-      _result =
-          std::make_pair(std::move(t), tree::node(std::move(pl).second,
-                                                  (std::move(a1) * UINT64_C(2)),
-                                                  std::move(pr).second));
+      _result = std::make_pair(std::move(t), tree::node(std::move(pl).second,
+                                                        (a1 * UINT64_C(2)),
+                                                        std::move(pr).second));
     }
   }
   return _result;
@@ -556,8 +554,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
   struct _After_Node {
     uint64_t n_;
     std::decay_t<decltype(tree::node(std::declval<MemSafetyProbe23::tree &>(),
-                                     std::move(std::declval<uint64_t &>()),
-                                     tree::leaf()))>
+                                     std::declval<uint64_t &>(), tree::leaf()))>
         _s1;
   };
 
@@ -589,8 +586,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
         } else {
           auto &[a0, a1, a2] =
               std::get<typename MemSafetyProbe23::tree::Node>(t.v_mut());
-          _stack.emplace_back(
-              _After_Node{n_, tree::node(t, std::move(a1), tree::leaf())});
+          _stack.emplace_back(_After_Node{n_, tree::node(t, a1, tree::leaf())});
           _stack.emplace_back(_Enter{n_, *a2});
         }
       }

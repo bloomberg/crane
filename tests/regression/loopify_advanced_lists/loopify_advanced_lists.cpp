@@ -164,7 +164,7 @@ List<uint64_t> LoopifyAdvancedLists::interleave(List<uint64_t> l1,
         auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
         auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a0), nullptr));
+            typename List<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =

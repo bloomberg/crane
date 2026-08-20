@@ -216,9 +216,8 @@ struct MemSafetyProbe24 {
           uint64_t a1 = _f.a1;
           std::pair<tree, uint64_t> pl = std::move(_f.pl);
           std::pair<tree, uint64_t> pr = std::move(_result);
-          _result =
-              std::make_pair(*_self, ((std::move(a1) + std::move(pl).second) +
-                                      std::move(pr).second));
+          _result = std::make_pair(
+              *_self, ((a1 + std::move(pl).second) + std::move(pr).second));
         }
       }
       return _result;

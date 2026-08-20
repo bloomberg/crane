@@ -18,7 +18,7 @@
 /// - h occurs exactly once in the branch, so move-on-last-use fires and
 /// emits std::move(a0).
 ///
-/// Crane emits
+/// Crane used to emit
 ///
 /// {
 /// auto& [a0, a1] = std::get<Mycons>(o.v_mut());
@@ -27,12 +27,13 @@
 ///
 /// The two arguments are {i unsequenced}: std::move(a0) consumes o's
 /// head element, and osum(o) walks the very same o.  Whichever order
-/// the compiler picks, one of them is wrong; with clang the move happens
-/// first, so osum reads a moved-from inner whose tail shared_ptr is
-/// now null and dereferences it.
+/// the compiler picks, one of them is wrong; with clang the move happened
+/// first, so osum read a moved-from inner whose tail shared_ptr was
+/// null and dereferenced it.
 ///
-/// Expected run 1 = 6; the extracted program segfaults instead
-/// (UBSan: "member call on null pointer of type 'inner'").
+/// gen_match_branch now suppresses field moves whenever the branch body
+/// still reads the owned scrutinee, so the field is copied instead and
+/// run 1 = 6.
 uint64_t CtorArgMoveAlias::osum(
     const CtorArgMoveAlias::mylist<CtorArgMoveAlias::inner> &o) {
   if (std::holds_alternative<
@@ -59,7 +60,7 @@ CtorArgMoveAlias::grab(CtorArgMoveAlias::mylist<CtorArgMoveAlias::inner> o) {
     auto &[a0, a1] = std::get<
         typename CtorArgMoveAlias::mylist<CtorArgMoveAlias::inner>::Mycons>(
         o.v_mut());
-    return pack::pack0(std::move(a0), osum(o));
+    return pack::pack0(a0, osum(o));
   }
 }
 

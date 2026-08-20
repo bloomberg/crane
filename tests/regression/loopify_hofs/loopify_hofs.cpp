@@ -271,7 +271,7 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(
       } else {
         auto &[a01, a11] =
             std::get<typename List<uint64_t>::Cons>(rec_result.v_mut());
-        if (std::move(a0) == std::move(a01)) {
+        if (std::move(a0) == a01) {
           _result = std::move(rec_result);
         } else {
           _result = std::move(rec_result);

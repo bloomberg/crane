@@ -151,7 +151,7 @@ struct LoopifyPredicates {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        if (p(std::move(a0))) {
+        if (p(a0)) {
           _loop_l = *a1;
         } else {
           return _loop_l;
@@ -204,8 +204,8 @@ struct LoopifyPredicates {
         uint64_t a0 = _f.a0;
         std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
         auto [yes, no] = _rc1;
-        _result = std::make_pair(
-            List<uint64_t>::cons(std::move(a0), std::move(yes)), std::move(no));
+        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(yes)),
+                                 std::move(no));
       }
     }
     return _result;
@@ -255,9 +255,8 @@ struct LoopifyPredicates {
         uint64_t a0 = _f.a0;
         std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
         auto [before, after] = _rc1;
-        _result = std::make_pair(
-            List<uint64_t>::cons(std::move(a0), std::move(before)),
-            std::move(after));
+        _result = std::make_pair(List<uint64_t>::cons(a0, std::move(before)),
+                                 std::move(after));
       }
     }
     return _result;

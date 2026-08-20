@@ -1172,7 +1172,7 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                 _loop_l2.v_mut());
         auto _cell = std::make_shared<LoopifyPatterns::list<uint64_t>>(
-            typename list<uint64_t>::Cons(std::move(a0), nullptr));
+            typename list<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_shared<LoopifyPatterns::list<uint64_t>>(
             typename list<uint64_t>::Cons(std::move(a00), nullptr));
         std::get<typename list<uint64_t>::Cons>(_cell->v_mut()).l =

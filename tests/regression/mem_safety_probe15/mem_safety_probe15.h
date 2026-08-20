@@ -137,8 +137,8 @@ struct MemSafetyProbe15 {
               _result = *_self;
             } else {
               auto &[a00, a10, a20] = std::get<typename tree::Node>(t2.v_mut());
-              _stack.emplace_back(_After_Node{
-                  crane_raw(a0), *a00, (std::move(a1) + std::move(a10))});
+              _stack.emplace_back(
+                  _After_Node{crane_raw(a0), *a00, (a1 + std::move(a10))});
               _stack.emplace_back(_Enter{crane_raw(a2), *a20});
             }
           }

@@ -7193,8 +7193,19 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     && (field_is_self_or_mutual_ref_at_def i
         || field_has_nested_self_ref_at_def i)
   in
+  (* Converse of [exclude_scrutinee]: the structured bindings alias subobjects
+     of the owned scrutinee, so moving a field out hollows out part of [o].  If
+     the branch body still reads [o] itself, that read may observe the
+     moved-from field — sibling arguments of one call are unsequenced, so even
+     [Ctor(std::move(a0), f(o))] is wrong.  Drop the whole owned set in that
+     case so no field move is emitted. *)
+  let scrut_read_in_body =
+    match scrut_db with
+    | Some db -> Escape.nb_occur_match (db + n_pat_vars) body > 0
+    | None -> false
+  in
   let pat_var_owned =
-    if is_owned then
+    if is_owned && not scrut_read_in_body then
       List.fold_left (fun (acc, j) _ ->
           let db = j + 1 in
           let def_field_idx = n_pat_vars - 1 - j in
