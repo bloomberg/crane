@@ -521,10 +521,59 @@ Crane Extraction "my_module" MyModule.
 
 ### Checking what was loopified
 
-`Set Crane Loopify Diagnostics` reports what the pass did with each recursive
-function, and `Set Crane Loopify Strict` turns a function it could not
-linearise into an error. See [Loopify coverage](loopify-coverage.md) for how
-the outcomes are decided and which shapes remain out of reach.
+```coq
+Set Crane Loopify Diagnostics.  (* report an outcome per recursive function *)
+Set Crane Loopify Strict.       (* turn a function it could not linearise into an error *)
+```
+
+`CRANE_LOOPIFY_DIAGNOSTICS=1` in the environment does the same as the first, so
+a whole project can be swept without editing every `.v` file. Each line is
+prefixed with the emitted file, since the same function can be linearised in
+one unit and declined in another. The outcomes are:
+
+| Outcome | Meaning |
+| --- | --- |
+| `tail loop` | Became a flat `while`. |
+| `tail-modulo-cons` | Became a flat `while` writing through a hole. |
+| `frame stack` | Recursion moved to an explicit heap stack — O(depth) heap, O(1) C++ stack. |
+| `deferred (...)` | Left alone deliberately; the shape already runs in O(1) stack (a `lazy_`-wrapped cofixpoint body). |
+| `DECLINED: ...` | The emitted C++ still calls itself. |
+
+The target invariant is *no emitted function retains a self-call*, not
+*everything becomes a flat loop*: a flat loop is only achievable for tail and
+tail-modulo-cons shapes, and tree recursion inherently needs O(depth) space,
+which the frame stack supplies as heap frames rather than C++ stack frames.
+
+The outcome is decided by a postcondition rather than by whether a bail-out
+announced itself — the transformed body is re-classified, and a surviving
+self-call is a decline whatever the strategy claimed — so a silent bail-out
+cannot hide. A function is transformed several times per unit (a dry run, then
+the header and implementation passes) and only one result is emitted, so
+outcomes are collected silently and each name is collapsed to its best outcome
+at the end of the real run, after inner lambdas have been linearised too.
+
+`scripts/loopify-coverage.sh` sweeps the test corpus and diffs the declines
+against the tracked `tests/loopify-coverage.golden`; `--accept` rewrites the
+baseline. Adding a decline is a regression even though every runtime test still
+passes.
+
+### Shapes that still decline
+
+Of the recursive functions in the test corpus, twelve decline, in two classes.
+
+**Recursion that crosses a closure boundary (10).** The self-call sits inside a
+lambda or is threaded through a `std::function` accumulator, and the frame
+transform correctly refuses to rewrite it: the lambda may be invoked later, or
+elsewhere, so its call cannot simply become a frame push. This covers a local
+fixpoint mutually recursive with its enclosing function — liftable by hand to a
+top-level sibling, at which point the existing mutual-recursion inlining
+applies — and genuine continuation-passing shapes, which would need the
+continuation defunctionalised.
+
+**Value-type receiver (2).** A frame stores the receiver as a raw pointer, and a
+value receiver is a temporary whose address does not outlive the frame.
+Supporting it needs a mode in which the frame owns the receiver by value, as it
+already does for ordinary parameters.
 
 ---
 
