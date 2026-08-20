@@ -209,16 +209,16 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
     uint64_t n;
   };
 
-  /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
-  struct _Resume_Cons {
+  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume_Cons>;
+  using _Frame = std::variant<_Enter, _Cont_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), n});
-  /// Loopified split_at: _Enter -> _Resume_Cons.
+  /// Loopified split_at: _Enter -> _Cont_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -235,14 +235,15 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
               std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
         } else {
           auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-          _stack.emplace_back(_Resume_Cons{a0});
+          _stack.emplace_back(_Cont_Cons{a0});
           _stack.emplace_back(_Enter{*a1, n_});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume_Cons>(_frame));
+      auto _f = std::move(std::get<_Cont_Cons>(_frame));
       uint64_t a0 = _f.a0;
-      auto [before, after] = std::move(_result);
+      std::pair<List<uint64_t>, List<uint64_t>> _rc1 = std::move(_result);
+      auto [before, after] = _rc1;
       _result =
           std::make_pair(List<uint64_t>::cons(std::move(a0), std::move(before)),
                          std::move(after));

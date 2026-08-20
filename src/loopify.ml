@@ -7995,12 +7995,22 @@ let try_inline_functional_into names body =
 let hoist_rec_conditions (check : call_checker)
     (params : (Id.t * cpp_type) list) (ret_ty : cpp_type)
     (stmts : cpp_stmt list) : cpp_stmt list =
-  (* Only safe when the recursive call's arguments (≈ the parameters) are
-     trivially copyable: those are what the [_Enter] frame stores, so there is
-     no move-only subtree that could dangle — the exact hazard
-     [has_recursive_branch_dependency] guards against. *)
-  if not (List.for_all (fun (_, ty) -> is_trivially_copyable_type ty) params)
-  then stmts
+  (* The hazard [has_recursive_branch_dependency] guards against is a raw
+     pointer stored in the [_Enter] frame that dangles once the smart pointer
+     it was derived from is moved from.  So the gate is precisely that no
+     parameter is a raw pointer: every other parameter shape — scalars, and
+     smart pointers or values, which own their referent — stays alive in the
+     frame for as long as the frame does.
+
+     Requiring *trivial copyability* instead, as this gate used to, excluded
+     every recursion over an inductive type, since those are passed as smart
+     pointers. That is the common case and not the dangerous one. *)
+  let rec is_raw_ptr = function
+    | Tptr _ -> true
+    | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) -> is_raw_ptr t
+    | _ -> false
+  in
+  if List.exists (fun (_, ty) -> is_raw_ptr ty) params then stmts
   else
     let counter = ref 0 in
     let fresh () =
@@ -8223,6 +8233,22 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
      closure and the method returns in O(1) stack frames.  Loopification
      is unnecessary and TMC would be invalid.  See {!has_lazy_body}. *)
   let name = Id.to_string mf.mf_name in
+  (* Hoist recursive calls out of conditions and dispatch scrutinees, exactly
+     as {!transform_fundef} does. Methods went without this, so a method whose
+     recursion fed a branch condition bailed out where the equivalent free
+     function loopified. Hoisting runs on the pre-[_self] parameter list: the
+     synthetic [_self] raw pointer is added later and would otherwise trip
+     the hoister's own raw-pointer gate. *)
+  let mf =
+    let n_params = List.length mf.mf_params in
+    let this_pos = mf.mf_this_pos in
+    let check =
+      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+    in
+    { mf with
+      mf_body =
+        hoist_rec_conditions check mf.mf_params mf.mf_ret_type mf.mf_body }
+  in
   if has_lazy_body mf.mf_body then begin
     let basic_check =
       method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name

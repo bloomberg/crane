@@ -324,21 +324,76 @@ struct LoopifyExprVariants {
 
     uint64_t eval_cond() const {
       const cond_expr *_self = this;
-      auto &&_sv = *_self;
-      if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
-        const auto &[a0] = std::get<typename cond_expr::Lit>(_sv.v());
-        return a0;
-      } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
-        const auto &[a0, a1] = std::get<typename cond_expr::Add>(_sv.v());
-        return (a0->eval_cond() + a1->eval_cond());
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename cond_expr::Cond>(_sv.v());
-        if (UINT64_C(0) < a0->eval_cond()) {
-          return a1->eval_cond();
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const cond_expr *_self;
+      };
+
+      /// _After_Add: saves [a0], dispatches next recursive call.
+      struct _After_Add {
+        cond_expr *a0;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        uint64_t _result;
+      };
+
+      /// _Cont_Cond: saves [a1, a2], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Cond {
+        std::shared_ptr<cond_expr> a1;
+        std::shared_ptr<cond_expr> a2;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Add, _Combine_Add, _Cont_Cond>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified eval_cond: _Enter -> _After_Add -> _Combine_Add ->
+      /// _Cont_Cond.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const cond_expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename cond_expr::Lit>(_sv.v());
+            _result = std::move(a0);
+          } else if (std::holds_alternative<typename cond_expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename cond_expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1, a2] =
+                std::get<typename cond_expr::Cond>(_sv.v());
+            _stack.emplace_back(_Cont_Cond{a1, a2});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = (std::move(_result) + std::move(_f._result));
         } else {
-          return a2->eval_cond();
+          auto _f = std::move(std::get<_Cont_Cond>(_frame));
+          std::shared_ptr<cond_expr> a1 = std::move(_f.a1);
+          std::shared_ptr<cond_expr> a2 = std::move(_f.a2);
+          uint64_t _rc1 = std::move(_result);
+          if (UINT64_C(0) < _rc1) {
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
         }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
@@ -1251,224 +1306,382 @@ struct LoopifyExprVariants {
 
     bool_expr simplify_bool() const {
       const bool_expr *_self = this;
-      auto &&_sv = *_self;
-      if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
-        return bool_expr::btrue();
-      } else if (std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
-        return bool_expr::bfalse();
-      } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
-        const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
-        auto &&_sv0 = a0->simplify_bool();
-        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return bool_expr::btrue();
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const bool_expr *_self;
+      };
+
+      /// _Cont_BAnd: saves [a1], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BAnd {
+        std::shared_ptr<bool_expr> a1;
+      };
+
+      /// _Cont_BAnd_1: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BAnd_1 {
+        bool_expr a_;
+      };
+
+      /// _Cont_BAnd_2: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BAnd_2 {
+        bool_expr a_;
+      };
+
+      /// _Cont_BFalse: resumes after recursive call, then processes rest.
+      struct _Cont_BFalse {};
+
+      /// _Cont_BNot: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BNot {
+        bool_expr a_;
+      };
+
+      /// _Cont_BNot_1: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BNot_1 {
+        bool_expr a_;
+      };
+
+      /// _Cont_BNot_2: resumes after recursive call, then processes rest.
+      struct _Cont_BNot_2 {};
+
+      /// _Cont_BOr: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BOr {
+        bool_expr a_;
+      };
+
+      /// _Cont_BOr_1: saves [a1], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BOr_1 {
+        std::shared_ptr<bool_expr> a1;
+      };
+
+      /// _Cont_BOr_2: saves [a_], resumes after recursive call, then processes
+      /// rest.
+      struct _Cont_BOr_2 {
+        bool_expr a_;
+      };
+
+      /// _Cont_BTrue: resumes after recursive call, then processes rest.
+      struct _Cont_BTrue {};
+
+      using _Frame =
+          std::variant<_Enter, _Cont_BAnd, _Cont_BAnd_1, _Cont_BAnd_2,
+                       _Cont_BFalse, _Cont_BNot, _Cont_BNot_1, _Cont_BNot_2,
+                       _Cont_BOr, _Cont_BOr_1, _Cont_BOr_2, _Cont_BTrue>;
+      bool_expr _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified simplify_bool: _Enter -> _Cont_BAnd -> _Cont_BAnd_1 ->
+      /// _Cont_BAnd_2 -> _Cont_BFalse -> _Cont_BNot -> _Cont_BNot_1 ->
+      /// _Cont_BNot_2 -> _Cont_BOr -> _Cont_BOr_1 -> _Cont_BOr_2 ->
+      /// _Cont_BTrue.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const bool_expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
+            _result = bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return bool_expr::bfalse();
+                         _sv.v())) {
+            _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(*a01, *a11);
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(*a01, *a11);
+                         _sv.v())) {
+            const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
+            _stack.emplace_back(_Cont_BAnd{a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename bool_expr::BOr>(_sv.v());
+            _stack.emplace_back(_Cont_BOr_1{a1});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bnot(*a01);
+            const auto &[a0] = std::get<typename bool_expr::BNot>(_sv.v());
+            _stack.emplace_back(_Cont_BNot_2{});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                       _sv0.v())) {
-          return bool_expr::bfalse();
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BAnd>(_sv0.v());
-          bool_expr a_ = bool_expr::band(*a00, *a10);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return a_;
+        } else if (std::holds_alternative<_Cont_BAnd>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BAnd>(_frame));
+          std::shared_ptr<bool_expr> a1 = std::move(_f.a1);
+          bool_expr _rc1 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc1.v())) {
+            _stack.emplace_back(_Cont_BTrue{});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return bool_expr::bfalse();
+                         _rc1.v())) {
+            _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+                         _rc1.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BAnd>(_rc1.v());
+            bool_expr a_ = bool_expr::band(*a00, *a10);
+            _stack.emplace_back(_Cont_BAnd_1{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+                         _rc1.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BOr>(_rc1.v());
+            bool_expr a_ = bool_expr::bor(*a00, *a10);
+            _stack.emplace_back(_Cont_BOr{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
           } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            const auto &[a00] = std::get<typename bool_expr::BNot>(_rc1.v());
+            bool_expr a_ = bool_expr::bnot(*a00);
+            _stack.emplace_back(_Cont_BNot{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
           }
-        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BOr>(_sv0.v());
-          bool_expr a_ = bool_expr::bor(*a00, *a10);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return a_;
+        } else if (std::holds_alternative<_Cont_BAnd_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BAnd_1>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc3 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc3.v())) {
+            _result = std::move(a_);
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return bool_expr::bfalse();
+                         _rc3.v())) {
+            _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
+                         _rc3.v())) {
             const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+                std::get<typename bool_expr::BAnd>(_rc3.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
+                         _rc3.v())) {
             const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+                std::get<typename bool_expr::BOr>(_rc3.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
           } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc3.v());
+            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+          }
+        } else if (std::holds_alternative<_Cont_BAnd_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BAnd_2>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc8 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc8.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc8.v())) {
+            _result = std::move(a_);
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc8.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc8.v());
+            _result =
+                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc8.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc8.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc8.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
+          }
+        } else if (std::holds_alternative<_Cont_BFalse>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BFalse>(_frame));
+          bool_expr _rc7 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc7.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc7.v())) {
+            _result = bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc7.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc7.v());
+            _result = bool_expr::band(*a01, *a11);
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc7.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc7.v());
+            _result = bool_expr::bor(*a01, *a11);
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc7.v());
+            _result = bool_expr::bnot(*a01);
+          }
+        } else if (std::holds_alternative<_Cont_BNot>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BNot>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc5 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc5.v())) {
+            _result = std::move(a_);
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc5.v())) {
+            _result = bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc5.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc5.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc5.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc5.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc5.v());
+            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+          }
+        } else if (std::holds_alternative<_Cont_BNot_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BNot_1>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc10 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc10.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc10.v())) {
+            _result = std::move(a_);
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc10.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc10.v());
+            _result =
+                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc10.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc10.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc10.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
+          }
+        } else if (std::holds_alternative<_Cont_BNot_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BNot_2>(_frame));
+          bool_expr _rc11 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc11.v())) {
+            _result = bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc11.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc11.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BAnd>(_rc11.v());
+            _result = bool_expr::bnot(bool_expr::band(*a00, *a10));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc11.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BOr>(_rc11.v());
+            _result = bool_expr::bnot(bool_expr::bor(*a00, *a10));
+          } else {
+            const auto &[a00] = std::get<typename bool_expr::BNot>(_rc11.v());
+            _result = bool_expr::bnot(bool_expr::bnot(*a00));
+          }
+        } else if (std::holds_alternative<_Cont_BOr>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BOr>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc4 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc4.v())) {
+            _result = std::move(a_);
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc4.v())) {
+            _result = bool_expr::bfalse();
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc4.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc4.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc4.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc4.v());
+            _result =
+                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc4.v());
+            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+          }
+        } else if (std::holds_alternative<_Cont_BOr_1>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BOr_1>(_frame));
+          std::shared_ptr<bool_expr> a1 = std::move(_f.a1);
+          bool_expr _rc6 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc6.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc6.v())) {
+            _stack.emplace_back(_Cont_BFalse{});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc6.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BAnd>(_rc6.v());
+            bool_expr a_ = bool_expr::band(*a00, *a10);
+            _stack.emplace_back(_Cont_BAnd_2{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc6.v())) {
+            const auto &[a00, a10] =
+                std::get<typename bool_expr::BOr>(_rc6.v());
+            bool_expr a_ = bool_expr::bor(*a00, *a10);
+            _stack.emplace_back(_Cont_BOr_2{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a00] = std::get<typename bool_expr::BNot>(_rc6.v());
+            bool_expr a_ = bool_expr::bnot(*a00);
+            _stack.emplace_back(_Cont_BNot_1{std::move(a_)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_Cont_BOr_2>(_frame)) {
+          auto _f = std::move(std::get<_Cont_BOr_2>(_frame));
+          bool_expr a_ = std::move(_f.a_);
+          bool_expr _rc9 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc9.v())) {
+            _result = bool_expr::btrue();
+          } else if (std::holds_alternative<typename bool_expr::BFalse>(
+                         _rc9.v())) {
+            _result = std::move(a_);
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(
+                         _rc9.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BAnd>(_rc9.v());
+            _result =
+                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+          } else if (std::holds_alternative<typename bool_expr::BOr>(
+                         _rc9.v())) {
+            const auto &[a01, a11] =
+                std::get<typename bool_expr::BOr>(_rc9.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+          } else {
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc9.v());
+            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
           }
         } else {
-          const auto &[a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          bool_expr a_ = bool_expr::bnot(*a00);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return a_;
+          auto _f = std::move(std::get<_Cont_BTrue>(_frame));
+          bool_expr _rc2 = std::move(_result);
+          if (std::holds_alternative<typename bool_expr::BTrue>(_rc2.v())) {
+            _result = bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return bool_expr::bfalse();
+                         _rc2.v())) {
+            _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
+                         _rc2.v())) {
             const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+                std::get<typename bool_expr::BAnd>(_rc2.v());
+            _result = bool_expr::band(*a01, *a11);
           } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
+                         _rc2.v())) {
             const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+                std::get<typename bool_expr::BOr>(_rc2.v());
+            _result = bool_expr::bor(*a01, *a11);
           } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            const auto &[a01] = std::get<typename bool_expr::BNot>(_rc2.v());
+            _result = bool_expr::bnot(*a01);
           }
-        }
-      } else if (std::holds_alternative<typename bool_expr::BOr>(_sv.v())) {
-        const auto &[a0, a1] = std::get<typename bool_expr::BOr>(_sv.v());
-        auto &&_sv0 = a0->simplify_bool();
-        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-          return bool_expr::btrue();
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                       _sv0.v())) {
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::band(*a01, *a11);
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(*a01, *a11);
-          } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bnot(*a01);
-          }
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BAnd>(_sv0.v());
-          bool_expr a_ = bool_expr::band(*a00, *a10);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return a_;
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
-          } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
-          }
-        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BOr>(_sv0.v());
-          bool_expr a_ = bool_expr::bor(*a00, *a10);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return a_;
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
-          } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
-          }
-        } else {
-          const auto &[a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          bool_expr a_ = bool_expr::bnot(*a00);
-          auto &&_sv1 = a1->simplify_bool();
-          if (std::holds_alternative<typename bool_expr::BTrue>(_sv1.v())) {
-            return bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv1.v())) {
-            return a_;
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BAnd>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _sv1.v())) {
-            const auto &[a01, a11] =
-                std::get<typename bool_expr::BOr>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
-          } else {
-            const auto &[a01] = std::get<typename bool_expr::BNot>(_sv1.v());
-            return bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
-          }
-        }
-      } else {
-        const auto &[a0] = std::get<typename bool_expr::BNot>(_sv.v());
-        auto &&_sv0 = a0->simplify_bool();
-        if (std::holds_alternative<typename bool_expr::BTrue>(_sv0.v())) {
-          return bool_expr::bfalse();
-        } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                       _sv0.v())) {
-          return bool_expr::btrue();
-        } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BAnd>(_sv0.v());
-          return bool_expr::bnot(bool_expr::band(*a00, *a10));
-        } else if (std::holds_alternative<typename bool_expr::BOr>(_sv0.v())) {
-          const auto &[a00, a10] = std::get<typename bool_expr::BOr>(_sv0.v());
-          return bool_expr::bnot(bool_expr::bor(*a00, *a10));
-        } else {
-          const auto &[a00] = std::get<typename bool_expr::BNot>(_sv0.v());
-          return bool_expr::bnot(bool_expr::bnot(*a00));
         }
       }
+      return _result;
     }
 
     bool eval_bool() const {

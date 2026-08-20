@@ -511,27 +511,64 @@ struct LoopifyTrees {
     /// same_shape tests structural equality.
     template <typename T1> bool same_shape(const tree<T1> &t2) const {
       const tree *_self = this;
-      auto &&_sv = *_self;
-      if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
-        if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
-          return false;
-        } else {
-          const auto &[a00, a10, a20] =
-              std::get<typename tree<T1>::Node>(t2.v());
-          if (a0->template same_shape<T1>(*a00)) {
-            return a2->template same_shape<T1>(*a20);
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree *_self;
+        const tree<T1> *t2;
+      };
+
+      /// _Cont_Node: saves [a2, a20], resumes after recursive call, then
+      /// processes rest.
+      struct _Cont_Node {
+        std::shared_ptr<tree<A>> a2;
+        const tree<T1> *a20;
+      };
+
+      using _Frame = std::variant<_Enter, _Cont_Node>;
+      bool _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, &t2});
+      /// Loopified same_shape: _Enter -> _Cont_Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree *_self = _f._self;
+          const tree<T1> &t2 = *_f.t2;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
+            if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
+              _result = true;
+            } else {
+              _result = false;
+            }
           } else {
-            return false;
+            const auto &[a0, a1, a2] =
+                std::get<typename tree<A>::Node>(_sv.v());
+            if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
+              _result = false;
+            } else {
+              const auto &[a00, a10, a20] =
+                  std::get<typename tree<T1>::Node>(t2.v());
+              _stack.emplace_back(_Cont_Node{a2, crane_raw(a20)});
+              _stack.emplace_back(_Enter{crane_raw(a0), crane_raw(a00)});
+            }
+          }
+        } else {
+          auto _f = std::move(std::get<_Cont_Node>(_frame));
+          std::shared_ptr<tree<A>> a2 = std::move(_f.a2);
+          const tree<T1> &a20 = *_f.a20;
+          bool _rc1 = std::move(_result);
+          if (_rc1) {
+            _stack.emplace_back(_Enter{crane_raw(a2), &a20});
+          } else {
+            _result = false;
           }
         }
       }
+      return _result;
     }
 
     tree<A> mirror() const {

@@ -1395,17 +1395,17 @@ LoopifyLists::split_at(
     uint64_t n;
   };
 
-  /// _Resume1: saves [a0], resumes after recursive call with _result.
-  struct _Resume1 {
+  /// _Cont1: saves [a0], resumes after recursive call, then processes rest.
+  struct _Cont1 {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Resume1>;
+  using _Frame = std::variant<_Enter, _Cont1>;
   std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
       _result{};
   crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{std::move(l), n});
-  /// Loopified split_at: _Enter -> _Resume1.
+  /// Loopified split_at: _Enter -> _Cont1.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
@@ -1422,15 +1422,17 @@ LoopifyLists::split_at(
         if (n == UINT64_C(0)) {
           _result = std::make_pair(list<uint64_t>::nil(), l);
         } else {
-          _stack.emplace_back(_Resume1{a0});
+          _stack.emplace_back(_Cont1{a0});
           _stack.emplace_back(
               _Enter{*a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Resume1>(_frame));
+      auto _f = std::move(std::get<_Cont1>(_frame));
       uint64_t a0 = _f.a0;
-      auto [a, b] = std::move(_result);
+      std::pair<LoopifyLists::list<uint64_t>, LoopifyLists::list<uint64_t>>
+          _rc1 = std::move(_result);
+      auto [a, b] = _rc1;
       _result = std::make_pair(
           list<uint64_t>::cons(std::move(a0), std::move(a)), std::move(b));
     }
