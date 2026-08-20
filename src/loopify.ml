@@ -119,6 +119,13 @@ let id_pop_back     = Id.of_string "pop_back"
 let id_back         = Id.of_string "back"
 let id_reserve      = Id.of_string "reserve"
 
+(** Raised when a function's shape defeats a linearising transform -- for
+    instance a self-call whose arity differs from the enclosing definition's, so
+    that no per-parameter correspondence exists.  This is a limitation of the
+    transform, not a broken invariant, so the caller turns it into a decline
+    (original body preserved) rather than letting it abort the extraction. *)
+exception Not_linearisable of string
+
 (** {2 List utility helpers} *)
 
 let rec list_take n = function
@@ -994,9 +1001,25 @@ let find_varying_params check params body =
              calls ) )
       params
 
-(** Filter a list keeping only elements at positions where [mask] is [true]. *)
+(** Filter a list keeping only elements at positions where [mask] is [true].
+
+    [mask] is indexed by the function's parameters, so [lst] is expected to be
+    a call site's argument list of the same length.  A self-call can legitimately
+    carry a different arity than the definition it sits in -- a partially applied
+    call, or a knot-tying wrapper whose functional takes an extra [rec] parameter
+    -- and then no per-parameter mask applies.  That is a shape this transform
+    does not handle rather than a broken invariant, so raise {!Not_linearisable}
+    and let the caller decline, instead of failing the whole extraction. *)
 let filter_by_mask mask lst =
-  combine_exn ~what:"filter_by_mask" mask lst
+  let n1 = List.length mask and n2 = List.length lst in
+  if n1 <> n2 then
+    raise
+      (Not_linearisable
+         (Printf.sprintf
+            "a recursive call passes %d argument%s where the definition has %d \
+             parameter%s"
+            n2 (if n2 = 1 then "" else "s") n1 (if n1 = 1 then "" else "s") ));
+  List.combine mask lst
   |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
 (** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
@@ -1352,7 +1375,20 @@ let make_shadow_updates shadow_params args =
     List.map
       (fun ((shadow_id, ty), arg) ->
         ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
-      (combine_exn ~what:"make_shadow_updates" shadow_params args)
+      (* Same arity caveat as {!filter_by_mask}: a self-call of a different
+         arity than the definition has no shadow-parameter correspondence, so
+         decline rather than fail the extraction. *)
+      ( if List.compare_lengths shadow_params args <> 0 then
+          raise
+            (Not_linearisable
+               (Printf.sprintf
+                  "a recursive call updates %d shadow parameter%s from %d \
+                   argument%s"
+                  (List.length shadow_params)
+                  (if List.length shadow_params = 1 then "" else "s")
+                  (List.length args)
+                  (if List.length args = 1 then "" else "s") ))
+        else List.combine shadow_params args )
   in
   (* Identify which params actually change (filter self-assignments). *)
   let non_trivial =
@@ -7774,6 +7810,11 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_ex
     ( transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body,
       false )
   in
+  (* A transform may discover mid-flight that the body's shape has no
+     per-parameter correspondence to linearise (see {!Not_linearisable}).  That
+     is a limitation, not a bug, so record a decline and keep the original
+     body. *)
+  try
   match try_tmc_classify check body with
   | Some ti ->
     (* TMC only rewrites calls that sit directly under a constructor.  A body
@@ -7790,6 +7831,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_ex
     end
     else frame ()
   | None -> frame ()
+  with Not_linearisable reason -> (decline reason body, false)
 
 (** Inline an Equations-style "functional" into its knot-tying wrapper.
 
@@ -8193,7 +8235,7 @@ let hoist_rec_conditions (check : call_checker)
     @param no_pure   Whether the function is marked [no_pure] (passed through
                      to the [Dfundef] node unchanged)
     @return A [Dfundef] declaration with the loopified body *)
-let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
+let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names params body;
   (* Try to inline mutual recursion partners *)
@@ -8259,6 +8301,18 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
        | Some s -> report_outcome ~name ~check ~strategy:s body)
   in
   Dfundef (names, ret_ty, params, body, no_pure)
+
+(** {!transform_fundef_exn}, but a {!Not_linearisable} raised anywhere inside a
+    transform is turned into a decline for this one function: the original body
+    is emitted unchanged and the outcome is recorded, so a shape the pass cannot
+    linearise never aborts the surrounding extraction. *)
+let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
+  try
+    transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body
+      no_pure
+  with Not_linearisable reason ->
+    ignore (decline reason body);
+    Dfundef (names, ret_ty, params, body, no_pure)
 
 (** Transform a struct method by loopifying its body.
 
@@ -8402,6 +8456,20 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
 let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+  (* Same contract as {!transform_fundef}: a shape the pass cannot linearise
+     declines this one field instead of aborting the extraction. *)
+  try transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag)
+  with Not_linearisable reason ->
+    let body =
+      match fld with
+      | Fmethod mf -> mf.mf_body
+      | Ffundef (_, _, _, body) -> body
+      | _ -> []
+    in
+    ignore (decline reason body);
+    (fld, vis, tag)
+
+and transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
     (transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf, vis, tag)

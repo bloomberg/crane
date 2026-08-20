@@ -117,34 +117,91 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   List<A> filter(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return List<A>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      if (f(a0)) {
-        return List<A>::cons(a0, a1->filter(f));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(List<A>::nil());
+        break;
       } else {
-        return a1->filter(f);
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        if (f(a0)) {
+          auto _cell =
+              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          _loop_self = crane_raw(a1);
+          continue;
+        } else {
+          _loop_self = crane_raw(a1);
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   uint64_t length() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (a1->length() + 1);
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    uint64_t _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified length: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = (std::move(_result) + 1);
+      }
     }
+    return _result;
   }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -157,110 +214,6 @@ template <typename Err> struct ExceptE {
 
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
-};
-
-struct Ascii {
-  // DATA
-  bool a0;
-  bool a1;
-  bool a2;
-  bool a3;
-  bool a4;
-  bool a5;
-  bool a6;
-  bool a7;
-
-  // ACCESSORS
-  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
-
-  // CREATORS
-  static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
-                      bool a6, bool a7) {
-    return {a0, a1, a2, a3, a4, a5, a6, a7};
-  }
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-struct STMonadExamples {
-  template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
-  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
-                                                 F1 &&quicksort_fun0);
-};
-
-struct String {
-  // TYPES
-  struct EmptyString {};
-
-  struct String0 {
-    Ascii a0;
-    std::shared_ptr<String> a1;
-  };
-
-  using variant_t = std::variant<EmptyString, String0>;
-
-private:
-  // DATA
-  variant_t v_;
-
-public:
-  // CREATORS
-  String() {}
-
-  explicit String(EmptyString _v) : v_(_v) {}
-
-  explicit String(String0 _v) : v_(std::move(_v)) {}
-
-  static String emptystring() { return String(EmptyString{}); }
-
-  static String string0(Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
-  }
-
-  // MANIPULATORS
-  ~String() {
-    crane::small_vector<std::shared_ptr<String>> _stack = {};
-    auto _drain = [&](variant_t &_v) {
-      if (auto *_alt = std::get_if<String0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
-        }
-      }
-    };
-    _drain(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (_cur.use_count() == 1) {
-        _drain(_cur->v_mut());
-      }
-    }
-  }
-
-  String(const String &) = default;
-  String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
-
-  inline variant_t &v_mut() { return v_; }
-
-  // ACCESSORS
-  const variant_t &v() const { return v_; }
-};
-
-struct Err {
-  // DATA
-  String x;
-
-  // ACCESSORS
-  Err clone() const { return {x}; }
-
-  // CREATORS
-  static Err error(String x) { return {std::move(x)}; }
 };
 
 template <typename I, typename T>
@@ -281,6 +234,29 @@ concept Ix = requires {
   { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
   { I::zero() } -> std::convertible_to<T>;
 };
+
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Err {
+  // DATA
+  std::string x;
+
+  // ACCESSORS
+  Err clone() const { return {x}; }
+
+  // CREATORS
+  static Err error(std::string x) { return {std::move(x)}; }
+};
+
+struct STMonadExamples {
+  template <typename F1>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
+                                                 F1 &&quicksort_fun0);
+};
+
 template <typename I, typename T>
 concept STRefClass = requires {
   { I::mkSTRef(std::declval<T>()) } -> std::convertible_to<std::any>;
@@ -362,27 +338,29 @@ struct STMonadTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      uint64_t x;
-      x = UINT64_C(0);
-      uint64_t y;
-      y = UINT64_C(1);
-      auto fib_loop_impl = [&](auto &, uint64_t k, uint64_t x0, uint64_t y0,
-                               uint64_t, uint64_t) -> uint64_t {
+      std::shared_ptr<uint64_t> x;
+      x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
+      std::shared_ptr<uint64_t> y;
+      y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
+      auto fib_loop_impl = [&](auto &, uint64_t k, std::shared_ptr<uint64_t> x0,
+                               std::shared_ptr<uint64_t> y0, uint64_t,
+                               uint64_t) -> uint64_t {
         uint64_t _loop_k = std::move(k);
         while (true) {
           if (_loop_k <= 0) {
-            return x0;
+            return *x0;
           } else {
             uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = x0;
-            uint64_t y_ = y0;
-            x0 = y_;
-            y0 = (x_ + y_);
+            uint64_t x_ = *x0;
+            uint64_t y_ = *y0;
+            *x0 = y_;
+            *y0 = (x_ + y_);
             _loop_k = k_;
           }
         }
       };
-      auto fib_loop = [&](uint64_t k, uint64_t x0, uint64_t y0, uint64_t idx_x,
+      auto fib_loop = [&](uint64_t k, std::shared_ptr<uint64_t> x0,
+                          std::shared_ptr<uint64_t> y0, uint64_t idx_x,
                           uint64_t idx_y) -> uint64_t {
         return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
       };
@@ -396,51 +374,50 @@ struct STMonadTests {
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<bool, bool> new_and_read_both_bool() {
-    bool r1;
-    r1 = false;
-    bool r2;
-    r2 = true;
-    bool x1 = r1;
-    bool x2 = r2;
+    std::shared_ptr<bool> r1;
+    r1 = std::make_shared<decltype(false)>(false);
+    std::shared_ptr<bool> r2;
+    r2 = std::make_shared<decltype(true)>(true);
+    bool x1 = *r1;
+    bool x2 = *r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    uint64_t r1;
-    r1 = UINT64_C(5);
-    uint64_t r2;
-    r2 = UINT64_C(6);
-    uint64_t x1 = r1;
-    uint64_t x2 = r2;
+    std::shared_ptr<uint64_t> r1;
+    r1 = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    std::shared_ptr<uint64_t> r2;
+    r2 = std::make_shared<decltype(UINT64_C(6))>(UINT64_C(6));
+    uint64_t x1 = *r1;
+    uint64_t x2 = *r2;
     return std::make_pair(x1, x2);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_another_nat() {
-    uint64_t v;
-    v = UINT64_C(5);
-    v = UINT64_C(6);
-    uint64_t val = v;
-    return val;
+    std::shared_ptr<uint64_t> v;
+    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    *v = UINT64_C(6);
+    return *v;
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static bool tree_simp_bool() {
-    bool v;
-    v = true;
-    return std::move(v);
+    std::shared_ptr<bool> v;
+    v = std::make_shared<decltype(true)>(true);
+    return *std::move(v);
   }
 
   template <typename _tcI0, typename _tcI1>
     requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static uint64_t tree_simp_nat() {
-    uint64_t v;
-    v = UINT64_C(5);
-    return std::move(v);
+    std::shared_ptr<uint64_t> v;
+    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
+    return *std::move(v);
   }
 
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);

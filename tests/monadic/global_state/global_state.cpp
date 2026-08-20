@@ -21,8 +21,7 @@ GlobalStateTests::fib_fun(uint64_t n) { /// _Enter: captures varying parameters
 
   using _Frame = std::variant<_Enter, _After_m, _Combine_m>;
   uint64_t _result{};
-  std::vector<_Frame> _stack;
-  _stack.reserve(8);
+  crane::small_vector<_Frame> _stack;
   _stack.emplace_back(_Enter{n});
   /// Loopified fib_fun: _Enter -> _After_m -> _Combine_m.
   while (!_stack.empty()) {

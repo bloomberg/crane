@@ -1,5 +1,3 @@
-fibst_cofix_repro.cpp max: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
-fibst_cofix_repro.cpp sub: DECLINED: recursive call passes a value-type receiver, whose address cannot be stored in a frame
 loopify_gap_ackermann.cpp ack: DECLINED: a self-call survived the transform
 loopify_gap_nested_fix.cpp rose_sum: DECLINED: a self-call survived the transform
 loopify_multi_recursion.cpp quadtree_rec: DECLINED: a self-call survived the transform
