@@ -38,14 +38,15 @@ struct WrapperNestedRecursionNoDrain {
 
   /// rose's recursive occurrence sits inside box, so it is neither a direct
   /// self-reference nor a self-reference through a list. The drain classifier
-  /// ("classify_ml_self_ref" in "src/gen_decls.ml") recognises only those two
-  /// shapes, so it reports no self-recursion here and Crane emits no iterative
-  /// destructor for rose at all. The same program written with list rose
-  /// instead of box rose does get one, and survives this test.
+  /// ("classify_ml_self_ref" in "src/gen_decls.ml") used to recognise only
+  /// those two shapes, reported no self-recursion here, and emitted no
+  /// iterative destructor for rose at all. Destruction then fell back to the
+  /// default member-wise ~shared_ptr chain, recursing once per level and
+  /// overflowing the C++ call stack on a deep value (CWE-674).
   ///
-  /// Destruction therefore falls back to the default member-wise
-  /// ~shared_ptr chain, which recurses once per level of the value. A deep
-  /// rose overflows the C++ call stack when it goes out of scope (CWE-674).
+  /// It now classifies recursion through a flat single-constructor wrapper too,
+  /// and the generated ~rose reaches through a uniquely-owned box cell to
+  /// move the nested rose onto its worklist.
   struct rose {
     // TYPES
     struct RLeaf {
@@ -77,6 +78,33 @@ struct WrapperNestedRecursionNoDrain {
     }
 
     // MANIPULATORS
+    ~rose() {
+      crane::small_vector<std::shared_ptr<rose>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<RNode>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            _stack.push_back(std::make_shared<rose>(std::move(_alt->a0->a0)));
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

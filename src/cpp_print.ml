@@ -636,6 +636,15 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
+(** Declared return type of the lambda whose body is currently being printed,
+    or [None] outside a lambda with an explicit return type.  A lambda erased
+    to [std::function<T(std::any)>] takes its argument as [std::any] but still
+    returns the concrete [T], so an erased value reaching [return] has to be
+    cast back.  Use sites with a known expected type (a [.first], a method
+    call) already get that cast from {!wrap_any_cast_if_needed}; a bare
+    [return k;] has no such site, and its expected type is exactly this. *)
+let current_lambda_ret_ty : cpp_type option ref = ref None
+
 (** Map from parameter IDs to their concrete C++ type, for variables that
     are std::any at runtime (because their outer pair match used pair<any,any>)
     but have a concrete declared type (e.g. [prs : List<std::any>]).  When such
@@ -1784,7 +1793,10 @@ and pp_cpp_expr env args t =
         current_any_typed_params := Id.Set.add id !current_any_typed_params
       | _ -> ()
     ) params;
+    let saved_ret_ty = !current_lambda_ret_ty in
+    current_lambda_ret_ty := ret_ty;
     let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
+    current_lambda_ret_ty := saved_ret_ty;
     current_any_typed_params := saved_any_params;
     let params_s, capture =
       match params with
@@ -2184,7 +2196,18 @@ and pp_cpp_stmt env args = function
                  | CPPstruct_id _) as inner) -> inner
       | _ -> e
     in
-    str "return " ++ pp_cpp_expr env args e ++ str ";"
+    (* An erased value returned bare from a lambda whose declared return type
+       is concrete needs the [any_cast] that a use site would otherwise have
+       supplied -- e.g. the identity consumer of an existential package,
+       [std::function<uint64_t(std::any)>([](const std::any& k) -> uint64_t
+       { return k; })], which does not compile without it. *)
+    let printed = pp_cpp_expr env args e in
+    let printed =
+      match !current_lambda_ret_ty with
+      | Some ret_ty -> wrap_any_cast_if_needed e printed ret_ty []
+      | None -> printed
+    in
+    str "return " ++ printed ++ str ";"
   | Sdecl (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
   | Sasgn (id, Some ty, e) ->
@@ -2866,6 +2889,28 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
         let t_printed =
           match t_expr with
           | CPPstring _ -> t_printed ++ str (sn ()).str_suffix
+          (* A custom match template splices [%scrut] in as text and appends
+             to it, so a scrutinee carrying a prefix operator would bind
+             looser than whatever follows.  A recursive occurrence nested
+             under a mapped type (e.g. [option chain]) is stored behind a
+             smart pointer, so the scrutinee prints as [*a1] and the option
+             template's [%scrut.has_value()] came out as [*a1.has_value()] --
+             the member access binding to [a1] rather than to the pointee,
+             which does not compile.  Parenthesize so the operator keeps its
+             intended operand.
+
+             Only the pointer operators need this: they are the ones a
+             template can follow with a member access.  The logical and
+             arithmetic prefixes ([!], [-], [~]) already bind tighter than
+             anything a template appends after [%scrut], so parenthesizing
+             them would only add noise to the generated code. *)
+          | _
+            when (let s = Pp.string_of_ppcmds t_printed in
+                  String.length s > 0
+                  && (match s.[0] with
+                      | '*' | '&' -> true
+                      | _ -> false)) ->
+            surround t_printed
           | _ -> t_printed
         in
         ( match typ with

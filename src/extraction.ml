@@ -906,6 +906,32 @@ and extract_really_ind env kn mib =
       in
       if List.is_empty l then raise (I Standard);
       if mib.mind_record == Declarations.NotRecord then raise (I Standard);
+      (* A record is emitted as a flat C++ struct holding its fields by
+         value, which cannot express a field whose type mentions the record
+         itself: [Inductive cell := MkCell { key : nat; kids : list cell }]
+         produced [List<cell> kids;] inside [struct cell], before the closing
+         brace, i.e. an incomplete type.  The standard inductive
+         representation has no such problem -- it puts recursive occurrences
+         behind a smart pointer -- so fall back to it.  (The single-
+         constructor "flat" layout in [gen_decls.ml] already declines
+         self-referential types for the same reason; records reach the flat
+         struct by a different route and needed the same guard.)  Rocq
+         rejects recursive [Record]s outright, so this only fires for the
+         [Inductive]-with-named-fields spelling.  The occurrence is looked
+         for anywhere in the field's type, not just at its head: going
+         through a container ([list cell]) leaves the struct just as
+         incomplete as a bare [cell] field would. *)
+      let rec mentions_self t =
+        match t with
+        | Tglob (gr, args, _) ->
+          (match gr with
+           | GlobRef.IndRef (kn', _) when MutInd.CanOrd.equal kn' kn -> true
+           | _ -> List.exists mentions_self args)
+        | Tarr (a, b) -> mentions_self a || mentions_self b
+        | Tmeta {contents = Some t} -> mentions_self t
+        | _ -> false
+      in
+      if List.exists mentions_self typ then raise (I Standard);
       (* Now we're sure it's a record. *)
       (* First, we find its field names. *)
       let field_names =

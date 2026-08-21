@@ -10,7 +10,9 @@ List<ExistentialErasedApplyBadCpp::dyn>
 ExistentialErasedApplyBadCpp::mk(uint64_t n) {
   return List<ExistentialErasedApplyBadCpp::dyn>::cons(
       dyn::dyn0(n, std::function<uint64_t(std::any)>(
-                       [](const std::any &k) -> uint64_t { return k; })),
+                       [](const std::any &k) -> uint64_t {
+                         return std::any_cast<uint64_t>(k);
+                       })),
       List<ExistentialErasedApplyBadCpp::dyn>::cons(
           dyn::dyn0(
               std::make_pair(n, (n + 1)),

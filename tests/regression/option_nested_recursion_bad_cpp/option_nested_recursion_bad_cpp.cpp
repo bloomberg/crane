@@ -16,8 +16,8 @@ uint64_t OptionNestedRecursionBadCpp::depth(
     const OptionNestedRecursionBadCpp::chain &c) {
   const auto &[a0, a1] =
       std::get<typename OptionNestedRecursionBadCpp::chain::Link>(c.v());
-  if (*a1.has_value()) {
-    const OptionNestedRecursionBadCpp::chain &c_ = **a1;
+  if ((*a1).has_value()) {
+    const OptionNestedRecursionBadCpp::chain &c_ = *(*a1);
     return (depth(c_) + 1);
   } else {
     return UINT64_C(1);

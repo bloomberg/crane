@@ -124,15 +124,17 @@ struct ExistentialErasedApplyBadCpp {
   /// the consumer's argument erase to std::any.
   ///
   /// The consumer is emitted with the erased signature it actually has --
-  /// const std::any & in, uint64_t out -- but its body is the identity
-  /// fun k => k, and Crane returns the erased std::any directly without an
-  /// any_cast back to the concrete return type:
+  /// const std::any & in, uint64_t out. For the identity fun k => k the
+  /// erased std::any used to be returned directly, with no any_cast back
+  /// to the concrete return type:
   ///
   /// (const std::any &k) -> uint64_t { return k; }
   ///
-  /// which does not compile. The any_cast is inserted for erased values
-  /// flowing out of pattern matches but not for one reaching a return
-  /// position through a lambda whose parameter was erased.
+  /// which does not compile. The other two consumers were already fine: they
+  /// use their argument at a site with a known expected type (.first, a
+  /// method call), which is where the cast was being inserted. A bare return
+  /// has no such site, so the lambda's declared return type is now threaded
+  /// through as the expected type there.
   struct dyn {
     // DATA
     std::any a;

@@ -116,33 +116,99 @@ struct RecursiveRecordIncompleteType {
   ///
   /// Crane translates record-shaped inductives to a plain struct with the
   /// fields inlined as members, which is right for non-recursive records but
-  /// wrong here: the kids member is emitted as List<cell> kids; inside
-  /// struct cell, i.e. the struct is used by value in its own definition,
-  /// before its closing brace. That is an incomplete type and does not
-  /// compile. The non-record spelling of the same type
-  /// (Inductive cell := MkCell : nat -> list cell -> cell) is fine, because
-  /// the recursive field goes behind a shared_ptr.
+  /// wrong here: the kids member came out as List<cell> kids; inside
+  /// struct cell, i.e. the struct used by value in its own definition,
+  /// before its closing brace -- an incomplete type, which does not compile.
+  ///
+  /// Record classification now declines self-referential types, so cell gets
+  /// the standard inductive representation, which puts the recursive
+  /// occurrence behind a smart pointer. The occurrence is looked for anywhere
+  /// in a field's type: reaching cell through list leaves the struct just
+  /// as incomplete as a bare cell field would.
   struct cell {
-    uint64_t key;
-    List<cell> kids;
+    // TYPES
+    struct MkCell {
+      uint64_t key;
+      std::shared_ptr<List<cell>> kids;
+    };
+
+    using variant_t = std::variant<MkCell>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    cell() {}
+
+    explicit cell(MkCell _v) : v_(std::move(_v)) {}
+
+    static cell mkcell(uint64_t key, List<cell> kids) {
+      return cell(MkCell{key, std::make_shared<List<cell>>(std::move(kids))});
+    }
+
+    // MANIPULATORS
+    ~cell() {
+      crane::small_vector<std::shared_ptr<cell>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<MkCell>(&_v)) {
+          if (_alt->kids && _alt->kids.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            auto *_lp = _alt->kids.get();
+            while (
+                std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<cell>::Cons>(_lp->v_mut());
+              _stack.push_back(std::make_shared<cell>(std::move(_lc.a)));
+              if (_lc.l && _lc.l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                _lp = _lc.l.get();
+              } else {
+                break;
+              }
+            }
+            _alt->kids.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    cell(const cell &) = default;
+    cell &operator=(const cell &) = default;
+    cell(cell &&) noexcept = default;
+    cell &operator=(cell &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rect(F0 &&f, const cell &c) {
-    uint64_t key0 = c.key;
-    List<cell> kids0 = c.kids;
-    return f(key0, kids0);
+    const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
+    return f(key1, *kids1);
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rec(F0 &&f, const cell &c) {
-    uint64_t key0 = c.key;
-    List<cell> kids0 = c.kids;
-    return f(key0, kids0);
+    const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
+    return f(key1, *kids1);
   }
 
+  static uint64_t key(const cell &c);
+  static List<cell> kids(const cell &c);
   static uint64_t csum(const cell &c);
   static uint64_t run(uint64_t n);
 };

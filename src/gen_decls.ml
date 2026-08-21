@@ -4387,12 +4387,58 @@ let gen_ind_header_v2
               (fun (pname, _, _, _) -> is_ref_to pname vars ty)
               mutual_partners
           in
+          (* Self-recursion routed through another user-defined inductive
+             (e.g. [RNode : box rose -> rose], where [box] is a plain
+             one-field wrapper).  The occurrence is neither direct nor a
+             list, so without this the type looked non-recursive, no drain
+             was emitted at all, and destruction recursed once per level
+             through the default member-wise [~shared_ptr] chain -- a stack
+             overflow on deep values (CWE-674; regression:
+             tests/regression/wrapper_nested_recursion_no_drain).
+
+             Restricted to "flat" wrappers: single-constructor inductives
+             laid out as a plain struct, so a uniquely-owned
+             [shared_ptr<box<rose>>] reaches its nested [rose] by a direct
+             member access.  Multi-constructor wrappers would need per-
+             alternative [get_if] dispatch and are still classified [`None].
+
+             Returns the wrapper's field names that hold a self-reference:
+             those whose declared type is a parameter the field instantiates
+             with [Self], plus any that name [Self] outright. *)
+          let wrapper_self_fields g args =
+            match g with
+            | GlobRef.IndRef (kn, i) when Table.is_flat_inductive g ->
+              let ctor = GlobRef.ConstructRef ((kn, i), 1) in
+              (match Table.get_ctor_ip_types_opt ctor with
+               | None -> []
+               | Some ip_types ->
+                 let cname_str = ctor_struct_name_of_ref ~fallback_idx:0 ctor in
+                 let nargs = List.length args in
+                 List.filter_map
+                   (fun (j, fty) ->
+                     let rec holds_self = function
+                       | Miniml.Tvar k | Miniml.Tvar' k ->
+                         k >= 1 && k <= nargs
+                         && is_direct_self_ref (List.nth args (k - 1))
+                       | Miniml.Tmeta {contents = Some t} -> holds_self t
+                       | t -> is_direct_self_ref t
+                     in
+                     if holds_self fty
+                     then Some (Common.lookup_ctor_field_name cname_str j)
+                     else None)
+                   (List.mapi (fun j t -> (j, t)) ip_types))
+            | _ -> []
+          in
           let rec classify_ml_self_ref = function
             | ml_ty when is_direct_self_ref ml_ty -> `Direct
             | Miniml.Tglob (g, [arg], _)
               when is_list_global g && is_direct_self_ref arg ->
               `List g
             | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
+            | Miniml.Tglob (g, args, _) when not (globref_equal g name) ->
+              (match wrapper_self_fields g args with
+               | [] -> `None
+               | fields -> `Wrapper fields)
             | _ -> `None
           in
           let has_mutual =
@@ -4534,6 +4580,31 @@ let gen_ind_header_v2
                      CPPvar _stack_id,
                      Id.of_string "push_back",
                      [CPPmove fe]))])]
+              | `Wrapper wfields ->
+                (* Reach through a uniquely-owned wrapper cell and move each
+                   nested [Self] onto the worklist, then drop the cell.  The
+                   ownership test is the same one the other drains use, and
+                   needs the same acquire fence -- see [unique_fence]. *)
+                let ss = render_q_destr self_ty in
+                let fes =
+                  Id.to_string _alt_id ^ "->" ^ Id.to_string field_id
+                in
+                [Sif_then (
+                  CPPbinop ("&&", fe,
+                    CPPbinop ("==",
+                      CPPraw (fes ^ ".use_count()"),
+                      CPPint 1)),
+                  unique_fence
+                  @ List.map (fun wf ->
+                      Sexpr (CPPdot_method_call (
+                        CPPvar _stack_id,
+                        Id.of_string "push_back",
+                        [CPPraw (
+                           Table.make_shared_name () ^ "<" ^ ss
+                           ^ ">(std::move(" ^ fes ^ "->"
+                           ^ Id.to_string wf ^ "))")])))
+                      wfields
+                  @ [Sraw (fes ^ ".reset();")])]
               | `List list_g ->
                 let ss = render_q_destr self_ty in
                 let fes =
@@ -4666,6 +4737,7 @@ let gen_ind_header_v2
                     match effective_cls with
                     | `Direct -> Some (field_id, `Direct)
                     | `List g -> Some (field_id, `List g)
+                    | `Wrapper fs -> Some (field_id, `Wrapper fs)
                     | _ -> None
                   else None)
                 (List.mapi (fun j ty -> (j, ty)) tys_list)

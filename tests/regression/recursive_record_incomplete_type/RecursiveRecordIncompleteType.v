@@ -12,12 +12,15 @@ Module RecursiveRecordIncompleteType.
 
     Crane translates record-shaped inductives to a plain struct with the
     fields inlined as members, which is right for non-recursive records but
-    wrong here: the [kids] member is emitted as [List<cell> kids;] inside
-    [struct cell], i.e. the struct is used by value in its own definition,
-    before its closing brace. That is an incomplete type and does not
-    compile. The non-record spelling of the same type
-    ([Inductive cell := MkCell : nat -> list cell -> cell]) is fine, because
-    the recursive field goes behind a [shared_ptr]. *)
+    wrong here: the [kids] member came out as [List<cell> kids;] inside
+    [struct cell], i.e. the struct used by value in its own definition,
+    before its closing brace -- an incomplete type, which does not compile.
+
+    Record classification now declines self-referential types, so [cell] gets
+    the standard inductive representation, which puts the recursive
+    occurrence behind a smart pointer. The occurrence is looked for anywhere
+    in a field's type: reaching [cell] through [list] leaves the struct just
+    as incomplete as a bare [cell] field would. *)
 Inductive cell : Type := MkCell { key : nat; kids : list cell }.
 
 Fixpoint csum (c : cell) : nat :=
