@@ -764,6 +764,10 @@ let rec mp_renaming_fun full_mp =
         | [""] -> modfstlev_rename l
         | _ -> modular_rename Mod (Label.to_id l) )
     in
+    (* A module named [std] or [crane] is emitted as [std_] / [crane_] so it
+       does not shadow the standard library or the Crane runtime namespace;
+       qualified references must use the same escaped name. *)
+    let name = Table.escape_reserved_struct_name name in
     name :: lmp
   | MPbound mbid ->
     let s = modular_rename Mod (MBId.to_id mbid) in

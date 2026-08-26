@@ -6869,3 +6869,49 @@
   (alias runtest)
   (deps dep_match_unit_vec.t.exe)
   (action (run ./dep_match_unit_vec.t.exe))))
+
+
+
+(subdir ident_named_uint64
+ (rule
+  (targets ident_named_uint64.t.exe)
+  (deps IdentNamedUint64.vo ident_named_uint64.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ident_named_uint64.t.exe ident_named_uint64.cpp ident_named_uint64.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ident_named_uint64.t.exe)
+  (action (run ./ident_named_uint64.t.exe))))
+
+(subdir inductive_named_list
+ (rule
+  (targets inductive_named_list.t.exe)
+  (deps InductiveNamedList.vo inductive_named_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_named_list.t.exe inductive_named_list.cpp inductive_named_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_named_list.t.exe)
+  (action (run ./inductive_named_list.t.exe))))
+
+(subdir module_named_crane
+ (rule
+  (targets module_named_crane.t.exe)
+  (deps ModuleNamedCrane.vo module_named_crane.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_named_crane.t.exe module_named_crane.cpp module_named_crane.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_named_crane.t.exe)
+  (action (run ./module_named_crane.t.exe))))
+
+(subdir module_named_std
+ (rule
+  (targets module_named_std.t.exe)
+  (deps ModuleNamedStd.vo module_named_std.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_named_std.t.exe module_named_std.cpp module_named_std.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_named_std.t.exe)
+  (action (run ./module_named_std.t.exe))))

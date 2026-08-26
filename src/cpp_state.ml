@@ -195,6 +195,26 @@ let keywords =
       (* Reserved identifiers *)
       "_";
       "__";
+      (* Unqualified library names that Crane's type mappings and runtime
+         headers put at global scope.  A Rocq definition or inductive with one
+         of these names would shadow the type it is spelled with — e.g. a
+         [Definition uint64_t] inside a struct hides the [uint64_t] used for
+         its own signature, and an [Inductive List] hides the runtime's
+         [List<T>]. *)
+      "int8_t";
+      "int16_t";
+      "int32_t";
+      "int64_t";
+      "uint8_t";
+      "uint16_t";
+      "uint32_t";
+      "uint64_t";
+      "intptr_t";
+      "uintptr_t";
+      "ptrdiff_t";
+      "size_t";
+      "List";
+      "persistent_array";
     ]
     Id.Set.empty
 

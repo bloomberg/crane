@@ -119,13 +119,13 @@ public:
 };
 
 struct InductiveNamedList {
-  struct List {
+  struct List_ {
     // TYPES
     struct LNil {};
 
     struct LCons {
       uint64_t a0;
-      std::shared_ptr<List> a1;
+      std::shared_ptr<List_> a1;
     };
 
     using variant_t = std::variant<LNil, LCons>;
@@ -136,21 +136,21 @@ struct InductiveNamedList {
 
   public:
     // CREATORS
-    List() {}
+    List_() {}
 
-    explicit List(LNil _v) : v_(_v) {}
+    explicit List_(LNil _v) : v_(_v) {}
 
-    explicit List(LCons _v) : v_(std::move(_v)) {}
+    explicit List_(LCons _v) : v_(std::move(_v)) {}
 
-    static List lnil() { return List(LNil{}); }
+    static List_ lnil() { return List_(LNil{}); }
 
-    static List lcons(uint64_t a0, List a1) {
-      return List(LCons{a0, std::make_shared<List>(std::move(a1))});
+    static List_ lcons(uint64_t a0, List_ a1) {
+      return List_(LCons{a0, std::make_shared<List_>(std::move(a1))});
     }
 
     // MANIPULATORS
-    ~List() {
-      crane::small_vector<std::shared_ptr<List>> _stack = {};
+    ~List_() {
+      crane::small_vector<std::shared_ptr<List_>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<LCons>(&_v)) {
           if (_alt->a1) {
@@ -169,10 +169,10 @@ struct InductiveNamedList {
       }
     }
 
-    List(const List &) = default;
-    List &operator=(const List &) = default;
-    List(List &&) noexcept = default;
-    List &operator=(List &&) noexcept = default;
+    List_(const List_ &) = default;
+    List_ &operator=(const List_ &) = default;
+    List_(List_ &&) noexcept = default;
+    List_ &operator=(List_ &&) noexcept = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -181,30 +181,31 @@ struct InductiveNamedList {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List &, T1 &>
-  static T1 List_rect(T1 f, F1 &&f0, const List &l) {
-    if (std::holds_alternative<typename List::LNil>(l.v())) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List_ &, T1 &>
+  static T1 List_rect(T1 f, F1 &&f0, const List_ &l) {
+    if (std::holds_alternative<typename List_::LNil>(l.v())) {
       return f;
     } else {
-      const auto &[a0, a1] = std::get<typename List::LCons>(l.v());
+      const auto &[a0, a1] = std::get<typename List_::LCons>(l.v());
       return f0(a0, *a1, List_rect<T1>(f, f0, *a1));
     }
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List &, T1 &>
-  static T1 List_rec(T1 f, F1 &&f0, const List &l) {
-    if (std::holds_alternative<typename List::LNil>(l.v())) {
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, List_ &, T1 &>
+  static T1 List_rec(T1 f, F1 &&f0, const List_ &l) {
+    if (std::holds_alternative<typename List_::LNil>(l.v())) {
       return f;
     } else {
-      const auto &[a0, a1] = std::get<typename List::LCons>(l.v());
+      const auto &[a0, a1] = std::get<typename List_::LCons>(l.v());
       return f0(a0, *a1, List_rec<T1>(f, f0, *a1));
     }
   }
 
-  static uint64_t len(const List &l);
+  static uint64_t len(const List_ &l);
   static inline const uint64_t go =
-      (len(List::lcons(UINT64_C(1), List::lcons(UINT64_C(2), List::lnil()))) +
+      (len(List_::lcons(UINT64_C(1),
+                        List_::lcons(UINT64_C(2), List_::lnil()))) +
        List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()).length());
 };
 

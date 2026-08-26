@@ -30,8 +30,8 @@ struct IdentNamedUint64 {
     return f(a0);
   }
 
-  static uint64_t uint64_t(uint64_t n);
-  static inline const uint64_t go = (uint64_t(UINT64_C(1)) + UINT64_C(2));
+  static uint64_t uint64_t_(uint64_t n);
+  static inline const uint64_t go = (uint64_t_(UINT64_C(1)) + UINT64_C(2));
 };
 
 #endif // INCLUDED_IDENT_NAMED_UINT64
