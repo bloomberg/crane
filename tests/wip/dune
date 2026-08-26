@@ -178,25 +178,3 @@
   (alias runtest)
   (deps non_uniform_pair_nest.t.exe)
   (action (run ./non_uniform_pair_nest.t.exe))))
-
-(subdir sig_curried_payload
- (rule
-  (targets sig_curried_payload.t.exe)
-  (deps SigCurriedPayload.vo sig_curried_payload.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_curried_payload.t.exe sig_curried_payload.cpp sig_curried_payload.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_curried_payload.t.exe)
-  (action (run ./sig_curried_payload.t.exe))))
-
-(subdir sig_fun_payload
- (rule
-  (targets sig_fun_payload.t.exe)
-  (deps SigFunPayload.vo sig_fun_payload.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fun_payload.t.exe sig_fun_payload.cpp sig_fun_payload.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_fun_payload.t.exe)
-  (action (run ./sig_fun_payload.t.exe))))

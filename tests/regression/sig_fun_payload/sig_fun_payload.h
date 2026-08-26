@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIG_FUN_PAYLOAD
 #define INCLUDED_SIG_FUN_PAYLOAD
 
-#include <any>
 #include <functional>
 #include <utility>
 #include <variant>
@@ -24,7 +23,7 @@ struct SigFunPayload {
   static inline const uint64_t go = []() {
     const auto &_sv0 = mk;
     const auto &[x0] = _sv0;
-    return std::any_cast<std::function<std::any(std::any)>>(x0)(UINT64_C(4));
+    return x0(UINT64_C(4));
   }();
 };
 

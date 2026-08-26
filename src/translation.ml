@@ -6822,11 +6822,28 @@ and eta_fun env f args =
       | Some i -> Escape.IntSet.mem i tctx.cpp_erased_env
       | None -> false
     in
+    (* A pattern binder whose definition-site field type is a type variable
+       still has a concrete C++ type when the scrutinee instantiates that
+       variable concretely — [populate_erased_field_env] recorded it in
+       [cpp_erased_type_env] and deliberately left it out of [cpp_erased_env].
+       Its erased ML type must not be taken at face value here, or a perfectly
+       concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
+       [any_cast] that does not compile. *)
+    let callee_known_concrete =
+      match callee_rel_idx with
+      | Some i when not callee_cpp_erased ->
+        ( match IntMap.find_opt i tctx.cpp_erased_type_env with
+        | Some t -> not (resolves_to_any_type t)
+        | None -> false )
+      | _ -> false
+    in
     let callee_is_bare_any =
-      callee_cpp_erased ||
-      (match callee_env_ty with
-      | Some ty -> is_ml_erased_ty ty
-      | None -> false)
+      callee_cpp_erased
+      || ( (not callee_known_concrete)
+         &&
+         match callee_env_ty with
+         | Some ty -> is_ml_erased_ty ty
+         | None -> false )
     in
     let callee_has_erased_params =
       callee_is_bare_any ||
