@@ -5497,6 +5497,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           let is_value_field =
             match fld_ty with
             | Miniml.Tarr _ -> false
+            (* A field whose type is itself a typeclass (a superclass field)
+               is promoted to a type alias in the instance struct
+               ([using ord_eq = eqnat;]), not to a nullary static method, so
+               calling it would emit [I::ord_eq()].  It is only ever used as
+               a nested-name-specifier for the superclass's projections. *)
+            | _ when Table.is_typeclass_type fld_ty -> false
             | _ -> true
           in
           if is_value_field then

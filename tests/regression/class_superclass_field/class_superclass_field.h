@@ -31,7 +31,7 @@ struct ClassSuperclassField {
   template <typename _tcI0, typename T1>
     requires Ord<_tcI0, T1>
   static uint64_t cmp(const T1 &x, const T1 &y) {
-    if (_tcI0::ord_eq()::eqb(x, y)) {
+    if (_tcI0::ord_eq::eqb(x, y)) {
       return UINT64_C(0);
     } else {
       if (_tcI0::le(x, y)) {

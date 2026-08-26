@@ -91,28 +91,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-(subdir class_superclass_explicit
- (rule
-  (targets class_superclass_explicit.t.exe)
-  (deps ClassSuperclassExplicit.vo class_superclass_explicit.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_superclass_explicit.t.exe class_superclass_explicit.cpp class_superclass_explicit.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_superclass_explicit.t.exe)
-  (action (run ./class_superclass_explicit.t.exe))))
-
-(subdir class_superclass_field
- (rule
-  (targets class_superclass_field.t.exe)
-  (deps ClassSuperclassField.vo class_superclass_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_superclass_field.t.exe class_superclass_field.cpp class_superclass_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_superclass_field.t.exe)
-  (action (run ./class_superclass_field.t.exe))))
-
 (subdir lifted_lambda_forward_ref
  (rule
   (targets lifted_lambda_forward_ref.t.exe)

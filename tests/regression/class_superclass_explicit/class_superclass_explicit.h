@@ -31,7 +31,7 @@ struct ClassSuperclassExplicit {
   template <typename _tcI0, typename T1>
     requires Ext<_tcI0, T1>
   static uint64_t use(const T1 &x) {
-    return (_tcI0::ext_base()::base(x) + _tcI0::ext(x));
+    return (_tcI0::ext_base::base(x) + _tcI0::ext(x));
   }
 
   static inline const uint64_t go = use<en, uint64_t>(UINT64_C(3));
