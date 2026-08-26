@@ -575,6 +575,26 @@ let pp_template_param (mbid, mt) =
       else
         concept_body ++ str " " ++ param_name
 
+(** Key identifying a lifted lambda helper, used to emit it only once. *)
+let lifted_decl_key = function
+  | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
+    Some (Id.to_string v)
+  | Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _) -> Some (Id.to_string v)
+  | _ -> None
+
+let dedup_lifted_decls ds =
+  let seen = Hashtbl.create 16 in
+  List.filter
+    (fun d ->
+      match lifted_decl_key d with
+      | Some k ->
+        if Hashtbl.mem seen k then false else (Hashtbl.replace seen k (); true)
+      | None -> true )
+    ds
+
+(** Lifted helpers already emitted as members of the struct being rendered. *)
+let emitted_member_lifted : (string, unit) Hashtbl.t = Hashtbl.create 16
+
 (** Pretty-print a structure element (label, elem) pair. Handles modules, module
     types, and declarations.
 
@@ -588,7 +608,43 @@ let pp_template_param (mbid, mt) =
             produces no output in the current pass. *)
 let rec pp_structure_elem ~is_header f = function
   | l, SEdecl d ->
+    (* {b Placement of lifted lambda helpers.}  A helper lifted out of a local
+       [let g := fun ... in] that mentions the enclosing struct (its parameter
+       types, or a sibling definition it calls) cannot be emitted before that
+       struct, and emitting it after leaves the call site — which sits in a
+       static data member initializer, {i not} a complete-class context —
+       referring to an undeclared name.  Emit it as a static member template
+       right before the declaration that produced it instead; helpers produced
+       elsewhere keep their file-scope placement. *)
+    ignore (Translation.take_lifted_decls ());
     let body = f d in
+    let member_lifted =
+      if not is_header then mt ()
+      else
+        let lifted =
+          Translation.take_lifted_decls ()
+          |> dedup_lifted_decls
+          |> List.filter (fun d' ->
+                 match lifted_decl_key d' with
+                 | Some k ->
+                   if Hashtbl.mem emitted_member_lifted k then false
+                   else (Hashtbl.replace emitted_member_lifted k (); true)
+                 | None -> true )
+        in
+        List.fold_left
+          (fun acc d' ->
+            let pp = pp_cpp_decl (empty_env ()) d' in
+            if Pp.ismt pp then acc
+            else if Pp.ismt acc then pp
+            else acc ++ cut2 () ++ pp )
+          (mt ())
+          lifted
+    in
+    let body =
+      if Pp.ismt member_lifted then body
+      else if Pp.ismt body then member_lifted
+      else member_lifted ++ cut2 () ++ body
+    in
     if Pp.ismt body then
       mt ()
     else
@@ -1522,23 +1578,6 @@ let rec prlist_sep_nonempty sep f = function
             header-pass declaration block, [defs_pp] the implementation-pass
             definition block, and [lifted_pp] any top-level declarations that
             were lifted out of local function bodies during translation. *)
-let lifted_decl_key = function
-  | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
-    Some (Id.to_string v)
-  | Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _) ->
-    Some (Id.to_string v)
-  | _ -> None
-
-let dedup_lifted_decls ds =
-  let seen = Hashtbl.create 16 in
-  List.filter (fun d ->
-    match lifted_decl_key d with
-    | Some k ->
-      if Hashtbl.mem seen k then false
-      else (Hashtbl.replace seen k (); true)
-    | None -> true
-  ) ds
-
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
@@ -1689,6 +1728,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
+  Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
   (* In Separate Extraction mode the visibility stack is empty when we enter

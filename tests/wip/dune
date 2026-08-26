@@ -91,39 +91,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-(subdir lifted_lambda_forward_ref
- (rule
-  (targets lifted_lambda_forward_ref.t.exe)
-  (deps LiftedLambdaForwardRef.vo lifted_lambda_forward_ref.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_forward_ref.t.exe lifted_lambda_forward_ref.cpp lifted_lambda_forward_ref.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lifted_lambda_forward_ref.t.exe)
-  (action (run ./lifted_lambda_forward_ref.t.exe))))
-
-(subdir lifted_lambda_nested
- (rule
-  (targets lifted_lambda_nested.t.exe)
-  (deps LiftedLambdaNested.vo lifted_lambda_nested.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_nested.t.exe lifted_lambda_nested.cpp lifted_lambda_nested.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lifted_lambda_nested.t.exe)
-  (action (run ./lifted_lambda_nested.t.exe))))
-
-(subdir lifted_lambda_two_users
- (rule
-  (targets lifted_lambda_two_users.t.exe)
-  (deps LiftedLambdaTwoUsers.vo lifted_lambda_two_users.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_two_users.t.exe lifted_lambda_two_users.cpp lifted_lambda_two_users.t.cpp)))
- (rule
-  (alias runtest)
-  (deps lifted_lambda_two_users.t.exe)
-  (action (run ./lifted_lambda_two_users.t.exe))))
-
 (subdir loopify_wrapper_receiver
  (rule
   (targets loopify_wrapper_receiver.t.exe)

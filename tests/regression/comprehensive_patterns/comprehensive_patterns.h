@@ -411,6 +411,11 @@ struct ComprehensivePatterns {
   static uint64_t f1_fc(uint64_t n);
   static uint64_t f2_fc(uint64_t n);
   static uint64_t bug_multi_calls(const State &s);
+
+  template <typename T1> static T1 _bug_base_and_proj_consume(const T1 x) {
+    return x;
+  }
+
   static std::pair<State, uint64_t> bug_base_and_proj(const State &s);
   static uint64_t sequential_lets(const State &s);
   static std::pair<State, uint64_t> let_then_use_base(State s);
@@ -460,11 +465,6 @@ struct ComprehensivePatterns {
   static List<uint64_t> proj_in_list(const StateStmt &s);
   static bool compare_projs(const StateStmt &s);
   static bool bool_with_proj(const StateStmt &s);
-
-  template <typename T1> static T1 _bug_base_and_proj_consume(const T1 x) {
-    return x;
-  }
-
   static uint64_t sum_values(uint64_t n, const StateStmt &s);
 
   struct RCF {

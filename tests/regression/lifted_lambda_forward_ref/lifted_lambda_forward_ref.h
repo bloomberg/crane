@@ -90,15 +90,15 @@ struct LiftedLambdaForwardRef {
   }
 
   static uint64_t later(const t &x);
+
+  template <typename T1> static uint64_t _anon_f(const T1, const t x) {
+    return later(x);
+  }
+
   static inline const uint64_t go = []() {
     t x = t::n(t::l());
     return (_anon_f(UINT64_C(0), x) + _anon_f(UINT64_C(1), x));
   }();
 };
-
-template <typename T1>
-uint64_t _anon_f(const T1, const LiftedLambdaForwardRef::t x) {
-  return LiftedLambdaForwardRef::later(x);
-}
 
 #endif // INCLUDED_LIFTED_LAMBDA_FORWARD_REF

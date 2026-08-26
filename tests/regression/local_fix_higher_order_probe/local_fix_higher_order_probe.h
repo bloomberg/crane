@@ -66,19 +66,19 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename T1>
-T1 _sample_go(const std::function<T1(Nat)> k, const Nat n0) {
-  if (std::holds_alternative<typename Nat::O>(n0.v())) {
-    return k(Nat::o());
-  } else {
-    const auto &[a0] = std::get<typename Nat::S>(n0.v());
-    const Nat &a0_value = *a0;
-    return _sample_go<T1>([=](Nat x) mutable { return k(Nat::s(x)); },
-                          a0_value);
-  }
-}
-
 struct LocalFixHigherOrderProbe {
+  template <typename T1>
+  static T1 _sample_go(const std::function<T1(Nat)> k, const Nat n0) {
+    if (std::holds_alternative<typename Nat::O>(n0.v())) {
+      return k(Nat::o());
+    } else {
+      const auto &[a0] = std::get<typename Nat::S>(n0.v());
+      const Nat &a0_value = *a0;
+      return _sample_go<T1>([=](Nat x) mutable { return k(Nat::s(x)); },
+                            a0_value);
+    }
+  }
+
   static Nat sample(const Nat &n);
   static inline const Nat run = sample(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };

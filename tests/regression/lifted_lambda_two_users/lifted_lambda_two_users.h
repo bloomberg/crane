@@ -90,25 +90,25 @@ struct LiftedLambdaTwoUsers {
   }
 
   static uint64_t depth(const t &x);
+
+  template <typename T1> static uint64_t _anon_f(const T1, const t x) {
+    return depth(x);
+  }
+
   static inline const uint64_t one = []() {
     t x = t::n(t::l());
     return (_anon_f(UINT64_C(0), x) + _anon_f(UINT64_C(1), x));
   }();
+
+  template <typename T1> static uint64_t _anon_g(const T1, const t y) {
+    return depth(y);
+  }
+
   static inline const uint64_t two = []() {
     t y = t::n(t::n(t::l()));
     return (_anon_g(UINT64_C(0), y) + _anon_g(UINT64_C(1), y));
   }();
   static inline const uint64_t go = (one + two);
 };
-
-template <typename T1>
-uint64_t _anon_f(const T1, const LiftedLambdaTwoUsers::t x) {
-  return LiftedLambdaTwoUsers::depth(x);
-}
-
-template <typename T1>
-uint64_t _anon_g(const T1, const LiftedLambdaTwoUsers::t y) {
-  return LiftedLambdaTwoUsers::depth(y);
-}
 
 #endif // INCLUDED_LIFTED_LAMBDA_TWO_USERS

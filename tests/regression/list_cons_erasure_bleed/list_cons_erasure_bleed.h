@@ -9,19 +9,6 @@
 #include <utility>
 #include <variant>
 
-template <typename T1> std::deque<std::any> _check_map(const std::deque<T1> l) {
-  if (l.empty()) {
-    return std::deque<std::any>{};
-  } else {
-    const auto &a = l.front();
-    std::decay_t<decltype(l)> l0(l.begin() + 1, l.end());
-    return [](auto _a0, auto _a1) {
-      _a1.push_front(_a0);
-      return _a1;
-    }(std::any(), _check_map<T1>(l0));
-  }
-}
-
 /// Regression test (now fixed). This mirrors theories/Parser/Defs.v's
 /// concat_tuple/rev_tuple family verbatim (same tactic-built
 /// dependent-case-split style, same
@@ -128,6 +115,20 @@ syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
 }
 
 syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs);
+
+template <typename T1> std::deque<std::any> _check_map(const std::deque<T1> l) {
+  if (l.empty()) {
+    return std::deque<std::any>{};
+  } else {
+    const auto &a = l.front();
+    std::decay_t<decltype(l)> l0(l.begin() + 1, l.end());
+    return [](auto _a0, auto _a1) {
+      _a1.push_front(_a0);
+      return _a1;
+    }(std::any(), _check_map<T1>(l0));
+  }
+}
+
 uint64_t check(uint64_t n);
 
 #endif // INCLUDED_LIST_CONS_ERASURE_BLEED

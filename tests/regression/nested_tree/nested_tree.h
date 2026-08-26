@@ -300,29 +300,26 @@ struct NestedTree {
     return f(x).app(f(y));
   }
 
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
+  static List<List<T2>> _flatten_tree_go(F0 &&f, const tree<T1> t0) {
+    if (std::holds_alternative<typename tree<T1>::Leaf>(t0.v())) {
+      return List<List<T2>>::nil();
+    } else {
+      const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t0.v());
+      return List<List<T2>>::cons(
+          f(a0), _flatten_tree_go<T1, T2>(
+                     [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
+                       return lift<T1, T2>(f, _x0);
+                     },
+                     *a1));
+    }
+  }
+
   template <typename T1> static List<List<T1>> flatten_tree(const tree<T1> &t) {
     return _flatten_tree_go<T1, T1>(
         [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
-
-template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
-List<List<T2>> _flatten_tree_go(F0 &&f,
-                                const NestedTree::template tree<T1> t0) {
-  if (std::holds_alternative<typename NestedTree::template tree<T1>::Leaf>(
-          t0.v())) {
-    return List<List<T2>>::nil();
-  } else {
-    const auto &[a0, a1] =
-        std::get<typename NestedTree::template tree<T1>::Node>(t0.v());
-    return List<List<T2>>::cons(
-        f(a0), _flatten_tree_go<T1, T2>(
-                   [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
-                     return NestedTree::template lift<T1, T2>(f, _x0);
-                   },
-                   *a1));
-  }
-}
 
 #endif // INCLUDED_NESTED_TREE
