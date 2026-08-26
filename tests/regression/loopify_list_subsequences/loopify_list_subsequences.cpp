@@ -45,7 +45,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(List<uint64_t> l) {
       *_write = std::move(_cell);
       _write =
           &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
-      _loop_l = *a1;
+      _loop_l = List<uint64_t>(*a1);
       continue;
     }
   }

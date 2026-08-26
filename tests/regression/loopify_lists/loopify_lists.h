@@ -402,7 +402,7 @@ struct LoopifyLists {
             typename list<list<T1>>::Cons(_loop_l, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename list<list<T1>>::Cons>((*_write)->v_mut()).l;
-        _loop_l = *a1;
+        _loop_l = list<T1>(*a1);
         continue;
       }
     }
@@ -591,7 +591,7 @@ struct LoopifyLists {
               } else {
                 auto &[a00, a10] =
                     std::get<typename list<T1>::Cons>(_loop_lst.v_mut());
-                _loop_lst = *a10;
+                _loop_lst = list<T1>(*a10);
                 _loop_k = m;
               }
             }
@@ -771,7 +771,7 @@ struct LoopifyLists {
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
                           .l;
-            _loop_l2 = *a10;
+            _loop_l2 = list<T1>(*a10);
             _loop_l1 = list<T1>::nil();
             _loop_fuel = f;
             continue;
@@ -788,7 +788,7 @@ struct LoopifyLists {
                           (*_write)->v_mut())
                           .l;
             _loop_l2 = list<T1>::nil();
-            _loop_l1 = *a1;
+            _loop_l1 = list<T1>(*a1);
             _loop_fuel = f;
             continue;
           } else {
@@ -801,8 +801,8 @@ struct LoopifyLists {
             _write = &std::get<typename list<std::pair<T1, T1>>::Cons>(
                           (*_write)->v_mut())
                           .l;
-            _loop_l2 = *a10;
-            _loop_l1 = *a1;
+            _loop_l2 = list<T1>(*a10);
+            _loop_l1 = list<T1>(*a1);
             _loop_fuel = f;
             continue;
           }

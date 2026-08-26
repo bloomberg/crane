@@ -1234,12 +1234,76 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
   | Tptr _, CPPvar _ -> CPPunop ("&", arg)
   | _ -> arg
 
+(** Provenance of a local binder: the loop *parameter* whose storage the binder
+    lives inside, or [None] when the binder was produced locally (a freshly
+    built value, a computed match scrutinee, an inlined callee's temporary...).
+
+    This is what makes a [const T*] shadow safe or not.  Deciding pointer-safety
+    from the *shape* of a recursive-call argument alone ([*a1] "looks like" a
+    borrow) says nothing about whose storage [a1] points into.  If [a1] is a
+    field of a *different* loop variable that the same iteration overwrites, or
+    of a block-scoped temporary, the pointer dangles before the next iteration
+    reads it.  Only a pointer that walks deeper into the parameter's *own*
+    borrowed argument is guaranteed to stay live: that storage belongs to the
+    caller and nothing in the loop can drop it.
+
+    Binders bound more than once with conflicting roots (pattern variables such
+    as [a1] are reused across match branches) are demoted to [None]: this is a
+    flow-insensitive over-approximation, so it can only cost an optimisation,
+    never soundness. *)
+let compute_binder_provenance params body =
+  let param_ids = List.map fst params in
+  let is_param x = List.exists (Id.equal x) param_ids in
+  let tbl : (Id.t * Id.t option) list ref = ref [] in
+  let record id p =
+    match List.assoc_opt id !tbl with
+    | None -> tbl := (id, p) :: !tbl
+    | Some q ->
+      if not (Option.equal Id.equal q p) then
+        tbl := (id, None) :: List.remove_assoc id !tbl
+  in
+  let rec prov_of = function
+    | CPPvar x ->
+      if is_param x then Some x
+      else (match List.assoc_opt x !tbl with Some p -> p | None -> None)
+    | CPPderef e | CPPmove e | CPPmember (e, _) | CPParrow (e, _)
+    | CPPget (e, _) | CPPget' (e, _) | CPPunop (_, e) ->
+      prov_of e
+    | CPPfun_call (CPPvar f, [e]) when Id.equal f id_crane_raw -> prov_of e
+    (* [x.v()] / [std::get<K>(e)]: projections that stay inside [e]'s storage. *)
+    | CPPfun_call (CPPmember (e, _), []) | CPPmethod_call (e, _, []) -> prov_of e
+    | CPPfun_call (CPPraw s, [e])
+      when String.length s >= 8 && String.sub s 0 8 = "std::get" ->
+      prov_of e
+    | CPPstd_get (_, _, Some e) -> prov_of e
+    | _ -> None
+  in
+  let rec walk_stmt s =
+    match s with
+    | Sasgn (id, _, e) -> record id (prov_of e)
+    | Smatch (branches, default) ->
+      List.iter
+        (fun br ->
+          let root = prov_of br.smb_scrutinee in
+          Option.iter (fun v -> record v root) br.smb_var;
+          List.iter (fun (fid, _, _) -> record fid root) br.smb_field_bindings;
+          List.iter walk_stmt br.smb_body)
+        branches;
+      Option.iter (List.iter walk_stmt) default
+    | s -> iter_stmt_children ~on_expr:(fun _ -> ()) ~on_stmts:(List.iter walk_stmt) s
+  in
+  (* Two sweeps: a binder may be recorded after a use that reads it. *)
+  List.iter walk_stmt body;
+  List.iter walk_stmt body;
+  prov_of
+
 (** Compute pointer-safety flags for each parameter.
 
-    A parameter is "pointer-safe" when it is a borrowed value-type ([const T&])
-    and every recursive call site passes either [*ptr] or the same variable back
-    as that argument.  This guarantees the pointer shadow will always point at a
-    live object.
+    A parameter is "pointer-safe" when it is a borrowed value-type ([const T&]),
+    every recursive call site passes either [*ptr] or the same variable back as
+    that argument, *and* that argument's storage provably belongs to the
+    parameter itself (see {!compute_binder_provenance}).  Together these
+    guarantee the pointer shadow will always point at a live object.
 
     When [binding_env] is supplied, [CPPvar x] at a call site is accepted as
     pointer-safe if [x] is bound to [CPPderef _] in that environment — i.e., if
@@ -1264,6 +1328,7 @@ let tail_pointer_safe_flags check params body ?(binding_env = []) () =
          | _ -> false)
       | _ -> false
     in
+    let prov_of = compute_binder_provenance params body in
     List.mapi
       (fun i (id, ty) ->
         match borrowed_value_param_pointee ty with
@@ -1272,7 +1337,14 @@ let tail_pointer_safe_flags check params body ?(binding_env = []) () =
           List.for_all
             (fun cs ->
               match List.nth_opt cs.cs_args i with
-              | Some arg -> is_safe_arg id arg
+              | Some arg ->
+                (* Shape alone is not enough: the pointee must live inside this
+                   parameter's own borrowed argument, or it can be freed by the
+                   very iteration that publishes the pointer. *)
+                is_safe_arg id arg
+                && (match prov_of arg with
+                    | Some root -> Id.equal root id
+                    | None -> false)
               | None -> false)
             calls)
       params
@@ -1396,7 +1468,28 @@ let make_shadow_updates shadow_params args =
       (fun ((shadow_id, _ty), arg) -> not (is_self_assign shadow_id arg))
       pairs
   in
-  let make_rhs _ty arg = arg in
+  (* Assigning an *owning* value-type shadow from a dereference is a
+     self-destruction hazard: the pointee is very often a cell owned by that
+     same shadow (walking a list tail via [_loop_l = *a1]).  [operator=] on the
+     underlying [std::variant] is destroy-then-construct across alternatives, so
+     it runs the old node's destructor -- dropping the last reference to the
+     cell it is about to read -- and then constructs from freed storage.
+
+     Materialising the source into a temporary first fixes this: the temporary
+     is fully constructed before [operator=] is entered, so the source cell is
+     still alive (and now also owned by the temporary) when the destination is
+     torn down.  The cost is one shallow node copy, which the direct
+     copy-assignment was paying anyway. *)
+  let make_rhs ty arg =
+    let core = match arg with CPPmove a -> a | a -> a in
+    (* The shadow's declared type still carries the parameter's [const &]; the
+       shadow itself is an owning value of the stripped type. *)
+    let vty = strip_ref_and_const_type ty in
+    match (ty, core) with
+    | Tptr _, _ -> arg
+    | _, CPPderef _ when is_value_type_ret vty -> CPPconverting_ctor (vty, [core])
+    | _ -> arg
+  in
   if List.length non_trivial <= 1 then
     (* 0 or 1 assignment — no hazard possible, assign directly *)
     List.filter_map
@@ -3403,7 +3496,12 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
     if not !cursor_used then []
     else
       [ Sasgn (id_own, Some head_ty, CPPconverting_ctor (head_ty, []));
-        Sasgn (id_uniq, Some (Tid (Id.of_string "bool", [])), CPPbool true) ]
+        (* [Tid] is the *user-defined* type constructor, so the printer
+           namespace-qualifies it ("Mod::bool").  This is the builtin, which
+           must never be qualified. *)
+        Sasgn
+          (id_uniq, Some (Tid_external (Id.of_string "bool", [])), CPPbool true)
+      ]
   in
   (* For value-type returns, dereference _head (shared_ptr → value) *)
   let ret_expr = match vt_ret with

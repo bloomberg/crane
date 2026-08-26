@@ -42,7 +42,7 @@ uint64_t LoopifyFramePtrEscape::walk(
         &acc) { /// _Enter: captures varying parameters for each recursive call.
 
   struct _Enter {
-    const LoopifyFramePtrEscape::lst *acc;
+    LoopifyFramePtrEscape::lst acc;
     LoopifyFramePtrEscape::lst l;
     uint64_t n;
   };
@@ -55,14 +55,14 @@ uint64_t LoopifyFramePtrEscape::walk(
   using _Frame = std::variant<_Enter, _Resume_Cons>;
   uint64_t _result{};
   crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&acc, l, n});
+  _stack.emplace_back(_Enter{acc, l, n});
   /// Loopified walk: _Enter -> _Resume_Cons.
   while (!_stack.empty()) {
     _Frame _frame = std::move(_stack.back());
     _stack.pop_back();
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyFramePtrEscape::lst &acc = *_f.acc;
+      const LoopifyFramePtrEscape::lst &acc = std::move(_f.acc);
       const LoopifyFramePtrEscape::lst &l = std::move(_f.l);
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -76,8 +76,8 @@ uint64_t LoopifyFramePtrEscape::walk(
           const auto &[a0, a1] =
               std::get<typename LoopifyFramePtrEscape::lst::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{a0});
-          _stack.emplace_back(_Enter{
-              crane_raw(a1), lst::cons((m + 1), lst::cons(m, lst::nil())), m});
+          _stack.emplace_back(
+              _Enter{*a1, lst::cons((m + 1), lst::cons(m, lst::nil())), m});
         }
       }
     } else {

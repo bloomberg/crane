@@ -301,7 +301,7 @@ struct LoopifyPolymorphic {
           return List<T1>::nil();
         } else {
           auto &[a0, a1] = std::get<typename List<T1>::Cons>(_loop_l.v_mut());
-          _loop_l = *a1;
+          _loop_l = List<T1>(*a1);
           _loop_n = n_;
         }
       }

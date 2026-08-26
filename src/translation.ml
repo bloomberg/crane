@@ -7926,7 +7926,22 @@ and gen_cpp_case (typ : ml_type) t env pv =
             (match typ_ind_kn with Some k -> MutInd.CanOrd.equal kn k | None -> false)
           | _ -> false
         in
+        let scrut_cpp_ty = convert_ml_type_to_cpp_type env tvars typ in
+        (* The recycled cell is a [crane::rc] over the *scrutinee's* inductive
+           instance, so it can only be handed to a [__reuse] factory that
+           rebuilds that same instance.  A type-changing function such as
+           [mapl : (A -> B) -> lst A -> lst B] matches on [lst A] but rebuilds
+           [lst B]: the two differ in size, alignment and destructor, so
+           recycling the cell is not merely a type error but unsound.  Require
+           the branch to reconstruct exactly the scrutinee's type. *)
+        let branch_rebuilds_scrut_ty branch_idx =
+          let _ids, rty, _pat, _body = pv.(branch_idx) in
+          Ml_type_util.cpp_ty_eq scrut_cpp_ty
+            (convert_ml_type_to_cpp_type env tvars rty)
+        in
         let try_cand (branch_idx, _mc, _ar, tail_ctor, _ta) =
+          if not (branch_rebuilds_scrut_ty branch_idx) then None
+          else
           let ids, _rty, _pat, body = pv.(branch_idx) in
           let ids', env' =
             push_vars'

@@ -164,27 +164,11 @@ struct ReuseMapTypeChange {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static lst<T2> mapl(F0 &&f, lst<T1> l) {
-    if (l.v().index() == 1) {
-      if (std::get<1>(l.v_mut()).a1.use_count() == 1) {
-        T1 x = std::move(std::get<1>(l.v_mut()).a0);
-        lst<T1> t = std::move(*std::get<1>(l.v_mut()).a1);
-        return lst<T2>::cons__reuse(std::move(std::get<1>(l.v_mut()).a1), f(x),
-                                    mapl<T1, T2>(f, std::move(t)));
-      } else {
-        if (std::holds_alternative<typename lst<T1>::Nil>(l.v_mut())) {
-          return lst<T2>::nil();
-        } else {
-          auto &[a0, a1] = std::get<typename lst<T1>::Cons>(l.v_mut());
-          return lst<T2>::cons(f(std::move(a0)), mapl<T1, T2>(f, *a1));
-        }
-      }
+    if (std::holds_alternative<typename lst<T1>::Nil>(l.v_mut())) {
+      return lst<T2>::nil();
     } else {
-      if (std::holds_alternative<typename lst<T1>::Nil>(l.v_mut())) {
-        return lst<T2>::nil();
-      } else {
-        auto &[a0, a1] = std::get<typename lst<T1>::Cons>(l.v_mut());
-        return lst<T2>::cons(f(std::move(a0)), mapl<T1, T2>(f, *a1));
-      }
+      auto &[a0, a1] = std::get<typename lst<T1>::Cons>(l.v_mut());
+      return lst<T2>::cons(f(std::move(a0)), mapl<T1, T2>(f, *a1));
     }
   }
 

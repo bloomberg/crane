@@ -82,7 +82,7 @@ LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
   crane::rc<LoopifyReuseBoolQualified::lst> *_write = &_head;
   crane::rc<LoopifyReuseBoolQualified::lst> _own =
       crane::rc<LoopifyReuseBoolQualified::lst>();
-  LoopifyReuseBoolQualified::bool _uniq = true;
+  bool _uniq = true;
   const LoopifyReuseBoolQualified::lst *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyReuseBoolQualified::lst::Nil>(

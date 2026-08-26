@@ -870,7 +870,7 @@ struct LoopifyHofs {
               _write =
                   &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
                        .l;
-              _loop_l1 = *a1;
+              _loop_l1 = List<uint64_t>(*a1);
               _loop_fuel = f;
               continue;
             } else {
@@ -880,7 +880,7 @@ struct LoopifyHofs {
               _write =
                   &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
                        .l;
-              _loop_l2 = *a10;
+              _loop_l2 = List<uint64_t>(*a10);
               _loop_fuel = f;
               continue;
             }

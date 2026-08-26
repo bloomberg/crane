@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -95,6 +96,7 @@ struct RecRecord {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -109,64 +111,109 @@ struct RecRecord {
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
+
+    uint64_t rlist_length() const {
+      if (std::holds_alternative<typename rlist<A>::Rnil>(this->v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(this->v());
+        return (a1->rlist_length() + 1);
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
+    T1 rlist_rec(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename rlist<A>::Rnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(this->v());
+        return f0(a0, *a1, a1->template rlist_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
+    T1 rlist_rect(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename rlist<A>::Rnil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(this->v());
+        return f0(a0, *a1, a1->template rlist_rect<T1>(f, f0));
+      }
+    }
   };
-
-  template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rect(T2 f, F1 &&f0, const rlist<T1> &r) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(a0, *a1, rlist_rect<T1, T2>(f, f0, *a1));
-    }
-  }
-
-  template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, rlist<T1> &, T2 &>
-  static T2 rlist_rec(T2 f, F1 &&f0, const rlist<T1> &r) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(r.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(r.v());
-      return f0(a0, *a1, rlist_rec<T1, T2>(f, f0, *a1));
-    }
-  }
 
   struct RNode {
-    uint64_t rn_value;
-    std::optional<std::shared_ptr<RNode>> rn_next;
+    // TYPES
+    struct MkRNode {
+      uint64_t rn_value;
+      std::shared_ptr<std::optional<RNode>> rn_next;
+    };
+
+    using variant_t = std::variant<MkRNode>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    RNode() {}
+
+    explicit RNode(MkRNode _v) : v_(std::move(_v)) {}
+
+    static RNode mkrnode(uint64_t rn_value, std::optional<RNode> rn_next) {
+      return RNode(MkRNode{rn_value, std::make_shared<std::optional<RNode>>(
+                                         std::move(rn_next))});
+    }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    uint64_t rnode_depth() const {
+      auto _cs = this->rn_next();
+      if (_cs.has_value()) {
+        const RNode &next = *_cs;
+        return (next.rnode_depth() + 1);
+      } else {
+        return UINT64_C(1);
+      }
+    }
+
+    std::optional<RNode> rn_next() const {
+      const auto &[rn_value0, rn_next1] =
+          std::get<typename RNode::MkRNode>(this->v());
+      return *rn_next1;
+    }
+
+    uint64_t rn_value() const {
+      const auto &[rn_value1, rn_next0] =
+          std::get<typename RNode::MkRNode>(this->v());
+      return rn_value1;
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
+                                     std::optional<RNode> &>
+    T1 RNode_rec(F0 &&f) const {
+      const auto &[rn_value1, rn_next1] =
+          std::get<typename RNode::MkRNode>(this->v());
+      return f(rn_value1, *rn_next1);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
+                                     std::optional<RNode> &>
+    T1 RNode_rect(F0 &&f) const {
+      const auto &[rn_value1, rn_next1] =
+          std::get<typename RNode::MkRNode>(this->v());
+      return f(rn_value1, *rn_next1);
+    }
   };
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
-  static T1 RNode_rect(F0 &&f, const RNode &r) {
-    uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0{};
-    const auto &__cv = r.rn_next;
-    if (__cv.has_value()) {
-      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
-      rn_next0 = std::make_optional<RNode>((*_cv0_0));
-    } else {
-      rn_next0 = std::optional<RNode>();
-    }
-    return f(rn_value0, rn_next0);
-  }
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<RNode> &>
-  static T1 RNode_rec(F0 &&f, const RNode &r) {
-    uint64_t rn_value0 = r.rn_value;
-    std::optional<RNode> rn_next0{};
-    const auto &__cv = r.rn_next;
-    if (__cv.has_value()) {
-      const std::shared_ptr<RNode> &_cv0_0 = *__cv;
-      rn_next0 = std::make_optional<RNode>((*_cv0_0));
-    } else {
-      rn_next0 = std::optional<RNode>();
-    }
-    return f(rn_value0, rn_next0);
-  }
 
   struct Employee {
     uint64_t emp_name;
@@ -179,59 +226,19 @@ struct RecRecord {
     uint64_t dept_size;
   };
 
-  template <typename T1> static uint64_t rlist_length(const rlist<T1> &l) {
-    if (std::holds_alternative<typename rlist<T1>::Rnil>(l.v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename rlist<T1>::Rcons>(l.v());
-      return (rlist_length<T1>(*a1) + 1);
-    }
-  }
-
   static uint64_t rlist_sum(const rlist<uint64_t> &l);
-  static uint64_t rnode_depth(const RNode &r);
   static inline const rlist<uint64_t> test_rlist = rlist<uint64_t>::rcons(
       UINT64_C(1), rlist<uint64_t>::rcons(
                        UINT64_C(2), rlist<uint64_t>::rcons(
                                         UINT64_C(3), rlist<uint64_t>::rnil())));
-  static inline const uint64_t test_rlist_len =
-      rlist_length<uint64_t>(test_rlist);
+  static inline const uint64_t test_rlist_len = test_rlist.rlist_length();
   static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
-  static inline const RNode test_rnode = RNode{
+  static inline const RNode test_rnode = RNode::mkrnode(
       UINT64_C(1),
-      [](const auto &__cv)
-          -> std::optional<std::shared_ptr<RNode>> {
-        if (__cv.has_value()) {
-          const RNode &_cv0_0 = *__cv;
-          return std::make_optional<std::shared_ptr<RNode>>(
-              std::make_shared<RNode>(_cv0_0));
-        } else {
-          return std::optional<std::shared_ptr<RNode>>();
-        }
-      }(std::make_optional<RNode>(RNode{
-              UINT64_C(2),
-              [](const auto &__cv)
-                  -> std::optional<std::shared_ptr<RNode>> {
-                if (__cv.has_value()) {
-                  const RNode &_cv0_0 = *__cv;
-                  return std::make_optional<std::shared_ptr<RNode>>(
-                      std::make_shared<RNode>(_cv0_0));
-                } else {
-                  return std::optional<std::shared_ptr<RNode>>();
-                }
-              }(std::make_optional<RNode>(RNode{
-                      UINT64_C(3),
-                      [](const auto &__cv)
-                          -> std::optional<std::shared_ptr<RNode>> {
-                        if (__cv.has_value()) {
-                          const RNode &_cv0_0 = *__cv;
-                          return std::make_optional<std::shared_ptr<RNode>>(
-                              std::make_shared<RNode>(_cv0_0));
-                        } else {
-                          return std::optional<std::shared_ptr<RNode>>();
-                        }
-                      }(std::optional<RNode>())}))}))};
-  static inline const uint64_t test_rnode_depth = rnode_depth(test_rnode);
+      std::make_optional<RNode>(RNode::mkrnode(
+          UINT64_C(2), std::make_optional<RNode>(RNode::mkrnode(
+                           UINT64_C(3), std::optional<RNode>())))));
+  static inline const uint64_t test_rnode_depth = test_rnode.rnode_depth();
   static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};
   static inline const Department test_dept =
       Department{UINT64_C(7), test_emp, UINT64_C(50)};

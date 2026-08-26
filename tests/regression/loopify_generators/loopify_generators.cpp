@@ -75,7 +75,7 @@ LoopifyGenerators::zip_longest_aux(const List<uint64_t> &l1,
                    (*_write)->v_mut())
                    .l;
           _loop_fuel = f;
-          _loop_l2 = *a10;
+          _loop_l2 = List<uint64_t>(*a10);
           _loop_l1 = List<uint64_t>::nil();
           continue;
         }
@@ -94,7 +94,7 @@ LoopifyGenerators::zip_longest_aux(const List<uint64_t> &l1,
                    .l;
           _loop_fuel = f;
           _loop_l2 = List<uint64_t>::nil();
-          _loop_l1 = *a1;
+          _loop_l1 = List<uint64_t>(*a1);
           continue;
         } else {
           const auto &[a00, a10] =
@@ -108,8 +108,8 @@ LoopifyGenerators::zip_longest_aux(const List<uint64_t> &l1,
                    (*_write)->v_mut())
                    .l;
           _loop_fuel = f;
-          _loop_l2 = *a10;
-          _loop_l1 = *a1;
+          _loop_l2 = List<uint64_t>(*a10);
+          _loop_l1 = List<uint64_t>(*a1);
           continue;
         }
       }

@@ -4429,10 +4429,46 @@ let gen_ind_header_v2
                    (List.mapi (fun j t -> (j, t)) ip_types))
             | _ -> []
           in
+          (* Recognise a "list-shaped" inductive: exactly two constructors, the
+             first nullary and the second [A -> g A -> g A].  That is the shape
+             the [`List] drain below knows how to walk iteratively.
+
+             [is_list_global] matches only the stdlib [list], by name.  A
+             user-defined inductive of the same shape needs the same treatment,
+             because a type whose recursion goes *through* it --
+             [Inductive tree := node : nat -> lst tree -> tree] -- has no direct
+             self-reference and so would otherwise get no iterative drain at
+             all.  Destroying a deep value then recurses
+             ~lst<tree> -> ~tree -> ~lst<tree> -> ... and overflows the stack. *)
+          let is_list_shaped_ind g =
+            match g with
+            | GlobRef.IndRef (kn, i) ->
+              let ctor j =
+                Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
+              in
+              (* A third constructor means this is not the Nil/Cons shape. *)
+              ctor 3 = None
+              && (match (ctor 1, ctor 2) with
+                  | Some [], Some [elem; tail] ->
+                    let is_first_tvar t =
+                      match Ml_type_util.resolve_tmeta t with
+                      | Miniml.Tvar 1 | Miniml.Tvar' 1 -> true
+                      | _ -> false
+                    in
+                    let is_self t =
+                      match Ml_type_util.resolve_tmeta t with
+                      | Miniml.Tglob (g', _, _) -> globref_equal g' g
+                      | _ -> false
+                    in
+                    is_first_tvar elem && is_self tail
+                  | _ -> false)
+            | _ -> false
+          in
           let rec classify_ml_self_ref = function
             | ml_ty when is_direct_self_ref ml_ty -> `Direct
             | Miniml.Tglob (g, [arg], _)
-              when is_list_global g && is_direct_self_ref arg ->
+              when (is_list_global g || is_list_shaped_ind g)
+                   && is_direct_self_ref arg ->
               `List g
             | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
             | Miniml.Tglob (g, args, _) when not (globref_equal g name) ->

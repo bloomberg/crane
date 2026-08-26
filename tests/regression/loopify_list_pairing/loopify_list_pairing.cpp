@@ -172,7 +172,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
                    .l;
-          _loop_l2 = *a10;
+          _loop_l2 = List<uint64_t>(*a10);
           _loop_l1 = List<uint64_t>::nil();
           _loop_fuel = fuel_;
           continue;
@@ -191,7 +191,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                    (*_write)->v_mut())
                    .l;
           _loop_l2 = List<uint64_t>::nil();
-          _loop_l1 = *a1;
+          _loop_l1 = List<uint64_t>(*a1);
           _loop_fuel = fuel_;
           continue;
         } else {
@@ -205,8 +205,8 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
                    (*_write)->v_mut())
                    .l;
-          _loop_l2 = *a10;
-          _loop_l1 = *a1;
+          _loop_l2 = List<uint64_t>(*a10);
+          _loop_l1 = List<uint64_t>(*a1);
           _loop_fuel = fuel_;
           continue;
         }

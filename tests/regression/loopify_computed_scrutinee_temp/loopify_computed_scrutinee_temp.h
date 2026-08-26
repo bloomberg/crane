@@ -1,54 +1,46 @@
-#ifndef INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN
-#define INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN
+#ifndef INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
+#define INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// KNOWN BUG: self-assignment of a loop variable from its own sub-field.
+/// Loopification bug: a raw pointer into a *computed scrutinee temporary*
+/// is stored in a stack frame that outlives the temporary.
 ///
-/// drain is tail recursive. One branch passes a freshly built list, so the
-/// loop variable for l has to be an owning value rather than a pointer; the
-/// other branch passes the scrutinee's own tail, which loopification emits as
-/// a direct self-assignment:
+/// walk is non-tail recursive and matches on wrap m l, a freshly
+/// computed value rather than a variable. Loopification binds it as a
+/// block-scoped temporary
 ///
-/// const auto &a0, a1 = std::get<Cons>(_loop_l.v());
-/// _loop_s  = _loop_s + a0;
-/// _loop_l  = *a1;        // source is owned by _loop_l itself
+/// auto &&_sv = wrap(m, l);
 ///
-/// _loop_l is the sole owner of the cell a1 points at, so the assignment
-/// destroys its own source. When the source cell uses a *different*
-/// constructor than the destination (One vs Cons), std::variant's
-/// assignment path is destroy-then-construct: it runs ~Cons, which drops
-/// the last shared_ptr to the One cell, and then copy-constructs One out
-/// of the freed cell.
+/// and then pushes the continuation frame
 ///
-/// A three-constructor inductive is what makes this visible: with only two
-/// constructors the surviving alternative is the empty Nil, so nothing is
-/// read back out of the freed storage.
+/// _stack.emplace_back(_Enter{crane_raw(a1), m});
 ///
-/// Expected: go 8 = 20, go 12 = 42 (checked with Compute in Rocq).
-/// Actual:   both return 2, plus an ASan heap-use-after-free.
+/// where a1 is a field of _sv. The frame outlives the block, so the
+/// next iteration reads *_f.l after _sv (and the cell it owned) has
+/// been destroyed. hd l then observes recycled heap memory: the reads
+/// happen after wrap's two make_shared calls have reused the block,
+/// so the wrong answer shows up even without a sanitizer.
 ///
-/// Without Set Crane Loopify the same file extracts to correct code.
-struct LoopifyVariantSelfAssign {
+/// Rocq: go n = 7*n + n*(n-1)/2. Extracted C++ under-counts for n >= 2.
+/// Removing Set Crane Loopify. makes the extracted code correct.
+struct LoopifyComputedScrutineeTemp {
   struct lst {
     // TYPES
     struct Nil {};
-
-    struct One {
-      uint64_t a0;
-    };
 
     struct Cons {
       uint64_t a0;
       std::shared_ptr<lst> a1;
     };
 
-    using variant_t = std::variant<Nil, One, Cons>;
+    using variant_t = std::variant<Nil, Cons>;
 
   private:
     // DATA
@@ -60,13 +52,9 @@ struct LoopifyVariantSelfAssign {
 
     explicit lst(Nil _v) : v_(_v) {}
 
-    explicit lst(One _v) : v_(std::move(_v)) {}
-
     explicit lst(Cons _v) : v_(std::move(_v)) {}
 
     static lst nil() { return lst(Nil{}); }
-
-    static lst one(uint64_t a0) { return lst(One{a0}); }
 
     static lst cons(uint64_t a0, lst a1) {
       return lst(Cons{a0, std::make_shared<lst>(std::move(a1))});
@@ -87,6 +75,7 @@ struct LoopifyVariantSelfAssign {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -103,10 +92,9 @@ struct LoopifyVariantSelfAssign {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, lst &, T1 &>
-  static T1 lst_rect(T1 f, F1 &&f0, F2 &&f1,
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
+  static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// _Enter: captures varying parameters for
                                      /// each recursive call.
 
@@ -133,9 +121,6 @@ struct LoopifyVariantSelfAssign {
         const lst &l = *_f.l;
         if (std::holds_alternative<typename lst::Nil>(l.v())) {
           _result = f;
-        } else if (std::holds_alternative<typename lst::One>(l.v())) {
-          const auto &[a0] = std::get<typename lst::One>(l.v());
-          _result = f0(a0);
         } else {
           const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -143,16 +128,15 @@ struct LoopifyVariantSelfAssign {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f1(_f.a0, std::move(_f.a1), std::move(_result));
+        _result = f0(_f.a0, std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
   }
 
-  template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, lst &, T1 &>
-  static T1 lst_rec(T1 f, F1 &&f0, F2 &&f1,
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
+  static T1 lst_rec(T1 f, F1 &&f0,
                     const lst &l) { /// _Enter: captures varying parameters for
                                     /// each recursive call.
 
@@ -179,9 +163,6 @@ struct LoopifyVariantSelfAssign {
         const lst &l = *_f.l;
         if (std::holds_alternative<typename lst::Nil>(l.v())) {
           _result = f;
-        } else if (std::holds_alternative<typename lst::One>(l.v())) {
-          const auto &[a0] = std::get<typename lst::One>(l.v());
-          _result = f0(a0);
         } else {
           const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
           _stack.emplace_back(_Resume_Cons{*a1, a0});
@@ -189,14 +170,16 @@ struct LoopifyVariantSelfAssign {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = f1(_f.a0, std::move(_f.a1), std::move(_result));
+        _result = f0(_f.a0, std::move(_f.a1), std::move(_result));
       }
     }
     return _result;
   }
 
-  static uint64_t drain(uint64_t n, const lst &l, uint64_t s);
+  static uint64_t hd(const lst &l);
+  static lst wrap(uint64_t m, lst l);
+  static uint64_t walk(uint64_t n, const lst &l);
   static uint64_t go(uint64_t n);
 };
 
-#endif // INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN
+#endif // INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP

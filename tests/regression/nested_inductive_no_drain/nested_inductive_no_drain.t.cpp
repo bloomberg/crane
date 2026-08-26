@@ -27,7 +27,12 @@ int main() {
   // `~lst()` (walking the `a1` spine) but none for `tree`, and the drain never
   // descends into the `a0` element.  Destruction therefore recurses
   // ~lst<tree> -> ~tree -> ~lst<tree> -> ... once per level.
-  for (unsigned n : {200000u, 2000000u}) {
+  // Depth is capped at 200k because `spine` itself is *not* loopified -- it is
+  // a methodified tail call whose receiver is a fresh value, which loopify
+  // declines ("value-type receiver, whose address cannot be stored in a
+  // frame").  Building deeper overflows in construction, which is a separate
+  // limitation from the drain this test covers.
+  for (unsigned n : {200000u}) {
     {
       auto *p = new tree(build(n));
       std::cout << n << ": built" << std::flush;

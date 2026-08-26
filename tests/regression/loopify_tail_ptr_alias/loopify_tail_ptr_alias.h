@@ -1,40 +1,43 @@
-#ifndef INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
-#define INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
+#ifndef INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
+#define INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// KNOWN BUG: use-after-free in a loopified *non-tail* recursive function.
+/// KNOWN BUG: use-after-free in a loopified tail-recursive function.
 ///
-/// walk is not tail recursive, so loopification builds an explicit frame
-/// stack. Within one _Enter frame, the two list parameters again get
-/// different representations:
+/// rot is tail recursive in two list arguments. Loopification picks a
+/// different representation for each loop variable:
 ///
-/// struct _Enter { const lst *acc; lst l; uint64_t n; };
+/// - acc is only ever passed on as a sub-field of the scrutinee, so it
+/// becomes a raw pointer:      const lst *_loop_acc
+/// - l is sometimes given a freshly built value, so it becomes an owning
+/// value:                      lst _loop_l
 ///
-/// acc is a raw pointer (it is always passed a sub-field), l is owned by
-/// value (it is sometimes given a freshly built value). The recursive call
-/// pushes
+/// The generated loop body is
 ///
-/// _stack.emplace_back(_Enter{
-/// crane_raw(a1),                                   // points INTO this frame's
-/// l lst::cons(m + 1, lst::cons(m, lst::nil())),      // fresh l for the callee
-/// m});
+/// const auto &a0, a1 = std::get<Cons>(_loop_l.v());
+/// const lst *_next_acc = crane_raw(a1);                 // points INTO _loop_l
+/// _loop_s = _loop_s + hd(deref _loop_acc);
+/// _loop_l = lst::cons(0, lst::cons(m, lst::nil()));     // frees the old
+/// _loop_l _loop_acc = _next_acc;                                // now
+/// dangling
 ///
-/// The acc pointer aliases a cell owned by the *current* iteration's
-/// _f.l. _f is a loop-body local, so it is destroyed at the end of the
-/// iteration, dropping the last reference to that cell. The frame just pushed
-/// keeps the now-dangling pointer and dereferences it later via hd acc.
+/// _next_acc aliases the tail cell owned by _loop_l. Overwriting
+/// _loop_l drops the last shared_ptr to that cell, so the pointer
+/// published into _loop_acc is dangling before the next iteration reads it
+/// through hd.
 ///
-/// Expected: go 4 = 15 (checked with Compute in Rocq).
-/// Actual:   14, plus an ASan heap-use-after-free.
+/// Expected: go 6 = 21 (checked with Compute in Rocq).
+/// Actual:   7, plus an ASan heap-use-after-free.
 ///
 /// Without Set Crane Loopify the same file extracts to correct code.
-struct LoopifyFramePtrEscape {
+struct LoopifyTailPtrAlias {
   struct lst {
     // TYPES
     struct Nil {};
@@ -79,6 +82,7 @@ struct LoopifyFramePtrEscape {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -180,8 +184,8 @@ struct LoopifyFramePtrEscape {
   }
 
   static uint64_t hd(const lst &l);
-  static uint64_t walk(uint64_t n, const lst &l, const lst &acc);
+  static uint64_t rot(uint64_t n, const lst &l, const lst &acc, uint64_t s);
   static uint64_t go(uint64_t n);
 };
 
-#endif // INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
+#endif // INCLUDED_LOOPIFY_TAIL_PTR_ALIAS

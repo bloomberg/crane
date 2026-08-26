@@ -288,7 +288,7 @@ template <SYM Ty> struct DefsFn {
       const auto &[x0, a1] = e;
       const auto &[_x, _x1] = x0;
       const auto &[_x2, a] = std::any_cast<std::pair<std::any, std::any>>(a1);
-      return a;
+      return std::any_cast<std::function<std::any(std::any)>>(a);
     }()(_x0);
   }
 

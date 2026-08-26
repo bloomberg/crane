@@ -405,7 +405,7 @@ bool LoopifySearchOpt::binary_search_fuel(uint64_t fuel, uint64_t target,
                 } else {
                   auto &[a04, a14] =
                       std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-                  _loop_xs = *a14;
+                  _loop_xs = List<uint64_t>(*a14);
                   _loop_n = n_;
                 }
               }

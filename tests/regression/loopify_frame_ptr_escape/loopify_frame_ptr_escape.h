@@ -1,35 +1,41 @@
-#ifndef INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
-#define INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
+#ifndef INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
+#define INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// Loopification bug: a raw pointer into a *computed scrutinee temporary*
-/// is stored in a stack frame that outlives the temporary.
+/// KNOWN BUG: use-after-free in a loopified *non-tail* recursive function.
 ///
-/// walk is non-tail recursive and matches on wrap m l, a freshly
-/// computed value rather than a variable. Loopification binds it as a
-/// block-scoped temporary
+/// walk is not tail recursive, so loopification builds an explicit frame
+/// stack. Within one _Enter frame, the two list parameters again get
+/// different representations:
 ///
-/// auto &&_sv = wrap(m, l);
+/// struct _Enter { const lst *acc; lst l; uint64_t n; };
 ///
-/// and then pushes the continuation frame
+/// acc is a raw pointer (it is always passed a sub-field), l is owned by
+/// value (it is sometimes given a freshly built value). The recursive call
+/// pushes
 ///
-/// _stack.emplace_back(_Enter{crane_raw(a1), m});
+/// _stack.emplace_back(_Enter{
+/// crane_raw(a1),                                   // points INTO this frame's
+/// l lst::cons(m + 1, lst::cons(m, lst::nil())),      // fresh l for the callee
+/// m});
 ///
-/// where a1 is a field of _sv. The frame outlives the block, so the
-/// next iteration reads *_f.l after _sv (and the cell it owned) has
-/// been destroyed. hd l then observes recycled heap memory: the reads
-/// happen after wrap's two make_shared calls have reused the block,
-/// so the wrong answer shows up even without a sanitizer.
+/// The acc pointer aliases a cell owned by the *current* iteration's
+/// _f.l. _f is a loop-body local, so it is destroyed at the end of the
+/// iteration, dropping the last reference to that cell. The frame just pushed
+/// keeps the now-dangling pointer and dereferences it later via hd acc.
 ///
-/// Rocq: go n = 7*n + n*(n-1)/2. Extracted C++ under-counts for n >= 2.
-/// Removing Set Crane Loopify. makes the extracted code correct.
-struct LoopifyComputedScrutineeTemp {
+/// Expected: go 4 = 15 (checked with Compute in Rocq).
+/// Actual:   14, plus an ASan heap-use-after-free.
+///
+/// Without Set Crane Loopify the same file extracts to correct code.
+struct LoopifyFramePtrEscape {
   struct lst {
     // TYPES
     struct Nil {};
@@ -74,6 +80,7 @@ struct LoopifyComputedScrutineeTemp {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -175,9 +182,8 @@ struct LoopifyComputedScrutineeTemp {
   }
 
   static uint64_t hd(const lst &l);
-  static lst wrap(uint64_t m, lst l);
-  static uint64_t walk(uint64_t n, const lst &l);
+  static uint64_t walk(uint64_t n, const lst &l, const lst &acc);
   static uint64_t go(uint64_t n);
 };
 
-#endif // INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
+#endif // INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE

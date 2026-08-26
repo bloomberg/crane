@@ -245,7 +245,7 @@ List<uint64_t> LoopifyListTransforms::drop(uint64_t n, List<uint64_t> l) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        _loop_l = *a1;
+        _loop_l = List<uint64_t>(*a1);
         _loop_n = n_;
       }
     }

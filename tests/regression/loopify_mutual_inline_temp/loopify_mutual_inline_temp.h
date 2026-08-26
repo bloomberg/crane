@@ -1,42 +1,40 @@
-#ifndef INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
-#define INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
+#ifndef INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP
+#define INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// KNOWN BUG: use-after-free in a loopified tail-recursive function.
+/// KNOWN BUG: use-after-free from loopifying mutual recursion.
 ///
-/// rot is tail recursive in two list arguments. Loopification picks a
-/// different representation for each loop variable:
+/// even_step and odd_step are mutually tail recursive. Loopification
+/// turns each into a single loop by inlining one step of its partner. The
+/// partner's list argument is a freshly built value, so it is materialised as
+/// a block-scoped temporary bound to a const reference:
 ///
-/// - acc is only ever passed on as a sub-field of the scrutinee, so it
-/// becomes a raw pointer:      const lst *_loop_acc
-/// - l is sometimes given a freshly built value, so it becomes an owning
-/// value:                      lst _loop_l
+/// const lst &_inl_l = lst::cons(a0 + 1, lst::nil());
+/// ...
+/// const auto &a0, a1 = std::get<Cons>(_inl_l.v());
+/// _loop_s    = _inl_s + a0;
+/// _loop_keep = crane_raw(a1);        // points INTO the temporary
+/// _loop_l    = lst::cons(a0, lst::cons(a0, lst::nil()));
+/// _loop_n    = m;
 ///
-/// The generated loop body is
-///
-/// const auto &a0, a1 = std::get<Cons>(_loop_l.v());
-/// const lst *_next_acc = crane_raw(a1);                 // points INTO _loop_l
-/// _loop_s = _loop_s + hd(deref _loop_acc);
-/// _loop_l = lst::cons(0, lst::cons(m, lst::nil()));     // frees the old
-/// _loop_l _loop_acc = _next_acc;                                // now
-/// dangling
-///
-/// _next_acc aliases the tail cell owned by _loop_l. Overwriting
-/// _loop_l drops the last shared_ptr to that cell, so the pointer
-/// published into _loop_acc is dangling before the next iteration reads it
+/// _loop_keep is published out of the loop body while pointing at a cell
+/// owned solely by _inl_l. Lifetime extension only keeps that temporary
+/// alive to the end of the enclosing block, so it dies at the end of the
+/// iteration and _loop_keep dangles before the next iteration reads it
 /// through hd.
 ///
-/// Expected: go 6 = 21 (checked with Compute in Rocq).
-/// Actual:   7, plus an ASan heap-use-after-free.
+/// Expected: go 8 = 16, go 7 = 12 (checked with Compute in Rocq).
+/// Actual:   go 8 returns 12, plus an ASan heap-use-after-free.
 ///
 /// Without Set Crane Loopify the same file extracts to correct code.
-struct LoopifyTailPtrAlias {
+struct LoopifyMutualInlineTemp {
   struct lst {
     // TYPES
     struct Nil {};
@@ -81,6 +79,7 @@ struct LoopifyTailPtrAlias {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -181,9 +180,13 @@ struct LoopifyTailPtrAlias {
     return _result;
   }
 
+  static lst build(uint64_t n, lst acc);
   static uint64_t hd(const lst &l);
-  static uint64_t rot(uint64_t n, const lst &l, const lst &acc, uint64_t s);
+  static uint64_t even_step(uint64_t n, const lst &l, const lst &keep,
+                            uint64_t s);
+  static uint64_t odd_step(uint64_t n, const lst &l, const lst &keep,
+                           uint64_t s);
   static uint64_t go(uint64_t n);
 };
 
-#endif // INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
+#endif // INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP

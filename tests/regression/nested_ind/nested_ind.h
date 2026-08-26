@@ -318,6 +318,46 @@ struct NestedInd {
     }
 
     // MANIPULATORS
+    ~rose() {
+      crane::small_vector<std::shared_ptr<rose<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            auto *_lp = _alt->a1.get();
+            while (std::holds_alternative<
+                   typename NestedInd::custom_list<rose<A>>::Ccons>(_lp->v())) {
+              auto &_lc =
+                  std::get<typename NestedInd::custom_list<rose<A>>::Ccons>(
+                      _lp->v_mut());
+              _stack.push_back(std::make_shared<rose<A>>(std::move(_lc.a0)));
+              if (_lc.a1 && _lc.a1.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                _lp = _lc.a1.get();
+              } else {
+                break;
+              }
+            }
+            _alt->a1.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    rose(const rose &) = default;
+    rose &operator=(const rose &) = default;
+    rose(rose &&) noexcept = default;
+    rose &operator=(rose &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

@@ -286,7 +286,7 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, List<uint64_t> l) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
-        _loop_l = *a1;
+        _loop_l = List<uint64_t>(*a1);
         _loop_k = m;
       }
     }
@@ -637,7 +637,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         if (elem_impl(a0, *a1)) {
-          _loop_l = *a1;
+          _loop_l = List<uint64_t>(*a1);
           _loop_fuel = f;
           continue;
         } else {
@@ -646,7 +646,7 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, List<uint64_t> l) {
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = *a1;
+          _loop_l = List<uint64_t>(*a1);
           _loop_fuel = f;
           continue;
         }
@@ -870,7 +870,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_l1 = *a1;
+            _loop_l1 = List<uint64_t>(*a1);
             _loop_fuel = f;
             continue;
           } else {
@@ -879,7 +879,7 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
             *_write = std::move(_cell);
             _write =
                 &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-            _loop_l2 = *a10;
+            _loop_l2 = List<uint64_t>(*a10);
             _loop_fuel = f;
             continue;
           }

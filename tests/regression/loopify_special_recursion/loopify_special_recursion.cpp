@@ -168,7 +168,7 @@ List<uint64_t> LoopifySpecialRecursion::reverse_insert(uint64_t x,
             typename List<uint64_t>::Cons(a0, nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-        _loop_l = *a1;
+        _loop_l = List<uint64_t>(*a1);
         continue;
       } else {
         *_write =

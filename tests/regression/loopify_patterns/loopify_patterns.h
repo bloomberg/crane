@@ -408,7 +408,7 @@ struct LoopifyPatterns {
               _write =
                   &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
                        .l;
-              _loop_l1 = *a1;
+              _loop_l1 = list<uint64_t>(*a1);
               _loop_fuel = f;
               continue;
             } else {
@@ -418,7 +418,7 @@ struct LoopifyPatterns {
               _write =
                   &std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
                        .l;
-              _loop_l2 = *a10;
+              _loop_l2 = list<uint64_t>(*a10);
               _loop_fuel = f;
               continue;
             }

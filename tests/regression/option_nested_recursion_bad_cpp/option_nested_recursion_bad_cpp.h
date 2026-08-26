@@ -9,18 +9,21 @@
 
 struct OptionNestedRecursionBadCpp {
   /// chain's recursive occurrence is nested under option, which
-  /// "Mapping/Std.v" maps to std::optional. The field is stored behind a
-  /// shared_ptr, so its C++ type is
-  /// std::shared_ptr<std::optional<chain>>, but the generated match on the
-  /// option forgets to dereference the pointer before probing the optional:
-  /// it emits o.has_value() against the shared_ptr rather than
-  /// dereferencing it first. The result does not compile:
+  /// "Mapping/Std.v" maps to std::optional with the custom match template
   ///
-  /// error: no member named 'has_value' in
-  /// 'std::shared_ptr<std::optional<...::chain>>'
+  /// if (%scrut.has_value()) { const %t0& %b0a0 = *%scrut; ... }
   ///
-  /// A one-constructor wrapper is enough; nothing here depends on option
-  /// specifically beyond its being a mapped type.
+  /// Because the recursion makes the field indirect, its C++ type is
+  /// std::shared_ptr<std::optional<chain>> and the scrutinee prints as the
+  /// dereference *a1. %scrut is spliced in as text, so the template's
+  /// member access used to bind to a1 rather than to the pointee:
+  ///
+  /// if ( *a1.has_value() )  // error: no member named 'has_value' in
+  /// // 'std::shared_ptr<std::optional<...::chain>>'
+  ///
+  /// Prefix-operator scrutinees are now parenthesized at the splice point, so
+  /// this comes out as ( *a1 ).has_value(). Nothing here is specific to
+  /// option beyond its being a mapped type with a match template.
   struct chain {
     // TYPES
     struct Link {

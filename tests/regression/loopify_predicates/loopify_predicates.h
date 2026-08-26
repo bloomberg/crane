@@ -154,7 +154,7 @@ struct LoopifyPredicates {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
         if (p(a0)) {
-          _loop_l = *a1;
+          _loop_l = List<uint64_t>(*a1);
         } else {
           return _loop_l;
         }

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -94,6 +95,7 @@ struct NestedInductiveNoDrain {
         auto _cur = std::move(_stack.back());
         _stack.pop_back();
         if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
           _drain(_cur->v_mut());
         }
       }
@@ -222,6 +224,47 @@ struct NestedInductiveNoDrain {
     }
 
     // MANIPULATORS
+    ~tree() {
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->a1 && _alt->a1.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            auto *_lp = _alt->a1.get();
+            while (std::holds_alternative<
+                   typename NestedInductiveNoDrain::lst<tree>::Cons>(
+                _lp->v())) {
+              auto &_lc =
+                  std::get<typename NestedInductiveNoDrain::lst<tree>::Cons>(
+                      _lp->v_mut());
+              _stack.push_back(std::make_shared<tree>(std::move(_lc.a0)));
+              if (_lc.a1 && _lc.a1.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                _lp = _lc.a1.get();
+              } else {
+                break;
+              }
+            }
+            _alt->a1.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

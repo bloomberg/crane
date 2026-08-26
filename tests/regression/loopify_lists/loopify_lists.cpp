@@ -815,7 +815,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
             _loop_l.v());
         if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
                 a0.v())) {
-          _loop_l = *a1;
+          _loop_l = LoopifyLists::list<LoopifyLists::list<uint64_t>>(*a1);
           _loop_fuel = f;
           continue;
         } else {
@@ -1086,8 +1086,8 @@ LoopifyLists::interleave(LoopifyLists::list<uint64_t> l1,
                  std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
                      .l->v_mut())
                  .l;
-        _loop_l2 = *a10;
-        _loop_l1 = *a1;
+        _loop_l2 = LoopifyLists::list<uint64_t>(*a10);
+        _loop_l1 = LoopifyLists::list<uint64_t>(*a1);
         continue;
       }
     }
@@ -1568,7 +1568,7 @@ LoopifyLists::drop(uint64_t n, LoopifyLists::list<uint64_t> l) {
       if (_loop_n == UINT64_C(0)) {
         return _loop_l;
       } else {
-        _loop_l = *a1;
+        _loop_l = LoopifyLists::list<uint64_t>(*a1);
         _loop_n =
             (((_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
       }

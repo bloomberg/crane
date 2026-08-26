@@ -81,7 +81,7 @@ List<uint64_t> LoopifyListWindows::drop(uint64_t m, List<uint64_t> xs) {
       } else {
         auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_xs.v_mut());
-        _loop_xs = *a1;
+        _loop_xs = List<uint64_t>(*a1);
         _loop_m = m_;
       }
     }
@@ -277,7 +277,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(List<uint64_t> l) {
       *_write = std::move(_cell);
       _write =
           &std::get<typename List<List<uint64_t>>::Cons>((*_write)->v_mut()).l;
-      _loop_l = *a1;
+      _loop_l = List<uint64_t>(*a1);
       continue;
     }
   }

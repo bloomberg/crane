@@ -2200,12 +2200,21 @@ and pp_cpp_stmt env args = function
        is concrete needs the [any_cast] that a use site would otherwise have
        supplied -- e.g. the identity consumer of an existential package,
        [std::function<uint64_t(std::any)>([](const std::any& k) -> uint64_t
-       { return k; })], which does not compile without it. *)
+       { return k; })], which does not compile without it.
+
+       Restricted to a bare [std::any]-typed *parameter* of the enclosing
+       lambda.  The broader test {!wrap_any_cast_if_needed} applies also
+       counts any-returning method calls, which misfires on loopified bodies:
+       their generated lambdas return accumulators and inlined callee results
+       that are already correctly typed, and casting those silently changes
+       the value (regression: tests/regression/loopify_variant_self_assign
+       and friends). *)
     let printed = pp_cpp_expr env args e in
     let printed =
       match !current_lambda_ret_ty with
-      | Some ret_ty -> wrap_any_cast_if_needed e printed ret_ty []
-      | None -> printed
+      | Some ret_ty when expr_is_any_typed_param e ->
+        wrap_any_cast_if_needed e printed ret_ty []
+      | _ -> printed
     in
     str "return " ++ printed ++ str ";"
   | Sdecl (id, ty) ->

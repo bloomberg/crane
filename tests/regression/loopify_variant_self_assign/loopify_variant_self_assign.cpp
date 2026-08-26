@@ -52,7 +52,7 @@ uint64_t LoopifyVariantSelfAssign::drain(uint64_t n,
         const auto &[a0, a1] =
             std::get<typename LoopifyVariantSelfAssign::lst::Cons>(_loop_l.v());
         _loop_s = (_loop_s + a0);
-        _loop_l = *a1;
+        _loop_l = LoopifyVariantSelfAssign::lst(*a1);
         _loop_n = m;
       }
     }

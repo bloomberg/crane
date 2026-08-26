@@ -1183,8 +1183,8 @@ LoopifyPatterns::merge_alternating(LoopifyPatterns::list<uint64_t> l1,
                  std::get<typename list<uint64_t>::Cons>((*_write)->v_mut())
                      .l->v_mut())
                  .l;
-        _loop_l2 = *a10;
-        _loop_l1 = *a1;
+        _loop_l2 = LoopifyPatterns::list<uint64_t>(*a10);
+        _loop_l1 = LoopifyPatterns::list<uint64_t>(*a1);
         continue;
       }
     }

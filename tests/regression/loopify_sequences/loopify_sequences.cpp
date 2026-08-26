@@ -724,10 +724,10 @@ List<uint64_t> LoopifySequences::lis(List<uint64_t> l) {
           *_write = std::move(_cell);
           _write =
               &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
-          _loop_l = *a1;
+          _loop_l = List<uint64_t>(*a1);
           continue;
         } else {
-          _loop_l = *a1;
+          _loop_l = List<uint64_t>(*a1);
           continue;
         }
       }
