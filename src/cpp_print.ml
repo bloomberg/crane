@@ -2283,8 +2283,16 @@ and pp_cpp_stmt env args = function
     require_header "cassert";
     ( match comment_opt with
     | Some c ->
-      str "// Precondition: "
-      ++ str c
+      (* The Rocq term is pretty-printed and may span several lines; a bare
+         [//] would only comment out the first one and leave the rest to be
+         parsed as C++.  Prefix every line. *)
+      let lines = String.split_on_char '\n' c in
+      let lines = List.map (fun l -> String.trim l) lines in
+      let lines = List.filter (fun l -> l <> "") lines in
+      prlist_with_sep fnl (fun l -> str "// " ++ str l)
+        (match lines with
+         | [] -> [ "Precondition:" ]
+         | first :: rest -> ("Precondition: " ^ first) :: rest)
       ++ fnl ()
       ++ str "assert("
       ++ str expr_str
@@ -3177,6 +3185,17 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
             match arg_expr with
             | CPPbinop _ -> str "(" ++ arg ++ str ")"
             | CPPfun_call (CPPglob (_, _, Some ci), _) when ci.ci_inline <> None ->
+              str "(" ++ arg ++ str ")"
+            (* A prefix pointer operator binds looser than the member access
+               the template appends, so [%a0.first] applied to a scrutinee
+               that prints as [*a0] came out as [*a0.first] -- the [.first]
+               attaching to the pointer rather than the pointee.  This is the
+               same hazard [CCscrut] guards against; see the comment there for
+               why only [*] and [&] need it. *)
+            | _
+              when (let s = Pp.string_of_ppcmds arg in
+                    String.length s > 0
+                    && (match s.[0] with '*' | '&' -> true | _ -> false)) ->
               str "(" ++ arg ++ str ")"
             | _ -> arg
           else arg

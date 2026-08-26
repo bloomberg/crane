@@ -4382,6 +4382,16 @@ let gen_ind_header_v2
             | _ -> false
           in
           let is_direct_self_ref t = is_ref_to name vars t in
+          (* Does [t] mention the inductive being generated anywhere, at any
+             depth?  [is_direct_self_ref] only matches the type at the root. *)
+          let rec contains_self t =
+            is_direct_self_ref t
+            || match t with
+               | Miniml.Tmeta {contents = Some t'} -> contains_self t'
+               | Miniml.Tglob (_, args, _) -> List.exists contains_self args
+               | Miniml.Tarr (a, b) -> contains_self a || contains_self b
+               | _ -> false
+          in
           let is_mutual_ref ty =
             List.exists
               (fun (pname, _, _, _) -> is_ref_to pname vars ty)
@@ -4471,9 +4481,18 @@ let gen_ind_header_v2
                    && is_direct_self_ref arg ->
               `List g
             | Miniml.Tmeta {contents = Some t} -> classify_ml_self_ref t
-            | Miniml.Tglob (g, args, _) when not (globref_equal g name) ->
+            | Miniml.Tglob (g, args, _) as ml_ty
+              when not (globref_equal g name) ->
               (match wrapper_self_fields g args with
-               | [] -> `None
+               | [] ->
+                 (* Recursion routed through some *other* mediating shape --
+                    [prod], [option], a record, a list of pairs, a nested list,
+                    a user-defined option-like inductive, ...  The three cases
+                    above cover only the shapes that predate the general
+                    harvester; everything else is handed to [harvest_field],
+                    which walks the mediator's structure and moves out every
+                    [Self] it reaches.  See its comment for the traversal. *)
+                 if List.exists contains_self args then `Nested ml_ty else `None
                | fields -> `Wrapper fields)
             | _ -> `None
           in
@@ -4603,6 +4622,303 @@ let gen_ind_header_v2
             if Table.non_atomic_rc () then []
             else [Sraw "std::atomic_thread_fence(std::memory_order_acquire);"]
           in
+          (* ---------------------------------------------------------------
+             Generic mediator harvester.
+
+             A constructor field whose type merely *contains* [Self] --
+             [(Self * nat)], [option (option Self)], [list (nat * Self)],
+             [cell Self], [w Self] where [w] holds a [list] -- reaches its
+             nested [Self]s through an arbitrary composition of products,
+             options, records and other inductives.  Each such shape used to
+             need its own case in [classify_ml_self_ref]; anything unrecognised
+             got no drain at all, so destroying a deep value recursed once per
+             level and overflowed the stack (CWE-674).
+
+             Instead of enumerating shapes, [harvest_val] walks the mediator's
+             *type* and emits the C++ that walks the corresponding value,
+             moving every [Self] it finds onto the destructor's worklist.  Two
+             mutually recursive halves:
+
+             - [harvest_val ty e]: [e] is a bare lvalue of [ty]'s value type.
+             - [harvest_ptr ty p]: [p] is a [shared_ptr] to one, so it first
+               establishes sole ownership ([p && p.use_count() == 1], plus the
+               acquire fence -- see [unique_fence]) and resets [p] afterwards.
+
+             The representation rule the two rely on is the one
+             [compute_field_cpp_ty] implements: a constructor field is behind a
+             [shared_ptr] exactly when its declared type names its own
+             inductive or nests a reference to it; type *arguments* are always
+             stored bare.  [field_is_ptr] mirrors that decision.
+
+             A mediator that recurses into itself (a list spine, a tree) cannot
+             be expanded inline -- generation would not terminate -- so it gets
+             its own local worklist and a loop, which is also what keeps the
+             generated code's stack depth bounded.  Ownership is re-established
+             per cell inside that loop, not just at the head: cells share their
+             tails, so a suffix may still belong to a live value.
+
+             Anything the walk does not understand (custom containers other
+             than [std::pair]/[std::optional], mutual blocks, non-uniform
+             recursion, or a type nested deeper than [harvest_fuel]) raises
+             [Harvest_bail] and the field is left undrained -- the previous
+             behaviour, never something worse. *)
+          let harvest_fuel = 12 in
+          let hv_seq = ref 0 in
+          let fresh_hv p =
+            incr hv_seq;
+            p ^ string_of_int !hv_seq
+          in
+          let self_str = render_q_destr self_ty in
+          let cpp_of_ml t =
+            convert_ml_type_to_cpp_type (empty_env ()) vars t
+          in
+          let render_ml t = render_q_destr (cpp_of_ml t) in
+          let push_self_stmt e =
+            Sexpr (CPPdot_method_call (
+              CPPvar _stack_id,
+              Id.of_string "push_back",
+              [CPPraw (
+                 Table.make_shared_name () ^ "<" ^ self_str
+                 ^ ">(std::move(" ^ e ^ "))")]))
+          in
+          (* Substitute a mediator's actual type arguments into one of its
+             declared constructor field types. *)
+          let rec subst_targs args t =
+            match t with
+            | Miniml.Tmeta {contents = Some t'} -> subst_targs args t'
+            | Miniml.Tvar k | Miniml.Tvar' k ->
+              if k >= 1 && k <= List.length args then List.nth args (k - 1)
+              else t
+            | Miniml.Tglob (g, ts, l) ->
+              Miniml.Tglob (g, List.map (subst_targs args) ts, l)
+            | Miniml.Tarr (a, b) ->
+              Miniml.Tarr (subst_targs args a, subst_targs args b)
+            | _ -> t
+          in
+          (* [(ctor index (1-based), declared field types)] for every
+             constructor of [g], or [None] if [g] is not an inductive we can
+             enumerate. *)
+          let ind_ctor_tys g =
+            match g with
+            | GlobRef.IndRef (kn, i) ->
+              let rec go j acc =
+                match
+                  Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
+                with
+                | None -> List.rev acc
+                | Some ftys -> go (j + 1) ((j, ftys) :: acc)
+              in
+              (match go 1 [] with [] -> None | l -> Some l)
+            | _ -> None
+          in
+          let mentions g t =
+            let rec go t =
+              match t with
+              | Miniml.Tmeta {contents = Some t'} -> go t'
+              | Miniml.Tglob (g', args, _) ->
+                globref_equal g' g || List.exists go args
+              | Miniml.Tarr (a, b) -> go a || go b
+              | _ -> false
+            in
+            go t
+          in
+          (* Mirrors [compute_field_cpp_ty]: is field type [fty] of inductive
+             [g] stored behind a smart pointer? *)
+          let field_is_ptr g fty =
+            let root_is_g =
+              match Ml_type_util.resolve_tmeta fty with
+              | Miniml.Tglob (g', _, _) -> globref_equal g' g
+              | _ -> false
+            in
+            (root_is_g || ml_type_has_nested_self_ref ~ind_ref:g fty)
+            && not (ml_type_recurses_through_boxed_container ~ind_ref:g fty)
+          in
+          let exception Harvest_bail in
+          let starts_with p s =
+            String.length s >= String.length p
+            && String.equal (String.sub s 0 (String.length p)) p
+          in
+          let rec harvest_val fuel ty e =
+            if fuel <= 0 then raise Harvest_bail;
+            let ty = Ml_type_util.resolve_tmeta ty in
+            if is_direct_self_ref ty then [push_self_stmt e]
+            else
+              match ty with
+              | Miniml.Tglob (g, args, _) when List.exists contains_self args ->
+                (match Table.find_custom_opt g with
+                 | Some tmpl when starts_with "std::optional" tmpl ->
+                   (match args with
+                    | [a] ->
+                      let body =
+                        harvest_val (fuel - 1) a ("(*(" ^ e ^ "))")
+                      in
+                      if body = [] then []
+                      else [Sif_then (CPPraw ("(" ^ e ^ ").has_value()"), body)]
+                    | _ -> raise Harvest_bail)
+                 | Some tmpl when starts_with "std::pair" tmpl ->
+                   (match args with
+                    | [a; b] ->
+                      (if contains_self a
+                       then harvest_val (fuel - 1) a ("(" ^ e ^ ").first")
+                       else [])
+                      @ (if contains_self b
+                         then harvest_val (fuel - 1) b ("(" ^ e ^ ").second")
+                         else [])
+                    | _ -> raise Harvest_bail)
+                 | Some _ -> raise Harvest_bail
+                 | None -> harvest_ind (fuel - 1) g args e)
+              | _ -> raise Harvest_bail
+          and harvest_ptr fuel ty p =
+            let body = harvest_val fuel ty ("(*(" ^ p ^ "))") in
+            if body = [] then []
+            else
+              [Sif_then (
+                CPPbinop ("&&", CPPraw p,
+                  CPPbinop ("==", CPPraw (p ^ ".use_count()"), CPPint 1)),
+                unique_fence @ body @ [Sraw (p ^ ".reset();")])]
+          and harvest_ind fuel g args e =
+            (* Mutual blocks would need a heterogeneous worklist; the mutual
+               drain further down handles those for [Self] itself, but not for
+               a mediator, so bail. *)
+            (match g with
+             | GlobRef.IndRef (kn, _) ->
+               let mib = Global.lookup_mind kn in
+               if Array.length mib.Declarations.mind_packets > 1 then
+                 raise Harvest_bail
+             | _ -> raise Harvest_bail);
+            let ctors =
+              match ind_ctor_tys g with
+              | None -> raise Harvest_bail
+              | Some c -> c
+            in
+            let g_ty = Miniml.Tglob (g, args, []) in
+            let g_str = render_ml g_ty in
+            let self_recursive =
+              List.exists
+                (fun (_, ftys) -> List.exists (mentions g) ftys)
+                ctors
+            in
+            (* Statements for one bare value [x] of [g args].  [on_spine], when
+               given, diverts the mediator's own recursive fields to a local
+               worklist instead of expanding them inline. *)
+            let body_for on_spine x =
+              let ctor_ref j = GlobRef.ConstructRef (
+                (match g with
+                 | GlobRef.IndRef (kn, i) -> (kn, i)
+                 | _ -> raise Harvest_bail), j)
+              in
+              let field_stmts cname_str access ftys =
+                List.concat
+                  (List.mapi
+                     (fun k fty ->
+                       let inst = subst_targs args fty in
+                       if not (contains_self inst) then []
+                       else
+                         let fe =
+                           access
+                             (Id.to_string
+                                (Common.lookup_ctor_field_name cname_str k))
+                         in
+                         let is_ptr = field_is_ptr g fty in
+                         match on_spine with
+                         | Some push
+                           when is_ptr && String.equal (render_ml inst) g_str ->
+                           push fe
+                         | _ ->
+                           if is_ptr then harvest_ptr (fuel - 1) inst fe
+                           else harvest_val (fuel - 1) inst fe)
+                     ftys)
+              in
+              let record_field_names =
+                (* Rocq [Record]s are emitted as a plain struct whose members
+                   are named after the projections, not as a variant with
+                   generic [aN] constructor fields. *)
+                match (ctors, Table.get_record_fields g) with
+                | ([(_, ftys)], (_ :: _ as fs))
+                  when List.length fs = List.length ftys ->
+                  (try
+                     Some (List.map
+                             (function
+                              | Some fr -> Common.pp_global_name Common.Term fr
+                              | None -> raise Exit)
+                             fs)
+                   with Exit -> None)
+                | _ -> None
+              in
+              match ctors with
+              | [(_, ftys)] when record_field_names <> None ->
+                let names = Option.get record_field_names in
+                List.concat
+                  (List.mapi
+                     (fun k fty ->
+                       let inst = subst_targs args fty in
+                       if not (contains_self inst) then []
+                       else
+                         let fe = "(" ^ x ^ ")." ^ List.nth names k in
+                         if field_is_ptr g fty
+                         then harvest_ptr (fuel - 1) inst fe
+                         else harvest_val (fuel - 1) inst fe)
+                     ftys)
+              | [(j, ftys)] when Table.is_flat_inductive g ->
+                (* Single-constructor "flat" inductives and records are laid
+                   out as a plain struct: no variant, direct member access. *)
+                let cname_str =
+                  ctor_struct_name_of_ref ~fallback_idx:0 (ctor_ref j)
+                in
+                field_stmts cname_str (fun f -> "(" ^ x ^ ")." ^ f) ftys
+              | _ ->
+                List.concat_map
+                  (fun (j, ftys) ->
+                    let cref = ctor_ref j in
+                    let cname_str =
+                      ctor_struct_name_of_ref ~fallback_idx:(j - 1) cref
+                    in
+                    let av = fresh_hv "_ha" in
+                    let inner =
+                      field_stmts cname_str (fun f -> av ^ "->" ^ f) ftys
+                    in
+                    if inner = [] then []
+                    else
+                      [Sraw (
+                         "if (auto* " ^ av ^ " = std::get_if<typename "
+                         ^ g_str ^ "::" ^ cname_str ^ ">(&(" ^ x
+                         ^ ").v_mut())) {")]
+                      @ inner @ [Sraw "}"])
+                  ctors
+            in
+            if not self_recursive then body_for None e
+            else begin
+              Table.mark_needs_small_vector ();
+              let wl = fresh_hv "_hw" in
+              let pv = wl ^ "p" and ev = wl ^ "e" in
+              let sp_str =
+                render_q_destr (Tshared_ptr (Tid (Id.of_string_soft g_str, [])))
+              in
+              let push fe = [Sraw (wl ^ ".push_back(std::move(" ^ fe ^ "));")] in
+              let on_spine = Some push in
+              [Sraw ("crane::small_vector<" ^ sp_str ^ "> " ^ wl ^ ";")]
+              @ body_for on_spine e
+              @ [Sraw ("while (!" ^ wl ^ ".empty()) {");
+                 Sraw ("auto " ^ pv ^ " = std::move(" ^ wl ^ ".back()); "
+                       ^ wl ^ ".pop_back();");
+                 Sraw ("if (!" ^ pv ^ " || " ^ pv
+                       ^ ".use_count() != 1) { continue; }")]
+              @ unique_fence
+              @ [Sraw ("auto& " ^ ev ^ " = *" ^ pv ^ ";")]
+              @ body_for on_spine ev
+              @ [Sraw "}"]
+            end
+          in
+          (* Drain statements for a nested-mediator field, or [None] if the
+             shape is one the harvester does not handle. *)
+          let harvest_field field_id ml_ty =
+            try
+              let fe = Id.to_string _alt_id ^ "->" ^ Id.to_string field_id in
+              match harvest_ptr harvest_fuel ml_ty fe with
+              | [] -> None
+              | stmts -> Some stmts
+            with Harvest_bail | Not_found -> None
+          in
           (* Build drain statements for classified fields.  [Direct] fields get
              a simple [push_back(std::move(field))].  [List g] fields with a
              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
@@ -4610,6 +4926,7 @@ let gen_ind_header_v2
             List.concat_map (fun (field_id, cls) ->
               let fe = CPParrow (CPPvar _alt_id, field_id) in
               match cls with
+              | `Stmts stmts -> stmts
               | `Direct ->
                 [Sif_then (fe,
                   [Sexpr (CPPdot_method_call (
@@ -4774,6 +5091,10 @@ let gen_ind_header_v2
                     | `Direct -> Some (field_id, `Direct)
                     | `List g -> Some (field_id, `List g)
                     | `Wrapper fs -> Some (field_id, `Wrapper fs)
+                    | `Nested ml_ty ->
+                      Option.map
+                        (fun stmts -> (field_id, `Stmts stmts))
+                        (harvest_field field_id ml_ty)
                     | _ -> None
                   else None)
                 (List.mapi (fun j ty -> (j, ty)) tys_list)

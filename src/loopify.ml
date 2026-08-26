@@ -6619,8 +6619,62 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
     @param expr     Expression to rewrite
     @return [expr] with in-scope variable and field-access references replaced
             by [std::declval]-based equivalents safe at struct scope *)
+(* Enclosing-scope variables referenced anywhere inside [body], in order of
+   first occurrence.  A name is "enclosing" exactly when [env] knows its type;
+   anything declared inside the lambda itself (its parameters, its locals) is
+   absent from [env] and so is correctly left alone. *)
+let collect_env_vars env body =
+  let acc = ref [] in
+  let add id =
+    if not (List.exists (Id.equal id) !acc) && lookup_var_type env id <> None
+    then acc := !acc @ [id]
+  in
+  let rec fe e =
+    (match e with
+     | CPPvar id -> add id
+     | CPPlambda (_, _, lbody, _) -> List.iter (fun s -> ignore (fs s)) lbody
+     | _ -> ());
+    map_expr fe Fun.id Fun.id e
+  and fs s = map_stmt fe fs Fun.id s in
+  List.iter (fun s -> ignore (fs s)) body;
+  !acc
+
 let rec rewrite_field_access_for_decltype pp_type env expr =
   match expr with
+  | CPPfun_call (CPPlambda (params, rt, body, _), args)
+    when body <> [] && collect_env_vars env body <> [] ->
+    (* An immediately-invoked lambda -- Crane's encoding of a local [fix] used
+       in expression position.  Substituting [std::declval] for the captured
+       variables *inside* the body would put it in evaluated context, where its
+       [static_assert] fires ("declval can only be used in an unevaluated
+       context").  The body is a real function body even though the surrounding
+       [decltype] is not evaluated.
+
+       So lift the captures to parameters instead and pass the [declval]s as
+       call arguments, which is the position [decltype] makes unevaluated:
+
+         decltype([](lst& _c0, uint64_t& _c1) { ...uses _c0, _c1... }
+                    (std::declval<lst&>(), std::declval<uint64_t&>()))
+
+       The capture-default is dropped for the same reason it is dropped on
+       plain lambdas below: a lambda in an unevaluated operand may not capture.
+       The body is left untouched -- with the captures now parameters, it needs
+       no rewriting. *)
+    let free = collect_env_vars env body in
+    let extra =
+      List.map
+        (fun id ->
+          (Tref (strip_ref_type (Option.get (lookup_var_type env id))), Some id))
+        free
+    in
+    (* Both lambda parameters and call arguments are stored reversed relative
+       to their printed order, so the new trailing entries go at the head of
+       each list -- and in the same orientation, so the two line up. *)
+    let extra_args = List.map (fun (ty, _) -> CPPdeclval ty) extra in
+    CPPfun_call
+      ( CPPlambda (extra @ params, rt, body, false),
+        extra_args
+        @ List.map (rewrite_field_access_for_decltype pp_type env) args )
   | CPPvar id ->
     ( match lookup_var_type env id with
     | Some ty ->
@@ -7062,8 +7116,11 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
            fix_handler_bindings, pointer-safe locals are [const T&] references;
            [adjust_frame_push_args] converts [_Enter{id}] → [_Enter{&id}] so
            that [const T&] is passed as [const T*] as the frame struct expects. *)
+        (* Guard on [all_frame_ps], not [frame_ps_map]: a handler that has no
+           pointer-safe fields of its own can still push an [_Enter] frame whose
+           fields are pointer-safe, and that push needs adjusting too. *)
         let handler =
-          if frame_ps_map <> [] then
+          if all_frame_ps <> [] then
             let cf_binding_env = collect_binding_env handler in
             adjust_frame_push_args ~binding_env:cf_binding_env ~frame_sptr all_frame_ps handler
           else handler

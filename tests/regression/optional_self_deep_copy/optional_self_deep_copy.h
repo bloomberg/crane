@@ -1,6 +1,8 @@
 #ifndef INCLUDED_OPTIONAL_SELF_DEEP_COPY
 #define INCLUDED_OPTIONAL_SELF_DEEP_COPY
 
+#include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -42,6 +44,36 @@ struct OptionalSelfDeepCopy {
     }
 
     // MANIPULATORS
+    ~chain() {
+      crane::small_vector<std::shared_ptr<chain>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<More>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            if (((*(_alt->a0))).has_value()) {
+              _stack.push_back(
+                  std::make_shared<chain>(std::move((*((*(_alt->a0)))))));
+            }
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    chain(const chain &) = default;
+    chain &operator=(const chain &) = default;
+    chain(chain &&) noexcept = default;
+    chain &operator=(chain &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

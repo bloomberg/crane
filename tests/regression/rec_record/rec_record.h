@@ -169,6 +169,36 @@ struct RecRecord {
     }
 
     // MANIPULATORS
+    ~RNode() {
+      crane::small_vector<std::shared_ptr<RNode>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<MkRNode>(&_v)) {
+          if (_alt->rn_next && _alt->rn_next.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            if (((*(_alt->rn_next))).has_value()) {
+              _stack.push_back(
+                  std::make_shared<RNode>(std::move((*((*(_alt->rn_next)))))));
+            }
+            _alt->rn_next.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    RNode(const RNode &) = default;
+    RNode &operator=(const RNode &) = default;
+    RNode(RNode &&) noexcept = default;
+    RNode &operator=(RNode &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

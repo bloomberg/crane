@@ -6571,3 +6571,233 @@
   (alias runtest)
   (deps reuse_map_type_change.t.exe)
   (action (run ./reuse_map_type_change.t.exe))))
+
+(subdir assoc_pair_list
+ (rule
+  (targets assoc_pair_list.t.exe)
+  (deps AssocPairList.vo assoc_pair_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_pair_list.t.exe assoc_pair_list.cpp assoc_pair_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_pair_list.t.exe)
+  (action (run ./assoc_pair_list.t.exe))))
+
+
+
+(subdir double_option_nest
+ (rule
+  (targets double_option_nest.t.exe)
+  (deps DoubleOptionNest.vo double_option_nest.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} double_option_nest.t.exe double_option_nest.cpp double_option_nest.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps double_option_nest.t.exe)
+  (action (run ./double_option_nest.t.exe))))
+
+(subdir list_of_list_drain
+ (rule
+  (targets list_of_list_drain.t.exe)
+  (deps ListOfListDrain.vo list_of_list_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_of_list_drain.t.exe list_of_list_drain.cpp list_of_list_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_of_list_drain.t.exe)
+  (action (run ./list_of_list_drain.t.exe))))
+
+(subdir list_of_prod_deep
+ (rule
+  (targets list_of_prod_deep.t.exe)
+  (deps ListOfProdDeep.vo list_of_prod_deep.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_of_prod_deep.t.exe list_of_prod_deep.cpp list_of_prod_deep.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_of_prod_deep.t.exe)
+  (action (run ./list_of_prod_deep.t.exe))))
+
+(subdir list_option_drain
+ (rule
+  (targets list_option_drain.t.exe)
+  (deps ListOptionDrain.vo list_option_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_option_drain.t.exe list_option_drain.cpp list_option_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_option_drain.t.exe)
+  (action (run ./list_option_drain.t.exe))))
+
+(subdir option_deep_drain
+ (rule
+  (targets option_deep_drain.t.exe)
+  (deps OptionDeepDrain.vo option_deep_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_deep_drain.t.exe option_deep_drain.cpp option_deep_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_deep_drain.t.exe)
+  (action (run ./option_deep_drain.t.exe))))
+
+(subdir pair_both_recursive
+ (rule
+  (targets pair_both_recursive.t.exe)
+  (deps PairBothRecursive.vo pair_both_recursive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_both_recursive.t.exe pair_both_recursive.cpp pair_both_recursive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_both_recursive.t.exe)
+  (action (run ./pair_both_recursive.t.exe))))
+
+(subdir prod_drain
+ (rule
+  (targets prod_drain.t.exe)
+  (deps ProdDrain.vo prod_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prod_drain.t.exe prod_drain.cpp prod_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prod_drain.t.exe)
+  (action (run ./prod_drain.t.exe))))
+
+(subdir record_mediated_drain
+ (rule
+  (targets record_mediated_drain.t.exe)
+  (deps RecordMediatedDrain.vo record_mediated_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_mediated_drain.t.exe record_mediated_drain.cpp record_mediated_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_mediated_drain.t.exe)
+  (action (run ./record_mediated_drain.t.exe))))
+
+(subdir sum_drain
+ (rule
+  (targets sum_drain.t.exe)
+  (deps SumDrain.vo sum_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_drain.t.exe sum_drain.cpp sum_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_drain.t.exe)
+  (action (run ./sum_drain.t.exe))))
+
+(subdir triple_list_drain
+ (rule
+  (targets triple_list_drain.t.exe)
+  (deps TripleListDrain.vo triple_list_drain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} triple_list_drain.t.exe triple_list_drain.cpp triple_list_drain.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps triple_list_drain.t.exe)
+  (action (run ./triple_list_drain.t.exe))))
+
+(subdir two_level_mediation
+ (rule
+  (targets two_level_mediation.t.exe)
+  (deps TwoLevelMediation.vo two_level_mediation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} two_level_mediation.t.exe two_level_mediation.cpp two_level_mediation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps two_level_mediation.t.exe)
+  (action (run ./two_level_mediation.t.exe))))
+
+(subdir user_option_wrapper
+ (rule
+  (targets user_option_wrapper.t.exe)
+  (deps UserOptionWrapper.vo user_option_wrapper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} user_option_wrapper.t.exe user_option_wrapper.cpp user_option_wrapper.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps user_option_wrapper.t.exe)
+  (action (run ./user_option_wrapper.t.exe))))
+
+
+
+(subdir prod_fst_projection
+ (rule
+  (targets prod_fst_projection.t.exe)
+  (deps ProdFstProjection.vo prod_fst_projection.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prod_fst_projection.t.exe prod_fst_projection.cpp prod_fst_projection.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prod_fst_projection.t.exe)
+  (action (run ./prod_fst_projection.t.exe))))
+
+(subdir prod_snd_projection
+ (rule
+  (targets prod_snd_projection.t.exe)
+  (deps ProdSndProjection.vo prod_snd_projection.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} prod_snd_projection.t.exe prod_snd_projection.cpp prod_snd_projection.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps prod_snd_projection.t.exe)
+  (action (run ./prod_snd_projection.t.exe))))
+
+
+
+(subdir inner_fix_captures_fn
+ (rule
+  (targets inner_fix_captures_fn.t.exe)
+  (deps InnerFixCapturesFn.vo inner_fix_captures_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inner_fix_captures_fn.t.exe inner_fix_captures_fn.cpp inner_fix_captures_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inner_fix_captures_fn.t.exe)
+  (action (run ./inner_fix_captures_fn.t.exe))))
+
+(subdir inner_fix_captures_ind
+ (rule
+  (targets inner_fix_captures_ind.t.exe)
+  (deps InnerFixCapturesInd.vo inner_fix_captures_ind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inner_fix_captures_ind.t.exe inner_fix_captures_ind.cpp inner_fix_captures_ind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inner_fix_captures_ind.t.exe)
+  (action (run ./inner_fix_captures_ind.t.exe))))
+
+(subdir nested_fix_loopify
+ (rule
+  (targets nested_fix_loopify.t.exe)
+  (deps NestedFixLoopify.vo nested_fix_loopify.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_fix_loopify.t.exe nested_fix_loopify.cpp nested_fix_loopify.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_fix_loopify.t.exe)
+  (action (run ./nested_fix_loopify.t.exe))))
+
+
+
+(subdir mutual_loopify_acc
+ (rule
+  (targets mutual_loopify_acc.t.exe)
+  (deps MutualLoopifyAcc.vo mutual_loopify_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_loopify_acc.t.exe mutual_loopify_acc.cpp mutual_loopify_acc.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_loopify_acc.t.exe)
+  (action (run ./mutual_loopify_acc.t.exe))))
+
+
+
+(subdir sig_prop_comment
+ (rule
+  (targets sig_prop_comment.t.exe)
+  (deps SigPropComment.vo sig_prop_comment.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_prop_comment.t.exe sig_prop_comment.cpp sig_prop_comment.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_prop_comment.t.exe)
+  (action (run ./sig_prop_comment.t.exe))))

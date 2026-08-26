@@ -1,5 +1,5 @@
-#ifndef INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP
-#define INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP
+#ifndef INCLUDED_OPTION_DEEP_DRAIN
+#define INCLUDED_OPTION_DEEP_DRAIN
 
 #include "small_vector.h"
 #include <atomic>
@@ -9,23 +9,7 @@
 #include <utility>
 #include <variant>
 
-struct OptionNestedRecursionBadCpp {
-  /// chain's recursive occurrence is nested under option, which
-  /// "Mapping/Std.v" maps to std::optional with the custom match template
-  ///
-  /// if (%scrut.has_value()) { const %t0& %b0a0 = *%scrut; ... }
-  ///
-  /// Because the recursion makes the field indirect, its C++ type is
-  /// std::shared_ptr<std::optional<chain>> and the scrutinee prints as the
-  /// dereference *a1. %scrut is spliced in as text, so the template's
-  /// member access used to bind to a1 rather than to the pointee:
-  ///
-  /// if ( *a1.has_value() )  // error: no member named 'has_value' in
-  /// // 'std::shared_ptr<std::optional<...::chain>>'
-  ///
-  /// Prefix-operator scrutinees are now parenthesized at the splice point, so
-  /// this comes out as ( *a1 ).has_value(). Nothing here is specific to
-  /// option beyond its being a mapped type with a match template.
+struct OptionDeepDrain {
   struct chain {
     // TYPES
     struct Link {
@@ -101,9 +85,8 @@ struct OptionNestedRecursionBadCpp {
     return f(a0, *a1);
   }
 
-  static chain build(uint64_t n);
-  static uint64_t depth(const chain &c);
-  static uint64_t run(uint64_t n);
+  static chain build(uint64_t n, chain acc);
+  static uint64_t go(uint64_t n);
 };
 
-#endif // INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP
+#endif // INCLUDED_OPTION_DEEP_DRAIN
