@@ -90,3 +90,223 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
+
+(subdir class_superclass_explicit
+ (rule
+  (targets class_superclass_explicit.t.exe)
+  (deps ClassSuperclassExplicit.vo class_superclass_explicit.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_superclass_explicit.t.exe class_superclass_explicit.cpp class_superclass_explicit.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_superclass_explicit.t.exe)
+  (action (run ./class_superclass_explicit.t.exe))))
+
+(subdir class_superclass_field
+ (rule
+  (targets class_superclass_field.t.exe)
+  (deps ClassSuperclassField.vo class_superclass_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_superclass_field.t.exe class_superclass_field.cpp class_superclass_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_superclass_field.t.exe)
+  (action (run ./class_superclass_field.t.exe))))
+
+(subdir dep_match_unit_bool_idx
+ (rule
+  (targets dep_match_unit_bool_idx.t.exe)
+  (deps DepMatchUnitBoolIdx.vo dep_match_unit_bool_idx.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_bool_idx.t.exe dep_match_unit_bool_idx.cpp dep_match_unit_bool_idx.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_bool_idx.t.exe)
+  (action (run ./dep_match_unit_bool_idx.t.exe))))
+
+(subdir dep_match_unit_fun
+ (rule
+  (targets dep_match_unit_fun.t.exe)
+  (deps DepMatchUnitFun.vo dep_match_unit_fun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_fun.t.exe dep_match_unit_fun.cpp dep_match_unit_fun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_fun.t.exe)
+  (action (run ./dep_match_unit_fun.t.exe))))
+
+(subdir dep_match_unit_list
+ (rule
+  (targets dep_match_unit_list.t.exe)
+  (deps DepMatchUnitList.vo dep_match_unit_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_list.t.exe dep_match_unit_list.cpp dep_match_unit_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_list.t.exe)
+  (action (run ./dep_match_unit_list.t.exe))))
+
+(subdir dep_match_unit_option
+ (rule
+  (targets dep_match_unit_option.t.exe)
+  (deps DepMatchUnitOption.vo dep_match_unit_option.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_option.t.exe dep_match_unit_option.cpp dep_match_unit_option.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_option.t.exe)
+  (action (run ./dep_match_unit_option.t.exe))))
+
+(subdir dep_match_unit_pair
+ (rule
+  (targets dep_match_unit_pair.t.exe)
+  (deps DepMatchUnitPair.vo dep_match_unit_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_pair.t.exe dep_match_unit_pair.cpp dep_match_unit_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_pair.t.exe)
+  (action (run ./dep_match_unit_pair.t.exe))))
+
+(subdir dep_match_unit_vec
+ (rule
+  (targets dep_match_unit_vec.t.exe)
+  (deps DepMatchUnitVec.vo dep_match_unit_vec.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_match_unit_vec.t.exe dep_match_unit_vec.cpp dep_match_unit_vec.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_match_unit_vec.t.exe)
+  (action (run ./dep_match_unit_vec.t.exe))))
+
+(subdir ident_named_uint64
+ (rule
+  (targets ident_named_uint64.t.exe)
+  (deps IdentNamedUint64.vo ident_named_uint64.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ident_named_uint64.t.exe ident_named_uint64.cpp ident_named_uint64.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ident_named_uint64.t.exe)
+  (action (run ./ident_named_uint64.t.exe))))
+
+(subdir inductive_named_list
+ (rule
+  (targets inductive_named_list.t.exe)
+  (deps InductiveNamedList.vo inductive_named_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inductive_named_list.t.exe inductive_named_list.cpp inductive_named_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps inductive_named_list.t.exe)
+  (action (run ./inductive_named_list.t.exe))))
+
+(subdir lifted_lambda_forward_ref
+ (rule
+  (targets lifted_lambda_forward_ref.t.exe)
+  (deps LiftedLambdaForwardRef.vo lifted_lambda_forward_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_forward_ref.t.exe lifted_lambda_forward_ref.cpp lifted_lambda_forward_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_lambda_forward_ref.t.exe)
+  (action (run ./lifted_lambda_forward_ref.t.exe))))
+
+(subdir lifted_lambda_nested
+ (rule
+  (targets lifted_lambda_nested.t.exe)
+  (deps LiftedLambdaNested.vo lifted_lambda_nested.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_nested.t.exe lifted_lambda_nested.cpp lifted_lambda_nested.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_lambda_nested.t.exe)
+  (action (run ./lifted_lambda_nested.t.exe))))
+
+(subdir lifted_lambda_two_users
+ (rule
+  (targets lifted_lambda_two_users.t.exe)
+  (deps LiftedLambdaTwoUsers.vo lifted_lambda_two_users.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_lambda_two_users.t.exe lifted_lambda_two_users.cpp lifted_lambda_two_users.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_lambda_two_users.t.exe)
+  (action (run ./lifted_lambda_two_users.t.exe))))
+
+(subdir loopify_wrapper_receiver
+ (rule
+  (targets loopify_wrapper_receiver.t.exe)
+  (deps LoopifyWrapperReceiver.vo loopify_wrapper_receiver.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_wrapper_receiver.t.exe loopify_wrapper_receiver.cpp loopify_wrapper_receiver.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_wrapper_receiver.t.exe)
+  (action (run ./loopify_wrapper_receiver.t.exe))))
+
+(subdir module_named_crane
+ (rule
+  (targets module_named_crane.t.exe)
+  (deps ModuleNamedCrane.vo module_named_crane.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_named_crane.t.exe module_named_crane.cpp module_named_crane.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_named_crane.t.exe)
+  (action (run ./module_named_crane.t.exe))))
+
+(subdir module_named_std
+ (rule
+  (targets module_named_std.t.exe)
+  (deps ModuleNamedStd.vo module_named_std.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_named_std.t.exe module_named_std.cpp module_named_std.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_named_std.t.exe)
+  (action (run ./module_named_std.t.exe))))
+
+(subdir non_uniform_list_nest
+ (rule
+  (targets non_uniform_list_nest.t.exe)
+  (deps NonUniformListNest.vo non_uniform_list_nest.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} non_uniform_list_nest.t.exe non_uniform_list_nest.cpp non_uniform_list_nest.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps non_uniform_list_nest.t.exe)
+  (action (run ./non_uniform_list_nest.t.exe))))
+
+(subdir non_uniform_pair_nest
+ (rule
+  (targets non_uniform_pair_nest.t.exe)
+  (deps NonUniformPairNest.vo non_uniform_pair_nest.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} non_uniform_pair_nest.t.exe non_uniform_pair_nest.cpp non_uniform_pair_nest.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps non_uniform_pair_nest.t.exe)
+  (action (run ./non_uniform_pair_nest.t.exe))))
+
+(subdir sig_curried_payload
+ (rule
+  (targets sig_curried_payload.t.exe)
+  (deps SigCurriedPayload.vo sig_curried_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_curried_payload.t.exe sig_curried_payload.cpp sig_curried_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_curried_payload.t.exe)
+  (action (run ./sig_curried_payload.t.exe))))
+
+(subdir sig_fun_payload
+ (rule
+  (targets sig_fun_payload.t.exe)
+  (deps SigFunPayload.vo sig_fun_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fun_payload.t.exe sig_fun_payload.cpp sig_fun_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_fun_payload.t.exe)
+  (action (run ./sig_fun_payload.t.exe))))

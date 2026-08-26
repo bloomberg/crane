@@ -1,0 +1,9 @@
+#include <dep_match_unit_vec.h>
+#include <cassert>
+#include <iostream>
+int main() {
+  auto r = DepMatchUnitVec::go;
+  std::cout << "go = " << r << " (want 5)" << std::endl;
+  assert(r == 5);
+  return 0;
+}
