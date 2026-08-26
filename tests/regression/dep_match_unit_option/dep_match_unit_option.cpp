@@ -6,6 +6,6 @@ DepMatchUnitOption::get(const DepMatchUnitOption::tg &t) {
     const auto &[a0] = std::get<typename DepMatchUnitOption::tg::TO>(t.v());
     return a0;
   } else {
-    return std::monostate{};
+    throw std::logic_error("unreachable: impossible dependent match branch");
   }
 }

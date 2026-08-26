@@ -2,6 +2,7 @@
 #define INCLUDED_DEP_MATCH_UNIT_FUN
 
 #include <functional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>

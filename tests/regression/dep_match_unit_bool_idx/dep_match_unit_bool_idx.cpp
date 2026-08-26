@@ -6,6 +6,6 @@ uint64_t DepMatchUnitBoolIdx::get(const DepMatchUnitBoolIdx::tagged &t) {
         std::get<typename DepMatchUnitBoolIdx::tagged::TA>(t.v());
     return a0;
   } else {
-    return std::monostate{};
+    throw std::logic_error("unreachable: impossible dependent match branch");
   }
 }

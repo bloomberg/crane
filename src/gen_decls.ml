@@ -1452,6 +1452,56 @@ and tvar_subst_stmt (tvars : Id.t list) (s : cpp_stmt) : cpp_stmt =
     (tvar_subst_type tvars)
     s
 
+(** [is_unit_cpp_type ty] is [true] for the C++ rendering of Rocq's [unit]
+    (which [Shared.v] maps to [std::monostate]) and for [void]. *)
+let is_unit_cpp_type = function
+  | Tvoid -> true
+  | Tglob (r, _, _) | Tnamespace (r, _) -> Table.is_unit_type r
+  | _ -> false
+
+(** [dead_unit_returns_to_abort cod body] rewrites [return tt;] into a throw
+    when the enclosing function does not return [unit].
+
+    A dependent match can have branches that are impossible by typing, e.g.
+
+    {v
+      match v in vec _ m return match m with O => unit | S _ => nat end with
+      | vnil => tt
+      | vcons _ x _ => x
+      end
+    v}
+
+    Extraction erases the dependency, so the [vnil] branch survives as a plain
+    [tt] sitting in a function whose C++ return type is [uint64_t] — which does
+    not compile.  The branch is unreachable, so emit the same throw used for
+    other absurd cases.
+
+    A nested lambda is traversed under its own declared return type, since a
+    [tt] returned from a lambda that really does return [unit] is well-typed. *)
+let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
+  let is_tt = function
+    | CPPglob (r, _, _) -> Table.is_tt_constructor r
+    | _ -> false
+  in
+  (* [ret_ty] is [None] inside a lambda with a deduced return type: there is no
+     declared type to contradict, so leave those bodies alone. *)
+  let rec fix_stmts ret_ty stmts =
+    match ret_ty with
+    | Some t when not (is_unit_cpp_type t) -> List.map (fix_stmt ret_ty) stmts
+    | _ -> List.map (fix_stmt None) stmts
+  and fix_stmt ret_ty s =
+    match s with
+    | Sreturn (Some e) when ret_ty <> None && is_tt e ->
+      Sreturn (Some (CPPabort "unreachable: impossible dependent match branch"))
+    | _ -> map_stmt (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) s
+  and fix_expr ret_ty e =
+    match e with
+    | CPPlambda (params, lam_ret, stmts, by_value) ->
+      CPPlambda (params, lam_ret, fix_stmts lam_ret stmts, by_value)
+    | _ -> map_expr (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) e
+  in
+  fix_stmts (Some cod) body
+
 (** Detect function-typed parameters that are NOT simply forwarded at
    self-recursive call sites.
 
@@ -2255,7 +2305,12 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure) )
+      Dfundef
+        ( [(n, [])],
+          cod,
+          ids,
+          dead_unit_returns_to_abort cod (guard @ sigma_asserts @ b),
+          no_pure ) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -2304,7 +2359,12 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef ([(n, [])], cod, ids, guard @ sigma_asserts @ b, no_pure)
+      Dfundef
+        ( [(n, [])],
+          cod,
+          ids,
+          dead_unit_returns_to_abort cod (guard @ sigma_asserts @ b),
+          no_pure )
   in
   tctx.current_cpp_return_type <- saved_return_type;
   tctx.current_outer_function_name <- saved_outer_name;

@@ -6,7 +6,7 @@ uint64_t DepMatchUnitFun::get(const DepMatchUnitFun::tg &t, uint64_t _x0) {
       const auto &[a0] = std::get<typename DepMatchUnitFun::tg::TF>(t.v());
       return a0;
     } else {
-      return std::monostate{};
+      throw std::logic_error("unreachable: impossible dependent match branch");
     }
   }()(_x0);
 }
