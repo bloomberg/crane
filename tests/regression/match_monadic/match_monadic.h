@@ -85,11 +85,11 @@ public:
     }
   }
 
-  static Tree<A> leaf() { return Tree(Leaf{}); }
+  static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
   static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
-    return Tree(Node{std::make_shared<Tree<A>>(std::move(a0)), std::move(a1),
-                     std::make_shared<Tree<A>>(std::move(a2))});
+    return Tree<A>(Node{std::make_shared<Tree<A>>(std::move(a0)), std::move(a1),
+                        std::make_shared<Tree<A>>(std::move(a2))});
   }
 
   // MANIPULATORS

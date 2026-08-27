@@ -131,10 +131,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -195,10 +195,10 @@ public:
   explicit Colist(std::function<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-  static Colist<A> conil() { return Colist(Conil{}); }
+  static Colist<A> conil() { return Colist<A>(Conil{}); }
 
   static Colist<A> cocons(A x, const Colist<A> &xs) {
-    return Colist(Cocons{std::move(x), std::make_shared<Colist<A>>(xs)});
+    return Colist<A>(Cocons{std::move(x), std::make_shared<Colist<A>>(xs)});
   }
 
   static Colist<A> lazy_(std::function<Colist<A>()> thunk) {

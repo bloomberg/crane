@@ -72,10 +72,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -200,11 +200,11 @@ struct LoopifyTrees {
       }
     }
 
-    static tree<A> leaf() { return tree(Leaf{}); }
+    static tree<A> leaf() { return tree<A>(Leaf{}); }
 
     static tree<A> node(tree<A> l, A x, tree<A> r) {
-      return tree(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
-                       std::make_shared<tree<A>>(std::move(r))});
+      return tree<A>(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
+                          std::make_shared<tree<A>>(std::move(r))});
     }
 
     // MANIPULATORS

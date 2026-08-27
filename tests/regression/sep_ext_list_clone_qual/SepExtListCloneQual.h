@@ -70,14 +70,16 @@ public:
             } else
               return A(a0);
           }(),
-          a1 ? std::make_shared<Datatypes::List<Forest<A>>>(*a1) : nullptr};
+          a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(
+                   *a1)
+             : nullptr};
     }
   }
 
-  static Forest<A> leaf() { return Forest(Leaf{}); }
+  static Forest<A> leaf() { return Forest<A>(Leaf{}); }
 
   static Forest<A> node(A a0, typename Datatypes::template List<Forest<A>> a1) {
-    return Forest(
+    return Forest<A>(
         Node{std::move(a0),
              std::make_shared<typename Datatypes::template List<Forest<A>>>(
                  std::move(a1))});

@@ -72,10 +72,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -274,10 +274,10 @@ struct DepElim {
       }
     }
 
-    static vec<A> vnil() { return vec(Vnil{}); }
+    static vec<A> vnil() { return vec<A>(Vnil{}); }
 
     static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
-      return vec(
+      return vec<A>(
           Vcons{n, std::move(a1), std::make_shared<vec<A>>(std::move(a2))});
     }
 

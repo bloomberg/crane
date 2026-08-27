@@ -129,14 +129,14 @@ struct RocqBug13581 {
         this->v_ = C{};
       } else {
         const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
-        this->v_ = D{a0 ? std::make_shared<RocqBug13581::J<T>>(*a0) : nullptr};
+        this->v_ = D{a0 ? std::make_shared<J<T>>(*a0) : nullptr};
       }
     }
 
-    static I<T> c() { return I(C{}); }
+    static I<T> c() { return I<T>(C{}); }
 
     static I<T> d(J<T> a0) {
-      return I(D{std::make_shared<J<T>>(std::move(a0))});
+      return I<T>(D{std::make_shared<J<T>>(std::move(a0))});
     }
 
     // MANIPULATORS
@@ -204,11 +204,11 @@ struct RocqBug13581 {
 
     template <typename _U> J(const J<_U> &_other) {
       const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
-      this->v_ = E{a0 ? std::make_shared<RocqBug13581::I<T>>(*a0) : nullptr};
+      this->v_ = E{a0 ? std::make_shared<I<T>>(*a0) : nullptr};
     }
 
     static J<T> e(I<T> a0) {
-      return J(E{std::make_shared<I<T>>(std::move(a0))});
+      return J<T>(E{std::make_shared<I<T>>(std::move(a0))});
     }
 
     // MANIPULATORS

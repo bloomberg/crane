@@ -99,9 +99,9 @@ public:
     }
   }
 
-  static Sum<A, B> inl(A a0) { return Sum(Inl{std::move(a0)}); }
+  static Sum<A, B> inl(A a0) { return Sum<A, B>(Inl{std::move(a0)}); }
 
-  static Sum<A, B> inr(B a0) { return Sum(Inr{std::move(a0)}); }
+  static Sum<A, B> inr(B a0) { return Sum<A, B>(Inr{std::move(a0)}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }

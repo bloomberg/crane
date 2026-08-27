@@ -142,6 +142,18 @@ val render_cpp_type_for_raw_template :
   ?raw_inductives:Refset'.t -> ?no_custom_inductives:Refset'.t ->
   cpp_type -> string
 
+(** Install the real type printer ([Cpp_print.pp_cpp_type]) used by
+    {!render_cpp_type_in_template}.  Called by {!Cpp_print} at load time to
+    break the dependency cycle. *)
+val set_cpp_type_printer : (cpp_type -> string) -> unit
+
+(** Render a C++ type as a string spelled exactly as the real printer spells
+    it inside a template body -- namespace-qualified, with the [typename] and
+    [template] disambiguators a dependent name needs.  Use this instead of
+    {!render_cpp_type_for_raw_template} whenever the resulting string must
+    agree with printer output elsewhere in the same declaration. *)
+val render_cpp_type_in_template : cpp_type -> string
+
 (** Build guard-compare statements for a constructor whose fields alias-check
     two identical-typed pointer parameters. [type_string_of], when given,
     renders a compared parameter's own [cpp_type] (e.g. via

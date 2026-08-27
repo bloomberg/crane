@@ -137,9 +137,9 @@ struct PolyInductive {
       }
     }
 
-    static pmaybe<A> pnothing() { return pmaybe(PNothing{}); }
+    static pmaybe<A> pnothing() { return pmaybe<A>(PNothing{}); }
 
-    static pmaybe<A> pjust(A a0) { return pmaybe(PJust{std::move(a0)}); }
+    static pmaybe<A> pjust(A a0) { return pmaybe<A>(PJust{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -254,11 +254,11 @@ struct PolyInductive {
       }
     }
 
-    static ptree<A> pleaf(A a0) { return ptree(PLeaf{std::move(a0)}); }
+    static ptree<A> pleaf(A a0) { return ptree<A>(PLeaf{std::move(a0)}); }
 
     static ptree<A> pnode(ptree<A> a0, ptree<A> a1) {
-      return ptree(PNode{std::make_shared<ptree<A>>(std::move(a0)),
-                         std::make_shared<ptree<A>>(std::move(a1))});
+      return ptree<A>(PNode{std::make_shared<ptree<A>>(std::move(a0)),
+                            std::make_shared<ptree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

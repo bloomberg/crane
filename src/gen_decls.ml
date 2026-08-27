@@ -5635,8 +5635,13 @@ let gen_ind_header_v2
                       O{} → Nat(O{}) — needed because constructors are
                       explicit. Use CPPglob with the inductive ref so
                       the printer emits the correct name (handles both
-                      top-level and module-nested inductives). *)
-                   (fun s -> CPPfun_call (mk_cppglob name [], [s])) )
+                      top-level and module-nested inductives).  The type
+                      arguments must be spelled out: when the inductive is
+                      not merged into its wrapper struct, the name reached
+                      through the wrapper ([List::list]) is no longer the
+                      injected-class-name, so class template argument
+                      deduction is not available. *)
+                   (fun s -> CPPfun_call (mk_cppglob name ty_vars, [s])) )
                 tys ) )
       in
 
@@ -5704,13 +5709,6 @@ let gen_ind_header_v2
                other polymorphic recursive type (no special arena suppression). *)
             if vars = [] || all_fields_empty then []
             else
-              let render_ty ty =
-                render_cpp_type_for_raw_template
-                  ~no_custom_inductives:(Refset'.singleton name)
-                  (qualify_inductives
-                     ~skip:(fun g -> GlobRef.CanOrd.equal g name)
-                     ty)
-              in
               let n_vars = List.length vars in
               let u_var_names =
                 List.mapi
@@ -5724,7 +5722,6 @@ let gen_ind_header_v2
                 List.mapi (fun i x -> Tvar (i, Some x)) u_var_names
               in
               let source_ty = Tglob (name, u_tys, []) in
-              let source_type_s = render_ty source_ty in
               let n_ctors = Array.length cnames in
               let other_id = Id.of_string "_other" in
               let vmn_id = Id.of_string variant_member_name in
@@ -5792,9 +5789,13 @@ let gen_ind_header_v2
                          (fun (id, _, _) -> Id.to_string id)
                          field_info)
                   in
+                  (* Render the source constructor type through the same
+                     printer the [std::holds_alternative] guard uses (via
+                     [CPPstd_holds_alternative] → [Tqualified]), so both
+                     spellings of [typename Ns::template t<_U>::Ctor] agree. *)
                   let source_ctor_s =
-                    "typename " ^ source_type_s ^ "::"
-                    ^ Id.to_string cname_id
+                    render_cpp_type_in_template
+                      (Tqualified (source_ty, cname_id))
                   in
                   [Sraw (
                      "const auto& [" ^ bindings

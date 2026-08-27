@@ -72,10 +72,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -184,10 +184,10 @@ struct NestedInd {
       }
     }
 
-    static custom_list<A> cnil() { return custom_list(Cnil{}); }
+    static custom_list<A> cnil() { return custom_list<A>(Cnil{}); }
 
     static custom_list<A> ccons(A a0, custom_list<A> a1) {
-      return custom_list(Ccons{
+      return custom_list<A>(Ccons{
           std::move(a0), std::make_shared<custom_list<A>>(std::move(a1))});
     }
 
@@ -308,13 +308,12 @@ struct NestedInd {
             } else
               return A(a0);
           }(),
-          a1 ? std::make_shared<NestedInd::custom_list<rose<A>>>(*a1)
-             : nullptr};
+          a1 ? std::make_shared<Custom_list<rose<A>>>(*a1) : nullptr};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {
-      return rose(Node{std::move(a0),
-                       std::make_shared<custom_list<rose<A>>>(std::move(a1))});
+      return rose<A>(Node{std::move(a0), std::make_shared<custom_list<rose<A>>>(
+                                             std::move(a1))});
     }
 
     // MANIPULATORS

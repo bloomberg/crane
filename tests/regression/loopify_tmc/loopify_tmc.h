@@ -77,10 +77,11 @@ struct LoopifyTmc {
       }
     }
 
-    static list<A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list<A>(Nil{}); }
 
     static list<A> cons(A a, list<A> l) {
-      return list(Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
+      return list<A>(
+          Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
     }
 
     // MANIPULATORS

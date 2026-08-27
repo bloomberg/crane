@@ -73,10 +73,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -134,7 +134,7 @@ struct LoopifyCoindStream {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream<A> scons(A a0, const stream<A> &a1) {
-      return stream(Scons{std::move(a0), std::make_shared<stream<A>>(a1)});
+      return stream<A>(Scons{std::move(a0), std::make_shared<stream<A>>(a1)});
     }
 
     static stream<A> lazy_(std::function<stream<A>()> thunk) {

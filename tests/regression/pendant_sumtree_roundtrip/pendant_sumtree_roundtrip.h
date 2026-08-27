@@ -74,10 +74,11 @@ public:
     }
   }
 
-  static List<A> nil0() { return List(Nil0{}); }
+  static List<A> nil0() { return List<A>(Nil0{}); }
 
   static List<A> cons0(A a, List<A> l) {
-    return List(Cons0{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(
+        Cons0{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -259,10 +260,10 @@ public:
     }
   }
 
-  static T0<A> nil() { return T0(Nil{}); }
+  static T0<A> nil() { return T0<A>(Nil{}); }
 
   static T0<A> cons(A h, uint64_t n, T0<A> a2) {
-    return T0(Cons{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
+    return T0<A>(Cons{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
   }
 
   // MANIPULATORS

@@ -77,10 +77,10 @@ struct MatchRefAfterMove {
       }
     }
 
-    static mylist<A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(
+      return mylist<A>(
           Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 
@@ -352,9 +352,11 @@ struct MatchRefAfterMove {
       }
     }
 
-    static either<A, B> left(A a0) { return either(Left{std::move(a0)}); }
+    static either<A, B> left(A a0) { return either<A, B>(Left{std::move(a0)}); }
 
-    static either<A, B> right(B a0) { return either(Right{std::move(a0)}); }
+    static either<A, B> right(B a0) {
+      return either<A, B>(Right{std::move(a0)});
+    }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

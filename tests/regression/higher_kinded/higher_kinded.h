@@ -81,11 +81,11 @@ struct HigherKinded {
       }
     }
 
-    static Tree<A> leaf(A a0) { return Tree(Leaf{std::move(a0)}); }
+    static Tree<A> leaf(A a0) { return Tree<A>(Leaf{std::move(a0)}); }
 
     static Tree<A> branch(Tree<A> a0, Tree<A> a1) {
-      return Tree(Branch{std::make_shared<Tree<A>>(std::move(a0)),
-                         std::make_shared<Tree<A>>(std::move(a1))});
+      return Tree<A>(Branch{std::make_shared<Tree<A>>(std::move(a0)),
+                            std::make_shared<Tree<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

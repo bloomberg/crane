@@ -73,10 +73,11 @@ struct ListOfProdDeep {
       }
     }
 
-    static lst<A> lnil() { return lst(Lnil{}); }
+    static lst<A> lnil() { return lst<A>(Lnil{}); }
 
     static lst<A> lcons(A a0, lst<A> a1) {
-      return lst(Lcons{std::move(a0), std::make_shared<lst<A>>(std::move(a1))});
+      return lst<A>(
+          Lcons{std::move(a0), std::make_shared<lst<A>>(std::move(a1))});
     }
 
     // MANIPULATORS

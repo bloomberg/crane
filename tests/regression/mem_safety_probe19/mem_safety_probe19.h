@@ -352,9 +352,9 @@ struct MemSafetyProbe19 {
       }
     }
 
-    static myopt<A> mynone() { return myopt(Mynone{}); }
+    static myopt<A> mynone() { return myopt<A>(Mynone{}); }
 
-    static myopt<A> mysome(A a0) { return myopt(Mysome{std::move(a0)}); }
+    static myopt<A> mysome(A a0) { return myopt<A>(Mysome{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

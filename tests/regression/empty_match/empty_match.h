@@ -119,9 +119,11 @@ struct EmptyMatch {
       }
     }
 
-    static either<A, B> left(A a0) { return either(Left{std::move(a0)}); }
+    static either<A, B> left(A a0) { return either<A, B>(Left{std::move(a0)}); }
 
-    static either<A, B> right(B a0) { return either(Right{std::move(a0)}); }
+    static either<A, B> right(B a0) {
+      return either<A, B>(Right{std::move(a0)});
+    }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

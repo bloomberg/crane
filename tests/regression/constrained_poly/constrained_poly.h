@@ -83,9 +83,9 @@ struct ConstrainedPoly {
       }
     }
 
-    static UOption<A> usome(A a0) { return UOption(USome{std::move(a0)}); }
+    static UOption<A> usome(A a0) { return UOption<A>(USome{std::move(a0)}); }
 
-    static UOption<A> unone() { return UOption(UNone{}); }
+    static UOption<A> unone() { return UOption<A>(UNone{}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

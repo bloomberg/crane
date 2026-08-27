@@ -90,11 +90,11 @@ public:
 
   explicit Compare(GT _v) : v_(_v) {}
 
-  static Compare<X> lt() { return Compare(LT{}); }
+  static Compare<X> lt() { return Compare<X>(LT{}); }
 
-  static Compare<X> eq() { return Compare(EQ{}); }
+  static Compare<X> eq() { return Compare<X>(EQ{}); }
 
-  static Compare<X> gt() { return Compare(GT{}); }
+  static Compare<X> gt() { return Compare<X>(GT{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }

@@ -88,10 +88,10 @@ struct DocComments {
       }
     }
 
-    static mylist<A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
     static mylist<A> mycons(A a, mylist<A> l) {
-      return mylist(
+      return mylist<A>(
           Mycons{std::move(a), std::make_shared<mylist<A>>(std::move(l))});
     }
 

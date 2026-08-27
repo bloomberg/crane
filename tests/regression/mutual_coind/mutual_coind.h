@@ -72,10 +72,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -136,7 +136,7 @@ struct MutualCoind {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static streamA<A> consa(A a0, const streamB<A> &a1) {
-      return streamA(ConsA{std::move(a0), std::make_shared<streamB<A>>(a1)});
+      return streamA<A>(ConsA{std::move(a0), std::make_shared<streamB<A>>(a1)});
     }
 
     static streamA<A> lazy_(std::function<streamA<A>()> thunk) {
@@ -172,7 +172,7 @@ struct MutualCoind {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static streamB<A> consb(A a0, const streamA<A> &a1) {
-      return streamB(ConsB{std::move(a0), std::make_shared<streamA<A>>(a1)});
+      return streamB<A>(ConsB{std::move(a0), std::make_shared<streamA<A>>(a1)});
     }
 
     static streamB<A> lazy_(std::function<streamB<A>()> thunk) {

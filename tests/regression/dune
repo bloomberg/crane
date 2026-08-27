@@ -7081,3 +7081,14 @@
   (alias runtest)
   (deps sig_fun_param_result_cast.t.exe)
   (action (run ./sig_fun_param_result_cast.t.exe))))
+
+(subdir list_erasure_ctor_typename
+ (rule
+  (targets list_erasure_ctor_typename.t.exe)
+  (deps ListErasureCtorTypename.vo list_erasure_ctor_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_erasure_ctor_typename.t.exe list_erasure_ctor_typename.cpp list_erasure_ctor_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_erasure_ctor_typename.t.exe)
+  (action (run ./list_erasure_ctor_typename.t.exe))))

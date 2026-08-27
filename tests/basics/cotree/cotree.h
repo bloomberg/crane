@@ -73,10 +73,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -149,10 +149,10 @@ struct Cotree {
     explicit colist(std::function<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
-    static colist<A> conil() { return colist(Conil{}); }
+    static colist<A> conil() { return colist<A>(Conil{}); }
 
     static colist<A> cocons(A x, const colist<A> &xs) {
-      return colist(Cocons{std::move(x), std::make_shared<colist<A>>(xs)});
+      return colist<A>(Cocons{std::move(x), std::make_shared<colist<A>>(xs)});
     }
 
     static colist<A> lazy_(std::function<colist<A>()> thunk) {
@@ -188,7 +188,7 @@ struct Cotree {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static cotree<A> conode(A a, const colist<cotree<A>> &f) {
-      return cotree(
+      return cotree<A>(
           Conode{std::move(a), std::make_shared<colist<cotree<A>>>(f)});
     }
 
@@ -283,8 +283,8 @@ struct Cotree {
     }
 
     static tree<A> node(A a, List<tree<A>> children) {
-      return tree(Node{std::move(a),
-                       std::make_shared<List<tree<A>>>(std::move(children))});
+      return tree<A>(Node{
+          std::move(a), std::make_shared<List<tree<A>>>(std::move(children))});
     }
 
     // MANIPULATORS

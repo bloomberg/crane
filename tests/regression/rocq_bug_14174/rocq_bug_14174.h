@@ -130,9 +130,9 @@ public:
     }
   }
 
-  static Option<A> some(A a) { return Option(Some{std::move(a)}); }
+  static Option<A> some(A a) { return Option<A>(Some{std::move(a)}); }
 
-  static Option<A> none() { return Option(None{}); }
+  static Option<A> none() { return Option<A>(None{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }
@@ -274,9 +274,9 @@ public:
     }
   }
 
-  static Sumor<A> inleft(A a0) { return Sumor(Inleft{std::move(a0)}); }
+  static Sumor<A> inleft(A a0) { return Sumor<A>(Inleft{std::move(a0)}); }
 
-  static Sumor<A> inright() { return Sumor(Inright{}); }
+  static Sumor<A> inright() { return Sumor<A>(Inright{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }
@@ -694,9 +694,9 @@ struct RocqBug14174 {
         }
       }
 
-      static sumor<A> inleft(A a0) { return sumor(Inleft{std::move(a0)}); }
+      static sumor<A> inleft(A a0) { return sumor<A>(Inleft{std::move(a0)}); }
 
-      static sumor<A> inright() { return sumor(Inright{}); }
+      static sumor<A> inright() { return sumor<A>(Inright{}); }
 
       // MANIPULATORS
       inline variant_t &v_mut() { return v_; }

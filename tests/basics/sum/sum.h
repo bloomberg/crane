@@ -100,9 +100,11 @@ struct Sum {
       }
     }
 
-    static either<A, B> left(A a0) { return either(Left{std::move(a0)}); }
+    static either<A, B> left(A a0) { return either<A, B>(Left{std::move(a0)}); }
 
-    static either<A, B> right(B a0) { return either(Right{std::move(a0)}); }
+    static either<A, B> right(B a0) {
+      return either<A, B>(Right{std::move(a0)});
+    }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }
@@ -310,13 +312,17 @@ struct Sum {
       }
     }
 
-    static triple<A, B, C> first(A a0) { return triple(First{std::move(a0)}); }
-
-    static triple<A, B, C> second(B a0) {
-      return triple(Second{std::move(a0)});
+    static triple<A, B, C> first(A a0) {
+      return triple<A, B, C>(First{std::move(a0)});
     }
 
-    static triple<A, B, C> third(C a0) { return triple(Third{std::move(a0)}); }
+    static triple<A, B, C> second(B a0) {
+      return triple<A, B, C>(Second{std::move(a0)});
+    }
+
+    static triple<A, B, C> third(C a0) {
+      return triple<A, B, C>(Third{std::move(a0)});
+    }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

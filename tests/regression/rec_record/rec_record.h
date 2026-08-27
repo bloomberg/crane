@@ -74,10 +74,10 @@ struct RecRecord {
       }
     }
 
-    static rlist<A> rnil() { return rlist(Rnil{}); }
+    static rlist<A> rnil() { return rlist<A>(Rnil{}); }
 
     static rlist<A> rcons(A a0, rlist<A> a1) {
-      return rlist(
+      return rlist<A>(
           Rcons{std::move(a0), std::make_shared<rlist<A>>(std::move(a1))});
     }
 

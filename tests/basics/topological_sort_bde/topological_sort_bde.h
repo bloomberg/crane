@@ -84,9 +84,10 @@ public:
           d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr};
     }
   }
-  static List<t_A> nil() { return List(Nil{}); }
+  static List<t_A> nil() { return List<t_A>(Nil{}); }
   static List<t_A> cons(t_A a, List<t_A> l) {
-    return List(Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
+    return List<t_A>(
+        Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
   }
   // MANIPULATORS
   ~List() {

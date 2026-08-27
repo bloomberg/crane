@@ -73,10 +73,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -134,7 +134,7 @@ public:
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Sseq<A> scons(A shead, const Sseq<A> &stail) {
-    return Sseq(SCons{std::move(shead), std::make_shared<Sseq<A>>(stail)});
+    return Sseq<A>(SCons{std::move(shead), std::make_shared<Sseq<A>>(stail)});
   }
 
   static Sseq<A> lazy_(std::function<Sseq<A>()> thunk) {

@@ -69,9 +69,9 @@ struct UserOptionWrapper {
       }
     }
 
-    static opt<A> non() { return opt(Non{}); }
+    static opt<A> non() { return opt<A>(Non{}); }
 
-    static opt<A> so(A a0) { return opt(So{std::move(a0)}); }
+    static opt<A> so(A a0) { return opt<A>(So{std::move(a0)}); }
 
     // MANIPULATORS
     inline variant_t &v_mut() { return v_; }

@@ -99,10 +99,10 @@ struct RecordCaseBody {
       }
     }
 
-    static list<A> nil() { return list(Nil{}); }
+    static list<A> nil() { return list<A>(Nil{}); }
 
     static list<A> cons(A a0, list<A> a1) {
-      return list(
+      return list<A>(
           Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
     }
 

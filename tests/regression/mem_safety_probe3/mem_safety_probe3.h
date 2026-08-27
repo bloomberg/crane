@@ -473,10 +473,10 @@ struct MemSafetyProbe3 {
       }
     }
 
-    static mylist<A> mynil() { return mylist(Mynil{}); }
+    static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
     static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist(
+      return mylist<A>(
           Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
     }
 

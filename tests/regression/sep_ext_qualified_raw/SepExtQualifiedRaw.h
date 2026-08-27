@@ -81,11 +81,11 @@ template <OrderedType X> struct Make {
       }
     }
 
-    static Fmap<A> empty() { return Fmap(Empty{}); }
+    static Fmap<A> empty() { return Fmap<A>(Empty{}); }
 
     static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
-      return Fmap(Node{std::move(a0), std::move(a1),
-                       std::make_shared<Fmap<A>>(std::move(a2))});
+      return Fmap<A>(Node{std::move(a0), std::move(a1),
+                          std::make_shared<Fmap<A>>(std::move(a2))});
     }
 
     // MANIPULATORS

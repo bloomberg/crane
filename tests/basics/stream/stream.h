@@ -130,10 +130,10 @@ public:
     }
   }
 
-  static List<A> nil() { return List(Nil{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, List<A> l) {
-    return List(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
@@ -190,7 +190,7 @@ public:
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Stream<A> scons(A x, const Stream<A> &xs) {
-    return Stream(Scons{std::move(x), std::make_shared<Stream<A>>(xs)});
+    return Stream<A>(Scons{std::move(x), std::make_shared<Stream<A>>(xs)});
   }
 
   static Stream<A> lazy_(std::function<Stream<A>()> thunk) {

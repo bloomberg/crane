@@ -909,51 +909,24 @@ let rec pp_cpp_type par vl t =
          leading [typename].  Template arguments inside the base type (e.g.,
          [pair<typename X::t, T1>]) are rendered normally, preserving inner
          [typename] keywords where needed. *)
+      (* Render the base of the chain with the ordinary type printer -- it
+         already knows how to qualify an inductive with its wrapper struct and
+         where the [template] disambiguator goes -- then drop the [typename]
+         it may prepend, since the enclosing [Tqualified] emits the single
+         leading one. *)
+      let pp_chain_base ty =
+        let s = string_of_ppcmds (pp_rec false ty) in
+        let kw = "typename " in
+        if CString.is_prefix kw s then
+          str (String.sub s (String.length kw)
+                 (String.length s - String.length kw))
+        else str s
+      in
       let rec pp_qualified_chain ty =
         match ty with
         | Tqualified (inner_ty, id) ->
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
-        | Tnamespace (r, Tglob (r', args, _))
-          when globref_equal r r' ->
-          let templates =
-            match args with
-            | [] -> mt ()
-            | args -> str "<" ++ pp_list (pp_rec false) args ++ str ">"
-          in
-          let type_name_str = str_global Type r' in
-          if is_qualified_name type_name_str then
-            let cap =
-              if Common.get_force_qualified_capitalization ()
-              then Common.capitalize_last_component type_name_str
-              else type_name_str in
-            let cap =
-              if is_merged_inductive_cached r' then
-                dedup_qualified_tail ~allow_bare:true cap
-              else cap in
-            let cap_pp =
-              if args <> [] && render_ctx.rc_in_template then
-                insert_template_keyword (str cap) cap
-              else str cap in
-            cap_pp ++ templates
-          else
-            let ns_name, needs_ns = inductive_name_info r in
-            if is_merged_inductive_cached r then
-              ns_name ++ templates
-            else if needs_ns then
-              ns_name ++ str "::" ++ str type_name_str ++ templates
-            else
-              str type_name_str ++ templates
-        | Tglob (r, _, _) ->
-          let type_name_str = str_global Type r in
-          if is_qualified_name type_name_str then
-            pp_rec false ty
-          else
-            let ns_name, needs_ns = inductive_name_info r in
-            if needs_ns && not (is_merged_inductive_cached r) then
-              ns_name ++ str "::" ++ pp_rec false ty
-            else
-              pp_rec false ty
-        | _ -> pp_rec false ty
+        | ty -> pp_chain_base ty
       in
       str "typename " ++ pp_qualified_chain base_ty ++ str "::" ++ Id.print nested_id
     | Tvariant tys ->
@@ -4208,3 +4181,14 @@ let pp_type par vl t =
 (** Insert a double line-break in the Pp output (used to visually separate
     declaration groups in the generated C++ source). *)
 let cut2 () = brk (0, -100000) ++ brk (0, 0)
+
+(* Give [Translation]'s eager string renderers access to this module's
+   context-sensitive printer (see [Translation.render_cpp_type_in_template]).
+   The type is rendered as if inside a template body, which is where those raw
+   strings are emitted. *)
+let () =
+  Translation.set_cpp_type_printer (fun ty ->
+    Pp.string_of_ppcmds
+      (with_render_ctx
+         ~setup:(fun () -> render_ctx.rc_in_template <- true)
+         (fun () -> pp_cpp_type false [] ty)))

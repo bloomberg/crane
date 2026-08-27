@@ -75,10 +75,10 @@ public:
     }
   }
 
-  static MyList<A> mynil() { return MyList(Mynil{}); }
+  static MyList<A> mynil() { return MyList<A>(Mynil{}); }
 
   static MyList<A> mycons(A a0, MyList<A> a1) {
-    return MyList(
+    return MyList<A>(
         Mycons{std::move(a0), std::make_shared<MyList<A>>(std::move(a1))});
   }
 

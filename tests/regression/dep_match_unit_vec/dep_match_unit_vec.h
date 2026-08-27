@@ -76,10 +76,10 @@ struct DepMatchUnitVec {
       }
     }
 
-    static vec<A> vnil() { return vec(Vnil{}); }
+    static vec<A> vnil() { return vec<A>(Vnil{}); }
 
     static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
-      return vec(
+      return vec<A>(
           Vcons{n, std::move(a1), std::make_shared<vec<A>>(std::move(a2))});
     }
 

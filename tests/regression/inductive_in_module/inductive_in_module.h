@@ -111,9 +111,9 @@ struct InductiveInModule {
           }
         }
 
-        static option<A> none() { return option(None{}); }
+        static option<A> none() { return option<A>(None{}); }
 
-        static option<A> some(A a) { return option(Some{std::move(a)}); }
+        static option<A> some(A a) { return option<A>(Some{std::move(a)}); }
 
         // MANIPULATORS
         inline variant_t &v_mut() { return v_; }

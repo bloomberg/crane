@@ -36,12 +36,12 @@ struct List {
 
     template <typename _U>
     list(const typename List::template list<_U> &_other) {
-      if (std::holds_alternative<
-              typename List::typename List::template list<_U>::Nil>(
+      if (std::holds_alternative<typename List::template list<_U>::Nil>(
               _other.v())) {
         this->v_ = Nil{};
       } else {
-        const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+        const auto &[a, l] =
+            std::get<typename List::template list<_U>::Cons>(_other.v());
         this->v_ = Cons{
             [&]() -> A {
               if constexpr (std::is_same_v<_U, std::any>) {
@@ -73,16 +73,17 @@ struct List {
               } else
                 return A(a);
             }(),
-            l ? std::make_shared<List<A>>(*l) : nullptr};
+            l ? std::make_shared<typename List::template list<A>>(*l)
+              : nullptr};
       }
     }
 
     static typename List::template list<A> nil() {
-      return typename List::list(Nil{});
+      return typename List::template list<A>(Nil{});
     }
 
     static typename List::template list<A> cons(A a, List::list<A> l) {
-      return typename List::list(Cons{
+      return typename List::template list<A>(Cons{
           std::move(a),
           std::make_shared<typename List::template list<A>>(std::move(l))});
     }
@@ -124,10 +125,11 @@ struct List {
   static std::optional<T1> nth_error(const List::list<T1> &l, uint64_t n);
 };
 
-/// WIP: Using `nth_error` on a `list (nat -> nat)` emits the erasure-converting
-/// `List` constructor with a doubled qualifier
-/// (`typename List::typename List::template list<_U>::Nil`), which is not even
-/// syntactically valid C++.
+/// Using nth_error on a list (nat -> nat) instantiates the
+/// erasure-converting List constructor, whose body names the source
+/// instantiation's constructor structs.  Because list is not merged into
+/// its List wrapper struct, those names are dependent and must be spelled
+/// typename List::template list<_U>::Nil.
 struct ListErasureCtorTypename {
   static std::optional<std::function<uint64_t(uint64_t)>> pick(uint64_t n);
   static inline const uint64_t go = []() -> uint64_t {

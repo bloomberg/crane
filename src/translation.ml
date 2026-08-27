@@ -578,6 +578,27 @@ let render_cpp_type_for_raw_template ?(raw_inductives = Refset'.empty)
           "int64_t"
           (render_cpp_type_simple ~raw_inductives ~no_custom_inductives ty)))
 
+(** Forward reference to the real type printer ([Cpp_print.pp_cpp_type]),
+    installed by {!Cpp_print} at load time (this module cannot depend on it).
+
+    {!render_cpp_type_simple} is an eager, string-level approximation: it
+    cannot see the rendering context, so it misses namespace qualification of
+    unmerged inductive wrappers and the [typename] / [template]
+    disambiguators a dependent name needs.  Wherever a raw string must agree
+    with what the printer emits elsewhere in the same declaration, go through
+    {!render_cpp_type_in_template} instead. *)
+let cpp_type_printer : (cpp_type -> string) option ref = ref None
+
+let set_cpp_type_printer f = cpp_type_printer := Some f
+
+(** Render [ty] as a string spelled exactly as the real printer would spell it
+    inside a template body, falling back to {!render_cpp_type_for_raw_template}
+    before the printer is installed. *)
+let render_cpp_type_in_template ty =
+  match !cpp_type_printer with
+  | Some f -> f ty
+  | None -> render_cpp_type_for_raw_template ty
+
 let build_guard_compare_stmts ?type_string_of n ids cod =
   match Table.find_guard_compare n with
   | None -> []
@@ -1034,9 +1055,12 @@ let recover_pattern_var_types_from_scrutinee (typ : ml_type) ids =
   | _ -> ids
 
 let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
-  let render ty =
-    render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
-  in
+  (* Every type rendered here lands in a raw string inside a template body
+     (a converting constructor, a [make_shared<...>] argument), so it must be
+     spelled exactly as the printer spells the same type in the surrounding
+     generated code -- hence the real printer rather than the eager
+     approximation. *)
+  let render ty = render_cpp_type_in_template (qualify_inductives ~skip ty) in
   (* Strip a single [Tnamespace] wrapper when it matches the inner [Tglob].
      [convert_ml_type_to_cpp_type] wraps external inductives as
      [Tnamespace(g, Tglob(g,...))] for qualified rendering, but for pattern
