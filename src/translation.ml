@@ -591,6 +591,16 @@ let cpp_type_printer : (cpp_type -> string) option ref = ref None
 
 let set_cpp_type_printer f = cpp_type_printer := Some f
 
+(** Whether a reference was methodified (spelled [x.f(...)] rather than
+    [f(x, ...)]).  The method registry lives above this module, so
+    {!Cpp_print} installs the predicate at load time, exactly as it does for
+    {!cpp_type_printer}. *)
+let method_this_pos_lookup : (GlobRef.t -> int option) ref = ref (fun _ -> None)
+
+let set_method_this_pos_lookup f = method_this_pos_lookup := f
+
+let is_methodified r = !method_this_pos_lookup r <> None
+
 (** Render [ty] as a string spelled exactly as the real printer would spell it
     inside a template body, falling back to {!render_cpp_type_for_raw_template}
     before the printer is installed. *)
@@ -3914,6 +3924,14 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           in
           let non_dummy_param_tys = collect_non_dummy_types ml_ty in
           let n = List.length non_dummy_param_tys in
+          let is_unary_method = n = 1 && is_methodified r in
+          if is_unary_method then
+            (* The function was methodified: it is spelled [x.f()], not [f(x)],
+               so no hand-rolled forwarding lambda can name it.  Emit the plain
+               reference and let the printer wrap it in the method-calling
+               lambda it already builds for method values. *)
+            gen_expr env a
+          else
           let arg_names = List.init n (fun i -> field_param_name i) in
           let fn_name = Common.pp_global_name Term r in
           (* Collect all tvars from the ML type *)

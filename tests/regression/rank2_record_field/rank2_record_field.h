@@ -118,8 +118,9 @@ public:
   }
 };
 
-/// WIP: A record field with a rank-2 type (`forall A, list A -> nat`) emits a
-/// lambda body referring to an undeclared template parameter `_T1`.
+/// A rank-2 record field (forall A, list A -> nat) stores a methodified
+/// function as a value: the reference must become a method-calling lambda,
+/// not a hand-rolled forwarding call naming an undeducible type variable.
 struct Rank2RecordField {
   struct poly {
     std::function<uint64_t(List<std::any>)> sizer;
@@ -130,9 +131,8 @@ struct Rank2RecordField {
     return p.sizer(x);
   }
 
-  static inline const poly pl = poly{[](auto &&a0) -> decltype(auto) {
-    return length<_T1>(std::forward<decltype(a0)>(a0));
-  }};
+  static inline const poly pl =
+      poly{[](const auto &_x) { return _x.length(); }};
   static inline const uint64_t go =
       (sizer<uint64_t>(
            pl, List<uint64_t>::cons(

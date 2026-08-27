@@ -169,16 +169,6 @@
   (deps param_inductive_fn_instantiation.t.exe)
   (action (run ./param_inductive_fn_instantiation.t.exe))))
 
-(subdir rank2_record_field
- (rule
-  (targets rank2_record_field.t.exe)
-  (deps Rank2RecordField.vo rank2_record_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_record_field.t.exe rank2_record_field.cpp rank2_record_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rank2_record_field.t.exe)
-  (action (run ./rank2_record_field.t.exe))))
 
 (subdir sigt_list_payload_any_cast
  (rule

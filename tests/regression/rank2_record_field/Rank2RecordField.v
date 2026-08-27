@@ -2,8 +2,9 @@ From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
 Require Import List. Import ListNotations.
-(** WIP: A record field with a rank-2 type (`forall A, list A -> nat`) emits a lambda
-    body referring to an undeclared template parameter `_T1`. *)
+(** A rank-2 record field ([forall A, list A -> nat]) stores a methodified
+    function as a value: the reference must become a method-calling lambda,
+    not a hand-rolled forwarding call naming an undeducible type variable. *)
 
 Module Rank2RecordField.
 Record poly := P { sizer : forall A, list A -> nat }.

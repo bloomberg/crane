@@ -1,7 +1,5 @@
-// WIP: this test does not build yet.
-//
-// A record field with a rank-2 type (`forall A, list A -> nat`) emits a lambda
-// body referring to an undeclared template parameter `_T1`.
+// A rank-2 record field ([forall A, list A -> nat]) stores a methodified
+// function as a value; the reference becomes a method-calling lambda.
 #include "rank2_record_field.h"
 
 #include <cassert>
