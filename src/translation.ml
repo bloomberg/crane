@@ -6953,7 +6953,21 @@ and eta_fun env f args =
       | Some i when not callee_cpp_erased ->
         ( match IntMap.find_opt i tctx.cpp_erased_type_env with
         | Some t -> not (resolves_to_any_type t)
-        | None -> false )
+        | None ->
+          (* Likewise for a parameter of the enclosing function: the ambient
+             environment may still spell its type as the class/section type
+             variable it was abstracted over, while the declaration this body
+             belongs to (e.g. a typeclass instance at a function type) pinned
+             it to a concrete C++ signature. *)
+          ( match get_param_type_by_index i with
+          | Some t ->
+            (not (is_ml_erased_ty t))
+            && not
+                 (resolves_to_any_type
+                    (convert_ml_type_to_cpp_type env
+                       (get_current_type_vars ())
+                       t ) )
+          | None -> false ) )
       | _ -> false
     in
     let callee_is_bare_any =

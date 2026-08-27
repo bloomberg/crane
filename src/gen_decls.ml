@@ -825,9 +825,16 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   (List.rev renamed_ml)
                   cpp_params
               in
+              (* Record the instance-resolved parameter types: the ambient
+                 environment still spells them with the class's type variable,
+                 so call sites inside the body need this to tell a concrete
+                 parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
+              let saved_param_tys = tctx.current_param_types in
+              set_current_param_types (List.rev renamed_ml);
               let stmts =
                 gen_stmts env (fun x -> Sreturn (Some x)) inner_body
               in
+              tctx.current_param_types <- saved_param_tys;
               (cpp_params, method_ret_ty, stmts)
           in
           Some

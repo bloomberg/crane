@@ -113,18 +113,6 @@
   (deps class_type_constructor_param.t.exe)
   (action (run ./class_type_constructor_param.t.exe))))
 
-
-(subdir instance_at_function_type
- (rule
-  (targets instance_at_function_type.t.exe)
-  (deps InstanceAtFunctionType.vo instance_at_function_type.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_at_function_type.t.exe instance_at_function_type.cpp instance_at_function_type.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_at_function_type.t.exe)
-  (action (run ./instance_at_function_type.t.exe))))
-
 (subdir instance_param_instance_constraint
  (rule
   (targets instance_param_instance_constraint.t.exe)
