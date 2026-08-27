@@ -96,11 +96,18 @@ struct LoopifyWrapperReceiver {
     const variant_t &v() const { return v_; }
 
     t build(uint64_t n) const {
-      if (n <= 0) {
-        return std::move(*this);
-      } else {
-        uint64_t m = n - 1;
-        return t::n(box<t>::b(std::move(*this))).build(m);
+      t _self_store;
+      const t *_loop_self = this;
+      uint64_t _loop_n = std::move(n);
+      while (true) {
+        if (_loop_n <= 0) {
+          return std::move(*_loop_self);
+        } else {
+          uint64_t m = _loop_n - 1;
+          _self_store = t::n(box<t>::b(std::move(*_loop_self)));
+          _loop_self = &_self_store;
+          _loop_n = m;
+        }
       }
     }
 

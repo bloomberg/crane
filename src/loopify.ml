@@ -8556,6 +8556,93 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
           | Some _ -> true)
           calls
       in
+      (* A tail call whose receiver is a value temporary ([t::n(...)]) can
+         still be linearised: park the temporary in a local that outlives the
+         loop and recurse on that local instead, so the pointer stored for
+         [_self] stays valid across the back-edge.  Only safe when the call's
+         other arguments do not read the receiver, since the parking
+         assignment happens first. *)
+      let self_store_ty =
+        let rec pointee = function
+          | Tref t | Tmod (TMconst, t) -> pointee t
+          | Tptr t | Tshared_ptr t -> Some (strip_ref_and_const_type t)
+          | _ -> None
+        in
+        pointee self_ty
+      in
+      let id_self_store = Id.of_string "_self_store" in
+      let park_value_receivers body =
+        let mentions_self e =
+          expr_exists
+            (function CPPvar v -> Id.equal v self_id | CPPthis -> true | _ -> false)
+            e
+        in
+        let changed = ref false in
+        let is_value_recv = function
+          | CPPderef _ | CPPvar _ | CPPthis -> false
+          | _ -> true
+        in
+        let replace_at pos x l = List.mapi (fun i y -> if i = pos then x else y) l in
+        (* [park e] returns the rewritten self-call, with its value receiver
+           replaced by a reference to the parking slot, or [None]. *)
+        let park e =
+          match e with
+          | CPPmethod_call (recv, id, args)
+            when Id.equal id mf.mf_name
+                 && is_value_recv recv
+                 && not (List.exists mentions_self args) ->
+            Some (recv, CPPmethod_call (CPPvar id_self_store, id, args))
+          | CPPfun_call (CPPglob (r, targs, x), args)
+            when Id.equal (Label.to_id (Common.label_of_r r)) mf.mf_name
+                 && List.length args > n_params ->
+            let args_normal = List.rev args in
+            let recv = List.nth args_normal this_pos in
+            if
+              is_value_recv recv
+              && not
+                   (List.exists mentions_self
+                      (list_remove_at this_pos args_normal) )
+            then
+              let args' =
+                List.rev (replace_at this_pos (CPPvar id_self_store) args_normal)
+              in
+              Some (recv, CPPfun_call (CPPglob (r, targs, x), args'))
+            else None
+          | _ -> None
+        in
+        let rec go_stmt s =
+          match s with
+          | Sreturn (Some e) when park e <> None ->
+            let (recv, call) = Option.get (park e) in
+            changed := true;
+            Sblock [Sasgn (id_self_store, None, recv); Sreturn (Some call)]
+          | _ -> map_stmt (fun e -> e) go_stmt Fun.id s
+        in
+        let body' = List.map go_stmt body in
+        if !changed then Some body' else None
+      in
+      let parked =
+        match (kind, self_store_ty) with
+        | (Tail_recursion, Some _) -> park_value_receivers body_with_self
+        | _ -> None
+      in
+      let body_with_self, has_value_receiver, self_store_ty =
+        match parked with
+        | None -> (body_with_self, has_value_receiver, None)
+        | Some b ->
+          let calls = collect_stmts self_check ~in_visitor:false b in
+          let still =
+            List.exists
+              (fun cs ->
+                match cs.cs_recv with
+                | None -> false
+                | Some (CPPderef _ | CPPvar _ | CPPthis) -> false
+                | Some _ -> true )
+              calls
+          in
+          if still then (body_with_self, has_value_receiver, None)
+          else (b, false, self_store_ty)
+      in
       if has_value_receiver then begin
         record_outcome name
           (Lp_declined
@@ -8592,6 +8679,13 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
           in
           (body', not used_inits)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
+      in
+      (* Declare the parking slot outside the loop so the pointer taken to it
+         on the back-edge stays valid for the next iteration. *)
+      let body' =
+        match self_store_ty with
+        | Some ty -> Sdecl (id_self_store, ty) :: body'
+        | None -> body'
       in
       if needs_init_self then
         let init_self = Sasgn (self_id, Some self_ty, CPPthis) in

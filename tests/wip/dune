@@ -90,14 +90,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir loopify_wrapper_receiver
- (rule
-  (targets loopify_wrapper_receiver.t.exe)
-  (deps LoopifyWrapperReceiver.vo loopify_wrapper_receiver.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_wrapper_receiver.t.exe loopify_wrapper_receiver.cpp loopify_wrapper_receiver.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_wrapper_receiver.t.exe)
-  (action (run ./loopify_wrapper_receiver.t.exe))))
