@@ -3746,6 +3746,46 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
   | MLapp (f, args) -> eta_fun env f args
   | MLlam _ as a ->
     let args, a = collect_lams a in
+    (* Nested binders normally flatten into one multi-parameter C++ lambda.
+       That is wrong when the context expects a curried function whose result
+       is itself a function -- e.g. an [endo (nat -> nat)] field of type
+       [std::function<F(F)>] with [F = std::function<uint64_t(uint64_t)>].
+       Keep only the binders the expected type takes and let the remainder
+       become the closure it returns. *)
+    let args, a =
+      let rec fun_ty_of = function
+        | Tmod (_, t) | Tref t -> fun_ty_of t
+        | Tfun (dom, cod) -> Some (List.length dom, cod)
+        | _ -> None
+      in
+      let is_runtime_binder (_, ty) =
+        (not (isTdummy ty)) && not (ml_type_is_void ty)
+      in
+      let split_after_runtime n binders =
+        (* Prefix of [binders] holding exactly [n] runtime binders, or [None]
+           if there are no more than [n] of them. *)
+        let rec go seen acc = function
+          | [] -> None
+          | b :: rest ->
+            let seen = if is_runtime_binder b then seen + 1 else seen in
+            if seen > n then Some (List.rev acc, b :: rest)
+            else go seen (b :: acc) rest
+        in
+        go 0 [] binders
+      in
+      match Option.bind expected_ty fun_ty_of with
+      | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->
+        (* [collect_lams] yields binders innermost-first; the ones to keep are
+           the outermost [n]. *)
+        ( match split_after_runtime n (List.rev args) with
+        | Some (kept, inner) ->
+          ( List.rev kept,
+            List.fold_left
+              (fun b (x, ty) -> MLlam (x, ty, b))
+              a (List.rev inner) )
+        | None -> (args, a) )
+      | _ -> (args, a)
+    in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in
     let saved_env_types = tctx.env_types in
@@ -5348,7 +5388,27 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               let tvars = get_current_type_vars () in
               let ct = convert_ml_type_to_cpp_type env tvars ft in
               if is_erased_type ct then None else Some ct
-            | _ -> None )
+            | _ ->
+              (* A field whose instantiated C++ type is a curried function
+                 (e.g. [A -> A] at [A = nat -> nat]) must keep its currying:
+                 without the expected type, [gen_expr]'s [MLlam] case would
+                 flatten the nested binders into one multi-parameter lambda,
+                 which does not convert to [std::function<F(F)>]. *)
+              let tvars = get_current_type_vars () in
+              let ct =
+                map_cpp_type
+                  (fun t ->
+                    match t with
+                    | Tvar (i, _) -> (
+                      match List.nth_opt ctor_temps (i - 1) with
+                      | Some c -> c
+                      | None -> t )
+                    | t -> t )
+                  (convert_ml_type_to_cpp_type env tvars ft)
+              in
+              ( match ct with
+              | Tfun (_, Tfun _) when not (is_erased_type ct) -> Some ct
+              | _ -> None ) )
           | None -> None
         in
         (* When a function value is stored into an erased ([std::any])

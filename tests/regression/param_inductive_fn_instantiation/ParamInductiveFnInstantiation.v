@@ -1,9 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A parameterised inductive with a function field (`endo A := E : (A -> A) -> endo A`)
-    instantiated at a function type emits an uncurried two-parameter lambda for
-    a field of curried `std::function` type. *)
+(** A parameterised inductive with a function field
+    (`endo A := E : (A -> A) -> endo A`) instantiated at a function type: the
+    argument's nested binders must stay curried to match the field's
+    `std::function<F(F)>` type. *)
 
 Module ParamInductiveFnInstantiation.
 Inductive endo (A : Type) : Type := E : (A -> A) -> endo A.

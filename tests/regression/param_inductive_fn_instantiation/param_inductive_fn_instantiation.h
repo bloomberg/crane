@@ -6,9 +6,10 @@
 #include <utility>
 #include <variant>
 
-/// WIP: A parameterised inductive with a function field (`endo A := E : (A ->
-/// A) -> endo A`) instantiated at a function type emits an uncurried
-/// two-parameter lambda for a field of curried `std::function` type.
+/// A parameterised inductive with a function field
+/// (`endo A := E : (A -> A) -> endo A`) instantiated at a function type: the
+/// argument's nested binders must stay curried to match the field's
+/// `std::function<F(F)>` type.
 struct ParamInductiveFnInstantiation {
   template <typename A> struct endo {
     // DATA
@@ -40,11 +41,12 @@ struct ParamInductiveFnInstantiation {
     return a0(x);
   }
 
-  static inline const endo<std::function<uint64_t(uint64_t)>> d =
-      endo<std::function<uint64_t(uint64_t)>>::e(
-          [](std::function<uint64_t(uint64_t)> g, uint64_t n) {
-            return g(g(n));
-          });
+  static inline const endo<std::function<uint64_t(uint64_t)>> d = []() {
+    return endo<std::function<uint64_t(uint64_t)>>::e(
+        [](std::function<uint64_t(uint64_t)> g) {
+          return [=](uint64_t n) mutable { return g(g(n)); };
+        });
+  }();
   static inline const uint64_t go = run<std::function<uint64_t(uint64_t)>>(
       d, [](uint64_t n) { return (n + UINT64_C(1)); })(UINT64_C(0));
 };

@@ -7180,3 +7180,14 @@
   (alias runtest)
   (deps instance_at_function_type.t.exe)
   (action (run ./instance_at_function_type.t.exe))))
+
+(subdir param_inductive_fn_instantiation
+ (rule
+  (targets param_inductive_fn_instantiation.t.exe)
+  (deps ParamInductiveFnInstantiation.vo param_inductive_fn_instantiation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} param_inductive_fn_instantiation.t.exe param_inductive_fn_instantiation.cpp param_inductive_fn_instantiation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps param_inductive_fn_instantiation.t.exe)
+  (action (run ./param_inductive_fn_instantiation.t.exe))))
