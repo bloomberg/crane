@@ -177,13 +177,13 @@ public:
 };
 
 struct NestedTree {
-  template <typename A> struct tree {
+  struct tree {
     // TYPES
     struct Leaf {};
 
     struct Node {
-      A a;
-      std::shared_ptr<tree<std::pair<A, A>>> t;
+      std::any a;
+      std::shared_ptr<tree> t;
     };
 
     using variant_t = std::variant<Leaf, Node>;
@@ -200,51 +200,10 @@ struct NestedTree {
 
     explicit tree(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U> tree(const tree<_U> &_other) {
-      if (std::holds_alternative<typename tree<_U>::Leaf>(_other.v())) {
-        this->v_ = Leaf{};
-      } else {
-        const auto &[a, t] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                if (a.type() == typeid(A))
-                  return std::any_cast<A>(a);
-                if constexpr (requires {
-                                typename A::first_type;
-                                typename A::second_type;
-                              }) {
-                  const auto &[_k, _v] =
-                      std::any_cast<std::pair<std::any, std::any>>(a);
-                  return A{
-                      [&]() -> typename A::first_type {
-                        if constexpr (std::is_same_v<typename A::first_type,
-                                                     std::any>)
-                          return _k;
-                        else
-                          return std::any_cast<typename A::first_type>(_k);
-                      }(),
-                      [&]() -> typename A::second_type {
-                        if constexpr (std::is_same_v<typename A::second_type,
-                                                     std::any>)
-                          return _v;
-                        else
-                          return std::any_cast<typename A::second_type>(_v);
-                      }()};
-                }
-                return std::any_cast<A>(a);
-              } else
-                return A(a);
-            }(),
-            t ? std::make_shared<tree<std::pair<A, A>>>(*t) : nullptr};
-      }
-    }
+    static tree leaf() { return tree(Leaf{}); }
 
-    static tree<A> leaf() { return tree(Leaf{}); }
-
-    static tree<A> node(A a, tree<std::pair<A, A>> t) {
-      return tree(Node{std::move(a),
-                       std::make_shared<tree<std::pair<A, A>>>(std::move(t))});
+    static tree node(std::any a, tree t) {
+      return tree(Node{std::move(a), std::make_shared<tree>(std::move(t))});
     }
 
     // MANIPULATORS
@@ -255,31 +214,31 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2, typename F1>
-  static T1 tree_rect(const T1 &f, F1 &&f0, const tree<T2> &t) {
-    if (std::holds_alternative<typename tree<T2>::Leaf>(t.v())) {
+  static T1 tree_rect(const T1 &f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[a0, a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(f0(a0, *a1, tree_rect<T1, T2>(f, f0, *a1)));
+      const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
+      return std::any_cast<T1>(f0(a0, *a1, tree_rect(f, f0, *a1)));
     }
   }
 
   template <typename T1, typename T2, typename F1>
-  static T1 tree_rec(const T1 &f, F1 &&f0, const tree<T2> &t) {
-    if (std::holds_alternative<typename tree<T2>::Leaf>(t.v())) {
+  static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
-      const auto &[a0, a1] = std::get<typename tree<T2>::Node>(t.v());
-      return std::any_cast<T1>(f0(a0, *a1, tree_rec<T1, T2>(f, f0, *a1)));
+      const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
+      return std::any_cast<T1>(f0(a0, *a1, tree_rec(f, f0, *a1)));
     }
   }
 
-  static inline const tree<Nat> example1 = tree<Nat>::node(
+  static inline const tree example1 = tree::node(
       Nat::s(Nat::o()),
-      tree<std::pair<Nat, Nat>>::node(
+      tree::node(
           std::make_pair(Nat::s(Nat::s(Nat::o())),
                          Nat::s(Nat::s(Nat::s(Nat::o())))),
-          tree<std::pair<std::pair<Nat, Nat>, std::pair<Nat, Nat>>>::node(
+          tree::node(
               std::make_pair(
                   std::make_pair(
                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
@@ -288,10 +247,7 @@ struct NestedTree {
                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
                       Nat::s(Nat::s(
                           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
-              tree<
-                  std::pair<std::pair<std::pair<Nat, Nat>, std::pair<Nat, Nat>>,
-                            std::pair<std::pair<Nat, Nat>,
-                                      std::pair<Nat, Nat>>>>::leaf())));
+              tree::leaf())));
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
@@ -302,11 +258,11 @@ struct NestedTree {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
-  static List<List<T2>> _flatten_tree_go(F0 &&f, const tree<T1> t0) {
-    if (std::holds_alternative<typename tree<T1>::Leaf>(t0.v())) {
+  static List<List<T2>> _flatten_tree_go(F0 &&f, const tree t0) {
+    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return List<List<T2>>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t0.v());
+      const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
       return List<List<T2>>::cons(
           f(a0), _flatten_tree_go<T1, T2>(
                      [=](std::pair<T1, T1> _x0) mutable -> List<T2> {
@@ -316,7 +272,8 @@ struct NestedTree {
     }
   }
 
-  template <typename T1> static List<List<T1>> flatten_tree(const tree<T1> &t) {
+  template <typename T1 = std::any>
+  static List<List<T1>> flatten_tree(const tree &t) {
     return _flatten_tree_go<T1, T1>(
         [](T1 x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }

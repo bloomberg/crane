@@ -234,7 +234,47 @@ let unsafe_lookup_ind kn = snd (Mindmap_env.find kn !inductives)
 let get_ind_nparams_opt kn =
   try Some (unsafe_lookup_ind kn).ind_nparams with Not_found -> None
 
+(** [packet_is_non_uniform p] holds when the inductive packet [p] is nested:
+    some constructor field mentions the very same packet at instantiated
+    parameters, as in [NS : nest (A * A) -> nest A].  Such a type cannot be a
+    C++ template — instantiating it would recurse forever — so its parameters
+    are erased to [std::any].  Self-reference is recognised by physical
+    equality of the packet, since all packets come from the same table. *)
+let packet_is_non_uniform p =
+  let nvars = List.length p.Miniml.ip_vars in
+  let is_identity_args args =
+    List.length args = nvars
+    && List.for_all2
+         (fun k a ->
+           match a with
+           | Miniml.Tvar j | Miniml.Tvar' j -> j = k
+           | _ -> false )
+         (List.init nvars (fun k -> k + 1))
+         args
+  in
+  let is_self kn' j =
+    try
+      let p' = (unsafe_lookup_ind kn').Miniml.ind_packets.(j) in
+      p' == p
+      || (Names.Id.equal p'.Miniml.ip_typename p.Miniml.ip_typename
+         && List.length p'.Miniml.ip_sign = List.length p.Miniml.ip_sign
+         && List.length p'.Miniml.ip_vars = nvars)
+    with _ -> false
+  in
+  let rec nested ty =
+    match ty with
+    | Miniml.Tglob (Names.GlobRef.IndRef (kn', j), args, _) when is_self kn' j ->
+      (not (is_identity_args args)) || List.exists nested args
+    | Miniml.Tglob (_, args, _) -> List.exists nested args
+    | Miniml.Tarr (a, b) -> nested a || nested b
+    | Miniml.Tmeta {contents = Some t} -> nested t
+    | _ -> false
+  in
+  nvars > 0
+  && Array.exists (fun fields -> List.exists nested fields) p.Miniml.ip_types
+
 let ind_param_vars ind p =
+  if packet_is_non_uniform p then ([], 0) else
   let sign_len = List.length p.Miniml.ip_sign in
   let nparams = min ind.Miniml.ind_nparams sign_len in
   let param_sign = List.firstn nparams p.Miniml.ip_sign in
@@ -412,6 +452,46 @@ let get_ctor_ip_types_opt r =
         Some ind.ind_packets.(i).ip_types.(j - 1)
       with Not_found | Invalid_argument _ -> None )
   | _ -> None
+
+(** [is_non_uniform_inductive r] holds when the inductive [r] is nested
+    (non-uniform): a constructor field mentions the inductive itself at
+    instantiated parameters rather than at its own parameters, as in
+    [Inductive nest A := NZ : A -> nest A | NS : nest (A * A) -> nest A].
+    A function recursing over such a type is polymorphically recursive, so
+    its self-call cannot reuse the enclosing template arguments. *)
+let is_non_uniform_inductive r =
+  let open GlobRef in
+  match r with
+  | IndRef (kn, i) ->
+    ( try
+        let ind = unsafe_lookup_ind kn in
+        let packet = ind.ind_packets.(i) in
+        let nvars = List.length packet.ip_vars in
+        let is_identity_args args =
+          List.length args = nvars
+          && List.for_all2
+               (fun k a ->
+                 match a with
+                 | Miniml.Tvar j | Miniml.Tvar' j -> j = k
+                 | _ -> false )
+               (List.init nvars (fun k -> k + 1))
+               args
+        in
+        let rec is_nested ty =
+          match ty with
+          | Miniml.Tglob (IndRef (kn', _), args, _)
+            when MutInd.CanOrd.equal kn' kn ->
+            (not (is_identity_args args)) || List.exists is_nested args
+          | Miniml.Tglob (_, args, _) -> List.exists is_nested args
+          | Miniml.Tarr (a, b) -> is_nested a || is_nested b
+          | Miniml.Tmeta {contents = Some t} -> is_nested t
+          | _ -> false
+        in
+        Array.exists
+          (fun fields -> List.exists is_nested fields)
+          packet.ip_types
+      with Not_found | Invalid_argument _ -> false )
+  | _ -> false
 
 (** Get the number of C++ parameter type variables for the inductive
     containing [r].  Only [Keep] entries in the PARAMETER portion of

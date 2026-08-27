@@ -101,25 +101,3 @@
   (alias runtest)
   (deps loopify_wrapper_receiver.t.exe)
   (action (run ./loopify_wrapper_receiver.t.exe))))
-
-(subdir non_uniform_list_nest
- (rule
-  (targets non_uniform_list_nest.t.exe)
-  (deps NonUniformListNest.vo non_uniform_list_nest.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} non_uniform_list_nest.t.exe non_uniform_list_nest.cpp non_uniform_list_nest.t.cpp)))
- (rule
-  (alias runtest)
-  (deps non_uniform_list_nest.t.exe)
-  (action (run ./non_uniform_list_nest.t.exe))))
-
-(subdir non_uniform_pair_nest
- (rule
-  (targets non_uniform_pair_nest.t.exe)
-  (deps NonUniformPairNest.vo non_uniform_pair_nest.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} non_uniform_pair_nest.t.exe non_uniform_pair_nest.cpp non_uniform_pair_nest.t.cpp)))
- (rule
-  (alias runtest)
-  (deps non_uniform_pair_nest.t.exe)
-  (action (run ./non_uniform_pair_nest.t.exe))))

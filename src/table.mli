@@ -324,6 +324,11 @@ val get_ind_nb_sign_keeps : GlobRef.t -> int
     The list order matches the constructor argument order. *)
 val get_ctor_ip_types_opt : GlobRef.t -> Miniml.ml_type list option
 
+(** [is_non_uniform_inductive r] holds when the inductive [r] is nested
+    (non-uniform): a constructor field mentions the inductive at instantiated
+    parameters, as in [NS : nest (A * A) -> nest A]. *)
+val is_non_uniform_inductive : Names.GlobRef.t -> bool
+
 (** Get the number of C++ parameter type variables for the inductive
     containing the given constructor.  Only [Keep] entries in the PARAMETER
     portion of [ip_sign] (first [ind_nparams] positions) are counted —

@@ -2106,12 +2106,43 @@ let gen_dfun n b cty ty temps =
   (* Build recursive call reference with typeclass and type params only.
      Function type params (from fun_tys) are excluded because they should be
      deduced from arguments, not explicitly specified in recursive calls. *)
-  let rec_call_temps = typeclass_temps_basic @ temps in
+  (* A function recursing over a nested (non-uniform) inductive is
+     polymorphically recursive: the self-call is at [nest (A * A)], not at
+     [nest A].  Repeating the enclosing template arguments would force the
+     wrong instantiation, so let C++ deduce them from the argument instead —
+     the recursive argument always mentions the inductive, so deduction
+     succeeds. *)
+  let recurses_on_non_uniform_ind =
+    let rec mentions = function
+      | Tglob (r, args, _) | Tnamespace (r, Tglob (_, args, _)) ->
+        Table.is_non_uniform_inductive r || List.exists mentions args
+      | Tmod (_, t) | Tnamespace (_, t) | Tref t | Tshared_ptr t -> mentions t
+      | Tfun (d, c) -> List.exists mentions d || mentions c
+      | _ -> false
+    in
+    List.exists (fun (_, ty) -> mentions ty) ids
+  in
+  let rec_call_temps =
+    if recurses_on_non_uniform_ind then typeclass_temps_basic
+    else typeclass_temps_basic @ temps
+  in
   let rec_call =
     mk_cppglob n (List.map (fun (_, id) -> Tvar (0, Some id)) rec_call_temps)
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
+  (* Such a function's own type parameters are erased out of its signature
+     (the inductive is rendered with [std::any] fields), so they are no longer
+     deducible.  Give them a default so the argument-less self-call above still
+     resolves; explicit call sites elsewhere keep working. *)
+  let temps =
+    if recurses_on_non_uniform_ind && fun_tys = [] then
+      List.map
+        (fun (tt, id) ->
+          match tt with TTtypename -> (TTtypename_default Tany, id) | _ -> (tt, id) )
+        temps
+    else temps
+  in
   let regular_temps = temps @ List.map (fun (_, t, n) -> (t, n)) fun_tys in
   let temps = typeclass_temps_basic @ regular_temps in
   (* Requires clause for typeclass constraints not yet implemented. *)
