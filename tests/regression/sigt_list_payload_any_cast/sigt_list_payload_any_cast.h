@@ -129,16 +129,16 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
-/// WIP: A `sigT` payload holding a `list nat` is stored as `List<uint64_t>` by
-/// the producer but read back through a doubled `any_cast<List<std::any>>` at
-/// the consumer, which throws `std::bad_any_cast` at run time.
+/// A `sigT` payload whose type is value-dependent (`list nat` in the `false`
+/// branch) is erased to `std::any`.  The producer must store it in the
+/// canonical element-erased shape the consumer reads back.
 struct SigtListPayloadAnyCast {
   static inline const SigT<bool, std::any> pack = SigT<bool, std::any>::existt(
-      false, List<uint64_t>::cons(
+      false, List<std::any>::cons(
                  UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2), List<uint64_t>::cons(
-                                      UINT64_C(3), List<uint64_t>::nil()))));
+                 List<std::any>::cons(
+                     UINT64_C(2), List<std::any>::cons(
+                                      UINT64_C(3), List<std::any>::nil()))));
 
   static inline const uint64_t go = []() {
     const auto &_sv0 = pack;
@@ -146,9 +146,7 @@ struct SigtListPayloadAnyCast {
     if (x0) {
       return std::any_cast<uint64_t>(a10);
     } else {
-      return List<uint64_t>(std::any_cast<List<std::any>>(
-                                std::any_cast<List<std::any>>(a10)))
-          .length();
+      return List<uint64_t>(std::any_cast<List<std::any>>(a10)).length();
     }
   }();
 };

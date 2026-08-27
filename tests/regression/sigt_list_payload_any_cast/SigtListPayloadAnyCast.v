@@ -3,9 +3,9 @@ From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
 From Stdlib Require Import List.
 Import ListNotations.
-(** WIP: A `sigT` payload holding a `list nat` is stored as `List<uint64_t>` by the
-    producer but read back through a doubled `any_cast<List<std::any>>` at the
-    consumer, which throws `std::bad_any_cast` at run time. *)
+(** A `sigT` payload whose type is value-dependent (`list nat` in the `false`
+    branch) is erased to `std::any`.  The producer must store it in the
+    canonical element-erased shape the consumer reads back. *)
 
 Module SigtListPayloadAnyCast.
 Definition pack : sigT (fun b : bool => if b then nat else list nat) :=

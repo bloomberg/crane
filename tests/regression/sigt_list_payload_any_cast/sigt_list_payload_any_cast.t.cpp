@@ -1,8 +1,6 @@
-// WIP: this test does not build yet.
-//
-// A `sigT` payload holding a `list nat` is stored as `List<uint64_t>` by the
-// producer but read back through a doubled `any_cast<List<std::any>>` at the
-// consumer, which throws `std::bad_any_cast` at run time.
+// A `sigT` payload holding a `list nat` round-trips through the field's
+// erased `std::any`: producer and consumer must agree on the element-erased
+// representation.
 #include "sigt_list_payload_any_cast.h"
 
 #include <cassert>

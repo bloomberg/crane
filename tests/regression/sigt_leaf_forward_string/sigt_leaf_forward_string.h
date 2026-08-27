@@ -184,8 +184,7 @@ template <SEM S> struct Make {
     const auto &[a, _x] = x0;
     const auto &[f, _x0] = std::any_cast<std::pair<std::any, std::any>>(a1);
     if (std::any_cast<bool>(std::any_cast<std::function<std::any(std::any)>>(f)(
-            std::make_pair(std::any(std::any(arg(a))),
-                           std::any(std::any(std::monostate{})))))) {
+            std::make_pair(std::any(arg(a)), std::any(std::monostate{}))))) {
       return true;
     } else {
       return false;

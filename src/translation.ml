@@ -3113,7 +3113,17 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
                | _ -> false)
             | None -> false
           in
-          if is_recursive_field || is_already_container then result
+          (* [result] may already be boxed by the field-driven erasure above
+             (a pair component of a value-dependent [sigT] payload, say).
+             Boxing is not idempotent: a second [std::any(...)] stores an
+             [any] holding an [any], which no consumer unboxes twice. *)
+          let is_already_boxed =
+            match result with
+            | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> true
+            | _ -> false
+          in
+          if is_recursive_field || is_already_container || is_already_boxed
+          then result
           else box_into_any result
         else result
       in
@@ -3385,10 +3395,12 @@ and wrap_crane_erase_fn expr =
   Table.mark_needs_erase_fn ();
   CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [expr])
 
-(** [field_stores_erased_fn_value field_types i e] — true when constructor
-    field [i] has an abstract type-variable (schema) type — a value-dependent
-    field such as the predicate [P] of [sigT A P] — and the argument [e] is a
-    lambda function value.
+(** [field_stores_erased_fn_value ?field_cpp_ty field_types i e] — true when
+    constructor field [i] has an abstract type-variable (schema) type — a
+    value-dependent field such as the predicate [P] of [sigT A P] — and the
+    argument [e] is either a lambda function value or any value landing in a
+    slot that is genuinely erased here ([field_cpp_ty], the field type
+    instantiated with this call's own type arguments, is [std::any]).
 
     Such a function's return value is boxed into the field's [std::any] at
     runtime and recovered by consumers with a fixed [any_cast] shape.  To keep
@@ -3400,7 +3412,7 @@ and wrap_crane_erase_fn expr =
     concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
     "nil" production erases to [deque<Prod<any,any>>], and reading the value
     back out of the [std::any] throws [std::bad_any_cast]. *)
-and field_stores_erased_fn_value field_types i e =
+and field_stores_erased_fn_value ?field_cpp_ty field_types i e =
   match List.nth_opt field_types i with
   | Some ft ->
     (* The (schema) field type must be an abstract type VARIABLE — e.g. the
@@ -3416,8 +3428,18 @@ and field_stores_erased_fn_value field_types i e =
     let field_is_abstract_var =
       match ft with Miniml.Tvar _ | Miniml.Tvar' _ -> true | _ -> false
     in
+    (* A non-function value needs the same canonical erasure whenever the
+       slot it lands in is REALLY [std::any] here — e.g. the [list nat]
+       payload of [sigT (fun b => if b then nat else list nat)], which a
+       consumer reads back as the element-erased [List<std::any>].  When the
+       abstract field instead instantiates to a concrete type (an ordinary
+       polymorphic container such as [Sig<List<nat>>]), the value must keep
+       its concrete element type. *)
+    let slot_is_erased =
+      match field_cpp_ty with Some ct -> is_erased_type ct | None -> false
+    in
     field_is_abstract_var
-    && (match strip_magic e with MLlam _ -> true | _ -> false)
+    && (slot_is_erased || match strip_magic e with MLlam _ -> true | _ -> false)
   | None -> false
 
 (** When a lambda literal is about to be stored via [crane_erase_fn] (see the
@@ -5390,6 +5412,20 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
            the cast.  [Tvar]/[Tvar'] fields are left to
            [wrap_if_needed_for_field], which handles the erased-field cases. *)
+        (* The field's declared type with this constructor call's own type
+           arguments substituted in — the [P] of [sigT A P] becomes the
+           concrete C++ type the field holds at this call site. *)
+        let instantiated_field_cpp_ty ft =
+          map_cpp_type
+            (fun t ->
+              match t with
+              | Tvar (i, _) -> (
+                match List.nth_opt ctor_temps (i - 1) with
+                | Some c -> c
+                | None -> t )
+              | t -> t )
+            (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ft)
+        in
         let expected_for_arg =
           match ft_opt with
           | Some ft ->
@@ -5411,18 +5447,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                  without the expected type, [gen_expr]'s [MLlam] case would
                  flatten the nested binders into one multi-parameter lambda,
                  which does not convert to [std::function<F(F)>]. *)
-              let tvars = get_current_type_vars () in
-              let ct =
-                map_cpp_type
-                  (fun t ->
-                    match t with
-                    | Tvar (i, _) -> (
-                      match List.nth_opt ctor_temps (i - 1) with
-                      | Some c -> c
-                      | None -> t )
-                    | t -> t )
-                  (convert_ml_type_to_cpp_type env tvars ft)
-              in
+              let ct = instantiated_field_cpp_ty ft in
               ( match ct with
               | Tfun (_, Tfun _) when not (is_erased_type ct) -> Some ct
               | _ -> None ) )
@@ -5443,8 +5468,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            [wrap_for_any_param] so cons productions deep-erase their element
            type to match nil.  See the mirror in the record-constructor path. *)
         let saved_wrap = tctx.wrap_for_any_param in
-        if field_stores_erased_fn_value field_types i e then
-          tctx.wrap_for_any_param <- true;
+        if
+          field_stores_erased_fn_value
+            ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+            field_types i e
+        then tctx.wrap_for_any_param <- true;
         let expr = gen_ctor_arg ?expected_ty:expected_for_arg e in
         tctx.wrap_for_any_param <- saved_wrap;
         tctx.current_cpp_return_type <- saved_ret;
@@ -6426,7 +6454,18 @@ and eta_fun env f args =
             | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
             | _ -> Tglob (g, [Tany], [])
           in
-          CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, as_value ())])
+          (* [as_value ()] may already have unboxed the erased value to the
+             canonical element-erased shape (the [MLrel] case of [gen_expr]
+             does this for a variable bound to an erased field).  Casting
+             again would re-box that concrete list into a fresh [std::any]
+             only to unbox it — mirror the custom-list branch below and reuse
+             the existing cast. *)
+          let inner =
+            match as_value () with
+            | CPPany_cast _ as already_cast -> already_cast
+            | v -> CPPany_cast (list_any_ty, v)
+          in
+          CPPconverting_ctor (cpp_ty, [inner])
         | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
           (* Flat single-file extraction sometimes wraps a module-local
              inductive in a self-referential [Tnamespace(g, Tglob(g,..))]

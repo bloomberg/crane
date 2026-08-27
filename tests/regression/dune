@@ -7213,3 +7213,14 @@
   (alias runtest)
   (deps instance_param_instance_constraint.t.exe)
   (action (run ./instance_param_instance_constraint.t.exe))))
+
+(subdir sigt_list_payload_any_cast
+ (rule
+  (targets sigt_list_payload_any_cast.t.exe)
+  (deps SigtListPayloadAnyCast.vo sigt_list_payload_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_list_payload_any_cast.t.exe sigt_list_payload_any_cast.cpp sigt_list_payload_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_list_payload_any_cast.t.exe)
+  (action (run ./sigt_list_payload_any_cast.t.exe))))
