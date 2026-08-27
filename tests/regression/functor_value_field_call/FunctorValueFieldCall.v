@@ -1,10 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: Nested functor application emits a call `C::zero()` for a module field that
-    the argument module defines as a value (`static inline const uint64_t`), so
-    the extracted header fails with "called object type 'uint64_t' is not a
-    function or function pointer". *)
+(** Nested functor application: a field a functor reads through its module
+    parameter may be extracted as a static data member in one argument module
+    and as a nullary accessor in another, so the use site must accept both
+    spellings, just as the generated concept does. *)
 
 Module FunctorValueFieldCall.
 Module Type CARRIER. Parameter t : Type. Parameter zero : t. End CARRIER.

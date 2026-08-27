@@ -21,7 +21,12 @@ concept DerivedType = BaseType<M>;
 
 template <DerivedType X> struct Use {
   static const typename X::t &get_default() {
-    static const typename X::t v = X::default_();
+    static const typename X::t v = [] {
+      if constexpr (requires { X::default_(); })
+        return X::default_();
+      else
+        return X::default_;
+    }();
     return v;
   }
 };

@@ -49,13 +49,32 @@ struct NatAsIntLike {
 
 template <IntLike I> struct Counter {
   static const typename I::t &init() {
-    static const typename I::t v = I::zero();
+    static const typename I::t v = [] {
+      if constexpr (requires { I::zero(); })
+        return I::zero();
+      else
+        return I::zero;
+    }();
     return v;
   }
 
-  static typename I::t step(typename I::t x) { return I::add(x, I::one()); }
+  static typename I::t step(typename I::t x) {
+    return I::add(x, [] {
+      if constexpr (requires { I::one(); })
+        return I::one();
+      else
+        return I::one;
+    }());
+  }
 
-  static bool is_zero(typename I::t x) { return I::eqb(x, I::zero()); }
+  static bool is_zero(typename I::t x) {
+    return I::eqb(x, [] {
+      if constexpr (requires { I::zero(); })
+        return I::zero();
+      else
+        return I::zero;
+    }());
+  }
 };
 
 using NatCounter = Counter<NatAsIntLike>;

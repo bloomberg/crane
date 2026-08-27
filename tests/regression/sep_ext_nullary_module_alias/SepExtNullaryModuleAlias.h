@@ -37,7 +37,12 @@ template <Config C> struct Worker {
   }
 
   static const uint64_t &get_default() {
-    static const uint64_t v = C::default_val();
+    static const uint64_t v = [] {
+      if constexpr (requires { C::default_val(); })
+        return C::default_val();
+      else
+        return C::default_val;
+    }();
     return v;
   }
 };

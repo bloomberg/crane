@@ -29,17 +29,38 @@ concept Outer = requires {
 
 template <Outer O> struct Worker {
   static const uint64_t &get_inner_val() {
-    static const uint64_t v = O::I::val();
+    static const uint64_t v = [] {
+      if constexpr (requires { O::I::val(); })
+        return O::I::val();
+      else
+        return O::I::val;
+    }();
     return v;
   }
 
   static const uint64_t &get_name() {
-    static const uint64_t v = O::name();
+    static const uint64_t v = [] {
+      if constexpr (requires { O::name(); })
+        return O::name();
+      else
+        return O::name;
+    }();
     return v;
   }
 
   static const uint64_t &sum() {
-    static const uint64_t v = (O::I::val() + O::name());
+    static const uint64_t v = ([] {
+      if constexpr (requires { O::I::val(); })
+        return O::I::val();
+      else
+        return O::I::val;
+    }() +
+                               [] {
+                                 if constexpr (requires { O::name(); })
+                                   return O::name();
+                                 else
+                                   return O::name;
+                               }());
     return v;
   }
 };

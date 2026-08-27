@@ -1302,6 +1302,12 @@ and pp_cpp_expr env args t =
         else
           pp_global Term x
     in
+    let rec has_mpbound mp =
+      match mp with
+      | Names.ModPath.MPbound _ -> true
+      | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
+      | _ -> false
+    in
     let is_accessor =
       let x_mp = modpath_of_r x in
       let x_lbl = label_of_r x in
@@ -1327,12 +1333,6 @@ and pp_cpp_expr env args t =
       in
       if found_in_list then true
       else
-        let rec has_mpbound mp =
-          match mp with
-          | Names.ModPath.MPbound _ -> true
-          | Names.ModPath.MPdot (parent, _) -> has_mpbound parent
-          | _ -> false
-        in
           let in_lbl_list = List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl)
             !template_static_accessors in
           in_lbl_list
@@ -1362,7 +1362,20 @@ and pp_cpp_expr env args t =
            insert_template_keyword base_name base_name_str
            ++ str "<" ++ ty_args ++ str ">")
     in
-    let full_name = if is_accessor then full_name ++ str "()" else full_name in
+    let full_name =
+      if not is_accessor then full_name
+      else if has_mpbound (modpath_of_r x) then
+        (* Reached through a bound module parameter, whose member shape is not
+           known here: the argument module may define this value as a static
+           data member or -- when it is itself inside a template, as a Meyers
+           singleton -- as a nullary accessor.  The generated concept accepts
+           both spellings (see [pp_spec_as_requirement] in [cpp.ml]), so the
+           use site must accept both too. *)
+        let n = string_of_ppcmds full_name in
+        str ("[]{ if constexpr (requires { " ^ n ^ "(); }) return " ^ n
+             ^ "(); else return " ^ n ^ "; }()")
+      else full_name ++ str "()"
+    in
     apply full_name
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in

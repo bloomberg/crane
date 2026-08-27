@@ -28,7 +28,12 @@ concept Cfg = requires {
 
 template <Cfg C> struct Worker {
   static const uint64_t &get_default() {
-    static const uint64_t v = C::default_val();
+    static const uint64_t v = [] {
+      if constexpr (requires { C::default_val(); })
+        return C::default_val();
+      else
+        return C::default_val;
+    }();
     return v;
   }
 
@@ -44,11 +49,23 @@ template <Cfg C> struct Worker {
   }
 
   static typename Datatypes::template List<uint64_t> prepend(uint64_t x) {
-    return Datatypes::template List<uint64_t>::cons(x, C::default_list());
+    return Datatypes::template List<uint64_t>::cons(x, [] {
+      if constexpr (requires { C::default_list(); })
+        return C::default_list();
+      else
+        return C::default_list;
+    }());
   }
 
   static const uint64_t &default_head() {
-    static const uint64_t v = C::default_list().hd(UINT64_C(0));
+    static const uint64_t v =
+        [] {
+          if constexpr (requires { C::default_list(); })
+            return C::default_list();
+          else
+            return C::default_list;
+        }()
+            .hd(UINT64_C(0));
     return v;
   }
 };

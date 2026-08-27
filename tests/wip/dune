@@ -124,16 +124,6 @@
   (deps dependent_if_type_branches.t.exe)
   (action (run ./dependent_if_type_branches.t.exe))))
 
-(subdir functor_value_field_call
- (rule
-  (targets functor_value_field_call.t.exe)
-  (deps FunctorValueFieldCall.vo functor_value_field_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_value_field_call.t.exe functor_value_field_call.cpp functor_value_field_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps functor_value_field_call.t.exe)
-  (action (run ./functor_value_field_call.t.exe))))
 
 (subdir instance_at_function_type
  (rule
