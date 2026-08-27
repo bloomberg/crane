@@ -1509,6 +1509,21 @@ let with_escape_analysis body f =
   tctx.current_cpp_return_type <- saved_return_type;
   result
 
+(** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
+    fixpoint, or a record destructure in argument position).  The lambda
+    returns THIS expression's value, not the enclosing function's, so the
+    ambient return type must be re-based on the expression's own expected type
+    ([None] wherever the context imposes none).  Without this the enclosing
+    function's return type leaks into the IIFE body and its tail expression is
+    cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
+    caller then projects with [.first.first]. *)
+let with_iife_return_type expected_ty f =
+  let saved = tctx.current_cpp_return_type in
+  tctx.current_cpp_return_type <- expected_ty;
+  let result = f () in
+  tctx.current_cpp_return_type <- saved;
+  result
+
 (** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
     then restore the original state.  This is the standard bracket for code
     that introduces [n] pattern variables or let bindings.
@@ -5857,7 +5872,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         ( CPPlambda
             ( [],
               None,
-              asgns @ gen_stmts env' (fun x -> Sreturn (Some x)) body,
+              asgns
+              @ with_iife_return_type expected_ty (fun () ->
+                    gen_stmts env' (fun x -> Sreturn (Some x)) body),
               false ),
           [] ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
@@ -5865,10 +5882,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
   | MLcase (typ, t, pv) when lang () == Cpp -> gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _) as a ->
     with_escape_analysis a (fun () ->
-      CPPfun_call
-        ( CPPlambda
-            ([], None, gen_stmts env (fun x -> Sreturn (Some x)) a, false),
-          [] ) )
+      with_iife_return_type expected_ty (fun () ->
+        CPPfun_call
+          ( CPPlambda
+              ([], None, gen_stmts env (fun x -> Sreturn (Some x)) a, false),
+            [] ) ) )
   | MLfix _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)

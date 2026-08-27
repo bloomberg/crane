@@ -39,8 +39,9 @@ Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
              Specif::SigT<Tag, sem_ty> v);
 const Specif::SigT<Tag, sem_ty> chain = []() {
-  auto v0 = Specif::template SigT<Tag, std::any>::existt(
-      Tag::TAGLIST, std::deque<std::any>{});
+  auto v0 =
+      Specif::template SigT<Tag, std::deque<std::pair<std::any, std::any>>>::
+          existt(Tag::TAGLIST, std::deque<std::any>{});
   auto v1 = apply_action(base_action, std::move(v0));
   auto v2 = apply_action(cons_action, std::move(v1));
   return apply_action(cons_action, std::move(v2));

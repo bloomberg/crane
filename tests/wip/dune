@@ -115,13 +115,3 @@
 
 
 
-(subdir type_level_fixpoint_record_field
- (rule
-  (targets type_level_fixpoint_record_field.t.exe)
-  (deps TypeLevelFixpointRecordField.vo type_level_fixpoint_record_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_record_field.t.exe type_level_fixpoint_record_field.cpp type_level_fixpoint_record_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_level_fixpoint_record_field.t.exe)
-  (action (run ./type_level_fixpoint_record_field.t.exe))))

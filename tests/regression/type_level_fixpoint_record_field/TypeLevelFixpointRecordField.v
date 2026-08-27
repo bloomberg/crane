@@ -1,9 +1,9 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A record field whose type is a `Type`-valued `Fixpoint` applied to a literal
-    (`ty 2`, i.e. a nested pair) is emitted as `uint64_t`, so the projections
-    on it do not type-check. *)
+(** A record field whose type is a `Type`-valued `Fixpoint` applied to a
+    literal (`ty 2`, i.e. a nested pair) is erased, so projecting it must not
+    inherit the enclosing definition's return type as a cast target. *)
 
 Module TypeLevelFixpointRecordField.
 Fixpoint ty (n : nat) : Type := match n with O => nat | S m => (ty m * ty m)%type end.

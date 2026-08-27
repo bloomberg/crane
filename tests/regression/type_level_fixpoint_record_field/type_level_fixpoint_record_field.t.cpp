@@ -1,8 +1,5 @@
-// WIP: this test does not build yet.
-//
-// A record field whose type is a `Type`-valued `Fixpoint` applied to a literal
-// (`ty 2`, i.e. a nested pair) is emitted as `uint64_t`, so the projections
-// on it do not type-check.
+// A record field whose type is a `Type`-valued `Fixpoint` applied to a
+// literal (`ty 2`, i.e. a nested pair) is projected twice.
 #include "type_level_fixpoint_record_field.h"
 
 #include <cassert>
