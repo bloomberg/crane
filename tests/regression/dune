@@ -7202,3 +7202,14 @@
   (alias runtest)
   (deps class_poly_method_erased_fn.t.exe)
   (action (run ./class_poly_method_erased_fn.t.exe))))
+
+(subdir instance_param_instance_constraint
+ (rule
+  (targets instance_param_instance_constraint.t.exe)
+  (deps InstanceParamInstanceConstraint.vo instance_param_instance_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_param_instance_constraint.t.exe instance_param_instance_constraint.cpp instance_param_instance_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_param_instance_constraint.t.exe)
+  (action (run ./instance_param_instance_constraint.t.exe))))

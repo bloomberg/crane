@@ -102,17 +102,6 @@
   (deps class_type_constructor_param.t.exe)
   (action (run ./class_type_constructor_param.t.exe))))
 
-(subdir instance_param_instance_constraint
- (rule
-  (targets instance_param_instance_constraint.t.exe)
-  (deps InstanceParamInstanceConstraint.vo instance_param_instance_constraint.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_param_instance_constraint.t.exe instance_param_instance_constraint.cpp instance_param_instance_constraint.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_param_instance_constraint.t.exe)
-  (action (run ./instance_param_instance_constraint.t.exe))))
-
 (subdir monad_class_type_constructor
  (rule
   (targets monad_class_type_constructor.t.exe)

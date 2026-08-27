@@ -6081,7 +6081,10 @@ and eta_fun env f args =
               | _ -> Some (ml_arg_to_template_type arg) )
             inner_args
         in
-        Tglob (r, build_template_params env [] ts @ template_args, [])
+        (* Instance parameters come first in the generated struct's template
+           list ([template <typename _tcI0, typename T1>]), so the instance
+           arguments must precede the type arguments here too. *)
+        Tglob (r, template_args @ build_template_params env [] ts, [])
       | MLcase (_, scrutinee, branches)
         when Array.length branches = 1 ->
         (* Record field projection — e.g., [base_category(PS)].

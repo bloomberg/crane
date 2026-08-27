@@ -5,10 +5,10 @@
 #include <memory>
 #include <optional>
 
-/// WIP: An instance parameterised by another instance (`Def A -> Def (option
-/// A)`) used at `option (option nat)` emits a template instantiation whose
-/// concept constraints are not satisfied, plus a stray unqualified `dflt`
-/// reference.
+/// An instance parameterised by another instance (`Def A -> Def (option A)`)
+/// used at `option (option nat)`: the nested instantiation must list the
+/// instance argument before the type argument, matching the generated
+/// struct's template parameter order.
 
 template <typename I, typename A>
 concept Def = requires {
@@ -31,7 +31,7 @@ struct InstanceParamInstanceConstraint {
   };
 
   static inline const uint64_t go = []() -> uint64_t {
-    auto _cs = DOpt<DOpt<uint64_t, DNat>, std::optional<uint64_t>>::dflt();
+    auto _cs = DOpt<DOpt<DNat, uint64_t>, std::optional<uint64_t>>::dflt();
     if (_cs.has_value()) {
       const std::optional<uint64_t> &o = *_cs;
       if (o.has_value()) {

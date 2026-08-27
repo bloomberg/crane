@@ -1,9 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: An instance parameterised by another instance (`Def A -> Def (option A)`)
-    used at `option (option nat)` emits a template instantiation whose concept
-    constraints are not satisfied, plus a stray unqualified `dflt` reference. *)
+(** An instance parameterised by another instance (`Def A -> Def (option A)`)
+    used at `option (option nat)`: the nested instantiation must list the
+    instance argument before the type argument, matching the generated
+    struct's template parameter order. *)
 
 Module InstanceParamInstanceConstraint.
 Class Def (A : Type) := { dflt : A }.

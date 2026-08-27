@@ -1,8 +1,6 @@
-// WIP: this test does not build yet.
-//
 // An instance parameterised by another instance (`Def A -> Def (option A)`)
-// used at `option (option nat)` emits a template instantiation whose concept
-// constraints are not satisfied, plus a stray unqualified `dflt` reference.
+// used at `option (option nat)`: the nested instantiation must list the
+// instance argument before the type argument.
 #include "instance_param_instance_constraint.h"
 
 #include <cassert>
