@@ -1,7 +1,5 @@
-// WIP: this test does not build yet.
-//
-// A state-monad type synonym (`st A := nat -> (A * nat)`) used through `bind`
-// produces a call with the wrong arity on the `std::function` synonym.
+// A state-monad type synonym makes a definition a value of function type; a
+// bare reference to it is a data member, not a nullary call.
 #include "state_monad_type_synonym.h"
 
 #include <cassert>

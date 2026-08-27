@@ -7136,3 +7136,14 @@
   (alias runtest)
   (deps rank2_record_field.t.exe)
   (action (run ./rank2_record_field.t.exe))))
+
+(subdir state_monad_type_synonym
+ (rule
+  (targets state_monad_type_synonym.t.exe)
+  (deps StateMonadTypeSynonym.vo state_monad_type_synonym.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} state_monad_type_synonym.t.exe state_monad_type_synonym.cpp state_monad_type_synonym.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps state_monad_type_synonym.t.exe)
+  (action (run ./state_monad_type_synonym.t.exe))))

@@ -609,6 +609,19 @@ let render_cpp_type_in_template ty =
   | Some f -> f ty
   | None -> render_cpp_type_for_raw_template ty
 
+(** Whether a bare reference to global [x] must be spelled [x()]: it is
+    declared as a zero-parameter function rather than a data member.  That is
+    the case for thunked values (monadic definitions, cofixpoints, extracted
+    axioms) and for functions all of whose parameters are erased. *)
+let glob_is_nullary_function x =
+  match find_type_opt x with
+  | None -> false
+  | Some ml_ty ->
+    is_monadic_ml_type ml_ty
+    || Table.is_cofixpoint x
+    || Table.is_axiom_value x
+    || (match resolve_tmeta ml_ty with Miniml.Tarr _ -> true | _ -> false)
+
 let build_guard_compare_stmts ?type_string_of n ids cod =
   match Table.find_guard_compare n with
   | None -> []
@@ -6768,6 +6781,14 @@ and eta_fun env f args =
         else if is_inline_custom id && args = [] then
           (* Zero-arg inline custom: return the glob directly so the
              template string renders as-is, without an appended (). *)
+          cglob
+        else if args = [] && not (glob_is_nullary_function id) then
+          (* A reference to a global {i value} whose C++ type is not a
+             function type (e.g. a state-monad-style [std::function] synonym):
+             it is a data member, not a nullary function, so it must not be
+             called.  Only globals whose declaration really takes no C++
+             parameters -- thunks and those whose every parameter is erased --
+             get the [()]. *)
           cglob
         else
           CPPfun_call (cglob, args)

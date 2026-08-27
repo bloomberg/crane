@@ -5,8 +5,9 @@
 #include <type_traits>
 #include <utility>
 
-/// WIP: A state-monad type synonym (`st A := nat -> (A * nat)`) used through
-/// `bind` produces a call with the wrong arity on the `std::function` synonym.
+/// A state-monad type synonym (st A := nat -> (A * nat)) makes a definition
+/// a value of function type: a bare reference to it is a data member, so it
+/// must not be spelled as a nullary call.
 struct StateMonadTypeSynonym {
   template <typename a>
   using st = std::function<std::pair<a, uint64_t>(uint64_t)>;
@@ -33,7 +34,7 @@ struct StateMonadTypeSynonym {
           tick, [=](uint64_t b) mutable { return ret<uint64_t>((a + b)); });
     });
   }();
-  static inline const uint64_t go = prog()(UINT64_C(1)).first;
+  static inline const uint64_t go = prog(UINT64_C(1)).first;
 };
 
 #endif // INCLUDED_STATE_MONAD_TYPE_SYNONYM
