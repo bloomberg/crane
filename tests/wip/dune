@@ -179,17 +179,6 @@
   (deps monad_class_type_constructor.t.exe)
   (action (run ./monad_class_type_constructor.t.exe))))
 
-(subdir nested_tree_pair_literal
- (rule
-  (targets nested_tree_pair_literal.t.exe)
-  (deps NestedTreePairLiteral.vo nested_tree_pair_literal.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree_pair_literal.t.exe nested_tree_pair_literal.cpp nested_tree_pair_literal.t.cpp)))
- (rule
-  (alias runtest)
-  (deps nested_tree_pair_literal.t.exe)
-  (action (run ./nested_tree_pair_literal.t.exe))))
-
 (subdir param_inductive_fn_instantiation
  (rule
   (targets param_inductive_fn_instantiation.t.exe)
@@ -211,39 +200,6 @@
   (alias runtest)
   (deps rank2_record_field.t.exe)
   (action (run ./rank2_record_field.t.exe))))
-
-(subdir recursive_under_option
- (rule
-  (targets recursive_under_option.t.exe)
-  (deps RecursiveUnderOption.vo recursive_under_option.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_under_option.t.exe recursive_under_option.cpp recursive_under_option.t.cpp)))
- (rule
-  (alias runtest)
-  (deps recursive_under_option.t.exe)
-  (action (run ./recursive_under_option.t.exe))))
-
-(subdir recursive_under_pair
- (rule
-  (targets recursive_under_pair.t.exe)
-  (deps RecursiveUnderPair.vo recursive_under_pair.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_under_pair.t.exe recursive_under_pair.cpp recursive_under_pair.t.cpp)))
- (rule
-  (alias runtest)
-  (deps recursive_under_pair.t.exe)
-  (action (run ./recursive_under_pair.t.exe))))
-
-(subdir sig_fun_param_result_cast
- (rule
-  (targets sig_fun_param_result_cast.t.exe)
-  (deps SigFunParamResultCast.vo sig_fun_param_result_cast.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fun_param_result_cast.t.exe sig_fun_param_result_cast.cpp sig_fun_param_result_cast.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_fun_param_result_cast.t.exe)
-  (action (run ./sig_fun_param_result_cast.t.exe))))
 
 (subdir sigt_branch_type_mismatch
  (rule

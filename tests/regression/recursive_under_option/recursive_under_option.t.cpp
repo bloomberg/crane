@@ -1,8 +1,6 @@
-// WIP: this test does not build yet.
-//
-// A constructor field holding the inductive under an `option`
-// (`N : option c -> c`) is stored as `shared_ptr<optional<c>>` but the
-// generated pattern match calls `.has_value()` on the pointer.
+// A constructor field holding the inductive under an [option]
+// ([N : option c -> c]) is stored as [shared_ptr<optional<c>>].  The pattern
+// match must dereference the pointer before testing [has_value()].
 #include "recursive_under_option.h"
 
 #include <cassert>

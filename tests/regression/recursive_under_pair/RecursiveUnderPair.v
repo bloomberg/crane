@@ -1,9 +1,9 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A constructor field holding the inductive under a pair
-    (`N : (nat * c) -> c`) is stored as `shared_ptr<pair<uint64_t, c>>` but the
-    generated code reads `.second` off the pointer. *)
+(** A constructor field holding the inductive under a pair
+    ([N : (nat * c) -> c]) is stored as [shared_ptr<pair<uint64_t, c>>].  The
+    pattern match must dereference the pointer before projecting [.second]. *)
 
 Module RecursiveUnderPair.
 Inductive c : Type := Stop : c | N : (nat * c)%type -> c.

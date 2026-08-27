@@ -1,8 +1,6 @@
-// WIP: this test does not build yet.
-//
 // A constructor field holding the inductive under a pair
-// (`N : (nat * c) -> c`) is stored as `shared_ptr<pair<uint64_t, c>>` but the
-// generated code reads `.second` off the pointer.
+// ([N : (nat * c) -> c]) is stored as [shared_ptr<pair<uint64_t, c>>].  The
+// pattern match must dereference the pointer before projecting [.second].
 #include "recursive_under_pair.h"
 
 #include <cassert>

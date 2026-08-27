@@ -1,15 +1,17 @@
 #ifndef INCLUDED_RECURSIVE_UNDER_OPTION
 #define INCLUDED_RECURSIVE_UNDER_OPTION
 
+#include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// WIP: A constructor field holding the inductive under an `option`
-/// (`N : option c -> c`) is stored as `shared_ptr<optional<c>>` but the
-/// generated pattern match calls `.has_value()` on the pointer.
+/// A constructor field holding the inductive under an option
+/// (N : option c -> c) is stored as shared_ptr<optional<c>>.  The pattern
+/// match must dereference the pointer before testing has_value().
 struct RecursiveUnderOption {
   struct c {
     // TYPES
@@ -34,6 +36,36 @@ struct RecursiveUnderOption {
     }
 
     // MANIPULATORS
+    ~c() {
+      crane::small_vector<std::shared_ptr<c>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<N>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            if (((*(_alt->a0))).has_value()) {
+              _stack.push_back(
+                  std::make_shared<c>(std::move((*((*(_alt->a0)))))));
+            }
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    c(const c &) = default;
+    c &operator=(const c &) = default;
+    c(c &&) noexcept = default;
+    c &operator=(c &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

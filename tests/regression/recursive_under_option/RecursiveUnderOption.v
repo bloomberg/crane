@@ -1,9 +1,9 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A constructor field holding the inductive under an `option`
-    (`N : option c -> c`) is stored as `shared_ptr<optional<c>>` but the
-    generated pattern match calls `.has_value()` on the pointer. *)
+(** A constructor field holding the inductive under an [option]
+    ([N : option c -> c]) is stored as [shared_ptr<optional<c>>].  The pattern
+    match must dereference the pointer before testing [has_value()]. *)
 
 Module RecursiveUnderOption.
 Inductive c : Type := N : option c -> c.

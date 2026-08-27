@@ -1,14 +1,16 @@
 #ifndef INCLUDED_RECURSIVE_UNDER_PAIR
 #define INCLUDED_RECURSIVE_UNDER_PAIR
 
+#include "small_vector.h"
+#include <atomic>
 #include <memory>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-/// WIP: A constructor field holding the inductive under a pair
-/// (`N : (nat * c) -> c`) is stored as `shared_ptr<pair<uint64_t, c>>` but the
-/// generated code reads `.second` off the pointer.
+/// A constructor field holding the inductive under a pair
+/// (N : (nat * c) -> c) is stored as shared_ptr<pair<uint64_t, c>>.  The
+/// pattern match must dereference the pointer before projecting .second.
 struct RecursiveUnderPair {
   struct c {
     // TYPES
@@ -39,6 +41,34 @@ struct RecursiveUnderPair {
     }
 
     // MANIPULATORS
+    ~c() {
+      crane::small_vector<std::shared_ptr<c>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<N>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            _stack.push_back(
+                std::make_shared<c>(std::move(((*(_alt->a0))).second)));
+            _alt->a0.reset();
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    c(const c &) = default;
+    c &operator=(const c &) = default;
+    c(c &&) noexcept = default;
+    c &operator=(c &&) noexcept = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS

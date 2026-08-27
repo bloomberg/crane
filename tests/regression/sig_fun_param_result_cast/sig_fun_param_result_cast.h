@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 #define INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 
-#include <any>
 #include <cassert>
 #include <functional>
 #include <utility>
@@ -18,10 +17,9 @@ template <typename A> struct Sig {
   static Sig<A> exist(A x) { return {std::move(x)}; }
 };
 
-/// WIP: A `sig` whose payload is a function, passed as a *parameter* (so its
-/// C++ type is the concrete `Sig<std::function<uint64_t(uint64_t)>>`), is still
-/// applied through `any_cast<std::function<std::any(std::any)>>`, so the call
-/// yields `std::any` where `uint64_t` is required.
+/// A sig whose payload is a function, passed as a parameter (so its C++ type
+/// is the concrete Sig<std::function<uint64_t(uint64_t)>>), must be applied
+/// directly rather than through an erased-function cast.
 struct SigFunParamResultCast {
   static uint64_t apply_sig(const Sig<std::function<uint64_t(uint64_t)>> &f,
                             uint64_t n);

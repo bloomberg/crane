@@ -1,8 +1,8 @@
 #include "recursive_under_pair.h"
 
-/// WIP: A constructor field holding the inductive under a pair
-/// (`N : (nat * c) -> c`) is stored as `shared_ptr<pair<uint64_t, c>>` but the
-/// generated code reads `.second` off the pointer.
+/// A constructor field holding the inductive under a pair
+/// (N : (nat * c) -> c) is stored as shared_ptr<pair<uint64_t, c>>.  The
+/// pattern match must dereference the pointer before projecting .second.
 RecursiveUnderPair::c RecursiveUnderPair::build(uint64_t n) {
   if (n <= 0) {
     return c::stop();
@@ -17,6 +17,6 @@ uint64_t RecursiveUnderPair::depth(const RecursiveUnderPair::c &x) {
     return UINT64_C(0);
   } else {
     const auto &[a0] = std::get<typename RecursiveUnderPair::c::N>(x.v());
-    return (depth(*a0.second) + 1);
+    return (depth((*a0).second) + 1);
   }
 }

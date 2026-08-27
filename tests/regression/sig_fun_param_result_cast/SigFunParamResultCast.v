@@ -1,10 +1,9 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A `sig` whose payload is a function, passed as a *parameter* (so its C++
-    type is the concrete `Sig<std::function<uint64_t(uint64_t)>>`), is still
-    applied through `any_cast<std::function<std::any(std::any)>>`, so the call
-    yields `std::any` where `uint64_t` is required. *)
+(** A [sig] whose payload is a function, passed as a parameter (so its C++ type
+    is the concrete [Sig<std::function<uint64_t(uint64_t)>>]), must be applied
+    directly rather than through an erased-function cast. *)
 
 Module SigFunParamResultCast.
 Definition apply_sig (f : {g : nat -> nat | g 0 = 0}) (n : nat) : nat := proj1_sig f n.

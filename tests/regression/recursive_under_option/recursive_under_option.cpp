@@ -1,8 +1,8 @@
 #include "recursive_under_option.h"
 
-/// WIP: A constructor field holding the inductive under an `option`
-/// (`N : option c -> c`) is stored as `shared_ptr<optional<c>>` but the
-/// generated pattern match calls `.has_value()` on the pointer.
+/// A constructor field holding the inductive under an option
+/// (N : option c -> c) is stored as shared_ptr<optional<c>>.  The pattern
+/// match must dereference the pointer before testing has_value().
 RecursiveUnderOption::c RecursiveUnderOption::build(uint64_t n) {
   if (n <= 0) {
     return c::n(std::optional<RecursiveUnderOption::c>());
@@ -14,8 +14,8 @@ RecursiveUnderOption::c RecursiveUnderOption::build(uint64_t n) {
 
 uint64_t RecursiveUnderOption::depth(const RecursiveUnderOption::c &x) {
   const auto &[a0] = std::get<typename RecursiveUnderOption::c::N>(x.v());
-  if (*a0.has_value()) {
-    const RecursiveUnderOption::c &y = **a0;
+  if ((*a0).has_value()) {
+    const RecursiveUnderOption::c &y = *(*a0);
     return (depth(y) + 1);
   } else {
     return UINT64_C(0);

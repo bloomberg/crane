@@ -1,9 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A non-uniform (nested) inductive `tree A := Lf : A -> tree A | Nd : tree (A * A) -> tree A`
-    builds a literal value: the erased-parameter constructor still expects
-    `uint64_t` where a `std::pair<uint64_t, uint64_t>` is supplied. *)
+(** A non-uniform (nested) inductive
+    ([tree A := Lf : A -> tree A | Nd : tree (A * A) -> tree A]) has its type
+    parameter erased, so a literal value built at [tree nat] passes a
+    [std::pair] through the erased constructor. *)
 
 Module NestedTreePairLiteral.
 Inductive tree (A : Type) : Type := Lf : A -> tree A | Nd : tree (A * A)%type -> tree A.
