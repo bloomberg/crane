@@ -5977,8 +5977,13 @@ and eta_fun env f args =
   in
   (* Check if an ML arg is a type class instance (a reference to a struct that
      implements a type class) *)
+  (* [MLmagic] is a transparent coercion — extraction inserts one around an
+     instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt]
+     with [Opt : Type -> Type]).  Look through it, or the instance is left in
+     value position and the generated call names the instance struct as if it
+     were a value. *)
   let is_typeclass_instance_arg ml_arg =
-    match ml_arg with
+    match strip_magic ml_arg with
     | MLglob (r, _) ->
       ( match find_type_opt r with
       | Some arg_ty -> Table.is_typeclass_type arg_ty
@@ -6096,7 +6101,7 @@ and eta_fun env f args =
     let typeclass_ml_args = List.rev typeclass_ml_args in
     (* Convert type class instance args to template type arguments *)
     let rec ml_arg_to_template_type ml_arg =
-      match ml_arg with
+      match strip_magic ml_arg with
       | MLglob (r, ts) ->
         if ref_returns_skipped r then
           (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
