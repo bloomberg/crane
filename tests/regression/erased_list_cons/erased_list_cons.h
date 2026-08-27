@@ -390,8 +390,9 @@ const MyDefs::grammar entries =
                                          MyDefs::symbol::t(MySym::Term::RBRACE),
                                          List<MyDefs::symbol>::nil()))))),
                      std::make_pair(
-                         crane_erase_fn([](const auto &) { return true; }),
-                         crane_erase_fn([](const auto &tup) {
+                         std::any(
+                             crane_erase_fn([](const auto &) { return true; })),
+                         std::any(crane_erase_fn([](const auto &tup) {
                            const auto &[_x, y0] =
                                std::any_cast<std::pair<std::any, std::any>>(
                                    tup);
@@ -403,7 +404,7 @@ const MyDefs::grammar entries =
                                std::any_cast<std::pair<std::any, std::any>>(y2);
                            return List<std::any>::cons(
                                pr, std::any_cast<List<std::any>>(prs));
-                         }))),
+                         })))),
              List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
                        std::pair<std::any, std::any>>>::nil());
 

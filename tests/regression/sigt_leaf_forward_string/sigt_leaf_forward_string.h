@@ -163,17 +163,17 @@ template <SEM S> struct Make {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
         std::make_pair(
-            crane_erase_fn([=](const auto &tup) mutable {
+            std::any(crane_erase_fn([=](const auto &tup) mutable {
               const auto &[v, _x] =
                   std::any_cast<std::pair<std::any, std::any>>(tup);
               return crane_call_erased(eq, v, v);
-            }),
-            crane_erase_fn([=](const auto &tup) mutable {
+            })),
+            std::any(crane_erase_fn([=](const auto &tup) mutable {
               const auto &[v, _x] =
                   std::any_cast<std::pair<std::any, std::any>>(tup);
               return std::any_cast<std::function<std::any(std::any, std::any)>>(
                   eq)(v, v);
-            })));
+            }))));
   }
 
   template <typename F1>

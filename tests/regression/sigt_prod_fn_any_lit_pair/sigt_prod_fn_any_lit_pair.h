@@ -156,16 +156,16 @@ template <SEM S> struct Make {
   static entry mk_entry(typename S::idx a) {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(crane_erase_fn([](const auto &tup) {
+        std::make_pair(std::any(crane_erase_fn([](const auto &tup) {
                          const auto &[_x, _x0] =
                              std::any_cast<std::pair<std::any, std::any>>(tup);
                          return true;
-                       }),
-                       crane_erase_fn([](const auto &tup) {
+                       })),
+                       std::any(crane_erase_fn([](const auto &tup) {
                          const auto &[_x, _x0] =
                              std::any_cast<std::pair<std::any, std::any>>(tup);
                          return true;
-                       })));
+                       }))));
   }
 
   template <typename F1>

@@ -145,8 +145,9 @@ template <SEM S> struct Make {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
         std::make_pair(
-            crane_erase_fn([](const auto &) { return true; }),
-            crane_erase_fn([](const auto &) { return UINT64_C(0); })));
+            std::any(crane_erase_fn([](const auto &) { return true; })),
+            std::any(
+                crane_erase_fn([](const auto &) { return UINT64_C(0); }))));
   }
 
   /// Apply the predicate, exactly like Parser.v:113 if p vs' ....

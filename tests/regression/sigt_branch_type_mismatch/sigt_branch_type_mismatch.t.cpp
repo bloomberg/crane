@@ -1,8 +1,6 @@
-// WIP: this test does not build yet.
-//
 // A `sigT` over a boolean-indexed type family whose branches are `nat` and
-// `nat -> nat` extracts to a single lambda whose two branches return
-// `uint64_t` and `std::any`, which clang rejects.
+// `nat -> nat`: the erased payload is called through the erased-callable
+// adapter and its result unboxed.
 #include "sigt_branch_type_mismatch.h"
 
 #include <cassert>

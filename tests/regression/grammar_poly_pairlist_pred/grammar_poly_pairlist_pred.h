@@ -195,39 +195,40 @@ const std::deque<grammar_entry> entries =
                        return _a1;
                      }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
                  std::make_pair(
-                     crane_erase_fn([](const auto &tup) {
+                     std::any(crane_erase_fn([](const auto &tup) {
                        const auto &[prs, _x] =
                            std::any_cast<std::pair<std::any, std::any>>(tup);
                        return nodupKeys<Val>(
                            crane_container_cast<
                                std::deque<std::pair<std::string, Val>>>(
                                std::any_cast<std::deque<std::any>>(prs)));
-                     }),
-                     crane_erase_fn([](const auto &tup) {
+                     })),
+                     std::any(crane_erase_fn([](const auto &tup) {
                        const auto &[prs, _x] =
                            std::any_cast<std::pair<std::any, std::any>>(tup);
                        return Val::vassoc(
                            crane_container_cast<
                                std::deque<std::pair<std::string, Val>>>(
                                std::any_cast<std::deque<std::any>>(prs)));
-                     }))),
+                     })))),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
       }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
              std::pair<std::any, std::any>>::
-            existt(std::make_pair(Nonterminal::VALUE,
-                                  [](auto _a0, auto _a1) {
-                                    _a1.push_front(_a0);
-                                    return _a1;
-                                  }(Symbol::t(), std::deque<Symbol>{})),
-                   std::make_pair(
-                       crane_erase_fn([](const auto &) { return true; }),
-                       crane_erase_fn([](const auto &tup) {
-                         const auto &[s, _x] =
-                             std::any_cast<std::pair<std::any, std::any>>(tup);
-                         return Val::vstr(std::any_cast<std::string>(s));
-                       }))),
+            existt(
+                std::make_pair(Nonterminal::VALUE,
+                               [](auto _a0, auto _a1) {
+                                 _a1.push_front(_a0);
+                                 return _a1;
+                               }(Symbol::t(), std::deque<Symbol>{})),
+                std::make_pair(
+                    std::any(crane_erase_fn([](const auto &) { return true; })),
+                    std::any(crane_erase_fn([](const auto &tup) {
+                      const auto &[s, _x] =
+                          std::any_cast<std::pair<std::any, std::any>>(tup);
+                      return Val::vstr(std::any_cast<std::string>(s));
+                    })))),
         std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                         std::pair<std::any, std::any>>>{}));
 uint64_t num_entries(std::monostate _x);

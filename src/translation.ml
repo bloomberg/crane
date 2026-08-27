@@ -1747,23 +1747,34 @@ let rec resolve_metas_in_ast resolve_metas = function
    |MLstring _ -> ()
 
 (** Substitute [CPPvar target] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion. *)
-let rec local_var_subst_expr (target : Id.t) (repl : cpp_expr) (e : cpp_expr) =
+    generic AST visitors for structural recursion.
+
+    With [~keep_cast:true], an occurrence that already sits directly under an
+    [any_cast] keeps that cast: only the variable underneath is substituted,
+    and a top-level [any_cast] on [repl] is dropped.  Callers whose [repl] is
+    an [any_cast] of [target] use this -- the cast already there was chosen by
+    the code that built that use site and knows its runtime encoding, so
+    nesting the two casts would throw [std::bad_any_cast]. *)
+let rec local_var_subst_expr ?(keep_cast = false) (target : Id.t)
+    (repl : cpp_expr) (e : cpp_expr) =
   match e with
+  | CPPany_cast (ty, CPPvar id) when keep_cast && Id.equal id target ->
+    CPPany_cast (ty, (match repl with CPPany_cast (_, inner) -> inner | r -> r))
   | CPPvar id when Id.equal id target -> repl
   | _ ->
     map_expr
-      (local_var_subst_expr target repl)
-      (local_var_subst_stmt target repl)
+      (local_var_subst_expr ~keep_cast target repl)
+      (local_var_subst_stmt ~keep_cast target repl)
       Fun.id
       e
 
 (** Statement-level counterpart of [local_var_subst_expr]: substitute
     [CPPvar target] with [repl] inside a single C++ statement. *)
-and local_var_subst_stmt (target : Id.t) (repl : cpp_expr) (s : cpp_stmt) =
+and local_var_subst_stmt ?(keep_cast = false) (target : Id.t) (repl : cpp_expr)
+    (s : cpp_stmt) =
   map_stmt
-    (local_var_subst_expr target repl)
-    (local_var_subst_stmt target repl)
+    (local_var_subst_expr ~keep_cast target repl)
+    (local_var_subst_stmt ~keep_cast target repl)
     Fun.id
     s
 
@@ -2997,33 +3008,45 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
         | Some t -> resolves_to_any_type t
         | None -> false
       in
+      (* Box a constructor argument into the erased ([std::any])
+         representation of its field.  A FUNCTION value must not be stored as
+         a raw closure: the application site recovers it with
+         [any_cast<std::function<std::any(std::any...)>>], so it goes through
+         the [crane_erase_fn] runtime helper, which adapts any callable to
+         that canonical signature (unbox each argument, box the result).  This
+         covers both non-lambda callables (named [mk] parameters) and inline
+         lambda literals — including the generic [ [](const auto&){...} ] form
+         produced when the function's domain is an erased/abstract type. *)
+      let box_into_any result =
+        let erased =
+          if ml_expr_is_function_value e then begin
+            Table.mark_needs_erase_fn ();
+            CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [result])
+          end else result
+        in
+        (* Box explicitly even for a callable already adapted by
+           [crane_erase_fn]: a custom constructor template (e.g.
+           [std::make_pair]) DEDUCES its field type from the argument, so
+           leaving the [std::function] unboxed would store
+           [pair<any, function<any(any)>>] where the consumer's
+           [any_cast<pair<any,any>>] expects both components boxed. *)
+        CPPconverting_ctor (Tany, [erased])
+      in
       let result = match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
           (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
           | _ when is_passthrough_ctor_arg i -> result
           | Some Tany ->
             (match result with
-            | _ when ml_expr_is_function_value e ->
-              (* Function value stored into an erased ([std::any]) field via a
-                 custom constructor (e.g. a [std::pair<std::any, std::any>]
-                 component from [prod]).  Route it through [crane_erase_fn] so
-                 the stored [std::any] holds a [std::function<std::any(std::any)>]
-                 that the application-site [any_cast] can recover, instead of a
-                 raw closure.  This covers both non-lambda callables (named
-                 [mk] parameters) and inline lambda literals — including the
-                 generic [ [](const auto&){...} ] form produced when the
-                 function's domain is an erased/abstract type. *)
-              Table.mark_needs_erase_fn ();
-              CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [result])
-            | CPPlambda _ -> result
-            | _ -> CPPconverting_ctor (Tany, [result]))
+            | CPPlambda _ when not (ml_expr_is_function_value e) -> result
+            | _ -> box_into_any result)
           | Some _ when draft_has_any_tany ->
             (* Concrete-typed field in a constructor where another field is erased.
                E.g. (v, tt) : symbols_semty [x] = prod (symbol_semty x) unit — the
                second field is concrete unit but concat_tuple_rec_case casts the
                pair as pair<any,any>, so std::monostate{} must become
                std::any(std::monostate{}). *)
-            CPPconverting_ctor (Tany, [result])
+            box_into_any result
           | Some _
             when flows_into_erased_slot
                  && (match result with
@@ -3033,7 +3056,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
                a value-dependent erased slot (see [flows_into_erased_slot]).
                Box it so the stored representation is [pair<any,any>], matching
                what a generic consumer's [any_cast<pair<any,any>>] recovers. *)
-            CPPconverting_ctor (Tany, [result])
+            box_into_any result
           | _ -> result)
         | _ -> result
       in
@@ -3073,7 +3096,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
             | None -> false
           in
           if is_recursive_field || is_already_container then result
-          else CPPconverting_ctor (Tany, [result])
+          else box_into_any result
         else result
       in
       result) ts)
@@ -7056,6 +7079,11 @@ and eta_fun env f args =
       in
       let n = n_args in
       let erased_cod =
+        (* A callee recovered from a bare [std::any] is called through the
+           canonical [std::function<std::any(std::any...)>] adapter, so its
+           result is a [std::any] no matter what the ML type says. *)
+        callee_is_bare_any
+        ||
         match f with
         | MLcase (case_ty, _, pv) when Array.length pv = 1 ->
           let (binds, _, _, br_body) = pv.(0) in
@@ -7579,7 +7607,8 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             else
               CPPvar binding_name
           in
-          List.map (local_var_subst_stmt var_name subst_expr) stmts
+          List.map (local_var_subst_stmt ~keep_cast:true var_name subst_expr)
+            stmts
         else
           stmts )
       body_stmts
@@ -8621,7 +8650,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                    | _ -> CPPany_cast (cpp_ty, CPPvar name)
                  in
                  List.map
-                   (local_var_subst_stmt name cast_expr)
+                   (local_var_subst_stmt ~keep_cast:true name cast_expr)
                    stmts
                else stmts)
             br_stmts

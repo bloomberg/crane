@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIGT_PAIR_FN_PAYLOAD
 #define INCLUDED_SIGT_PAIR_FN_PAYLOAD
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -133,9 +134,10 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
-/// WIP: A `sigT` whose payload is a pair of a value and a function emits two
-/// contradictory `any_cast`s of the same pair, and the function result is left
-/// as `std::any` in a `uint64_t`-returning position.
+/// A sigT whose payload is a pair of a value and a function: both pair
+/// components are boxed at the producer -- the function through the
+/// erased-callable adapter -- so the consumer recovers the pair with a single
+/// any_cast<pair<any,any>> and applies the callable.
 struct SigtPairFnPayload {
   using item = SigT<std::any, std::any>;
 
@@ -143,7 +145,7 @@ struct SigtPairFnPayload {
     requires std::is_invocable_r_v<uint64_t, F1 &, T1 &>
   static item mk(T1 a, F1 &&f) {
     return SigT<std::any, std::any>::existt(
-        std::any(), std::make_pair(std::any(a), std::any(f)));
+        std::any(), std::make_pair(std::any(a), std::any(crane_erase_fn(f))));
   }
 
   static inline const List<item> items = List<SigT<std::any, std::any>>::cons(

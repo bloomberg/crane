@@ -7092,3 +7092,25 @@
   (alias runtest)
   (deps list_erasure_ctor_typename.t.exe)
   (action (run ./list_erasure_ctor_typename.t.exe))))
+
+(subdir sigt_branch_type_mismatch
+ (rule
+  (targets sigt_branch_type_mismatch.t.exe)
+  (deps SigtBranchTypeMismatch.vo sigt_branch_type_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_branch_type_mismatch.t.exe sigt_branch_type_mismatch.cpp sigt_branch_type_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_branch_type_mismatch.t.exe)
+  (action (run ./sigt_branch_type_mismatch.t.exe))))
+
+(subdir sigt_pair_fn_payload
+ (rule
+  (targets sigt_pair_fn_payload.t.exe)
+  (deps SigtPairFnPayload.vo sigt_pair_fn_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_pair_fn_payload.t.exe sigt_pair_fn_payload.cpp sigt_pair_fn_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_pair_fn_payload.t.exe)
+  (action (run ./sigt_pair_fn_payload.t.exe))))

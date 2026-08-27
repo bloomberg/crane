@@ -39,7 +39,7 @@ struct MonadClassTypeConstructor {
 
   struct MOpt {
     static std::optional<std::any> mret(std::any a) {
-      return std::make_optional<std::any>(crane_erase_fn(a));
+      return std::make_optional<std::any>(std::any(crane_erase_fn(a)));
     }
 
     static std::optional<std::any>

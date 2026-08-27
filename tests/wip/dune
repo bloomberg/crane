@@ -190,17 +190,6 @@
   (deps rank2_record_field.t.exe)
   (action (run ./rank2_record_field.t.exe))))
 
-(subdir sigt_branch_type_mismatch
- (rule
-  (targets sigt_branch_type_mismatch.t.exe)
-  (deps SigtBranchTypeMismatch.vo sigt_branch_type_mismatch.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_branch_type_mismatch.t.exe sigt_branch_type_mismatch.cpp sigt_branch_type_mismatch.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_branch_type_mismatch.t.exe)
-  (action (run ./sigt_branch_type_mismatch.t.exe))))
-
 (subdir sigt_list_payload_any_cast
  (rule
   (targets sigt_list_payload_any_cast.t.exe)
@@ -211,17 +200,6 @@
   (alias runtest)
   (deps sigt_list_payload_any_cast.t.exe)
   (action (run ./sigt_list_payload_any_cast.t.exe))))
-
-(subdir sigt_pair_fn_payload
- (rule
-  (targets sigt_pair_fn_payload.t.exe)
-  (deps SigtPairFnPayload.vo sigt_pair_fn_payload.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_pair_fn_payload.t.exe sigt_pair_fn_payload.cpp sigt_pair_fn_payload.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_pair_fn_payload.t.exe)
-  (action (run ./sigt_pair_fn_payload.t.exe))))
 
 (subdir state_monad_type_synonym
  (rule
