@@ -90,3 +90,223 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
+
+(subdir class_poly_method_erased_fn
+ (rule
+  (targets class_poly_method_erased_fn.t.exe)
+  (deps ClassPolyMethodErasedFn.vo class_poly_method_erased_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_poly_method_erased_fn.t.exe class_poly_method_erased_fn.cpp class_poly_method_erased_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_poly_method_erased_fn.t.exe)
+  (action (run ./class_poly_method_erased_fn.t.exe))))
+
+(subdir class_type_constructor_param
+ (rule
+  (targets class_type_constructor_param.t.exe)
+  (deps ClassTypeConstructorParam.vo class_type_constructor_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_type_constructor_param.t.exe class_type_constructor_param.cpp class_type_constructor_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_type_constructor_param.t.exe)
+  (action (run ./class_type_constructor_param.t.exe))))
+
+(subdir dependent_if_type_branches
+ (rule
+  (targets dependent_if_type_branches.t.exe)
+  (deps DependentIfTypeBranches.vo dependent_if_type_branches.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_if_type_branches.t.exe dependent_if_type_branches.cpp dependent_if_type_branches.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_if_type_branches.t.exe)
+  (action (run ./dependent_if_type_branches.t.exe))))
+
+(subdir functor_value_field_call
+ (rule
+  (targets functor_value_field_call.t.exe)
+  (deps FunctorValueFieldCall.vo functor_value_field_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_value_field_call.t.exe functor_value_field_call.cpp functor_value_field_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_value_field_call.t.exe)
+  (action (run ./functor_value_field_call.t.exe))))
+
+(subdir instance_at_function_type
+ (rule
+  (targets instance_at_function_type.t.exe)
+  (deps InstanceAtFunctionType.vo instance_at_function_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_at_function_type.t.exe instance_at_function_type.cpp instance_at_function_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_at_function_type.t.exe)
+  (action (run ./instance_at_function_type.t.exe))))
+
+(subdir instance_param_instance_constraint
+ (rule
+  (targets instance_param_instance_constraint.t.exe)
+  (deps InstanceParamInstanceConstraint.vo instance_param_instance_constraint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_param_instance_constraint.t.exe instance_param_instance_constraint.cpp instance_param_instance_constraint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_param_instance_constraint.t.exe)
+  (action (run ./instance_param_instance_constraint.t.exe))))
+
+(subdir list_erasure_ctor_typename
+ (rule
+  (targets list_erasure_ctor_typename.t.exe)
+  (deps ListErasureCtorTypename.vo list_erasure_ctor_typename.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_erasure_ctor_typename.t.exe list_erasure_ctor_typename.cpp list_erasure_ctor_typename.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_erasure_ctor_typename.t.exe)
+  (action (run ./list_erasure_ctor_typename.t.exe))))
+
+(subdir monad_class_type_constructor
+ (rule
+  (targets monad_class_type_constructor.t.exe)
+  (deps MonadClassTypeConstructor.vo monad_class_type_constructor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_class_type_constructor.t.exe monad_class_type_constructor.cpp monad_class_type_constructor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_class_type_constructor.t.exe)
+  (action (run ./monad_class_type_constructor.t.exe))))
+
+(subdir nested_tree_pair_literal
+ (rule
+  (targets nested_tree_pair_literal.t.exe)
+  (deps NestedTreePairLiteral.vo nested_tree_pair_literal.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree_pair_literal.t.exe nested_tree_pair_literal.cpp nested_tree_pair_literal.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_tree_pair_literal.t.exe)
+  (action (run ./nested_tree_pair_literal.t.exe))))
+
+(subdir param_inductive_fn_instantiation
+ (rule
+  (targets param_inductive_fn_instantiation.t.exe)
+  (deps ParamInductiveFnInstantiation.vo param_inductive_fn_instantiation.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} param_inductive_fn_instantiation.t.exe param_inductive_fn_instantiation.cpp param_inductive_fn_instantiation.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps param_inductive_fn_instantiation.t.exe)
+  (action (run ./param_inductive_fn_instantiation.t.exe))))
+
+(subdir rank2_record_field
+ (rule
+  (targets rank2_record_field.t.exe)
+  (deps Rank2RecordField.vo rank2_record_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_record_field.t.exe rank2_record_field.cpp rank2_record_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_record_field.t.exe)
+  (action (run ./rank2_record_field.t.exe))))
+
+(subdir recursive_under_option
+ (rule
+  (targets recursive_under_option.t.exe)
+  (deps RecursiveUnderOption.vo recursive_under_option.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_under_option.t.exe recursive_under_option.cpp recursive_under_option.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps recursive_under_option.t.exe)
+  (action (run ./recursive_under_option.t.exe))))
+
+(subdir recursive_under_pair
+ (rule
+  (targets recursive_under_pair.t.exe)
+  (deps RecursiveUnderPair.vo recursive_under_pair.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} recursive_under_pair.t.exe recursive_under_pair.cpp recursive_under_pair.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps recursive_under_pair.t.exe)
+  (action (run ./recursive_under_pair.t.exe))))
+
+(subdir sig_fun_param_result_cast
+ (rule
+  (targets sig_fun_param_result_cast.t.exe)
+  (deps SigFunParamResultCast.vo sig_fun_param_result_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_fun_param_result_cast.t.exe sig_fun_param_result_cast.cpp sig_fun_param_result_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_fun_param_result_cast.t.exe)
+  (action (run ./sig_fun_param_result_cast.t.exe))))
+
+(subdir sigt_branch_type_mismatch
+ (rule
+  (targets sigt_branch_type_mismatch.t.exe)
+  (deps SigtBranchTypeMismatch.vo sigt_branch_type_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_branch_type_mismatch.t.exe sigt_branch_type_mismatch.cpp sigt_branch_type_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_branch_type_mismatch.t.exe)
+  (action (run ./sigt_branch_type_mismatch.t.exe))))
+
+(subdir sigt_list_payload_any_cast
+ (rule
+  (targets sigt_list_payload_any_cast.t.exe)
+  (deps SigtListPayloadAnyCast.vo sigt_list_payload_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_list_payload_any_cast.t.exe sigt_list_payload_any_cast.cpp sigt_list_payload_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_list_payload_any_cast.t.exe)
+  (action (run ./sigt_list_payload_any_cast.t.exe))))
+
+(subdir sigt_pair_fn_payload
+ (rule
+  (targets sigt_pair_fn_payload.t.exe)
+  (deps SigtPairFnPayload.vo sigt_pair_fn_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_pair_fn_payload.t.exe sigt_pair_fn_payload.cpp sigt_pair_fn_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_pair_fn_payload.t.exe)
+  (action (run ./sigt_pair_fn_payload.t.exe))))
+
+(subdir state_monad_type_synonym
+ (rule
+  (targets state_monad_type_synonym.t.exe)
+  (deps StateMonadTypeSynonym.vo state_monad_type_synonym.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} state_monad_type_synonym.t.exe state_monad_type_synonym.cpp state_monad_type_synonym.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps state_monad_type_synonym.t.exe)
+  (action (run ./state_monad_type_synonym.t.exe))))
+
+(subdir type_level_fixpoint_call
+ (rule
+  (targets type_level_fixpoint_call.t.exe)
+  (deps TypeLevelFixpointCall.vo type_level_fixpoint_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_call.t.exe type_level_fixpoint_call.cpp type_level_fixpoint_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fixpoint_call.t.exe)
+  (action (run ./type_level_fixpoint_call.t.exe))))
+
+(subdir type_level_fixpoint_record_field
+ (rule
+  (targets type_level_fixpoint_record_field.t.exe)
+  (deps TypeLevelFixpointRecordField.vo type_level_fixpoint_record_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_record_field.t.exe type_level_fixpoint_record_field.cpp type_level_fixpoint_record_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fixpoint_record_field.t.exe)
+  (action (run ./type_level_fixpoint_record_field.t.exe))))
