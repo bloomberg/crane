@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
 #define INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
 
+#include "crane_fn.h"
 #include <any>
 #include <concepts>
 #include <functional>
@@ -26,7 +27,7 @@ struct ClassTypeConstructorParam {
   template <typename _tcI0, typename T1, typename T2, typename T3, typename F0>
     requires Container<_tcI0, T1> && std::is_invocable_r_v<T3, F0 &, T2 &>
   static T1 cmap(F0 &&x, const T1 &x0) {
-    return std::any_cast<T1>(_tcI0::cmap(x, x0));
+    return std::any_cast<T1>(_tcI0::cmap(crane_erase_fn(x), x0));
   }
 
   template <typename _tcI0, typename T1, typename T2>

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NESTED_TREE
 #define INCLUDED_NESTED_TREE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -219,7 +220,8 @@ struct NestedTree {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      return std::any_cast<T1>(f0(a0, *a1, tree_rect(f, f0, *a1)));
+      return std::any_cast<T1>(
+          f0(a0, *a1, tree_rect(f, crane_erase_fn(f0), *a1)));
     }
   }
 
@@ -229,7 +231,8 @@ struct NestedTree {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      return std::any_cast<T1>(f0(a0, *a1, tree_rec(f, f0, *a1)));
+      return std::any_cast<T1>(
+          f0(a0, *a1, tree_rec(f, crane_erase_fn(f0), *a1)));
     }
   }
 

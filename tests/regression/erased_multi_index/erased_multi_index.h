@@ -137,7 +137,7 @@ struct ErasedMultiIndex {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename hlist::HCons>(this->v());
-        return f0(a0, *a1, a1->template hlist_rec<T1>(f, f0));
+        return f0(a0, *a1, a1->template hlist_rec<T1>(f, crane_erase_fn(f0)));
       }
     }
 
@@ -148,7 +148,7 @@ struct ErasedMultiIndex {
         return f;
       } else {
         const auto &[a0, a1] = std::get<typename hlist::HCons>(this->v());
-        return f0(a0, *a1, a1->template hlist_rect<T1>(f, f0));
+        return f0(a0, *a1, a1->template hlist_rect<T1>(f, crane_erase_fn(f0)));
       }
     }
   };

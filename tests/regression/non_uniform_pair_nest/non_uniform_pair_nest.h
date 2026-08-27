@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NON_UNIFORM_PAIR_NEST
 #define INCLUDED_NON_UNIFORM_PAIR_NEST
 
+#include "crane_fn.h"
 #include <any>
 #include <memory>
 #include <type_traits>
@@ -53,7 +54,7 @@ struct NonUniformPairNest {
       return std::any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return std::any_cast<T1>(f0(*a0, nest_rect(f, f0, *a0)));
+      return std::any_cast<T1>(f0(*a0, nest_rect(crane_erase_fn(f), f0, *a0)));
     }
   }
 
@@ -65,7 +66,7 @@ struct NonUniformPairNest {
       return std::any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return std::any_cast<T1>(f0(*a0, nest_rec(f, f0, *a0)));
+      return std::any_cast<T1>(f0(*a0, nest_rec(crane_erase_fn(f), f0, *a0)));
     }
   }
 

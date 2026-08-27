@@ -32,7 +32,7 @@ struct MonadClassTypeConstructor {
   template <typename _tcI0, typename T1, typename T2, typename F1>
     requires Mon<_tcI0, T1> && std::is_invocable_r_v<T1, F1 &, T2 &>
   static T1 mbind(const T1 &x, F1 &&x0) {
-    return std::any_cast<T1>(_tcI0::mbind(x, x0));
+    return std::any_cast<T1>(_tcI0::mbind(x, crane_erase_fn(x0)));
   }
 
   template <typename a> using Opt = std::optional<a>;

@@ -3362,6 +3362,23 @@ and apply_erased_callee callee arg_exprs =
 and erase_fn_for_any_slot e expr =
   if ml_expr_is_function_value e then wrap_crane_erase_fn expr else expr
 
+(** [erase_fn_arg_for_param env param_ty e expr] wraps a function-valued
+    argument when the callee's parameter type is the canonical erased
+    [std::function<std::any(std::any...)>] adapter (e.g. a class method
+    polymorphic in its own type argument, [forall A, (A -> A) -> A -> A]):
+    a concrete closure does not convert to the erased signature. *)
+and erase_fn_arg_for_param env param_ml_ty e expr =
+  let erased_fn_param =
+    match
+      convert_ml_type_to_cpp_type env (get_current_type_vars ()) param_ml_ty
+    with
+    | Tfun (dom, cod) -> cod = Tany || List.mem Tany dom
+    | _ -> false
+  in
+  if erased_fn_param && ml_expr_is_function_value e then
+    wrap_crane_erase_fn expr
+  else expr
+
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
     that the helper is needed. *)
 and wrap_crane_erase_fn expr =
@@ -5672,13 +5689,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       let fld =
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
       in
-      let _, env' =
-        push_vars'
-          (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
-             ids )
-          env
+      let branch_binders =
+        List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids
       in
+      let _, env' = push_vars' branch_binders env in
       ( match fld with
       (* [CPPfun_call] expects args in reverse order; [List.rev_map] both
          converts and reverses.  Filter [MLdummy] args — these are erased type
@@ -5690,13 +5704,61 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         let value_args =
           List.filter (fun a -> match a with MLdummy _ -> false | _ -> true) args
         in
-        let call =
-          CPPfun_call
-            ( make_field_access (gen_expr env t) fld,
-              List.rev_map (gen_expr env') value_args )
-        in
         let fld_ty_opt =
           try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+        in
+        (* The field's own parameter types drive erasure of function-valued
+           arguments: a class method polymorphic in its own type argument
+           takes the canonical [std::function<std::any(std::any...)>], which
+           a concrete closure does not convert to. *)
+        let fld_param_tys =
+          (* Type variables bound by the FIELD itself -- a rank-2 method like
+             [forall A, (A -> A) -> A -> A], whose index runs past the class's
+             own parameters -- are erased in the generated concept, so every
+             instance takes them as [std::any]. *)
+          let n_class_params =
+            match typ with Miniml.Tglob (_, args, _) -> List.length args | _ -> 0
+          in
+          let rec erase_field_tvars ty =
+            match resolve_tmeta ty with
+            | Miniml.Tvar j | Miniml.Tvar' j when j > n_class_params ->
+              Miniml.Tunknown
+            | Miniml.Tarr (a, b) ->
+              Miniml.Tarr (erase_field_tvars a, erase_field_tvars b)
+            | Miniml.Tglob (g, l, a) ->
+              Miniml.Tglob (g, List.map erase_field_tvars l, a)
+            | t -> t
+          in
+          match fld_ty_opt with
+          | Some ft ->
+            List.filter_map
+              (fun t ->
+                if isTdummy t then None else Some (erase_field_tvars t) )
+              (fst (get_args_and_ret [] ft))
+          | None -> []
+        in
+        let call =
+          (* The arguments live under the branch's binders, so the ML type
+             environment must be pushed alongside [env'] for the erasure
+             checks below to see their real types. *)
+          let saved_env_types = tctx.env_types in
+          let saved_erased = tctx.cpp_erased_env in
+          let saved_erased_tys = tctx.cpp_erased_type_env in
+          push_env_types branch_binders;
+          let arg_exprs =
+            List.rev
+              (List.mapi
+                 (fun j a ->
+                   let e = gen_expr env' a in
+                   match List.nth_opt fld_param_tys j with
+                   | Some pt -> erase_fn_arg_for_param env' pt a e
+                   | None -> e )
+                 value_args )
+          in
+          tctx.env_types <- saved_env_types;
+          tctx.cpp_erased_env <- saved_erased;
+          tctx.cpp_erased_type_env <- saved_erased_tys;
+          CPPfun_call (make_field_access (gen_expr env t) fld, arg_exprs)
         in
         let n_value_args = List.length value_args in
         let erased_cod =
@@ -6303,6 +6365,11 @@ and eta_fun env f args =
               (params, Some (Tshared_ptr inner), List.map wrap_stmt body, cap)
           | _ -> expr )
         | _ -> expr
+      in
+      let expr =
+        match List.nth_opt fn_param_ml_tys i with
+        | Some param_ty -> erase_fn_arg_for_param env param_ty ml_arg expr
+        | None -> expr
       in
       (* Wrap void calls as values only when the expression will be used
          as a value (not in monadic parameter handler which places it in
@@ -7077,42 +7144,47 @@ and eta_fun env f args =
        [std::function] CTAD once C++ instantiates the template. *)
     let has_unresolved_boxed_arg = ref false in
     let args = List.mapi (fun i x ->
-      match x with
-      | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
-        wrap_void_call_as_value (gen_expr env x)
-      | MLmagic _ ->
-        let expected = match List.nth_opt callee_param_tys i with
-          | Some ml_ty ->
-            let tvars = get_current_type_vars () in
-            let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
-            if is_erased_type cpp_ty then None else Some cpp_ty
-          | None -> None
-        in
-        gen_expr ?expected_ty:expected env x
-      | MLrel j when Escape.IntSet.mem j tctx.cpp_erased_env ->
-        let inner = gen_expr env x in
-        let expected = match List.nth_opt callee_param_tys i with
-          | Some ml_ty ->
-            let tvars = get_current_type_vars () in
-            let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
-            if is_erased_type cpp_ty then None else Some cpp_ty
-          | None -> None
-        in
-        ( match expected with
-          | Some ty ->
-            let rec erase_type_to_any = function
-              | Tglob (g, args, ns) when args <> [] ->
-                Tglob (g, List.map erase_type_to_any args, ns)
-              | Tglob (_, [], _) as t -> t
-              | Tnamespace (ns_g, inner) ->
-                Tnamespace (ns_g, erase_type_to_any inner)
-              | _ -> Tany
-            in
-            CPPany_cast (erase_type_to_any ty, inner)
-          | None ->
-            has_unresolved_boxed_arg := true;
-            inner )
-      | _ -> gen_expr env x) args in
+      let expr =
+        match x with
+        | MLapp (f, _) | MLmagic (MLapp (f, _)) when ml_callee_is_void f ->
+          wrap_void_call_as_value (gen_expr env x)
+        | MLmagic _ ->
+          let expected = match List.nth_opt callee_param_tys i with
+            | Some ml_ty ->
+              let tvars = get_current_type_vars () in
+              let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+              if is_erased_type cpp_ty then None else Some cpp_ty
+            | None -> None
+          in
+          gen_expr ?expected_ty:expected env x
+        | MLrel j when Escape.IntSet.mem j tctx.cpp_erased_env ->
+          let inner = gen_expr env x in
+          let expected = match List.nth_opt callee_param_tys i with
+            | Some ml_ty ->
+              let tvars = get_current_type_vars () in
+              let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+              if is_erased_type cpp_ty then None else Some cpp_ty
+            | None -> None
+          in
+          ( match expected with
+            | Some ty ->
+              let rec erase_type_to_any = function
+                | Tglob (g, args, ns) when args <> [] ->
+                  Tglob (g, List.map erase_type_to_any args, ns)
+                | Tglob (_, [], _) as t -> t
+                | Tnamespace (ns_g, inner) ->
+                  Tnamespace (ns_g, erase_type_to_any inner)
+                | _ -> Tany
+              in
+              CPPany_cast (erase_type_to_any ty, inner)
+            | None ->
+              has_unresolved_boxed_arg := true;
+              inner )
+        | _ -> gen_expr env x
+      in
+      match List.nth_opt callee_param_tys i with
+      | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
+      | None -> expr) args in
     tctx.wrap_for_any_param <- saved_wrap;
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
