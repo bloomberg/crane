@@ -3041,12 +3041,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
          lambda literals — including the generic [ [](const auto&){...} ] form
          produced when the function's domain is an erased/abstract type. *)
       let box_into_any result =
-        let erased =
-          if ml_expr_is_function_value e then begin
-            Table.mark_needs_erase_fn ();
-            CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [result])
-          end else result
-        in
+        let erased = erase_fn_for_any_slot e result in
         (* Box explicitly even for a callable already adapted by
            [crane_erase_fn]: a custom constructor template (e.g.
            [std::make_pair]) DEDUCES its field type from the argument, so
@@ -3346,6 +3341,32 @@ and ml_expr_is_function_value e =
     ( match infer_ml_body_type other with
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
+
+(** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
+    is not callable, so the canonical [std::function<std::any(std::any...)>]
+    adapter the producer stored via {!erase_fn_for_any_slot} is recovered with
+    an [any_cast] and each argument is boxed.  The result is a [std::any]. *)
+and apply_erased_callee callee arg_exprs =
+  let arg_tys = List.map (fun _ -> Tany) arg_exprs in
+  CPPfun_call
+    ( CPPany_cast (Tfun (arg_tys, Tany), callee),
+      List.rev_map (fun a -> CPPconverting_ctor (Tany, [a])) arg_exprs )
+
+(** Adapt a function value being stored into a slot whose C++ type is the
+    erased [std::any].  The application side reads such a callable back with
+    [any_cast<std::function<std::any(std::any...)>>], so the producer must
+    store that same canonical representation rather than the raw closure --
+    which is what the [crane_erase_fn] runtime helper builds, deducing the
+    callable's signature with [std::function] CTAD.  Non-function values are
+    returned unchanged. *)
+and erase_fn_for_any_slot e expr =
+  if ml_expr_is_function_value e then wrap_crane_erase_fn expr else expr
+
+(** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
+    that the helper is needed. *)
+and wrap_crane_erase_fn expr =
+  Table.mark_needs_erase_fn ();
+  CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [expr])
 
 (** [field_stores_erased_fn_value field_types i e] — true when constructor
     field [i] has an abstract type-variable (schema) type — a value-dependent
@@ -4985,13 +5006,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                      [std::function] CTAD to deduce the callable's signature and
                      builds the [std::function<std::any(std::any...)>] adapter
                      (unbox each argument, box the result). *)
-                  if ml_expr_is_function_value ml_e then begin
-                    (* Wrap via the [crane_erase_fn] runtime helper (emitted as
-                       [#include "crane_fn.h"] in the header preamble). *)
-                    Table.mark_needs_erase_fn ();
-                    CPPfun_call
-                      (CPPvar (Id.of_string "crane_erase_fn"), [expr])
-                  end else expr
+                  (* Wrap via the [crane_erase_fn] runtime helper (emitted as
+                     [#include "crane_fn.h"] in the header preamble). *)
+                  erase_fn_for_any_slot ml_e expr
                 end )
             | Tfun (param_tys, _ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
@@ -6648,8 +6665,18 @@ and eta_fun env f args =
             | _ -> false )
           | None -> false
         in
+        let cod_is_erased =
+          match find_type_opt id with
+          | Some ml_ty ->
+            let tvars = get_current_type_vars () in
+            resolves_to_any_type
+              (convert_ml_type_to_cpp_type env tvars (ml_codomain ml_ty))
+          | None -> false
+        in
         if ret_is_chainable then
-          CPPfun_call (base, List.rev (List.map (gen_expr env) excess_args))
+          let excess = List.map (gen_expr env) excess_args in
+          if cod_is_erased then apply_erased_callee base excess
+          else CPPfun_call (base, List.rev excess)
         else
           CPPabort "untranslatable curried proof term" )
     in
@@ -6935,6 +6962,17 @@ and eta_fun env f args =
          &&
          match callee_env_ty with
          | Some ty -> is_ml_erased_ty ty
+         | None -> false )
+      (* Not a local binder: a callee whose own type erases to [std::any]
+         (e.g. a value of a type-level [Fixpoint]'s result, or a definition
+         returning a dependent [if ... then nat else nat -> nat]) is likewise
+         only callable through the canonical adapter. *)
+      || ( callee_rel_idx = None
+         &&
+         let tvars = get_current_type_vars () in
+         match infer_ml_body_type (strip_magic f) with
+         | Some t ->
+           resolves_to_any_type (convert_ml_type_to_cpp_type env tvars t)
          | None -> false )
     in
     let callee_has_erased_params =
@@ -10782,7 +10820,18 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           in
           tctx.move_dead_after <-
             Escape.IntSet.union tctx.move_dead_after tail_dead );
-      let result = inline_iife k (gen_expr ?expected_ty:tctx.current_cpp_return_type env ast) in
+      let value = gen_expr ?expected_ty:tctx.current_cpp_return_type env ast in
+      (* A function value returned into an erased ([std::any]) return type --
+         e.g. the [nat -> nat] branch of a dependent [if ... then nat else
+         nat -> nat] -- must be stored in the canonical adapter form the
+         application site casts back to. *)
+      let value =
+        match tctx.current_cpp_return_type with
+        | Some ret_ty when resolves_to_any_type ret_ty ->
+          erase_fn_for_any_slot ast value
+        | _ -> value
+      in
+      let result = inline_iife k value in
       tctx.move_dead_after <- saved_dead;
       result
     else
@@ -11041,3 +11090,20 @@ let set_method_ns_for_locals () =
 let restore_method_self_ns saved =
   tctx.method_self_ns <- saved
 
+(** Adapt closures returned from a function whose return type is the erased
+    [std::any] (e.g. the [nat -> nat] branch of a dependent
+    [if b then nat else nat -> nat]).  Like {!erase_fn_for_any_slot} at
+    argument and value-declaration positions, the callable must be stored in
+    the canonical [std::function<std::any(std::any...)>] form that the
+    application site recovers with an [any_cast].  Nested lambda bodies are
+    left alone: their returns answer to their own return type. *)
+let erase_returned_fn_values (ret_ty : cpp_type) (body : cpp_stmt list) =
+  if not (resolves_to_any_type ret_ty) then body
+  else
+    let rec fix_stmt s =
+      match s with
+      | Sreturn (Some (CPPlambda _ as e)) ->
+        Sreturn (Some (wrap_crane_erase_fn e))
+      | _ -> map_stmt Fun.id fix_stmt Fun.id s
+    in
+    List.map fix_stmt body

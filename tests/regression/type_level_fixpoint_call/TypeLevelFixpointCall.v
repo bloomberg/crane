@@ -3,8 +3,9 @@ From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
 From Stdlib Require Import List.
 Import ListNotations.
-(** WIP: A `Fixpoint` returning `Type` erases to `std::any`; a value of type `ty 1`
-    is then applied as a function, and `std::any` provides no call operator. *)
+(** A [Fixpoint] returning [Type] erases to [std::any]: a value of type [ty 1]
+    is stored as an erased callable and applied through the canonical
+    adapter. *)
 
 Module TypeLevelFixpointCall.
 Fixpoint ty (n : nat) : Type := match n with O => nat | S m => (nat -> ty m)%type end.

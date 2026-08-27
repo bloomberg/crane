@@ -2340,7 +2340,8 @@ let gen_dfun n b cty ty temps =
         ( [(n, [])],
           cod,
           ids,
-          dead_unit_returns_to_abort cod (guard @ sigma_asserts @ b),
+          dead_unit_returns_to_abort cod
+            (erase_returned_fn_values cod (guard @ sigma_asserts @ b)),
           no_pure ) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
@@ -2394,7 +2395,8 @@ let gen_dfun n b cty ty temps =
         ( [(n, [])],
           cod,
           ids,
-          dead_unit_returns_to_abort cod (guard @ sigma_asserts @ b),
+          dead_unit_returns_to_abort cod
+            (erase_returned_fn_values cod (guard @ sigma_asserts @ b)),
           no_pure )
   in
   tctx.current_cpp_return_type <- saved_return_type;
@@ -2804,6 +2806,10 @@ let gen_decl__inner n b ty =
               [])
         else body_expr
       in
+      let body_expr =
+        if resolves_to_any_type cty then erase_fn_for_any_slot b body_expr
+        else body_expr
+      in
       let inner = Dasgn (n, cty, body_expr) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
@@ -3033,6 +3039,10 @@ let gen_spec__inner n b ty =
                 [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))],
                 false),
               [])
+        else b_expr
+      in
+      let b_expr =
+        if resolves_to_any_type ty then erase_fn_for_any_slot inner_body b_expr
         else b_expr
       in
       let inner = Dasgn (n, Tmod (TMconst, ty), b_expr) in

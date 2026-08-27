@@ -113,17 +113,6 @@
   (deps class_type_constructor_param.t.exe)
   (action (run ./class_type_constructor_param.t.exe))))
 
-(subdir dependent_if_type_branches
- (rule
-  (targets dependent_if_type_branches.t.exe)
-  (deps DependentIfTypeBranches.vo dependent_if_type_branches.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_if_type_branches.t.exe dependent_if_type_branches.cpp dependent_if_type_branches.t.cpp)))
- (rule
-  (alias runtest)
-  (deps dependent_if_type_branches.t.exe)
-  (action (run ./dependent_if_type_branches.t.exe))))
-
 
 (subdir instance_at_function_type
  (rule
@@ -182,16 +171,6 @@
   (action (run ./sigt_list_payload_any_cast.t.exe))))
 
 
-(subdir type_level_fixpoint_call
- (rule
-  (targets type_level_fixpoint_call.t.exe)
-  (deps TypeLevelFixpointCall.vo type_level_fixpoint_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_call.t.exe type_level_fixpoint_call.cpp type_level_fixpoint_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_level_fixpoint_call.t.exe)
-  (action (run ./type_level_fixpoint_call.t.exe))))
 
 (subdir type_level_fixpoint_record_field
  (rule

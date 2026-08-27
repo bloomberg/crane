@@ -1,9 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A definition whose return type is an `if` over a boolean computing `nat` in
-    one branch and `nat -> nat` in the other erases to `std::any`, which is then
-    applied as a function. *)
+(** A definition whose return type is a dependent [if] computing [nat] in one
+    branch and [nat -> nat] in the other erases to [std::any]: the returned
+    closure is stored through the canonical adapter and the application site
+    casts it back. *)
 
 Module DependentIfTypeBranches.
 Definition choose (n : nat) : if Nat.eqb n 0 then nat else (nat -> nat) :=

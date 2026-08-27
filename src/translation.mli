@@ -210,6 +210,23 @@ val infer_owned_flags :
 (** Wrap a C++ parameter type with const/ref based on ownership semantics. *)
 val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type
 
+(** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
+    [std::any], following erased-type constants and alias chains. *)
+val resolves_to_any_type : cpp_type -> bool
+
+(** [erase_returned_fn_values ret_ty body] wraps closures returned directly
+    from a function whose return type erases to [std::any] in the
+    [crane_erase_fn] adapter, so the application site's [any_cast] finds the
+    canonical representation. *)
+val erase_returned_fn_values : cpp_type -> cpp_stmt list -> cpp_stmt list
+
+(** [erase_fn_for_any_slot e expr] wraps [expr] in the [crane_erase_fn]
+    runtime helper when the ML expression [e] is a function value being stored
+    into a slot erased to [std::any], so that the application side's
+    [any_cast<std::function<std::any(std::any...)>>] finds the canonical
+    representation.  Other expressions are returned unchanged. *)
+val erase_fn_for_any_slot : ml_ast -> cpp_expr -> cpp_expr
+
 (** True when a single-branch match body is a direct projection returning a
     field stored as an erased [std::any]. *)
 val ml_body_returns_erased_field : ml_ast -> bool

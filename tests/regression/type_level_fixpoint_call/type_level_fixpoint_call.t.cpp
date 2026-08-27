@@ -1,7 +1,5 @@
-// WIP: this test does not build yet.
-//
-// A `Fixpoint` returning `Type` erases to `std::any`; a value of type `ty 1`
-// is then applied as a function, and `std::any` provides no call operator.
+// A Fixpoint returning Type erases to std::any: a value of type ty 1 is
+// stored as an erased callable and applied through the canonical adapter.
 #include "type_level_fixpoint_call.h"
 
 #include <cassert>
