@@ -97,6 +97,10 @@ type cpp_type =
       (** A type-class instance template parameter ([_tcI0]) and the class
           constraining it.  Types qualified under it ([typename _tcI0::M]) are
           dependent — see {!instance_dependent}. *)
+  | Tpromoted of Id.t
+      (** A [Type]-valued type-class field, lifted to an associated type.
+          Carries only its name: which instance it hangs off is decided later,
+          by substituting a resolution map. *)
   | Tid of Id.t * cpp_type list
       (** Local type identifier with type arguments, for nested structs *)
   | Tid_external of Id.t * cpp_type list

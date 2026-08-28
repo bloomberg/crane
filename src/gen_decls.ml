@@ -222,7 +222,8 @@ let gen_record_cpp name fields ind =
     |> List.map (fun id -> Id.to_string (Common.tparam_name id))
   in
   let replace_promoted = function
-    | Tvar (_, Some id) when List.mem (Id.to_string id) promoted_var_names ->
+    | (Tpromoted id | Tvar (_, Some id))
+      when List.mem (Id.to_string id) promoted_var_names ->
       Tany
     | Tglob (g, _, _) when Table.is_promoted_type_var g ->
       ( match Table.promoted_type_var_name g with
@@ -328,7 +329,7 @@ let gen_typeclass_cpp name fields ind =
      [typename I::base_category::Obj] when it comes from a typeclass-typed
      promoted field).  A name with no entry is left as a plain type variable. *)
   let rec subst_promoted_in_cpp_type = function
-    | Tvar (_, Some vname) -> (
+    | Tpromoted vname | Tvar (_, Some vname) -> (
       match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
       | Some (_, replacement) -> replacement
       | None -> Tvar (0, Some vname) )
@@ -1108,7 +1109,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          enclosing scope, not the template parameter's type. *)
       let is_self_referential_promoted var_name cpp_ty =
         match cpp_ty with
-        | Tvar (_, Some id) when Id.equal id var_name -> true
+        | Tpromoted id | Tvar (_, Some id) when Id.equal id var_name -> true
         | _ -> false
       in
       (* For each concept-constrained template parameter, forward its
@@ -1328,7 +1329,7 @@ let get_tvars_indexed t =
     | Some n -> n
   in
   let rec aux l = function
-    | Tvar (1000, _) ->
+    | Tpromoted _ ->
       (* Promoted type var marker from a Record-turned-TypeClass.  These
          represent projected type members (e.g., [Obj] from [PreCategory])
          and must be resolved through typeclass instance access — not as
@@ -1358,7 +1359,7 @@ let get_tvars_indexed t =
     [%t1] = R) that the C++ compiler cannot deduce. *)
 let get_rendered_tvar_indices t =
   let rec aux l = function
-    | Tvar (1000, _) -> l
+    | Tpromoted _ -> l
     | Tvar (i, _) ->
       if List.mem i l then l else i :: l
     | Tglob (g, tys, _) ->
@@ -1973,7 +1974,7 @@ let gen_dfun n b cty ty temps =
 
        Extraction intermediate form:
          ML type has [Tglob(m_carrier, [])] ← marked as promoted type var
-         Converts to [Tvar(1000, Some "m_carrier")] ← needs resolution
+         Converts to [Tpromoted "m_carrier"] ← needs resolution
 
        This map provides the resolution:
          "m_carrier" ↦ Tqualified(Tvar(0, Some "_tcI0"), "m_carrier")
@@ -1984,7 +1985,7 @@ let gen_dfun n b cty ty temps =
        "Obj" ↦ typename _tcI0::base_category::Obj
 
      The map is applied by [resolve_promoted_in_type] to substitute all
-     [Tvar(1000, ...)] markers with their qualified forms. *)
+     [Tpromoted] markers with their qualified forms. *)
   let promoted_var_resolutions =
     List.concat_map
       (fun (_tt, tc_name, class_info, _) ->
@@ -2000,13 +2001,13 @@ let gen_dfun n b cty ty temps =
   let gen_body_stmts env cw e =
     apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts env cw e)
   in
-  (* Substitute promoted type var markers [Tvar(1000, Some name)] with their
+  (* Substitute promoted type var markers [Tpromoted name] with their
      qualified resolutions throughout a C++ type tree. *)
   let rec resolve_promoted_in_type ty =
     match ty with
     | Tvar (i, _) when List.mem_assoc i hkt_tvar_resolutions ->
       List.assoc i hkt_tvar_resolutions
-    | Tvar (1000, Some name) -> (
+    | Tpromoted name -> (
       match List.find_opt
               (fun (n, _) -> Id.equal n name)
               promoted_var_resolutions with
@@ -2277,7 +2278,7 @@ let gen_dfun n b cty ty temps =
   set_current_type_vars type_var_ids;
   set_current_param_types all_ids;
   (* Activate promoted var resolution for body generation — types like
-     [Tvar(1000, Some "Obj")] in type annotations will be resolved to
+     [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
   let saved_promoted_var_map = tctx.promoted_var_map in
   tctx.promoted_var_map <- promoted_var_resolutions;

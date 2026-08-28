@@ -695,36 +695,21 @@ let is_list_with_concrete_elem = function
     @param par  whether to parenthesize (for precedence in function types)
     @param vl   type variable names for de Bruijn index lookup
 
-    Convention: [Tvar(1000, Some id)] is a {e promoted type variable} — a
-    record field lifted from value-level to type-level during concept
-    generation (e.g. [m_carrier] from a [Monoid] typeclass).  Index 1000
-    is a sentinel distinguishing promoted vars from regular template params
-    ([Tvar(0..N, _)]) and loopification-internal types
-    ([Tvar(0, Some "_Frame")]).  Inside a struct body the bare [id] suffices;
-    outside, it is qualified as [StructName::id]. *)
+    A {!Minicpp.Tpromoted} reaching the printer is one no resolution map
+    claimed, so it is rendered as a member of the enclosing struct: the bare
+    name inside a struct body, [StructName::id] outside one. *)
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
     | Tinstance (id, _) -> Id.print id
-    | Tvar (1000, Some id) ->
-      (* PROMOTED TYPE VARIABLES: Record fields that were promoted from value-level
-         to type-level during concept generation (e.g., [m_carrier] from [Monoid],
-         [Obj]/[Hom] from [PreCategory]).
+    | Tpromoted id ->
+      (* A [Type]-valued type-class field ([m_carrier] of [Monoid], [Obj] of
+         [PreCategory]) cannot be a struct member in C++, so it becomes a type
+         requirement in the concept and a [using] declaration in the instance
+         struct.  Here it is a reference to that declaration:
 
-         These Type-valued fields cannot exist as struct members in C++, so they
-         become type requirements in concepts and "using" declarations in structs.
-
-         The special index 1000 distinguishes promoted vars from:
-         - Regular type params: Tvar(0/1/2, Some name) from generic functions
-         - Local loopification types: Tvar(0, Some "_Frame") from loop transforms
-
-         Context-dependent rendering:
-         - Inside struct (header): "Obj" → resolves via [using Obj = std::any;]
-         - Outside struct (.cpp file): "Obj" → "StructName::Obj" (qualified access)
-
-         Example:
-           In struct:  using Obj = std::any;
-           In .cpp:    DepRecord::Obj my_var = ...;  *)
+           in struct:  using Obj = std::any;
+           in .cpp:    DepRecord::Obj my_var = ...; *)
       ( match render_ctx.rc_struct_name with
       | Some struct_name when not render_ctx.rc_in_struct ->
         struct_name ++ str "::" ++ Id.print id
@@ -2709,7 +2694,7 @@ and is_constexpr_type ty =
   if is_any_type ty then false else
   match ty with
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tany | Tauto | Ttodo | Tunknown -> false
+  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false

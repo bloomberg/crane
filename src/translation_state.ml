@@ -85,12 +85,12 @@ type translation_ctx = {
      (prints as: typename _tcI0::m_carrier).
      Set by gen_dfun when generating template functions with typeclass
      parameters. Used by convert_ml_type_to_cpp_type to resolve
-     Tvar(1000, name) markers. *)
+     [Tpromoted] markers. *)
   mutable promoted_var_map : (Id.t * cpp_type) list;
   (* When true, we are inside a constructor expression (module-level static
      initializer). Promoted type vars that can't be resolved via
      promoted_var_map fall back to Tany (std::any) instead of keeping
-     Tvar(1000, name) markers, because module-level aliases apply. *)
+     [Tpromoted] markers, because module-level aliases apply. *)
   mutable in_constructor_expr : bool;
   (* When true, we are translating a value that is an ARGUMENT of an enclosing
      constructor application (a nested constructor).  Out-of-range

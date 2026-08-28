@@ -99,6 +99,12 @@ type cpp_type =
        constrained by.  Types qualified under it ([typename _tcI0::M]) are
        dependent: what they resolve to is only known when C++ instantiates the
        enclosing template with a particular instance. *)
+  | Tpromoted of Id.t
+    (* A [Type]-valued field of a type class, lifted from value level to type
+       level: it becomes an associated type rather than a struct member.  The
+       name alone is carried; which instance it hangs off is only known once a
+       resolution map is in scope, so until then it is neither a template
+       parameter nor a qualified type. *)
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
   | Tid_external of Id.t * cpp_type list
@@ -481,7 +487,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
-  | Tvar _ | Tinstance _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
+  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural

@@ -2397,7 +2397,7 @@ let rec convert_ml_type_to_cpp_type
      1. Inside template functions with typeclass params: [promoted_var_map] is
         populated, resolve to qualified types like [typename _tcI0::m_carrier]
      2. Module-level (constructor expressions): Use module aliases ([std::any])
-     3. No context: Mark with [Tvar(1000, ...)] for later resolution *)
+     3. No context: Mark with [Tpromoted] for later resolution *)
   | Tglob (g, ts, _) when Table.is_promoted_type_var g ->
     ( match Table.promoted_type_var_name g with
     | Some var_id ->
@@ -2414,7 +2414,7 @@ let rec convert_ml_type_to_cpp_type
            [base_category]) have no alias at all.  Otherwise keep the marker
            for concept generation and signature printing. *)
         if tctx.in_constructor_expr then Tany
-        else Tvar (1000, Some var_id) )
+        else Tpromoted var_id )
     | None -> Tany )
   | Tglob (g, _, _) when Table.is_value_dep_type_scheme g ->
     (* Value-dependent type scheme (e.g. [sym_semty : sym -> Type]) applied to a
@@ -6885,7 +6885,7 @@ and eta_fun env f args =
       else
         filtered
     in
-    (* Promoted type vars ([Tvar(1000, Some name)]) are no longer separate
+    (* Promoted type vars ([Tpromoted name]) are no longer separate
        template parameters — they're resolved through typeclass instance
        access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var
        resolution.  No additional template type arguments are needed at
@@ -7021,7 +7021,7 @@ and eta_fun env f args =
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
-             types may contain Tvar(1000, Some "carrier") — a promoted type var.
+             types may contain [Tpromoted "carrier"] — a promoted type var.
              We resolve these to the concrete type from the typeclass instance
              (e.g., unsigned int from nat_magma::carrier). *)
           let missing_args, cod =
@@ -7044,14 +7044,14 @@ and eta_fun env f args =
               in
               if subst_map <> [] then
                 let rec subst_promoted = function
-                  | Tvar (1000, Some name) ->
+                  | Tpromoted name ->
                     ( match
                         List.find_opt
                           (fun (vid, _) -> Id.equal vid name)
                           subst_map
                       with
                     | Some (_, concrete) -> concrete
-                    | None -> Tvar (1000, Some name) )
+                    | None -> Tpromoted name )
                   | Tmod (m, t) -> Tmod (m, subst_promoted t)
                   | Tfun (d, c) ->
                     Tfun (List.map subst_promoted d, subst_promoted c)
