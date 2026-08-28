@@ -255,14 +255,21 @@ let collect_typeclass_param_ids ty =
   in
   match ty with Miniml.Tarr _ -> aux [] 0 ty | _ -> []
 
+(** A type variable that really denotes an associated type of a type-class
+    instance parameter: [htp_tvar] stands for [typename <htp_instance>::<htp_field>]. *)
+type hkt_tvar_position = {
+  htp_tvar : int;
+  htp_instance : Minicpp.cpp_type;  (** always a {!Minicpp.Tinstance} *)
+  htp_field : Id.t;
+}
+
 (** The type variables of an ML arrow type that stand for a higher-kinded
     class parameter: [mret : forall M, Mon M -> forall A, A -> M A] passes the
     variable for [M A] as the type-constructor argument of its [Mon]
     parameter.  Such a variable is not a C++ template parameter but the
     instance's associated type — see {!Table.get_ind_hkt_params}.
 
-    Returns [(tvar index, instance parameter index, associated type name)],
-    with instance parameters numbered in source order to match [_tcI0],
+    Instance parameters are numbered in source order, to match [_tcI0],
     [_tcI1], ... *)
 let hkt_tvar_positions_of_type ty =
   let rec go i acc = function
@@ -274,7 +281,10 @@ let hkt_tvar_positions_of_type ty =
           (fun acc pos ->
             match (List.nth_opt type_args pos, List.nth_opt ip_vars pos) with
             | Some (Miniml.Tvar j | Miniml.Tvar' j), Some var_name ->
-              (j, i, var_name) :: acc
+              { htp_tvar = j;
+                htp_instance = Minicpp.Tinstance (tc_instance_id i, class_ref);
+                htp_field = var_name }
+              :: acc
             | _ -> acc )
           acc
           (Table.get_ind_hkt_params class_ref)
@@ -6728,7 +6738,7 @@ and eta_fun env f args =
         | None -> fun _ -> true
         | Some callee_ty ->
           ( match
-              List.map (fun (j, _, _) -> j) (hkt_tvar_positions_of_type callee_ty)
+              List.map (fun p -> p.htp_tvar) (hkt_tvar_positions_of_type callee_ty)
             with
           | [] -> fun _ -> true
           | hkt -> (

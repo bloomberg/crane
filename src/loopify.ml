@@ -263,7 +263,7 @@ let rec worthwhile_move_type = function
     List.exists worthwhile_move_type ts
   | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
     worthwhile_move_type t
-  | Tvar _ -> true
+  | Tvar _ | Tinstance _ -> true
   | Tdecay t -> worthwhile_move_type t
   | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
 

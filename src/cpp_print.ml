@@ -705,6 +705,7 @@ let is_list_with_concrete_elem = function
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
+    | Tinstance (id, _) -> Id.print id
     | Tvar (1000, Some id) ->
       (* PROMOTED TYPE VARIABLES: Record fields that were promoted from value-level
          to type-level during concept generation (e.g., [m_carrier] from [Monoid],
@@ -2135,13 +2136,8 @@ and pp_cpp_expr env args t =
          may define it as [std::any] itself, and [any_cast<std::any>] throws
          rather than acting as the identity.  [crane_any_cast] (crane_fn.h)
          decides that at instantiation time. *)
-      let dependent_target =
-        match ty with
-        | Tqualified (Tvar (_, Some base), _) -> Common.is_tc_instance_id base
-        | _ -> false
-      in
       let caster =
-        if dependent_target then begin
+        if Minicpp.instance_dependent ty <> None then begin
           Table.mark_needs_erase_fn ();
           "crane_any_cast"
         end
@@ -2713,7 +2709,7 @@ and is_constexpr_type ty =
   if is_any_type ty then false else
   match ty with
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
+  | Tvoid | Tvar _ | Tinstance _ | Tany | Tauto | Ttodo | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false

@@ -93,6 +93,10 @@ type cpp_tymod =
 type cpp_type =
   | Tvar of int * Id.t option
       (** Type variable with De Bruijn index and optional name *)
+  | Tinstance of Id.t * GlobRef.t
+      (** A type-class instance template parameter ([_tcI0]) and the class
+          constraining it.  Types qualified under it ([typename _tcI0::M]) are
+          dependent — see {!instance_dependent}. *)
   | Tid of Id.t * cpp_type list
       (** Local type identifier with type arguments, for nested structs *)
   | Tid_external of Id.t * cpp_type list
@@ -445,6 +449,12 @@ val ind_ty_ptr : GlobRef.t -> cpp_type list -> cpp_type
     @param ty the base type to wrap as an rvalue reference
     @return [Tref (Tref ty)] *)
 val rval_ref : cpp_type -> cpp_type
+
+(** The instance parameter a type is qualified under, if any: [typename
+    _tcI0::M] yields its {!Tinstance} name and class.  Such a type is
+    dependent — what it resolves to is a property of the instance C++
+    eventually substitutes, so codegen cannot decide it. *)
+val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
 
 (** {2 Generic AST traversal combinators}
 

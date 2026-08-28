@@ -1449,11 +1449,6 @@ let tc_instance_name i = "_tcI" ^ string_of_int i
 
 let tc_instance_id i = Id.of_string (tc_instance_name i)
 
-let is_tc_instance_id id =
-  let s = Id.to_string id in
-  String.length s > 4
-  && String.equal (String.sub s 0 4) "_tcI"
-  && String.for_all (fun c -> c >= '0' && c <= '9') (String.sub s 4 (String.length s - 4))
 
 let ctor_fallback_name i = "Ctor" ^ string_of_int i
 

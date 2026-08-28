@@ -123,8 +123,8 @@ let class_promoted_vars class_ref =
     would be undeducible: nothing in the signature determines it. *)
 let hkt_tvar_resolutions_of_type ty =
   List.map
-    (fun (j, i, var_name) ->
-      (j, Tqualified (Tvar (0, Some (Common.tc_instance_id i)), var_name)) )
+    (fun { htp_tvar; htp_instance; htp_field } ->
+      (htp_tvar, Tqualified (htp_instance, htp_field)) )
     (hkt_tvar_positions_of_type ty)
 
 (** Rewrite the type variables listed in [resolutions] (see
@@ -262,7 +262,7 @@ let gen_typeclass_cpp name fields ind =
   (* Build typename requirements for promoted vars: typename I::field; *)
   let type_reqs =
     List.map
-      (fun var_id -> Tqualified (Tvar (0, Some inst_id), var_id))
+      (fun var_id -> Tqualified (Tinstance (inst_id, name), var_id))
       promoted_vars
   in
   let non_dummy_types = non_dummy_constructor_types ind in
@@ -300,7 +300,7 @@ let gen_typeclass_cpp name fields ind =
               (fun nested_var ->
                 ( nested_var,
                   Tqualified
-                    (Tqualified (Tvar (0, Some inst_id), field_id), nested_var)
+                    (Tqualified (Tinstance (inst_id, name), field_id), nested_var)
                 ) )
               nested_promoted
           else
@@ -317,7 +317,7 @@ let gen_typeclass_cpp name fields ind =
      [PreCategory]-typed field. *)
   let rec subst_promoted_in_cpp_type = function
     | Tvar (_, Some vname) when List.exists (Id.equal vname) promoted_vars ->
-      Tqualified (Tvar (0, Some inst_id), vname)
+      Tqualified (Tinstance (inst_id, name), vname)
     | Tvar (_, Some vname) -> (
       match
         List.find_opt (fun (n, _) -> Id.equal n vname) nested_promoted_map
@@ -1116,7 +1116,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               List.map
                 (fun var_name ->
                   let qualified_ty =
-                    Tqualified (Tvar (0, Some tc_name), var_name)
+                    Tqualified (Tinstance (tc_name, class_ref_tc), var_name)
                   in
                   ( Fnested_using (var_name, qualified_ty),
                     VPublic,
@@ -1939,10 +1939,12 @@ let gen_dfun n b cty ty temps =
                 Some (class_ref, type_args),
                 remove_prime_id (id_of_mlid ml_id) )
             | _ ->
-              ( TTtypename,
-                instance_name,
-                None,
-                remove_prime_id (id_of_mlid ml_id) )
+              (* Unreachable: this branch is guarded by
+                 [Table.is_typeclass_type ty], which only holds for [Tglob]. *)
+              CErrors.anomaly
+                (Pp.str
+                   "gen_decls: type-class instance parameter whose type is \
+                    not a global reference")
           in
           typeclass_temps := temp_info :: !typeclass_temps;
           (* Return renamed param for env (use instance_name like 'i' instead of
@@ -1986,7 +1988,7 @@ let gen_dfun n b cty ty temps =
         (* Direct promoted vars: Var → typename _tcI0::Var *)
         let direct =
           List.map (fun var_name ->
-            (var_name, Tqualified (Tvar (0, Some tc_name), var_name))
+            (var_name, Tqualified (Tinstance (tc_name, class_ref), var_name))
           ) promoted
         in
         (* Nested promoted vars from TC-typed fields:
@@ -2016,7 +2018,7 @@ let gen_dfun n b cty ty temps =
                   else
                     Some (nested_var,
                       Tqualified
-                        (Tqualified (Tvar (0, Some tc_name), field_id),
+                        (Tqualified (Tinstance (tc_name, class_ref), field_id),
                          nested_var))
                 ) n_promoted
               else []

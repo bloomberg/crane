@@ -94,6 +94,11 @@ type cpp_tymod =
 
 type cpp_type =
   | Tvar of int * Id.t option
+  | Tinstance of Id.t * GlobRef.t
+    (* A type-class instance template parameter ([_tcI0]) and the class it is
+       constrained by.  Types qualified under it ([typename _tcI0::M]) are
+       dependent: what they resolve to is only known when C++ instantiates the
+       enclosing template with a particular instance. *)
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
   | Tid_external of Id.t * cpp_type list
@@ -441,6 +446,16 @@ let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
     pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
 let rval_ref ty = Tref (Tref ty)
 
+(** The instance parameter a type is qualified under, if any: [typename
+    _tcI0::M] (and longer chains like [typename _tcI0::M::inner]) yield the
+    instance and its class.  Such a type is dependent — what it resolves to is
+    a property of the instance C++ eventually substitutes, so codegen cannot
+    decide it. *)
+let rec instance_dependent = function
+  | Tqualified (base, _) -> instance_dependent base
+  | Tinstance (id, class_ref) -> Some (id, class_ref)
+  | _ -> None
+
 (** {2 Generic AST traversal combinators}
 
     These enable writing AST transformations without manually matching every
@@ -466,7 +481,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
-  | Tvar _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
+  | Tvar _ | Tinstance _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
