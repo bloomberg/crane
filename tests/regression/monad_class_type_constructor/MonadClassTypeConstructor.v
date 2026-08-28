@@ -1,9 +1,9 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A monad typeclass over a type constructor (`Mon (M : Type -> Type)`) emits
-    the instance name in value position (`MOpt` used as a value), and the bind
-    body applies a `std::any`. *)
+(** A monad typeclass over a type constructor (`Mon (M : Type -> Type)`), with a
+    carrier (`Opt`) that is itself a definition.  Exercises the higher-kinded
+    class parameter together with an erased callback passed to `mbind`. *)
 
 Module MonadClassTypeConstructor.
 Class Mon (M : Type -> Type) := { mret : forall A, A -> M A ; mbind : forall A B, M A -> (A -> M B) -> M B }.

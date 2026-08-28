@@ -126,6 +126,10 @@ val extract_monad_from_codomain : ml_type -> GlobRef.t option
 (** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
 val collect_typeclass_param_ids : ml_type -> Id.t list
 
+(** Type variables standing for a higher-kinded class parameter, as
+    [(tvar index, instance parameter index, associated type name)]. *)
+val hkt_tvar_positions_of_type : ml_type -> (int * int * Id.t) list
+
 (** Apply unit-to-void conversion on a C++ type, respecting reified mode. *)
 val apply_unit_void : bool -> bool -> cpp_type -> cpp_type
 

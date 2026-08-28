@@ -319,6 +319,47 @@ val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
 (** Get number of significant type parameters. *)
 val get_ind_nb_sign_keeps : GlobRef.t -> int
 
+(** {3 Higher-kinded class parameters}
+
+    A class parameter that is itself a type constructor ([Class Mon (M : Type ->
+    Type)]) cannot be a C++ template type parameter — [M A] is not a type C++
+    can form from a [typename M].  It is demoted to an associated type of the
+    instance ([typename I::M]), reusing the representation of promoted
+    [Type]-valued record fields. *)
+
+(** Record which of an inductive's [Keep] parameters (0-based) are type
+    constructors.  Called by extraction; a no-op for the empty list. *)
+val add_ind_hkt_params : GlobRef.t -> int list -> unit
+
+(** Positions (0-based among the [Keep] parameters) of the type-constructor
+    parameters of [r]. *)
+val get_ind_hkt_params : GlobRef.t -> int list
+
+(** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
+    type constructor. *)
+val is_hkt_param : GlobRef.t -> int -> bool
+
+(** Number of [r]'s parameters that remain real C++ template parameters. *)
+val get_ind_nb_tparams : GlobRef.t -> int
+
+(** Drop the entries of a class's type-argument list that sit at its
+    higher-kinded parameter positions. *)
+val drop_hkt_args : GlobRef.t -> 'a list -> 'a list
+
+(** Record the arity of an extracted type-scheme constant (the [A] of
+    [Definition Opt (A : Type) := option A]).  A no-op for arity 0. *)
+val add_type_scheme_arity : GlobRef.t -> int -> unit
+
+(** Arity of an extracted type-scheme constant; 0 when [r] takes no type
+    parameters or is unknown. *)
+val get_type_scheme_arity : GlobRef.t -> int
+
+(** Register a type constructor as the carrier of a higher-kinded class
+    parameter; its arguments are then erased everywhere. *)
+val add_hkt_carrier : GlobRef.t -> unit
+
+val is_hkt_carrier : GlobRef.t -> bool
+
 (** Get the ML field types for a constructor, as stored in [ip_types].
     Returns [None] if the inductive is not in the extraction table.
     The list order matches the constructor argument order. *)

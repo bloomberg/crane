@@ -7235,3 +7235,25 @@
   (alias runtest)
   (deps type_level_fixpoint_record_field.t.exe)
   (action (run ./type_level_fixpoint_record_field.t.exe))))
+
+(subdir class_type_constructor_param
+ (rule
+  (targets class_type_constructor_param.t.exe)
+  (deps ClassTypeConstructorParam.vo class_type_constructor_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_type_constructor_param.t.exe class_type_constructor_param.cpp class_type_constructor_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_type_constructor_param.t.exe)
+  (action (run ./class_type_constructor_param.t.exe))))
+
+(subdir monad_class_type_constructor
+ (rule
+  (targets monad_class_type_constructor.t.exe)
+  (deps MonadClassTypeConstructor.vo monad_class_type_constructor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_class_type_constructor.t.exe monad_class_type_constructor.cpp monad_class_type_constructor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_class_type_constructor.t.exe)
+  (action (run ./monad_class_type_constructor.t.exe))))

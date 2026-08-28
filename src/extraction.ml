@@ -193,6 +193,25 @@ let type_scheme_nb_args' env c =
 
 let _ = Hook.set type_scheme_nb_args_hook type_scheme_nb_args'
 
+(** Positions, 0-based among the [Keep] entries of [type_sign], of the
+    parameters that are type CONSTRUCTORS ([F : Type -> Type]) rather than
+    plain types ([A : Type]).  {!Table.add_ind_hkt_params} records these for
+    inductives so that a type class parameterised by a type constructor can be
+    generated as an associated type instead of a C++ template parameter. *)
+let hkt_keep_positions env sg c =
+  let rec go env c j =
+    match EConstr.kind sg (whd_all env sg c) with
+    | Prod (n, t, d) ->
+      let env' = push_rel_assum (n, t) env in
+      if is_info_scheme env sg t then
+        let rest = go env' d (j + 1) in
+        if type_scheme_nb_args env sg t > 0 then j :: rest else rest
+      else
+        go env' d j
+    | _ -> []
+  in
+  go env c 0
+
 (** {2 [type_sign_vl] does the same, plus a type var list} *)
 
 (* When generating type variables, we avoid any ' in their names (otherwise this
@@ -681,6 +700,10 @@ and extract_really_ind env kn mib =
         let ar = EConstr.of_constr ar in
         let info = fst (flag_of_type env sg ar) = Info in
         let s, vl = if info then type_sign_vl env sg ar else ([], []) in
+        if info then
+          Table.add_ind_hkt_params
+            (GlobRef.IndRef (kn, i))
+            (hkt_keep_positions env sg ar);
         let t = Array.make (Array.length mip.mind_nf_lc) [] in
         ( {
             ip_typename = mip.mind_typename;
@@ -2428,6 +2451,28 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
 
 (** Main entry point for extracting a constant declaration, dispatching on kind
     (axiom, definition, etc.). *)
+
+(** Record which type constructors are used as the argument of a higher-kinded
+    class parameter ([Opt] in [Instance MOpt : Mon Opt]).  Such a carrier is
+    rendered element-erased, so the fact must be known before any code is
+    generated — see {!Table.add_hkt_carrier}. *)
+let register_hkt_carriers ty =
+  let rec go = function
+    | Tarr (a, b) -> go a; go b
+    | Tmeta { contents = Some t } -> go t
+    | Tglob (r, args, _) ->
+      if Table.get_ind_hkt_params r <> [] then
+        List.iteri
+          (fun i a ->
+            match a with
+            | Tglob (c, _, _) when Table.is_hkt_param r i -> Table.add_hkt_carrier c
+            | _ -> () )
+          args;
+      List.iter go args
+    | _ -> ()
+  in
+  go ty
+
 let extract_constant access env kn cb =
   let sg = Evd.from_env env in
   let r = GlobRef.ConstRef kn in
@@ -2452,6 +2497,7 @@ let extract_constant access env kn cb =
       (match t with
        | Tunknown | Taxiom -> add_erased_type_const r
        | _ -> ());
+      Table.add_type_scheme_arity r (List.length vl);
       Dtype (r, vl, t)
     end
   in
@@ -2483,6 +2529,7 @@ let extract_constant access env kn cb =
   in
   let mk_def c =
     let e, t = extract_std_constant env sg kn c typ in
+    register_hkt_carriers t;
     Dterm (r, e, t)
   in
   try

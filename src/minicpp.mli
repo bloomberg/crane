@@ -338,6 +338,7 @@ and cpp_expr =
   | CPPbrace_init  (** Empty brace initialization: {} *)
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
+  | CPPerase_fn of cpp_type option * cpp_expr
       (** std::any_cast<T>(expr) — recovers typed value from std::any *)
   | CPPcontainer_cast of cpp_type * cpp_expr * bool
       (** crane_container_cast<Dst>(expr) — converts a type-erased sequence

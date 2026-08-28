@@ -61,31 +61,39 @@ template <class A> decltype(auto) crane_erase_fn_unbox(std::any &as) {
   }
 }
 
-template <class R, class... A>
-std::function<std::any(std::conditional_t<true, std::any, A>...)>
+// [Ret] is the result type of the adapted callable: [std::any] when the
+// consumer erases the result too, or a concrete type when only the arguments
+// are erased (e.g. a higher-kinded class method taking
+// [std::function<typename I::M(std::any)>]).
+template <class Ret, class R, class... A>
+std::function<Ret(std::conditional_t<true, std::any, A>...)>
 crane_erase_fn_impl(std::function<R(A...)> f) {
   return [f = std::move(f)](
-             std::conditional_t<true, std::any, A>... as) mutable -> std::any {
+             std::conditional_t<true, std::any, A>... as) mutable -> Ret {
     if constexpr (std::is_void_v<R>) {
       f(crane_erase_fn_unbox<A>(as)...);
-      return std::any{};
+      return Ret{};
     } else {
-      return std::any(f(crane_erase_fn_unbox<A>(as)...));
+      return Ret(f(crane_erase_fn_unbox<A>(as)...));
     }
   };
 }
 
-template <class F> auto crane_erase_fn(F &&f) {
+template <class Ret = std::any, class F> auto crane_erase_fn(F &&f) {
   if constexpr (requires { std::function{std::forward<F>(f)}; }) {
-    return crane_erase_fn_impl(std::function{std::forward<F>(f)});
+    return crane_erase_fn_impl<Ret>(std::function{std::forward<F>(f)});
+  } else if constexpr (!requires { f(std::declval<std::any>()); }) {
+    // Not callable at all: the value only *might* have been a function
+    // (its Rocq type was a variable), so there is nothing to erase.
+    return std::forward<F>(f);
   } else {
-    return std::function<std::any(std::any)>(
-        [f = std::forward<F>(f)](std::any a) mutable -> std::any {
+    return std::function<Ret(std::any)>(
+        [f = std::forward<F>(f)](std::any a) mutable -> Ret {
           if constexpr (std::is_void_v<decltype(f(a))>) {
             f(a);
-            return std::any{};
+            return Ret{};
           } else {
-            return std::any(f(a));
+            return Ret(f(a));
           }
         });
   }
@@ -166,7 +174,12 @@ struct crane_is_pair<std::pair<X, Y>> : std::true_type {};
 // [std::bad_any_cast] because the boxed value is [pair<any,any>], not
 // [pair<X,Y>]).
 template <class T> T crane_any_cast(const std::any &a) {
-  if constexpr (crane_is_pair<T>::value) {
+  if constexpr (std::is_same_v<T, std::any>) {
+    // The target may be a dependent associated type that resolves to
+    // [std::any] itself (a type-class instance with a fully erased carrier).
+    // Casting [any] to [any] is the identity, not an unwrap.
+    return a;
+  } else if constexpr (crane_is_pair<T>::value) {
     if (auto *p = std::any_cast<T>(&a)) {
       return *p;
     }

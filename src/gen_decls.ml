@@ -78,6 +78,77 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
 let count_keep_params sign =
   List.length (List.filter (fun x -> x == Keep) sign)
 
+(** True when [i] (an index into a class's [ip_vars]) is a real C++ template
+    type parameter.  Everything else — the promoted [Type]-valued fields past
+    the [Keep] parameters, and any [Keep] parameter that is itself a type
+    constructor ([M : Type -> Type]) — becomes an associated type of the
+    instance, spelled [typename I::name]. *)
+let is_class_tparam class_ref i =
+  i < Table.get_ind_nb_sign_keeps class_ref
+  && not (Table.is_hkt_param class_ref i)
+
+(** Render a type CONSTRUCTOR argument as a type: the [Opt] of
+    [Instance MOpt : Mon Opt] becomes [Opt<std::any>].  The associated type
+    stands for the instance's carrier at every element type at once, so the
+    arguments it is applied to are erased — and, by {!Table.add_hkt_carrier},
+    erased at every other occurrence of that carrier too. *)
+let erase_hkt_carrier ml_ty =
+  match ml_ty with
+  | Miniml.Tglob (r, args, es) ->
+    Table.add_hkt_carrier r;
+    let arity = max (List.length args) (Table.get_type_scheme_arity r) in
+    Miniml.Tglob (r, List.init arity (fun _ -> Miniml.Tunknown), es)
+  | _ -> ml_ty
+
+(** The concrete types a class's associated types take in an instance, read off
+    the instance's class arguments ([Mon Opt] gives [M = Opt<std::any>]). *)
+let class_promoted_concrete class_ref type_args =
+  List.mapi
+    (fun i ty ->
+      if Table.is_hkt_param class_ref i then erase_hkt_carrier ty else ty)
+    type_args
+  |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
+
+(** The associated-type ("promoted") variables of a class, in [ip_vars]
+    order. *)
+let class_promoted_vars class_ref =
+  List.filteri
+    (fun i _ -> not (is_class_tparam class_ref i))
+    (Table.get_ind_ip_vars class_ref)
+
+(** Map a function's own type variables to the associated types they really
+    stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
+    standing for [M A] is [typename _tcI0::M] — an associated type of the
+    instance, not a template parameter.  Left as a free template parameter it
+    would be undeducible: nothing in the signature determines it. *)
+let hkt_tvar_resolutions_of_type ty =
+  List.map
+    (fun (j, i, var_name) ->
+      (j, Tqualified (Tvar (0, Some (Common.tc_instance_id i)), var_name)) )
+    (hkt_tvar_positions_of_type ty)
+
+(** Rewrite the type variables listed in [resolutions] (see
+    {!hkt_tvar_resolutions_of_type}) throughout a C++ type. *)
+let apply_hkt_resolutions resolutions ty =
+  if resolutions = [] then ty
+  else
+    Minicpp.map_cpp_type
+      (function
+        | Tvar (i, _) as t -> (
+          match List.assoc_opt i resolutions with Some r -> r | None -> t )
+        | t -> t )
+      ty
+
+(** Rewrite those type variables throughout the statements of a function
+    body, so type annotations there agree with the resolved signature. *)
+let apply_hkt_resolutions_stmts resolutions stmts =
+  if resolutions = [] then stmts
+  else
+    let ft = apply_hkt_resolutions resolutions in
+    let rec fe e = Minicpp.map_expr fe fs ft e
+    and fs s = Minicpp.map_stmt fe fs ft s in
+    List.map fs stmts
+
 (** Filter [Tdummy] entries from the first constructor's type list.  Both
     [gen_record_cpp] and [gen_typeclass_cpp] need the non-erased types only,
     because [select_fields] already drops the corresponding field names. *)
@@ -172,14 +243,17 @@ let gen_typeclass_cpp name fields ind =
   in
   (* Split ip_vars into param vars (real type params) and promoted vars
      (associated types). Prefix param vars with t_ for BDE convention. *)
+  (* A parameter that is itself a type constructor ([M : Type -> Type]) is not
+     a C++ template type parameter but an associated type of the instance
+     ([typename I::M]) — the same treatment promoted Type-valued fields get. *)
+  let is_tparam i = is_class_tparam name i in
   let prefixed_ip_vars =
-    List.mapi
-      (fun i x -> if i < nb_keep then Common.tparam_name x else x)
+    List.mapi (fun i x -> if is_tparam i then Common.tparam_name x else x)
       ind.ip_vars
   in
-  let param_vars = List.filteri (fun i _ -> i < nb_keep) prefixed_ip_vars in
+  let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
   let promoted_vars =
-    List.filteri (fun i _ -> i >= nb_keep) prefixed_ip_vars
+    List.filteri (fun i _ -> not (is_tparam i)) prefixed_ip_vars
   in
   (* Only param vars become concept template parameters; promoted vars become
      typename requirements inside the requires block *)
@@ -272,7 +346,7 @@ let gen_typeclass_cpp name fields ind =
      function). *)
   let is_bare_promoted_tvar ty =
     match ty with
-    | Miniml.Tvar n -> n > nb_keep
+    | Miniml.Tvar n -> not (is_tparam (n - 1))
     | _ -> false
   in
   (* Check if a field type is a typeclass-typed promoted field.  Such
@@ -467,13 +541,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                carry their kept type args so a [requires C<_tcI0, T1>] clause
                can be emitted at the use site instead of silently degrading to
                an unconstrained [typename] (CWE-693 / CWE-345). *)
-            let nb_keeps = Table.get_ind_nb_sign_keeps r in
-            if nb_keeps = 0 then TTconcept (r, [])
+            if Table.get_ind_nb_tparams r = 0 then TTconcept (r, [])
             else
               let type_arg_cpp =
                 List.map
                   (convert_ml_type_to_cpp_type (empty_env ()) [])
-                  type_args
+                  (Table.drop_hkt_args r type_args)
               in
               TTconcept (r, type_arg_cpp)
           | _ -> TTtypename
@@ -550,17 +623,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          (eta_fun) can substitute promoted Tvars with concrete types. E.g., for
          nat_magma : Magma, register [(carrier, nat)] so pick_op<nat_magma>
          eta-expansion uses unsigned int instead of std::any. *)
-      let ip_vars = Table.get_ind_ip_vars class_ref in
-      let nb_sign_keeps_inst = Table.get_ind_nb_sign_keeps class_ref in
-      let promoted_vars =
-        List.filteri (fun i _ -> i >= nb_sign_keeps_inst) ip_vars
-      in
-      let promoted_concrete =
-        if List.length type_args > nb_sign_keeps_inst then
-          List.filteri (fun i _ -> i >= nb_sign_keeps_inst) type_args
-        else
-          []
-      in
+      let promoted_vars = class_promoted_vars class_ref in
+      let promoted_concrete = class_promoted_concrete class_ref type_args in
       if
         List.length promoted_vars = List.length promoted_concrete
         && promoted_vars <> []
@@ -619,6 +683,49 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              be empty, leaving Tvars unsubstituted — we handle that below by
              using lambda binder types. *)
           let subst_ty = Mlutil.type_subst_list type_args field_ml_ty in
+          (* An instance method may have been eta-reduced below the arity its
+             class field declares ([cmap A B f x := f x] extracts to
+             [fun A B f => f]).  The concept requires the declared arity, so
+             re-introduce the missing arguments. *)
+          let field_body =
+            if Table.get_ind_hkt_params class_ref = [] then field_body
+            else
+            let arg_types =
+              List.filter
+                (fun t ->
+                  not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t) )
+                (fst (get_args_and_ret [] subst_ty))
+            in
+            let rec nb_lams = function
+              | MLlam (_, ty, rest) ->
+                (if Mlutil.isTdummy ty then 0 else 1) + nb_lams rest
+              | _ -> 0
+            in
+            let missing =
+              List.length arg_types - nb_lams field_body
+            in
+            if missing <= 0 then field_body
+            else
+              let missing_tys =
+                List.filteri
+                  (fun i _ -> i >= List.length arg_types - missing)
+                  arg_types
+              in
+              let rec expand = function
+                | MLlam (id, ty, rest) -> MLlam (id, ty, expand rest)
+                | inner ->
+                  let inner = Mlutil.ast_lift missing inner in
+                  let args =
+                    List.init missing (fun i -> MLrel (missing - i))
+                  in
+                  List.fold_left
+                    (fun acc (i, ty) ->
+                      MLlam (Id (Id.of_string ("a" ^ string_of_int i)), ty, acc) )
+                    (MLapp (inner, args))
+                    (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
+              in
+              expand field_body
+          in
           (* Extract parameter names and types from the lambda. For promoted
              type vars (e.g., Tvar 3 for edge in Graph), substitute them with
              their concrete types from type_args. Only substitute Tvars beyond
@@ -983,16 +1090,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          ip_vars entries beyond the real type parameter count (as determined by
          ip_sign Keep count, not tv_temps which reflects the instance's own type
          variables). They become `using field = ConcreteType;` in the struct. *)
-      let ip_vars = Table.get_ind_ip_vars class_ref in
-      let nb_sign_keeps_for_promoted = Table.get_ind_nb_sign_keeps class_ref in
-      let promoted_vars =
-        List.filteri (fun i _ -> i >= nb_sign_keeps_for_promoted) ip_vars
-      in
+      let promoted_vars = class_promoted_vars class_ref in
       let promoted_concrete_types =
-        if List.length type_args > nb_sign_keeps_for_promoted then
-          List.filteri (fun i _ -> i >= nb_sign_keeps_for_promoted) type_args
-        else
-          []
+        class_promoted_concrete class_ref type_args
       in
       (* Is [cpp_ty] a self-referential promoted-var reference (e.g.,
          [Tvar(_, Some "Obj")] where "Obj" is a promoted var)?  Such
@@ -1012,11 +1112,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (fun (tt, tc_name) ->
             match tt with
             | TTconcept (class_ref_tc, _) ->
-              let tc_ip_vars = Table.get_ind_ip_vars class_ref_tc in
-              let tc_nb_keeps = Table.get_ind_nb_sign_keeps class_ref_tc in
-              let tc_promoted =
-                List.filteri (fun i _ -> i >= tc_nb_keeps) tc_ip_vars
-              in
+              let tc_promoted = class_promoted_vars class_ref_tc in
               List.map
                 (fun var_name ->
                   let qualified_ty =
@@ -1095,7 +1191,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* Exclude promoted type args from the returned list (used for
          static_assert) *)
       let non_promoted_type_args =
-        List.filteri (fun i _ -> i < nb_sign_keeps_for_promoted) type_args
+        List.filteri (fun i _ -> is_class_tparam class_ref i) type_args
       in
       (* Generate nested promoted-var usings.  When a using aliases a
          typeclass-typed field (e.g., [using base_category = nat_category;]),
@@ -1294,6 +1390,10 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     function-typed parameters but is nevertheless a real part of both callable
     signatures.
 
+    [hkt_erased] forces this treatment even when no marker is syntactically
+    present, for signatures whose erasure happened through a higher-kinded
+    class parameter (see {!hkt_tvar_resolutions_of_type}).
+
     Function types containing HKT erasure markers cannot be rendered faithfully.
     If any function parameter is HKT-erased, function-only tvars remain phantom:
     conversion may already have removed their occurrences from the erased
@@ -1305,7 +1405,7 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     Used by both {!gen_dfun} (to choose between an [is_invocable_r_v]
     constraint and plain [TTtypename]) and {!phantom_aware_temps} (to choose
     whether a template parameter needs a [void] default). *)
-let primary_tvar_indices dom cod =
+let primary_tvar_indices ?(hkt_erased = false) dom cod =
   let add_rendered acc t =
     List.fold_left
       (fun acc i -> IntSet.add i acc)
@@ -1322,7 +1422,7 @@ let primary_tvar_indices dom cod =
           (concrete, add_rendered clean_fun t, has_erased_fun)
         | _ ->
           (add_rendered concrete t, clean_fun, has_erased_fun) )
-      (add_rendered IntSet.empty cod, IntSet.empty, false)
+      (add_rendered IntSet.empty cod, IntSet.empty, hkt_erased)
       dom
   in
   if has_erased_fun then concrete else IntSet.union concrete clean_fun
@@ -1827,16 +1927,16 @@ let gen_dfun n b cty ty temps =
                       (empty_env ())
                       []
                       t )
-                  type_args
+                  (Table.drop_hkt_args class_ref type_args)
               in
               let tt =
-                let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
-                if nb_keeps = 0 then TTconcept (class_ref, [])
+                if Table.get_ind_nb_tparams class_ref = 0 then
+                  TTconcept (class_ref, [])
                 else TTconcept (class_ref, type_arg_cpp)
               in
               ( tt,
                 instance_name,
-                Some (class_ref, type_arg_cpp),
+                Some (class_ref, type_args),
                 remove_prime_id (id_of_mlid ml_id) )
             | _ ->
               ( TTtypename,
@@ -1882,9 +1982,7 @@ let gen_dfun n b cty ty temps =
     List.concat_map (fun (_tt, tc_name, class_info, _) ->
       match class_info with
       | Some (class_ref, _) ->
-        let ip_vars = Table.get_ind_ip_vars class_ref in
-        let nb_keeps = Table.get_ind_nb_sign_keeps class_ref in
-        let promoted = List.filteri (fun i _ -> i >= nb_keeps) ip_vars in
+        let promoted = class_promoted_vars class_ref in
         (* Direct promoted vars: Var → typename _tcI0::Var *)
         let direct =
           List.map (fun var_name ->
@@ -1911,11 +2009,7 @@ let gen_dfun n b cty ty temps =
               let field_name_str = Common.pp_global_name Term field_ref in
               let field_id = Id.of_string field_name_str in
               if List.exists (Id.equal field_id) promoted then
-                let n_ip = Table.get_ind_ip_vars r in
-                let n_nk = Table.get_ind_nb_sign_keeps r in
-                let n_promoted =
-                  List.filteri (fun i _ -> i >= n_nk) n_ip
-                in
+                let n_promoted = class_promoted_vars r in
                 List.filter_map (fun nested_var ->
                   (* Skip if already directly mapped (direct takes priority) *)
                   if List.exists (Id.equal nested_var) promoted then None
@@ -1933,10 +2027,18 @@ let gen_dfun n b cty ty temps =
       | None -> []
     ) typeclass_temps
   in
+  let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
+  (* Type annotations inside the body must name the same resolved types as the
+     signature does. *)
+  let gen_body_stmts env cw e =
+    apply_hkt_resolutions_stmts hkt_tvar_resolutions (gen_stmts env cw e)
+  in
   (* Substitute promoted type var markers [Tvar(1000, Some name)] with their
      qualified resolutions throughout a C++ type tree. *)
   let rec resolve_promoted_in_type ty =
     match ty with
+    | Tvar (i, _) when List.mem_assoc i hkt_tvar_resolutions ->
+      List.assoc i hkt_tvar_resolutions
     | Tvar (1000, Some name) -> (
       match List.find_opt
               (fun (n, _) -> Id.equal n name)
@@ -1960,15 +2062,16 @@ let gen_dfun n b cty ty temps =
     | _ -> ty
   in
   (* Apply promoted var resolution to domain and codomain types *)
+  let has_type_resolutions =
+    promoted_var_resolutions <> [] || hkt_tvar_resolutions <> []
+  in
   let dom =
-    if promoted_var_resolutions <> [] then
+    if has_type_resolutions then
       List.map resolve_promoted_in_type dom
     else dom
   in
   let cod =
-    if promoted_var_resolutions <> [] then
-      resolve_promoted_in_type cod
-    else cod
+    if has_type_resolutions then resolve_promoted_in_type cod else cod
   in
   (* Push params into environment for de Bruijn lookup during body generation.
      collect_lams returns params in reverse order (innermost first), so MLrel 1
@@ -2015,8 +2118,7 @@ let gen_dfun n b cty ty temps =
       (fun (x, ty, owned) ->
         let cpp_ty = convert_ml_type_to_cpp_type env [] ty in
         let cpp_ty =
-          if promoted_var_resolutions <> [] then
-            resolve_promoted_in_type cpp_ty
+          if has_type_resolutions then resolve_promoted_in_type cpp_ty
           else cpp_ty
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
@@ -2066,7 +2168,14 @@ let gen_dfun n b cty ty temps =
      Similarly, function-typed params containing HKT erasure markers (Tany
      or dummy_type) also get TTtypename, since their type structure has been
      partially erased and an is_invocable_v constraint would be malformed. *)
-  let primary = primary_tvar_indices dom cod in
+  (* Element types swallowed by a higher-kinded carrier ([A] in [M A -> (A ->
+     M B) -> M B]) survive only inside callback signatures, where they are not
+     deducible: the instance sees the erased carrier.  Treat this like any
+     other HKT erasure so those tvars stay non-primary and no
+     [is_invocable_r_v] constraint mentions them. *)
+  let primary =
+    primary_tvar_indices ~hkt_erased:(hkt_tvar_resolutions <> []) dom cod
+  in
   let unwrap_fun_ty2 = function
     | Tmod (TMconst, (Tfun _ as f)) -> Some f
     | Tfun _ as f -> Some f
@@ -2131,7 +2240,12 @@ let gen_dfun n b cty ty temps =
   in
   let rec_call_temps =
     if recurses_on_non_uniform_ind then typeclass_temps_basic
-    else typeclass_temps_basic @ temps
+    else
+      typeclass_temps_basic
+      @ List.filter
+          (fun (_, id) ->
+            not (List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions) )
+          temps
   in
   let rec_call =
     mk_cppglob n (List.map (fun (_, id) -> Tvar (0, Some id)) rec_call_temps)
@@ -2151,7 +2265,34 @@ let gen_dfun n b cty ty temps =
     else temps
   in
   let regular_temps = temps @ List.map (fun (_, t, n) -> (t, n)) fun_tys in
-  let temps = typeclass_temps_basic @ regular_temps in
+  (* Variables standing for a higher-kinded class parameter are rendered as
+     associated types of the instance, so they must not also be declared as
+     template parameters: nothing would deduce them.  They stay in
+     [regular_temps] below, which only feeds Tvar index resolution. *)
+  let is_hkt_temp (_, id) =
+    List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions
+  in
+  (* The remaining tvars of such a signature may have lost every deducible
+     occurrence too (the element type [A] of [M A]); default them so explicit
+     instance-only calls like [mbind<MOpt>(...)] still resolve. *)
+  let default_if_undeducible (tt, id) =
+    match tt with
+    | TTtypename
+      when hkt_tvar_resolutions <> []
+           && not
+                (List.exists
+                   (fun i -> tvar_id i = id)
+                   (IntSet.elements primary) ) ->
+      (TTtypename_default Tany, id)
+    | _ -> (tt, id)
+  in
+  let temps =
+    typeclass_temps_basic
+    @ List.filter_map
+        (fun t ->
+          if is_hkt_temp t then None else Some (default_if_undeducible t) )
+        regular_temps
+  in
   (* Requires clause for typeclass constraints not yet implemented. *)
   (* Set current type variables for pattern matching lambda generation.
      These are the template parameters that can be used in type annotations.
@@ -2313,7 +2454,7 @@ let gen_dfun n b cty ty temps =
         | Some stmts -> stmts
         | None ->
           let b =
-            List.map (glob_subst_stmt n rec_call) (gen_stmts env cofix_wrap b)
+            List.map (glob_subst_stmt n rec_call) (gen_body_stmts env cofix_wrap b)
           in
           return_captures_by_value b
       in
@@ -2387,7 +2528,7 @@ let gen_dfun n b cty ty temps =
             (List.mapi (fun i x -> (i, x)) missing)) in
           List.map
             (glob_subst_stmt n rec_call)
-            (gen_stmts env cofix_wrap (MLapp (lifted_b, args)))
+            (gen_body_stmts env cofix_wrap (MLapp (lifted_b, args)))
       in
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)

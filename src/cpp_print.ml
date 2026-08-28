@@ -2130,13 +2130,38 @@ and pp_cpp_expr env args t =
           Id.print id
         | _ -> pp_cpp_expr env args e
       in
-      str (sn ()).any_cast
+      (* A cast whose target is an associated type of a type-class instance
+         parameter ([typename _tcI0::F]) cannot be resolved here: the instance
+         may define it as [std::any] itself, and [any_cast<std::any>] throws
+         rather than acting as the identity.  [crane_any_cast] (crane_fn.h)
+         decides that at instantiation time. *)
+      let dependent_target =
+        match ty with
+        | Tqualified (Tvar (_, Some base), _) -> Common.is_tc_instance_id base
+        | _ -> false
+      in
+      let caster =
+        if dependent_target then begin
+          Table.mark_needs_erase_fn ();
+          "crane_any_cast"
+        end
+        else (sn ()).any_cast
+      in
+      str caster
       ++ str "<"
       ++ pp_cpp_type false [] ty
       ++ str ">("
       ++ inner
       ++ str ")"
     end
+  | CPPerase_fn (ret_ty, e) ->
+    str "crane_erase_fn"
+    ++ ( match ret_ty with
+       | None -> mt ()
+       | Some ty -> str "<" ++ pp_cpp_type false [] ty ++ str ">" )
+    ++ str "("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     let saved = !suppress_elem_boxing in
     if suppress_boxing then suppress_elem_boxing := true;

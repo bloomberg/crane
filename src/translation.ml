@@ -255,6 +255,36 @@ let collect_typeclass_param_ids ty =
   in
   match ty with Miniml.Tarr _ -> aux [] 0 ty | _ -> []
 
+(** The type variables of an ML arrow type that stand for a higher-kinded
+    class parameter: [mret : forall M, Mon M -> forall A, A -> M A] passes the
+    variable for [M A] as the type-constructor argument of its [Mon]
+    parameter.  Such a variable is not a C++ template parameter but the
+    instance's associated type — see {!Table.get_ind_hkt_params}.
+
+    Returns [(tvar index, instance parameter index, associated type name)],
+    with instance parameters numbered in source order to match [_tcI0],
+    [_tcI1], ... *)
+let hkt_tvar_positions_of_type ty =
+  let rec go i acc = function
+    | Miniml.Tarr (Miniml.Tglob (class_ref, type_args, _), rest)
+      when Table.is_typeclass class_ref ->
+      let ip_vars = Table.get_ind_ip_vars class_ref in
+      let acc =
+        List.fold_left
+          (fun acc pos ->
+            match (List.nth_opt type_args pos, List.nth_opt ip_vars pos) with
+            | Some (Miniml.Tvar j | Miniml.Tvar' j), Some var_name ->
+              (j, i, var_name) :: acc
+            | _ -> acc )
+          acc
+          (Table.get_ind_hkt_params class_ref)
+      in
+      go (i + 1) acc rest
+    | Miniml.Tarr (_, rest) -> go i acc rest
+    | _ -> acc
+  in
+  go 0 [] ty
+
 (** Apply unit-to-void conversion on a C++ type, respecting reified mode.
     In reified mode, [Unit] inside [ITree<Unit>] becomes [ITree<void>].
     In sequential mode, the entire type becomes [Tvoid]. *)
@@ -2272,6 +2302,15 @@ let strip_ns_tglob = function
   | Tnamespace (_, (Tglob _ as inner)) -> inner
   | t -> t
 
+(** Element-erase a higher-kinded carrier at the ML level, mirroring what
+    {!convert_ml_type_to_cpp_type} does for the C++ side: [Opt nat] denotes
+    [Opt<std::any>], so a pattern variable bound from it is a [std::any]. *)
+let erase_hkt_carrier_ml (ty : ml_type) : ml_type =
+  match ty with
+  | Tglob (g, (_ :: _ as args), es) when Table.is_hkt_carrier g ->
+    Tglob (g, List.map (fun _ -> Miniml.Tunknown) args, es)
+  | _ -> ty
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -2322,6 +2361,13 @@ let rec convert_ml_type_to_cpp_type
       | Tfun (l, t) -> Tfun (t1c :: l, voidify_cod t)
       | _ -> Tfun (t1c :: [], voidify_cod t2c) )
   | Tglob (g, _, _) when is_void g -> Tvoid
+  (* A type constructor used as the carrier of a higher-kinded class parameter
+     is element-erased everywhere, matching the instance's [using M = ...]
+     (see {!Table.is_hkt_carrier}). *)
+  | Tglob (g, args, es)
+    when Table.is_hkt_carrier g && List.exists (fun a -> a <> Miniml.Tunknown) args ->
+    convert_ml_type_to_cpp_type env ~ns tvars
+      (Tglob (g, List.map (fun _ -> Miniml.Tunknown) args, es))
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
      "promoted" from value-level fields to type-level parameters.
 
@@ -3397,18 +3443,24 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
     match
       convert_ml_type_to_cpp_type env (get_current_type_vars ()) param_ml_ty
     with
-    | Tfun (dom, cod) -> cod = Tany || List.mem Tany dom
-    | _ -> false
+    (* A parameter that erases only its ARGUMENTS (its result stays concrete,
+       e.g. [std::function<typename I::M(std::any)>] for a higher-kinded class
+       method) keeps that result type: erasing it too would box the result
+       twice. *)
+    | Tfun (dom, cod) when cod <> Tany && List.mem Tany dom -> Some (Some cod)
+    | Tfun (dom, cod) when cod = Tany || List.mem Tany dom -> Some None
+    | _ -> None
   in
-  if erased_fn_param && ml_expr_is_function_value e then
-    wrap_crane_erase_fn expr
-  else expr
+  match erased_fn_param with
+  | Some ret_ty when ml_expr_is_function_value e ->
+    wrap_crane_erase_fn ?ret_ty:(Option.map Fun.id ret_ty) expr
+  | _ -> expr
 
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
     that the helper is needed. *)
-and wrap_crane_erase_fn expr =
+and wrap_crane_erase_fn ?ret_ty expr =
   Table.mark_needs_erase_fn ();
-  CPPfun_call (CPPvar (Id.of_string "crane_erase_fn"), [expr])
+  CPPerase_fn (ret_ty, expr)
 
 (** [field_stores_erased_fn_value ?field_cpp_ty field_types i e] — true when
     constructor field [i] has an abstract type-variable (schema) type — a
@@ -6666,16 +6718,36 @@ and eta_fun env f args =
        template argument deduction). In that case, recover the concrete type
        from the enclosing function's return type. *)
     let regular_type_args =
-      List.map
-        (fun ty ->
-          let t =
-            convert_ml_type_to_cpp_type env tvars (type_simpl ty)
-          in
-          if has_unnamed_tvar t then
-            Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
-          else
-            t )
-        tys
+      (* A type argument standing for a higher-kinded class parameter is not a
+         template parameter of the callee (it is the instance's associated
+         type), so it must not be passed — and it is always erased, which
+         would otherwise make [filter_erased_type_args] drop the real type
+         arguments alongside it. *)
+      let keep_position =
+        match find_type_opt id with
+        | None -> fun _ -> true
+        | Some callee_ty ->
+          ( match
+              List.map (fun (j, _, _) -> j) (hkt_tvar_positions_of_type callee_ty)
+            with
+          | [] -> fun _ -> true
+          | hkt -> (
+          (* A variable that does not occur in the callee's type is not a
+             template parameter of it either ([mbind]'s [B] only ever appears
+             under the carrier [M B], which is the instance's associated
+             type). *)
+          let occurring = collect_tvars_set IntSet.empty callee_ty in
+          fun i ->
+            not (List.mem i hkt)
+            && (IntSet.is_empty occurring || IntSet.mem i occurring) ) )
+      in
+      List.filteri (fun i _ -> keep_position (i + 1)) tys
+      |> List.map
+           (fun ty ->
+             let t = convert_ml_type_to_cpp_type env tvars (type_simpl ty) in
+             if has_unnamed_tvar t then
+               Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
+             else t )
     in
     (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
        non-empty but all entries were erased (Tdummy Ktype) →
@@ -6730,6 +6802,31 @@ and eta_fun env f args =
               None
           | _ -> None )
       in
+      (* Value args normally let C++ deduce the type params, but not when
+         the return type variable occurs in no value parameter — as for a
+         method of a higher-kinded class ([cout : forall A, F A -> A], whose
+         only parameter is the instance's associated carrier type, a
+         non-deduced context). *)
+      let ret_tvar_undeducible () =
+        match find_type_opt id with
+        | None -> false
+        | Some ml_ty_orig -> (
+          match resolve_tmeta (ml_return_type ml_ty_orig) with
+          | Miniml.Tvar i | Miniml.Tvar' i ->
+            let rec mentions = function
+              | Miniml.Tvar j | Miniml.Tvar' j -> i = j
+              | Miniml.Tarr (a, b) -> mentions a || mentions b
+              | Miniml.Tglob (_, l, _) -> List.exists mentions l
+              | Miniml.Tmeta { contents = Some t } -> mentions t
+              | _ -> false
+            in
+            let rec doms acc = function
+              | Miniml.Tarr (t1, t2) -> doms (resolve_tmeta t1 :: acc) t2
+              | _ -> acc
+            in
+            not (List.exists mentions (doms [] ml_ty_orig))
+          | _ -> false )
+      in
       if filtered = [] && regular_type_args <> [] then
         (* Case (a): tys was non-empty but all got filtered. Only attempt
            recovery when there are no non-erased value args — if there are value
@@ -6737,7 +6834,9 @@ and eta_fun env f args =
            explicit type args may conflict with the template signature, e.g.
            hk_map's F0/F1 are function types). *)
           match
-            if args = [] then try_recover_erased_return_type () else None
+            if args = [] || ret_tvar_undeducible () then
+              try_recover_erased_return_type ()
+            else None
           with
         | Some (idx, ret_ty, _) ->
           (* Replace the erased position with the concrete return type, then
@@ -6753,7 +6852,10 @@ and eta_fun env f args =
            - [args = []] — no value args, so C++ can't deduce types.
            - [concrete_tvar_type <> None] — the callee's return type [Tvar]
              was resolved from excess args + enclosing return type. *)
-        let should_recover = args = [] || concrete_tvar_type <> None in
+        let should_recover =
+          args = [] || concrete_tvar_type <> None || ret_tvar_undeducible ()
+        in
+
           match
             if should_recover then try_recover_erased_return_type () else None
           with
@@ -6789,6 +6891,7 @@ and eta_fun env f args =
     let all_type_args =
       typeclass_type_args @ regular_type_args @ promoted_type_args
     in
+
     let cglob = mk_cppglob id all_type_args in
     (* Check if this is a typeclass instance used as a type (for :: access).
        When all args are consumed (domain and args both empty after filtering),
@@ -8534,7 +8637,7 @@ and is_trivial_scrut = function
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   (* Save the ML type for temps computation after fix_a_fired is known. *)
-  let ml_typ = typ in
+  let ml_typ = erase_hkt_carrier_ml typ in
   (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]

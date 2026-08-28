@@ -1,9 +1,10 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-(** WIP: A typeclass parameterised by a type constructor (`Container (F : Type -> Type)`)
-    collapses every method to `std::any` and generates a one-type-argument
-    concept, so the static assertion fails and the method calls do not resolve. *)
+(** A typeclass parameterised by a type constructor (`Container (F : Type -> Type)`).
+    The higher-kinded parameter is demoted to a promoted associated type holding
+    the element-erased carrier, so the concept, the instance and the method
+    wrappers all agree. *)
 
 Module ClassTypeConstructorParam.
 Class Container (F : Type -> Type) := { cmap : forall A B, (A -> B) -> F A -> F B ; cwrap : forall A, A -> F A ; cout : forall A, F A -> A }.

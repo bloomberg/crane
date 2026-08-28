@@ -195,21 +195,22 @@ concept Eq = requires {
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.
-template <typename I, typename G, typename A>
-concept Graph = requires {
+template <typename I, typename
+A>concept Graph = requires {
+  typename I::G;
   typename I::edge;
-  { I::empty() } -> std::convertible_to<G>;
-  {
-    I::add_node(std::declval<G>(), std::declval<A>())
-  } -> std::convertible_to<G>;
-  {
-    I::add_edge(std::declval<G>(), std::declval<typename I::edge>())
-  } -> std::convertible_to<G>;
-  { I::nodes(std::declval<G>()) } -> std::convertible_to<List<A>>;
-  {
-    I::edges(std::declval<G>(), std::declval<A>())
-  } -> std::convertible_to<List<typename I::edge>>;
-};
+  { I::add_node(std::declval<typename I::G>(),
+std::declval<A>()) } -> std::convertible_to<typename I::G>;
+  { I::add_edge(std::declval<typename I::G>(),
+std::declval<typename I::edge>()) } -> std::convertible_to<typename I::G>;
+  { I::nodes(std::declval<typename I::G>()) } -> std::convertible_to<List<A>>;
+  { I::edges(std::declval<typename I::G>(),
+std::declval<A>()) } -> std::convertible_to<List<typename I::edge>>;
+} && (requires {
+  { I::empty() } -> std::convertible_to<typename I::G>;
+} || requires {
+  { I::empty } -> std::convertible_to<typename I::G>;
+});
 
 template <typename g, typename a> using edge = std::any;
 
@@ -234,6 +235,7 @@ template <typename A> struct Directed {
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct DirectedGraph {
+  using G = Directed<std::any>;
   using edge = DirectedEdge<T1>;
 
   static Directed<std::any> empty() {
@@ -281,6 +283,7 @@ template <typename A> struct Undirected {
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct UndirectedGraph {
+  using G = Undirected<std::any>;
   using edge = UndirectedEdge<T1>;
 
   static Undirected<std::any> empty() {

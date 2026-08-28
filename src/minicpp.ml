@@ -346,6 +346,11 @@ and cpp_expr =
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
+  | CPPerase_fn of cpp_type option * cpp_expr
+    (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to the canonical
+       erased representation std::function<Ret(std::any...)>.  [None] means the
+       result is erased too (Ret = std::any); [Some t] keeps the codomain, for
+       a consumer that erases only the argument types. *)
   | CPPcontainer_cast of cpp_type * cpp_expr * bool
     (* crane_container_cast<Dst>(expr) — converts a type-erased sequence
        container (element type std::any) into a concrete-element container by
@@ -537,6 +542,7 @@ let map_expr
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
+  | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
   | CPPcontainer_cast (ty, e', sb) -> CPPcontainer_cast (ft ty, fe e', sb)
   | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
 
@@ -626,7 +632,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _)
+  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
@@ -703,7 +709,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _)
+  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)

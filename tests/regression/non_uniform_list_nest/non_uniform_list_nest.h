@@ -154,7 +154,8 @@ struct NonUniformListNest {
       return std::any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return std::any_cast<T1>(f0(*a0, n2_rect(crane_erase_fn(f), f0, *a0)));
+      return std::any_cast<T1>(
+          f0(*a0, n2_rect(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 
@@ -166,7 +167,7 @@ struct NonUniformListNest {
       return std::any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return std::any_cast<T1>(f0(*a0, n2_rec(crane_erase_fn(f), f0, *a0)));
+      return std::any_cast<T1>(f0(*a0, n2_rec(crane_erase_fn<T1>(f), f0, *a0)));
     }
   }
 

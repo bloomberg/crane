@@ -221,7 +221,7 @@ struct NestedTree {
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
       return std::any_cast<T1>(
-          f0(a0, *a1, tree_rect(f, crane_erase_fn(f0), *a1)));
+          f0(a0, *a1, tree_rect(f, crane_erase_fn<T1>(f0), *a1)));
     }
   }
 
@@ -232,7 +232,7 @@ struct NestedTree {
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
       return std::any_cast<T1>(
-          f0(a0, *a1, tree_rec(f, crane_erase_fn(f0), *a1)));
+          f0(a0, *a1, tree_rec(f, crane_erase_fn<T1>(f0), *a1)));
     }
   }
 

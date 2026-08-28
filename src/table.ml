@@ -443,6 +443,70 @@ let get_ind_nb_sign_keeps r =
       with Not_found | Invalid_argument _ -> 0 )
   | _ -> 0
 
+(** {2 Higher-kinded class parameters}
+
+    A type class may be parameterised by a type CONSTRUCTOR rather than a type:
+    [Class Mon (M : Type -> Type)].  Such a parameter cannot become a C++
+    template type parameter, because [M A] is not a type C++ can form from a
+    [typename M].  Instead it is demoted to an ASSOCIATED TYPE of the instance
+    ([typename I::M]) — the very representation promoted [Type]-valued record
+    fields already use.  Extraction records the positions of these parameters
+    (0-based among the [Keep] entries of [ip_sign]) here; the concept, instance
+    and wrapper generators in {!Gen_decls} consult them to move the parameter
+    from the template-parameter list to the associated-type requirements. *)
+
+let hkt_params_table = ref (Refmap'.empty : int list Refmap'.t)
+
+let add_ind_hkt_params r positions =
+  if positions <> [] then
+    hkt_params_table := Refmap'.add r positions !hkt_params_table
+
+(** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
+    that are type constructors. Empty for everything else. *)
+let get_ind_hkt_params r =
+  let open GlobRef in
+  let r = match r with ConstructRef (ip, _) -> IndRef ip | r -> r in
+  try Refmap'.find r !hkt_params_table with Not_found -> []
+
+(** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
+    type constructor, and therefore an associated type in C++. *)
+let is_hkt_param r i = List.mem i (get_ind_hkt_params r)
+
+(** Number of [r]'s type parameters that stay real C++ template parameters —
+    the [Keep] count minus the higher-kinded ones. *)
+let get_ind_nb_tparams r =
+  get_ind_nb_sign_keeps r - List.length (get_ind_hkt_params r)
+
+(** Drop the entries of [args] sitting at [r]'s higher-kinded parameter
+    positions.  Used wherever a class's type arguments are re-emitted as
+    concept arguments ([C<_tcI0, T1>]), which no longer include them. *)
+let drop_hkt_args r args =
+  match get_ind_hkt_params r with
+  | [] -> args
+  | hkt -> List.filteri (fun i _ -> not (List.mem i hkt)) args
+
+(** Arity of an extracted type-scheme constant — the number of type parameters
+    of [Definition Opt (A : Type) := option A].  Recorded by extraction so that
+    a class's type-constructor argument can be applied to the right number of
+    erased arguments ([Opt<std::any>]) when it becomes an associated type. *)
+
+let type_scheme_arities = ref (Refmap'.empty : int Refmap'.t)
+
+let add_type_scheme_arity r n =
+  if n > 0 then type_scheme_arities := Refmap'.add r n !type_scheme_arities
+
+let get_type_scheme_arity r =
+  try Refmap'.find r !type_scheme_arities with Not_found -> 0
+
+(** Type constructors that are used as the argument of a higher-kinded class
+    parameter (see {!add_ind_hkt_params}).  The instance renders such a carrier
+    element-erased ([Opt A] becomes [std::optional<std::any>]), so every other
+    occurrence must erase it the same way, or values produced by the class
+    methods would not typecheck against it. *)
+let hkt_carriers = ref Refset'.empty
+let add_hkt_carrier r = hkt_carriers := Refset'.add r !hkt_carriers
+let is_hkt_carrier r = Refset'.mem r !hkt_carriers
+
 let get_ctor_ip_types_opt r =
   let open GlobRef in
   match r with
