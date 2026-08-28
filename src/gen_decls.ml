@@ -116,6 +116,54 @@ let class_promoted_vars class_ref =
     (fun i _ -> not (is_class_tparam class_ref i))
     (Table.get_ind_ip_vars class_ref)
 
+(** A class's fields paired with their non-dummy ML types, as recorded in the
+    extraction tables.  Empty when the two disagree in length: the pairing
+    would be meaningless. *)
+let class_fields_with_types class_ref =
+  let fields = Table.get_record_fields class_ref in
+  let types = filter_value_types (Table.record_field_types class_ref) in
+  if List.length fields = List.length types then List.combine fields types
+  else []
+
+(** The associated types an instance parameter provides, as a substitution from
+    the bare name a promoted type variable carries to the qualified type it
+    really denotes.
+
+    [inst_ty] is the instance those names hang off: [Tinstance (_tcI0, Mon)]
+    for a function's instance argument, [Tinstance (I, Mon)] inside the class's
+    own concept.  A direct associated type of [class_ref] resolves to [typename
+    I::Obj].  A promoted field that is itself a type class contributes its own
+    associated types one level deeper ([typename I::base_category::Obj]) —
+    extraction marks those with the same bare name, so they are otherwise
+    indistinguishable from direct ones.  Direct entries win: a name is never
+    resolved through a field when the class declares it itself.
+
+    [fields] defaults to {!class_fields_with_types}; pass it when the caller
+    already holds the pairing, as it does while generating the class itself. *)
+let promoted_resolutions ?fields class_ref inst_ty =
+  let fields =
+    match fields with Some f -> f | None -> class_fields_with_types class_ref
+  in
+  let direct = class_promoted_vars class_ref in
+  let is_direct v = List.exists (Id.equal v) direct in
+  let nested =
+    List.concat_map
+      (fun (field_opt, field_ty) ->
+        match (field_opt, field_ty) with
+        | Some field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
+          let field_id = Id.of_string (Common.pp_global_name Term field_ref) in
+          if is_direct field_id then
+            List.filter_map
+              (fun v ->
+                if is_direct v then None
+                else Some (v, Tqualified (Tqualified (inst_ty, field_id), v)) )
+              (class_promoted_vars r)
+          else []
+        | _ -> [] )
+      fields
+  in
+  List.map (fun v -> (v, Tqualified (inst_ty, v))) direct @ nested
+
 (** Map a function's own type variables to the associated types they really
     stand for.  In [mret : forall M, Mon M -> forall A, A -> M A] the variable
     standing for [M A] is [typename _tcI0::M] — an associated type of the
@@ -271,53 +319,17 @@ let gen_typeclass_cpp name fields ind =
       with _ ->
         List.map (fun f -> (f, Miniml.Tunknown)) fields )
   in
-  (* Build a mapping for promoted vars from nested typeclasses.
-
-     When a promoted field has typeclass type (e.g., [base_category :
-     PreCategory]), the nested typeclass's own promoted vars (e.g., [Obj])
-     may appear in other fields' types (e.g., [zero_object : Obj
-     base_category]).  During extraction, these become [Tvar(1000, Some
-     "Obj")] — indistinguishable from a direct promoted var of the current
-     typeclass.
-
-     We build a mapping [Obj → typename I::base_category::Obj] so that
-     [subst_promoted_in_cpp_type] can resolve them correctly through the
-     promoted field rather than leaving a dangling bare [Obj]. *)
-  let nested_promoted_map =
-    List.concat_map
-      (fun (field_opt, field_ty) ->
-        match (field_opt, field_ty) with
-        | Some _field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
-          let field_name_str = Common.pp_global_name Term _field_ref in
-          let field_id = Id.of_string field_name_str in
-          if List.exists (Id.equal field_id) promoted_vars then
-            let nested_promoted = class_promoted_vars r in
-            List.map
-              (fun nested_var ->
-                ( nested_var,
-                  Tqualified
-                    (Tqualified (Tinstance (inst_id, name), field_id), nested_var)
-                ) )
-              nested_promoted
-          else
-            []
-        | _ -> [] )
-      method_list
+  let promoted_map =
+    promoted_resolutions ~fields:method_list name (Tinstance (inst_id, name))
   in
-  (* Substitute promoted Tvars with [Tqualified(I, name)] in cpp_type trees.
-     After conversion, promoted vars appear as [Tvar(_, Some name)] where
-     name is in [promoted_vars].  Replace with [typename I::name].
-     Also handles nested promoted vars from typeclass-typed promoted fields
-     via [nested_promoted_map] — e.g., [Obj] from [PreCategory] becomes
-     [typename I::base_category::Obj] when [base_category] is a promoted
-     [PreCategory]-typed field. *)
+  (* Substitute promoted Tvars in cpp_type trees.  After conversion, a promoted
+     var appears as [Tvar (_, Some name)]; [promoted_map] says which qualified
+     type that bare name really denotes ([typename I::Obj], or
+     [typename I::base_category::Obj] when it comes from a typeclass-typed
+     promoted field).  A name with no entry is left as a plain type variable. *)
   let rec subst_promoted_in_cpp_type = function
-    | Tvar (_, Some vname) when List.exists (Id.equal vname) promoted_vars ->
-      Tqualified (Tinstance (inst_id, name), vname)
     | Tvar (_, Some vname) -> (
-      match
-        List.find_opt (fun (n, _) -> Id.equal n vname) nested_promoted_map
-      with
+      match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
       | Some (_, replacement) -> replacement
       | None -> Tvar (0, Some vname) )
     | Tfun (args, ret) ->
@@ -1108,7 +1120,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (fun (tt, tc_name) ->
             match tt with
             | TTconcept (class_ref_tc, _) ->
-              let tc_promoted = class_promoted_vars class_ref_tc in
+              (* Direct associated types only: the nested ones are added below,
+                 keyed off the using names this produces. *)
               List.map
                 (fun var_name ->
                   let qualified_ty =
@@ -1117,7 +1130,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   ( Fnested_using (var_name, qualified_ty),
                     VPublic,
                     SNoTag ) )
-                tc_promoted
+                (class_promoted_vars class_ref_tc)
             | _ -> [] )
           template_params
       in
@@ -1973,53 +1986,13 @@ let gen_dfun n b cty ty temps =
      The map is applied by [resolve_promoted_in_type] to substitute all
      [Tvar(1000, ...)] markers with their qualified forms. *)
   let promoted_var_resolutions =
-    List.concat_map (fun (_tt, tc_name, class_info, _) ->
-      match class_info with
-      | Some (class_ref, _) ->
-        let promoted = class_promoted_vars class_ref in
-        (* Direct promoted vars: Var → typename _tcI0::Var *)
-        let direct =
-          List.map (fun var_name ->
-            (var_name, Tqualified (Tinstance (tc_name, class_ref), var_name))
-          ) promoted
-        in
-        (* Nested promoted vars from TC-typed fields:
-           Var → typename _tcI0::field::Var *)
-        let method_list =
-          let fields = Table.get_record_fields class_ref in
-          let field_types = Table.record_field_types class_ref in
-          let non_dummy =
-            filter_value_types field_types
-          in
-          if List.length fields = List.length non_dummy then
-            List.combine fields non_dummy
-          else []
-        in
-        let nested =
-          List.concat_map (fun (field_opt, field_ty) ->
-            match (field_opt, field_ty) with
-            | Some field_ref, Miniml.Tglob (r, _, _)
-              when Table.is_typeclass r ->
-              let field_name_str = Common.pp_global_name Term field_ref in
-              let field_id = Id.of_string field_name_str in
-              if List.exists (Id.equal field_id) promoted then
-                let n_promoted = class_promoted_vars r in
-                List.filter_map (fun nested_var ->
-                  (* Skip if already directly mapped (direct takes priority) *)
-                  if List.exists (Id.equal nested_var) promoted then None
-                  else
-                    Some (nested_var,
-                      Tqualified
-                        (Tqualified (Tinstance (tc_name, class_ref), field_id),
-                         nested_var))
-                ) n_promoted
-              else []
-            | _ -> []
-          ) method_list
-        in
-        direct @ nested
-      | None -> []
-    ) typeclass_temps
+    List.concat_map
+      (fun (_tt, tc_name, class_info, _) ->
+        match class_info with
+        | Some (class_ref, _) ->
+          promoted_resolutions class_ref (Tinstance (tc_name, class_ref))
+        | None -> [] )
+      typeclass_temps
   in
   let hkt_tvar_resolutions = hkt_tvar_resolutions_of_type ty in
   (* Type annotations inside the body must name the same resolved types as the
