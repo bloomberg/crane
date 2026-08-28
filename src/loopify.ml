@@ -6531,7 +6531,7 @@ let optimize_frame_push_args frame_field_types stmts =
     @return An [smatch_branch] for use in [Smatch (branches, None)] *)
 let make_frame_branch frame_name body =
   { smb_scrutinee = CPPvar (id_frame);
-    smb_ctor_type = Tvar (0, Some (Id.of_string frame_name));
+    smb_ctor_type = Tid_external (Id.of_string frame_name, []);
     smb_var = Some (id_f);
     smb_field_bindings = [];
     smb_extra_conds = [];
@@ -6551,8 +6551,7 @@ let make_frame_branch frame_name body =
     @return Complete statement list for the loopified function body *)
 let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
   let result_decl = Sdecl_init (id_result, ret_ty) in
-  (* Use Tvar with Some name to avoid struct-name qualification that Tid adds *)
-  let frame_ty = Tvar (0, Some (id_Frame)) in
+  let frame_ty = Tid_external (id_Frame, []) in
   (* [crane::small_vector] rather than [std::vector]: the frame stack is only
      as deep as the recursion it replaced, so for the overwhelming majority of
      calls it never exceeds the inline capacity.  A [std::vector] with
@@ -7029,10 +7028,10 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
       frames
   in
   let call_names = List.map (fun cf -> cf.cf_name) frames in
-  let enter_ty = Tvar (0, Some (id_enter)) in
+  let enter_ty = Tid_external (id_enter, []) in
   let variant_tys =
     enter_ty
-    :: List.map (fun name -> Tvar (0, Some (Id.of_string name))) call_names
+    :: List.map (fun name -> Tid_external (Id.of_string name, [])) call_names
   in
   let struct_defs =
     [Scomment "_Enter: captures varying parameters for each recursive call.";

@@ -108,7 +108,9 @@ type cpp_type =
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
   | Tid_external of Id.t * cpp_type list
-    (* External type from a header — never struct-qualified *)
+    (* A named type that is never struct-qualified, unlike [Tid]: a type from
+       an included header, a builtin scalar, or a struct local to a function
+       body.  The name is emitted verbatim. *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
   | Tfun of cpp_type list * cpp_type
   | Tmod of cpp_tymod * cpp_type

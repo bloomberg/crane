@@ -2568,7 +2568,7 @@ let gen_dfun n b cty ty temps =
           (* Case 2: top-level sequential — emit [int main()] directly.
              Replace [Tvoid] return type with [int] and every [Sreturn None]
              with [Sreturn (Some (CPPint 0))]. *)
-          let int_ty = Tvar (0, Some (Id.of_string "int")) in
+          let int_ty = Tid_external (Id.of_string "int", []) in
           let rec void_return_to_zero = function
             | Sreturn None -> Sreturn (Some (CPPint 0))
             | Sif (c, t, e) ->
@@ -5857,7 +5857,7 @@ let gen_ind_header_v2
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let source_ctor_ty = Tvar (0, Some cname_id) in
+                let source_ctor_ty = Tid_external (cname_id, []) in
                 let field_info =
                   List.mapi
                     (fun j ty ->
