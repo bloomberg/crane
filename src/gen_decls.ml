@@ -291,11 +291,7 @@ let gen_typeclass_cpp name fields ind =
           let field_name_str = Common.pp_global_name Term _field_ref in
           let field_id = Id.of_string field_name_str in
           if List.exists (Id.equal field_id) promoted_vars then
-            let nested_ip_vars = Table.get_ind_ip_vars r in
-            let nested_nb_keeps = Table.get_ind_nb_sign_keeps r in
-            let nested_promoted =
-              List.filteri (fun i _ -> i >= nested_nb_keeps) nested_ip_vars
-            in
+            let nested_promoted = class_promoted_vars r in
             List.map
               (fun nested_var ->
                 ( nested_var,
@@ -1231,11 +1227,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               ( match field_ml_ty with
               | Some (Miniml.Tglob (tc_ref, _, _))
                 when Table.is_typeclass tc_ref ->
-                let nested_ip = Table.get_ind_ip_vars tc_ref in
-                let nested_nk = Table.get_ind_nb_sign_keeps tc_ref in
-                let nested_promoted =
-                  List.filteri (fun i _ -> i >= nested_nk) nested_ip
-                in
+                let nested_promoted = class_promoted_vars tc_ref in
                 List.filter_map
                   (fun v ->
                     if List.exists (Id.equal v) direct_names then None
@@ -1244,7 +1236,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                         ( Fnested_using
                             ( v,
                               Tqualified
-                                (Tvar (0, Some using_name), v) ),
+                                (Tinstance (using_name, tc_ref), v) ),
                           VPublic,
                           SNoTag ))
                   nested_promoted
