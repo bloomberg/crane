@@ -1,0 +1,19 @@
+#include "numeral_edge.h"
+
+uint64_t NumeralEdge::take_nat(uint64_t n) { return (n + UINT64_C(1)); }
+
+uint64_t NumeralEdge::classify(uint64_t n) {
+  if (n <= 0) {
+    return UINT64_C(0);
+  } else {
+    uint64_t n0 = n - 1;
+    if (n0 <= 0) {
+      return UINT64_C(1);
+    } else {
+      uint64_t _x = n0 - 1;
+      return UINT64_C(2);
+    }
+  }
+}
+
+bool NumeralEdge::is_big(uint64_t n) { return UINT64_C(100) <= n; }

@@ -1,0 +1,93 @@
+#include "fold_sequence_state_trace.h"
+
+FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::line_through(const std::pair<Real, Real> &p1,
+                                         const std::pair<Real, Real> &p2) {
+  const auto &[x1, y1] = p1;
+  const auto &[x2, y2] = p2;
+  if ((x1 == x2)) {
+    return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
+  } else {
+    Real a = (y1 - y2);
+    Real b = (x2 - x1);
+    Real c = ((x1 * y2) - (x2 * y1));
+    return Line{a, b, c};
+  }
+}
+
+FoldSequenceStateTraceCase::Line
+FoldSequenceStateTraceCase::perp_bisector(const std::pair<Real, Real> &p1,
+                                          const std::pair<Real, Real> &p2) {
+  const auto &[x1, y1] = p1;
+  const auto &[x2, y2] = p2;
+  if ((x1 == x2)) {
+    if ((y1 == y2)) {
+      return Line{Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)), (-x1)};
+    } else {
+      Real a = Real::from_z(INT64_C(0));
+      Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
+      Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
+      return Line{a, b, c};
+    }
+  } else {
+    Real a = (Real::from_z(INT64_C(2)) * (x2 - x1));
+    Real b = (Real::from_z(INT64_C(2)) * (y2 - y1));
+    Real c = ((((x1 * x1) + (y1 * y1)) - (x2 * x2)) - (y2 * y2));
+    return Line{a, b, c};
+  }
+}
+
+FoldSequenceStateTraceCase::Line FoldSequenceStateTraceCase::perp_through(
+    const std::pair<Real, Real> &p, const FoldSequenceStateTraceCase::Line &l) {
+  const auto &[x, y] = p;
+  Real c = ((l.A * y) - (l.B * x));
+  return Line{l.B, (-l.A), c};
+}
+
+FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O1(const std::pair<Real, Real> &p1,
+                                    const std::pair<Real, Real> &p2) {
+  return Fold::fold_line_ctor(line_through(p1, p2));
+}
+
+FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O2(const std::pair<Real, Real> &p1,
+                                    const std::pair<Real, Real> &p2) {
+  return Fold::fold_line_ctor(perp_bisector(p1, p2));
+}
+
+FoldSequenceStateTraceCase::Fold
+FoldSequenceStateTraceCase::fold_O4(const std::pair<Real, Real> &p,
+                                    const FoldSequenceStateTraceCase::Line &l) {
+  return Fold::fold_line_ctor(perp_through(p, l));
+}
+
+FoldSequenceStateTraceCase::ConstructionState
+FoldSequenceStateTraceCase::add_fold_to_state(
+    const FoldSequenceStateTraceCase::ConstructionState &st,
+    const FoldSequenceStateTraceCase::FoldStep &step) {
+  FoldSequenceStateTraceCase::Line new_line = step.execute_fold_step();
+  return ConstructionState{
+      st.state_points,
+      List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines)};
+}
+
+FoldSequenceStateTraceCase::ConstructionState
+FoldSequenceStateTraceCase::execute_sequence(
+    FoldSequenceStateTraceCase::ConstructionState st,
+    const List<FoldSequenceStateTraceCase::FoldStep> &seq) {
+  if (std::holds_alternative<
+          typename List<FoldSequenceStateTraceCase::FoldStep>::Nil>(seq.v())) {
+    return st;
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename List<FoldSequenceStateTraceCase::FoldStep>::Cons>(
+            seq.v());
+    return execute_sequence(add_fold_to_state(std::move(st), a0), *a1);
+  }
+}
+
+uint64_t FoldSequenceStateTraceCase::line_count_after_sample_sequence(
+    const FoldSequenceStateTraceCase::ConstructionState &st) {
+  return execute_sequence(st, sample_sequence).state_lines.length();
+}

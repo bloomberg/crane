@@ -1,0 +1,168 @@
+#ifndef INCLUDED_DOUBLE_TYPENAME
+#define INCLUDED_DOUBLE_TYPENAME
+
+#include "small_vector.h"
+#include <any>
+#include <atomic>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+template <typename A> struct List {
+  // TYPES
+  struct Nil {};
+
+  struct Cons {
+    A a;
+    std::shared_ptr<List<A>> l;
+  };
+
+  using variant_t = std::variant<Nil, Cons>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  List() {}
+
+  explicit List(Nil _v) : v_(_v) {}
+
+  explicit List(Cons _v) : v_(std::move(_v)) {}
+
+  template <typename _U> List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      this->v_ = Nil{};
+    } else {
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
+    }
+  }
+
+  static List<A> nil() { return List<A>(Nil{}); }
+
+  static List<A> cons(A a, List<A> l) {
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  }
+
+  // MANIPULATORS
+  ~List() {
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
+template <typename M>
+concept OrderedType = requires { typename M::t; };
+
+struct DoubleTypename {
+  template <OrderedType X> struct MakeMap {
+    template <typename A> struct entry {
+      // DATA
+      typename X::t a0;
+      A a1;
+
+      // ACCESSORS
+      entry<A> clone() const { return {a0, a1}; }
+
+      // CREATORS
+      static entry<A> entry0(typename X::t a0, A a1) {
+        return {std::move(a0), std::move(a1)};
+      }
+    };
+
+    template <typename T1, typename T2, typename F0>
+      requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
+    static T2 entry_rect(F0 &&f, const entry<T1> &e) {
+      const auto &[a0, a1] = e;
+      return f(a0, a1);
+    }
+
+    template <typename T1, typename T2, typename F0>
+      requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
+    static T2 entry_rec(F0 &&f, const entry<T1> &e) {
+      const auto &[a0, a1] = e;
+      return f(a0, a1);
+    }
+
+    template <typename T1>
+    static List<typename X::t> keys(const List<entry<T1>> &l) {
+      if (std::holds_alternative<typename List<entry<T1>>::Nil>(l.v())) {
+        return List<typename X::t>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<entry<T1>>::Cons>(l.v());
+        const auto &[a00, a10] = a0;
+        return List<typename X::t>::cons(a00, List<typename X::t>::nil());
+      }
+    }
+  };
+
+  struct NatOrd {
+    using t = uint64_t;
+  };
+
+  using NatMap = MakeMap<NatOrd>;
+  static inline const List<uint64_t> test =
+      NatMap::template keys<uint64_t>(List<NatMap::entry<uint64_t>>::cons(
+          NatMap::template entry<uint64_t>::entry0(UINT64_C(1), UINT64_C(2)),
+          List<NatMap::entry<uint64_t>>::nil()));
+};
+
+#endif // INCLUDED_DOUBLE_TYPENAME

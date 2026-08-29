@@ -1,0 +1,52 @@
+#include "reuse_alias.h"
+
+ReuseAlias::mylist<uint64_t>
+ReuseAlias::inc_head(const ReuseAlias::mylist<uint64_t> &l) {
+  if (std::holds_alternative<typename ReuseAlias::mylist<uint64_t>::Mynil>(
+          l.v())) {
+    return mylist<uint64_t>::mynil();
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
+    return mylist<uint64_t>::mycons((a0 + UINT64_C(1)), *a1);
+  }
+}
+
+std::pair<ReuseAlias::mylist<uint64_t>, ReuseAlias::mylist<uint64_t>>
+ReuseAlias::double_use(ReuseAlias::mylist<uint64_t> l) {
+  return std::make_pair(inc_head(l), l);
+}
+
+std::pair<uint64_t, uint64_t>
+ReuseAlias::double_call(const ReuseAlias::mylist<uint64_t> &l) {
+  return std::make_pair(length<uint64_t>(l), length<uint64_t>(inc_head(l)));
+}
+
+std::pair<ReuseAlias::mylist<uint64_t>, uint64_t>
+ReuseAlias::alias_and_match(ReuseAlias::mylist<uint64_t> l) {
+  if (std::holds_alternative<typename ReuseAlias::mylist<uint64_t>::Mynil>(
+          l.v_mut())) {
+    return std::make_pair(std::move(l), UINT64_C(0));
+  } else {
+    auto &[a0, a1] =
+        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v_mut());
+    return std::make_pair(std::move(l), a0);
+  }
+}
+
+std::pair<ReuseAlias::mylist<uint64_t>, ReuseAlias::mylist<uint64_t>>
+ReuseAlias::scrutinee_in_branch(ReuseAlias::mylist<uint64_t> l) {
+  if (std::holds_alternative<typename ReuseAlias::mylist<uint64_t>::Mynil>(
+          l.v_mut())) {
+    return std::make_pair(mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
+  } else {
+    auto &[a0, a1] =
+        std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v_mut());
+    return std::make_pair(std::move(l), *a1);
+  }
+}
+
+ReuseAlias::mylist<uint64_t>
+ReuseAlias::triple_inc(const ReuseAlias::mylist<uint64_t> &l) {
+  return inc_head(inc_head(inc_head(l)));
+}

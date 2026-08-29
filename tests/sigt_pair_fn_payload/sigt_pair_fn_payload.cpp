@@ -1,0 +1,8 @@
+#include "sigt_pair_fn_payload.h"
+
+uint64_t SigtPairFnPayload::score(const SigT<std::any, std::any> &it) {
+  const auto &[x, a1] = it;
+  const auto &[a, f] = std::any_cast<std::pair<std::any, std::any>>(a1);
+  return std::any_cast<uint64_t>(
+      std::any_cast<std::function<std::any(std::any)>>(f)(a));
+}

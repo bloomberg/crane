@@ -1,0 +1,84 @@
+#ifndef INCLUDED_MEM_SAFETY_PROBE12
+#define INCLUDED_MEM_SAFETY_PROBE12
+
+#include "crane_fn.h"
+#include <any>
+#include <functional>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct MemSafetyProbe12 {
+  struct wrap {
+    // DATA
+    std::any a;
+
+    // ACCESSORS
+    wrap clone() const { return {a}; }
+
+    // CREATORS
+    static wrap wrap0(std::any a) { return {std::move(a)}; }
+  };
+
+  template <typename T1, typename T2, typename F0>
+  static T1 wrap_rect(F0 &&f, const wrap &w) {
+    const auto &[a0] = w;
+    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+  }
+
+  template <typename T1, typename T2, typename F0>
+  static T1 wrap_rec(F0 &&f, const wrap &w) {
+    const auto &[a0] = w;
+    return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
+  }
+
+  template <typename T1> static T1 unwrap(const wrap &w) {
+    const auto &[a0] = w;
+    return std::any_cast<T1>(a0);
+  }
+
+  static inline const wrap pack_nat = wrap::wrap0(UINT64_C(42));
+  static inline const uint64_t test_pack_nat = unwrap<uint64_t>(pack_nat);
+  static inline const wrap pack_bool = wrap::wrap0(true);
+  static inline const bool test_pack_bool = unwrap<bool>(pack_bool);
+  static wrap pack_fn_let(uint64_t base);
+  static inline const uint64_t test_pack_fn_let = []() {
+    wrap w = pack_fn_let(UINT64_C(10));
+    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
+  }();
+  static wrap pack_fn_direct(uint64_t base);
+  static inline const uint64_t test_pack_fn_direct = []() {
+    wrap w = pack_fn_direct(UINT64_C(10));
+    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(UINT64_C(5));
+  }();
+
+  template <typename F0>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+  static wrap pack_composed(F0 &&f, uint64_t base) {
+    std::function<uint64_t(uint64_t)> g = [=](uint64_t x) mutable {
+      return (f(x) + base);
+    };
+    return wrap::wrap0(g);
+  }
+
+  static inline const uint64_t test_pack_composed = []() {
+    wrap w = pack_composed([](uint64_t x) { return (x * UINT64_C(2)); },
+                           UINT64_C(5));
+    return unwrap<std::function<uint64_t(uint64_t)>>(std::move(w))(
+        UINT64_C(10));
+  }();
+  static inline const uint64_t test_multi_wrap = []() {
+    wrap w1 = wrap::wrap0(UINT64_C(10));
+    wrap w2 = wrap::wrap0(UINT64_C(20));
+    return (unwrap<uint64_t>(std::move(w1)) + unwrap<uint64_t>(std::move(w2)));
+  }();
+  static inline const uint64_t test_wrap_pair = []() {
+    std::pair<uint64_t, uint64_t> p = std::make_pair(UINT64_C(3), UINT64_C(7));
+    wrap w = wrap::wrap0(std::move(p));
+    std::pair<uint64_t, uint64_t> p2 =
+        unwrap<std::pair<uint64_t, uint64_t>>(std::move(w));
+    return (p2.first + p2.second);
+  }();
+};
+
+#endif // INCLUDED_MEM_SAFETY_PROBE12

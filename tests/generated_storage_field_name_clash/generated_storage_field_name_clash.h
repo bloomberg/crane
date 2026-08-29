@@ -1,0 +1,68 @@
+#ifndef INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
+#define INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct GeneratedStorageFieldNameClash {
+  struct d_v_ {
+    // TYPES
+    struct Empty {};
+
+    struct Flag {
+      bool a0;
+    };
+
+    using variant_t = std::variant<Empty, Flag>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    d_v_() {}
+
+    explicit d_v_(Empty _v) : v_(_v) {}
+
+    explicit d_v_(Flag _v) : v_(std::move(_v)) {}
+
+    static d_v_ empty() { return d_v_(Empty{}); }
+
+    static d_v_ flag(bool a0) { return d_v_(Flag{a0}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, bool &>
+  static T1 d_v__rect(T1 f, F1 &&f0, const d_v_ &d) {
+    if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
+      return f;
+    } else {
+      const auto &[a0] = std::get<typename d_v_::Flag>(d.v());
+      return f0(a0);
+    }
+  }
+
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, bool &>
+  static T1 d_v__rec(T1 f, F1 &&f0, const d_v_ &d) {
+    if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
+      return f;
+    } else {
+      const auto &[a0] = std::get<typename d_v_::Flag>(d.v());
+      return f0(a0);
+    }
+  }
+
+  static bool is_flag(const d_v_ &x);
+  static inline const bool sample = is_flag(d_v_::flag(true));
+};
+
+#endif // INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH

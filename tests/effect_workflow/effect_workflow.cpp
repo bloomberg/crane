@@ -1,0 +1,115 @@
+#include "effect_workflow.h"
+
+std::string EffectWorkflow::full_workflow(std::string prefix) {
+  int64_t _x = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+  std::string tmp = [&]() -> std::string {
+    std::string _n = std::filesystem::path(prefix).filename().string();
+    if (_n.empty() || _n == "." || _n == "..")
+      _n = "tmp";
+    std::filesystem::path _base = std::filesystem::temp_directory_path();
+    std::random_device _rng;
+    for (;;) {
+      std::string _d =
+          (_base / (_n + std::to_string(_rng()) + std::to_string(_rng())))
+              .string();
+      if (::mkdir(_d.c_str(), 0700) != 0) {
+        if (errno == EEXIST)
+          continue;
+        throw std::runtime_error("crane: failed to create temporary directory");
+      }
+      std::string _p = _d + "/" + _n;
+      int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
+      if (_fd < 0)
+        throw std::runtime_error("crane: failed to create temporary file");
+      ::close(_fd);
+      return _p;
+    }
+  }();
+  bool _x0 = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(tmp), _ec);
+    return !_ec;
+  }();
+  setenv("LAST_TEMP"s.c_str(), tmp.c_str(), 1);
+  std::cout << tmp << '\n';
+  int64_t _x3 = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+  return tmp;
+}
+
+std::string EffectWorkflow::conditional_create(std::string path) {
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    return !_ec;
+  }();
+  if (ok) {
+    std::cout << "created"s << '\n';
+    return path;
+  } else {
+    return "exists";
+  }
+}
+
+void EffectWorkflow::read_and_set() {
+  std::string line;
+  std::getline(std::cin, line);
+  setenv("USER_INPUT"s.c_str(), std::move(line).c_str(), 1);
+  return;
+}
+
+uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
+  if (n <= 0) {
+    return UINT64_C(0);
+  } else {
+    uint64_t n_ = n - 1;
+    int64_t _x = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
+    std::cout << msg << '\n';
+    uint64_t r = repeat_log(n_, msg);
+    return (r + 1);
+  }
+}
+
+std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
+  std::optional<std::string> r = [&]() -> std::optional<std::string> {
+    auto *v = std::getenv(name.c_str());
+    return v ? std::optional<std::string>(v) : std::optional<std::string>();
+  }();
+  if (r.has_value()) {
+    const std::string &v = *r;
+    return v;
+  } else {
+    bool _x = [&]() -> bool {
+      std::error_code _ec;
+      std::filesystem::create_directories(std::filesystem::path(path), _ec);
+      return !_ec;
+    }();
+    setenv(name.c_str(), path.c_str(), 1);
+    return path;
+  }
+}
+
+int64_t EffectWorkflow::read_length() {
+  std::string line;
+  std::getline(std::cin, line);
+  int64_t len = static_cast<int64_t>(std::move(line).length());
+  return len;
+}
+
+std::pair<std::string, std::string> EffectWorkflow::double_read() {
+  std::string a;
+  std::getline(std::cin, a);
+  std::string b;
+  std::getline(std::cin, b);
+  return std::make_pair(a, b);
+}
+
+int64_t EffectWorkflow::return_literal() { return INT64_C(42); }

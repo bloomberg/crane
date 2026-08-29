@@ -1,12 +1,12 @@
 
 
-(subdir impossible_branch_thunk_call
+(subdir assoc_type_option_leak
  (rule
-  (targets impossible_branch_thunk_call.t.exe)
-  (deps ImpossibleBranchThunkCall.vo impossible_branch_thunk_call.t.cpp (source_tree .))
+  (targets assoc_type_option_leak.t.exe)
+  (deps AssocTypeOptionLeak.vo assoc_type_option_leak.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} impossible_branch_thunk_call.t.exe impossible_branch_thunk_call.cpp impossible_branch_thunk_call.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_option_leak.t.exe assoc_type_option_leak.cpp assoc_type_option_leak.t.cpp)))
  (rule
   (alias runtest)
-  (deps impossible_branch_thunk_call.t.exe)
-  (action (run ./impossible_branch_thunk_call.t.exe))))
+  (deps assoc_type_option_leak.t.exe)
+  (action (run ./assoc_type_option_leak.t.exe))))

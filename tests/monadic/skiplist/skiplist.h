@@ -13,702 +13,7 @@
 #include <utility>
 #include <variant>
 
-template <typename K, typename V> struct SkipList {
-  std::shared_ptr<SkipNode<K, V>> slHead;
-  uint64_t slMaxLevel;
-  stm::TVar<uint64_t> slLevel;
-  stm::TVar<uint64_t> slLength;
-
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &>
-  SkipPath<K, V> findPath(F0 &&ltK, const K &target) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    SkipPath<K, V> path = SkipPath<K, V>{};
-    return SkipList<int, int>::template findPath_aux<K, V>(
-        ltK, this->slHead, target, lvl, std::move(path));
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::optional<V> lookup(F0 &&ltK, F1 &&eqK, const K &k) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
-        V v = stm::readTVar<V>(node->value);
-        return std::make_optional<V>(v);
-      } else {
-        return std::optional<V>();
-      }
-    } else {
-      return std::optional<V>();
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::monostate insert(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
-                        uint64_t newLevel) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (newLevel + 1), curLvl);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, k)) {
-        stm::writeTVar<V>(existing->value, v);
-        return std::monostate{};
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(std::move(path),
-                                                    this->slHead, newN);
-        if (curLvl < newLevel) {
-          stm::writeTVar(this->slLevel, newLevel);
-          return std::monostate{};
-        } else {
-          return std::monostate{};
-        }
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  newN);
-      if (curLvl < newLevel) {
-        stm::writeTVar(this->slLevel, newLevel);
-        return std::monostate{};
-      } else {
-        return std::monostate{};
-      }
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::monostate remove(F0 &&ltK, F1 &&eqK, const K &k) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
-        uint64_t curLvl = stm::readTVar(this->slLevel);
-        SkipList<int, int>::template extendPath<K, V>(
-            path, this->slHead, (node->level + 1), curLvl);
-        SkipList<int, int>::template unlinkNode<K, V>(std::move(path), node);
-        return std::monostate{};
-      } else {
-        return std::monostate{};
-      }
-    } else {
-      return std::monostate{};
-    }
-  }
-
-  std::optional<std::pair<K, V>> minimum() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (firstOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *firstOpt;
-      V v = stm::readTVar<V>(node->value);
-      return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
-    } else {
-      return std::optional<std::pair<K, V>>();
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool memberFast(F0 &&ltK, F1 &&eqK, const K &k) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
-                                                          this->slHead, k, lvl);
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool member(F0 &&ltK, F1 &&eqK, const K &k) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
-                                                          this->slHead, k, lvl);
-  }
-
-  bool isEmpty() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    return [=]() mutable -> bool {
-      if (firstOpt.has_value()) {
-        const std::shared_ptr<SkipNode<K, V>> &_x = *firstOpt;
-        return false;
-      } else {
-        return true;
-      }
-    }();
-  }
-
-  uint64_t length() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    return SkipList<int, int>::template length_aux<K, V>(
-        10000u, std::move(firstOpt), UINT64_C(0));
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool exists_(F0 &&ltK, F1 &&eqK, const K &k) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(ltK, eqK,
-                                                          this->slHead, k, lvl);
-  }
-
-  std::optional<std::shared_ptr<SkipNode<K, V>>> front() const {
-    return ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-        this->slHead->forward[UINT64_C(0)]));
-  }
-
-  std::optional<std::shared_ptr<SkipNode<K, V>>> back() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (firstOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &first = *firstOpt;
-      return SkipList<int, int>::template findLast_aux<K, V>(10000u, first);
-    } else {
-      return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-    }
-  }
-
-  std::optional<std::pair<K, V>> popFront() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (firstOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *firstOpt;
-      SkipList<int, int>::template unlinkFirstFromHead<K, V>(this->slHead, node,
-                                                             node->level);
-      V v = stm::readTVar<V>(node->value);
-      return std::make_optional<std::pair<K, V>>(std::make_pair(node->key, v));
-    } else {
-      return std::optional<std::pair<K, V>>();
-    }
-  }
-
-  uint64_t removeAll() const {
-    uint64_t count = SkipList<int, int>::template removeAll_aux<K, V>(
-        10000u, this->slHead, UINT64_C(0));
-    stm::writeTVar(this->slLevel, UINT64_C(0));
-    return count;
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::monostate add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
-                     uint64_t newLevel) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (newLevel + 1), curLvl);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, k)) {
-        stm::writeTVar<V>(existing->value, v);
-        return std::monostate{};
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(std::move(path),
-                                                    this->slHead, newN);
-        if (curLvl < newLevel) {
-          stm::writeTVar(this->slLevel, newLevel);
-          return std::monostate{};
-        } else {
-          return std::monostate{};
-        }
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  newN);
-      if (curLvl < newLevel) {
-        stm::writeTVar(this->slLevel, newLevel);
-        return std::monostate{};
-      } else {
-        return std::monostate{};
-      }
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool addUnique(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
-                 uint64_t newLevel) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (newLevel + 1), curLvl);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, k)) {
-        return false;
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(k, v, newLevel);
-        SkipList<int, int>::template linkNode<K, V>(std::move(path),
-                                                    this->slHead, newN);
-        [&]() -> void {
-          if (curLvl < newLevel) {
-            stm::writeTVar(this->slLevel, newLevel);
-            return;
-          } else {
-            return;
-          }
-        }();
-        return true;
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(k, v, newLevel);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  newN);
-      [&]() -> void {
-        if (curLvl < newLevel) {
-          stm::writeTVar(this->slLevel, newLevel);
-          return;
-        } else {
-          return;
-        }
-      }();
-      return true;
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::optional<std::shared_ptr<SkipNode<K, V>>> find(F0 &&ltK, F1 &&eqK,
-                                                      const K &k) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
-        return std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node);
-      } else {
-        return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-      }
-    } else {
-      return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-    }
-  }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &>
-  std::optional<std::shared_ptr<SkipNode<K, V>>>
-  previous(F0 &&eqK, std::shared_ptr<SkipNode<K, V>> pair) const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (firstOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &first = *firstOpt;
-      if (eqK(first->key, pair->key)) {
-        return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-      } else {
-        return SkipList<int, int>::template findPrev_aux<K, V>(
-            eqK, 10000u, first, this->slHead, pair->key);
-      }
-    } else {
-      return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-    }
-  }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &>
-  std::optional<std::shared_ptr<SkipNode<K, V>>>
-  findLowerBound(F0 &&ltK, const K &k) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      return std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node);
-    } else {
-      return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::optional<std::shared_ptr<SkipNode<K, V>>>
-  findUpperBound(F0 &&ltK, F1 &&eqK, const K &k) const {
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
-        return ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            node->forward[UINT64_C(0)]));
-      } else {
-        return std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node);
-      }
-    } else {
-      return std::optional<std::shared_ptr<SkipNode<K, V>>>();
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool removePair(F0 &&ltK, F1 &&eqK,
-                  std::shared_ptr<SkipNode<K, V>> pair) const {
-    K k = pair->key;
-    SkipPath<K, V> path = this->findPath(ltK, k);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, k)) {
-        SkipList<int, int>::template extendPath<K, V>(
-            path, this->slHead, (node->level + 1), curLvl);
-        SkipList<int, int>::template unlinkNode<K, V>(path, node);
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::pair<std::shared_ptr<SkipNode<K, V>>, bool>
-  bde_add(F0 &&ltK, F1 &&eqK, const K &key0, const V &data0,
-          uint64_t level) const {
-    SkipPath<K, V> path = this->findPath(ltK, key0);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (level + 1), curLvl);
-    std::optional<std::shared_ptr<SkipNode<K, V>>> curFront =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    bool isNewFront;
-    if (curFront.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &frontNode = *curFront;
-      isNewFront = ltK(key0, frontNode->key);
-    } else {
-      isNewFront = true;
-    }
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, key0)) {
-        stm::writeTVar<V>(existing->value, data0);
-        return std::make_pair(existing, false);
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(key0, data0, level);
-        SkipList<int, int>::template linkNode<K, V>(std::move(path),
-                                                    this->slHead, newN);
-        [&]() -> void {
-          if (curLvl < level) {
-            stm::writeTVar(this->slLevel, level);
-            return;
-          } else {
-            return;
-          }
-        }();
-        return std::make_pair(newN, isNewFront);
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(key0, data0, level);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  newN);
-      [&]() -> void {
-        if (curLvl < level) {
-          stm::writeTVar(this->slLevel, level);
-          return;
-        } else {
-          return;
-        }
-      }();
-      return std::make_pair(newN, isNewFront);
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::pair<std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>,
-            bool>
-  bde_addUnique(F0 &&ltK, F1 &&eqK, const K &key0, const V &data0,
-                uint64_t level) const {
-    SkipPath<K, V> path = this->findPath(ltK, key0);
-    uint64_t curLvl = stm::readTVar(this->slLevel);
-    SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
-                                                  (level + 1), curLvl);
-    std::optional<std::shared_ptr<SkipNode<K, V>>> curFront =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    bool isNewFront;
-    if (curFront.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &frontNode = *curFront;
-      isNewFront = ltK(key0, frontNode->key);
-    } else {
-      isNewFront = true;
-    }
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &existing = *nextOpt;
-      if (eqK(existing->key, key0)) {
-        return std::make_pair(
-            std::make_pair(SkipList<int, int>::e_DUPLICATE,
-                           std::optional<std::shared_ptr<SkipNode<K, V>>>()),
-            false);
-      } else {
-        std::shared_ptr<SkipNode<K, V>> newN =
-            SkipNode<K, V>::create(key0, data0, level);
-        SkipList<int, int>::template linkNode<K, V>(std::move(path),
-                                                    this->slHead, newN);
-        [&]() -> void {
-          if (curLvl < level) {
-            stm::writeTVar(this->slLevel, level);
-            return;
-          } else {
-            return;
-          }
-        }();
-        return std::make_pair(
-            std::make_pair(
-                SkipList<int, int>::e_SUCCESS,
-                std::make_optional<std::shared_ptr<SkipNode<K, V>>>(newN)),
-            isNewFront);
-      }
-    } else {
-      std::shared_ptr<SkipNode<K, V>> newN =
-          SkipNode<K, V>::create(key0, data0, level);
-      SkipList<int, int>::template linkNode<K, V>(std::move(path), this->slHead,
-                                                  newN);
-      [&]() -> void {
-        if (curLvl < level) {
-          stm::writeTVar(this->slLevel, level);
-          return;
-        } else {
-          return;
-        }
-      }();
-      return std::make_pair(
-          std::make_pair(
-              SkipList<int, int>::e_SUCCESS,
-              std::make_optional<std::shared_ptr<SkipNode<K, V>>>(newN)),
-          isNewFront);
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_find(F0 &&ltK, F1 &&eqK, const K &key0) const {
-    SkipPath<K, V> path = this->findPath(ltK, key0);
-    std::shared_ptr<SkipNode<K, V>> pred0 = path.get(UINT64_C(0));
-    std::optional<std::shared_ptr<SkipNode<K, V>>> nextOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            pred0->forward[UINT64_C(0)]));
-    if (nextOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *nextOpt;
-      if (eqK(node->key, key0)) {
-        return std::make_pair(
-            SkipList<int, int>::e_SUCCESS,
-            std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-      } else {
-        return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                              std::optional<std::shared_ptr<SkipNode<K, V>>>());
-      }
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_front() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> frontOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (frontOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *frontOpt;
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_back() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> backOpt = this->back();
-    if (backOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *backOpt;
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_popFront() const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> firstOpt =
-        ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<K, V>>>(
-            this->slHead->forward[UINT64_C(0)]));
-    if (firstOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *firstOpt;
-      SkipList<int, int>::template unlinkFirstFromHead<K, V>(this->slHead, node,
-                                                             node->level);
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  uint64_t bde_remove(F0 &&ltK, F1 &&eqK,
-                      std::shared_ptr<SkipNode<K, V>> pair) const {
-    bool result = this->removePair(ltK, eqK, pair);
-    if (result) {
-      return SkipList<int, int>::e_SUCCESS;
-    } else {
-      return SkipList<int, int>::e_NOT_FOUND;
-    }
-  }
-
-  uint64_t bde_removeAll() const { return this->removeAll(); }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  bool bde_exists(F0 &&ltK, F1 &&eqK, const K &key0) const {
-    uint64_t lvl = stm::readTVar(this->slLevel);
-    return SkipList<int, int>::template findKey_aux<K, V>(
-        ltK, eqK, this->slHead, key0, lvl);
-  }
-
-  bool bde_isEmpty() const { return this->isEmpty(); }
-
-  uint64_t bde_length() const { return this->length(); }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &>
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_previous(F0 &&eqK, std::shared_ptr<SkipNode<K, V>> pair) const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> prevOpt =
-        this->previous(eqK, pair);
-    if (prevOpt.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *prevOpt;
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &>
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_findLowerBound(F0 &&ltK, const K &key0) const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> result =
-        this->findLowerBound(ltK, key0);
-    if (result.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *result;
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
-  template <typename F0, typename F1>
-    requires std::is_invocable_r_v<bool, F0 &, K &, K &> &&
-             std::is_invocable_r_v<bool, F1 &, K &, K &>
-  std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<K, V>>>>
-  bde_findUpperBound(F0 &&ltK, F1 &&eqK, const K &key0) const {
-    std::optional<std::shared_ptr<SkipNode<K, V>>> result =
-        this->findUpperBound(ltK, eqK, key0);
-    if (result.has_value()) {
-      const std::shared_ptr<SkipNode<K, V>> &node = *result;
-      return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
-          std::make_optional<std::shared_ptr<SkipNode<K, V>>>(node));
-    } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
-                            std::optional<std::shared_ptr<SkipNode<K, V>>>());
-    }
-  }
-
+struct SkipList_Mod {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::shared_ptr<SkipNode<T1, T2>>
@@ -744,9 +49,15 @@ template <typename K, typename V> struct SkipList {
   static std::shared_ptr<SkipNode<T1, T2>>
   findPred(F0 &&ltK, std::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
            uint64_t level) {
-    return SkipList<int, int>::template findPred_go<T1, T2>(ltK, 10000u, curr,
-                                                            target, level);
+    return findPred_go<T1, T2>(ltK, 10000u, curr, target, level);
   }
+
+  template <typename K, typename V> struct SkipList {
+    std::shared_ptr<SkipNode<K, V>> slHead;
+    uint64_t slMaxLevel;
+    stm::TVar<uint64_t> slLevel;
+    stm::TVar<uint64_t> slLength;
+  };
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
@@ -757,8 +68,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
-                                                        _loop_level);
+          findPred<T1, T2>(ltK, _loop_curr, target, _loop_level);
       path.set(_loop_level, pred);
       if (_loop_level <= 0) {
         return path;
@@ -792,8 +102,7 @@ template <typename K, typename V> struct SkipList {
     uint64_t _loop_level = std::move(level);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
-      SkipList<int, int>::template linkAtLevel<T1, T2>(pred, newNode,
-                                                       _loop_level);
+      linkAtLevel<T1, T2>(pred, newNode, _loop_level);
       if (_loop_level <= 0) {
         return;
       } else {
@@ -833,7 +142,7 @@ template <typename K, typename V> struct SkipList {
     if (needed <= (currentMax + 1)) {
       return;
     } else {
-      SkipList<int, int>::template extendPath_aux<T1, T2>(
+      extendPath_aux<T1, T2>(
           path, head,
           (((needed - UINT64_C(1)) > needed ? 0 : (needed - UINT64_C(1)))),
           (currentMax + UINT64_C(1)));
@@ -846,7 +155,7 @@ template <typename K, typename V> struct SkipList {
                        std::shared_ptr<SkipNode<T1, T2>> head,
                        std::shared_ptr<SkipNode<T1, T2>> newNode) {
     uint64_t lvl = newNode->level;
-    SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode, lvl);
+    linkNode_aux<T1, T2>(path, head, newNode, lvl);
     return;
   }
 
@@ -869,8 +178,7 @@ template <typename K, typename V> struct SkipList {
     uint64_t _loop_level = std::move(level);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
-      SkipList<int, int>::template unlinkAtLevel<T1, T2>(pred, target,
-                                                         _loop_level);
+      unlinkAtLevel<T1, T2>(pred, target, _loop_level);
       if (_loop_level <= 0) {
         return;
       } else {
@@ -885,7 +193,7 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNode(SkipPath<T1, T2> path,
                          std::shared_ptr<SkipNode<T1, T2>> target) {
     uint64_t lvl = target->level;
-    SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target, lvl);
+    unlinkNode_aux<T1, T2>(path, target, lvl);
     return;
   }
 
@@ -899,8 +207,7 @@ template <typename K, typename V> struct SkipList {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     while (true) {
       std::shared_ptr<SkipNode<T1, T2>> pred =
-          SkipList<int, int>::template findPred<T1, T2>(ltK, _loop_curr, target,
-                                                        _loop_level);
+          findPred<T1, T2>(ltK, _loop_curr, target, _loop_level);
       if (_loop_level <= 0) {
         std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
             ptr_to_opt(stm::readTVar<std::shared_ptr<SkipNode<T1, T2>>>(
@@ -1031,8 +338,7 @@ template <typename K, typename V> struct SkipList {
                 head->forward[UINT64_C(0)]));
         if (firstOpt.has_value()) {
           const std::shared_ptr<SkipNode<T1, T2>> &node = *firstOpt;
-          SkipList<int, int>::template unlinkNodeAtAllLevels<T1, T2>(
-              head, node, node->level);
+          unlinkNodeAtAllLevels<T1, T2>(head, node, node->level);
           _loop_acc = (_loop_acc + 1);
           _loop_fuel = fuel_;
         } else {
@@ -1102,14 +408,14 @@ template <typename K, typename V> struct SkipList {
   static std::pair<uint64_t, std::optional<std::shared_ptr<SkipNode<T1, T2>>>>
   bde_next(std::shared_ptr<SkipNode<T1, T2>> pair) {
     std::optional<std::shared_ptr<SkipNode<T1, T2>>> nextOpt =
-        SkipList<int, int>::template next<T1, T2>(pair);
+        next<T1, T2>(pair);
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<T1, T2>> &node = *nextOpt;
       return std::make_pair(
-          SkipList<int, int>::e_SUCCESS,
+          e_SUCCESS,
           std::make_optional<std::shared_ptr<SkipNode<T1, T2>>>(node));
     } else {
-      return std::make_pair(SkipList<int, int>::e_NOT_FOUND,
+      return std::make_pair(e_NOT_FOUND,
                             std::optional<std::shared_ptr<SkipNode<T1, T2>>>());
     }
   }
@@ -1126,9 +432,7 @@ template <typename K, typename V> struct SkipList {
 
   template <typename T1, typename T2>
   static SkipList<T1, T2> createIO(const T1 &dummyKey, const T2 &dummyVal) {
-    return stm::atomically([&] {
-      return SkipList<int, int>::template create<T1, T2>(dummyKey, dummyVal);
-    });
+    return stm::atomically([&] { return create<T1, T2>(dummyKey, dummyVal); });
   }
 };
 

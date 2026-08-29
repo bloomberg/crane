@@ -1,0 +1,107 @@
+#include "effect_complex_return.h"
+
+std::pair<std::string, std::string> EffectComplexReturn::read_pair() {
+  std::string a;
+  std::getline(std::cin, a);
+  std::string b;
+  std::getline(std::cin, b);
+  return std::make_pair(a, b);
+}
+
+std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
+  if (do_read) {
+    std::string line;
+    std::getline(std::cin, line);
+    return std::make_optional<std::string>(line);
+  } else {
+    return std::optional<std::string>();
+  }
+}
+
+std::string EffectComplexReturn::print_then_read(std::string prompt) {
+  std::cout << prompt << '\n';
+  return []() -> std::string {
+    std::string _r;
+    std::getline(std::cin, _r);
+    return _r;
+  }();
+}
+
+std::pair<int64_t, std::string>
+EffectComplexReturn::mixed_effects(std::string name) {
+  int64_t t = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count());
+  std::optional<std::string> mv = [&]() -> std::optional<std::string> {
+    auto *v = std::getenv(name.c_str());
+    return v ? std::optional<std::string>(v) : std::optional<std::string>();
+  }();
+  if (mv.has_value()) {
+    const std::string &v = *mv;
+    std::cout << v << '\n';
+    return std::make_pair(t, v);
+  } else {
+    std::string line;
+    std::getline(std::cin, line);
+    return std::make_pair(t, line);
+  }
+}
+
+int64_t EffectComplexReturn::elapsed_ms() {
+  int64_t t1 = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+  int64_t t2 = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::steady_clock::now().time_since_epoch())
+          .count());
+  return static_cast<int64_t>(
+      (static_cast<uint64_t>(t2) - static_cast<uint64_t>(t1)) &
+      0x7FFFFFFFFFFFFFFFULL);
+}
+
+List<std::string> EffectComplexReturn::read_n(uint64_t n) {
+  if (n <= 0) {
+    return List<std::string>::nil();
+  } else {
+    uint64_t n0 = n - 1;
+    if (n0 <= 0) {
+      std::string x;
+      std::getline(std::cin, x);
+      return List<std::string>::cons(x, List<std::string>::nil());
+    } else {
+      uint64_t n1 = n0 - 1;
+      if (n1 <= 0) {
+        std::string x;
+        std::getline(std::cin, x);
+        std::string y;
+        std::getline(std::cin, y);
+        return List<std::string>::cons(
+            x, List<std::string>::cons(y, List<std::string>::nil()));
+      } else {
+        uint64_t _x = n1 - 1;
+        return List<std::string>::nil();
+      }
+    }
+  }
+}
+
+std::string EffectComplexReturn::env_or_prompt(std::string name) {
+  std::optional<std::string> mv = [&]() -> std::optional<std::string> {
+    auto *v = std::getenv(name.c_str());
+    return v ? std::optional<std::string>(v) : std::optional<std::string>();
+  }();
+  if (mv.has_value()) {
+    const std::string &v = *mv;
+    return v;
+  } else {
+    std::cout << "Enter "s + name + ":"s << '\n';
+    return []() -> std::string {
+      std::string _r;
+      std::getline(std::cin, _r);
+      return _r;
+    }();
+  }
+}

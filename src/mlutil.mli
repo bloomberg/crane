@@ -267,6 +267,10 @@ val mlapp : ml_ast -> ml_ast list -> ml_ast
     @param t the ML AST node whose children are to be mapped *)
 val ast_map : (ml_ast -> ml_ast) -> ml_ast -> ml_ast
 
+(** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
+    recursing through the whole term. *)
+val ast_map_types : (ml_type -> ml_type) -> ml_ast -> ml_ast
+
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term
     @param n   the current binding depth (passed to [f] for each child)

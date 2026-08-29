@@ -1,0 +1,108 @@
+#include "effect_bind_action.h"
+
+std::string EffectBindAction::conditional_read(bool use_stdin) {
+  return [=]() mutable -> std::string {
+    if (use_stdin) {
+      return []() -> std::string {
+        std::string _r;
+        std::getline(std::cin, _r);
+        return _r;
+      }();
+    } else {
+      return "default";
+    }
+  }();
+}
+
+int64_t EffectBindAction::conditional_effect(bool flag) {
+  return (flag ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : INT64_C(0));
+}
+
+std::string EffectBindAction::maybe_override(std::string name,
+                                             std::string default0) {
+  std::optional<std::string> r = [&]() -> std::optional<std::string> {
+    auto *v = std::getenv(name.c_str());
+    return v ? std::optional<std::string>(v) : std::optional<std::string>();
+  }();
+  return [=]() mutable -> std::string {
+    if (r.has_value()) {
+      const std::string &v = *r;
+      return v;
+    } else {
+      return default0;
+    }
+  }();
+}
+
+std::pair<int64_t, int64_t> EffectBindAction::timed_if_needed(bool measure) {
+  int64_t t1 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : INT64_C(0));
+  int64_t t2 =
+      (measure ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : INT64_C(0));
+  return std::make_pair(t1, t2);
+}
+
+std::string EffectBindAction::echo_if(bool flag) {
+  std::string line;
+  std::getline(std::cin, line);
+  [&]() -> void {
+    if (flag) {
+      std::cout << std::move(line) << '\n';
+      return;
+    } else {
+      return;
+    }
+  }();
+  return line;
+}
+
+std::string EffectBindAction::helper(std::string s) {
+  std::cout << s << '\n';
+  return s;
+}
+
+std::string EffectBindAction::use_helper(bool flag) {
+  return [=]() mutable -> std::string {
+    if (flag) {
+      return helper("yes");
+    } else {
+      return helper("no");
+    }
+  }();
+}
+
+std::string EffectBindAction::let_match_then_effect(uint64_t n) {
+  std::string msg;
+  if (n <= 0) {
+    msg = "zero";
+  } else {
+    uint64_t _x = n - 1;
+    msg = "other";
+  }
+  std::cout << msg << '\n';
+  return msg;
+}
+
+uint64_t EffectBindAction::discard_conditional(bool flag) {
+  [&]() -> void {
+    if (flag) {
+      std::cout << "flagged"s << '\n';
+      return;
+    } else {
+      return;
+    }
+  }();
+  return UINT64_C(42);
+}

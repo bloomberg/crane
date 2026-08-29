@@ -1,0 +1,70 @@
+#include "effect_list_return.h"
+
+List<std::string> EffectListReturn::list_files(std::string path) {
+  return [&]() -> List<std::string> {
+    auto result = List<std::string>::nil();
+    std::error_code _ec;
+    std::size_t _count = 0;
+    std::filesystem::directory_iterator _it(std::filesystem::path(path), _ec),
+        _end;
+    for (; !_ec && _it != _end && _count < 65536;
+         _it.increment(_ec), ++_count) {
+      result = List<std::string>::cons(_it->path().filename().string(),
+                                       std::move(result));
+    }
+    return result;
+  }();
+}
+
+bool EffectListReturn::make_and_check(std::string path) {
+  return [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
+    return !_ec;
+  }();
+}
+
+std::pair<int64_t, std::string> EffectListReturn::timestamped_line() {
+  int64_t t = static_cast<int64_t>(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count());
+  std::string line;
+  std::getline(std::cin, line);
+  return std::make_pair(t, line);
+}
+
+std::string EffectListReturn::get_cwd() {
+  return [&]() -> std::string {
+    std::error_code _ec;
+    auto _p = std::filesystem::current_path(_ec);
+    return _ec ? std::string{} : _p.string();
+  }();
+}
+
+std::pair<bool, List<std::string>>
+EffectListReturn::create_and_list(std::string dir) {
+  bool ok = [&]() -> bool {
+    std::error_code _ec;
+    std::filesystem::create_directories(std::filesystem::path(dir), _ec);
+    return !_ec;
+  }();
+  if (ok) {
+    List<std::string> files = [&]() -> List<std::string> {
+      auto result = List<std::string>::nil();
+      std::error_code _ec;
+      std::size_t _count = 0;
+      std::filesystem::directory_iterator _it(std::filesystem::path(dir), _ec),
+          _end;
+      for (; !_ec && _it != _end && _count < 65536;
+           _it.increment(_ec), ++_count) {
+        result = List<std::string>::cons(_it->path().filename().string(),
+                                         std::move(result));
+      }
+      return result;
+    }();
+    return std::make_pair(true, files);
+  } else {
+    return std::make_pair(false, List<std::string>::nil());
+  }
+}

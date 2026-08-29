@@ -772,6 +772,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             else
               ty
           in
+          (* The body's embedded types still mention the class's promoted type
+             variables ([list E] carries [Tvar 1], not [list nat]).  Resolve
+             them exactly as the parameter and return types are resolved: left
+             alone they would render as the concept's template parameter [T1],
+             which is not in scope inside the instance struct. *)
+          let field_body = Mlutil.ast_map_types subst_promoted_tvars field_body in
           let rec extract_params ml_acc cpp_acc body =
             match body with
             | MLlam (_id, ty, rest) when Mlutil.isTdummy ty ->
@@ -2774,7 +2780,7 @@ let rec replace_erased_proj_refs
     GlobRef of the first promoted type var (the carrier). This allows
     convert_ml_type_to_cpp_type to detect it as a promoted type var.
     [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map. *)
-let rec rewrite_ml_ast_types
+let rewrite_ml_ast_types
     (carrier_refs : (GlobRef.t * int) list)
     (ast : ml_ast) : ml_ast =
   if carrier_refs = [] then
@@ -2798,36 +2804,7 @@ let rec rewrite_ml_ast_types
         Miniml.Tglob (r, ts', a)
       | _ -> t
     in
-    let rast = rewrite_ml_ast_types carrier_refs in
-    match ast with
-    | MLlam (id, ty, body) -> MLlam (id, rty ty, rast body)
-    | MLletin (id, ty, e1, e2) -> MLletin (id, rty ty, rast e1, rast e2)
-    | MLglob (r, tys) -> MLglob (r, List.map rty tys)
-    | MLcons (ty, r, args) -> MLcons (rty ty, r, List.map rast args)
-    | MLtuple es -> MLtuple (List.map rast es)
-    | MLcase (ty, scrut, branches) ->
-      let branches' =
-        Array.map
-          (fun (binds, bty, pat, body) ->
-            let binds' = List.map (fun (id, t) -> (id, rty t)) binds in
-            (binds', rty bty, pat, rast body) )
-          branches
-      in
-      MLcase (rty ty, rast scrut, branches')
-    | MLfix (i, name_types, bodies, is_cofix) ->
-      let name_types' = Array.map (fun (id, ty) -> (id, rty ty)) name_types in
-      let bodies' = Array.map rast bodies in
-      MLfix (i, name_types', bodies', is_cofix)
-    | MLapp (f, args) -> MLapp (rast f, List.map rast args)
-    | MLmagic e -> MLmagic (rast e)
-    | MLrel _
-     |MLdummy _
-     |MLaxiom _
-     |MLexn _
-     |MLuint _
-     |MLfloat _
-     |MLparray _
-     |MLstring _ -> ast
+    Mlutil.ast_map_types rty ast
 
 (** Rewrite projection types for promoted dependent records. When a function's
     first parameter is a promoted typeclass (e.g., Magma), and the remaining

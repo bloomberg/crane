@@ -1,0 +1,226 @@
+#include "mem_safety_probe16.h"
+
+uint64_t MemSafetyProbe16::sum_list(
+    const MemSafetyProbe16::mylist<uint64_t>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe16::mylist<uint64_t> *l;
+  };
+
+  /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    uint64_t a0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  uint64_t _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified sum_list: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe16::mylist<uint64_t> &l = *_f.l;
+      if (std::holds_alternative<
+              typename MemSafetyProbe16::mylist<uint64_t>::Mynil>(l.v())) {
+        _result = UINT64_C(0);
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(
+                l.v());
+        _stack.emplace_back(_Resume_Mycons{a0});
+        _stack.emplace_back(_Enter{crane_raw(a1)});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = (_f.a0 + std::move(_result));
+    }
+  }
+  return _result;
+}
+
+MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe16::build_summers(
+    const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &trees) {
+  std::shared_ptr<MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>
+      _head{};
+  std::shared_ptr<MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>
+      *_write = &_head;
+  MemSafetyProbe16::mylist<MemSafetyProbe16::tree> _loop_trees = trees;
+  while (true) {
+    if (std::holds_alternative<
+            typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mynil>(
+            _loop_trees.v())) {
+      *_write = std::make_shared<
+          MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>(
+          mylist<std::function<uint64_t(uint64_t)>>::mynil());
+      break;
+    } else {
+      const auto &[a0, a1] = std::get<
+          typename MemSafetyProbe16::mylist<MemSafetyProbe16::tree>::Mycons>(
+          _loop_trees.v());
+      const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
+      auto _cell = std::make_shared<
+          MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>(
+          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
+              [=](uint64_t _x0) mutable -> uint64_t {
+                return a0.make_summer(_x0);
+              },
+              nullptr));
+      *_write = std::move(_cell);
+      _write =
+          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
+               (*_write)->v_mut())
+               .a1;
+      _loop_trees = a1_value;
+      continue;
+    }
+  }
+  return std::move(*_head);
+}
+
+uint64_t MemSafetyProbe16::apply_fns(
+    const MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    uint64_t
+        x) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>> *fns;
+  };
+
+  /// _Resume_Mycons: saves [x], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    uint64_t x;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  uint64_t _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{&fns});
+  /// Loopified apply_fns: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>> &fns =
+          *_f.fns;
+      if (std::holds_alternative<typename MemSafetyProbe16::mylist<
+              std::function<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+        _result = UINT64_C(0);
+      } else {
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe16::mylist<
+            std::function<uint64_t(uint64_t)>>::Mycons>(fns.v());
+        _stack.emplace_back(_Resume_Mycons{a0(x)});
+        _stack.emplace_back(_Enter{crane_raw(a1)});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = (_f.x + std::move(_result));
+    }
+  }
+  return _result;
+}
+
+MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe16::multi_capture_tree(MemSafetyProbe16::tree t, uint64_t n) {
+  std::shared_ptr<MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>
+      _head{};
+  std::shared_ptr<MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>
+      *_write = &_head;
+  uint64_t _loop_n = std::move(n);
+  while (true) {
+    if (_loop_n <= 0) {
+      *_write = std::make_shared<
+          MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>(
+          mylist<std::function<uint64_t(uint64_t)>>::mynil());
+      break;
+    } else {
+      uint64_t n_ = _loop_n - 1;
+      auto _cell = std::make_shared<
+          MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>>>(
+          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
+              [=](uint64_t x) mutable {
+                return ((t.tree_sum() + x) + _loop_n);
+              },
+              nullptr));
+      *_write = std::move(_cell);
+      _write =
+          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
+               (*_write)->v_mut())
+               .a1;
+      _loop_n = n_;
+      continue;
+    }
+  }
+  return std::move(*_head);
+}
+
+uint64_t MemSafetyProbe16::nested_match_closure(
+    const MemSafetyProbe16::tree &t,
+    const MemSafetyProbe16::mylist<uint64_t> &l, uint64_t n) {
+  if (std::holds_alternative<typename MemSafetyProbe16::tree::Leaf>(t.v())) {
+    return n;
+  } else {
+    const auto &[a0, a1, a2] =
+        std::get<typename MemSafetyProbe16::tree::Node>(t.v());
+    if (std::holds_alternative<
+            typename MemSafetyProbe16::mylist<uint64_t>::Mynil>(l.v())) {
+      return (a1 + n);
+    } else {
+      const auto &[a00, a10] =
+          std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(l.v());
+      return ((((a0->tree_sum() + a2->tree_sum()) + a1) + a00) + n);
+    }
+  }
+}
+
+MemSafetyProbe16::mylist<uint64_t> MemSafetyProbe16::zip_apply(
+    const MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>> &fns,
+    const MemSafetyProbe16::mylist<uint64_t> &vals) {
+  std::shared_ptr<MemSafetyProbe16::mylist<uint64_t>> _head{};
+  std::shared_ptr<MemSafetyProbe16::mylist<uint64_t>> *_write = &_head;
+  const MemSafetyProbe16::mylist<uint64_t> *_loop_vals = &vals;
+  const MemSafetyProbe16::mylist<std::function<uint64_t(uint64_t)>> *_loop_fns =
+      &fns;
+  while (true) {
+    if (std::holds_alternative<typename MemSafetyProbe16::mylist<
+            std::function<uint64_t(uint64_t)>>::Mynil>(_loop_fns->v())) {
+      *_write = std::make_shared<MemSafetyProbe16::mylist<uint64_t>>(
+          mylist<uint64_t>::mynil());
+      break;
+    } else {
+      const auto &[a0, a1] = std::get<typename MemSafetyProbe16::mylist<
+          std::function<uint64_t(uint64_t)>>::Mycons>(_loop_fns->v());
+      if (std::holds_alternative<
+              typename MemSafetyProbe16::mylist<uint64_t>::Mynil>(
+              _loop_vals->v())) {
+        *_write = std::make_shared<MemSafetyProbe16::mylist<uint64_t>>(
+            mylist<uint64_t>::mynil());
+        break;
+      } else {
+        const auto &[a00, a10] =
+            std::get<typename MemSafetyProbe16::mylist<uint64_t>::Mycons>(
+                _loop_vals->v());
+        auto _cell = std::make_shared<MemSafetyProbe16::mylist<uint64_t>>(
+            typename mylist<uint64_t>::Mycons(a0(a00), nullptr));
+        *_write = std::move(_cell);
+        _write =
+            &std::get<typename mylist<uint64_t>::Mycons>((*_write)->v_mut()).a1;
+        _loop_vals = crane_raw(a10);
+        _loop_fns = crane_raw(a1);
+        continue;
+      }
+    }
+  }
+  return std::move(*_head);
+}
+
+MemSafetyProbe16::mylist<uint64_t>
+MemSafetyProbe16::flatten_cps(const MemSafetyProbe16::tree &t) {
+  return flatten_cps_aux(
+      t, [](MemSafetyProbe16::mylist<uint64_t> x) { return x; });
+}

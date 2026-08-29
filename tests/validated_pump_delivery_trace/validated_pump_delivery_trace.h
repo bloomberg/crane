@@ -1,0 +1,865 @@
+#ifndef INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE
+#define INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE
+
+#include "small_vector.h"
+#include <any>
+#include <atomic>
+#include <memory>
+#include <optional>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+template <typename A> struct List {
+  // TYPES
+  struct Nil {};
+
+  struct Cons {
+    A a;
+    std::shared_ptr<List<A>> l;
+  };
+
+  using variant_t = std::variant<Nil, Cons>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  List() {}
+
+  explicit List(Nil _v) : v_(_v) {}
+
+  explicit List(Cons _v) : v_(std::move(_v)) {}
+
+  template <typename _U> List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      this->v_ = Nil{};
+    } else {
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
+    }
+  }
+
+  static List<A> nil() { return List<A>(Nil{}); }
+
+  static List<A> cons(A a, List<A> l) {
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  }
+
+  // MANIPULATORS
+  ~List() {
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+
+  template <typename F0>
+    requires std::is_invocable_r_v<bool, F0 &, A &>
+  bool forallb(F0 &&f) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return true;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (f(a0) && a1->forallb(f));
+    }
+  }
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+  T1 fold_left(F0 &&f, T1 a0) const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return a0;
+    } else {
+      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
+      return a2->template fold_left<T1>(f, f(a0, a1));
+    }
+  }
+
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
+    }
+  }
+};
+
+struct ValidatedPumpDeliveryTraceCase {
+  struct Mg_dL {
+    uint64_t mg_dL_val;
+  };
+
+  struct Grams {
+    uint64_t grams_val;
+  };
+
+  using Carbs_g = Grams;
+  using Minutes = uint64_t;
+  using DIA_minutes = uint64_t;
+  using Insulin_twentieth = uint64_t;
+  static inline const uint64_t ONE_UNIT = UINT64_C(20);
+  static inline const uint64_t BG_LEVEL2_HYPO = UINT64_C(54);
+  static inline const uint64_t BG_HYPO = UINT64_C(70);
+  static inline const uint64_t BG_HYPER = UINT64_C(180);
+  static inline const uint64_t BG_METER_MIN = UINT64_C(20);
+  static inline const uint64_t BG_METER_MAX = UINT64_C(600);
+  static inline const uint64_t CARBS_SANITY_MAX = UINT64_C(200);
+  static bool bg_in_meter_range(const Mg_dL &bg);
+  static bool carbs_reasonable(const Grams &carbs);
+
+  struct Config {
+    uint64_t cfg_bg_rise_per_gram;
+    uint64_t cfg_conservative_cob_absorption_percent;
+    uint64_t cfg_suspend_threshold_mg_dl;
+    uint64_t cfg_stacking_warning_threshold_min;
+    uint64_t cfg_iob_high_threshold_twentieths;
+  };
+
+  static inline const Config default_config = Config{
+      UINT64_C(4), UINT64_C(30), UINT64_C(80), UINT64_C(60), UINT64_C(200)};
+  enum class ActivityState {
+    ACTIVITY_NORMAL,
+    ACTIVITY_LIGHTEXERCISE,
+    ACTIVITY_MODERATEEXERCISE,
+    ACTIVITY_INTENSEEXERCISE,
+    ACTIVITY_ILLNESS,
+    ACTIVITY_STRESS
+  };
+
+  template <typename T1>
+  static T1 ActivityState_rect(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
+                               ActivityState a) {
+    switch (a) {
+    case ActivityState::ACTIVITY_NORMAL: {
+      return f;
+    }
+    case ActivityState::ACTIVITY_LIGHTEXERCISE: {
+      return f0;
+    }
+    case ActivityState::ACTIVITY_MODERATEEXERCISE: {
+      return f1;
+    }
+    case ActivityState::ACTIVITY_INTENSEEXERCISE: {
+      return f2;
+    }
+    case ActivityState::ACTIVITY_ILLNESS: {
+      return f3;
+    }
+    case ActivityState::ACTIVITY_STRESS: {
+      return f4;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  template <typename T1>
+  static T1 ActivityState_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4,
+                              ActivityState a) {
+    switch (a) {
+    case ActivityState::ACTIVITY_NORMAL: {
+      return f;
+    }
+    case ActivityState::ACTIVITY_LIGHTEXERCISE: {
+      return f0;
+    }
+    case ActivityState::ACTIVITY_MODERATEEXERCISE: {
+      return f1;
+    }
+    case ActivityState::ACTIVITY_INTENSEEXERCISE: {
+      return f2;
+    }
+    case ActivityState::ACTIVITY_ILLNESS: {
+      return f3;
+    }
+    case ActivityState::ACTIVITY_STRESS: {
+      return f4;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  static uint64_t isf_activity_modifier(ActivityState state);
+  static uint64_t icr_activity_modifier(ActivityState state);
+
+  struct FaultStatus {
+    // TYPES
+    struct Fault_None {};
+
+    struct Fault_Occlusion {};
+
+    struct Fault_LowReservoir {
+      uint64_t a0;
+    };
+
+    struct Fault_BatteryLow {};
+
+    struct Fault_Unknown {};
+
+    using variant_t =
+        std::variant<Fault_None, Fault_Occlusion, Fault_LowReservoir,
+                     Fault_BatteryLow, Fault_Unknown>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    FaultStatus() {}
+
+    explicit FaultStatus(Fault_None _v) : v_(_v) {}
+
+    explicit FaultStatus(Fault_Occlusion _v) : v_(_v) {}
+
+    explicit FaultStatus(Fault_LowReservoir _v) : v_(std::move(_v)) {}
+
+    explicit FaultStatus(Fault_BatteryLow _v) : v_(_v) {}
+
+    explicit FaultStatus(Fault_Unknown _v) : v_(_v) {}
+
+    static FaultStatus fault_none() { return FaultStatus(Fault_None{}); }
+
+    static FaultStatus fault_occlusion() {
+      return FaultStatus(Fault_Occlusion{});
+    }
+
+    static FaultStatus fault_lowreservoir(uint64_t a0) {
+      return FaultStatus(Fault_LowReservoir{a0});
+    }
+
+    static FaultStatus fault_batterylow() {
+      return FaultStatus(Fault_BatteryLow{});
+    }
+
+    static FaultStatus fault_unknown() { return FaultStatus(Fault_Unknown{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    bool fault_blocks_bolus() const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return false;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return a0 < UINT64_C(10);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
+    T1 FaultStatus_rec(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
+    }
+
+    template <typename T1, typename F2>
+      requires std::is_invocable_r_v<T1, F2 &, uint64_t &>
+    T1 FaultStatus_rect(T1 f, T1 f0, F2 &&f1, T1 f2, T1 f3) const {
+      if (std::holds_alternative<typename FaultStatus::Fault_None>(this->v())) {
+        return f;
+      } else if (std::holds_alternative<typename FaultStatus::Fault_Occlusion>(
+                     this->v())) {
+        return f0;
+      } else if (std::holds_alternative<
+                     typename FaultStatus::Fault_LowReservoir>(this->v())) {
+        const auto &[a0] =
+            std::get<typename FaultStatus::Fault_LowReservoir>(this->v());
+        return f1(a0);
+      } else if (std::holds_alternative<typename FaultStatus::Fault_BatteryLow>(
+                     this->v())) {
+        return f2;
+      } else {
+        return f3;
+      }
+    }
+  };
+  enum class InsulinType { INSULIN_HUMALOG, INSULIN_ASPART, INSULIN_LISPRO };
+
+  template <typename T1>
+  static T1 InsulinType_rect(T1 f, T1 f0, T1 f1, InsulinType i) {
+    switch (i) {
+    case InsulinType::INSULIN_HUMALOG: {
+      return f;
+    }
+    case InsulinType::INSULIN_ASPART: {
+      return f0;
+    }
+    case InsulinType::INSULIN_LISPRO: {
+      return f1;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  template <typename T1>
+  static T1 InsulinType_rec(T1 f, T1 f0, T1 f1, InsulinType i) {
+    switch (i) {
+    case InsulinType::INSULIN_HUMALOG: {
+      return f;
+    }
+    case InsulinType::INSULIN_ASPART: {
+      return f0;
+    }
+    case InsulinType::INSULIN_LISPRO: {
+      return f1;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  static Minutes peak_time(InsulinType itype, uint64_t _x);
+
+  struct BolusEvent {
+    uint64_t be_dose_twentieths;
+    Minutes be_time_minutes;
+  };
+
+  static uint64_t div_ceil(uint64_t a, uint64_t b);
+  static bool event_time_valid(uint64_t now, const BolusEvent &event);
+  static bool history_times_valid(uint64_t now, const List<BolusEvent> &events);
+  static bool history_sorted_from(uint64_t prev,
+                                  const List<BolusEvent> &events);
+  static bool history_sorted_desc(const List<BolusEvent> &events);
+  static bool history_valid(uint64_t now, const List<BolusEvent> &events);
+  static uint64_t bilinear_iob_fraction(uint64_t elapsed, uint64_t dia,
+                                        InsulinType itype);
+  static Insulin_twentieth bilinear_iob_from_bolus(uint64_t now,
+                                                   const BolusEvent &event,
+                                                   uint64_t dia,
+                                                   InsulinType itype);
+  static Insulin_twentieth total_bilinear_iob(uint64_t now,
+                                              const List<BolusEvent> &events,
+                                              uint64_t dia, InsulinType itype);
+  static Mg_dL apply_sensor_margin(Mg_dL bg, const Mg_dL &target);
+  static uint64_t adjusted_isf_tenths(const Mg_dL &bg,
+                                      uint64_t base_isf_tenths);
+  static Insulin_twentieth correction_twentieths_full(uint64_t _x,
+                                                      const Mg_dL &current_bg,
+                                                      const Mg_dL &target_bg,
+                                                      uint64_t base_isf_tenths);
+  static Insulin_twentieth
+  apply_reverse_correction_twentieths(uint64_t carb, const Mg_dL &current_bg,
+                                      const Mg_dL &target_bg,
+                                      uint64_t isf_tenths);
+
+  struct SuspendDecision {
+    // TYPES
+    struct Suspend_None {};
+
+    struct Suspend_Reduce {
+      Insulin_twentieth a0;
+    };
+
+    struct Suspend_Withhold {};
+
+    using variant_t =
+        std::variant<Suspend_None, Suspend_Reduce, Suspend_Withhold>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    SuspendDecision() {}
+
+    explicit SuspendDecision(Suspend_None _v) : v_(_v) {}
+
+    explicit SuspendDecision(Suspend_Reduce _v) : v_(std::move(_v)) {}
+
+    explicit SuspendDecision(Suspend_Withhold _v) : v_(_v) {}
+
+    static SuspendDecision suspend_none() {
+      return SuspendDecision(Suspend_None{});
+    }
+
+    static SuspendDecision suspend_reduce(Insulin_twentieth a0) {
+      return SuspendDecision(Suspend_Reduce{std::move(a0)});
+    }
+
+    static SuspendDecision suspend_withhold() {
+      return SuspendDecision(Suspend_Withhold{});
+    }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 SuspendDecision_rect(T1 f, F1 &&f0, T1 f1,
+                                 const SuspendDecision &s) {
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
+      return f;
+    } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
+                   s.v())) {
+      const auto &[a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s.v());
+      return f0(a0);
+    } else {
+      return f1;
+    }
+  }
+
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 SuspendDecision_rec(T1 f, F1 &&f0, T1 f1,
+                                const SuspendDecision &s) {
+    if (std::holds_alternative<typename SuspendDecision::Suspend_None>(s.v())) {
+      return f;
+    } else if (std::holds_alternative<typename SuspendDecision::Suspend_Reduce>(
+                   s.v())) {
+      const auto &[a0] =
+          std::get<typename SuspendDecision::Suspend_Reduce>(s.v());
+      return f0(a0);
+    } else {
+      return f1;
+    }
+  }
+
+  static uint64_t predict_bg_drop_tenths(uint64_t iob_twentieths,
+                                         uint64_t isf_tenths);
+  static uint64_t conservative_cob_rise(const Config &cfg, uint64_t cob_grams);
+  static uint64_t predicted_eventual_bg_tenths(const Config &cfg,
+                                               const Mg_dL &current_bg,
+                                               uint64_t iob_twentieths,
+                                               uint64_t cob_grams,
+                                               uint64_t isf_tenths);
+  static SuspendDecision
+  suspend_check_tenths_with_cob(const Config &cfg, const Mg_dL &current_bg,
+                                uint64_t iob_twentieths, uint64_t cob_grams,
+                                uint64_t isf_tenths, uint64_t proposed);
+  static Insulin_twentieth apply_suspend(uint64_t proposed,
+                                         const SuspendDecision &decision);
+  static Insulin_twentieth pediatric_max_twentieths(uint64_t weight_kg);
+  static Insulin_twentieth cap_pediatric(uint64_t bolus, uint64_t weight_kg);
+
+  struct PrecisionParams {
+    uint64_t prec_icr_tenths;
+    uint64_t prec_isf_tenths;
+    Mg_dL prec_target_bg;
+    DIA_minutes prec_dia;
+    InsulinType prec_insulin_type;
+  };
+
+  static bool prec_params_valid(const PrecisionParams &p);
+
+  struct PrecisionInput {
+    Carbs_g pi_carbs_g;
+    Mg_dL pi_current_bg;
+    Minutes pi_now;
+    List<BolusEvent> pi_bolus_history;
+    ActivityState pi_activity;
+    bool pi_use_sensor_margin;
+    FaultStatus pi_fault;
+    std::optional<uint64_t> pi_weight_kg;
+  };
+
+  static Insulin_twentieth carb_bolus_twentieths(uint64_t carbs_g,
+                                                 uint64_t icr_tenths);
+  static Insulin_twentieth
+  calculate_precision_bolus(const PrecisionInput &input,
+                            const PrecisionParams &params);
+  static bool time_reasonable(uint64_t now);
+  static bool history_extraction_safe(const List<BolusEvent> &events);
+  static uint64_t iob_high_threshold(const Config &cfg);
+  static bool iob_dangerously_high(uint64_t iob);
+
+  struct PrecisionResult {
+    // TYPES
+    struct PrecOK {
+      Insulin_twentieth a0;
+      bool a1;
+    };
+
+    struct PrecError {
+      uint64_t a0;
+    };
+
+    using variant_t = std::variant<PrecOK, PrecError>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    PrecisionResult() {}
+
+    explicit PrecisionResult(PrecOK _v) : v_(std::move(_v)) {}
+
+    explicit PrecisionResult(PrecError _v) : v_(std::move(_v)) {}
+
+    static PrecisionResult precok(Insulin_twentieth a0, bool a1) {
+      return PrecisionResult(PrecOK{std::move(a0), a1});
+    }
+
+    static PrecisionResult precerror(uint64_t a0) {
+      return PrecisionResult(PrecError{a0});
+    }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    bool result_modified() const {
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+        const auto &[a0, a1] =
+            std::get<typename PrecisionResult::PrecOK>(this->v());
+        return a1;
+      } else {
+        return false;
+      }
+    }
+
+    uint64_t precision_result_code() const {
+      if (std::holds_alternative<typename PrecisionResult::PrecOK>(this->v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[a0] =
+            std::get<typename PrecisionResult::PrecError>(this->v());
+        return a0;
+      }
+    }
+  };
+
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 PrecisionResult_rect(F0 &&f, F1 &&f0, const PrecisionResult &p) {
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
+      const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
+      return f(a0, a1);
+    } else {
+      const auto &[a0] = std::get<typename PrecisionResult::PrecError>(p.v());
+      return f0(a0);
+    }
+  }
+
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, bool &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+  static T1 PrecisionResult_rec(F0 &&f, F1 &&f0, const PrecisionResult &p) {
+    if (std::holds_alternative<typename PrecisionResult::PrecOK>(p.v())) {
+      const auto &[a0, a1] = std::get<typename PrecisionResult::PrecOK>(p.v());
+      return f(a0, a1);
+    } else {
+      const auto &[a0] = std::get<typename PrecisionResult::PrecError>(p.v());
+      return f0(a0);
+    }
+  }
+
+  static inline const uint64_t prec_error_invalid_params = UINT64_C(1);
+  static inline const uint64_t prec_error_invalid_input = UINT64_C(2);
+  static inline const uint64_t prec_error_hypo = UINT64_C(3);
+  static inline const uint64_t prec_error_invalid_history = UINT64_C(4);
+  static inline const uint64_t prec_error_invalid_time = UINT64_C(5);
+  static inline const uint64_t prec_error_stacking = UINT64_C(6);
+  static inline const uint64_t prec_error_fault = UINT64_C(7);
+  static inline const uint64_t prec_error_tdd_exceeded = UINT64_C(8);
+  static inline const uint64_t prec_error_iob_high = UINT64_C(9);
+  static inline const uint64_t prec_error_extraction_unsafe = UINT64_C(10);
+  static bool bolus_too_soon(uint64_t now, const List<BolusEvent> &history);
+  static Insulin_twentieth cap_twentieths(uint64_t t);
+  static PrecisionResult
+  validated_precision_bolus(PrecisionInput input,
+                            const PrecisionParams &params);
+  static std::optional<Insulin_twentieth>
+  prec_result_twentieths(const PrecisionResult &r);
+
+  struct MmolPrecisionInput {
+    Carbs_g mpi_carbs_g;
+    uint64_t mpi_current_bg_mmol_tenths;
+    Minutes mpi_now;
+    List<BolusEvent> mpi_bolus_history;
+    ActivityState mpi_activity;
+    bool mpi_use_sensor_margin;
+    FaultStatus mpi_fault;
+    std::optional<uint64_t> mpi_weight_kg;
+  };
+
+  static uint64_t mmol_tenths_to_mg_dL(uint64_t mmol_tenths);
+  static PrecisionInput convert_mmol_input(const MmolPrecisionInput &input);
+  static PrecisionResult validated_mmol_bolus(const MmolPrecisionInput &input,
+                                              const PrecisionParams &params);
+  enum class RoundingMode { ROUNDTWENTIETH, ROUNDTENTH, ROUNDHALF, ROUNDUNIT };
+
+  template <typename T1>
+  static T1 RoundingMode_rect(T1 f, T1 f0, T1 f1, T1 f2, RoundingMode r) {
+    switch (r) {
+    case RoundingMode::ROUNDTWENTIETH: {
+      return f;
+    }
+    case RoundingMode::ROUNDTENTH: {
+      return f0;
+    }
+    case RoundingMode::ROUNDHALF: {
+      return f1;
+    }
+    case RoundingMode::ROUNDUNIT: {
+      return f2;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  template <typename T1>
+  static T1 RoundingMode_rec(T1 f, T1 f0, T1 f1, T1 f2, RoundingMode r) {
+    switch (r) {
+    case RoundingMode::ROUNDTWENTIETH: {
+      return f;
+    }
+    case RoundingMode::ROUNDTENTH: {
+      return f0;
+    }
+    case RoundingMode::ROUNDHALF: {
+      return f1;
+    }
+    case RoundingMode::ROUNDUNIT: {
+      return f2;
+    }
+    default:
+      std::unreachable();
+    }
+  }
+
+  static uint64_t round_down_to_increment(uint64_t t, uint64_t increment);
+  static Insulin_twentieth apply_rounding(RoundingMode mode, uint64_t t);
+  static std::optional<Insulin_twentieth>
+  final_delivery(RoundingMode mode, const PrecisionResult &result);
+
+  struct PumpState {
+    uint64_t ps_reservoir_twentieths;
+    uint64_t ps_basal_rate_hundredths;
+    Minutes ps_last_bolus_time;
+    bool ps_occlusion_detected;
+    uint64_t ps_battery_percent;
+  };
+
+  static bool pump_can_deliver(const PumpState &state, uint64_t dose);
+  static uint64_t reservoir_after_bolus(const PumpState &state, uint64_t dose);
+  static uint64_t option_nat_default(const std::optional<uint64_t> &x,
+                                     uint64_t d);
+  static bool pump_accepts_result(const PumpState &pump, RoundingMode mode,
+                                  const PrecisionResult &r);
+  static uint64_t pump_reservoir_after_result(const PumpState &pump,
+                                              RoundingMode mode,
+                                              const PrecisionResult &r);
+  static inline const PrecisionParams witness_prec_params =
+      PrecisionParams{UINT64_C(100), UINT64_C(500), Mg_dL{UINT64_C(100)},
+                      UINT64_C(240), InsulinType::INSULIN_HUMALOG};
+  static inline const PrecisionInput standard_input = PrecisionInput{
+      Grams{UINT64_C(60)},       Mg_dL{UINT64_C(150)},           UINT64_C(0),
+      List<BolusEvent>::nil(),   ActivityState::ACTIVITY_NORMAL, false,
+      FaultStatus::fault_none(), std::optional<uint64_t>()};
+  static inline const MmolPrecisionInput mmol_input =
+      MmolPrecisionInput{Grams{UINT64_C(60)},
+                         UINT64_C(83),
+                         UINT64_C(0),
+                         List<BolusEvent>::nil(),
+                         ActivityState::ACTIVITY_NORMAL,
+                         false,
+                         FaultStatus::fault_none(),
+                         std::optional<uint64_t>()};
+  static inline const PrecisionInput high_iob_input = PrecisionInput{
+      Grams{UINT64_C(0)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(100),
+      List<BolusEvent>::cons(
+          BolusEvent{UINT64_C(120), UINT64_C(85)},
+          List<BolusEvent>::cons(BolusEvent{UINT64_C(100), UINT64_C(80)},
+                                 List<BolusEvent>::nil())),
+      ActivityState::ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_none(),
+      std::optional<uint64_t>()};
+  static inline const PrecisionInput tdd_exceeded_input = PrecisionInput{
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(2000),
+      List<BolusEvent>::cons(
+          BolusEvent{UINT64_C(500), UINT64_C(1800)},
+          List<BolusEvent>::cons(
+              BolusEvent{UINT64_C(500), UINT64_C(1500)},
+              List<BolusEvent>::cons(BolusEvent{UINT64_C(500), UINT64_C(1000)},
+                                     List<BolusEvent>::nil()))),
+      ActivityState::ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_none(),
+      std::make_optional<uint64_t>(UINT64_C(70))};
+  static inline const PrecisionInput occlusion_input = PrecisionInput{
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(120),
+      List<BolusEvent>::cons(BolusEvent{UINT64_C(40), UINT64_C(100)},
+                             List<BolusEvent>::nil()),
+      ActivityState::ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_occlusion(),
+      std::optional<uint64_t>()};
+  static inline const PrecisionInput battery_low_input = PrecisionInput{
+      Grams{UINT64_C(60)},
+      Mg_dL{UINT64_C(150)},
+      UINT64_C(120),
+      List<BolusEvent>::cons(BolusEvent{UINT64_C(40), UINT64_C(100)},
+                             List<BolusEvent>::nil()),
+      ActivityState::ACTIVITY_NORMAL,
+      false,
+      FaultStatus::fault_batterylow(),
+      std::optional<uint64_t>()};
+  static inline const PrecisionInput pediatric_capped_input =
+      PrecisionInput{Grams{UINT64_C(200)},
+                     Mg_dL{UINT64_C(400)},
+                     UINT64_C(0),
+                     List<BolusEvent>::nil(),
+                     ActivityState::ACTIVITY_NORMAL,
+                     false,
+                     FaultStatus::fault_none(),
+                     std::make_optional<uint64_t>(UINT64_C(20))};
+  static inline const PumpState standard_pump = PumpState{
+      UINT64_C(2000), UINT64_C(100), UINT64_C(0), false, UINT64_C(80)};
+  static inline const PumpState low_battery_pump =
+      PumpState{UINT64_C(2000), UINT64_C(100), UINT64_C(0), false, UINT64_C(4)};
+  static inline const PrecisionResult standard_result =
+      validated_precision_bolus(standard_input, witness_prec_params);
+  static inline const PrecisionResult mmol_result =
+      validated_mmol_bolus(mmol_input, witness_prec_params);
+  static inline const PrecisionResult battery_low_result =
+      validated_precision_bolus(battery_low_input, witness_prec_params);
+  static inline const PrecisionResult pediatric_result =
+      validated_precision_bolus(pediatric_capped_input, witness_prec_params);
+  static inline const uint64_t standard_result_code =
+      standard_result.precision_result_code();
+  static inline const bool standard_modified =
+      standard_result.result_modified();
+  static inline const uint64_t standard_final_delivery_half =
+      option_nat_default(
+          final_delivery(RoundingMode::ROUNDHALF, standard_result),
+          UINT64_C(0));
+  static inline const bool standard_pump_accepts = pump_accepts_result(
+      standard_pump, RoundingMode::ROUNDHALF, standard_result);
+  static inline const uint64_t standard_reservoir_after =
+      pump_reservoir_after_result(standard_pump, RoundingMode::ROUNDHALF,
+                                  standard_result);
+  static inline const uint64_t mmol_result_code =
+      mmol_result.precision_result_code();
+  static inline const uint64_t mmol_final_delivery_tenth = option_nat_default(
+      final_delivery(RoundingMode::ROUNDTENTH, mmol_result), UINT64_C(0));
+  static inline const uint64_t high_iob_error_code =
+      validated_precision_bolus(high_iob_input, witness_prec_params)
+          .precision_result_code();
+  static inline const uint64_t tdd_error_code =
+      validated_precision_bolus(tdd_exceeded_input, witness_prec_params)
+          .precision_result_code();
+  static inline const uint64_t occlusion_error_code =
+      validated_precision_bolus(occlusion_input, witness_prec_params)
+          .precision_result_code();
+  static inline const uint64_t battery_low_result_code =
+      battery_low_result.precision_result_code();
+  static inline const bool battery_low_pump_denied = !(pump_accepts_result(
+      low_battery_pump, RoundingMode::ROUNDHALF, battery_low_result));
+  static inline const uint64_t pediatric_result_code =
+      pediatric_result.precision_result_code();
+  static inline const bool pediatric_modified =
+      pediatric_result.result_modified();
+  static inline const uint64_t pediatric_final_delivery = option_nat_default(
+      final_delivery(RoundingMode::ROUNDTWENTIETH, pediatric_result),
+      UINT64_C(0));
+  static inline const bool low_reservoir_blocks =
+      FaultStatus::fault_lowreservoir(UINT64_C(5)).fault_blocks_bolus();
+  static inline const bool unknown_fault_blocks =
+      FaultStatus::fault_unknown().fault_blocks_bolus();
+};
+
+#endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

@@ -1,0 +1,11 @@
+#include "prim_proj.h"
+
+PrimProj::point PrimProj::add_points(const PrimProj::point &p1,
+                                     const PrimProj::point &p2) {
+  return point{(p1.px + p2.px), (p1.py + p2.py)};
+}
+
+PrimProj::point PrimProj::translate(uint64_t dx, uint64_t dy,
+                                    const PrimProj::point &p) {
+  return point{(p.px + dx), (p.py + dy)};
+}

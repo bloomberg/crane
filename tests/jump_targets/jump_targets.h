@@ -1,0 +1,523 @@
+#ifndef INCLUDED_JUMP_TARGETS
+#define INCLUDED_JUMP_TARGETS
+
+#include "small_vector.h"
+#include <any>
+#include <atomic>
+#include <memory>
+#include <optional>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+template <typename A> struct List {
+  // TYPES
+  struct Nil {};
+
+  struct Cons {
+    A a;
+    std::shared_ptr<List<A>> l;
+  };
+
+  using variant_t = std::variant<Nil, Cons>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  List() {}
+
+  explicit List(Nil _v) : v_(_v) {}
+
+  explicit List(Cons _v) : v_(std::move(_v)) {}
+
+  template <typename _U> List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      this->v_ = Nil{};
+    } else {
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
+    }
+  }
+
+  static List<A> nil() { return List<A>(Nil{}); }
+
+  static List<A> cons(A a, List<A> l) {
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  }
+
+  // MANIPULATORS
+  ~List() {
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+
+  uint64_t length() const {
+    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
+    }
+  }
+};
+
+struct JumpTargets {
+  struct instr_collection {
+    // TYPES
+    struct JUN_coll {
+      uint64_t a0;
+    };
+
+    struct JMS_coll {
+      uint64_t a0;
+    };
+
+    struct NOP_coll {};
+
+    using variant_t = std::variant<JUN_coll, JMS_coll, NOP_coll>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    instr_collection() {}
+
+    explicit instr_collection(JUN_coll _v) : v_(std::move(_v)) {}
+
+    explicit instr_collection(JMS_coll _v) : v_(std::move(_v)) {}
+
+    explicit instr_collection(NOP_coll _v) : v_(_v) {}
+
+    static instr_collection jun_coll(uint64_t a0) {
+      return instr_collection(JUN_coll{a0});
+    }
+
+    static instr_collection jms_coll(uint64_t a0) {
+      return instr_collection(JMS_coll{a0});
+    }
+
+    static instr_collection nop_coll() { return instr_collection(NOP_coll{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    std::optional<uint64_t> jump_target_collection() const {
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else {
+        return std::optional<uint64_t>();
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_collection_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_collection_rect(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_collection::JUN_coll>(
+              this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JUN_coll>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_collection::JMS_coll>(
+                     this->v())) {
+        const auto &[a0] =
+            std::get<typename instr_collection::JMS_coll>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+  };
+
+  static List<uint64_t> collect_targets(const List<instr_collection> &prog);
+  static inline const uint64_t test_collection =
+      collect_targets(List<instr_collection>::cons(
+                          instr_collection::jun_coll(UINT64_C(17)),
+                          List<instr_collection>::cons(
+                              instr_collection::nop_coll(),
+                              List<instr_collection>::cons(
+                                  instr_collection::jms_coll(UINT64_C(511)),
+                                  List<instr_collection>::cons(
+                                      instr_collection::nop_coll(),
+                                      List<instr_collection>::nil())))))
+          .length();
+
+  struct instr_region {
+    // TYPES
+    struct JUN_reg {
+      uint64_t a0;
+    };
+
+    struct JMS_reg {
+      uint64_t a0;
+    };
+
+    struct NOP_reg {};
+
+    using variant_t = std::variant<JUN_reg, JMS_reg, NOP_reg>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    instr_region() {}
+
+    explicit instr_region(JUN_reg _v) : v_(std::move(_v)) {}
+
+    explicit instr_region(JMS_reg _v) : v_(std::move(_v)) {}
+
+    explicit instr_region(NOP_reg _v) : v_(_v) {}
+
+    static instr_region jun_reg(uint64_t a0) {
+      return instr_region(JUN_reg{a0});
+    }
+
+    static instr_region jms_reg(uint64_t a0) {
+      return instr_region(JMS_reg{a0});
+    }
+
+    static instr_region nop_reg() { return instr_region(NOP_reg{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    std::optional<uint64_t> jump_target_region() const {
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JMS_reg>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else {
+        return std::optional<uint64_t>();
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_region_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_region_rect(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_region::JUN_reg>(this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JUN_reg>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_region::JMS_reg>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_region::JMS_reg>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+  };
+
+  struct layout {
+    uint64_t base_;
+    uint64_t code_;
+  };
+
+  static bool addr_in_region(uint64_t addr, const layout &l);
+  static bool in_layout(const layout &l, const instr_region &i);
+  static inline const bool test_region_check = in_layout(
+      layout{UINT64_C(16), UINT64_C(32)}, instr_region::jun_reg(UINT64_C(40)));
+
+  struct instr_jms {
+    // TYPES
+    struct JUN_jms {
+      uint64_t a0;
+    };
+
+    struct JMS_jms {
+      uint64_t a0;
+    };
+
+    struct NOP_jms {};
+
+    using variant_t = std::variant<JUN_jms, JMS_jms, NOP_jms>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    instr_jms() {}
+
+    explicit instr_jms(JUN_jms _v) : v_(std::move(_v)) {}
+
+    explicit instr_jms(JMS_jms _v) : v_(std::move(_v)) {}
+
+    explicit instr_jms(NOP_jms _v) : v_(_v) {}
+
+    static instr_jms jun_jms(uint64_t a0) { return instr_jms(JUN_jms{a0}); }
+
+    static instr_jms jms_jms(uint64_t a0) { return instr_jms(JMS_jms{a0}); }
+
+    static instr_jms nop_jms() { return instr_jms(NOP_jms{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    std::optional<uint64_t> jump_target_jms() const {
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else {
+        return std::optional<uint64_t>();
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_jms_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_jms_rect(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_jms::JUN_jms>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JUN_jms>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_jms::JMS_jms>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jms::JMS_jms>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+  };
+
+  static uint64_t option_nat_or_zero(const std::optional<uint64_t> &o);
+  static inline const uint64_t test_jms =
+      option_nat_or_zero(instr_jms::jms_jms(UINT64_C(144)).jump_target_jms());
+
+  struct instr_jun {
+    // TYPES
+    struct JUN_jun {
+      uint64_t a0;
+    };
+
+    struct JMS_jun {
+      uint64_t a0;
+    };
+
+    struct NOP_jun {};
+
+    using variant_t = std::variant<JUN_jun, JMS_jun, NOP_jun>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    instr_jun() {}
+
+    explicit instr_jun(JUN_jun _v) : v_(std::move(_v)) {}
+
+    explicit instr_jun(JMS_jun _v) : v_(std::move(_v)) {}
+
+    explicit instr_jun(NOP_jun _v) : v_(_v) {}
+
+    static instr_jun jun_jun(uint64_t a0) { return instr_jun(JUN_jun{a0}); }
+
+    static instr_jun jms_jun(uint64_t a0) { return instr_jun(JMS_jun{a0}); }
+
+    static instr_jun nop_jun() { return instr_jun(NOP_jun{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    std::optional<uint64_t> jump_target_jun() const {
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return std::make_optional<uint64_t>(a0);
+      } else {
+        return std::optional<uint64_t>();
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_jun_rec(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 instr_jun_rect(F0 &&f, F1 &&f0, T1 f1) const {
+      if (std::holds_alternative<typename instr_jun::JUN_jun>(this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JUN_jun>(this->v());
+        return f(a0);
+      } else if (std::holds_alternative<typename instr_jun::JMS_jun>(
+                     this->v())) {
+        const auto &[a0] = std::get<typename instr_jun::JMS_jun>(this->v());
+        return f0(a0);
+      } else {
+        return f1;
+      }
+    }
+  };
+
+  static uint64_t target_default(const std::optional<uint64_t> &o);
+  static inline const uint64_t test_jun =
+      target_default(instr_jun::jun_jun(UINT64_C(511)).jump_target_jun());
+
+  static inline const std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
+                                uint64_t>
+      t = std::make_pair(
+          std::make_pair(std::make_pair(test_collection, test_region_check),
+                         test_jms),
+          test_jun);
+};
+
+#endif // INCLUDED_JUMP_TARGETS

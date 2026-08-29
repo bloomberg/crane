@@ -1,0 +1,1552 @@
+#ifndef INCLUDED_MEM_SAFETY_PROBE29
+#define INCLUDED_MEM_SAFETY_PROBE29
+
+#include "crane_fn.h"
+#include "small_vector.h"
+#include <atomic>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct MemSafetyProbe29 {
+  struct inner {
+    // TYPES
+    struct ILeaf {};
+
+    struct INode {
+      std::shared_ptr<inner> a0;
+      uint64_t a1;
+      std::shared_ptr<inner> a2;
+    };
+
+    using variant_t = std::variant<ILeaf, INode>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    inner() {}
+
+    explicit inner(ILeaf _v) : v_(_v) {}
+
+    explicit inner(INode _v) : v_(std::move(_v)) {}
+
+    static inner ileaf() { return inner(ILeaf{}); }
+
+    static inner inode(inner a0, uint64_t a1, inner a2) {
+      return inner(INode{std::make_shared<inner>(std::move(a0)), a1,
+                         std::make_shared<inner>(std::move(a2))});
+    }
+
+    // MANIPULATORS
+    ~inner() {
+      crane::small_vector<std::shared_ptr<inner>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<INode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    inner(const inner &) = default;
+    inner &operator=(const inner &) = default;
+    inner(inner &&) noexcept = default;
+    inner &operator=(inner &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    inner double_inner() const {
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _After_INode: saves [a0, _s1], dispatches next recursive call.
+      struct _After_INode {
+        inner *a0;
+        uint64_t _s1;
+      };
+
+      /// _Combine_INode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_INode {
+        inner _result;
+        uint64_t _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
+      inner _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified double_inner: _Enter -> _After_INode -> _Combine_INode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
+            _result = inner::ileaf();
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
+            _stack.emplace_back(
+                _After_INode{crane_raw(a0), (a1 * UINT64_C(2))});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_INode>(_frame)) {
+          auto _f = std::move(std::get<_After_INode>(_frame));
+          _stack.emplace_back(_Combine_INode{std::move(_result), _f._s1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_INode>(_frame));
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    uint64_t inner_sum() const {
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _After_INode: saves [a0, a1], dispatches next recursive call.
+      struct _After_INode {
+        inner *a0;
+        uint64_t a1;
+      };
+
+      /// _Combine_INode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_INode {
+        uint64_t _result;
+        uint64_t a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified inner_sum: _Enter -> _After_INode -> _Combine_INode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
+            _stack.emplace_back(_After_INode{crane_raw(a0), a1});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_INode>(_frame)) {
+          auto _f = std::move(std::get<_After_INode>(_frame));
+          _stack.emplace_back(_Combine_INode{std::move(_result), _f.a1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_INode>(_frame));
+          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
+                                     inner &, T1 &>
+    T1 inner_rec(T1 f, F1 &&f0) const {
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _After_INode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_INode {
+        inner *a0_0;
+        inner a2;
+        uint64_t a1;
+        inner a0_1;
+      };
+
+      /// _Combine_INode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_INode {
+        std::decay_t<T1> _result;
+        inner a2;
+        uint64_t a1;
+        inner a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified inner_rec: _Enter -> _After_INode -> _Combine_INode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
+            _stack.emplace_back(_After_INode{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_INode>(_frame)) {
+          auto _f = std::move(std::get<_After_INode>(_frame));
+          _stack.emplace_back(_Combine_INode{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_INode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
+                       std::move(_f.a2), std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, inner &, T1 &, uint64_t &,
+                                     inner &, T1 &>
+    T1 inner_rect(T1 f, F1 &&f0) const {
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _After_INode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_INode {
+        inner *a0_0;
+        inner a2;
+        uint64_t a1;
+        inner a0_1;
+      };
+
+      /// _Combine_INode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_INode {
+        std::decay_t<T1> _result;
+        inner a2;
+        uint64_t a1;
+        inner a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_INode, _Combine_INode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified inner_rect: _Enter -> _After_INode -> _Combine_INode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename inner::INode>(_sv.v());
+            _stack.emplace_back(_After_INode{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_INode>(_frame)) {
+          auto _f = std::move(std::get<_After_INode>(_frame));
+          _stack.emplace_back(_Combine_INode{
+              std::move(_result), std::move(_f.a2), _f.a1, std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_INode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), _f.a1,
+                       std::move(_f.a2), std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+  };
+
+  struct outer {
+    // TYPES
+    struct OLeaf {};
+
+    struct ONode {
+      std::shared_ptr<outer> a0;
+      inner a1;
+      std::shared_ptr<outer> a2;
+    };
+
+    using variant_t = std::variant<OLeaf, ONode>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    outer() {}
+
+    explicit outer(OLeaf _v) : v_(_v) {}
+
+    explicit outer(ONode _v) : v_(std::move(_v)) {}
+
+    static outer oleaf() { return outer(OLeaf{}); }
+
+    static outer onode(outer a0, inner a1, outer a2) {
+      return outer(ONode{std::make_shared<outer>(std::move(a0)), std::move(a1),
+                         std::make_shared<outer>(std::move(a2))});
+    }
+
+    // MANIPULATORS
+    ~outer() {
+      crane::small_vector<std::shared_ptr<outer>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<ONode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    outer(const outer &) = default;
+    outer &operator=(const outer &) = default;
+    outer(outer &&) noexcept = default;
+    outer &operator=(outer &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    std::pair<outer, outer> dup_outer() const {
+      return std::make_pair(*this, *this);
+    }
+
+    outer transform_outer() const {
+      const outer *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const outer *_self;
+      };
+
+      /// _After_ONode: saves [a0, a1], dispatches next recursive call.
+      struct _After_ONode {
+        outer *a0;
+        std::decay_t<decltype(std::declval<inner &>().double_inner())> a1;
+      };
+
+      /// _Combine_ONode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ONode {
+        outer _result;
+        std::decay_t<decltype(std::declval<inner &>().double_inner())> a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
+      outer _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified transform_outer: _Enter -> _After_ONode -> _Combine_ONode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const outer *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
+            _result = outer::oleaf();
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
+            _stack.emplace_back(_After_ONode{crane_raw(a0), a1.double_inner()});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_ONode>(_frame)) {
+          auto _f = std::move(std::get<_After_ONode>(_frame));
+          _stack.emplace_back(_Combine_ONode{std::move(_result), _f.a1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_ONode>(_frame));
+          _result =
+              outer::onode(std::move(_result), _f.a1, std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    uint64_t outer_sum() const {
+      const outer *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const outer *_self;
+      };
+
+      /// _After_ONode: saves [a0, a1], dispatches next recursive call.
+      struct _After_ONode {
+        outer *a0;
+        std::decay_t<decltype(std::declval<inner &>().inner_sum())> a1;
+      };
+
+      /// _Combine_ONode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ONode {
+        uint64_t _result;
+        std::decay_t<decltype(std::declval<inner &>().inner_sum())> a1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified outer_sum: _Enter -> _After_ONode -> _Combine_ONode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const outer *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
+            _stack.emplace_back(_After_ONode{crane_raw(a0), a1.inner_sum()});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_ONode>(_frame)) {
+          auto _f = std::move(std::get<_After_ONode>(_frame));
+          _stack.emplace_back(_Combine_ONode{std::move(_result), _f.a1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_ONode>(_frame));
+          _result = ((std::move(_result) + _f.a1) + std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
+                                     T1 &>
+    T1 outer_rec(T1 f, F1 &&f0) const {
+      const outer *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const outer *_self;
+      };
+
+      /// _After_ONode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_ONode {
+        outer *a0_0;
+        outer a2;
+        inner a1;
+        outer a0_1;
+      };
+
+      /// _Combine_ONode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ONode {
+        std::decay_t<T1> _result;
+        outer a2;
+        inner a1;
+        outer a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified outer_rec: _Enter -> _After_ONode -> _Combine_ONode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const outer *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
+            _stack.emplace_back(_After_ONode{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_ONode>(_frame)) {
+          auto _f = std::move(std::get<_After_ONode>(_frame));
+          _stack.emplace_back(_Combine_ONode{std::move(_result),
+                                             std::move(_f.a2), std::move(_f.a1),
+                                             std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_ONode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f.a2), std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, outer &, T1 &, inner &, outer &,
+                                     T1 &>
+    T1 outer_rect(T1 f, F1 &&f0) const {
+      const outer *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const outer *_self;
+      };
+
+      /// _After_ONode: saves [a0_0, a2, a1, a0_1], dispatches next recursive
+      /// call.
+      struct _After_ONode {
+        outer *a0_0;
+        outer a2;
+        inner a1;
+        outer a0_1;
+      };
+
+      /// _Combine_ONode: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_ONode {
+        std::decay_t<T1> _result;
+        outer a2;
+        inner a1;
+        outer a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified outer_rect: _Enter -> _After_ONode -> _Combine_ONode.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const outer *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2] = std::get<typename outer::ONode>(_sv.v());
+            _stack.emplace_back(_After_ONode{crane_raw(a0), *a2, a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_ONode>(_frame)) {
+          auto _f = std::move(std::get<_After_ONode>(_frame));
+          _stack.emplace_back(_Combine_ONode{std::move(_result),
+                                             std::move(_f.a2), std::move(_f.a1),
+                                             std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_ONode>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f.a2), std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+  };
+
+  struct expr {
+    // TYPES
+    struct Lit {
+      uint64_t a0;
+    };
+
+    struct Neg {
+      std::shared_ptr<expr> a0;
+    };
+
+    struct Add {
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
+    };
+
+    struct Mul {
+      std::shared_ptr<expr> a0;
+      std::shared_ptr<expr> a1;
+    };
+
+    using variant_t = std::variant<Lit, Neg, Add, Mul>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    expr() {}
+
+    explicit expr(Lit _v) : v_(std::move(_v)) {}
+
+    explicit expr(Neg _v) : v_(std::move(_v)) {}
+
+    explicit expr(Add _v) : v_(std::move(_v)) {}
+
+    explicit expr(Mul _v) : v_(std::move(_v)) {}
+
+    static expr lit(uint64_t a0) { return expr(Lit{a0}); }
+
+    static expr neg(expr a0) {
+      return expr(Neg{std::make_shared<expr>(std::move(a0))});
+    }
+
+    static expr add(expr a0, expr a1) {
+      return expr(Add{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
+    }
+
+    static expr mul(expr a0, expr a1) {
+      return expr(Mul{std::make_shared<expr>(std::move(a0)),
+                      std::make_shared<expr>(std::move(a1))});
+    }
+
+    // MANIPULATORS
+    ~expr() {
+      crane::small_vector<std::shared_ptr<expr>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Neg>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+        }
+        if (auto *_alt = std::get_if<Add>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+        if (auto *_alt = std::get_if<Mul>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    expr(const expr &) = default;
+    expr &operator=(const expr &) = default;
+    expr(expr &&) noexcept = default;
+    expr &operator=(expr &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    inner expr_to_inner() const {
+      const expr *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const expr *_self;
+      };
+
+      /// _After_Add: saves [a0, _s1], dispatches next recursive call.
+      struct _After_Add {
+        expr *a0;
+        std::decay_t<decltype(UINT64_C(0))> _s1;
+      };
+
+      /// _After_Mul: saves [a0, _s1], dispatches next recursive call.
+      struct _After_Mul {
+        expr *a0;
+        std::decay_t<decltype(UINT64_C(1))> _s1;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        inner _result;
+        std::decay_t<decltype(UINT64_C(0))> _s1;
+      };
+
+      /// _Combine_Mul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Mul {
+        inner _result;
+        std::decay_t<decltype(UINT64_C(1))> _s1;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
+                                  _Combine_Mul>;
+      inner _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified expr_to_inner: _Enter -> _After_Add -> _After_Mul ->
+      /// _Combine_Add -> _Combine_Mul.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
+            _result = inner::inode(inner::ileaf(), a0, inner::ileaf());
+          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0), UINT64_C(0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
+            _stack.emplace_back(_After_Mul{crane_raw(a0), UINT64_C(1)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result), _f._s1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_After_Mul>(_frame)) {
+          auto _f = std::move(std::get<_After_Mul>(_frame));
+          _stack.emplace_back(_Combine_Mul{std::move(_result), _f._s1});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
+        } else {
+          auto _f = std::move(std::get<_Combine_Mul>(_frame));
+          _result =
+              inner::inode(std::move(_result), _f._s1, std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    expr double_expr() const {
+      const expr *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const expr *_self;
+      };
+
+      /// _After_Add: saves [a0], dispatches next recursive call.
+      struct _After_Add {
+        expr *a0;
+      };
+
+      /// _After_Mul: saves [a0], dispatches next recursive call.
+      struct _After_Mul {
+        expr *a0;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        expr _result;
+      };
+
+      /// _Combine_Mul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Mul {
+        expr _result;
+      };
+
+      /// _Resume_Neg: resumes after recursive call with _result.
+      struct _Resume_Neg {};
+
+      using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
+                                  _Combine_Mul, _Resume_Neg>;
+      expr _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified double_expr: _Enter -> _After_Add -> _After_Mul ->
+      /// _Combine_Add -> _Combine_Mul -> _Resume_Neg.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
+            _result = expr::lit((a0 * UINT64_C(2)));
+          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
+            _stack.emplace_back(_Resume_Neg{});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
+            _stack.emplace_back(_After_Mul{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_After_Mul>(_frame)) {
+          auto _f = std::move(std::get<_After_Mul>(_frame));
+          _stack.emplace_back(_Combine_Mul{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = expr::add(std::move(_result), std::move(_f._result));
+        } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Mul>(_frame));
+          _result = expr::mul(std::move(_result), std::move(_f._result));
+        } else {
+          auto _f = std::move(std::get<_Resume_Neg>(_frame));
+          _result = expr::neg(std::move(_result));
+        }
+      }
+      return _result;
+    }
+
+    uint64_t eval_expr() const {
+      const expr *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const expr *_self;
+      };
+
+      /// _After_Add: saves [a0], dispatches next recursive call.
+      struct _After_Add {
+        expr *a0;
+      };
+
+      /// _After_Mul: saves [a0], dispatches next recursive call.
+      struct _After_Mul {
+        expr *a0;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        uint64_t _result;
+      };
+
+      /// _Combine_Mul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Mul {
+        uint64_t _result;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
+                                  _Combine_Mul>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified eval_expr: _Enter -> _After_Add -> _After_Mul ->
+      /// _Combine_Add -> _Combine_Mul.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
+            _result = std::move(a0);
+          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
+            _stack.emplace_back(_After_Mul{crane_raw(a0)});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_After_Mul>(_frame)) {
+          auto _f = std::move(std::get<_After_Mul>(_frame));
+          _stack.emplace_back(_Combine_Mul{std::move(_result)});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = (std::move(_result) + std::move(_f._result));
+        } else {
+          auto _f = std::move(std::get<_Combine_Mul>(_frame));
+          _result = (std::move(_result) * std::move(_f._result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F0, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
+    T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+      const expr *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const expr *_self;
+      };
+
+      /// _After_Add: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_Add {
+        expr *a0_0;
+        expr a1;
+        expr a0_1;
+      };
+
+      /// _After_Mul: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_Mul {
+        expr *a0_0;
+        expr a1;
+        expr a0_1;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        std::decay_t<T1> _result;
+        expr a1;
+        expr a0;
+      };
+
+      /// _Combine_Mul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Mul {
+        std::decay_t<T1> _result;
+        expr a1;
+        expr a0;
+      };
+
+      /// _Resume_Neg: saves [a0], resumes after recursive call with _result.
+      struct _Resume_Neg {
+        expr a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
+                                  _Combine_Mul, _Resume_Neg>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified expr_rec: _Enter -> _After_Add -> _After_Mul -> _Combine_Add
+      /// -> _Combine_Mul -> _Resume_Neg.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
+            _result = f(a0);
+          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
+            _stack.emplace_back(_Resume_Neg{*a0});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
+            _stack.emplace_back(_After_Mul{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_After_Mul>(_frame)) {
+          auto _f = std::move(std::get<_After_Mul>(_frame));
+          _stack.emplace_back(_Combine_Mul{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = f1(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Mul>(_frame));
+          _result = f2(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        } else {
+          auto _f = std::move(std::get<_Resume_Neg>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result));
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F0, typename F1, typename F2, typename F3>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F2 &, expr &, T1 &, expr &, T1 &> &&
+               std::is_invocable_r_v<T1, F3 &, expr &, T1 &, expr &, T1 &>
+    T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2) const {
+      const expr *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const expr *_self;
+      };
+
+      /// _After_Add: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_Add {
+        expr *a0_0;
+        expr a1;
+        expr a0_1;
+      };
+
+      /// _After_Mul: saves [a0_0, a1, a0_1], dispatches next recursive call.
+      struct _After_Mul {
+        expr *a0_0;
+        expr a1;
+        expr a0_1;
+      };
+
+      /// _Combine_Add: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Add {
+        std::decay_t<T1> _result;
+        expr a1;
+        expr a0;
+      };
+
+      /// _Combine_Mul: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_Mul {
+        std::decay_t<T1> _result;
+        expr a1;
+        expr a0;
+      };
+
+      /// _Resume_Neg: saves [a0], resumes after recursive call with _result.
+      struct _Resume_Neg {
+        expr a0;
+      };
+
+      using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,
+                                  _Combine_Mul, _Resume_Neg>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified expr_rect: _Enter -> _After_Add -> _After_Mul ->
+      /// _Combine_Add -> _Combine_Mul -> _Resume_Neg.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const expr *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
+            _result = f(a0);
+          } else if (std::holds_alternative<typename expr::Neg>(_sv.v())) {
+            const auto &[a0] = std::get<typename expr::Neg>(_sv.v());
+            _stack.emplace_back(_Resume_Neg{*a0});
+            _stack.emplace_back(_Enter{crane_raw(a0)});
+          } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
+            const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
+            _stack.emplace_back(_After_Add{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          } else {
+            const auto &[a0, a1] = std::get<typename expr::Mul>(_sv.v());
+            _stack.emplace_back(_After_Mul{crane_raw(a0), *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else if (std::holds_alternative<_After_Add>(_frame)) {
+          auto _f = std::move(std::get<_After_Add>(_frame));
+          _stack.emplace_back(_Combine_Add{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_After_Mul>(_frame)) {
+          auto _f = std::move(std::get<_After_Mul>(_frame));
+          _stack.emplace_back(_Combine_Mul{std::move(_result), std::move(_f.a1),
+                                           std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else if (std::holds_alternative<_Combine_Add>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Add>(_frame));
+          _result = f1(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        } else if (std::holds_alternative<_Combine_Mul>(_frame)) {
+          auto _f = std::move(std::get<_Combine_Mul>(_frame));
+          _result = f2(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result));
+        } else {
+          auto _f = std::move(std::get<_Resume_Neg>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result));
+        }
+      }
+      return _result;
+    }
+  };
+
+  struct tree3 {
+    // TYPES
+    struct T3Leaf {};
+
+    struct T3Node {
+      std::shared_ptr<tree3> a0;
+      std::shared_ptr<tree3> a1;
+      std::shared_ptr<tree3> a2;
+      uint64_t a3;
+    };
+
+    using variant_t = std::variant<T3Leaf, T3Node>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    tree3() {}
+
+    explicit tree3(T3Leaf _v) : v_(_v) {}
+
+    explicit tree3(T3Node _v) : v_(std::move(_v)) {}
+
+    static tree3 t3leaf() { return tree3(T3Leaf{}); }
+
+    static tree3 t3node(tree3 a0, tree3 a1, tree3 a2, uint64_t a3) {
+      return tree3(T3Node{std::make_shared<tree3>(std::move(a0)),
+                          std::make_shared<tree3>(std::move(a1)),
+                          std::make_shared<tree3>(std::move(a2)), a3});
+    }
+
+    // MANIPULATORS
+    ~tree3() {
+      crane::small_vector<std::shared_ptr<tree3>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<T3Node>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    tree3(const tree3 &) = default;
+    tree3 &operator=(const tree3 &) = default;
+    tree3(tree3 &&) noexcept = default;
+    tree3 &operator=(tree3 &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    uint64_t tree3_sum() const {
+      const tree3 *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree3 *_self;
+      };
+
+      /// _After_T3Node: saves [a1, a0, a3], dispatches next recursive call.
+      struct _After_T3Node {
+        const tree3 *a1;
+        const tree3 *a0;
+        uint64_t a3;
+      };
+
+      /// _After_T3Node_1: saves [_result, a0, a3], dispatches next recursive
+      /// call.
+      struct _After_T3Node_1 {
+        uint64_t _result;
+        const tree3 *a0;
+        uint64_t a3;
+      };
+
+      /// _Combine_T3Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_T3Node {
+        uint64_t _result_0;
+        uint64_t _result_1;
+        uint64_t a3;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree3_sum: _Enter -> _After_T3Node -> _After_T3Node_1 ->
+      /// _Combine_T3Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree3 *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename tree3::T3Node>(_sv.v());
+            _stack.emplace_back(
+                _After_T3Node{crane_raw(a1), crane_raw(a0), a3});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_T3Node>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node>(_frame));
+          _stack.emplace_back(
+              _After_T3Node_1{std::move(_result), _f.a0, _f.a3});
+          _stack.emplace_back(_Enter{_f.a1});
+        } else if (std::holds_alternative<_After_T3Node_1>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node_1>(_frame));
+          _stack.emplace_back(
+              _Combine_T3Node{_f._result, std::move(_result), _f.a3});
+          _stack.emplace_back(_Enter{_f.a0});
+        } else {
+          auto _f = std::move(std::get<_Combine_T3Node>(_frame));
+          _result =
+              (((std::move(_result) + _f._result_1) + _f._result_0) + _f.a3);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
+                                     tree3 &, T1 &, uint64_t &>
+    T1 tree3_rec(T1 f, F1 &&f0) const {
+      const tree3 *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree3 *_self;
+      };
+
+      /// _After_T3Node: saves [a1_0, a0_0, a3, a2, a1_1, a0_1], dispatches next
+      /// recursive call.
+      struct _After_T3Node {
+        const tree3 *a1_0;
+        const tree3 *a0_0;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1_1;
+        tree3 a0_1;
+      };
+
+      /// _After_T3Node_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
+      /// next recursive call.
+      struct _After_T3Node_1 {
+        std::decay_t<T1> _result;
+        const tree3 *a0_0;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1;
+        tree3 a0_1;
+      };
+
+      /// _Combine_T3Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_T3Node {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1;
+        tree3 a0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree3_rec: _Enter -> _After_T3Node -> _After_T3Node_1 ->
+      /// _Combine_T3Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree3 *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename tree3::T3Node>(_sv.v());
+            _stack.emplace_back(
+                _After_T3Node{crane_raw(a1), crane_raw(a0), a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_T3Node>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node>(_frame));
+          _stack.emplace_back(_After_T3Node_1{
+              std::move(_result), _f.a0_0, _f.a3, std::move(_f.a2),
+              std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_T3Node_1>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node_1>(_frame));
+          _stack.emplace_back(_Combine_T3Node{
+              std::move(_f._result), std::move(_result), _f.a3,
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_T3Node>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_1), std::move(_f.a2),
+                       std::move(_f._result_0), _f.a3);
+        }
+      }
+      return _result;
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree3 &, T1 &, tree3 &, T1 &,
+                                     tree3 &, T1 &, uint64_t &>
+    T1 tree3_rect(T1 f, F1 &&f0) const {
+      const tree3 *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const tree3 *_self;
+      };
+
+      /// _After_T3Node: saves [a1_0, a0_0, a3, a2, a1_1, a0_1], dispatches next
+      /// recursive call.
+      struct _After_T3Node {
+        const tree3 *a1_0;
+        const tree3 *a0_0;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1_1;
+        tree3 a0_1;
+      };
+
+      /// _After_T3Node_1: saves [_result, a0_0, a3, a2, a1, a0_1], dispatches
+      /// next recursive call.
+      struct _After_T3Node_1 {
+        std::decay_t<T1> _result;
+        const tree3 *a0_0;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1;
+        tree3 a0_1;
+      };
+
+      /// _Combine_T3Node: receives partial results, combines with _result from
+      /// final call.
+      struct _Combine_T3Node {
+        std::decay_t<T1> _result_0;
+        std::decay_t<T1> _result_1;
+        uint64_t a3;
+        tree3 a2;
+        tree3 a1;
+        tree3 a0;
+      };
+
+      using _Frame =
+          std::variant<_Enter, _After_T3Node, _After_T3Node_1, _Combine_T3Node>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified tree3_rect: _Enter -> _After_T3Node -> _After_T3Node_1 ->
+      /// _Combine_T3Node.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const tree3 *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1, a2, a3] =
+                std::get<typename tree3::T3Node>(_sv.v());
+            _stack.emplace_back(
+                _After_T3Node{crane_raw(a1), crane_raw(a0), a3, *a2, *a1, *a0});
+            _stack.emplace_back(_Enter{crane_raw(a2)});
+          }
+        } else if (std::holds_alternative<_After_T3Node>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node>(_frame));
+          _stack.emplace_back(_After_T3Node_1{
+              std::move(_result), _f.a0_0, _f.a3, std::move(_f.a2),
+              std::move(_f.a1_1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a1_0});
+        } else if (std::holds_alternative<_After_T3Node_1>(_frame)) {
+          auto _f = std::move(std::get<_After_T3Node_1>(_frame));
+          _stack.emplace_back(_Combine_T3Node{
+              std::move(_f._result), std::move(_result), _f.a3,
+              std::move(_f.a2), std::move(_f.a1), std::move(_f.a0_1)});
+          _stack.emplace_back(_Enter{_f.a0_0});
+        } else {
+          auto _f = std::move(std::get<_Combine_T3Node>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_result), std::move(_f.a1),
+                       std::move(_f._result_1), std::move(_f.a2),
+                       std::move(_f._result_0), _f.a3);
+        }
+      }
+      return _result;
+    }
+  };
+
+  static inline const uint64_t test_outer_basic = []() {
+    outer o = outer::onode(
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
+                     outer::oleaf()),
+        inner::inode(inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
+                     UINT64_C(2),
+                     inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
+                     outer::oleaf()));
+    return std::move(o).outer_sum();
+  }();
+  static outer dup_inner(inner i);
+  static inline const uint64_t test_dup_inner = []() {
+    inner i = inner::inode(
+        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), UINT64_C(10),
+        inner::inode(inner::ileaf(), UINT64_C(15), inner::ileaf()));
+    return dup_inner(std::move(i)).outer_sum();
+  }();
+  static inline const uint64_t test_transform = []() {
+    outer o = outer::onode(
+        outer::oleaf(),
+        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()),
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
+                     outer::oleaf()));
+    return std::move(o).transform_outer().outer_sum();
+  }();
+  static inline const uint64_t test_expr = []() {
+    expr e = expr::add(
+        expr::mul(expr::add(expr::lit(UINT64_C(2)), expr::lit(UINT64_C(3))),
+                  expr::lit(UINT64_C(4))),
+        expr::neg(expr::add(expr::lit(UINT64_C(10)), expr::lit(UINT64_C(5)))));
+    return std::move(e).eval_expr();
+  }();
+  static tree3 build_tree3(uint64_t n);
+  static inline const uint64_t test_tree3 =
+      build_tree3(UINT64_C(4)).tree3_sum();
+  static inline const uint64_t test_dup_outer = []() {
+    outer o =
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(42), inner::ileaf()),
+                     outer::oleaf());
+    std::pair<outer, outer> p = std::move(o).dup_outer();
+    return (p.first.outer_sum() + p.second.outer_sum());
+  }();
+  static inline const uint64_t test_double_expr =
+      expr::add(expr::lit(UINT64_C(5)),
+                expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))))
+          .double_expr()
+          .eval_expr();
+
+  static inline const uint64_t test_cross_type = []() {
+    expr e =
+        expr::add(expr::lit(UINT64_C(5)),
+                  expr::mul(expr::lit(UINT64_C(3)), expr::lit(UINT64_C(7))));
+    inner i = std::move(e).expr_to_inner();
+    outer o = outer::onode(outer::oleaf(), i, outer::oleaf());
+    return (std::move(o).outer_sum() + std::move(i).inner_sum());
+  }();
+};
+
+#endif // INCLUDED_MEM_SAFETY_PROBE29

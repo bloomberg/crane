@@ -100,28 +100,6 @@
   (deps assoc_type_any_cast.t.exe)
   (action (run ./assoc_type_any_cast.t.exe))))
 
-(subdir assoc_type_option_leak
- (rule
-  (targets assoc_type_option_leak.t.exe)
-  (deps AssocTypeOptionLeak.vo assoc_type_option_leak.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_option_leak.t.exe assoc_type_option_leak.cpp assoc_type_option_leak.t.cpp)))
- (rule
-  (alias runtest)
-  (deps assoc_type_option_leak.t.exe)
-  (action (run ./assoc_type_option_leak.t.exe))))
-
-(subdir assoc_type_tvar_leak
- (rule
-  (targets assoc_type_tvar_leak.t.exe)
-  (deps AssocTypeTvarLeak.vo assoc_type_tvar_leak.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_tvar_leak.t.exe assoc_type_tvar_leak.cpp assoc_type_tvar_leak.t.cpp)))
- (rule
-  (alias runtest)
-  (deps assoc_type_tvar_leak.t.exe)
-  (action (run ./assoc_type_tvar_leak.t.exe))))
-
 (subdir assoc_type_two_swapped
  (rule
   (targets assoc_type_two_swapped.t.exe)

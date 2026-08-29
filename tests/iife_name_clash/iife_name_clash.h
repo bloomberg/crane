@@ -1,0 +1,67 @@
+#ifndef INCLUDED_IIFE_NAME_CLASH
+#define INCLUDED_IIFE_NAME_CLASH
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct IifeNameClash {
+  struct wrapper {
+    // TYPES
+    struct Wrap {
+      uint64_t n;
+    };
+
+    struct Empty {};
+
+    using variant_t = std::variant<Wrap, Empty>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    wrapper() {}
+
+    explicit wrapper(Wrap _v) : v_(std::move(_v)) {}
+
+    explicit wrapper(Empty _v) : v_(_v) {}
+
+    static wrapper wrap(uint64_t n) { return wrapper(Wrap{n}); }
+
+    static wrapper empty() { return wrapper(Empty{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+  static T1 wrapper_rect(F0 &&f, T1 f0, const wrapper &w) {
+    if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
+      const auto &[n0] = std::get<typename wrapper::Wrap>(w.v());
+      return f(n0);
+    } else {
+      return f0;
+    }
+  }
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+  static T1 wrapper_rec(F0 &&f, T1 f0, const wrapper &w) {
+    if (std::holds_alternative<typename wrapper::Wrap>(w.v())) {
+      const auto &[n0] = std::get<typename wrapper::Wrap>(w.v());
+      return f(n0);
+    } else {
+      return f0;
+    }
+  }
+
+  static uint64_t double_get(const wrapper &w1, const wrapper &w2);
+};
+
+#endif // INCLUDED_IIFE_NAME_CLASH

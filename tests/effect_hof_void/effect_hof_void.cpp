@@ -1,0 +1,26 @@
+#include "effect_hof_void.h"
+
+std::string EffectHofVoid::concrete_use() {
+  return apply_then_return(
+      [](std::string _x0) {
+        std::cout << _x0 << '\n';
+        return;
+      },
+      "hello");
+}
+
+void EffectHofVoid::set_wrapper(std::string v, std::string k) {
+  setenv(k.c_str(), v.c_str(), 1);
+  return;
+}
+
+void EffectHofVoid::concrete_set() {
+  std::function<void(std::string)> f = [](std::string _x0) {
+    set_wrapper("myval", _x0);
+    return;
+  };
+  {
+    f("mykey");
+    return;
+  }
+}

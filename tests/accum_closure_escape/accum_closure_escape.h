@@ -1,0 +1,333 @@
+#ifndef INCLUDED_ACCUM_CLOSURE_ESCAPE
+#define INCLUDED_ACCUM_CLOSURE_ESCAPE
+
+#include "small_vector.h"
+#include <any>
+#include <atomic>
+#include <functional>
+#include <memory>
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct AccumClosureEscape {
+  template <typename A> struct mylist {
+    // TYPES
+    struct Mynil {};
+
+    struct Mycons {
+      A a0;
+      std::shared_ptr<mylist<A>> a1;
+    };
+
+    using variant_t = std::variant<Mynil, Mycons>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    mylist() {}
+
+    explicit mylist(Mynil _v) : v_(_v) {}
+
+    explicit mylist(Mycons _v) : v_(std::move(_v)) {}
+
+    template <typename _U> mylist(const mylist<_U> &_other) {
+      if (std::holds_alternative<typename mylist<_U>::Mynil>(_other.v())) {
+        this->v_ = Mynil{};
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename mylist<_U>::Mycons>(_other.v());
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                if (a0.type() == typeid(A))
+                  return std::any_cast<A>(a0);
+                if constexpr (requires {
+                                typename A::first_type;
+                                typename A::second_type;
+                              }) {
+                  const auto &[_k, _v] =
+                      std::any_cast<std::pair<std::any, std::any>>(a0);
+                  return A{
+                      [&]() -> typename A::first_type {
+                        if constexpr (std::is_same_v<typename A::first_type,
+                                                     std::any>)
+                          return _k;
+                        else
+                          return std::any_cast<typename A::first_type>(_k);
+                      }(),
+                      [&]() -> typename A::second_type {
+                        if constexpr (std::is_same_v<typename A::second_type,
+                                                     std::any>)
+                          return _v;
+                        else
+                          return std::any_cast<typename A::second_type>(_v);
+                      }()};
+                }
+                return std::any_cast<A>(a0);
+              } else
+                return A(a0);
+            }(),
+            a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
+      }
+    }
+
+    static mylist<A> mynil() { return mylist<A>(Mynil{}); }
+
+    static mylist<A> mycons(A a0, mylist<A> a1) {
+      return mylist<A>(
+          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    }
+
+    // MANIPULATORS
+    ~mylist() {
+      crane::small_vector<std::shared_ptr<mylist<A>>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<Mycons>(&_v)) {
+          if (_alt->a1) {
+            _stack.push_back(std::move(_alt->a1));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    mylist(const mylist &) = default;
+    mylist &operator=(const mylist &) = default;
+    mylist(mylist &&) noexcept = default;
+    mylist &operator=(mylist &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    mylist<A> mylist_append(mylist<A> l2) const {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return l2;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return mylist<A>::mycons(a0, a1->mylist_append(std::move(l2)));
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
+    T1 mylist_rec(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
+    T1 mylist_rect(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
+        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
+      }
+    }
+  };
+
+  struct tree {
+    // TYPES
+    struct TLeaf {};
+
+    struct TNode {
+      std::shared_ptr<tree> a0;
+      uint64_t a1;
+      std::shared_ptr<tree> a2;
+    };
+
+    using variant_t = std::variant<TLeaf, TNode>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    tree() {}
+
+    explicit tree(TLeaf _v) : v_(_v) {}
+
+    explicit tree(TNode _v) : v_(std::move(_v)) {}
+
+    static tree tleaf() { return tree(TLeaf{}); }
+
+    static tree tnode(tree a0, uint64_t a1, tree a2) {
+      return tree(TNode{std::make_shared<tree>(std::move(a0)), a1,
+                        std::make_shared<tree>(std::move(a2))});
+    }
+
+    // MANIPULATORS
+    ~tree() {
+      crane::small_vector<std::shared_ptr<tree>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<TNode>(&_v)) {
+          if (_alt->a0) {
+            _stack.push_back(std::move(_alt->a0));
+          }
+          if (_alt->a2) {
+            _stack.push_back(std::move(_alt->a2));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) noexcept = default;
+    tree &operator=(tree &&) noexcept = default;
+
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    mylist<std::function<uint64_t(uint64_t)>> tree_to_adders() const {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
+        return mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        const tree &a0_value = *a0;
+        const tree &a2_value = *a2;
+        return mylist<std::function<uint64_t(uint64_t)>>::mycons(
+            [=](uint64_t x) mutable { return (a1 + x); },
+            a0_value.tree_to_adders().mylist_append(a2_value.tree_to_adders()));
+      }
+    }
+
+    mylist<uint64_t> tree_to_list() const {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
+        return mylist<uint64_t>::mynil();
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        return mylist<uint64_t>::mycons(
+            a1, a0->tree_to_list().mylist_append(a2->tree_to_list()));
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
+    T1 tree_rec(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
+                  a2->template tree_rec<T1>(f, f0));
+      }
+    }
+
+    template <typename T1, typename F1>
+      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
+                                     T1 &>
+    T1 tree_rect(T1 f, F1 &&f0) const {
+      if (std::holds_alternative<typename tree::TLeaf>(this->v())) {
+        return f;
+      } else {
+        const auto &[a0, a1, a2] = std::get<typename tree::TNode>(this->v());
+        return f0(*a0, a0->template tree_rect<T1>(f, f0), a1, *a2,
+                  a2->template tree_rect<T1>(f, f0));
+      }
+    }
+  };
+
+  static mylist<std::function<uint64_t(uint64_t)>>
+  build_adders(const mylist<uint64_t> &l,
+               mylist<std::function<uint64_t(uint64_t)>> acc);
+  static uint64_t
+  apply_first(const mylist<std::function<uint64_t(uint64_t)>> &fns, uint64_t x);
+  static uint64_t
+  apply_all_sum(const mylist<std::function<uint64_t(uint64_t)>> &fns,
+                uint64_t x);
+  static inline const uint64_t test1 = []() {
+    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    return apply_first(std::move(fns), UINT64_C(5));
+  }();
+  static inline const uint64_t test2 = []() {
+    mylist<std::function<uint64_t(uint64_t)>> fns = build_adders(
+        mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+        mylist<std::function<uint64_t(uint64_t)>>::mynil());
+    return apply_all_sum(std::move(fns), UINT64_C(5));
+  }();
+
+  static uint64_t compose_from_list(const mylist<uint64_t> &l,
+                                    std::function<uint64_t(uint64_t)> acc,
+                                    uint64_t _x0) {
+    return [=]() mutable -> std::function<uint64_t(uint64_t)> {
+      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
+        return acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename mylist<uint64_t>::Mycons>(l.v());
+        const mylist<uint64_t> &a1_value = *a1;
+        return [=](uint64_t _x0) mutable -> uint64_t {
+          return compose_from_list(
+              a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, _x0);
+        };
+      }
+    }()(_x0);
+  }
+
+  static inline const uint64_t test3 = compose_from_list(
+      mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(
+              UINT64_C(20), mylist<uint64_t>::mycons(
+                                UINT64_C(30), mylist<uint64_t>::mynil()))),
+      [](uint64_t x) { return x; }, UINT64_C(7));
+  static inline const uint64_t test4 = []() {
+    tree t = tree::tnode(
+        tree::tnode(tree::tleaf(), UINT64_C(10), tree::tleaf()), UINT64_C(20),
+        tree::tnode(tree::tleaf(), UINT64_C(30), tree::tleaf()));
+    return apply_all_sum(std::move(t).tree_to_adders(), UINT64_C(5));
+  }();
+  static inline const uint64_t test5 = []() {
+    tree t =
+        tree::tnode(tree::tnode(tree::tleaf(), UINT64_C(42), tree::tleaf()),
+                    UINT64_C(100), tree::tleaf());
+    mylist<std::function<uint64_t(uint64_t)>> fns =
+        std::move(t).tree_to_adders();
+    return apply_first(std::move(fns), UINT64_C(0));
+  }();
+};
+
+#endif // INCLUDED_ACCUM_CLOSURE_ESCAPE

@@ -1,0 +1,135 @@
+#ifndef INCLUDED_EFFECT_UNIT_STRESS
+#define INCLUDED_EFFECT_UNIT_STRESS
+
+#include "small_vector.h"
+#include <any>
+#include <atomic>
+#include <cstdint>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <optional>
+#include <string>
+#include <system_error>
+#include <utility>
+#include <variant>
+
+using namespace std::string_literals;
+
+template <typename A> struct List {
+  // TYPES
+  struct Nil {};
+
+  struct Cons {
+    A a;
+    std::shared_ptr<List<A>> l;
+  };
+
+  using variant_t = std::variant<Nil, Cons>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  List() {}
+
+  explicit List(Nil _v) : v_(_v) {}
+
+  explicit List(Cons _v) : v_(std::move(_v)) {}
+
+  template <typename _U> List(const List<_U> &_other) {
+    if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+      this->v_ = Nil{};
+    } else {
+      const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>) {
+              if (a.type() == typeid(A))
+                return std::any_cast<A>(a);
+              if constexpr (requires {
+                              typename A::first_type;
+                              typename A::second_type;
+                            }) {
+                const auto &[_k, _v] =
+                    std::any_cast<std::pair<std::any, std::any>>(a);
+                return A{[&]() -> typename A::first_type {
+                           if constexpr (std::is_same_v<typename A::first_type,
+                                                        std::any>)
+                             return _k;
+                           else
+                             return std::any_cast<typename A::first_type>(_k);
+                         }(),
+                         [&]() -> typename A::second_type {
+                           if constexpr (std::is_same_v<typename A::second_type,
+                                                        std::any>)
+                             return _v;
+                           else
+                             return std::any_cast<typename A::second_type>(_v);
+                         }()};
+              }
+              return std::any_cast<A>(a);
+            } else
+              return A(a);
+          }(),
+          l ? std::make_shared<List<A>>(*l) : nullptr};
+    }
+  }
+
+  static List<A> nil() { return List<A>(Nil{}); }
+
+  static List<A> cons(A a, List<A> l) {
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  }
+
+  // MANIPULATORS
+  ~List() {
+    crane::small_vector<std::shared_ptr<List<A>>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
+        if (_alt->l) {
+          _stack.push_back(std::move(_alt->l));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  List(const List &) = default;
+  List &operator=(const List &) = default;
+  List(List &&) noexcept = default;
+  List &operator=(List &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
+struct EffectUnitStress {
+  static void ret_tt_simple();
+  static void ret_tt_after_bind();
+  static void ret_tt_after_effect();
+  static std::string bind_identity();
+  static uint64_t bind_ignore();
+  static void conditional_tt(bool b);
+  static void conditional_mixed(bool b);
+  static std::pair<std::string, std::string> pair_of_effects();
+  static std::string nat_dispatch(uint64_t n);
+  static int64_t let_pure_in_monadic();
+  static std::string nested_if_monadic(bool b1, bool b2);
+  static std::optional<uint64_t> safe_head(const List<uint64_t> &xs);
+};
+
+#endif // INCLUDED_EFFECT_UNIT_STRESS

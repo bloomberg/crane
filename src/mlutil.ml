@@ -608,6 +608,44 @@ let ast_map f = function
     | MLfloat _
     | MLstring _ ) as a -> a
 
+(** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
+    recursing through the whole term.  Unlike {!ast_map} it descends on its
+    own, because a type-level rewrite has to reach every node that carries a
+    type: lambda and let binders, [MLglob] type arguments, [MLcons] and
+    [MLcase] heads, pattern binders, and fixpoint signatures. *)
+let rec ast_map_types f = function
+  | MLlam (i, t, a) -> MLlam (i, f t, ast_map_types f a)
+  | MLletin (i, t, a, b) ->
+    MLletin (i, f t, ast_map_types f a, ast_map_types f b)
+  | MLglob (r, tys) -> MLglob (r, List.map f tys)
+  | MLcons (t, c, l) -> MLcons (f t, c, List.map (ast_map_types f) l)
+  | MLtuple l -> MLtuple (List.map (ast_map_types f) l)
+  | MLcase (t, a, v) ->
+    let branch (binds, bty, pat, body) =
+      ( List.map (fun (id, bt) -> (id, f bt)) binds,
+        f bty,
+        pat,
+        ast_map_types f body )
+    in
+    MLcase (f t, ast_map_types f a, Array.map branch v)
+  | MLfix (i, ids, v, is_cofix) ->
+    MLfix
+      ( i,
+        Array.map (fun (id, t) -> (id, f t)) ids,
+        Array.map (ast_map_types f) v,
+        is_cofix )
+  | MLapp (a, l) -> MLapp (ast_map_types f a, List.map (ast_map_types f) l)
+  | MLmagic a -> MLmagic (ast_map_types f a)
+  | MLparray (t, def) ->
+    MLparray (Array.map (ast_map_types f) t, ast_map_types f def)
+  | ( MLrel _
+    | MLexn _
+    | MLdummy _
+    | MLaxiom _
+    | MLuint _
+    | MLfloat _
+    | MLstring _ ) as a -> a
+
 (** {2 Map over asts, with binding depth as parameter} *)
 
 let ast_map_lift_branch f n (ids, r, p, a) =

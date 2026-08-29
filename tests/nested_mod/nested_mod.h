@@ -1,0 +1,144 @@
+#ifndef INCLUDED_NESTED_MOD
+#define INCLUDED_NESTED_MOD
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct NestedMod {
+  struct Outer {
+    enum class Color { RED, GREEN, BLUE };
+
+    template <typename T1> static T1 color_rect(T1 f, T1 f0, T1 f1, Color c) {
+      switch (c) {
+      case Color::RED: {
+        return f;
+      }
+      case Color::GREEN: {
+        return f0;
+      }
+      case Color::BLUE: {
+        return f1;
+      }
+      default:
+        std::unreachable();
+      }
+    }
+
+    template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
+      switch (c) {
+      case Color::RED: {
+        return f;
+      }
+      case Color::GREEN: {
+        return f0;
+      }
+      case Color::BLUE: {
+        return f1;
+      }
+      default:
+        std::unreachable();
+      }
+    }
+
+    struct Inner {
+      struct shape {
+        // TYPES
+        struct Circle {
+          uint64_t a0;
+        };
+
+        struct Square {
+          uint64_t a0;
+        };
+
+        struct Triangle {
+          uint64_t a0;
+          uint64_t a1;
+          uint64_t a2;
+        };
+
+        using variant_t = std::variant<Circle, Square, Triangle>;
+
+      private:
+        // DATA
+        variant_t v_;
+
+      public:
+        // CREATORS
+        shape() {}
+
+        explicit shape(Circle _v) : v_(std::move(_v)) {}
+
+        explicit shape(Square _v) : v_(std::move(_v)) {}
+
+        explicit shape(Triangle _v) : v_(std::move(_v)) {}
+
+        static shape circle(uint64_t a0) { return shape(Circle{a0}); }
+
+        static shape square(uint64_t a0) { return shape(Square{a0}); }
+
+        static shape triangle(uint64_t a0, uint64_t a1, uint64_t a2) {
+          return shape(Triangle{a0, a1, a2});
+        }
+
+        // MANIPULATORS
+        inline variant_t &v_mut() { return v_; }
+
+        // ACCESSORS
+        const variant_t &v() const { return v_; }
+      };
+
+      template <typename T1, typename F0, typename F1, typename F2>
+        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                       uint64_t &>
+      static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
+        if (std::holds_alternative<typename shape::Circle>(s.v())) {
+          const auto &[a0] = std::get<typename shape::Circle>(s.v());
+          return f(a0);
+        } else if (std::holds_alternative<typename shape::Square>(s.v())) {
+          const auto &[a0] = std::get<typename shape::Square>(s.v());
+          return f0(a0);
+        } else {
+          const auto &[a0, a1, a2] = std::get<typename shape::Triangle>(s.v());
+          return f1(a0, a1, a2);
+        }
+      }
+
+      template <typename T1, typename F0, typename F1, typename F2>
+        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
+                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
+                                       uint64_t &>
+      static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
+        if (std::holds_alternative<typename shape::Circle>(s.v())) {
+          const auto &[a0] = std::get<typename shape::Circle>(s.v());
+          return f(a0);
+        } else if (std::holds_alternative<typename shape::Square>(s.v())) {
+          const auto &[a0] = std::get<typename shape::Square>(s.v());
+          return f0(a0);
+        } else {
+          const auto &[a0, a1, a2] = std::get<typename shape::Triangle>(s.v());
+          return f1(a0, a1, a2);
+        }
+      }
+
+      static uint64_t area(const shape &s);
+    };
+
+    static uint64_t shape_with_color(const Inner::shape &s, Color c);
+    static uint64_t color_code(Color c);
+  };
+
+  static inline const Outer::Inner::shape my_circle =
+      Outer::Inner::shape::circle(UINT64_C(5));
+  static inline const Outer::Color my_color = Outer::Color::RED;
+  static inline const uint64_t test_area = Outer::Inner::area(my_circle);
+  static inline const uint64_t test_combined =
+      Outer::shape_with_color(my_circle, my_color);
+  static inline const uint64_t test_color = Outer::color_code(my_color);
+};
+
+#endif // INCLUDED_NESTED_MOD

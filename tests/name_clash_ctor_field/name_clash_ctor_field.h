@@ -1,0 +1,208 @@
+#ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
+#define INCLUDED_NAME_CLASH_CTOR_FIELD
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct NameClashCtorField {
+  struct clash1 {
+    // DATA
+    uint64_t d_a0;
+    uint64_t d_a1;
+
+    // ACCESSORS
+    clash1 clone() const { return {d_a0, d_a1}; }
+
+    // CREATORS
+    static clash1 c1(uint64_t d_a0, uint64_t d_a1) { return {d_a0, d_a1}; }
+
+    uint64_t sum_clash1() const {
+      const auto &[d_a0, d_a1] = *this;
+      return (d_a0 + d_a1);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    T1 clash1_rec(F0 &&f) const {
+      const auto &[d_a2, d_a3] = *this;
+      return f(d_a2, d_a3);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    T1 clash1_rect(F0 &&f) const {
+      const auto &[d_a2, d_a3] = *this;
+      return f(d_a2, d_a3);
+    }
+  };
+
+  struct clash2 {
+    // TYPES
+    struct C2a {
+      uint64_t v;
+    };
+
+    struct C2b {
+      uint64_t result;
+    };
+
+    using variant_t = std::variant<C2a, C2b>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    clash2() {}
+
+    explicit clash2(C2a _v) : v_(std::move(_v)) {}
+
+    explicit clash2(C2b _v) : v_(std::move(_v)) {}
+
+    static clash2 c2a(uint64_t v) { return clash2(C2a{v}); }
+
+    static clash2 c2b(uint64_t result) { return clash2(C2b{result}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    uint64_t get_clash2() const {
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[v0] = std::get<typename clash2::C2a>(this->v());
+        return v0;
+      } else {
+        const auto &[result] = std::get<typename clash2::C2b>(this->v());
+        return result;
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 clash2_rec(F0 &&f, F1 &&f0) const {
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[v0] = std::get<typename clash2::C2a>(this->v());
+        return f(v0);
+      } else {
+        const auto &[result0] = std::get<typename clash2::C2b>(this->v());
+        return f0(result0);
+      }
+    }
+
+    template <typename T1, typename F0, typename F1>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    T1 clash2_rect(F0 &&f, F1 &&f0) const {
+      if (std::holds_alternative<typename clash2::C2a>(this->v())) {
+        const auto &[v0] = std::get<typename clash2::C2a>(this->v());
+        return f(v0);
+      } else {
+        const auto &[result0] = std::get<typename clash2::C2b>(this->v());
+        return f0(result0);
+      }
+    }
+  };
+
+  struct pair_ind {
+    // DATA
+    uint64_t a0;
+    uint64_t a1;
+
+    // ACCESSORS
+    pair_ind clone() const { return {a0, a1}; }
+
+    // CREATORS
+    static pair_ind mkpair(uint64_t a0, uint64_t a1) { return {a0, a1}; }
+
+    pair_ind swap_pair() const {
+      const auto &[a0, a1] = *this;
+      return pair_ind::mkpair(a1, a0);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    T1 pair_ind_rec(F0 &&f) const {
+      const auto &[a0, a1] = *this;
+      return f(a0, a1);
+    }
+
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+    T1 pair_ind_rect(F0 &&f) const {
+      const auto &[a0, a1] = *this;
+      return f(a0, a1);
+    }
+  };
+
+  struct box {
+    // TYPES
+    struct Box0 {
+      pair_ind a0;
+    };
+
+    struct EmptyBox {};
+
+    using variant_t = std::variant<Box0, EmptyBox>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    box() {}
+
+    explicit box(Box0 _v) : v_(std::move(_v)) {}
+
+    explicit box(EmptyBox _v) : v_(_v) {}
+
+    static box box0(pair_ind a0) { return box(Box0{std::move(a0)}); }
+
+    static box emptybox() { return box(EmptyBox{}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+
+    uint64_t unbox_sum() const {
+      if (std::holds_alternative<typename box::Box0>(this->v())) {
+        const auto &[a0] = std::get<typename box::Box0>(this->v());
+        const auto &[a00, a10] = a0;
+        return (a00 + a10);
+      } else {
+        return UINT64_C(0);
+      }
+    }
+  };
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+  static T1 box_rect(F0 &&f, T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[a0] = std::get<typename box::Box0>(b.v());
+      return f(a0);
+    } else {
+      return f0;
+    }
+  }
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, pair_ind &>
+  static T1 box_rec(F0 &&f, T1 f0, const box &b) {
+    if (std::holds_alternative<typename box::Box0>(b.v())) {
+      const auto &[a0] = std::get<typename box::Box0>(b.v());
+      return f(a0);
+    } else {
+      return f0;
+    }
+  }
+};
+
+#endif // INCLUDED_NAME_CLASH_CTOR_FIELD

@@ -1,0 +1,213 @@
+#include "mem_safety_probe14.h"
+
+uint64_t MemSafetyProbe14::sum_fns(
+    const MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>>
+        &l) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> *l;
+  };
+
+  /// _Resume_Mycons: saves [_s0], resumes after recursive call with _result.
+  struct _Resume_Mycons {
+    uint64_t _s0;
+  };
+
+  using _Frame = std::variant<_Enter, _Resume_Mycons>;
+  uint64_t _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{&l});
+  /// Loopified sum_fns: _Enter -> _Resume_Mycons.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> &l =
+          *_f.l;
+      if (std::holds_alternative<typename MemSafetyProbe14::mylist<
+              std::function<uint64_t(uint64_t)>>::Mynil>(l.v())) {
+        _result = UINT64_C(0);
+      } else {
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe14::mylist<
+            std::function<uint64_t(uint64_t)>>::Mycons>(l.v());
+        _stack.emplace_back(_Resume_Mycons{a0(UINT64_C(0))});
+        _stack.emplace_back(_Enter{crane_raw(a1)});
+      }
+    } else {
+      auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+      _result = (_f._s0 + std::move(_result));
+    }
+  }
+  return _result;
+}
+
+uint64_t MemSafetyProbe14::capture_then_match(MemSafetyProbe14::tree t) {
+  std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
+    return (t.tree_sum() + n);
+  };
+  if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(
+          t.v_mut())) {
+    return f(UINT64_C(0));
+  } else {
+    auto &[a0, a1, a2] =
+        std::get<typename MemSafetyProbe14::tree::Node>(t.v_mut());
+    return ((f(std::move(a1)) + a0->tree_sum()) + a2->tree_sum());
+  }
+}
+
+MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe14::tree_level_fns(
+    const MemSafetyProbe14::tree &t,
+    uint64_t depth) { /// _Enter: captures varying parameters for each recursive
+                      /// call.
+
+  struct _Enter {
+    uint64_t depth;
+    const MemSafetyProbe14::tree *t;
+  };
+
+  /// _After_Node: saves [_s0, a0_value, _s2, _s3], dispatches next recursive
+  /// call.
+  struct _After_Node {
+    uint64_t _s0;
+    const MemSafetyProbe14::tree *a0_value;
+    std::function<uint64_t(uint64_t)> _s2;
+    std::function<uint64_t(uint64_t)> _s3;
+  };
+
+  /// _Combine_Node: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_Node {
+    MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result;
+    std::function<uint64_t(uint64_t)> _s1;
+    std::function<uint64_t(uint64_t)> _s2;
+  };
+
+  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+  MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{depth, &t});
+  /// Loopified tree_level_fns: _Enter -> _After_Node -> _Combine_Node.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t depth = _f.depth;
+      const MemSafetyProbe14::tree &t = *_f.t;
+      if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(
+              t.v())) {
+        _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1, a2] =
+            std::get<typename MemSafetyProbe14::tree::Node>(t.v());
+        const MemSafetyProbe14::tree &a0_value = *a0;
+        const MemSafetyProbe14::tree &a2_value = *a2;
+        _stack.emplace_back(_After_Node{
+            (UINT64_C(1) + depth), crane_raw(a0),
+            [=](uint64_t n) mutable {
+              return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
+            },
+            [=](uint64_t n) mutable {
+              return (((depth * UINT64_C(100)) + a1) + n);
+            }});
+        _stack.emplace_back(_Enter{(UINT64_C(1) + depth), crane_raw(a2)});
+      }
+    } else if (std::holds_alternative<_After_Node>(_frame)) {
+      auto _f = std::move(std::get<_After_Node>(_frame));
+      _stack.emplace_back(_Combine_Node{std::move(_result), std::move(_f._s2),
+                                        std::move(_f._s3)});
+      _stack.emplace_back(_Enter{_f._s0, _f.a0_value});
+    } else {
+      auto _f = std::move(std::get<_Combine_Node>(_frame));
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s2),
+          mylist<std::function<uint64_t(uint64_t)>>::mycons(
+              std::move(_f._s1),
+              std::move(_result).mylist_append(std::move(_f._result))));
+    }
+  }
+  return _result;
+}
+
+MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
+  std::shared_ptr<MemSafetyProbe14::tree> _head{};
+  std::shared_ptr<MemSafetyProbe14::tree> *_write = &_head;
+  uint64_t _loop_n = std::move(n);
+  while (true) {
+    if (_loop_n <= 0) {
+      *_write = std::make_shared<MemSafetyProbe14::tree>(tree::leaf());
+      break;
+    } else {
+      uint64_t n_ = _loop_n - 1;
+      auto _cell = std::make_shared<MemSafetyProbe14::tree>(typename tree::Node(
+          nullptr, _loop_n,
+          std::make_shared<MemSafetyProbe14::tree>(tree::leaf())));
+      *_write = std::move(_cell);
+      _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
+      _loop_n = n_;
+      continue;
+    }
+  }
+  return std::move(*_head);
+}
+
+MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>>
+MemSafetyProbe14::collect_closures(
+    const MemSafetyProbe14::tree
+        &t) { /// _Enter: captures varying parameters for each recursive call.
+
+  struct _Enter {
+    const MemSafetyProbe14::tree *t;
+  };
+
+  /// _After_Node: saves [a0_value, _s1], dispatches next recursive call.
+  struct _After_Node {
+    const MemSafetyProbe14::tree *a0_value;
+    std::function<uint64_t(uint64_t)> _s1;
+  };
+
+  /// _Combine_Node: receives partial results, combines with _result from final
+  /// call.
+  struct _Combine_Node {
+    MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result;
+    std::function<uint64_t(uint64_t)> _s1;
+  };
+
+  using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
+  MemSafetyProbe14::mylist<std::function<uint64_t(uint64_t)>> _result{};
+  crane::small_vector<_Frame> _stack;
+  _stack.emplace_back(_Enter{&t});
+  /// Loopified collect_closures: _Enter -> _After_Node -> _Combine_Node.
+  while (!_stack.empty()) {
+    _Frame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<_Enter>(_frame)) {
+      auto _f = std::move(std::get<_Enter>(_frame));
+      const MemSafetyProbe14::tree &t = *_f.t;
+      if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(
+              t.v())) {
+        _result = mylist<std::function<uint64_t(uint64_t)>>::mynil();
+      } else {
+        const auto &[a0, a1, a2] =
+            std::get<typename MemSafetyProbe14::tree::Node>(t.v());
+        const MemSafetyProbe14::tree &a0_value = *a0;
+        const MemSafetyProbe14::tree &a2_value = *a2;
+        _stack.emplace_back(_After_Node{
+            crane_raw(a0), [=](uint64_t n) mutable { return (a1 + n); }});
+        _stack.emplace_back(_Enter{crane_raw(a2)});
+      }
+    } else if (std::holds_alternative<_After_Node>(_frame)) {
+      auto _f = std::move(std::get<_After_Node>(_frame));
+      _stack.emplace_back(_Combine_Node{std::move(_result), std::move(_f._s1)});
+      _stack.emplace_back(_Enter{_f.a0_value});
+    } else {
+      auto _f = std::move(std::get<_Combine_Node>(_frame));
+      _result = mylist<std::function<uint64_t(uint64_t)>>::mycons(
+          std::move(_f._s1),
+          std::move(_result).mylist_append(std::move(_f._result)));
+    }
+  }
+  return _result;
+}

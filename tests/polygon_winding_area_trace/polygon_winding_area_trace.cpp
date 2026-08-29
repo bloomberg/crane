@@ -1,0 +1,215 @@
+#include "polygon_winding_area_trace.h"
+
+int64_t BinInt::pow_pos(int64_t z, unsigned int _x0) {
+  return Pos::template iter<int64_t>(
+      [=](int64_t _x0) mutable -> int64_t {
+        return static_cast<int64_t>(static_cast<uint64_t>(z) *
+                                    static_cast<uint64_t>(_x0));
+      },
+      INT64_C(1), _x0);
+}
+
+Real PolygonWindingAreaTraceCase::hav(Real theta) {
+  return r_sqr(r_sin((theta / Real::from_z(INT64_C(2)))));
+}
+
+Real PolygonWindingAreaTraceCase::distance(
+    const PolygonWindingAreaTraceCase::Point &p1,
+    const PolygonWindingAreaTraceCase::Point &p2) {
+  Real dphi = (p2.phi - p1.phi);
+  Real dlambda = (p2.lambda - p1.lambda);
+  Real a = (hav(std::move(dphi)) +
+            ((r_cos(p1.phi) * r_cos(p2.phi)) * hav(std::move(dlambda))));
+  return ((Real::from_z(INT64_C(2)) * R_earth) * r_asin(r_sqrt(std::move(a))));
+}
+
+Real PolygonWindingAreaTraceCase::lon_diff(Real lon1, Real lon2) {
+  Real raw = (lon2 - lon1);
+  if ((Real::pi() < raw)) {
+    return (std::move(raw) - (Real::from_z(INT64_C(2)) * Real::pi()));
+  } else {
+    if ((raw < (-Real::pi()))) {
+      return (std::move(raw) + (Real::from_z(INT64_C(2)) * Real::pi()));
+    } else {
+      return raw;
+    }
+  }
+}
+
+Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
+    const List<PolygonWindingAreaTraceCase::Point> &pts,
+    const List<PolygonWindingAreaTraceCase::Point> &all_pts, uint64_t idx) {
+  if (std::holds_alternative<
+          typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
+            pts.v());
+    uint64_t n = all_pts.length();
+    Real lambda_prev = nth_cyclic<PolygonWindingAreaTraceCase::Point>(
+                           a0, all_pts,
+                           ((((idx + n) - UINT64_C(1)) > (idx + n)
+                                 ? 0
+                                 : ((idx + n) - UINT64_C(1)))))
+                           .lambda;
+    Real lambda_next = nth_cyclic<PolygonWindingAreaTraceCase::Point>(
+                           a0, all_pts, (idx + UINT64_C(1)))
+                           .lambda;
+    Real term = (lon_diff(std::move(lambda_prev), std::move(lambda_next)) *
+                 r_sin(a0.phi));
+    return (std::move(term) +
+            spherical_shoelace_aux(*a1, all_pts, (idx + UINT64_C(1))));
+  }
+}
+
+Real PolygonWindingAreaTraceCase::spherical_shoelace(
+    const List<PolygonWindingAreaTraceCase::Point> &pts) {
+  return spherical_shoelace_aux(pts, pts, UINT64_C(0));
+}
+
+Real PolygonWindingAreaTraceCase::spherical_polygon_area(
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  return r_abs(
+      ((r_sqr(R_earth) * spherical_shoelace(poly)) / Real::from_z(INT64_C(2))));
+}
+
+Real PolygonWindingAreaTraceCase::distance_to_central_angle(Real d) {
+  return (d / R_earth);
+}
+
+Real PolygonWindingAreaTraceCase::spherical_cosine_arg(Real ca, Real cb,
+                                                       Real cab) {
+  Real num = (r_cos(cab) - (r_cos(ca) * r_cos(cb)));
+  Real denom = (r_sin(ca) * r_sin(cb));
+  return r_max(
+      Real::from_z(INT64_C(-1)),
+      r_min(Real::from_z(INT64_C(1)),
+            (std::move(num) /
+             r_max(r_abs(std::move(denom)),
+                   (Real::from_z(INT64_C(1)) /
+                    Real::from_z(BinInt::pow_pos(
+                        INT64_C(10), (2u * (2u * (2u * 1u) + 1u)))))))));
+}
+
+Real PolygonWindingAreaTraceCase::law_of_cosines_arg(Real da, Real db,
+                                                     Real dab) {
+  Real ca = distance_to_central_angle(da);
+  Real cb = distance_to_central_angle(db);
+  Real cab = distance_to_central_angle(dab);
+  return spherical_cosine_arg(std::move(ca), std::move(cb), std::move(cab));
+}
+
+Real PolygonWindingAreaTraceCase::segment_angle(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const PolygonWindingAreaTraceCase::Point &a,
+    const PolygonWindingAreaTraceCase::Point &b) {
+  Real da = distance(p, a);
+  Real db = distance(p, b);
+  Real dab = distance(a, b);
+  return r_acos(
+      law_of_cosines_arg(std::move(da), std::move(db), std::move(dab)));
+}
+
+Real PolygonWindingAreaTraceCase::winding_sum_aux(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const List<PolygonWindingAreaTraceCase::Point> &pts,
+    const PolygonWindingAreaTraceCase::Point &first) {
+  if (std::holds_alternative<
+          typename List<PolygonWindingAreaTraceCase::Point>::Nil>(pts.v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
+            pts.v());
+    auto &&_sv0 = *a1;
+    if (std::holds_alternative<
+            typename List<PolygonWindingAreaTraceCase::Point>::Nil>(_sv0.v())) {
+      return segment_angle(p, a0, first);
+    } else {
+      const auto &[a00, a10] =
+          std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
+              _sv0.v());
+      return (segment_angle(p, a0, a00) + winding_sum_aux(p, *a1, first));
+    }
+  }
+}
+
+Real PolygonWindingAreaTraceCase::winding_sum(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  if (std::holds_alternative<
+          typename List<PolygonWindingAreaTraceCase::Point>::Nil>(poly.v())) {
+    return Real::from_z(INT64_C(0));
+  } else {
+    const auto &[a0, a1] =
+        std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
+            poly.v());
+    return winding_sum_aux(p, poly, a0);
+  }
+}
+
+Real PolygonWindingAreaTraceCase::winding_number(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  return (winding_sum(p, poly) / (Real::from_z(INT64_C(2)) * Real::pi()));
+}
+
+bool PolygonWindingAreaTraceCase::inside_by_winding(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  if ((Real::pi() < winding_sum(p, poly))) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool PolygonWindingAreaTraceCase::nonnegative_area(
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  if ((Real::from_z(INT64_C(0)) <= spherical_polygon_area(poly))) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool PolygonWindingAreaTraceCase::nonnegative_segment_angle(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const PolygonWindingAreaTraceCase::Point &a,
+    const PolygonWindingAreaTraceCase::Point &b) {
+  if ((Real::from_z(INT64_C(0)) <= segment_angle(p, a, b))) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+bool PolygonWindingAreaTraceCase::winding_number_gt_half(
+    const PolygonWindingAreaTraceCase::Point &p,
+    const List<PolygonWindingAreaTraceCase::Point> &poly) {
+  if (((Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))) <
+       winding_number(p, poly))) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+PolygonWindingAreaTraceCase::Polygon
+PolygonWindingAreaTraceCase::test_equatorial_square(Real delta) {
+  return List<PolygonWindingAreaTraceCase::Point>::cons(
+      Point{Real::from_z(INT64_C(0)), Real::from_z(INT64_C(0))},
+      List<PolygonWindingAreaTraceCase::Point>::cons(
+          Point{Real::from_z(INT64_C(0)), delta},
+          List<PolygonWindingAreaTraceCase::Point>::cons(
+              Point{delta, delta},
+              List<PolygonWindingAreaTraceCase::Point>::cons(
+                  Point{delta, Real::from_z(INT64_C(0))},
+                  List<PolygonWindingAreaTraceCase::Point>::nil()))));
+}
+
+Real Rdefinitions::Q2R(const Q &x) {
+  return (Real::from_z(x.Qnum) *
+          r_inv(Real::from_z(static_cast<int64_t>(x.Qden))));
+}

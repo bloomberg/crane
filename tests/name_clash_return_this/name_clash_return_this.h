@@ -1,0 +1,79 @@
+#ifndef INCLUDED_NAME_CLASH_RETURN_THIS
+#define INCLUDED_NAME_CLASH_RETURN_THIS
+
+#include <type_traits>
+#include <utility>
+#include <variant>
+
+struct NameClashReturnThis {
+  struct shape {
+    // TYPES
+    struct Circle {
+      uint64_t a0;
+    };
+
+    struct Square {
+      uint64_t a0;
+      uint64_t a1;
+    };
+
+    using variant_t = std::variant<Circle, Square>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    shape() {}
+
+    explicit shape(Circle _v) : v_(std::move(_v)) {}
+
+    explicit shape(Square _v) : v_(std::move(_v)) {}
+
+    static shape circle(uint64_t a0) { return shape(Circle{a0}); }
+
+    static shape square(uint64_t a0, uint64_t a1) {
+      return shape(Square{a0, a1});
+    }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+  static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
+    if (std::holds_alternative<typename shape::Circle>(s.v())) {
+      const auto &[a0] = std::get<typename shape::Circle>(s.v());
+      return f(a0);
+    } else {
+      const auto &[a0, a1] = std::get<typename shape::Square>(s.v());
+      return f0(a0, a1);
+    }
+  }
+
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+  static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
+    if (std::holds_alternative<typename shape::Circle>(s.v())) {
+      const auto &[a0] = std::get<typename shape::Circle>(s.v());
+      return f(a0);
+    } else {
+      const auto &[a0, a1] = std::get<typename shape::Square>(s.v());
+      return f0(a0, a1);
+    }
+  }
+
+  static shape maybe_transform(bool flag, shape s);
+  static shape identity_or_double(const shape &s);
+  static shape pick_shape(shape s1, shape s2);
+  static uint64_t nested_this(const shape &s);
+};
+
+#endif // INCLUDED_NAME_CLASH_RETURN_THIS
