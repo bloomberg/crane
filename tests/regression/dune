@@ -7422,3 +7422,14 @@
   (alias runtest)
   (deps superclass_only_concept.t.exe)
   (action (run ./superclass_only_concept.t.exe))))
+
+(subdir eta_closure_fixpoint
+ (rule
+  (targets eta_closure_fixpoint.t.exe)
+  (deps EtaClosureFixpoint.vo eta_closure_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_closure_fixpoint.t.exe eta_closure_fixpoint.cpp eta_closure_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_closure_fixpoint.t.exe)
+  (action (run ./eta_closure_fixpoint.t.exe))))
