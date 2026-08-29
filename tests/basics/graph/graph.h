@@ -210,22 +210,25 @@ concept Eq = requires {
 /// A graph abstraction parameterized by a container type G and
 /// node type A. Provides operations for building and querying
 /// the graph.
-template <typename I, typename
-A>concept Graph = requires {
-  typename I::G;
+template <typename I, typename A>
+concept Graph = requires {
+  typename I::template G<std::any>;
   typename I::edge;
-  { I::add_node(std::declval<typename I::G>(),
-std::declval<A>()) } -> std::convertible_to<typename I::G>;
-  { I::add_edge(std::declval<typename I::G>(),
-std::declval<typename I::edge>()) } -> std::convertible_to<typename I::G>;
-  { I::nodes(std::declval<typename I::G>()) } -> std::convertible_to<List<A>>;
-  { I::edges(std::declval<typename I::G>(),
-std::declval<A>()) } -> std::convertible_to<List<typename I::edge>>;
-} && (requires {
-  { I::empty() } -> std::convertible_to<typename I::G>;
-} || requires {
-  { I::empty } -> std::convertible_to<typename I::G>;
-});
+  { I::empty() } -> std::convertible_to<typename I::template G<A>>;
+  {
+    I::add_node(std::declval<typename I::template G<A>>(), std::declval<A>())
+  } -> std::convertible_to<typename I::template G<A>>;
+  {
+    I::add_edge(std::declval<typename I::template G<A>>(),
+                std::declval<typename I::edge>())
+  } -> std::convertible_to<typename I::template G<A>>;
+  {
+    I::nodes(std::declval<typename I::template G<A>>())
+  } -> std::convertible_to<List<A>>;
+  {
+    I::edges(std::declval<typename I::template G<A>>(), std::declval<A>())
+  } -> std::convertible_to<List<typename I::edge>>;
+};
 
 template <typename g, typename a> using edge = std::any;
 
@@ -250,20 +253,20 @@ template <typename A> struct Directed {
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct DirectedGraph {
-  using G = Directed<std::any>;
+  template <typename _A0> using G = Directed<_A0>;
   using edge = DirectedEdge<T1>;
 
-  static Directed<std::any> empty() {
+  static Directed<T1> empty() {
     return Directed<std::any>{List<std::any>::nil(),
                               List<DirectedEdge<std::any>>::nil()};
   }
 
-  static Directed<std::any> add_node(Directed<std::any> g, T1 n) {
+  static Directed<T1> add_node(Directed<std::any> g, T1 n) {
     return Directed<std::any>{List<std::any>::cons(n, g.directed_nodes),
                               g.directed_edges};
   }
 
-  static Directed<std::any> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
+  static Directed<T1> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
     return Directed<std::any>{
         g.directed_nodes,
         List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
@@ -271,7 +274,7 @@ struct DirectedGraph {
 
   static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
 
-  static List<DirectedEdge<T1>> edges(Directed<std::any> g, T1 n) {
+  static List<edge> edges(Directed<std::any> g, T1 n) {
     return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
       return directed_originates<_tcI0, T1>(n, _x0);
     });
@@ -298,21 +301,20 @@ template <typename A> struct Undirected {
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct UndirectedGraph {
-  using G = Undirected<std::any>;
+  template <typename _A0> using G = Undirected<_A0>;
   using edge = UndirectedEdge<T1>;
 
-  static Undirected<std::any> empty() {
+  static Undirected<T1> empty() {
     return Undirected<std::any>{List<std::any>::nil(),
                                 List<UndirectedEdge<std::any>>::nil()};
   }
 
-  static Undirected<std::any> add_node(Undirected<std::any> g, T1 n) {
+  static Undirected<T1> add_node(Undirected<std::any> g, T1 n) {
     return Undirected<std::any>{List<std::any>::cons(n, g.undirected_nodes),
                                 g.undirected_edges};
   }
 
-  static Undirected<std::any> add_edge(Undirected<std::any> g,
-                                       UndirectedEdge<T1> e) {
+  static Undirected<T1> add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
     return Undirected<std::any>{
         g.undirected_nodes,
         List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
@@ -320,7 +322,7 @@ struct UndirectedGraph {
 
   static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }
 
-  static List<UndirectedEdge<T1>> edges(Undirected<std::any> g, T1 n) {
+  static List<edge> edges(Undirected<std::any> g, T1 n) {
     return g.undirected_edges.filter(
         [=](UndirectedEdge<T1> _x0) mutable -> bool {
           return undirected_originates<_tcI0, T1>(n, _x0);

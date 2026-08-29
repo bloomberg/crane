@@ -328,12 +328,17 @@ val get_ind_nb_sign_keeps : GlobRef.t -> int
     [Type]-valued record fields. *)
 
 (** Record which of an inductive's [Keep] parameters (0-based) are type
-    constructors.  Called by extraction; a no-op for the empty list. *)
-val add_ind_hkt_params : GlobRef.t -> int list -> unit
+    constructors, each with its arity.  Called by extraction; a no-op for the
+    empty list. *)
+val add_ind_hkt_params : GlobRef.t -> (int * int) list -> unit
 
 (** Positions (0-based among the [Keep] parameters) of the type-constructor
     parameters of [r]. *)
 val get_ind_hkt_params : GlobRef.t -> int list
+
+(** Arity of [r]'s type-constructor parameter at position [i], [0] when that
+    parameter is an ordinary type. *)
+val get_ind_hkt_arity : GlobRef.t -> int -> int
 
 (** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
     type constructor. *)
@@ -353,12 +358,6 @@ val add_type_scheme_arity : GlobRef.t -> int -> unit
 (** Arity of an extracted type-scheme constant; 0 when [r] takes no type
     parameters or is unknown. *)
 val get_type_scheme_arity : GlobRef.t -> int
-
-(** Register a type constructor as the carrier of a higher-kinded class
-    parameter; its arguments are then erased everywhere. *)
-val add_hkt_carrier : GlobRef.t -> unit
-
-val is_hkt_carrier : GlobRef.t -> bool
 
 (** Get the ML field types for a constructor, as stored in [ip_types].
     Returns [None] if the inductive is not in the extraction table.

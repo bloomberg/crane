@@ -2016,6 +2016,9 @@ and pp_cpp_expr env args t =
     ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPqualified (e, id) ->
     pp_cpp_expr env args e ++ str "::" ++ Id.print id
+  | CPPqualified_tpl (e, id, tys) ->
+    pp_cpp_expr env args e ++ str "::template " ++ Id.print id ++ str "<"
+    ++ pp_list (pp_cpp_type false []) tys ++ str ">"
   | CPPqualified_t (ty, id) ->
     pp_cpp_type false [] ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->

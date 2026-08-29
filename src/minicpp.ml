@@ -330,6 +330,8 @@ and cpp_expr =
   | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list (* obj.method(args) *)
   | CPPqualified of
       cpp_expr * Id.t (* expr::id - for qualified name access like Type::ctor *)
+  | CPPqualified_tpl of cpp_expr * Id.t * cpp_type list
+    (* expr::template id<tys...> - a member template of a dependent base *)
   | CPPqualified_t of
       cpp_type * Id.t (* Type::id - for type-qualified member access *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
@@ -585,6 +587,8 @@ let map_expr
   | CPPdot_method_call (obj, id, args) ->
     CPPdot_method_call (fe obj, id, List.map fe args)
   | CPPqualified (e', id) -> CPPqualified (fe e', id)
+  | CPPqualified_tpl (e', id, tys) ->
+    CPPqualified_tpl (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort _ -> e
@@ -693,7 +697,9 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
-  | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
+  | CPPqualified (e', _)
+  | CPPqualified_tpl (e', _, _)
+  | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
@@ -770,7 +776,9 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
-  | CPPqualified (e', _) | CPPshared_ptr_ctor (_, e')
+  | CPPqualified (e', _)
+  | CPPqualified_tpl (e', _, _)
+  | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'

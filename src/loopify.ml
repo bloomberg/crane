@@ -603,7 +603,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPget' (e, _)
    |CPPmember (e, _)
    |CPParrow (e, _)
-   |CPPqualified (e, _) -> collect_expr check e
+   |CPPqualified (e, _)
+   |CPPqualified_tpl (e, _, _) -> collect_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -783,7 +784,8 @@ let rec count_calls_expr (check : call_checker) expr =
    |CPPget' (e, _)
    |CPPmember (e, _)
    |CPParrow (e, _)
-   |CPPqualified (e, _) -> count_calls_expr check e
+   |CPPqualified (e, _)
+   |CPPqualified_tpl (e, _, _) -> count_calls_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -3914,7 +3916,8 @@ let rec free_vars_expr = function
    |CPPget' (e, _)
    |CPPmember (e, _)
    |CPParrow (e, _)
-   |CPPqualified (e, _) -> free_vars_expr e
+   |CPPqualified (e, _)
+   |CPPqualified_tpl (e, _, _) -> free_vars_expr e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)

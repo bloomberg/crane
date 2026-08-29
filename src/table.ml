@@ -455,18 +455,28 @@ let get_ind_nb_sign_keeps r =
     and wrapper generators in {!Gen_decls} consult them to move the parameter
     from the template-parameter list to the associated-type requirements. *)
 
-let hkt_params_table = ref (Refmap'.empty : int list Refmap'.t)
+let hkt_params_table = ref (Refmap'.empty : (int * int) list Refmap'.t)
 
 let add_ind_hkt_params r positions =
   if positions <> [] then
     hkt_params_table := Refmap'.add r positions !hkt_params_table
 
 (** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
-    that are type constructors. Empty for everything else. *)
-let get_ind_hkt_params r =
+    that are type constructors, each with its arity.  Empty for everything
+    else. *)
+let get_ind_hkt_params_arities r =
   let open GlobRef in
   let r = match r with ConstructRef (ip, _) -> IndRef ip | r -> r in
   try Refmap'.find r !hkt_params_table with Not_found -> []
+
+(** Positions (0-based among the [Keep] type parameters) of [r]'s parameters
+    that are type constructors. Empty for everything else. *)
+let get_ind_hkt_params r = List.map fst (get_ind_hkt_params_arities r)
+
+(** Arity of [r]'s type-constructor parameter at position [i], or [0] when
+    that parameter is an ordinary type. *)
+let get_ind_hkt_arity r i =
+  try List.assoc i (get_ind_hkt_params_arities r) with Not_found -> 0
 
 (** True when parameter [i] (0-based among the [Keep] parameters) of [r] is a
     type constructor, and therefore an associated type in C++. *)
@@ -497,15 +507,6 @@ let add_type_scheme_arity r n =
 
 let get_type_scheme_arity r =
   try Refmap'.find r !type_scheme_arities with Not_found -> 0
-
-(** Type constructors that are used as the argument of a higher-kinded class
-    parameter (see {!add_ind_hkt_params}).  The instance renders such a carrier
-    element-erased ([Opt A] becomes [std::optional<std::any>]), so every other
-    occurrence must erase it the same way, or values produced by the class
-    methods would not typecheck against it. *)
-let hkt_carriers = ref Refset'.empty
-let add_hkt_carrier r = hkt_carriers := Refset'.add r !hkt_carriers
-let is_hkt_carrier r = Refset'.mem r !hkt_carriers
 
 let get_ctor_ip_types_opt r =
   let open GlobRef in

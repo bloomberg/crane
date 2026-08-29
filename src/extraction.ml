@@ -195,7 +195,8 @@ let _ = Hook.set type_scheme_nb_args_hook type_scheme_nb_args'
 
 (** Positions, 0-based among the [Keep] entries of [type_sign], of the
     parameters that are type CONSTRUCTORS ([F : Type -> Type]) rather than
-    plain types ([A : Type]).  {!Table.add_ind_hkt_params} records these for
+    plain types ([A : Type]), each paired with that constructor's arity.
+    {!Table.add_ind_hkt_params} records these for
     inductives so that a type class parameterised by a type constructor can be
     generated as an associated type instead of a C++ template parameter. *)
 let hkt_keep_positions env sg c =
@@ -205,7 +206,8 @@ let hkt_keep_positions env sg c =
       let env' = push_rel_assum (n, t) env in
       if is_info_scheme env sg t then
         let rest = go env' d (j + 1) in
-        if type_scheme_nb_args env sg t > 0 then j :: rest else rest
+        let arity = type_scheme_nb_args env sg t in
+        if arity > 0 then (j, arity) :: rest else rest
       else
         go env' d j
     | _ -> []
@@ -502,7 +504,16 @@ let rec extract_type env sg db j c args =
         Tunknown
       else
         let n' = List.nth db (n - 1) in
-        if Int.equal n' 0 then Tunknown else Tvar n' )
+        if Int.equal n' 0 then
+          Tunknown
+        else if List.is_empty args then
+          Tvar n'
+        else
+          (* A type variable of arrow kind applied to arguments — the [M A] of
+             a class parameterised by a type constructor.  Keeping the
+             application lets the instance's carrier stay parameterised in C++
+             instead of being erased at its element type. *)
+          Tapp (n', List.map (fun a -> extract_type env sg db 0 a []) args) )
   | Const (kn, u) ->
     let r = GlobRef.ConstRef kn in
     let () = check_sort_poly sg r u in
@@ -2462,27 +2473,6 @@ let extract_fixpoint env sg vkn is_fix (fi, ti, ci) =
 (** Main entry point for extracting a constant declaration, dispatching on kind
     (axiom, definition, etc.). *)
 
-(** Record which type constructors are used as the argument of a higher-kinded
-    class parameter ([Opt] in [Instance MOpt : Mon Opt]).  Such a carrier is
-    rendered element-erased, so the fact must be known before any code is
-    generated — see {!Table.add_hkt_carrier}. *)
-let register_hkt_carriers ty =
-  let rec go = function
-    | Tarr (a, b) -> go a; go b
-    | Tmeta { contents = Some t } -> go t
-    | Tglob (r, args, _) ->
-      if Table.get_ind_hkt_params r <> [] then
-        List.iteri
-          (fun i a ->
-            match a with
-            | Tglob (c, _, _) when Table.is_hkt_param r i -> Table.add_hkt_carrier c
-            | _ -> () )
-          args;
-      List.iter go args
-    | _ -> ()
-  in
-  go ty
-
 let extract_constant access env kn cb =
   let sg = Evd.from_env env in
   let r = GlobRef.ConstRef kn in
@@ -2542,7 +2532,6 @@ let extract_constant access env kn cb =
   in
   let mk_def c =
     let e, t = extract_std_constant env sg kn c typ in
-    register_hkt_carriers t;
     Dterm (r, e, t)
   in
   try

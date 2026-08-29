@@ -280,7 +280,8 @@ let hkt_tvar_positions_of_type ty =
         List.fold_left
           (fun acc pos ->
             match (List.nth_opt type_args pos, List.nth_opt ip_vars pos) with
-            | Some (Miniml.Tvar j | Miniml.Tvar' j), Some var_name ->
+            | ( Some (Miniml.Tvar j | Miniml.Tvar' j | Miniml.Tapp (j, _)),
+                Some var_name ) ->
               { htp_tvar = j;
                 htp_instance = Minicpp.Tinstance (tc_instance_id i, class_ref);
                 htp_field = var_name }
@@ -1609,6 +1610,8 @@ let rec collect_tvars_set acc = function
   | Miniml.Tvar i | Miniml.Tvar' i -> IntSet.add i acc
   | Miniml.Tarr (t1, t2) -> collect_tvars_set (collect_tvars_set acc t1) t2
   | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars_set acc args
+  | Miniml.Tapp (i, args) ->
+    List.fold_left collect_tvars_set (IntSet.add i acc) args
   | Miniml.Tmeta {contents = Some t} -> collect_tvars_set acc t
   | _ -> acc
 
@@ -2316,15 +2319,6 @@ let rec clean_self_ns t =
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
-(** Element-erase a higher-kinded carrier at the ML level, mirroring what
-    {!convert_ml_type_to_cpp_type} does for the C++ side: [Opt nat] denotes
-    [Opt<std::any>], so a pattern variable bound from it is a [std::any]. *)
-let erase_hkt_carrier_ml (ty : ml_type) : ml_type =
-  match ty with
-  | Tglob (g, (_ :: _ as args), es) when Table.is_hkt_carrier g ->
-    Tglob (g, List.map (fun _ -> Miniml.Tunknown) args, es)
-  | _ -> ty
-
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -2375,18 +2369,6 @@ let rec convert_ml_type_to_cpp_type
       | Tfun (l, t) -> Tfun (t1c :: l, voidify_cod t)
       | _ -> Tfun (t1c :: [], voidify_cod t2c) )
   | Tglob (g, _, _) when is_void g -> Tvoid
-  (* A type constructor used as the carrier of a higher-kinded class parameter
-     is element-erased everywhere, matching the instance's [using M = ...]
-     (see {!Table.is_hkt_carrier}). *)
-  (* A self-reference inside the carrier's own declaration is exempt: erasing
-     it would rewrite the type itself ([List<A>]'s tail becoming
-     [List<std::any>]), not just its uses. *)
-  | Tglob (g, args, es)
-    when Table.is_hkt_carrier g
-         && not (Refset'.mem g ns)
-         && List.exists (fun a -> a <> Miniml.Tunknown) args ->
-    convert_ml_type_to_cpp_type env ~ns tvars
-      (Tglob (g, List.map (fun _ -> Miniml.Tunknown) args, es))
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
      "promoted" from value-level fields to type-level parameters.
 
@@ -3029,7 +3011,9 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           | None -> raw_tys)
         | _ -> raw_tys
       in
-      let temps = build_template_params env [] tys in
+      (* Resolve against the enclosing type-variable names: inside a member
+         template a [Tvar] is a real parameter, not an erased type. *)
+      let temps = build_template_params env (get_current_type_vars ()) tys in
       (* When all type args are erased and promoted_var_map is active, use
          concrete promoted types so elements don't get wrapped in std::any. *)
       if List.for_all is_erased_type temps && tctx.promoted_var_map <> [] then
@@ -3040,6 +3024,17 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
         in
         if List.length promoted_tys = List.length tys then promoted_tys
         else temps
+      else if List.for_all is_erased_type temps then
+        (* The constructor's own annotation was erased, but the enclosing
+           method declares the very same type with its arguments intact --
+           inside a member template, [Some a] returning [optional<_A0>]. *)
+        match tctx.current_cpp_return_type with
+        | Some (Tglob (rn, rargs, _))
+          when GlobRef.CanOrd.equal rn cn
+               && List.length rargs = List.length temps
+               && not (List.exists is_erased_type rargs) ->
+          rargs
+        | _ -> temps
       else temps
     | _ -> []
   in
@@ -5849,8 +5844,32 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         let value_args =
           List.filter (fun a -> match a with MLdummy _ -> false | _ -> true) args
         in
+        (* A higher-kinded class's instances keep the method's own quantifier:
+           each method is a member template, not a signature erased at
+           [std::any].  So neither its arguments nor its result are erased
+           here. *)
+        let hkt_class =
+          match typ with
+          | Miniml.Tglob (r, _, _) -> Table.get_ind_hkt_params r <> []
+          | _ -> false
+        in
         let fld_ty_opt =
-          try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+          let declared =
+            try Some (List.nth non_erased_field_types (n - i)) with _ -> None
+          in
+          if not hkt_class then declared
+          else
+            (* The class's [ip_types] entry has already erased the method's own
+               [forall A]; the projection constant has not, and an instance of
+               a higher-kinded class needs it back (see the instance side in
+               [Gen_decls]). *)
+            let rec strip = function
+              | Miniml.Tarr (d, rest)
+                when Mlutil.isTdummy d || Table.is_typeclass_type d ->
+                strip rest
+              | t -> t
+            in
+            try Some (strip (Table.find_type fld)) with Not_found -> declared
         in
         (* The field's own parameter types drive erasure of function-valued
            arguments: a class method polymorphic in its own type argument
@@ -5866,6 +5885,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           in
           let rec erase_field_tvars ty =
             match resolve_tmeta ty with
+            | _ when hkt_class -> ty
             | Miniml.Tvar j | Miniml.Tvar' j when j > n_class_params ->
               Miniml.Tunknown
             | Miniml.Tarr (a, b) ->
@@ -5903,12 +5923,43 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           tctx.env_types <- saved_env_types;
           tctx.cpp_erased_env <- saved_erased;
           tctx.cpp_erased_type_env <- saved_erased_tys;
-          CPPfun_call (make_field_access (gen_expr env t) fld, arg_exprs)
+          let callee =
+            if not hkt_class then make_field_access (gen_expr env t) fld
+            else
+              (* The instance's method is a member template (its own [forall A]
+                 survives), and its type parameters are not always deducible --
+                 [mret : A -> M A] mentions [A] only in its result -- so they
+                 are passed explicitly. *)
+              let ipv =
+                match typ with
+                | Miniml.Tglob (r, _, _) ->
+                  List.length (Table.get_ind_ip_vars r)
+                | _ -> 0
+              in
+              let nmax =
+                match fld_ty_opt with
+                | Some ft -> Mlutil.type_maxvar ft
+                | None -> 0
+              in
+              if nmax <= ipv then make_field_access (gen_expr env t) fld
+              else
+                let tvars = get_current_type_vars () in
+                let targs =
+                  List.init (nmax - ipv) (fun k ->
+                      convert_ml_type_to_cpp_type env tvars
+                        (Miniml.Tvar (ipv + 1 + k)) )
+                in
+                CPPqualified_tpl
+                  ( gen_expr env t,
+                    Common.id_of_global Term fld,
+                    targs )
+          in
+          CPPfun_call (callee, arg_exprs)
         in
         let n_value_args = List.length value_args in
         let erased_cod =
           match fld_ty_opt with
-          | Some ft -> ml_codomain_erases_to_any n_value_args ft
+          | Some ft -> (not hkt_class) && ml_codomain_erases_to_any n_value_args ft
           | None -> false
         in
         ( match (erased_cod, tctx.current_cpp_return_type) with
@@ -8750,7 +8801,7 @@ and is_trivial_scrut = function
 and gen_custom_cpp_case env k (typ : ml_type) t pv =
   let tvars = get_current_type_vars () in
   (* Save the ML type for temps computation after fix_a_fired is known. *)
-  let ml_typ = erase_hkt_carrier_ml typ in
+  let ml_typ = typ in
   (* [scrut_is_magic]: true when the scrutinee is erased at runtime (stored as
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]

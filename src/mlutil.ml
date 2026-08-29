@@ -78,6 +78,12 @@ let rec apply_ml_type head args =
     | Tapp (j, pre) -> Tapp (j, pre @ args)
     | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
+    | Tunknown -> (
+      (* The only heads extraction leaves unknown here are type constructors it
+         could not name, and the one such constructor a class can be
+         instantiated at is the identity ([fun A => A]): it reduces to its
+         argument. *)
+      match args with [a] -> a | _ -> Tunknown )
     | _ -> head )
 
 (** Structural equality on ML types. *)

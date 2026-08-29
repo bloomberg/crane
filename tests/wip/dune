@@ -88,16 +88,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir hkt_class_param
- (rule
-  (targets hkt_class_param.t.exe)
-  (deps HktClassParam.vo hkt_class_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_class_param.t.exe hkt_class_param.cpp hkt_class_param.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_class_param.t.exe)
-  (action (run ./hkt_class_param.t.exe))))
-
-

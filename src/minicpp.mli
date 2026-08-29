@@ -324,6 +324,8 @@ and cpp_expr =
   | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list
       (** Dot method call: object.method(args) *)
   | CPPqualified of cpp_expr * Id.t  (** Scope resolution: expr::id *)
+  | CPPqualified_tpl of cpp_expr * Id.t * cpp_type list
+      (** Member template of a dependent base: [expr::template id<tys...>] *)
   | CPPqualified_t of cpp_type * Id.t  (** Type-qualified member: Type::id *)
   | CPPconvertible_to of cpp_type  (** std::convertible_to<T> type trait *)
   | CPPabort of string  (** Unreachable code marker, calls std::abort() *)
