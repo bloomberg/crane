@@ -3966,17 +3966,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   (* Filter out phantom extra template params: if an extra tvar name doesn't
      appear in any param type or the return type, it's phantom (e.g., a killed
      inductive type arg) and shouldn't be a template param. *)
-  let rec cpp_type_has_tvar name = function
-    | Tvar (_, Some n) -> Id.equal n name
-    | Tglob (_, args, _) | Tid (_, args) | Tid_external (_, args)
-    | Tvariant args ->
-      List.exists (cpp_type_has_tvar name) args
-    | Tfun (args, ret) ->
-      List.exists (cpp_type_has_tvar name) args || cpp_type_has_tvar name ret
-    | Tref t | Tptr t | Tshared_ptr t | Tdecay t -> cpp_type_has_tvar name t
-    | Tmod (_, t) | Tnamespace (_, t) -> cpp_type_has_tvar name t
-    | Tqualified (base, _) -> cpp_type_has_tvar name base
-    | _ -> false
+  (* Whether a type mentions the template parameter [name] anywhere. *)
+  let cpp_type_has_tvar name =
+    exists_cpp_type (function
+      | Tvar (_, Some n) -> Id.equal n name
+      | _ -> false )
   in
   let extra_tvar_name_set =
     List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names

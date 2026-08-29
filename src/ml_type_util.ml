@@ -198,31 +198,17 @@ let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
 (** Return [true] if the C++ type contains any unresolved type variable
     ([Tvar] or [Tauto]).  Used by {!gen_type_conversion_expr} to decide whether
     a field needs a converting constructor call. *)
-let rec contains_tvar = function
-  | Tvar _ | Tauto -> true
-  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists contains_tvar ts
-  | Tshared_ptr t | Tref t | Tptr t
-  | Tmod (_, t) | Tnamespace (_, t) ->
-    contains_tvar t
-  | Tfun (args, ret) ->
-    List.exists contains_tvar args || contains_tvar ret
-  | Tvariant ts -> List.exists contains_tvar ts
-  | _ -> false
+let contains_tvar =
+  exists_cpp_type (function Tvar _ | Tauto -> true | _ -> false)
 
-let rec has_unbound_tvar bound_names = function
-  | Tvar (_, Some name) -> not (List.exists (Id.equal name) bound_names)
-  | Tvar (_, None) -> true
-  | Tauto -> true
-  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists (has_unbound_tvar bound_names) ts
-  | Tshared_ptr t | Tref t | Tptr t
-  | Tmod (_, t) | Tnamespace (_, t) ->
-    has_unbound_tvar bound_names t
-  | Tfun (args, ret) ->
-    List.exists (has_unbound_tvar bound_names) args || has_unbound_tvar bound_names ret
-  | Tvariant ts -> List.exists (has_unbound_tvar bound_names) ts
-  | _ -> false
+(** Whether a C++ type mentions a type variable not among [bound_names].  An
+    unnamed [Tvar] and [Tauto] always count: neither can be matched against the
+    bound set. *)
+let has_unbound_tvar bound_names =
+  exists_cpp_type (function
+    | Tvar (_, Some name) -> not (List.exists (Id.equal name) bound_names)
+    | Tvar (_, None) | Tauto -> true
+    | _ -> false )
 
 (** Check if [g] is the Coq [option] inductive (rendered as
     [std::optional]).  Used to detect [optional<shared_ptr<T>>] patterns
@@ -356,38 +342,29 @@ let is_skipped_ml_type = function
     Table.is_inline_custom r && Table.find_custom_opt r = Some ""
   | _ -> false
 
-(** Recursively check whether a C++ type contains Tany (std::any). Used to
-    detect when a let-binding's type annotation has unresolved carrier
-    projections that should be replaced by concrete types from the generated
-    lambda expression. *)
-let rec has_tany_in_type = function
+(** Whether a single type node erases to [std::any]: [Tany] itself, and an
+    unnamed [Tvar], which {!tvar_erase_type} turns into one. *)
+let is_tany_node = function
   | Tany -> true
-  | Tvar (_, None) -> true  (* unnamed Tvar erases to std::any via tvar_erase_type *)
-  | Tfun (dom, cod) -> List.exists has_tany_in_type dom || has_tany_in_type cod
-  | Tmod (_, t) | Tnamespace (_, t) -> has_tany_in_type t
-  | Tshared_ptr t | Tref t | Tptr t -> has_tany_in_type t
-  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists has_tany_in_type ts
-  | Tvariant ts -> List.exists has_tany_in_type ts
-  | Tqualified (base, _) -> has_tany_in_type base
+  | Tvar (_, None) -> true
   | _ -> false
+
+(** Whether a C++ type contains [std::any] anywhere.  Used to detect a
+    let-binding whose type annotation still holds unresolved carrier
+    projections, to be replaced by concrete types from the generated lambda. *)
+let has_tany_in_type = exists_cpp_type is_tany_node
 
 (** Like [has_tany_in_type] but also treats [dummy_type]/[dummy_prop]/[dummy_implicit]
     VarRef markers as erased types.  Used for non-lambda let bindings where [auto]
     is the right fallback — but NOT for the Tfun+lambda case where we want to
     preserve the lambda's concrete return type. *)
-let rec has_erased_type_in_type = function
-  | t when has_tany_in_type t -> true
-  | Tglob (GlobRef.VarRef id, [], [])
-    when Id.to_string id = "dummy_type" -> true
-  | Tfun (dom, cod) -> List.exists has_erased_type_in_type dom || has_erased_type_in_type cod
-  | Tmod (_, t) | Tnamespace (_, t) -> has_erased_type_in_type t
-  | Tshared_ptr t | Tref t | Tptr t -> has_erased_type_in_type t
-  | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts) ->
-    List.exists has_erased_type_in_type ts
-  | Tvariant ts -> List.exists has_erased_type_in_type ts
-  | Tqualified (base, _) -> has_erased_type_in_type base
-  | _ -> false
+let has_erased_type_in_type =
+  exists_cpp_type (fun t ->
+    is_tany_node t
+    ||
+    match t with
+    | Tglob (GlobRef.VarRef id, [], []) -> Id.to_string id = "dummy_type"
+    | _ -> false )
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
 
@@ -583,20 +560,8 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
     detect types that can't be fully resolved in monomorphized contexts
     (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like
     List<T1>. *)
-let rec has_unnamed_tvar (ty : cpp_type) : bool =
-  match ty with
-  | Tvar (_, None) -> true
-  | Tvar (_, Some _) -> false
-  | Tglob (_, tys, _) -> List.exists has_unnamed_tvar tys
-  | Tfun (tys, ty) -> List.exists has_unnamed_tvar tys || has_unnamed_tvar ty
-  | Tmod (_, ty) -> has_unnamed_tvar ty
-  | Tnamespace (_, ty) -> has_unnamed_tvar ty
-  | Tref ty -> has_unnamed_tvar ty
-  | Tvariant tys -> List.exists has_unnamed_tvar tys
-  | Tshared_ptr ty -> has_unnamed_tvar ty
-  | Tid (_, tys) | Tid_external (_, tys) -> List.exists has_unnamed_tvar tys
-  | Tqualified (ty, _) -> has_unnamed_tvar ty
-  | _ -> false
+let has_unnamed_tvar : cpp_type -> bool =
+  exists_cpp_type (function Tvar (_, None) -> true | _ -> false)
 
 (** Check if a C++ type is Tany or contains an unnamed Tvar (which becomes
     Tany). This is used to identify methods that return std::any due to type
