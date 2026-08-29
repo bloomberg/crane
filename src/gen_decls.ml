@@ -151,7 +151,7 @@ let promoted_resolutions ?fields class_ref inst_ty =
       (fun (field_opt, field_ty) ->
         match (field_opt, field_ty) with
         | Some field_ref, Miniml.Tglob (r, _, _) when Table.is_typeclass r ->
-          let field_id = Id.of_string (Common.pp_global_name Term field_ref) in
+          let field_id = Common.id_of_global Term field_ref in
           if is_direct field_id then
             List.filter_map
               (fun v ->
@@ -677,7 +677,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             None
           else
           let method_name =
-            Id.of_string (Common.pp_global_name Term method_ref)
+            Common.id_of_global Term method_ref
           in
           (* Strip MLmagic wrappers from the field body — promoted dependent
              records produce MLmagic due to Tvar/Tglob mismatches. *)
@@ -1075,10 +1075,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                      field. *)
                   None
                 else
-                  let field_name_str =
-                    Common.pp_global_name Term field_ref
-                  in
-                  let field_id = Id.of_string field_name_str in
+                  let field_id = Common.id_of_global Term field_ref in
                   let cpp_ty = ml_expr_to_cpp_type body in
                   if cpp_ty = Tany then None
                   else
@@ -1229,10 +1226,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   (fun (fld_opt, fml_ty) ->
                     match fld_opt with
                     | Some fld_ref ->
-                      let fld_name_str =
-                        Common.pp_global_name Term fld_ref
-                      in
-                      if String.equal fld_name_str (Id.to_string using_name)
+                      if Id.equal (Common.id_of_global Term fld_ref) using_name
                       then Some fml_ty
                       else None
                     | None -> None)
@@ -3541,7 +3535,7 @@ and stmt_has_shared_from_this = function
     @param this_pos 0-based index of the [this] argument in the parameter list *)
 let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let num_ind_vars = List.length vars in
-  let func_name = Id.of_string (Common.pp_global_name Term func_ref) in
+  let func_name = Common.id_of_global Term func_ref in
 
   (* Get return type *)
   let all_args, ret_ty = get_args_and_ret [] ty in

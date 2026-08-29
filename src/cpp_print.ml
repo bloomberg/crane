@@ -1179,7 +1179,7 @@ and pp_cpp_expr env args t =
     (* A bare reference to a method on the same struct (eta-reduced from \self.
        method self). Generate this->method() - a call to the method via this,
        not a function pointer. *)
-    let method_name = Id.of_string (Common.pp_global_name Term x) in
+    let method_name = Common.id_of_global Term x in
     str "this->" ++ Id.print method_name ++ str "()"
   | CPPglob (x, _tys, _)
     when lookup_method_this_pos x <> None
@@ -1197,7 +1197,7 @@ and pp_cpp_expr env args t =
              not (String.equal (String.capitalize_ascii epon_name) sn_str)
            | None -> true )
          | None -> render_ctx.rc_struct_name = None ->
-    let method_name = Id.of_string (Common.pp_global_name Term x) in
+    let method_name = Common.id_of_global Term x in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
     str "[](const auto &_x) { return _x"
     ++ str accessor
@@ -1421,7 +1421,7 @@ and pp_cpp_expr env args t =
         cmds
   | CPPfun_call (CPPglob (n, tys, _), ts) when lookup_method_this_pos n <> None
     ->
-    let method_name = Id.of_string (Common.pp_global_name Term n) in
+    let method_name = Common.id_of_global Term n in
     let this_pos =
       match lookup_method_this_pos n with
       | Some p -> p

@@ -187,6 +187,11 @@ val pp_global : kind -> GlobRef.t -> string
 (** Print just the short name of a reference (for declarations). *)
 val pp_global_name : kind -> GlobRef.t -> string
 
+(** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
+    under, for the many places that need it as an identifier rather than a
+    string (a struct field, a method, a [using] alias). *)
+val id_of_global : kind -> GlobRef.t -> Id.t
+
 (** Print the type name for an eponymous record reference.  Returns the
     enclosing module name for consistent struct/type naming. *)
 val pp_type_name_capitalized : GlobRef.t -> string

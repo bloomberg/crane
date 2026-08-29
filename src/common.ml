@@ -1181,6 +1181,11 @@ let pp_global_name k r =
   assert (List.length ls > 1);
   List.hd ls
 
+(** {!pp_global_name} as an [Id.t]: the short C++ name a reference is emitted
+    under, for the many places that need it as an identifier rather than a
+    string (a struct field, a method, a [using] alias). *)
+let id_of_global k r = Id.of_string (pp_global_name k r)
+
 (** Print the type name for an eponymous record reference.  Returns the
     enclosing module name (from [mp_renaming]) so that type references match
     the struct definition name and qualified field accesses.  Eponymous

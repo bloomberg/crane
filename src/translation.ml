@@ -5731,7 +5731,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
        type class instances are template type parameters, not runtime values *)
     let make_field_access base_expr fld =
       if is_typeclass then
-        let fld_name = Id.of_string (Common.pp_global_name Term fld) in
+        let fld_name = Common.id_of_global Term fld in
         CPPqualified (base_expr, fld_name)
       else
         CPPget' (base_expr, fld)
@@ -11141,7 +11141,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let non_erased_fields = List.filter_map Fun.id all_fields in
       let make_field_access base_expr fld =
         if is_typeclass then
-          let fld_name = Id.of_string (Common.pp_global_name Term fld) in
+          let fld_name = Common.id_of_global Term fld in
           CPPqualified (base_expr, fld_name)
         else
           CPPget' (base_expr, fld)
