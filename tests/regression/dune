@@ -7257,3 +7257,14 @@
   (alias runtest)
   (deps monad_class_type_constructor.t.exe)
   (action (run ./monad_class_type_constructor.t.exe))))
+
+(subdir module_inductive_same_name
+ (rule
+  (targets module_inductive_same_name.t.exe)
+  (deps ModuleInductiveSameName.vo module_inductive_same_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_inductive_same_name.t.exe module_inductive_same_name.cpp module_inductive_same_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_inductive_same_name.t.exe)
+  (action (run ./module_inductive_same_name.t.exe))))

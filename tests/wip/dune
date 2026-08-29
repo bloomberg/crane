@@ -12,7 +12,6 @@
    ITree Equations ExtLib Paco)
  (flags (:standard -output-directory ../../tests/wip)))
 
-
 (subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
@@ -276,17 +275,6 @@
   (alias runtest)
   (deps list_rev_stack_overflow.t.exe)
   (action (run ./list_rev_stack_overflow.t.exe))))
-
-(subdir module_inductive_same_name
- (rule
-  (targets module_inductive_same_name.t.exe)
-  (deps ModuleInductiveSameName.vo module_inductive_same_name.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} module_inductive_same_name.t.exe module_inductive_same_name.cpp module_inductive_same_name.t.cpp)))
- (rule
-  (alias runtest)
-  (deps module_inductive_same_name.t.exe)
-  (action (run ./module_inductive_same_name.t.exe))))
 
 (subdir rank2_method_arg
  (rule

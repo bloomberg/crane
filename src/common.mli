@@ -204,9 +204,9 @@ val pp_module : ModPath.t -> string
     [MEapply]) and you only need the string for display. *)
 val module_label_name : Label.t -> string
 
-(** Pre-scan the structure for sibling module-inductive name collisions.
-    When a module and an inductive type with the same C++ name are siblings
-    in the same scope, the module is renamed with a ["_Mod"] suffix.
+(** Pre-scan the structure for module/inductive name collisions.  When a module
+    has the same C++ name as an inductive type that is either its sibling or
+    declared inside it, the module is renamed with a ["_Mod"] suffix.
     Must be called before any [pp_global] or [pp_module] calls. *)
 val detect_sibling_module_inductive_collisions : ml_structure -> unit
 

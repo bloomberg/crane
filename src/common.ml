@@ -681,41 +681,51 @@ let modular_rename_ex _k id =
     replacement). *)
 let modular_rename k id = fst (modular_rename_ex k id)
 
-(** Scan [s] for cases where a module and an inductive type at the same scope
-    level share the same C++ name, and pre-populate {!sibling_collision_renames}
-    so that {!mp_renaming_fun} can append a ["_Mod"] suffix to the module.
+(** C++ names of every inductive type declared directly in [sel]. *)
+let inductive_names_of_sel sel =
+  List.concat_map
+    (fun (_l, se) ->
+      match se with
+      | SEdecl (Dind (_kn, ind)) ->
+        Array.to_list
+          (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+      | _ -> [] )
+    sel
+
+(** Body of a module entry, when it is a literal structure. *)
+let mod_struct_body m =
+  match m.ml_mod_expr with MEstruct (_, sel) -> Some sel | _ -> None
+
+(** Scan [s] for cases where a module's C++ name clashes with that of an
+    inductive type, and pre-populate {!sibling_collision_renames} so that
+    {!mp_renaming_fun} can append a ["_Mod"] suffix to the module.  Both
+    positions are illegal in C++ and are detected here:
+    - the inductive is a {e sibling} of the module, so the two would become
+      same-named members of the same enclosing struct;
+    - the inductive is declared {e inside} the module, so the generated nested
+      type would have the same name as the struct that encloses it.
     @param s The full [ml_structure] to scan (typically the whole extraction result) *)
 let detect_sibling_module_inductive_collisions (s : ml_structure) =
   Hashtbl.clear sibling_collision_renames;
   let rec scan_sel parent_mp sel =
-    let module_entries =
-      List.filter_map
-        (fun (l, se) ->
-          match se with
-          | SEmodule _ ->
-            Some (l, modular_rename Mod (Label.to_id l))
-          | _ -> None )
-        sel
-    in
-    let inductive_names =
-      List.concat_map
-        (fun (_l, se) ->
-          match se with
-          | SEdecl (Dind (_kn, ind)) ->
-            Array.to_list
-              (Array.map
-                 (fun p -> modular_rename Type p.ip_typename)
-                 ind.ind_packets)
-          | _ -> [] )
-        sel
-    in
+    let inductive_names = inductive_names_of_sel sel in
     List.iter
-      (fun (l, mod_name) ->
-        if List.exists (String.equal mod_name) inductive_names then
-          Hashtbl.replace sibling_collision_renames
-            (MPdot (parent_mp, l))
-            (mod_name ^ "_Mod") )
-      module_entries;
+      (fun (l, se) ->
+        match se with
+        | SEmodule m ->
+          let mod_name = modular_rename Mod (Label.to_id l) in
+          let clashes names = List.exists (String.equal mod_name) names in
+          let inner_names =
+            match mod_struct_body m with
+            | Some inner_sel -> inductive_names_of_sel inner_sel
+            | None -> []
+          in
+          if clashes inductive_names || clashes inner_names then
+            Hashtbl.replace sibling_collision_renames
+              (MPdot (parent_mp, l))
+              (mod_name ^ "_Mod")
+        | _ -> () )
+      sel;
     List.iter
       (fun (_l, se) ->
         match se with
