@@ -375,12 +375,16 @@ let gen_typeclass_cpp name fields ind =
     | Some field_ref ->
       let method_name = Common.pp_global_name Term field_ref in
       if is_typeclass_field_type field_ty then
-        (* TypeClass-typed field — skip method requirement.  The field
-           is promoted and already has a [typename I::field;] type
-           requirement in [type_reqs].  Adding a method requirement
-           would try to use the concept name as a concrete type
-           (e.g., [std::shared_ptr<PreCategory>]) which is invalid. *)
-        None
+        (* TypeClass-typed field (a superclass instance).  It carries no
+           method of its own: the instance exposes it as a nested type, so
+           the concept asks for [typename I::field;] rather than a call.  A
+           method requirement would try to use the concept name as a concrete
+           type (e.g. [std::shared_ptr<PreCategory>]), which is invalid. *)
+        Some
+          (`Type
+            (Tqualified
+               ( Tinstance (inst_id, name),
+                 Common.id_of_global Term field_ref )))
       else if is_bare_promoted_tvar field_ty then
         (* Field type is a bare promoted Tvar (e.g., fun_ind_prf :
            fun_ind_prf_ty). The concrete type could be a plain value or a
@@ -457,6 +461,17 @@ let gen_typeclass_cpp name fields ind =
   in
   let all_reqs =
     List.filter_map (fun pair -> gen_method_req pair) method_list
+  in
+  (* Superclass fields contribute [typename I::field;] alongside the promoted
+     associated types.  Without them a class made purely of superclasses would
+     yield an empty (and therefore ill-formed) requires-expression. *)
+  let type_reqs =
+    List.fold_left
+      (fun acc req ->
+        match req with
+        | `Type t when not (List.exists (fun t' -> t' = t) acc) -> acc @ [t]
+        | _ -> acc )
+      type_reqs all_reqs
   in
   (* Separate normal requirements from disjunctive ones *)
   let normal_reqs =

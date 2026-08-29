@@ -6,8 +6,9 @@ Require Import Crane.Mapping.NatIntStd.
 
 Module SuperclassOnlyConcept.
   (** A class whose fields are all superclass instances has no methods of its
-      own, so Crane emits [concept Both = requires { };] — a C++ requires
-      expression must contain at least one requirement. *)
+      own.  Each superclass field must still contribute a [typename I::field;]
+      requirement, or the concept would have an empty — and therefore
+      ill-formed — requires-expression. *)
   Class Base (A : Type) := { b0 : A -> nat }.
   Class L1 (A : Type) := { l1_base :: Base A ; l1 : A -> nat }.
   Class L2 (A : Type) := { l2_base :: Base A ; l2 : A -> nat }.

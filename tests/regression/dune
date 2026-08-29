@@ -1,12 +1,12 @@
 
 
-(subdir all_args_erased_call
+(subdir superclass_only_concept
  (rule
-  (targets all_args_erased_call.t.exe)
-  (deps AllArgsErasedCall.vo all_args_erased_call.t.cpp (source_tree .))
+  (targets superclass_only_concept.t.exe)
+  (deps SuperclassOnlyConcept.vo superclass_only_concept.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} all_args_erased_call.t.exe all_args_erased_call.cpp all_args_erased_call.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} superclass_only_concept.t.exe superclass_only_concept.cpp superclass_only_concept.t.cpp)))
  (rule
   (alias runtest)
-  (deps all_args_erased_call.t.exe)
-  (action (run ./all_args_erased_call.t.exe))))
+  (deps superclass_only_concept.t.exe)
+  (action (run ./superclass_only_concept.t.exe))))

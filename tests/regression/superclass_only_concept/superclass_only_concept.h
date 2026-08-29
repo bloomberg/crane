@@ -18,11 +18,13 @@ concept L1 = requires {
 };
 template <typename I, typename A>
 concept L2 = requires {
+  typename I::l2_base;
   { I::l2(std::declval<A>()) } -> std::convertible_to<uint64_t>;
 };
 template <typename I, typename A>
 concept Both = requires {
-
+  typename I::bl1;
+  typename I::bl2;
 };
 
 struct SuperclassOnlyConcept {

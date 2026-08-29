@@ -276,17 +276,6 @@
   (deps rank2_method_arg.t.exe)
   (action (run ./rank2_method_arg.t.exe))))
 
-(subdir superclass_only_concept
- (rule
-  (targets superclass_only_concept.t.exe)
-  (deps SuperclassOnlyConcept.vo superclass_only_concept.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} superclass_only_concept.t.exe superclass_only_concept.cpp superclass_only_concept.t.cpp)))
- (rule
-  (alias runtest)
-  (deps superclass_only_concept.t.exe)
-  (action (run ./superclass_only_concept.t.exe))))
-
 (subdir tc_method_arity_mismatch
  (rule
   (targets tc_method_arity_mismatch.t.exe)
