@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STRING_
 #define INCLUDED_STRING_
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
@@ -73,12 +74,26 @@ public:
   const variant_t &v() const { return v_; }
 
   String append(String s2) const {
-    if (std::holds_alternative<typename String::EmptyString>(this->v())) {
-      return s2;
-    } else {
-      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return String::string0(a0, a1->append(std::move(s2)));
+    std::shared_ptr<String> _head{};
+    std::shared_ptr<String> *_write = &_head;
+    const String *_loop_self = this;
+    String _loop_s2 = std::move(s2);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+        *_write = std::make_shared<String>(std::move(_loop_s2));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+        auto _cell =
+            std::make_shared<String>(typename String::String0(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 

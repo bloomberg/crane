@@ -111,17 +111,6 @@
   (deps dep_type_fn_any_cast.t.exe)
   (action (run ./dep_type_fn_any_cast.t.exe))))
 
-(subdir eta_closure_first_class
- (rule
-  (targets eta_closure_first_class.t.exe)
-  (deps EtaClosureFirstClass.vo eta_closure_first_class.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_closure_first_class.t.exe eta_closure_first_class.cpp eta_closure_first_class.t.cpp)))
- (rule
-  (alias runtest)
-  (deps eta_closure_first_class.t.exe)
-  (action (run ./eta_closure_first_class.t.exe))))
-
 (subdir eta_closure_fixpoint
  (rule
   (targets eta_closure_fixpoint.t.exe)

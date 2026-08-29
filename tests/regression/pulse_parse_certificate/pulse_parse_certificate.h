@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PULSE_PARSE_CERTIFICATE
 #define INCLUDED_PULSE_PARSE_CERTIFICATE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -112,21 +113,63 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), a1->template map<T1>(f));
+    std::shared_ptr<List<T1>> _head{};
+    std::shared_ptr<List<T1>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 
   uint64_t length() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (a1->length() + 1);
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    uint64_t _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified length: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = (std::move(_result) + 1);
+      }
     }
+    return _result;
   }
 };
 

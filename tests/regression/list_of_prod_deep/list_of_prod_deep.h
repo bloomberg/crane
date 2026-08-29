@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LIST_OF_PROD_DEEP
 #define INCLUDED_LIST_OF_PROD_DEEP
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -114,23 +115,89 @@ struct ListOfProdDeep {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
     T1 lst_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename lst<A>::Lnil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(this->v());
-        return f0(a0, *a1, a1->template lst_rec<T1>(f, f0));
+      const lst *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const lst *_self;
+      };
+
+      /// _Resume_Lcons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_Lcons {
+        lst<A> a1;
+        std::decay_t<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Lcons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified lst_rec: _Enter -> _Resume_Lcons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const lst *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename lst<A>::Lnil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(_sv.v());
+            _stack.emplace_back(_Resume_Lcons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_Lcons>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
     T1 lst_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename lst<A>::Lnil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(this->v());
-        return f0(a0, *a1, a1->template lst_rect<T1>(f, f0));
+      const lst *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const lst *_self;
+      };
+
+      /// _Resume_Lcons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_Lcons {
+        lst<A> a1;
+        std::decay_t<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Lcons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified lst_rect: _Enter -> _Resume_Lcons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const lst *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename lst<A>::Lnil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] = std::get<typename lst<A>::Lcons>(_sv.v());
+            _stack.emplace_back(_Resume_Lcons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_Lcons>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 

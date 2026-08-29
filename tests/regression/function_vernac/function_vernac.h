@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FUNCTION_VERNAC
 #define INCLUDED_FUNCTION_VERNAC
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -219,19 +220,59 @@ struct FunctionVernac {
                std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
                                      uint64_t &, R_div2 &, T1 &>
-    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, uint64_t, uint64_t) const {
-      if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
-        return f(n0);
-      } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &[n0] = std::get<typename R_div2::R_div2_1>(this->v());
-        return f0(n0);
-      } else {
-        const auto &[n0, p0, a2, _res0] =
-            std::get<typename R_div2::R_div2_2>(this->v());
-        return f1(n0, p0, a2, *_res0,
-                  _res0->template R_div2_rec<T1>(f, f0, f1, p0, a2));
+    T1 R_div2_rec(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
+      const R_div2 *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const R_div2 *_self;
+        uint64_t _x;
+        uint64_t _x0;
+      };
+
+      /// _Resume_R_div2_2: saves [_res0, a2, p0, n0], resumes after recursive
+      /// call with _result.
+      struct _Resume_R_div2_2 {
+        R_div2 _res0;
+        uint64_t a2;
+        uint64_t p0;
+        uint64_t n0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_R_div2_2>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0});
+      /// Loopified R_div2_rec: _Enter -> _Resume_R_div2_2.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const R_div2 *_self = _f._self;
+          uint64_t _x = _f._x;
+          uint64_t _x0 = _f._x0;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename R_div2::R_div2_0>(_sv.v())) {
+            const auto &[n0] = std::get<typename R_div2::R_div2_0>(_sv.v());
+            _result = f(n0);
+          } else if (std::holds_alternative<typename R_div2::R_div2_1>(
+                         _sv.v())) {
+            const auto &[n0] = std::get<typename R_div2::R_div2_1>(_sv.v());
+            _result = f0(n0);
+          } else {
+            const auto &[n0, p0, a2, _res0] =
+                std::get<typename R_div2::R_div2_2>(_sv.v());
+            _stack.emplace_back(_Resume_R_div2_2{*_res0, a2, p0, n0});
+            _stack.emplace_back(_Enter{crane_raw(_res0), p0, a2});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
+          _result =
+              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res0), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
@@ -239,19 +280,59 @@ struct FunctionVernac {
                std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
                std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
                                      uint64_t &, R_div2 &, T1 &>
-    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t, uint64_t) const {
-      if (std::holds_alternative<typename R_div2::R_div2_0>(this->v())) {
-        const auto &[n0] = std::get<typename R_div2::R_div2_0>(this->v());
-        return f(n0);
-      } else if (std::holds_alternative<typename R_div2::R_div2_1>(this->v())) {
-        const auto &[n0] = std::get<typename R_div2::R_div2_1>(this->v());
-        return f0(n0);
-      } else {
-        const auto &[n0, p0, a2, _res0] =
-            std::get<typename R_div2::R_div2_2>(this->v());
-        return f1(n0, p0, a2, *_res0,
-                  _res0->template R_div2_rect<T1>(f, f0, f1, p0, a2));
+    T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
+      const R_div2 *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const R_div2 *_self;
+        uint64_t _x;
+        uint64_t _x0;
+      };
+
+      /// _Resume_R_div2_2: saves [_res0, a2, p0, n0], resumes after recursive
+      /// call with _result.
+      struct _Resume_R_div2_2 {
+        R_div2 _res0;
+        uint64_t a2;
+        uint64_t p0;
+        uint64_t n0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_R_div2_2>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0});
+      /// Loopified R_div2_rect: _Enter -> _Resume_R_div2_2.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const R_div2 *_self = _f._self;
+          uint64_t _x = _f._x;
+          uint64_t _x0 = _f._x0;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename R_div2::R_div2_0>(_sv.v())) {
+            const auto &[n0] = std::get<typename R_div2::R_div2_0>(_sv.v());
+            _result = f(n0);
+          } else if (std::holds_alternative<typename R_div2::R_div2_1>(
+                         _sv.v())) {
+            const auto &[n0] = std::get<typename R_div2::R_div2_1>(_sv.v());
+            _result = f0(n0);
+          } else {
+            const auto &[n0, p0, a2, _res0] =
+                std::get<typename R_div2::R_div2_2>(_sv.v());
+            _stack.emplace_back(_Resume_R_div2_2{*_res0, a2, p0, n0});
+            _stack.emplace_back(_Enter{crane_raw(_res0), p0, a2});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
+          _result =
+              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res0), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 
@@ -382,18 +463,59 @@ struct FunctionVernac {
                std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
                                      List<uint64_t> &, uint64_t &, R_list_sum &,
                                      T1 &>
-    T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<uint64_t> &, uint64_t) const {
-      if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
-              this->v())) {
-        const auto &[l0] =
-            std::get<typename R_list_sum::R_list_sum_0>(this->v());
-        return f(l0);
-      } else {
-        const auto &[l0, x0, xs0, a3, _res0] =
-            std::get<typename R_list_sum::R_list_sum_1>(this->v());
-        return f0(l0, x0, xs0, a3, *_res0,
-                  _res0->template R_list_sum_rec<T1>(f, f0, xs0, a3));
+    T1 R_list_sum_rec(F0 &&f, F1 &&f0, const List<uint64_t> &_x,
+                      uint64_t _x0) const {
+      const R_list_sum *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const R_list_sum *_self;
+        List<uint64_t> _x;
+        uint64_t _x0;
+      };
+
+      /// _Resume_R_list_sum_1: saves [_res0, a3, xs0, x0, l0], resumes after
+      /// recursive call with _result.
+      struct _Resume_R_list_sum_1 {
+        R_list_sum _res0;
+        uint64_t a3;
+        List<uint64_t> xs0;
+        uint64_t x0;
+        List<uint64_t> l0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_R_list_sum_1>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0});
+      /// Loopified R_list_sum_rec: _Enter -> _Resume_R_list_sum_1.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const R_list_sum *_self = _f._self;
+          const List<uint64_t> &_x = std::move(_f._x);
+          uint64_t _x0 = _f._x0;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
+                  _sv.v())) {
+            const auto &[l0] =
+                std::get<typename R_list_sum::R_list_sum_0>(_sv.v());
+            _result = f(l0);
+          } else {
+            const auto &[l0, x0, xs0, a3, _res0] =
+                std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
+            _stack.emplace_back(_Resume_R_list_sum_1{*_res0, a3, xs0, x0, l0});
+            _stack.emplace_back(_Enter{crane_raw(_res0), xs0, a3});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
+          _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
+                       std::move(_f._res0), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F0, typename F1>
@@ -401,19 +523,59 @@ struct FunctionVernac {
                std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
                                      List<uint64_t> &, uint64_t &, R_list_sum &,
                                      T1 &>
-    T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &,
-                       uint64_t) const {
-      if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
-              this->v())) {
-        const auto &[l0] =
-            std::get<typename R_list_sum::R_list_sum_0>(this->v());
-        return f(l0);
-      } else {
-        const auto &[l0, x0, xs0, a3, _res0] =
-            std::get<typename R_list_sum::R_list_sum_1>(this->v());
-        return f0(l0, x0, xs0, a3, *_res0,
-                  _res0->template R_list_sum_rect<T1>(f, f0, xs0, a3));
+    T1 R_list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &_x,
+                       uint64_t _x0) const {
+      const R_list_sum *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const R_list_sum *_self;
+        List<uint64_t> _x;
+        uint64_t _x0;
+      };
+
+      /// _Resume_R_list_sum_1: saves [_res0, a3, xs0, x0, l0], resumes after
+      /// recursive call with _result.
+      struct _Resume_R_list_sum_1 {
+        R_list_sum _res0;
+        uint64_t a3;
+        List<uint64_t> xs0;
+        uint64_t x0;
+        List<uint64_t> l0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_R_list_sum_1>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0});
+      /// Loopified R_list_sum_rect: _Enter -> _Resume_R_list_sum_1.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const R_list_sum *_self = _f._self;
+          const List<uint64_t> &_x = std::move(_f._x);
+          uint64_t _x0 = _f._x0;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
+                  _sv.v())) {
+            const auto &[l0] =
+                std::get<typename R_list_sum::R_list_sum_0>(_sv.v());
+            _result = f(l0);
+          } else {
+            const auto &[l0, x0, xs0, a3, _res0] =
+                std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
+            _stack.emplace_back(_Resume_R_list_sum_1{*_res0, a3, xs0, x0, l0});
+            _stack.emplace_back(_Enter{crane_raw(_res0), xs0, a3});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
+          _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
+                       std::move(_f._res0), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 

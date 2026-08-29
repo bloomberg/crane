@@ -1,6 +1,7 @@
 #ifndef INCLUDED_GET_PAIR_BOUND_PROP
 #define INCLUDED_GET_PAIR_BOUND_PROP
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -109,31 +110,53 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> skipn(uint64_t n) const {
-    if (n <= 0) {
-      return std::move(*this);
-    } else {
-      uint64_t n0 = n - 1;
-      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-        return List<A>::nil();
+    const List *_loop_self = this;
+    uint64_t _loop_n = std::move(n);
+    while (true) {
+      if (_loop_n <= 0) {
+        return std::move(*_loop_self);
       } else {
-        auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return a1->skipn(n0);
+        uint64_t n0 = _loop_n - 1;
+        auto &&_sv = *_loop_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          return List<A>::nil();
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _loop_self = crane_raw(a1);
+          _loop_n = n0;
+        }
       }
     }
   }
 
   List<A> firstn(uint64_t n) const {
-    if (n <= 0) {
-      return List<A>::nil();
-    } else {
-      uint64_t n0 = n - 1;
-      if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-        return List<A>::nil();
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    uint64_t _loop_n = std::move(n);
+    while (true) {
+      if (_loop_n <= 0) {
+        *_write = std::make_shared<List<A>>(List<A>::nil());
+        break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-        return List<A>::cons(a0, a1->firstn(n0));
+        uint64_t n0 = _loop_n - 1;
+        auto &&_sv = *_loop_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          *_write = std::make_shared<List<A>>(List<A>::nil());
+          break;
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          auto _cell =
+              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          _loop_self = crane_raw(a1);
+          _loop_n = n0;
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 };
 

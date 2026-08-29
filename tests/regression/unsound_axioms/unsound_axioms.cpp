@@ -9,7 +9,7 @@ uint64_t UnsoundAxioms::cast_confusion(const UnsoundAxioms::Rec &r) {
 uint64_t UnsoundAxioms::choose_in_match(const UnsoundAxioms::Rec &r) {
   uint64_t a = r.f1;
   uint64_t b = r.f2;
-  uint64_t witness = choose<uint64_t>();
+  uint64_t witness = choose<uint64_t>;
   return ((a + b) + witness);
 }
 
@@ -47,5 +47,5 @@ uint64_t UnsoundAxioms::prop_as_type() {
 uint64_t UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {
   uint64_t a = r.f1;
   uint64_t b = r.f2;
-  return ((prop_as_type() + a) + b);
+  return ((prop_as_type + a) + b);
 }

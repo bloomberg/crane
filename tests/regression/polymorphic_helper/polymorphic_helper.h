@@ -1,6 +1,7 @@
 #ifndef INCLUDED_POLYMORPHIC_HELPER
 #define INCLUDED_POLYMORPHIC_HELPER
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -66,12 +67,25 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s(a0->add(std::move(m)));
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const Nat *_loop_self = this;
+    Nat _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        _loop_self = crane_raw(a0);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -175,12 +189,24 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat length() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return Nat::o();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return Nat::s(a1->length());
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<Nat>(Nat::o());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 #define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <any>
@@ -115,62 +116,211 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   bool forallb(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return true;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return (f(a0) && a1->forallb(f));
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Cons0 {
+      std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    bool _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified forallb: _Enter -> _Resume_Cons0.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+          _result = true;
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
+          _stack.emplace_back(_Resume_Cons0{f(a0)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
+        _result = (_f.a0 && std::move(_result));
+      }
     }
+    return _result;
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return a0;
-    } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons0>(this->v());
-      return f(a1, a2->template fold_right<T1>(f, a0));
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons0: saves [a1], resumes after recursive call with _result.
+    struct _Resume_Cons0 {
+      std::decay_t<A> a1;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    T1 _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified fold_right: _Enter -> _Resume_Cons0.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+          _result = a0;
+        } else {
+          const auto &[a1, a2] = std::get<typename List<A>::Cons0>(_sv.v());
+          _stack.emplace_back(_Resume_Cons0{a1});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
+        _result = f(std::move(_f.a1), std::move(_result));
+      }
     }
+    return _result;
   }
 
   template <typename T1> List<T1> concat() const {
-    if (std::holds_alternative<typename List<List<T1>>::Nil0>(this->v())) {
-      return List<T1>::nil0();
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<List<T1>>::Cons0>(this->v());
-      return a0.app(a1->template concat<T1>());
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Cons0 {
+      List<T1> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    List<T1> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified concat: _Enter -> _Resume_Cons0.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
+          _result = List<T1>::nil0();
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename List<List<T1>>::Cons0>(_sv.v());
+          _stack.emplace_back(_Resume_Cons0{a0});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
+        _result = std::move(_f.a0).app(std::move(_result));
+      }
     }
+    return _result;
   }
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return List<T1>::nil0();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return List<T1>::cons0(f(a0), a1->template map<T1>(f));
+    std::shared_ptr<List<T1>> _head{};
+    std::shared_ptr<List<T1>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+        *_write = std::make_shared<List<T1>>(List<T1>::nil0());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
+        auto _cell = std::make_shared<List<T1>>(
+            typename List<T1>::Cons0(f(a0), nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<T1>::Cons0>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 
   uint64_t length() const {
-    if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return (a1->length() + 1);
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons0: resumes after recursive call with _result.
+    struct _Resume_Cons0 {};
+
+    using _Frame = std::variant<_Enter, _Resume_Cons0>;
+    uint64_t _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified length: _Enter -> _Resume_Cons0.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
+          _stack.emplace_back(_Resume_Cons0{});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons0>(_frame));
+        _result = (std::move(_result) + 1);
+      }
     }
+    return _result;
   }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil0>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons0>(this->v());
-      return List<A>::cons0(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons0(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons0>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -335,15 +485,46 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<uint64_t> to_nat(uint64_t) const {
-    if (std::holds_alternative<typename T::F1>(this->v())) {
-      return Sig<uint64_t>::exist(UINT64_C(0));
-    } else {
-      const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-      const auto &_sv0 = a1->to_nat(n1);
-      const auto &[x0] = _sv0;
-      return Sig<uint64_t>::exist((x0 + 1));
+  Sig<uint64_t> to_nat(uint64_t _x) const {
+    const T *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const T *_self;
+      uint64_t _x;
+    };
+
+    /// _Cont_FS: resumes after recursive call, then processes rest.
+    struct _Cont_FS {};
+
+    using _Frame = std::variant<_Enter, _Cont_FS>;
+    Sig<uint64_t> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self, _x});
+    /// Loopified to_nat: _Enter -> _Cont_FS.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const T *_self = _f._self;
+        uint64_t _x = _f._x;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename T::F1>(_sv.v())) {
+          _result = Sig<uint64_t>::exist(UINT64_C(0));
+        } else {
+          const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
+          _stack.emplace_back(_Cont_FS{});
+          _stack.emplace_back(_Enter{crane_raw(a1), n1});
+        }
+      } else {
+        auto _f = std::move(std::get<_Cont_FS>(_frame));
+        Sig<uint64_t> _rc1 = std::move(_result);
+        const auto &[x0] = _rc1;
+        _result = Sig<uint64_t>::exist((x0 + 1));
+      }
     }
+    return _result;
   }
 };
 

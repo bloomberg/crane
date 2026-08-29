@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CTOR_ARG_MOVE_ALIAS
 #define INCLUDED_CTOR_ARG_MOVE_ALIAS
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -105,34 +106,131 @@ struct CtorArgMoveAlias {
     const variant_t &v() const { return v_; }
 
     uint64_t isum() const {
-      if (std::holds_alternative<typename inner::INil>(this->v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a0, a1] = std::get<typename inner::ICons>(this->v());
-        return (a0 + a1->isum());
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _Resume_ICons: saves [a0], resumes after recursive call with _result.
+      struct _Resume_ICons {
+        uint64_t a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_ICons>;
+      uint64_t _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified isum: _Enter -> _Resume_ICons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::INil>(_sv.v())) {
+            _result = UINT64_C(0);
+          } else {
+            const auto &[a0, a1] = std::get<typename inner::ICons>(_sv.v());
+            _stack.emplace_back(_Resume_ICons{a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_ICons>(_frame));
+          _result = (_f.a0 + std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
     T1 inner_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename inner::INil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename inner::ICons>(this->v());
-        return f0(a0, *a1, a1->template inner_rec<T1>(f, f0));
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _Resume_ICons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_ICons {
+        inner a1;
+        uint64_t a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_ICons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified inner_rec: _Enter -> _Resume_ICons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::INil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] = std::get<typename inner::ICons>(_sv.v());
+            _stack.emplace_back(_Resume_ICons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_ICons>(_frame));
+          _result = f0(_f.a0, std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, uint64_t &, inner &, T1 &>
     T1 inner_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename inner::INil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename inner::ICons>(this->v());
-        return f0(a0, *a1, a1->template inner_rect<T1>(f, f0));
+      const inner *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const inner *_self;
+      };
+
+      /// _Resume_ICons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_ICons {
+        inner a1;
+        uint64_t a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_ICons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified inner_rect: _Enter -> _Resume_ICons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const inner *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename inner::INil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] = std::get<typename inner::ICons>(_sv.v());
+            _stack.emplace_back(_Resume_ICons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_ICons>(_frame));
+          _result = f0(_f.a0, std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 
@@ -241,23 +339,91 @@ struct CtorArgMoveAlias {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, a1->template mylist_rec<T1>(f, f0));
+      const mylist *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const mylist *_self;
+      };
+
+      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_Mycons {
+        mylist<A> a1;
+        std::decay_t<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified mylist_rec: _Enter -> _Resume_Mycons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const mylist *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename mylist<A>::Mynil>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(this->v());
-        return f0(a0, *a1, a1->template mylist_rect<T1>(f, f0));
+      const mylist *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const mylist *_self;
+      };
+
+      /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
+      /// _result.
+      struct _Resume_Mycons {
+        mylist<A> a1;
+        std::decay_t<A> a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Mycons>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified mylist_rect: _Enter -> _Resume_Mycons.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const mylist *_self = _f._self;
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
+            _result = f;
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(_Resume_Mycons{*a1, a0});
+            _stack.emplace_back(_Enter{crane_raw(a1)});
+          }
+        } else {
+          auto _f = std::move(std::get<_Resume_Mycons>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.a1), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 

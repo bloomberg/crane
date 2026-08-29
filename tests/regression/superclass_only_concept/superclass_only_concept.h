@@ -5,8 +5,9 @@
 #include <utility>
 
 /// A class whose fields are all superclass instances has no methods of its
-/// own, so Crane emits concept Both = requires { }; — a C++ requires
-/// expression must contain at least one requirement.
+/// own.  Each superclass field must still contribute a typename I::field;
+/// requirement, or the concept would have an empty — and therefore
+/// ill-formed — requires-expression.
 template <typename I, typename A>
 concept Base = requires {
   { I::b0(std::declval<A>()) } -> std::convertible_to<uint64_t>;

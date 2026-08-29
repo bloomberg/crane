@@ -10,6 +10,7 @@ concept Eqb = requires {
 };
 template <typename I, typename A>
 concept Ord = requires {
+  typename I::ord_eq;
   { I::le(std::declval<A>(), std::declval<A>()) } -> std::convertible_to<bool>;
 };
 

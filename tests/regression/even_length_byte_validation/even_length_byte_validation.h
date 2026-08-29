@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
 #define INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -111,21 +112,81 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   bool forallb(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return true;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (f(a0) && a1->forallb(f));
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
+    struct _Resume_Cons {
+      std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a0;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    bool _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified forallb: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = true;
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{f(a0)});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = (_f.a0 && std::move(_result));
+      }
     }
+    return _result;
   }
 
   uint64_t length() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (a1->length() + 1);
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    uint64_t _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified length: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Enter{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = (std::move(_result) + 1);
+      }
     }
+    return _result;
   }
 };
 

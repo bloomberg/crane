@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RECORD_ERASED_PROOF_FIELDS
 #define INCLUDED_RECORD_ERASED_PROOF_FIELDS
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -111,11 +112,17 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return a0;
-    } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return a2->template fold_left<T1>(f, f(a0, a1));
+    const List *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
     }
   }
 };

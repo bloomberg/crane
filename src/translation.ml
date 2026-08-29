@@ -4517,7 +4517,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     if needs_call then
       CPPfun_call (cglob, [])
     else
-      cglob
+      curry_to_expected env ?expected_ty x cglob
   | MLcons (_ty, r, _ts)
     when match r with
          | GlobRef.ConstructRef ((kn, i), _) ->
@@ -6026,6 +6026,56 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
   | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
+(** Re-curry a global named in value position when its C++ declaration takes
+    more parameters than the use site expects.
+
+    A definition returning a closure ([nat -> nat -> nat] read as [nat ->
+    (nat -> nat)]) is declared flat, with every arrow becoming a C++
+    parameter.  That suits a direct call, but handing the bare name to
+    something expecting a one-argument callable does not compile.  Rebuild the
+    nesting the use site asks for:
+
+    {v [](uint64_t _ec0) { return [=](uint64_t _ec1) { return f(_ec0, _ec1); }; } v}
+
+    Returns [cglob] unchanged when the arities already agree. *)
+and curry_to_expected env ?expected_ty x cglob =
+  let decl_dom =
+    match find_type_opt x with
+    | Some ml_ty -> (
+      match
+        convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty
+      with
+      | Tfun (dom, _) -> dom
+      | _ -> [] )
+    | None -> []
+  in
+  match expected_ty with
+  | Some (Tfun (exp_dom, _))
+    when exp_dom <> [] && List.length decl_dom > List.length exp_dom ->
+    (* Only the arity comes from [exp_dom]; the types come from the
+       declaration, which is concrete where the callee's signature may still
+       be generic. *)
+    let n_outer = List.length exp_dom in
+    let exp_dom = List.filteri (fun i _ -> i < n_outer) decl_dom in
+    let inner_dom = List.filteri (fun i _ -> i >= n_outer) decl_dom in
+    let param i ty = (ty, Some (Id.of_string (Printf.sprintf "_ec%d" i))) in
+    let outer = List.mapi param exp_dom in
+    let inner = List.mapi (fun i ty -> param (n_outer + i) ty) inner_dom in
+    let arg (_, id_opt) = CPPvar (Option.get id_opt) in
+    (* [CPPlambda] holds its parameters, and [CPPfun_call] its arguments, in
+       reverse order. *)
+    let call =
+      CPPfun_call (cglob, List.rev_map arg (outer @ inner))
+    in
+    CPPlambda
+      ( List.rev outer,
+        None,
+        [ Sreturn
+            (Some (CPPlambda (List.rev inner, None, [Sreturn (Some call)], true)))
+        ],
+        true )
+  | _ -> cglob
+
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't
     deduce them from lambda arguments, using the enclosing function's return
@@ -6423,15 +6473,25 @@ and eta_fun env f args =
           | None -> (ml_arg, None) )
         | _ -> (ml_arg, None)
       in
+      (* The [i]th declared parameter type of the callee, as a C++ type, taken
+         from [param_tys]; [None] when it is erased and so says nothing. *)
+      let param_expected_cpp_ty param_tys =
+        match List.nth_opt param_tys i with
+        | Some ml_ty ->
+          let tvars = get_current_type_vars () in
+          let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
+          if is_erased_type cpp_ty then None else Some cpp_ty
+        | None -> None
+      in
       let arg_expected_ty =
         match ml_arg with
-        | MLmagic _ ->
-          (match List.nth_opt fn_param_ml_tys i with
-           | Some ml_ty ->
-             let tvars = get_current_type_vars () in
-             let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
-             if is_erased_type cpp_ty then None else Some cpp_ty
-           | None -> None)
+        | MLmagic _ -> param_expected_cpp_ty fn_param_ml_tys
+        (* [MLglob]: a bare function name handed over as a value may need
+           re-currying.  Count the arrows in the callee's {e unsubstituted}
+           parameter type: arrows past the point where the codomain becomes a
+           type variable belong to the element type the callee is generic in,
+           not to the callable it expects. *)
+        | MLglob _ -> param_expected_cpp_ty fn_param_ml_tys_orig
         | _ -> None
       in
       let saved_expected_for_arg = tctx.expected_ml_type_for_arg in

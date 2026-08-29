@@ -10,6 +10,7 @@ concept Base = requires {
 };
 template <typename I, typename A>
 concept Ext = requires {
+  typename I::ext_base;
   { I::ext(std::declval<A>()) } -> std::convertible_to<uint64_t>;
 };
 
