@@ -89,17 +89,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-(subdir all_args_erased_call
- (rule
-  (targets all_args_erased_call.t.exe)
-  (deps AllArgsErasedCall.vo all_args_erased_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} all_args_erased_call.t.exe all_args_erased_call.cpp all_args_erased_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps all_args_erased_call.t.exe)
-  (action (run ./all_args_erased_call.t.exe))))
-
 (subdir assoc_type_any_cast
  (rule
   (targets assoc_type_any_cast.t.exe)

@@ -649,19 +649,6 @@ let render_cpp_type_in_template ty =
   | Some f -> f ty
   | None -> render_cpp_type_for_raw_template ty
 
-(** Whether a bare reference to global [x] must be spelled [x()]: it is
-    declared as a zero-parameter function rather than a data member.  That is
-    the case for thunked values (monadic definitions, cofixpoints, extracted
-    axioms) and for functions all of whose parameters are erased. *)
-let glob_is_nullary_function x =
-  match find_type_opt x with
-  | None -> false
-  | Some ml_ty ->
-    is_monadic_ml_type ml_ty
-    || Table.is_cofixpoint x
-    || Table.is_axiom_value x
-    || (match resolve_tmeta ml_ty with Miniml.Tarr _ -> true | _ -> false)
-
 let build_guard_compare_stmts ?type_string_of n ids cod =
   match Table.find_guard_compare n with
   | None -> []
@@ -2659,6 +2646,26 @@ and erase_unresolved_tvars = function
   | Tshared_ptr t -> Tshared_ptr (erase_unresolved_tvars t)
   | Tref t -> Tref (erase_unresolved_tvars t)
   | t -> t
+
+(** Whether a bare reference to global [x] must be spelled [x()]: it is
+    declared as a zero-parameter function rather than a data member.  That is
+    the case for thunked values (monadic definitions, cofixpoints, extracted
+    axioms) and for definitions that really do take C++ parameters.
+
+    An ML arrow is {i not} enough: a definition all of whose arguments are
+    erased (a lemma-only argument, say) converts to a non-function C++ type
+    and is emitted as a data member by {!Gen_decls.gen_spec}.  Asking the
+    converter is what keeps the two in step. *)
+and glob_is_nullary_function x =
+  match find_type_opt x with
+  | None -> false
+  | Some ml_ty ->
+    is_monadic_ml_type ml_ty
+    || Table.is_cofixpoint x
+    || Table.is_axiom_value x
+    || ( match convert_ml_type_to_cpp_type (empty_env ()) [] ml_ty with
+       | Tfun _ -> true
+       | _ -> false )
 
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any].  Handles direct [Tany], erased-type constants (aliases for
