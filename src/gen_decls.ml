@@ -1137,7 +1137,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   if cpp_ty = Tany then None
                   else
                     Some
-                      ( Fnested_using (field_id, cpp_ty),
+                      ( Fnested_using ([], field_id, cpp_ty),
                         VPublic,
                         SNoTag )
               | _ -> None )
@@ -1182,7 +1182,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   let qualified_ty =
                     Tqualified (Tinstance (tc_name, class_ref_tc), var_name)
                   in
-                  ( Fnested_using (var_name, qualified_ty),
+                  ( Fnested_using ([], var_name, qualified_ty),
                     VPublic,
                     SNoTag ) )
                 (class_promoted_vars class_ref_tc)
@@ -1197,7 +1197,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         List.filter_map
           (fun (f, _, _) ->
             match f with
-            | Fnested_using (id, _) -> Some id
+            | Fnested_using (_, id, _) -> Some id
             | _ -> None )
           tc_promoted_usings
       in
@@ -1206,7 +1206,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         List.filter
           (fun (f, _, _) ->
             match f with
-            | Fnested_using (id, _) ->
+            | Fnested_using (_, id, _) ->
               not (List.exists (Id.equal id) tc_promoted_names)
             | _ -> true )
           forwarded_usings
@@ -1216,7 +1216,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         List.filter_map
           (fun (f, _, _) ->
             match f with
-            | Fnested_using (id, _) -> Some id
+            | Fnested_using (_, id, _) -> Some id
             | _ -> None )
           forwarded_usings
       in
@@ -1248,7 +1248,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  None
                else
                  Some
-                   ( Fnested_using (var_name, concrete_cpp_ty),
+                   ( Fnested_using ([], var_name, concrete_cpp_ty),
                      VPublic,
                      SNoTag ) )
       in
@@ -1269,14 +1269,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       let direct_names =
         List.filter_map
           (fun (f, _, _) ->
-            match f with Fnested_using (id, _) -> Some id | _ -> None)
+            match f with Fnested_using (_, id, _) -> Some id | _ -> None)
           direct_usings
       in
       let nested_promoted_usings =
         List.concat_map
           (fun (f, _, _) ->
             match f with
-            | Fnested_using (using_name, _using_ty) ->
+            | Fnested_using (_, using_name, _using_ty) ->
               (* Find this field's ML type in the typeclass definition *)
               let field_ml_ty =
                 List.find_map
@@ -1299,7 +1299,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                     else
                       Some
                         ( Fnested_using
-                            ( v,
+                            ( [],
+                              v,
                               Tqualified
                                 (Tinstance (using_name, tc_ref), v) ),
                           VPublic,
@@ -4472,7 +4473,7 @@ let gen_ind_header_v2
       in
       let variant_alias_name = escape_if_clashes "variant_t" in
       let variant_using =
-        (Fnested_using (Id.of_string variant_alias_name, variant_ty), VPublic, STypes)
+        (Fnested_using ([], Id.of_string variant_alias_name, variant_ty), VPublic, STypes)
       in
       let element_using = [] in
 

@@ -63,6 +63,23 @@ let new_meta _ =
   incr meta_count;
   Tmeta {id = !meta_count; contents = None}
 
+(** Apply a type to [args], contracting the application when the head is
+    known.  [Tapp] is a redex: its head is a type variable, so substituting
+    that variable with a concrete type constructor reduces it.
+
+    A head that carries no arguments of its own ([Tdummy], [Tunknown]) absorbs
+    them, which is what a carrier erased by extraction must do. *)
+let rec apply_ml_type head args =
+  match args with
+  | [] -> head
+  | _ -> (
+    match head with
+    | Tvar j | Tvar' j -> Tapp (j, args)
+    | Tapp (j, pre) -> Tapp (j, pre @ args)
+    | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
+    | Tmeta {contents = Some u} -> apply_ml_type u args
+    | _ -> head )
+
 (** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
   match (t1, t2) with
@@ -71,6 +88,8 @@ let rec eq_ml_type t1 t2 =
     GlobRef.CanOrd.equal gr1 gr2 && List.equal eq_ml_type t1 t2
   | Tvar i1, Tvar i2 -> Int.equal i1 i2
   | Tvar' i1, Tvar' i2 -> Int.equal i1 i2
+  | Tapp (i1, l1), Tapp (i2, l2) ->
+    Int.equal i1 i2 && List.equal eq_ml_type l1 l2
   | Tmeta m1, Tmeta m2 -> eq_ml_meta m1 m2
   | Tdummy k1, Tdummy k2 -> k1 == k2
   | Tunknown, Tunknown -> true
@@ -80,6 +99,7 @@ let rec eq_ml_type t1 t2 =
       | Tglob _
       | Tvar _
       | Tvar' _
+      | Tapp _
       | Tmeta _
       | Tdummy _
       | Tunknown
@@ -100,6 +120,7 @@ let type_subst_list l t =
     | Tvar _ -> t (* Out-of-range: leave unchanged (promoted dep record vars) *)
     | Tvar' j when j >= 1 && j <= n -> List.nth l (j - 1)
     | Tvar' _ -> t (* Out-of-range: leave unchanged *)
+    | Tapp (j, args) -> apply_ml_type (subst (Tvar j)) (List.map subst args)
     | Tmeta {contents = None} -> t
     | Tmeta {contents = Some u} -> subst u
     | Tarr (a, b) -> Tarr (subst a, subst b)
@@ -120,6 +141,7 @@ let type_subst_vect v t =
     | Tvar' j when j >= 1 && j <= n ->
       v.(j - 1) (* Tvar' is also a type variable *)
     | Tvar' _ -> t (* Per-constructor type var, leave unchanged *)
+    | Tapp (j, args) -> apply_ml_type (subst (Tvar j)) (List.map subst args)
     | Tmeta {contents = None} -> t
     | Tmeta {contents = Some u} -> subst u
     | Tarr (a, b) -> Tarr (subst a, subst b)
@@ -156,6 +178,7 @@ let rec type_occurs alpha t =
   | Tmeta {contents = Some u} -> type_occurs alpha u
   | Tarr (t1, t2) -> type_occurs alpha t1 || type_occurs alpha t2
   | Tglob (r, l, a) -> List.exists (type_occurs alpha) l
+  | Tapp (_, l) -> List.exists (type_occurs alpha) l
   | Tdummy _ | Tvar _ | Tvar' _ | Taxiom | Tunknown | Tstring -> false
 
 (** {2 Most General Unificator} *)
@@ -187,6 +210,9 @@ let rec mgu = function
   | Tdummy _, Tdummy _ -> ()
   | Tvar i, Tvar j when Int.equal i j -> ()
   | Tvar' i, Tvar' j when Int.equal i j -> ()
+  | Tapp (i, l), Tapp (j, l') when Int.equal i j ->
+    if List.length l <> List.length l' then raise Impossible;
+    List.iter mgu (List.combine l l')
   | Tunknown, Tunknown -> ()
   | Taxiom, Taxiom -> ()
   | Tstring, Tstring -> ()
@@ -304,6 +330,7 @@ module Mlenv = struct
               Tvar (add_new i) )
       | Tarr (t1, t2) -> Tarr (meta2var t1, meta2var t2)
       | Tglob (r, l, a) -> Tglob (r, List.map meta2var l, a)
+      | Tapp (i, l) -> Tapp (i, List.map meta2var l)
       | t -> t
     in
     (!c, meta2var t)
@@ -330,6 +357,7 @@ end
 let rec type_mem_kn kn = function
   | Tmeta {contents = Some t} -> type_mem_kn kn t
   | Tglob (r, l, _) -> occur_kn_in_ref kn r || List.exists (type_mem_kn kn) l
+  | Tapp (_, l) -> List.exists (type_mem_kn kn) l
   | Tarr (a, b) -> type_mem_kn kn a || type_mem_kn kn b
   | _ -> false
 
@@ -339,6 +367,7 @@ let type_maxvar t =
   let rec parse n = function
     | Tmeta {contents = Some t} -> parse n t
     | Tvar i -> max i n
+    | Tapp (i, l) -> List.fold_left parse (max i n) l
     | Tarr (a, b) -> parse (parse n a) b
     | Tglob (_, l, _) -> List.fold_left parse n l
     | _ -> n
@@ -366,6 +395,10 @@ let rec type_recomp (l, t) =
 let rec var2var' = function
   | Tmeta {contents = Some t} -> var2var' t
   | Tvar i -> Tvar' i
+  (* The head of an application is an index, not a [Tvar] node, so there is no
+     [Tvar']-flavoured application to switch to; only the arguments carry the
+     distinction. *)
+  | Tapp (i, l) -> Tapp (i, List.map var2var' l)
   | Tarr (a, b) -> Tarr (var2var' a, var2var' b)
   | Tglob (r, l, a) -> Tglob (r, List.map var2var' l, a)
   | a -> a
@@ -382,6 +415,7 @@ let type_expand env t =
       ( match env r with
       | Some mlt -> expand (type_subst_list l mlt)
       | None -> Tglob (r, List.map expand l, a) )
+    | Tapp (i, l) -> Tapp (i, List.map expand l)
     | Tarr (a, b) -> Tarr (expand a, expand b)
     | a -> a
   in
@@ -1978,6 +2012,7 @@ let remap_tvars f =
   let rec remap_type = function
     | Tvar i -> Tvar (f i)
     | Tvar' i -> Tvar' (f i)
+    | Tapp (i, args) -> Tapp (f i, List.map remap_type args)
     | Tarr (t1, t2) -> Tarr (remap_type t1, remap_type t2)
     | Tglob (r, args, e) ->
       Tglob (r, List.map remap_type args, List.map remap_ast e)

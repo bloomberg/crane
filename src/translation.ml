@@ -2584,6 +2584,15 @@ let rec convert_ml_type_to_cpp_type
   | Tvar i | Tvar' i ->
     ( try Tvar (i, Some (List.nth tvars (pred i)))
       with Failure _ -> Tvar (i, None) )
+  (* A higher-kinded variable applied to arguments.  The head stays a type
+     variable here; [Gen_decls.apply_hkt_resolutions] rewrites it to the
+     instance's associated type, leaving [Tapply] to render the application. *)
+  | Tapp (i, args) ->
+    let head =
+      try Tvar (i, Some (List.nth tvars (pred i)))
+      with Failure _ -> Tvar (i, None)
+    in
+    Tapply (head, List.map (convert_ml_type_to_cpp_type env ~ns tvars) args)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ~ns tvars t
   | Tmeta {id = i} ->
     (* Unresolved meta - use std::any for type erasure. This happens for

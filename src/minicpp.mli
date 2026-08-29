@@ -117,6 +117,9 @@ type cpp_type =
       (** Type qualified by namespace reference *)
   | Tqualified of cpp_type * Id.t
       (** Nested type access, e.g., typename Base<T>::nested *)
+  | Tapply of cpp_type * cpp_type list
+      (** An alias template applied to arguments: [typename I::template C<A>]
+          when the head is an associated type, [C<A>] otherwise. *)
   | Tref of cpp_type  (** C++ reference type *)
   | Tptr of cpp_type  (** C++ pointer type *)
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
@@ -395,7 +398,7 @@ and cpp_field =
   | Fdestructor of cpp_stmt list  (** Destructor body for the enclosing struct *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
-  | Fnested_using of Id.t * cpp_type  (** Nested using type alias declaration *)
+  | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type  (** Nested using type alias declaration *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
   | Fdefaulted_special_members
       (** Explicitly-defaulted copy/move constructors and assignment operators.

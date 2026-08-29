@@ -83,6 +83,10 @@ type ml_type =
   | Tglob of GlobRef.t * ml_type list * ml_ast list
   | Tvar of int
   | Tvar' of int  (** same as Tvar, used to avoid clash *)
+  | Tapp of int * ml_type list
+      (** A type variable of arrow kind applied to arguments: the [M A] of
+          [mret : forall A, A -> M A], where [M : Type -> Type] is a
+          higher-kinded class parameter.  The head is a [Tvar] index. *)
   | Tmeta of ml_meta  (** used during ML type reconstruction *)
   | Tdummy of kill_reason
   | Tunknown

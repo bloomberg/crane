@@ -117,6 +117,11 @@ type cpp_type =
   | Tnamespace of GlobRef.t * cpp_type
   | Tqualified of
       cpp_type * Id.t (* typename Base<T>::nested - for nested struct access *)
+  | Tapply of cpp_type * cpp_type list
+      (* An alias template applied to arguments: [typename I::template C<A>]
+         when the head is an associated type, [C<A>] otherwise.  This is how a
+         higher-kinded class parameter ([M : Type -> Type]) is used, the head
+         being the instance's associated alias template. *)
   | Tref of cpp_type
   | Tptr of cpp_type
   | Tvariant of cpp_type list
@@ -411,8 +416,11 @@ and cpp_field =
     (* Destructor body for the enclosing struct. *)
   (* Nested struct with its own visibility-annotated fields *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
-  (* Nested using declaration *)
-  | Fnested_using of Id.t * cpp_type
+  (* Nested using declaration.  The template parameters are empty for a plain
+     alias and non-empty for an alias template ([template <typename A> using C
+     = List<A>;]), which is how an instance provides the carrier of a
+     higher-kinded class parameter. *)
+  | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
   (* Explicitly-defaulted copy/move ctors and assignment operators, emitted
@@ -460,7 +468,7 @@ let rval_ref ty = Tref (Tref ty)
     a property of the instance C++ eventually substitutes, so codegen cannot
     decide it. *)
 let rec instance_dependent = function
-  | Tqualified (base, _) -> instance_dependent base
+  | Tqualified (base, _) | Tapply (base, _) -> instance_dependent base
   | Tinstance (id, class_ref) -> Some (id, class_ref)
   | _ -> None
 
@@ -487,6 +495,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvariant ts -> Tvariant (List.map (map_cpp_type f) ts)
   | Tnamespace (r, t) -> Tnamespace (r, map_cpp_type f t)
   | Tqualified (t, id) -> Tqualified (map_cpp_type f t, id)
+  | Tapply (t, ts) -> Tapply (map_cpp_type f t, List.map (map_cpp_type f) ts)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
@@ -509,6 +518,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
   | Tmod (_, t) | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
   | Tqualified (t, _) | Tdecay t ->
     exists_cpp_type p t
+  | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
   | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
   | Tauto ->

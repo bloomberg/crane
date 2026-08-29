@@ -261,7 +261,8 @@ let rec worthwhile_move_type = function
   | Tvariant ts -> List.exists worthwhile_move_type ts
   | Tid (_, ts) | Tid_external (_, ts) ->
     List.exists worthwhile_move_type ts
-  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tref t ->
+  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
+  | Tref t ->
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t

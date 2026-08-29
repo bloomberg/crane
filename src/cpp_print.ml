@@ -882,7 +882,17 @@ let rec pp_cpp_type par vl t =
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         str "typename " ++ name ++ str "::" ++ pp_rec false t )
-    | Tqualified (base_ty, nested_id) ->
+    | (Tqualified _ | Tapply (Tqualified _, _)) as qualified_ty ->
+      (* An associated type may itself be an alias template — the carrier of a
+         higher-kinded class parameter, [typename I::template C<A>].  It is
+         spelled like a plain associated type but for the [template]
+         disambiguator and the argument list, so both share this arm. *)
+      let base_ty, nested_id, targs =
+        match qualified_ty with
+        | Tqualified (b, n) -> (b, n, [])
+        | Tapply (Tqualified (b, n), a) -> (b, n, a)
+        | _ -> assert false
+      in
       (* DESIGN: Template-dependent type access like 'typename M::Key::t'.
          C++ templates require 'typename' to access nested types from
          dependent base types.  Nested Tqualified chains (e.g.,
@@ -914,7 +924,18 @@ let rec pp_cpp_type par vl t =
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
         | ty -> pp_chain_base ty
       in
-      str "typename " ++ pp_qualified_chain base_ty ++ str "::" ++ Id.print nested_id
+      str "typename "
+      ++ pp_qualified_chain base_ty
+      ++ str "::"
+      ++ ( if targs = [] then Id.print nested_id
+           else
+             str "template "
+             ++ cpp_angle
+                  (Id.to_string nested_id)
+                  (pp_list (pp_rec false) targs) )
+    | Tapply (head, args) ->
+      (* A non-dependent alias template: the head names it outright. *)
+      pp_rec false head ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
     | Tvariant tys ->
       require_header "variant";
       std_angle "variant" (pp_list (pp_rec false) tys)
@@ -2712,6 +2733,9 @@ and is_constexpr_type ty =
   | Tid (_, tys) | Tid_external (_, tys) -> List.for_all is_constexpr_type tys
   | Tnamespace (_, t) -> is_constexpr_type t
   | Tqualified (t, _) -> is_constexpr_type t
+  (* An applied associated type is whatever the instance makes it; nothing
+     here can establish it is a literal type. *)
+  | Tapply _ -> false
 
 (** Check if a function is constexpr-eligible: all param types AND return
     type must be constexpr-eligible literal types.
@@ -3500,11 +3524,16 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ fields_s
     ++ fnl ()
     ++ str "};"
-  | Fnested_using (id, ty) ->
-    if is_any_type ty then
+  | Fnested_using (tparams, id, ty) ->
+    if tparams = [] && is_any_type ty then
       any_type_aliases := Id.Set.add id !any_type_aliases;
     h
-      ( str "using "
+      ( ( if tparams = [] then mt ()
+          else
+            str "template <"
+            ++ pp_list pp_template_param tparams
+            ++ str "> " )
+      ++ str "using "
       ++ Id.print id
       ++ str " = "
       ++ pp_type ty
