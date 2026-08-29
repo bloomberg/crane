@@ -6,9 +6,9 @@ Require Import Crane.Mapping.NatIntStd.
 
 Module ImpossibleBranchThunkCall.
   (** Matching on an indexed inductive at a fixed index leaves a branch that
-      is impossible in Rocq.  Crane emits an [std::any]-returning "unreachable"
-      thunk for it, then applies the thunk's result to the branch's arguments:
-      [type 'std::any' does not provide a call operator]. *)
+      is impossible in Rocq.  Applying its absurd eliminator is itself
+      unreachable, so the branch must emit the throw alone rather than calling
+      the throwing thunk's [std::any] result. *)
   Inductive tagged : bool -> Type :=
   | TN : nat -> tagged true
   | TL : list nat -> tagged false.

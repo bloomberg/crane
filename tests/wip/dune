@@ -188,17 +188,6 @@
   (deps hkt_class_param.t.exe)
   (action (run ./hkt_class_param.t.exe))))
 
-(subdir impossible_branch_thunk_call
- (rule
-  (targets impossible_branch_thunk_call.t.exe)
-  (deps ImpossibleBranchThunkCall.vo impossible_branch_thunk_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} impossible_branch_thunk_call.t.exe impossible_branch_thunk_call.cpp impossible_branch_thunk_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps impossible_branch_thunk_call.t.exe)
-  (action (run ./impossible_branch_thunk_call.t.exe))))
-
 (subdir list_app_stack_overflow
  (rule
   (targets list_app_stack_overflow.t.exe)

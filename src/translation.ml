@@ -3827,6 +3827,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     end
     else result
   | MLapp (MLmagic t, args) -> gen_expr ?expected_ty env (MLapp (t, args))
+  | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
+    (* Applying an absurd head — the eliminator of a branch that the indices
+       rule out.  The application is itself unreachable, so emit the throw
+       alone: calling it would apply the throwing thunk's [std::any] result
+       as though it were a function. *)
+    gen_expr ?expected_ty env absurd
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
