@@ -2312,6 +2312,23 @@ let strip_ns_tglob = function
   | Tnamespace (_, (Tglob _ as inner)) -> inner
   | t -> t
 
+(** Strip self-referential [Tnamespace] wrappers, at every depth.
+
+    Flat single-file extraction sometimes wraps a module-local inductive in
+    [Tnamespace (g, Tglob (g, ...))], which renders as the bogus
+    [typename G::G<...>].  Unwrapping those leaves a well-formed type; every
+    other namespace qualifier is preserved. *)
+let rec clean_self_ns t =
+  match t with
+  | Tnamespace (ns_r, Tglob (g_r, args, gns)) when GlobRef.CanOrd.equal ns_r g_r
+    ->
+    clean_self_ns (Tglob (g_r, args, gns))
+  | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
+  | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
+  | Tref t -> Tref (clean_self_ns t)
+  | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
+  | t -> t
+
 (** Element-erase a higher-kinded carrier at the ML level, mirroring what
     {!convert_ml_type_to_cpp_type} does for the C++ side: [Opt nat] denotes
     [Opt<std::any>], so a pattern variable bound from it is a [std::any]. *)
@@ -2743,6 +2760,40 @@ and save_erased_env () =
 and restore_erased_env (saved_env, saved_type_env) =
   tctx.cpp_erased_env <- saved_env;
   tctx.cpp_erased_type_env <- saved_type_env
+
+(** The type arguments the enclosing function's return type supplies for the
+    inductive [ind], when it names [ind] with exactly [arity] of them.
+
+    A constructor call for an inductive with dependent parameters has to
+    instantiate the same template its caller expects, and the return type is
+    where that expectation is recorded.  Namespace and [shared_ptr] wrappers
+    are seen through, as are typedefs, which may name [ind] only indirectly.
+    [None] when the return type says nothing about [ind]. *)
+and expected_type_args_from_return env ind ~arity =
+  let rec go cpp_ty =
+    match cpp_ty with
+    | Tglob (r, tys, _)
+      when Names.GlobRef.CanOrd.equal ind r && List.length tys = arity ->
+      Some tys
+    | Tnamespace (_, inner) | Tshared_ptr inner -> go inner
+    | Tglob (GlobRef.ConstRef kn, _, _) -> (
+      match Table.lookup_typedef_unchecked kn with
+      | Some ml_ty ->
+        go (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty)
+      | None -> None )
+    | _ -> None
+  in
+  match tctx.current_cpp_return_type with Some rt -> go rt | None -> None
+
+(** Collapse the erased parts of a type to [std::any]: the type itself when it
+    resolves to [std::any], and, structurally, a function type's arguments and
+    result.  Lets an expected type argument be compared against a computed one
+    on equal terms, the computed side already being erased. *)
+and normalize_erased_types = function
+  | t when resolves_to_any_type t -> Tany
+  | Tfun (ps, r) ->
+    Tfun (List.map normalize_erased_types ps, normalize_erased_types r)
+  | t -> t
 
 and build_template_params env tvars tys =
   (* Template params emitted at expression/function-call sites are public API
@@ -4535,17 +4586,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       else begin
         let tvars = get_current_type_vars () in
         let ct = convert_ml_type_to_cpp_type env tvars ml_ft in
-        let rec clean_self_ns t =
-          match t with
-          | Tnamespace (ns_r, Tglob (g_r, args, gns))
-            when GlobRef.CanOrd.equal ns_r g_r ->
-            clean_self_ns (Tglob (g_r, args, gns))
-          | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
-          | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
-          | Tref t -> Tref (clean_self_ns t)
-          | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
-          | t -> t
-        in
         let clean_ct = clean_self_ns ct in
         match strip_ns_tglob clean_ct with
         | Tglob (g, [elem_ty], _)
@@ -4722,33 +4762,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           let temps =
             if Table.has_dependent_params n then
               let expected_temps =
-                let rec try_extract_temps cpp_ty =
-                  match cpp_ty with
-                  | Tglob (ret_r, ret_tys, _)
-                    when Names.GlobRef.CanOrd.equal n ret_r
-                         && List.length ret_tys = List.length temps ->
-                    Some ret_tys
-                  | Tnamespace (_, inner) -> try_extract_temps inner
-                  | Tshared_ptr inner -> try_extract_temps inner
-                  | Tglob (GlobRef.ConstRef kn, _, _) ->
-                    (match Table.lookup_typedef_unchecked kn with
-                     | Some ml_ty ->
-                       let tvars = get_current_type_vars () in
-                       let resolved = convert_ml_type_to_cpp_type env tvars ml_ty in
-                       try_extract_temps resolved
-                     | None -> None)
-                  | _ -> None
-                in
-                match tctx.current_cpp_return_type with
-                | Some rt -> try_extract_temps rt
-                | None -> None
-              in
-              let normalize_erased_types =
-                let rec go = function
-                  | t when resolves_to_any_type t -> Tany
-                  | Tfun (ps, r) -> Tfun (List.map go ps, go r)
-                  | t -> t
-                in go
+                expected_type_args_from_return env n
+                  ~arity:(List.length temps)
               in
               match expected_temps with
               | Some exp_tys ->
@@ -4928,34 +4943,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys_filt in
               if Table.has_dependent_params n then
-            let rec try_extract_temps cpp_ty =
-              match cpp_ty with
-              | Tglob (ret_r, ret_tys, _)
-                when Names.GlobRef.CanOrd.equal n ret_r
-                     && List.length ret_tys = List.length temps ->
-                Some ret_tys
-              | Tnamespace (_, inner) -> try_extract_temps inner
-              | Tshared_ptr inner -> try_extract_temps inner
-              | Tglob (GlobRef.ConstRef kn, _, _) ->
-                (match Table.lookup_typedef_unchecked kn with
-                 | Some ml_ty ->
-                   let tvars = get_current_type_vars () in
-                   let resolved = convert_ml_type_to_cpp_type env tvars ml_ty in
-                   try_extract_temps resolved
-                 | None -> None)
-              | _ -> None
-            in
             let expected_temps =
-              match tctx.current_cpp_return_type with
-              | Some rt -> try_extract_temps rt
-              | None -> None
-            in
-            let normalize_erased_types =
-              let rec go = function
-                | t when resolves_to_any_type t -> Tany
-                | Tfun (ps, r) -> Tfun (List.map go ps, go r)
-                | t -> t
-              in go
+              expected_type_args_from_return env n ~arity:(List.length temps)
             in
             match expected_temps with
             | Some exp_tys ->
@@ -6552,21 +6541,6 @@ and eta_fun env f args =
           in
           CPPconverting_ctor (cpp_ty, [inner])
         | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
-          (* Flat single-file extraction sometimes wraps a module-local
-             inductive in a self-referential [Tnamespace(g, Tglob(g,..))]
-             (renders as the bogus [typename G::...]).  Strip such self-wraps
-             recursively so the concrete callee element type is well-formed. *)
-          let rec clean_self_ns t =
-            match t with
-            | Tnamespace (ns_r, Tglob (g_r, args, gns))
-              when GlobRef.CanOrd.equal ns_r g_r ->
-              clean_self_ns (Tglob (g_r, args, gns))
-            | Tnamespace (ns_r, inner) -> Tnamespace (ns_r, clean_self_ns inner)
-            | Tglob (gr, args, ns) -> Tglob (gr, List.map clean_self_ns args, ns)
-            | Tref t -> Tref (clean_self_ns t)
-            | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
-            | t -> t
-          in
           let clean_cpp_ty = clean_self_ns cpp_ty in
           (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
              with fully-erased elements at runtime ([deque<pair<any,any>>]).
