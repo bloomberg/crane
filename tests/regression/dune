@@ -7444,3 +7444,14 @@
   (alias runtest)
   (deps dep_return_any_cast.t.exe)
   (action (run ./dep_return_any_cast.t.exe))))
+
+(subdir dep_type_fn_any_cast
+ (rule
+  (targets dep_type_fn_any_cast.t.exe)
+  (deps DepTypeFnAnyCast.vo dep_type_fn_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_type_fn_any_cast.t.exe dep_type_fn_any_cast.cpp dep_type_fn_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_type_fn_any_cast.t.exe)
+  (action (run ./dep_type_fn_any_cast.t.exe))))
