@@ -1,16 +1,11 @@
-#ifndef INCLUDED_STM
-#define INCLUDED_STM
+#ifndef INCLUDED_LIST_FOLD_LEFT_STACK_OVERFLOW
+#define INCLUDED_LIST_FOLD_LEFT_STACK_OVERFLOW
 
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
-#include <stm_adapter.h>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -114,69 +109,30 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+  T1 fold_left(F0 &&f, T1 a0) const {
     const List *_loop_self = this;
-    List<A> _loop_m = std::move(m);
+    T1 _loop_a0 = std::move(a0);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
-        break;
+        return _loop_a0;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
-        _loop_self = crane_raw(a1);
-        continue;
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
       }
     }
-    return std::move(*_head);
   }
 };
 
-struct STMDefs {
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, T1 &>
-  static void modifyTVar(stm::TVar<T1> a, F1 &&f);
+struct ListFoldLeftStackOverflow {
+  /// A tail-recursive builder, loopified below, so that constructing the
+  /// list itself is stack-safe: only the generated List method under test
+  /// can overflow.
+  static List<uint64_t> bld(uint64_t n, List<uint64_t> acc);
+  static uint64_t run(uint64_t k);
 };
 
-struct stmtest {
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, T1 &>
-  static T1 readOrRetry(stm::TVar<T1> tv, F1 &&ok) {
-    T1 x = stm::readTVar(tv);
-    if (ok(x)) {
-      return x;
-    } else {
-      return stm::retry<T1>();
-    }
-  }
-
-  static uint64_t stm_basic_counter(std::monostate _x);
-  static uint64_t io_basic_counter();
-  static uint64_t stm_inc(uint64_t x);
-  static uint64_t io_inc(uint64_t x);
-  static uint64_t stm_add_self(uint64_t x);
-  static uint64_t io_add_self(uint64_t x);
-  static void stm_enqueue(stm::TVar<List<uint64_t>> q, uint64_t x);
-  static uint64_t stm_dequeue(stm::TVar<List<uint64_t>> q);
-  static uint64_t stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt);
-  static uint64_t stm_queue_roundtrip(uint64_t x);
-  static uint64_t io_queue_roundtrip(uint64_t x);
-  static uint64_t stm_orElse_retry_example(std::monostate _x);
-  static uint64_t io_orElse_retry_example();
-};
-
-template <typename T1, typename F1>
-  requires std::is_invocable_r_v<T1, F1 &, T1 &>
-void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
-  T1 val = stm::readTVar(a);
-  stm::writeTVar(a, f(val));
-  return;
-}
-
-#endif // INCLUDED_STM
+#endif // INCLUDED_LIST_FOLD_LEFT_STACK_OVERFLOW

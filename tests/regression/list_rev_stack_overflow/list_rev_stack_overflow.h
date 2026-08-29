@@ -1,6 +1,7 @@
-#ifndef INCLUDED_LIST_APP_STACK_OVERFLOW
-#define INCLUDED_LIST_APP_STACK_OVERFLOW
+#ifndef INCLUDED_LIST_REV_STACK_OVERFLOW
+#define INCLUDED_LIST_REV_STACK_OVERFLOW
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -111,25 +112,37 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return a0;
-    } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return a2->template fold_left<T1>(f, f(a0, a1));
+    const List *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
     }
   }
 
-  List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+  List<A> rev_append(List<A> l_) const {
+    const List *_loop_self = this;
+    List<A> _loop_l_ = std::move(l_);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_l_;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a1);
+        _loop_l_ = List<A>::cons(a0, std::move(_loop_l_));
+      }
     }
   }
 };
 
-struct ListAppStackOverflow {
+struct ListRevStackOverflow {
   /// A tail-recursive builder, loopified below, so that constructing the
   /// list itself is stack-safe: only the generated List method under test
   /// can overflow.
@@ -137,4 +150,4 @@ struct ListAppStackOverflow {
   static uint64_t run(uint64_t k);
 };
 
-#endif // INCLUDED_LIST_APP_STACK_OVERFLOW
+#endif // INCLUDED_LIST_REV_STACK_OVERFLOW

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COTREE
 #define INCLUDED_COTREE
 
+#include "crane_fn.h"
 #include "lazy.h"
 #include "small_vector.h"
 #include <any>
@@ -113,12 +114,25 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &>
   List<T1> map(F0 &&f) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<T1>::cons(f(a0), a1->template map<T1>(f));
+    std::shared_ptr<List<T1>> _head{};
+    std::shared_ptr<List<T1>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -216,15 +230,34 @@ struct Cotree {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     cotree<T1> comap_cotree(F0 &&g) const {
-      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
-      return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
-        return cotree<T1>::conode(g(a0),
-                                  comap<cotree<A>, cotree<T1>>(
-                                      [=](cotree<A> _x0) mutable -> cotree<T1> {
-                                        return _x0.template comap_cotree<T1>(g);
-                                      },
-                                      *a1));
-      });
+      const cotree *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const cotree *_self;
+      };
+
+      using _Frame = std::variant<_Enter>;
+      cotree<T1> _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self});
+      /// Loopified comap_cotree: _Enter.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const cotree *_self = _f._self;
+        const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(_self.v());
+        _result = cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+          return cotree<T1>::conode(
+              g(a0), comap<cotree<A>, cotree<T1>>(
+                         [=](cotree<A> _x0) mutable -> cotree<T1> {
+                           return _x0.template comap_cotree<T1>(g);
+                         },
+                         *a1));
+        });
+      }
+      return _result;
     }
   };
 

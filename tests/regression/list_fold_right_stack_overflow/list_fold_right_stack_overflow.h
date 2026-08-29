@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LIST_FOLD_RIGHT_STACK_OVERFLOW
 #define INCLUDED_LIST_FOLD_RIGHT_STACK_OVERFLOW
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -111,12 +112,43 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return a0;
-    } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return f(a1, a2->template fold_right<T1>(f, a0));
+    const List *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+
+    /// _Resume_Cons: saves [a1], resumes after recursive call with _result.
+    struct _Resume_Cons {
+      std::decay_t<A> a1;
+    };
+
+    using _Frame = std::variant<_Enter, _Resume_Cons>;
+    T1 _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified fold_right: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = a0;
+        } else {
+          const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{a1});
+          _stack.emplace_back(_Enter{crane_raw(a2)});
+        }
+      } else {
+        auto _f = std::move(std::get<_Resume_Cons>(_frame));
+        _result = f(std::move(_f.a1), std::move(_result));
+      }
     }
+    return _result;
   }
 };
 

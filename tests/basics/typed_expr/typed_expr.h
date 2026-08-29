@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPED_EXPR
 #define INCLUDED_TYPED_EXPR
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -130,29 +131,69 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  std::any eval(Ty) const {
-    if (std::holds_alternative<typename Expr::ENat>(this->v())) {
-      const auto &[a0] = std::get<typename Expr::ENat>(this->v());
-      return a0;
-    } else if (std::holds_alternative<typename Expr::EBool>(this->v())) {
-      const auto &[a0] = std::get<typename Expr::EBool>(this->v());
-      return a0;
-    } else if (std::holds_alternative<typename Expr::EAdd>(this->v())) {
-      const auto &[a0, a1] = std::get<typename Expr::EAdd>(this->v());
-      return (std::any_cast<uint64_t>(a0->eval(Ty::TNAT)) +
-              std::any_cast<uint64_t>(a1->eval(Ty::TNAT)));
-    } else if (std::holds_alternative<typename Expr::EEq>(this->v())) {
-      const auto &[a0, a1] = std::get<typename Expr::EEq>(this->v());
-      return std::any_cast<uint64_t>(a0->eval(Ty::TNAT)) ==
-             std::any_cast<uint64_t>(a1->eval(Ty::TNAT));
-    } else {
-      const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(this->v());
-      if (std::any_cast<bool>(a1->eval(Ty::TBOOL))) {
-        return a2->eval(t);
+  std::any eval(Ty _x) const {
+    const Expr *_self = this;
+
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const Expr *_self;
+      Ty _x;
+    };
+
+    /// _Cont_EIf: saves [a2, a3, t], resumes after recursive call, then
+    /// processes rest.
+    struct _Cont_EIf {
+      std::shared_ptr<Expr> a2;
+      std::shared_ptr<Expr> a3;
+      Ty t;
+    };
+
+    using _Frame = std::variant<_Enter, _Cont_EIf>;
+    std::any _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self, _x});
+    /// Loopified eval: _Enter -> _Cont_EIf.
+    while (!_stack.empty()) {
+      _Frame _frame = std::move(_stack.back());
+      _stack.pop_back();
+      if (std::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(std::get<_Enter>(_frame));
+        const Expr *_self = _f._self;
+        Ty _x = _f._x;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename Expr::ENat>(_sv.v())) {
+          const auto &[a0] = std::get<typename Expr::ENat>(_sv.v());
+          _result = std::move(a0);
+        } else if (std::holds_alternative<typename Expr::EBool>(_sv.v())) {
+          const auto &[a0] = std::get<typename Expr::EBool>(_sv.v());
+          _result = std::move(a0);
+        } else if (std::holds_alternative<typename Expr::EAdd>(_sv.v())) {
+          const auto &[a0, a1] = std::get<typename Expr::EAdd>(_sv.v());
+          _result = (std::any_cast<uint64_t>(a0->eval(Ty::TNAT)) +
+                     std::any_cast<uint64_t>(a1->eval(Ty::TNAT)));
+        } else if (std::holds_alternative<typename Expr::EEq>(_sv.v())) {
+          const auto &[a0, a1] = std::get<typename Expr::EEq>(_sv.v());
+          _result = std::any_cast<uint64_t>(a0->eval(Ty::TNAT)) ==
+                    std::any_cast<uint64_t>(a1->eval(Ty::TNAT));
+        } else {
+          const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(_sv.v());
+          _stack.emplace_back(_Cont_EIf{a2, a3, t});
+          _stack.emplace_back(_Enter{crane_raw(a1), Ty::TBOOL});
+        }
       } else {
-        return a3->eval(t);
+        auto _f = std::move(std::get<_Cont_EIf>(_frame));
+        std::shared_ptr<Expr> a2 = std::move(_f.a2);
+        std::shared_ptr<Expr> a3 = std::move(_f.a3);
+        Ty t = _f.t;
+        std::any _rc1 = std::move(_result);
+        if (_rc1) {
+          _stack.emplace_back(_Enter{crane_raw(a2), t});
+        } else {
+          _stack.emplace_back(_Enter{crane_raw(a3), t});
+        }
       }
     }
+    return _result;
   }
 };
 

@@ -1,6 +1,7 @@
-#ifndef INCLUDED_LIST_REV_STACK_OVERFLOW
-#define INCLUDED_LIST_REV_STACK_OVERFLOW
+#ifndef INCLUDED_LIST_APP_STACK_OVERFLOW
+#define INCLUDED_LIST_APP_STACK_OVERFLOW
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -111,34 +112,45 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
   T1 fold_left(F0 &&f, T1 a0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return a0;
-    } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return a2->template fold_left<T1>(f, f(a0, a1));
-    }
-  }
-
-  List<A> rev() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return List<A>::nil();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return a1->rev().app(List<A>::cons(a0, List<A>::nil()));
+    const List *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
     }
   }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
-struct ListRevStackOverflow {
+struct ListAppStackOverflow {
   /// A tail-recursive builder, loopified below, so that constructing the
   /// list itself is stack-safe: only the generated List method under test
   /// can overflow.
@@ -146,4 +158,4 @@ struct ListRevStackOverflow {
   static uint64_t run(uint64_t k);
 };
 
-#endif // INCLUDED_LIST_REV_STACK_OVERFLOW
+#endif // INCLUDED_LIST_APP_STACK_OVERFLOW

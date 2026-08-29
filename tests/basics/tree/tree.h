@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TREE
 #define INCLUDED_TREE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -69,26 +70,54 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat max(Nat m) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return m;
-    } else {
-      auto &[a0] = std::get<typename Nat::S>(this->v());
-      if (std::holds_alternative<typename Nat::O>(m.v_mut())) {
-        return *this;
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const Nat *_loop_self = this;
+    Nat _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        break;
       } else {
-        auto &[a00] = std::get<typename Nat::S>(m.v_mut());
-        return Nat::s(a0->max(*a00));
+        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+        if (std::holds_alternative<typename Nat::O>(_loop_m.v_mut())) {
+          *_write = std::make_shared<Nat>(*_loop_self);
+          break;
+        } else {
+          auto &[a00] = std::get<typename Nat::S>(_loop_m.v_mut());
+          auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+          *_write = std::move(_cell);
+          _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+          _loop_self = crane_raw(a0);
+          _loop_m = Nat(*a00);
+          continue;
+        }
       }
     }
+    return std::move(*_head);
   }
 
   Nat add(Nat m) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0] = std::get<typename Nat::S>(this->v());
-      return Nat::s(a0->add(std::move(m)));
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const Nat *_loop_self = this;
+    Nat _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        _loop_self = crane_raw(a0);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -192,12 +221,26 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return List<A>::cons(a0, a1->app(std::move(m)));
+    std::shared_ptr<List<A>> _head{};
+    std::shared_ptr<List<A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<A> _loop_m = std::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LEVENSHTEIN
 #define INCLUDED_LEVENSHTEIN
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
@@ -68,15 +69,21 @@ public:
   const variant_t &v() const { return v_; }
 
   Bool0 leb(const Nat &m) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return Bool0::TRUE_;
-    } else {
-      const auto &[a0] = std::get<typename Nat::S>(this->v());
-      if (std::holds_alternative<typename Nat::O>(m.v())) {
-        return Bool0::FALSE_;
+    const Nat *_loop_self = this;
+    const Nat *_loop_m = &m;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
+        return Bool0::TRUE_;
       } else {
-        const auto &[a00] = std::get<typename Nat::S>(m.v());
-        return a0->leb(*a00);
+        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
+        if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
+          return Bool0::FALSE_;
+        } else {
+          const auto &[a00] = std::get<typename Nat::S>(_loop_m->v());
+          _loop_self = crane_raw(a0);
+          _loop_m = crane_raw(a00);
+        }
       }
     }
   }
@@ -272,21 +279,47 @@ public:
   const variant_t &v() const { return v_; }
 
   String append(String s2) const {
-    if (std::holds_alternative<typename String::EmptyString>(this->v())) {
-      return s2;
-    } else {
-      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return String::string0(a0, a1->append(std::move(s2)));
+    std::shared_ptr<String> _head{};
+    std::shared_ptr<String> *_write = &_head;
+    const String *_loop_self = this;
+    String _loop_s2 = std::move(s2);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+        *_write = std::make_shared<String>(std::move(_loop_s2));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+        auto _cell =
+            std::make_shared<String>(typename String::String0(a0, nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 
   Nat length() const {
-    if (std::holds_alternative<typename String::EmptyString>(this->v())) {
-      return Nat::o();
-    } else {
-      const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-      return Nat::s(a1->length());
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const String *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+        *_write = std::make_shared<Nat>(Nat::o());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
     }
+    return std::move(*_head);
   }
 };
 
@@ -514,21 +547,79 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
-                 const Nat &) const {
-      if (std::holds_alternative<typename chain::Empty>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
-        const auto &[a0, s0, t0, n0, a4] =
-            std::get<typename chain::Skip>(this->v());
-        return f0(a0, s0, t0, n0, *a4,
-                  a4->template chain_rec<T1>(f, f0, f1, s0, t0, n0));
-      } else {
-        const auto &[s0, t0, u0, n0, a4, a5] =
-            std::get<typename chain::Change>(this->v());
-        return f1(s0, t0, u0, n0, a4, *a5,
-                  a5->template chain_rec<T1>(f, f0, f1, t0, u0, n0));
+    T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
+                 const Nat &_x1) const {
+      const chain *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const chain *_self;
+        String _x;
+        String _x0;
+        Nat _x1;
+      };
+
+      /// _Resume_Change: saves [a5, a4, n0, u0, t0, s0], resumes after
+      /// recursive call with _result.
+      struct _Resume_Change {
+        chain a5;
+        edit a4;
+        Nat n0;
+        String u0;
+        String t0;
+        String s0;
+      };
+
+      /// _Resume_Skip: saves [a4, n0, t0, s0, a0], resumes after recursive call
+      /// with _result.
+      struct _Resume_Skip {
+        chain a4;
+        Nat n0;
+        String t0;
+        String s0;
+        Ascii a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Change, _Resume_Skip>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
+      /// Loopified chain_rec: _Enter -> _Resume_Change -> _Resume_Skip.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const chain *_self = _f._self;
+          const String &_x = std::move(_f._x);
+          const String &_x0 = std::move(_f._x0);
+          const Nat &_x1 = std::move(_f._x1);
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
+            const auto &[a0, s0, t0, n0, a4] =
+                std::get<typename chain::Skip>(_sv.v());
+            _stack.emplace_back(_Resume_Skip{*a4, n0, t0, s0, a0});
+            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
+          } else {
+            const auto &[s0, t0, u0, n0, a4, a5] =
+                std::get<typename chain::Change>(_sv.v());
+            _stack.emplace_back(_Resume_Change{*a5, a4, n0, u0, t0, s0});
+            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
+          }
+        } else if (std::holds_alternative<_Resume_Change>(_frame)) {
+          auto _f = std::move(std::get<_Resume_Change>(_frame));
+          _result = f1(std::move(_f.s0), std::move(_f.t0), std::move(_f.u0),
+                       std::move(_f.n0), std::move(_f.a4), std::move(_f.a5),
+                       std::move(_result));
+        } else {
+          auto _f = std::move(std::get<_Resume_Skip>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.s0), std::move(_f.t0),
+                       std::move(_f.n0), std::move(_f.a4), std::move(_result));
+        }
       }
+      return _result;
     }
 
     template <typename T1, typename F1, typename F2>
@@ -536,21 +627,79 @@ struct Levenshtein {
                                      Nat &, chain &, T1 &> &&
                std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
                                      Nat &, edit &, chain &, T1 &>
-    T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &, const String &,
-                  const Nat &) const {
-      if (std::holds_alternative<typename chain::Empty>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename chain::Skip>(this->v())) {
-        const auto &[a0, s0, t0, n0, a4] =
-            std::get<typename chain::Skip>(this->v());
-        return f0(a0, s0, t0, n0, *a4,
-                  a4->template chain_rect<T1>(f, f0, f1, s0, t0, n0));
-      } else {
-        const auto &[s0, t0, u0, n0, a4, a5] =
-            std::get<typename chain::Change>(this->v());
-        return f1(s0, t0, u0, n0, a4, *a5,
-                  a5->template chain_rect<T1>(f, f0, f1, t0, u0, n0));
+    T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
+                  const Nat &_x1) const {
+      const chain *_self = this;
+
+      /// _Enter: captures varying parameters for each recursive call.
+      struct _Enter {
+        const chain *_self;
+        String _x;
+        String _x0;
+        Nat _x1;
+      };
+
+      /// _Resume_Change: saves [a5, a4, n0, u0, t0, s0], resumes after
+      /// recursive call with _result.
+      struct _Resume_Change {
+        chain a5;
+        edit a4;
+        Nat n0;
+        String u0;
+        String t0;
+        String s0;
+      };
+
+      /// _Resume_Skip: saves [a4, n0, t0, s0, a0], resumes after recursive call
+      /// with _result.
+      struct _Resume_Skip {
+        chain a4;
+        Nat n0;
+        String t0;
+        String s0;
+        Ascii a0;
+      };
+
+      using _Frame = std::variant<_Enter, _Resume_Change, _Resume_Skip>;
+      T1 _result{};
+      crane::small_vector<_Frame> _stack;
+      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
+      /// Loopified chain_rect: _Enter -> _Resume_Change -> _Resume_Skip.
+      while (!_stack.empty()) {
+        _Frame _frame = std::move(_stack.back());
+        _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          const chain *_self = _f._self;
+          const String &_x = std::move(_f._x);
+          const String &_x0 = std::move(_f._x0);
+          const Nat &_x1 = std::move(_f._x1);
+          auto &&_sv = *_self;
+          if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
+            _result = f;
+          } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
+            const auto &[a0, s0, t0, n0, a4] =
+                std::get<typename chain::Skip>(_sv.v());
+            _stack.emplace_back(_Resume_Skip{*a4, n0, t0, s0, a0});
+            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
+          } else {
+            const auto &[s0, t0, u0, n0, a4, a5] =
+                std::get<typename chain::Change>(_sv.v());
+            _stack.emplace_back(_Resume_Change{*a5, a4, n0, u0, t0, s0});
+            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
+          }
+        } else if (std::holds_alternative<_Resume_Change>(_frame)) {
+          auto _f = std::move(std::get<_Resume_Change>(_frame));
+          _result = f1(std::move(_f.s0), std::move(_f.t0), std::move(_f.u0),
+                       std::move(_f.n0), std::move(_f.a4), std::move(_f.a5),
+                       std::move(_result));
+        } else {
+          auto _f = std::move(std::get<_Resume_Skip>(_frame));
+          _result = f0(std::move(_f.a0), std::move(_f.s0), std::move(_f.t0),
+                       std::move(_f.n0), std::move(_f.a4), std::move(_result));
+        }
       }
+      return _result;
     }
   };
 

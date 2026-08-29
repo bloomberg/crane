@@ -1,12 +1,12 @@
 
 
-(subdir assoc_type_two_swapped
+(subdir list_fold_right_stack_overflow
  (rule
-  (targets assoc_type_two_swapped.t.exe)
-  (deps AssocTypeTwoSwapped.vo assoc_type_two_swapped.t.cpp (source_tree .))
+  (targets list_fold_right_stack_overflow.t.exe)
+  (deps ListFoldRightStackOverflow.vo list_fold_right_stack_overflow.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_two_swapped.t.exe assoc_type_two_swapped.cpp assoc_type_two_swapped.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_fold_right_stack_overflow.t.exe list_fold_right_stack_overflow.cpp list_fold_right_stack_overflow.t.cpp)))
  (rule
   (alias runtest)
-  (deps assoc_type_two_swapped.t.exe)
-  (action (run ./assoc_type_two_swapped.t.exe))))
+  (deps list_fold_right_stack_overflow.t.exe)
+  (action (run ./list_fold_right_stack_overflow.t.exe))))

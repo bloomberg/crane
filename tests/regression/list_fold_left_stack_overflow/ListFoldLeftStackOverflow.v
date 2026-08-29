@@ -6,11 +6,12 @@ Require Import Crane.Mapping.NatIntStd.
 
 Module ListFoldLeftStackOverflow.
   (** The [List] methods Crane generates for the mapped stdlib list are
-      emitted as plain non-tail recursion, one C++ stack frame per cell.  On a
-      200 000-element list [List<A>::fold_left] overflows the stack (ASan reports
-      [stack-overflow]).  Unlike a user [Fixpoint], these are generated members
-      of the mapped [List] type, so [Crane Loopify] cannot be applied to
-      them. *)
+      structural recursion over the list: emitted as plain recursion they
+      take one C++ stack frame per cell, and [List<A>::fold_left] blows the
+      stack on a 200 000-element list.  Unlike a user [Fixpoint] they are
+      generated members of the mapped [List] type, with no name to hang a
+      [Crane Loopify] on, so they are loopified by default.
+  *)
   (** A tail-recursive builder, loopified below, so that constructing the
       list itself is stack-safe: only the generated [List] method under test
       can overflow. *)

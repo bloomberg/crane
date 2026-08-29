@@ -1683,14 +1683,14 @@ let loopify_table = Summary.ref empty_loopify_table ~name:"CraneExtrLoopify"
 
 (** Determines whether a function should be loopified: forced on/off per
     function, falling back to the global [Crane Loopify] setting. *)
-let should_loopify r =
+let should_loopify ?default r =
   let yes, no = !loopify_table in
   if Refset'.mem r yes then
     true
   else if Refset'.mem r no then
     false
   else
-    loopify ()
+    match default with Some d -> d | None -> loopify ()
 
 let add_loopify_entries b l =
   let f b = if b then Refset'.add else Refset'.remove in

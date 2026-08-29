@@ -1,10 +1,12 @@
-#ifndef INCLUDED_LIST_LENGTH_STACK_OVERFLOW
-#define INCLUDED_LIST_LENGTH_STACK_OVERFLOW
+#ifndef INCLUDED_LIST_MAP_STACK_OVERFLOW
+#define INCLUDED_LIST_MAP_STACK_OVERFLOW
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -107,17 +109,49 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  uint64_t length() const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return UINT64_C(0);
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return (a1->length() + 1);
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+  T1 fold_left(F0 &&f, T1 a0) const {
+    const List *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
     }
+  }
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, A &>
+  List<T1> map(F0 &&f) const {
+    std::shared_ptr<List<T1>> _head{};
+    std::shared_ptr<List<T1>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell =
+            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
+    }
+    return std::move(*_head);
   }
 };
 
-struct ListLengthStackOverflow {
+struct ListMapStackOverflow {
   /// A tail-recursive builder, loopified below, so that constructing the
   /// list itself is stack-safe: only the generated List method under test
   /// can overflow.
@@ -125,4 +159,4 @@ struct ListLengthStackOverflow {
   static uint64_t run(uint64_t k);
 };
 
-#endif // INCLUDED_LIST_LENGTH_STACK_OVERFLOW
+#endif // INCLUDED_LIST_MAP_STACK_OVERFLOW

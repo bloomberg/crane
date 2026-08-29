@@ -634,9 +634,11 @@ val loopify_diagnostics : unit -> bool
     ([Set Crane Loopify Strict]). *)
 val loopify_strict : unit -> bool
 
-(** Check whether a specific function should be loopified (per-function override
-    first, then global setting). *)
-val should_loopify : GlobRef.t -> bool
+(** Check whether a specific function should be loopified: a per-function
+    override ([Crane Loopify] / [Crane NoLoopify]) first, then [default], then
+    the global setting.  Pass [~default:true] for code the user cannot name in
+    an override, such as the methods generated on an inductive. *)
+val should_loopify : ?default:bool -> GlobRef.t -> bool
 
 (** Declaration currently being translated; consulted by {!reuse_loopify_ok}. *)
 val current_decl_ref : GlobRef.t option ref

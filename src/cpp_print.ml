@@ -3701,6 +3701,10 @@ let rec decl_globref = function
 let maybe_loopify decl =
   let should =
     match decl_globref decl with
+    (* The methods generated on an inductive are structural recursion over
+       that inductive, one C++ frame per cell, and the user has no name to
+       hang [Crane Loopify] on.  Loopify them by default. *)
+    | Some (GlobRef.IndRef _ as r) -> Table.should_loopify ~default:true r
     | Some r -> Table.should_loopify r
     | None -> Table.loopify ()
   in
