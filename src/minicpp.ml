@@ -491,6 +491,35 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tdecay t -> Tdecay (map_cpp_type f t)
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
 
+(** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
+    nested inside it.
+
+    Deliberately limited to {e containment} questions — "is there a
+    [shared_ptr] anywhere in here".  A predicate whose answer genuinely differs
+    per constructor (whether a type is literal, whether it is worth moving) is
+    clearer as an explicit match, and should stay one. *)
+let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
+  p ty
+  ||
+  match ty with
+  | Tglob (_, tys, _) | Tid (_, tys) | Tid_external (_, tys) | Tvariant tys ->
+    List.exists (exists_cpp_type p) tys
+  | Tfun (dom, cod) ->
+    List.exists (exists_cpp_type p) dom || exists_cpp_type p cod
+  | Tmod (_, t) | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
+  | Tqualified (t, _) | Tdecay t ->
+    exists_cpp_type p t
+  | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
+  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
+  | Tauto ->
+    false
+
+(** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply — as the
+    element of a container, a function's argument or result, or the type
+    itself. *)
+let contains_shared_ptr ty =
+  exists_cpp_type (function Tshared_ptr _ -> true | _ -> false) ty
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent. *)

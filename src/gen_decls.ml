@@ -3498,24 +3498,6 @@ let replace_this_in_lambdas self_type stmts =
     let self_binding = Sasgn (self_id, self_ty, self_expr) in
     self_binding :: List.map walk_stmt stmts
 
-(** Check if a C++ type contains [Tshared_ptr] anywhere in its structure.
-
-    Recurses through [Tref], [Tmod], [Tshared_ptr], [Tptr], [Tid], [Tglob],
-    [Tnamespace], and [Tfun] to find any nested [Tshared_ptr].
-
-    Used in method generation to gate [replace_return_this_stmt]: the
-    [return this] to [return shared_from_this()] transformation is only
-    correct when the return type actually wraps the receiver in
-    [shared_ptr] (e.g., [shared_ptr<T>] or [pair<shared_ptr<T>, V>]). *)
-let rec contains_shared_ptr = function
-  | Tshared_ptr _ -> true
-  | Tref t | Tmod (_, t) | Tptr t -> contains_shared_ptr t
-  | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) ->
-    List.exists contains_shared_ptr args
-  | Tfun (args, ret) ->
-    List.exists contains_shared_ptr args || contains_shared_ptr ret
-  | _ -> false
-
 (** Check if any expression or statement contains [CPPshared_from_this]. *)
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true

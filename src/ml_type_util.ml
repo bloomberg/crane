@@ -692,20 +692,6 @@ let is_prod_ml_type ty =
   | Miniml.Tglob (r, _, _) -> is_prod_global r
   | _ -> false
 
-(** Does a C++ type mention [shared_ptr] anywhere in its structure?
-    Used to decide whether a field-type / bare-type mismatch in pattern
-    matching is real (pointer wrapping) vs. superficial (namespace). *)
-let rec contains_shared_ptr = function
-  | Tshared_ptr _ -> true
-  | Tref t | Tmod (_, t) | Tptr t -> contains_shared_ptr t
-  | Tid (_, args) | Tid_external (_, args) | Tglob (_, args, _) ->
-    List.exists contains_shared_ptr args
-  | Tnamespace (_, t) -> contains_shared_ptr t
-  | Tfun (args, ret) ->
-    List.exists contains_shared_ptr args
-    || contains_shared_ptr ret
-  | _ -> false
-
 (* Rocq BinNums.positive constructor indices (1-based): xI = 2n+1, xO = 2n, xH = 1 *)
 let positive_xI_idx = 1
 let positive_xO_idx = 2

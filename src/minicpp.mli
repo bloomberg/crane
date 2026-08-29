@@ -476,6 +476,25 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
+(** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
+    nested inside it.
+
+    Deliberately limited to {e containment} questions — "is there a
+    [shared_ptr] anywhere in here".  A predicate whose answer genuinely differs
+    per constructor (whether a type is literal, whether it is worth moving) is
+    clearer as an explicit match, and should stay one.
+    @param p the predicate tested at each node
+    @param ty the type to search
+    @return whether any node satisfies [p] *)
+val exists_cpp_type : (cpp_type -> bool) -> cpp_type -> bool
+
+(** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply — as the
+    element of a container, a function's argument or result, or the type
+    itself.
+    @param ty the type to search
+    @return whether a [Tshared_ptr] node occurs in [ty] *)
+val contains_shared_ptr : cpp_type -> bool
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent.

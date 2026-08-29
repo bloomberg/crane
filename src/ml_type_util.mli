@@ -214,8 +214,6 @@ val is_nontrivial_value_ml_type : Miniml.ml_type -> bool
 (** Whether a MiniML type is a product type. *)
 val is_prod_ml_type : Miniml.ml_type -> bool
 
-(** Whether a C++ type contains a [shared_ptr] anywhere within it. *)
-val contains_shared_ptr : Minicpp.cpp_type -> bool
 
 (** {2 Well-known Coq constructor tag indices} *)
 

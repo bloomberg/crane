@@ -4262,23 +4262,12 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
 let infer_saved_types tparams env exprs =
   List.map (infer_saved_type tparams env) exprs
 
-(** Return [true] when a C++ type contains a [shared_ptr] at any depth.
-    Used to drive the pointer-safe frame optimization: frame fields for these
-    types are stored as raw [T*] pointers extracted via [.get()], so the
-    surrounding code uses [.get()] when pushing frame fields. *)
-let rec type_contains_shared_ptr = function
-  | Tshared_ptr _ -> true
-  | Tmod (_, t) | Tptr t | Tref t | Tnamespace (_, t) ->
-    type_contains_shared_ptr t
-  | Tvariant ts -> List.exists type_contains_shared_ptr ts
-  | Tfun (args, ret) ->
-    List.exists type_contains_shared_ptr args || type_contains_shared_ptr ret
-  | _ -> false
-
-(** Check whether any saved expression would decompose into a [shared_ptr] field
-    in a frame struct, triggering pointer-safe frame handling. *)
+(** Check whether any saved expression would decompose into a [shared_ptr]
+    field in a frame struct.  Such fields drive the pointer-safe frame
+    optimization: they are stored as raw [T*] extracted via [.get()], so the
+    surrounding code must use [.get()] when pushing them. *)
 let saved_exprs_contain_shared_ptr tparams env exprs =
-  infer_saved_types tparams env exprs |> List.exists type_contains_shared_ptr
+  infer_saved_types tparams env exprs |> List.exists contains_shared_ptr
 
 (** Return [true] when decomposing [expr] into stack frames would require
     saving a [shared_ptr]-typed sub-expression.  This is used as a guard to
@@ -6909,7 +6898,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
   in
   let frame_sptr =
     List.filter_map (fun cf ->
-      let flags = List.map type_contains_shared_ptr cf.cf_saved_types in
+      let flags = List.map contains_shared_ptr cf.cf_saved_types in
       if List.exists Fun.id flags then Some (cf.cf_name, flags) else None)
       frames
   in
