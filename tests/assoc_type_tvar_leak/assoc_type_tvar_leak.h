@@ -1,5 +1,5 @@
-#ifndef INCLUDED_ASSOC_TYPE_TWO_SWAPPED
-#define INCLUDED_ASSOC_TYPE_TWO_SWAPPED
+#ifndef INCLUDED_ASSOC_TYPE_TVAR_LEAK
+#define INCLUDED_ASSOC_TYPE_TVAR_LEAK
 
 #include "small_vector.h"
 #include <any>
@@ -121,49 +121,48 @@ public:
   }
 };
 
-/// Two associated Type fields in one class.  Crane assigns the wrong
-/// associated type to each method: mkx is declared returning Y's C++
-/// type and xy returning X's, so neither instance method compiles.
-template <typename I>
-concept Two = requires {
-  typename I::Y;
-  typename I::X;
-  { I::mkx(std::declval<uint64_t>()) } -> std::convertible_to<typename I::X>;
-  {
-    I::xy(std::declval<typename I::X>())
-  } -> std::convertible_to<typename I::Y>;
-  { I::ynat(std::declval<typename I::Y>()) } -> std::convertible_to<uint64_t>;
-};
+template <typename
+I>concept Elt = requires {
+  typename I::E;
+  { I::elist() } -> std::convertible_to<List<typename I::E>>;
+  { I::ecount(std::declval<List<typename I::E>>()) } -> std::convertible_to<uint64_t>;
+} && (requires {
+  { I::e0() } -> std::convertible_to<typename I::E>;
+} || requires {
+  { I::e0 } -> std::convertible_to<typename I::E>;
+});
 
-struct AssocTypeTwoSwapped {
-  using X = std::any;
-  using Y = std::any;
+struct AssocTypeTvarLeak {
+  using E = std::any;
 
-  struct TT {
-    using Y = std::pair<uint64_t, uint64_t>;
-    using X = List<uint64_t>;
+  struct EN {
+    using E = uint64_t;
 
-    static List<uint64_t> mkx(uint64_t n) { return std::make_pair(n, n); }
+    static uint64_t e0() { return UINT64_C(0); }
 
-    static std::pair<uint64_t, uint64_t> xy(List<uint64_t> p) {
-      return List<std::any>::cons(
-          p.first, List<std::any>::cons(p.second, List<std::any>::nil()));
+    static List<uint64_t> elist() {
+      return List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
     }
 
-    static uint64_t ynat(std::pair<uint64_t, uint64_t> l) {
+    static uint64_t ecount(List<uint64_t> l) {
       return l.template fold_left<uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));
     }
   };
 
-  static_assert(Two<TT>);
+  static_assert(Elt<EN>);
 
-  template <Two _tcI0> static uint64_t go(uint64_t n) {
-    return _tcI0::ynat(_tcI0::xy(_tcI0::mkx(n)));
+  template <Elt _tcI0> static uint64_t go() {
+    return _tcI0::ecount(
+        List<typename _tcI0::E>::cons(_tcI0::e0(), _tcI0::elist()));
   }
 
   static uint64_t run(uint64_t k);
 };
 
-#endif // INCLUDED_ASSOC_TYPE_TWO_SWAPPED
+#endif // INCLUDED_ASSOC_TYPE_TVAR_LEAK

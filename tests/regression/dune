@@ -1,12 +1,12 @@
 
 
-(subdir assoc_type_option_leak
+(subdir assoc_type_any_cast
  (rule
-  (targets assoc_type_option_leak.t.exe)
-  (deps AssocTypeOptionLeak.vo assoc_type_option_leak.t.cpp (source_tree .))
+  (targets assoc_type_any_cast.t.exe)
+  (deps AssocTypeAnyCast.vo assoc_type_any_cast.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_option_leak.t.exe assoc_type_option_leak.cpp assoc_type_option_leak.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_any_cast.t.exe assoc_type_any_cast.cpp assoc_type_any_cast.t.cpp)))
  (rule
   (alias runtest)
-  (deps assoc_type_option_leak.t.exe)
-  (action (run ./assoc_type_option_leak.t.exe))))
+  (deps assoc_type_any_cast.t.exe)
+  (action (run ./assoc_type_any_cast.t.exe))))

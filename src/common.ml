@@ -686,6 +686,9 @@ let inductive_names_of_sel sel =
   List.concat_map
     (fun (_l, se) ->
       match se with
+      (* A type class becomes a concept, which is hoisted to namespace scope
+         rather than nested, so it never competes for a member name. *)
+      | SEdecl (Dind (_kn, {ind_kind = TypeClass _; _})) -> []
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)

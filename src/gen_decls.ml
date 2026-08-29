@@ -18,6 +18,27 @@ open Translation
 
 module IntSet = Escape.IntSet
 
+(** [with_method_env_types params f] runs [f] with the de Bruijn type stack
+    holding exactly [params] (innermost binder first, as returned by
+    {!push_vars'}), restoring the ambient stack afterwards.
+
+    An instance method's body is generated outside any enclosing function, so
+    without this the stack still describes whatever was translated last — and
+    a lookup of a parameter's type answers with a stale, unrelated entry (for
+    a class's associated [Type], the unresolved class type variable, which
+    reads as erased and provokes a spurious [any_cast]). *)
+let with_method_env_types params f =
+  let saved_env_types = tctx.env_types in
+  let saved_erased = (tctx.cpp_erased_env, tctx.cpp_erased_type_env) in
+  reset_env_types ();
+  push_env_types params;
+  Fun.protect
+    ~finally:(fun () ->
+      tctx.env_types <- saved_env_types;
+      tctx.cpp_erased_env <- fst saved_erased;
+      tctx.cpp_erased_type_env <- snd saved_erased )
+    f
+
 let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
   let constrdecl =
     Array.to_list
@@ -921,7 +942,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 in
                 let renamed_eta, env = push_vars' ml_vars base_env in
                 let stmts =
-                  gen_stmts env (fun x -> Sreturn (Some x)) call_expr
+                  with_method_env_types renamed_eta (fun () ->
+                    gen_stmts env (fun x -> Sreturn (Some x)) call_expr )
                 in
                 let stmts =
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
@@ -969,7 +991,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               let saved_param_tys = tctx.current_param_types in
               set_current_param_types (List.rev renamed_ml);
               let stmts =
-                gen_stmts env (fun x -> Sreturn (Some x)) inner_body
+                with_method_env_types renamed_ml (fun () ->
+                  gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
               tctx.current_param_types <- saved_param_tys;
               (cpp_params, method_ret_ty, stmts)

@@ -1,12 +1,12 @@
-#ifndef INCLUDED_ASSOC_TYPE_TWO_SWAPPED
-#define INCLUDED_ASSOC_TYPE_TWO_SWAPPED
+#ifndef INCLUDED_ASSOC_TYPE_OPTION_LEAK
+#define INCLUDED_ASSOC_TYPE_OPTION_LEAK
 
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
-#include <type_traits>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -109,61 +109,65 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
-  T1 fold_left(F0 &&f, T1 a0) const {
+  uint64_t length() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return a0;
+      return UINT64_C(0);
     } else {
-      const auto &[a1, a2] = std::get<typename List<A>::Cons>(this->v());
-      return a2->template fold_left<T1>(f, f(a0, a1));
+      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      return (a1->length() + 1);
     }
   }
 };
 
-/// Two associated Type fields in one class.  Crane assigns the wrong
-/// associated type to each method: mkx is declared returning Y's C++
-/// type and xy returning X's, so neither instance method compiles.
-template <typename I>
-concept Two = requires {
-  typename I::Y;
-  typename I::X;
-  { I::mkx(std::declval<uint64_t>()) } -> std::convertible_to<typename I::X>;
-  {
-    I::xy(std::declval<typename I::X>())
-  } -> std::convertible_to<typename I::Y>;
-  { I::ynat(std::declval<typename I::Y>()) } -> std::convertible_to<uint64_t>;
+struct ListDef {
+  template <typename T1> static List<T1> repeat(T1 x, uint64_t n);
 };
 
-struct AssocTypeTwoSwapped {
-  using X = std::any;
-  using Y = std::any;
+template <typename I>
+concept Opt = requires {
+  typename I::O;
+  {
+    I::some_(std::declval<uint64_t>())
+  } -> std::convertible_to<std::optional<typename I::O>>;
+  { I::sz(std::declval<typename I::O>()) } -> std::convertible_to<uint64_t>;
+};
 
-  struct TT {
-    using Y = std::pair<uint64_t, uint64_t>;
-    using X = List<uint64_t>;
+struct AssocTypeOptionLeak {
+  using O = std::any;
 
-    static List<uint64_t> mkx(uint64_t n) { return std::make_pair(n, n); }
+  struct OL {
+    using O = List<uint64_t>;
 
-    static std::pair<uint64_t, uint64_t> xy(List<uint64_t> p) {
-      return List<std::any>::cons(
-          p.first, List<std::any>::cons(p.second, List<std::any>::nil()));
+    static std::optional<List<uint64_t>> some_(uint64_t n) {
+      return std::make_optional<List<uint64_t>>(
+          ListDef::template repeat<uint64_t>(n, n));
     }
 
-    static uint64_t ynat(std::pair<uint64_t, uint64_t> l) {
-      return l.template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(0));
-    }
+    static uint64_t sz(List<uint64_t> a0) { return a0.length(); }
   };
 
-  static_assert(Two<TT>);
+  static_assert(Opt<OL>);
 
-  template <Two _tcI0> static uint64_t go(uint64_t n) {
-    return _tcI0::ynat(_tcI0::xy(_tcI0::mkx(n)));
+  template <Opt _tcI0> static uint64_t go(uint64_t n) {
+    auto _cs = _tcI0::some_(n);
+    if (_cs.has_value()) {
+      const typename _tcI0::O &o = *_cs;
+      return _tcI0::sz(o);
+    } else {
+      return UINT64_C(0);
+    }
   }
 
   static uint64_t run(uint64_t k);
 };
 
-#endif // INCLUDED_ASSOC_TYPE_TWO_SWAPPED
+template <typename T1> List<T1> ListDef::repeat(T1 x, uint64_t n) {
+  if (n <= 0) {
+    return List<T1>::nil();
+  } else {
+    uint64_t k = n - 1;
+    return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
+  }
+}
+
+#endif // INCLUDED_ASSOC_TYPE_OPTION_LEAK

@@ -7136,6 +7136,11 @@ and eta_fun env f args =
                | None -> false ) ->
         let arg_ml_erased =
           let rec has_magic = function
+            (* A coercion around a local variable says nothing on its own: in
+               an instance method the class's associated type has already been
+               specialised, so the variable holds the concrete pair.  Judge by
+               the variable's type instead. *)
+            | MLmagic (MLrel _ as v) -> has_magic v
             | MLmagic _ -> true
             | MLapp (MLglob (r, _), args) ->
               (* If the callee is itself a pair accessor (.first/.second) and

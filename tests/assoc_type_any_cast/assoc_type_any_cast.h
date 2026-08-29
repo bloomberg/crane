@@ -5,10 +5,6 @@
 #include <concepts>
 #include <utility>
 
-/// A type class with an associated Type field.  The instance's method
-/// parameter is correctly specialised to std::pair<uint64_t, uint64_t>,
-/// but its body still any_casts the parameter as if it were erased, so the
-/// generated instance does not compile.
 template <typename I>
 concept Wrap = requires {
   typename I::W;
@@ -27,8 +23,7 @@ struct AssocTypeAnyCast {
     }
 
     static uint64_t unwrap(std::pair<uint64_t, uint64_t> p) {
-      return (std::any_cast<std::pair<std::any, std::any>>(p).first +
-              std::any_cast<std::pair<std::any, std::any>>(p).second);
+      return (p.first + p.second);
     }
   };
 
