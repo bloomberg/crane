@@ -100,15 +100,4 @@
   (deps hkt_class_param.t.exe)
   (action (run ./hkt_class_param.t.exe))))
 
-(subdir rank2_method_arg
- (rule
-  (targets rank2_method_arg.t.exe)
-  (deps Rank2MethodArg.vo rank2_method_arg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_method_arg.t.exe rank2_method_arg.cpp rank2_method_arg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rank2_method_arg.t.exe)
-  (action (run ./rank2_method_arg.t.exe))))
-
 

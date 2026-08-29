@@ -853,6 +853,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 type_var_names
                 ret
           in
+          (* The body is generated in the method's return-type context, as a
+             top-level function's body is: an expression whose C++ type is the
+             erased [std::any] -- a call to a higher-rank callback, say -- is
+             cast back to the concrete type the method declares. *)
+          let saved_method_ret = tctx.current_cpp_return_type in
+          tctx.current_cpp_return_type <- Some method_ret_ty;
           let cpp_params, ret_ty, body_stmts =
             if ml_params = [] then
               (* No lambdas in the body — either a function reference that needs
@@ -1003,6 +1009,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               tctx.current_param_types <- saved_param_tys;
               (cpp_params, method_ret_ty, stmts)
           in
+          tctx.current_cpp_return_type <- saved_method_ret;
           Some
             ( Fmethod
                 {

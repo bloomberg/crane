@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DOUBLE_OPPOSITE_WITNESSES
 #define INCLUDED_DOUBLE_OPPOSITE_WITNESSES
 
+#include "crane_fn.h"
 #include <any>
 #include <concepts>
 #include <functional>
@@ -80,10 +81,12 @@ struct DoubleOppositeWitnessesCase {
   template <PreCategory _tcI0> struct opposite_category {
     using Obj = typename _tcI0::Obj;
 
-    static std::any identity(Obj x) { return _tcI0::identity(x); }
+    static std::any identity(Obj x) {
+      return crane_erase_fn(_tcI0::identity(x));
+    }
 
     static std::any compose(Obj x, Obj y, Obj z, std::any f, std::any g) {
-      return _tcI0::compose(z, y, x, g, f);
+      return crane_erase_fn(_tcI0::compose(z, y, x, g, f));
     }
   };
 

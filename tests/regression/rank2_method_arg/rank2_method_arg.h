@@ -20,7 +20,7 @@ concept Applyer = requires {
 struct Rank2MethodArg {
   struct AI {
     static uint64_t app2(std::function<std::any(std::any)> f, uint64_t n) {
-      return f(n);
+      return std::any_cast<uint64_t>(f(n));
     }
   };
 
