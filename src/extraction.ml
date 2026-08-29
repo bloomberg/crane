@@ -806,8 +806,6 @@ and extract_really_ind env kn mib =
                        prods lists fields in reverse order. *)
                     let field_idx = nfields - 1 - idx in
                     let pos = ndecls + 1 + field_idx in
-                    let tv = !next_tvar in
-                    incr next_tvar;
                     let var_name =
                       if field_idx < List.length field_names then
                         let fn = List.nth field_names field_idx in
@@ -817,12 +815,24 @@ and extract_really_ind env kn mib =
                       else
                         anon_tvar_id field_idx
                     in
-                    Some (pos, tv, field_idx, var_name)
+                    Some (pos, field_idx, var_name)
                   else
                     None )
                 prods
             in
-            let promoted_entries = List.filter_map Fun.id promoted_info in
+            (* [prods] lists fields in reverse declaration order.  Restore
+               declaration order before numbering the type variables: the
+               order of [ip_vars] is what an instance's class arguments are
+               matched against, so a class with two associated types would
+               otherwise get them swapped. *)
+            let promoted_entries =
+              List.filter_map Fun.id promoted_info
+              |> List.sort (fun (_, a, _) (_, b, _) -> Int.compare a b)
+              |> List.map (fun (pos, field_idx, var_name) ->
+                     let tv = !next_tvar in
+                     incr next_tvar;
+                     (pos, tv, field_idx, var_name) )
+            in
             (* Only promote if there are Sort fields AND also non-Sort fields
                (i.e., the record has actual methods/data, not just types). This
                prevents promotion for degenerate cases. *)

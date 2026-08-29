@@ -5,9 +5,10 @@ From Crane Require Import Mapping.Std.
 Require Import Crane.Mapping.NatIntStd.
 
 Module AssocTypeTwoSwapped.
-  (** Two associated [Type] fields in one class.  Crane assigns the wrong
-      associated type to each method: [mkx] is declared returning [Y]'s C++
-      type and [xy] returning [X]'s, so neither instance method compiles. *)
+  (** Two associated [Type] fields in one class.  Each method must be given
+      the associated type it actually mentions: [mkx] returns [X] and [xy]
+      returns [Y], even though extraction sees the class's fields in reverse
+      declaration order. *)
   Class Two :=
     { X : Type ; Y : Type ; mkx : nat -> X ; xy : X -> Y ; ynat : Y -> nat }.
 

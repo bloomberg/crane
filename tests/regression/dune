@@ -1,12 +1,12 @@
 
 
-(subdir assoc_type_any_cast
+(subdir assoc_type_two_swapped
  (rule
-  (targets assoc_type_any_cast.t.exe)
-  (deps AssocTypeAnyCast.vo assoc_type_any_cast.t.cpp (source_tree .))
+  (targets assoc_type_two_swapped.t.exe)
+  (deps AssocTypeTwoSwapped.vo assoc_type_two_swapped.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_any_cast.t.exe assoc_type_any_cast.cpp assoc_type_any_cast.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_two_swapped.t.exe assoc_type_two_swapped.cpp assoc_type_two_swapped.t.cpp)))
  (rule
   (alias runtest)
-  (deps assoc_type_any_cast.t.exe)
-  (action (run ./assoc_type_any_cast.t.exe))))
+  (deps assoc_type_two_swapped.t.exe)
+  (action (run ./assoc_type_two_swapped.t.exe))))

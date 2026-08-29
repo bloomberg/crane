@@ -126,8 +126,8 @@ public:
 /// type and xy returning X's, so neither instance method compiles.
 template <typename I>
 concept Two = requires {
-  typename I::Y;
   typename I::X;
+  typename I::Y;
   { I::mkx(std::declval<uint64_t>()) } -> std::convertible_to<typename I::X>;
   {
     I::xy(std::declval<typename I::X>())
@@ -140,17 +140,19 @@ struct AssocTypeTwoSwapped {
   using Y = std::any;
 
   struct TT {
-    using Y = std::pair<uint64_t, uint64_t>;
-    using X = List<uint64_t>;
+    using X = std::pair<uint64_t, uint64_t>;
+    using Y = List<uint64_t>;
 
-    static List<uint64_t> mkx(uint64_t n) { return std::make_pair(n, n); }
+    static std::pair<uint64_t, uint64_t> mkx(uint64_t n) {
+      return std::make_pair(n, n);
+    }
 
-    static std::pair<uint64_t, uint64_t> xy(List<uint64_t> p) {
+    static List<uint64_t> xy(std::pair<uint64_t, uint64_t> p) {
       return List<std::any>::cons(
           p.first, List<std::any>::cons(p.second, List<std::any>::nil()));
     }
 
-    static uint64_t ynat(std::pair<uint64_t, uint64_t> l) {
+    static uint64_t ynat(List<uint64_t> l) {
       return l.template fold_left<uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));

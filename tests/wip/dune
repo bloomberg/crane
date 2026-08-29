@@ -89,17 +89,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-(subdir assoc_type_two_swapped
- (rule
-  (targets assoc_type_two_swapped.t.exe)
-  (deps AssocTypeTwoSwapped.vo assoc_type_two_swapped.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_two_swapped.t.exe assoc_type_two_swapped.cpp assoc_type_two_swapped.t.cpp)))
- (rule
-  (alias runtest)
-  (deps assoc_type_two_swapped.t.exe)
-  (action (run ./assoc_type_two_swapped.t.exe))))
-
 (subdir dep_return_any_cast
  (rule
   (targets dep_return_any_cast.t.exe)
