@@ -453,26 +453,6 @@ let filter_erased_type_args ?(preserve_positions = false) tys =
     List.map (fun t -> if is_erased_type t then Minicpp.Tany else t) tys
   else if List.exists is_erased_type tys then [] else tys
 
-(** Recursively check whether a C++ type tree contains erased HKT markers (Tany
-    or dummy_type globs). These markers arise when a higher-kinded type
-    constructor (e.g., F : Type -> Type) is erased during extraction — the type
-    constructor itself becomes Tany/dummy_type, but it may be nested inside a
-    function type like (A -> B) -> F A -> F B. Used by gen_dfun and
-    gen_decl_for_pp to detect function params whose type variables cannot be
-    deduced by C++ and should therefore use plain TTtypename instead of a
-    TTfun (is_invocable_v) constraint. *)
-let rec has_hkt_erasure = function
-  | Minicpp.Tany -> true
-  | t when is_cpp_dummy_type t -> true
-  | Minicpp.Tfun (d, c) -> List.exists has_hkt_erasure d || has_hkt_erasure c
-  | Minicpp.Tmod (_, t)
-   |Minicpp.Tref t
-   |Minicpp.Tshared_ptr t
-   |Minicpp.Tnamespace (_, t) -> has_hkt_erasure t
-  | Minicpp.Tglob (_, ts, _) | Minicpp.Tvariant ts ->
-    List.exists has_hkt_erasure ts
-  | _ -> false
-
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to guard
     Tvar substitution: we only substitute with fully concrete types. *)

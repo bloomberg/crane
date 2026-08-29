@@ -155,9 +155,6 @@ val is_cpp_dummy_prop : Minicpp.cpp_type -> bool
 val filter_erased_type_args :
   ?preserve_positions:bool -> Minicpp.cpp_type list -> Minicpp.cpp_type list
 
-(** Whether a C++ type has higher-kinded-type erasure. *)
-val has_hkt_erasure : Minicpp.cpp_type -> bool
-
 (** {2 Type-variable presence, substitution, and erasure} *)
 
 (** Whether a MiniML type contains a type variable. *)

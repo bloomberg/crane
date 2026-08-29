@@ -7125,11 +7125,11 @@ and eta_fun env f args =
       match ty with
       | Tfun (dom, cod) ->
         (* Filter domain to exclude type class types (they're now template
-           params) and erased types. Use has_hkt_erasure for deep checking:
-           proof params like wf witnesses may extract as function types
-           containing dummy_type (e.g. Tfun([List<T1>], dummy_type)) rather than
-           plain dummy_type. These entries must be removed to match the ML arg
-           list which already filters out MLdummy entries. *)
+           params) and erased types.  Proof params like wf witnesses may
+           extract as function types containing dummy_type (e.g.
+           Tfun([List<T1>], dummy_type)) rather than plain dummy_type. These
+           entries must be removed to match the ML arg list which already
+           filters out MLdummy entries. *)
         let dom =
           List.filter
             (fun t ->

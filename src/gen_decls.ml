@@ -1587,42 +1587,26 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     function-typed parameters but is nevertheless a real part of both callable
     signatures.
 
-    [hkt_erased] forces this treatment even when no marker is syntactically
-    present, for signatures whose erasure happened through a higher-kinded
-    class parameter (see {!hkt_tvar_resolutions_of_type}).
-
-    Function types containing HKT erasure markers cannot be rendered faithfully.
-    If any function parameter is HKT-erased, function-only tvars remain phantom:
-    conversion may already have removed their occurrences from the erased
-    function, so it is no longer possible to correlate them safely with tvars in
-    the remaining clean functions.  This preserves the defaults needed by
-    [hk_map].  Tvars that also occur in the codomain or a non-function parameter
-    remain primary.
-
     Used by both {!gen_dfun} (to choose between an [is_invocable_r_v]
     constraint and plain [TTtypename]) and {!phantom_aware_temps} (to choose
     whether a template parameter needs a [void] default). *)
-let primary_tvar_indices ?(hkt_erased = false) dom cod =
+let primary_tvar_indices dom cod =
   let add_rendered acc t =
     List.fold_left
       (fun acc i -> IntSet.add i acc)
       acc
       (get_rendered_tvar_indices t)
   in
-  let concrete, clean_fun, has_erased_fun =
+  let concrete, clean_fun =
     List.fold_left
-      (fun (concrete, clean_fun, has_erased_fun) t ->
+      (fun (concrete, clean_fun) t ->
         match t with
-        | Tfun _ when has_hkt_erasure t ->
-          (concrete, clean_fun, true)
-        | Tfun _ ->
-          (concrete, add_rendered clean_fun t, has_erased_fun)
-        | _ ->
-          (add_rendered concrete t, clean_fun, has_erased_fun) )
-      (add_rendered IntSet.empty cod, IntSet.empty, hkt_erased)
+        | Tfun _ -> (concrete, add_rendered clean_fun t)
+        | _ -> (add_rendered concrete t, clean_fun) )
+      (add_rendered IntSet.empty cod, IntSet.empty)
       dom
   in
-  if has_erased_fun then concrete else IntSet.union concrete clean_fun
+  IntSet.union concrete clean_fun
 
 (** Collect tvar indices that appear in type INDEX positions of inductives
     in the ML type.  Type indices are stripped from the C++ type by
@@ -2325,18 +2309,8 @@ let gen_dfun n b cty ty temps =
      params or the return type.  Function-typed params that reference tvars
      outside this set (e.g., erased HKT type variables) get TTtypename (no
      is_invocable_v constraint) instead of TTfun, to avoid referencing template
-     type parameters that were filtered out as phantom by gen_decl_for_pp.
-     Similarly, function-typed params containing HKT erasure markers (Tany
-     or dummy_type) also get TTtypename, since their type structure has been
-     partially erased and an is_invocable_v constraint would be malformed. *)
-  (* Element types swallowed by a higher-kinded carrier ([A] in [M A -> (A ->
-     M B) -> M B]) survive only inside callback signatures, where they are not
-     deducible: the instance sees the erased carrier.  Treat this like any
-     other HKT erasure so those tvars stay non-primary and no
-     [is_invocable_r_v] constraint mentions them. *)
-  let primary =
-    primary_tvar_indices ~hkt_erased:(hkt_tvar_resolutions <> []) dom cod
-  in
+     type parameters that were filtered out as phantom by gen_decl_for_pp. *)
+  let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 = function
     | Tmod (TMconst, (Tfun _ as f)) -> Some f
     | Tfun _ as f -> Some f
@@ -2351,7 +2325,7 @@ let gen_dfun n b cty ty temps =
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
           in
-          if has_undeclared || has_hkt_erasure (Tfun (fdom, fcod)) then
+          if has_undeclared then
             Some (x, TTtypename, fun_tparam_id i)
           else
             let fcod = if is_cpp_unit_type fcod then Tvoid else fcod in
@@ -2433,25 +2407,11 @@ let gen_dfun n b cty ty temps =
   let is_hkt_temp (_, id) =
     List.exists (fun (i, _) -> tvar_id i = id) hkt_tvar_resolutions
   in
-  (* The remaining tvars of such a signature may have lost every deducible
-     occurrence too (the element type [A] of [M A]); default them so explicit
-     instance-only calls like [mbind<MOpt>(...)] still resolve. *)
-  let default_if_undeducible (tt, id) =
-    match tt with
-    | TTtypename
-      when hkt_tvar_resolutions <> []
-           && not
-                (List.exists
-                   (fun i -> tvar_id i = id)
-                   (IntSet.elements primary) ) ->
-      (TTtypename_default Tany, id)
-    | _ -> (tt, id)
-  in
   let temps =
     typeclass_temps_basic
     @ List.filter_map
         (fun t ->
-          if is_hkt_temp t then None else Some (default_if_undeducible t) )
+          if is_hkt_temp t then None else Some t )
         regular_temps
   in
   (* Requires clause for typeclass constraints not yet implemented. *)

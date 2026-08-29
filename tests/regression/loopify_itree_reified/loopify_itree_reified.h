@@ -5,6 +5,7 @@
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -21,6 +22,8 @@ struct LoopifyItreeReified {
   /// The guardedness checker unfolds this transparent definition to verify
   /// that recursive calls are under Tau/Vis constructors.
   template <typename T1, typename F0>
+    requires std::is_invocable_r_v<std::shared_ptr<ITree<T1>>, F0 &,
+                                   std::shared_ptr<ITree<T1>> &>
   static std::shared_ptr<ITree<T1>> pass_body(F0 &&rec,
                                               const itreeF_t<T1> &ot) {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
