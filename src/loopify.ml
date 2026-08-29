@@ -2101,6 +2101,65 @@ let build_shadow_setup check params body =
   { ss_varying = varying; ss_varying_params = varying_params;
     ss_shadow_params = shadow_params; ss_subs = subs }
 
+(** Drop the shadow variables a loop body only ever writes.
+
+    A parameter can vary across recursive calls and still never be read — an
+    index carried along only to keep a dependent type well-formed, say.  Its
+    shadow is then set but never used, which [-Werror] rejects.  Remove both
+    the declaration and the writes, iterating so that a staging temporary
+    ([_next_x]) left dead by the removal goes too.
+
+    @return the surviving declarations and the rewritten body *)
+let drop_unread_shadows shadow_decls body =
+  let declared_id = function
+    | Sasgn (id, _, _) -> Some id
+    | _ -> None
+  in
+  let write_target = function
+    | Sasgn (id, _, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) -> Some id
+    | _ -> None
+  in
+  (* Every variable the statements *read* — the target of an assignment is a
+     write, so only right-hand sides are walked. *)
+  let reads stmts =
+    let tbl = Hashtbl.create 16 in
+    let rec walk_expr e =
+      match e with
+      | CPPvar id -> Hashtbl.replace tbl (Id.to_string id) ()
+      | _ -> iter_expr_children ~on_expr:walk_expr ~on_stmts:walk_stmts e
+    and walk_stmt s =
+      match s with
+      | Sasgn (_, _, rhs) | Sexpr (CPPbinop ("=", CPPvar _, rhs)) ->
+        walk_expr rhs
+      | _ -> iter_stmt_children ~on_expr:walk_expr ~on_stmts:walk_stmts s
+    and walk_stmts ss = List.iter walk_stmt ss in
+    walk_stmts stmts;
+    tbl
+  in
+  (* Only loopification's own variables are candidates: a shadow, or the
+     staging temporary that feeds one. *)
+  let is_candidate decls id =
+    List.exists (fun d -> declared_id d = Some id) decls
+    || String.starts_with ~prefix:"_next_" (Id.to_string id)
+  in
+  let rec fixpoint decls body =
+    let r = reads (decls @ body) in
+    let dead id =
+      is_candidate decls id && not (Hashtbl.mem r (Id.to_string id))
+    in
+    let live s = match write_target s with Some id -> not (dead id) | None -> true in
+    (* A dead write nested in a branch becomes an empty block, which the
+       existing cleanup pass then removes. *)
+    let rec drop s =
+      if live s then map_stmt Fun.id drop Fun.id s else Sblock []
+    in
+    let decls' = List.filter live decls in
+    let body' = List.map drop body in
+    if List.length decls' = List.length decls && body' = body then (decls, body)
+    else fixpoint decls' body'
+  in
+  fixpoint shadow_decls body
+
 (** Transform a tail-recursive function body into a [while] loop with shadow variables.
 
     Tail recursion is the simplest loopification case.  Since no work happens
@@ -2201,6 +2260,8 @@ let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
      since [while (true)] without [break] never falls through.
      Void base cases exit via [Sreturn None] (plain [return;]).
      Both use [while (true)] for the loop condition. *)
+  let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
+  let body'' = strip_unnecessary_blocks body'' in
   shadow_decls
   @ [Swhile (CPPbool true, body'')]
   @ (if is_void then [Sreturn None] else [])
@@ -3509,6 +3570,8 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
     | Some _ -> CPPmove (CPPderef (CPPvar (id_head)))
     | None -> CPPvar (id_head)
   in
+  let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
+  let body'' = strip_unnecessary_blocks body'' in
   [head_decl; write_decl]
   @ cursor_decls
   @ shadow_decls

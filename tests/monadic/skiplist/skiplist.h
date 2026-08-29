@@ -359,8 +359,7 @@ struct SkipList_Mod {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::optional<std::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, uint64_t fuel, std::shared_ptr<SkipNode<T1, T2>> curr,
-               std::shared_ptr<SkipNode<T1, T2>> _x, const T1 &target) {
-    std::shared_ptr<SkipNode<T1, T2>> _loop_x = std::move(_x);
+               std::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
     std::shared_ptr<SkipNode<T1, T2>> _loop_curr = std::move(curr);
     uint64_t _loop_fuel = std::move(fuel);
     while (true) {
@@ -378,7 +377,6 @@ struct SkipList_Mod {
                 std::move(_loop_curr));
           } else {
             std::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-            _loop_x = std::move(_loop_curr);
             _loop_fuel = fuel_;
             _loop_curr = std::move(_next_curr);
           }

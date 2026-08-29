@@ -432,11 +432,10 @@ struct DepElim {
 
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &>
-    vec<T1> vec_map(uint64_t _x, F1 &&f) const {
+    vec<T1> vec_map(uint64_t, F1 &&f) const {
       std::shared_ptr<vec<T1>> _head{};
       std::shared_ptr<vec<T1>> *_write = &_head;
       const vec *_loop_self = this;
-      uint64_t _loop_x = std::move(_x);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
@@ -449,18 +448,16 @@ struct DepElim {
           *_write = std::move(_cell);
           _write = &std::get<typename vec<T1>::Vcons>((*_write)->v_mut()).a2;
           _loop_self = crane_raw(a2);
-          _loop_x = n;
           continue;
         }
       }
       return std::move(*_head);
     }
 
-    List<A> vec_to_list(uint64_t _x) const {
+    List<A> vec_to_list(uint64_t) const {
       std::shared_ptr<List<A>> _head{};
       std::shared_ptr<List<A>> *_write = &_head;
       const vec *_loop_self = this;
-      uint64_t _loop_x = std::move(_x);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
@@ -473,7 +470,6 @@ struct DepElim {
           *_write = std::move(_cell);
           _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
           _loop_self = crane_raw(a2);
-          _loop_x = n;
           continue;
         }
       }

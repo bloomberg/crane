@@ -354,8 +354,7 @@ struct SkipList_Mod {
   static bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>
   findPrev_aux(F0 &&eqK, unsigned int fuel,
                bsl::shared_ptr<SkipNode<T1, T2>> curr,
-               bsl::shared_ptr<SkipNode<T1, T2>> _x, const T1 &target) {
-    bsl::shared_ptr<SkipNode<T1, T2>> _loop_x = bsl::move(_x);
+               bsl::shared_ptr<SkipNode<T1, T2>>, const T1 &target) {
     bsl::shared_ptr<SkipNode<T1, T2>> _loop_curr = bsl::move(curr);
     unsigned int _loop_fuel = bsl::move(fuel);
     while (true) {
@@ -373,7 +372,6 @@ struct SkipList_Mod {
                 bsl::move(_loop_curr));
           } else {
             bsl::shared_ptr<SkipNode<T1, T2>> _next_curr = next0;
-            _loop_x = bsl::move(_loop_curr);
             _loop_fuel = fuel_;
             _loop_curr = bsl::move(_next_curr);
           }
