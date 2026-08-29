@@ -186,7 +186,7 @@ public:
         std::shared_ptr<Expr> a3 = std::move(_f.a3);
         Ty t = _f.t;
         std::any _rc1 = std::move(_result);
-        if (_rc1) {
+        if (std::any_cast<bool>(_rc1)) {
           _stack.emplace_back(_Enter{crane_raw(a2), t});
         } else {
           _stack.emplace_back(_Enter{crane_raw(a3), t});

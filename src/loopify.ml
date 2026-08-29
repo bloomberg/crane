@@ -8280,6 +8280,18 @@ let hoist_rec_conditions (check : call_checker)
       let cond' = hoist_calls cond in
       (List.rev !bindings, cond')
     in
+    (* A scrutinee or condition that {e is} the recursive call loses, on being
+       bound to a temporary of the function's return type, whatever cast the
+       call carried in expression position.  When that type is the erased
+       [std::any], put the cast back: the surrounding construct needs the
+       concrete type [want] it dispatches on. *)
+    let hoist_cond_as want cond =
+      let binds, cond' = hoist_cond cond in
+      match (ret_ty, cond') with
+      | Tany, CPPvar _ when want <> Tany -> (binds, CPPany_cast (want, cond'))
+      | _ -> (binds, cond')
+    in
+    let ty_bool = Tid_external (Id.of_string "bool", []) in
     let hoist_expr e =
       bindings := [];
       let e' = hoist_ternaries e in
@@ -8292,10 +8304,10 @@ let hoist_rec_conditions (check : call_checker)
     and hstmt s =
       match s with
       | Sif (cond, t, e) ->
-        let binds, cond' = hoist_cond cond in
+        let binds, cond' = hoist_cond_as ty_bool cond in
         binds_to_stmts binds @ [Sif (cond', hs t, hs e)]
       | Sif_then (cond, t) ->
-        let binds, cond' = hoist_cond cond in
+        let binds, cond' = hoist_cond_as ty_bool cond in
         binds_to_stmts binds @ [Sif_then (cond', hs t)]
       | Sreturn (Some e) ->
         let binds, e' = hoist_expr e in
@@ -8313,7 +8325,7 @@ let hoist_rec_conditions (check : call_checker)
                 List.map (fun (p, b) -> (p, hs b)) branches,
                 Option.map hs def ) ]
       | Scustom_case (ty, scrut, tyargs, branches, err) ->
-        let binds, scrut' = hoist_cond scrut in
+        let binds, scrut' = hoist_cond_as ty scrut in
         binds_to_stmts binds
         @ [ Scustom_case
               ( ty, scrut', tyargs,

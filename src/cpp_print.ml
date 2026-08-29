@@ -3703,8 +3703,12 @@ let maybe_loopify decl =
     match decl_globref decl with
     (* The methods generated on an inductive are structural recursion over
        that inductive, one C++ frame per cell, and the user has no name to
-       hang [Crane Loopify] on.  Loopify them by default. *)
-    | Some (GlobRef.IndRef _ as r) -> Table.should_loopify ~default:true r
+       hang [Crane Loopify] on.  Loopify them by default.
+
+       A coinductive is exempt: its recursion sits under a lazy thunk, so it
+       never builds a deep C++ stack in the first place. *)
+    | Some (GlobRef.IndRef _ as r) ->
+      Table.should_loopify ~default:(not (Table.is_coinductive r)) r
     | Some r -> Table.should_loopify r
     | None -> Table.loopify ()
   in

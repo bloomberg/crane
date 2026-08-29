@@ -230,34 +230,15 @@ struct Cotree {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     cotree<T1> comap_cotree(F0 &&g) const {
-      const cotree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const cotree *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      cotree<T1> _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified comap_cotree: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const cotree *_self = _f._self;
-        const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(_self.v());
-        _result = cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
-          return cotree<T1>::conode(
-              g(a0), comap<cotree<A>, cotree<T1>>(
-                         [=](cotree<A> _x0) mutable -> cotree<T1> {
-                           return _x0.template comap_cotree<T1>(g);
-                         },
-                         *a1));
-        });
-      }
-      return _result;
+      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      return cotree<T1>::lazy_([=]() mutable -> cotree<T1> {
+        return cotree<T1>::conode(g(a0),
+                                  comap<cotree<A>, cotree<T1>>(
+                                      [=](cotree<A> _x0) mutable -> cotree<T1> {
+                                        return _x0.template comap_cotree<T1>(g);
+                                      },
+                                      *a1));
+      });
     }
   };
 
