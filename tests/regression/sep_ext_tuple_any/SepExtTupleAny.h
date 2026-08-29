@@ -22,7 +22,7 @@ template <SymTypes Ty> struct Defs {
   get_first(typename Ty::symbol,
             const typename Datatypes::template List<typename Ty::symbol> &,
             symbols_semty vs) {
-    return vs.first;
+    return std::any_cast<std::pair<std::any, std::any>>(vs).first;
   }
 };
 

@@ -22,7 +22,9 @@ template <SymTypes Ty> struct Destruct {
   get_second(typename Ty::sym, typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {
-    return (vs.second).first;
+    return std::any_cast<std::pair<std::any, std::any>>(
+               std::any_cast<std::pair<std::any, std::any>>(vs).second)
+        .first;
   }
 };
 

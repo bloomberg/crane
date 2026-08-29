@@ -7206,12 +7206,25 @@ and eta_fun env f args =
                         || Common.contains_substring s ".second"
                | None -> false ) ->
         let arg_ml_erased =
+          (* A variable is erased when its ML type is, or when the C++ type
+             it converts to is [std::any] -- a value-dependent type such as
+             [symbols_semty gamma] is only opaque after conversion. *)
+          let rel_is_erased ty =
+            let ty = resolve_tmeta ty in
+            is_erased_ml_type ty
+            || resolves_to_any_type
+                 (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ty)
+          in
           let rec has_magic = function
             (* A coercion around a local variable says nothing on its own: in
                an instance method the class's associated type has already been
                specialised, so the variable holds the concrete pair.  Judge by
-               the variable's type instead. *)
-            | MLmagic (MLrel _ as v) -> has_magic v
+               the variable's type when it is known; a coercion is still the
+               only evidence available when it is not. *)
+            | MLmagic (MLrel i) -> (
+              match get_env_type_opt i with
+              | Some ty -> rel_is_erased ty
+              | None -> true )
             | MLmagic _ -> true
             | MLapp (MLglob (r, _), args) ->
               (* If the callee is itself a pair accessor (.first/.second) and
@@ -7229,10 +7242,10 @@ and eta_fun env f args =
                 List.exists has_magic inner_args
               else false
             | MLapp (MLmagic _, _) -> true
-            | MLrel i ->
-              (match get_env_type_opt i with
-               | Some ty -> is_erased_ml_type (resolve_tmeta ty)
-               | None -> false)
+            | MLrel i -> (
+              match get_env_type_opt i with
+              | Some ty -> rel_is_erased ty
+              | None -> false )
             | _ -> false
           in
           if List.length regular_ml_args > 0 then
