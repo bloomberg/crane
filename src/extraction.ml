@@ -2531,10 +2531,13 @@ let extract_constant access env kn cb =
     if has_args && all_args_dummy t then
       Dterm (r, MLdummy Kprop, Tdummy Kprop)
     else (
-      (* Register non-function axioms as axiom values. These are generated as
-         zero-arg functions so they throw when called, not at static init
-         time. *)
-      if not has_args then add_axiom_value r;
+      (* Register axioms as axiom values.  These are generated as zero-arg
+         functions so they throw when called, not at static init time.  An
+         axiom with arguments qualifies too when they are all erased -- a
+         [forall (P : Prop), P -> nat] takes no C++ parameter -- and there is
+         no harm in registering the rest: an axiom reference may throw
+         whatever its arity. *)
+      add_axiom_value r;
       Dterm (r, MLaxiom (Constant.to_string kn), t) )
   in
   let mk_def c =

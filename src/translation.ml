@@ -4511,7 +4511,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
       | Some _ when Table.is_cofixpoint x -> true
-      | Some _ when Table.is_axiom_value x -> true
+      (* An axiom is emitted as a zero-parameter function unless it has C++
+         parameters of its own, in which case naming it is naming a
+         function. *)
+      | Some ml_ty when Table.is_axiom_value x ->
+        ( match convert_ml_type_to_cpp_type env tvars ml_ty with
+        | Tfun _ -> false
+        | _ -> true )
       | _ -> false
     in
     if needs_call then
