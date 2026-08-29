@@ -4574,6 +4574,23 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     in
     CPPenum_val (ind_ref, ctor_name)
   | MLcons (ty, r, ts) ->
+    (* A value built directly into an erased ([std::any]) slot -- the
+       enclosing function's C++ return type is opaque, as for a definition
+       whose return type is value-dependent -- must use the canonical erased
+       shape, with every type argument boxed.  A consumer of such a slot
+       recovers it with a fixed [any_cast] and cannot know the concrete type
+       arguments; storing them concretely makes that cast throw. *)
+    (* A value built directly into an erased ([std::any]) slot -- the
+       enclosing function's C++ return type is opaque, as for a definition
+       whose return type is value-dependent -- must use the canonical erased
+       shape: a consumer of such a slot recovers it with a fixed [any_cast]
+       and cannot know the concrete type arguments.  That is the same
+       requirement [wrap_for_any_param] expresses for a value flowing into an
+       erased field or parameter. *)
+    let saved_wrap_cons = tctx.wrap_for_any_param in
+    ( match tctx.current_cpp_return_type with
+    | Some t when resolves_to_any_type t -> tctx.wrap_for_any_param <- true
+    | _ -> () );
     (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
        NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
 
@@ -5694,6 +5711,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     in
     tctx.promoted_var_map <- saved_promoted_cons;
     tctx.in_constructor_expr <- saved_in_ctor_cons;
+    tctx.wrap_for_any_param <- saved_wrap_cons;
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let tvars = get_current_type_vars () in

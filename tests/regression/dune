@@ -7433,3 +7433,14 @@
   (alias runtest)
   (deps eta_closure_fixpoint.t.exe)
   (action (run ./eta_closure_fixpoint.t.exe))))
+
+(subdir dep_return_any_cast
+ (rule
+  (targets dep_return_any_cast.t.exe)
+  (deps DepReturnAnyCast.vo dep_return_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_return_any_cast.t.exe dep_return_any_cast.cpp dep_return_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_return_any_cast.t.exe)
+  (action (run ./dep_return_any_cast.t.exe))))

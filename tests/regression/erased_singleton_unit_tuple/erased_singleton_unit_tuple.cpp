@@ -17,7 +17,8 @@ uint64_t firstOf(const List<Sym> &, syms_semty t) {
 uint64_t check(uint64_t n) {
   return firstOf(
       List<Sym>::nil(),
-      head1(List<Sym>::cons(Sym::B, List<Sym>::nil()),
-            cons_sem(Sym::A, List<Sym>::cons(Sym::B, List<Sym>::nil()), n,
-                     cons_sem(Sym::B, List<Sym>::nil(), n, std::monostate{}))));
+      head1(List<std::any>::cons(Sym::B, List<std::any>::nil()),
+            cons_sem(
+                Sym::A, List<std::any>::cons(Sym::B, List<std::any>::nil()), n,
+                cons_sem(Sym::B, List<std::any>::nil(), n, std::monostate{}))));
 }
