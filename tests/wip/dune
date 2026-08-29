@@ -89,3 +89,234 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
+
+(subdir all_args_erased_call
+ (rule
+  (targets all_args_erased_call.t.exe)
+  (deps AllArgsErasedCall.vo all_args_erased_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} all_args_erased_call.t.exe all_args_erased_call.cpp all_args_erased_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps all_args_erased_call.t.exe)
+  (action (run ./all_args_erased_call.t.exe))))
+
+(subdir assoc_type_any_cast
+ (rule
+  (targets assoc_type_any_cast.t.exe)
+  (deps AssocTypeAnyCast.vo assoc_type_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_any_cast.t.exe assoc_type_any_cast.cpp assoc_type_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_any_cast.t.exe)
+  (action (run ./assoc_type_any_cast.t.exe))))
+
+(subdir assoc_type_option_leak
+ (rule
+  (targets assoc_type_option_leak.t.exe)
+  (deps AssocTypeOptionLeak.vo assoc_type_option_leak.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_option_leak.t.exe assoc_type_option_leak.cpp assoc_type_option_leak.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_option_leak.t.exe)
+  (action (run ./assoc_type_option_leak.t.exe))))
+
+(subdir assoc_type_tvar_leak
+ (rule
+  (targets assoc_type_tvar_leak.t.exe)
+  (deps AssocTypeTvarLeak.vo assoc_type_tvar_leak.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_tvar_leak.t.exe assoc_type_tvar_leak.cpp assoc_type_tvar_leak.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_tvar_leak.t.exe)
+  (action (run ./assoc_type_tvar_leak.t.exe))))
+
+(subdir assoc_type_two_swapped
+ (rule
+  (targets assoc_type_two_swapped.t.exe)
+  (deps AssocTypeTwoSwapped.vo assoc_type_two_swapped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_two_swapped.t.exe assoc_type_two_swapped.cpp assoc_type_two_swapped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_two_swapped.t.exe)
+  (action (run ./assoc_type_two_swapped.t.exe))))
+
+(subdir dep_return_any_cast
+ (rule
+  (targets dep_return_any_cast.t.exe)
+  (deps DepReturnAnyCast.vo dep_return_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_return_any_cast.t.exe dep_return_any_cast.cpp dep_return_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_return_any_cast.t.exe)
+  (action (run ./dep_return_any_cast.t.exe))))
+
+(subdir dep_type_fn_any_cast
+ (rule
+  (targets dep_type_fn_any_cast.t.exe)
+  (deps DepTypeFnAnyCast.vo dep_type_fn_any_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dep_type_fn_any_cast.t.exe dep_type_fn_any_cast.cpp dep_type_fn_any_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dep_type_fn_any_cast.t.exe)
+  (action (run ./dep_type_fn_any_cast.t.exe))))
+
+(subdir eta_closure_first_class
+ (rule
+  (targets eta_closure_first_class.t.exe)
+  (deps EtaClosureFirstClass.vo eta_closure_first_class.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_closure_first_class.t.exe eta_closure_first_class.cpp eta_closure_first_class.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_closure_first_class.t.exe)
+  (action (run ./eta_closure_first_class.t.exe))))
+
+(subdir eta_closure_fixpoint
+ (rule
+  (targets eta_closure_fixpoint.t.exe)
+  (deps EtaClosureFixpoint.vo eta_closure_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_closure_fixpoint.t.exe eta_closure_fixpoint.cpp eta_closure_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_closure_fixpoint.t.exe)
+  (action (run ./eta_closure_fixpoint.t.exe))))
+
+(subdir hkt_class_param
+ (rule
+  (targets hkt_class_param.t.exe)
+  (deps HktClassParam.vo hkt_class_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_class_param.t.exe hkt_class_param.cpp hkt_class_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_class_param.t.exe)
+  (action (run ./hkt_class_param.t.exe))))
+
+(subdir impossible_branch_thunk_call
+ (rule
+  (targets impossible_branch_thunk_call.t.exe)
+  (deps ImpossibleBranchThunkCall.vo impossible_branch_thunk_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} impossible_branch_thunk_call.t.exe impossible_branch_thunk_call.cpp impossible_branch_thunk_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps impossible_branch_thunk_call.t.exe)
+  (action (run ./impossible_branch_thunk_call.t.exe))))
+
+(subdir list_app_stack_overflow
+ (rule
+  (targets list_app_stack_overflow.t.exe)
+  (deps ListAppStackOverflow.vo list_app_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_app_stack_overflow.t.exe list_app_stack_overflow.cpp list_app_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_app_stack_overflow.t.exe)
+  (action (run ./list_app_stack_overflow.t.exe))))
+
+(subdir list_fold_left_stack_overflow
+ (rule
+  (targets list_fold_left_stack_overflow.t.exe)
+  (deps ListFoldLeftStackOverflow.vo list_fold_left_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_fold_left_stack_overflow.t.exe list_fold_left_stack_overflow.cpp list_fold_left_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_fold_left_stack_overflow.t.exe)
+  (action (run ./list_fold_left_stack_overflow.t.exe))))
+
+(subdir list_fold_right_stack_overflow
+ (rule
+  (targets list_fold_right_stack_overflow.t.exe)
+  (deps ListFoldRightStackOverflow.vo list_fold_right_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_fold_right_stack_overflow.t.exe list_fold_right_stack_overflow.cpp list_fold_right_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_fold_right_stack_overflow.t.exe)
+  (action (run ./list_fold_right_stack_overflow.t.exe))))
+
+(subdir list_length_stack_overflow
+ (rule
+  (targets list_length_stack_overflow.t.exe)
+  (deps ListLengthStackOverflow.vo list_length_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_length_stack_overflow.t.exe list_length_stack_overflow.cpp list_length_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_length_stack_overflow.t.exe)
+  (action (run ./list_length_stack_overflow.t.exe))))
+
+(subdir list_map_stack_overflow
+ (rule
+  (targets list_map_stack_overflow.t.exe)
+  (deps ListMapStackOverflow.vo list_map_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_map_stack_overflow.t.exe list_map_stack_overflow.cpp list_map_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_map_stack_overflow.t.exe)
+  (action (run ./list_map_stack_overflow.t.exe))))
+
+(subdir list_rev_stack_overflow
+ (rule
+  (targets list_rev_stack_overflow.t.exe)
+  (deps ListRevStackOverflow.vo list_rev_stack_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} list_rev_stack_overflow.t.exe list_rev_stack_overflow.cpp list_rev_stack_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps list_rev_stack_overflow.t.exe)
+  (action (run ./list_rev_stack_overflow.t.exe))))
+
+(subdir module_inductive_same_name
+ (rule
+  (targets module_inductive_same_name.t.exe)
+  (deps ModuleInductiveSameName.vo module_inductive_same_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_inductive_same_name.t.exe module_inductive_same_name.cpp module_inductive_same_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_inductive_same_name.t.exe)
+  (action (run ./module_inductive_same_name.t.exe))))
+
+(subdir rank2_method_arg
+ (rule
+  (targets rank2_method_arg.t.exe)
+  (deps Rank2MethodArg.vo rank2_method_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank2_method_arg.t.exe rank2_method_arg.cpp rank2_method_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank2_method_arg.t.exe)
+  (action (run ./rank2_method_arg.t.exe))))
+
+(subdir superclass_only_concept
+ (rule
+  (targets superclass_only_concept.t.exe)
+  (deps SuperclassOnlyConcept.vo superclass_only_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} superclass_only_concept.t.exe superclass_only_concept.cpp superclass_only_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps superclass_only_concept.t.exe)
+  (action (run ./superclass_only_concept.t.exe))))
+
+(subdir tc_method_arity_mismatch
+ (rule
+  (targets tc_method_arity_mismatch.t.exe)
+  (deps TcMethodArityMismatch.vo tc_method_arity_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tc_method_arity_mismatch.t.exe tc_method_arity_mismatch.cpp tc_method_arity_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tc_method_arity_mismatch.t.exe)
+  (action (run ./tc_method_arity_mismatch.t.exe))))
