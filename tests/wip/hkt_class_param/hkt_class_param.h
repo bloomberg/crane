@@ -17,7 +17,7 @@ template <typename A> struct List {
 
   struct Cons {
     A a;
-    std::shared_ptr<List<std::any>> l;
+    std::shared_ptr<List<A>> l;
   };
 
   using variant_t = std::variant<Nil, Cons>;
@@ -69,7 +69,7 @@ public:
             } else
               return A(a);
           }(),
-          l};
+          l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -77,7 +77,7 @@ public:
 
   static List<A> cons(A a, List<std::any> l) {
     return List<A>(
-        Cons{std::move(a), std::make_shared<List<std::any>>(std::move(l))});
+        Cons{std::move(a), std::make_shared<List<A>>(List<A>(std::move(l)))});
   }
 
   // MANIPULATORS

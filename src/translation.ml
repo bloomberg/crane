@@ -2378,8 +2378,13 @@ let rec convert_ml_type_to_cpp_type
   (* A type constructor used as the carrier of a higher-kinded class parameter
      is element-erased everywhere, matching the instance's [using M = ...]
      (see {!Table.is_hkt_carrier}). *)
+  (* A self-reference inside the carrier's own declaration is exempt: erasing
+     it would rewrite the type itself ([List<A>]'s tail becoming
+     [List<std::any>]), not just its uses. *)
   | Tglob (g, args, es)
-    when Table.is_hkt_carrier g && List.exists (fun a -> a <> Miniml.Tunknown) args ->
+    when Table.is_hkt_carrier g
+         && not (Refset'.mem g ns)
+         && List.exists (fun a -> a <> Miniml.Tunknown) args ->
     convert_ml_type_to_cpp_type env ~ns tvars
       (Tglob (g, List.map (fun _ -> Miniml.Tunknown) args, es))
   (* PROMOTED TYPE VARIABLES: Handle references to record fields that were
