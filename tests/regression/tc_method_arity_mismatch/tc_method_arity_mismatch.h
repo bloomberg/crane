@@ -17,9 +17,11 @@ concept Mk = requires {
 
 struct TcMethodArityMismatch {
   struct MkNat {
-    static uint64_t mkf(uint64_t a) {
-      uint64_t b = (a + UINT64_C(1));
-      return [=](uint64_t k) mutable { return (k + b); };
+    static uint64_t mkf(uint64_t a, uint64_t a0) {
+      return [&]() {
+        uint64_t b = (a + UINT64_C(1));
+        return [=](uint64_t k) mutable { return (k + b); };
+      }()(a0);
     }
   };
 

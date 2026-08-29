@@ -111,13 +111,4 @@
   (deps rank2_method_arg.t.exe)
   (action (run ./rank2_method_arg.t.exe))))
 
-(subdir tc_method_arity_mismatch
- (rule
-  (targets tc_method_arity_mismatch.t.exe)
-  (deps TcMethodArityMismatch.vo tc_method_arity_mismatch.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tc_method_arity_mismatch.t.exe tc_method_arity_mismatch.cpp tc_method_arity_mismatch.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tc_method_arity_mismatch.t.exe)
-  (action (run ./tc_method_arity_mismatch.t.exe))))
+

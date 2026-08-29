@@ -731,20 +731,26 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (* An instance method may have been eta-reduced below the arity its
              class field declares ([cmap A B f x := f x] extracts to
              [fun A B f => f]).  The concept requires the declared arity, so
-             re-introduce the missing arguments. *)
+             re-introduce the missing arguments.
+
+             A body with no lambdas at all is left alone: the eta path in
+             [gen_method] below handles the point-free case, and it also
+             bridges a parameter the class declares at an erased type to the
+             concrete type the named body expects. *)
+          let rec nb_lams = function
+            | MLlam (_, ty, rest) ->
+              (if Mlutil.isTdummy ty then 0 else 1) + nb_lams rest
+            | _ -> 0
+          in
           let field_body =
-            if Table.get_ind_hkt_params class_ref = [] then field_body
+            if nb_lams field_body = 0 && Table.get_ind_hkt_params class_ref = []
+            then field_body
             else
             let arg_types =
               List.filter
                 (fun t ->
                   not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t) )
                 (fst (get_args_and_ret [] subst_ty))
-            in
-            let rec nb_lams = function
-              | MLlam (_, ty, rest) ->
-                (if Mlutil.isTdummy ty then 0 else 1) + nb_lams rest
-              | _ -> 0
             in
             let missing =
               List.length arg_types - nb_lams field_body
