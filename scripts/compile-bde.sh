@@ -14,6 +14,11 @@ if [[ "$PROJECT_ROOT" == */_build/default ]]; then
 fi
 
 THEORIES_CPP_BDE="$PROJECT_ROOT/theories/cpp_bde"
+# The BDE flavor only re-implements the headers whose representation differs
+# (small_vector.h, mini_stm.h, ...); it shadows them by name.  Everything else
+# -- crane_fn.h and friends -- is flavor-independent, so the generic theories
+# directory is searched after it as a fallback.
+THEORIES_CPP="$PROJECT_ROOT/theories/cpp"
 
 OUTPUT="$1"
 shift
@@ -131,6 +136,7 @@ exec clang++ \
     "${SYSROOT_FLAGS[@]}" \
     -I . \
     -I "$THEORIES_CPP_BDE" \
+    -I "$THEORIES_CPP" \
     -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion \
     -Wsign-conversion -Wstring-compare -Wformat-overflow \
     -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4 \
