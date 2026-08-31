@@ -301,41 +301,13 @@ struct RecRecord {
     const variant_t &v() const { return v_; }
 
     uint64_t rnode_depth() const {
-      const RNode *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const RNode *_self;
-      };
-
-      /// _Resume_next: resumes after recursive call with _result.
-      struct _Resume_next {};
-
-      using _Frame = std::variant<_Enter, _Resume_next>;
-      uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified rnode_depth: _Enter -> _Resume_next.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const RNode *_self = _f._self;
-          auto _cs = _self->rn_next();
-          if (_cs.has_value()) {
-            const RNode &next = *_cs;
-            _stack.emplace_back(_Resume_next{});
-            _stack.emplace_back(_Enter{&next});
-          } else {
-            _result = UINT64_C(1);
-          }
-        } else {
-          auto _f = std::move(std::get<_Resume_next>(_frame));
-          _result = (std::move(_result) + 1);
-        }
+      auto _cs = this->rn_next();
+      if (_cs.has_value()) {
+        const RNode &next = *_cs;
+        return (next.rnode_depth() + 1);
+      } else {
+        return UINT64_C(1);
       }
-      return _result;
     }
 
     std::optional<RNode> rn_next() const {

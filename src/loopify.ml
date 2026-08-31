@@ -477,6 +477,78 @@ let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
        None
    | _ -> None
 
+(** Locals whose storage does not outlive one iteration of a loopified body.
+
+    A match whose scrutinee is a value temporary -- typically the [_cs] cache
+    of a scrutinee that is a function call, as in [auto _cs = _self->next();]
+    -- binds names into an object that dies with the branch that created it.
+    Parking the address of such a binder in an [_Enter] frame leaves the frame
+    pointing at freed memory once the branch is left, so a recursive call on
+    one of these receivers must not be linearised.
+
+    [stable] seeds the traversal with the storage that does outlive the loop:
+    the method parameters and [_self]. *)
+let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
+  let stable = ref stable in
+  let unstable = ref Id.Set.empty in
+  (* Storage outlives the frame when it is rooted in [this] or in a variable
+     already known to be stable.  An accessor call is treated as reaching into
+     its receiver ([_self->v()] denotes part of [*_self]); when such a call in
+     fact returns by value, the copy it makes is caught below, at the local it
+     is bound to. *)
+  let rec denotes_stable e =
+    match e with
+    | CPPthis -> true
+    | CPPvar v -> Id.Set.mem v !stable
+    | CPPderef e | CPPmove e | CPPmember (e, _) | CPParrow (e, _)
+    | CPPget (e, _) | CPPget' (e, _)
+    | CPPmethod_call (e, _, _) | CPPdot_method_call (e, _, _) ->
+      denotes_stable e
+    | CPPfun_call (f, args) -> List.exists denotes_stable (f :: args)
+    | _ -> false
+  in
+  (* A local initialised from a call keeps a copy of whatever the call
+     returned, unless it is declared as a reference; that copy dies with its
+     enclosing block.  Locals bound from a dereference or a field are plain
+     aliases and live as long as what they name. *)
+  let rec is_alias_ty = function
+    | Tref _ -> true
+    | Tmod (_, t) -> is_alias_ty t
+    | _ -> false
+  in
+  let copies_its_initialiser e ty =
+    ( match e with
+    | CPPmethod_call _ | CPPdot_method_call _ | CPPfun_call _ -> true
+    | _ -> false )
+    && match ty with Some t -> not (is_alias_ty t) | None -> true
+  in
+  let classify ok id =
+    if ok then stable := Id.Set.add id !stable
+    else unstable := Id.Set.add id !unstable
+  in
+  let rec walk s =
+    ( match s with
+    | Sasgn (id, ty, e) ->
+      classify (denotes_stable e && not (copies_its_initialiser e ty)) id
+    | Scustom_case (_, scrut, _, branches, _) ->
+      let ok = denotes_stable scrut in
+      List.iter
+        (fun (binders, _, _) -> List.iter (fun (id, _) -> classify ok id) binders)
+        branches
+    | Smatch (branches, _) ->
+      (* Structured bindings alias the matched object. *)
+      List.iter
+        (fun br ->
+          let ok = denotes_stable br.smb_scrutinee in
+          Option.iter (classify ok) br.smb_var;
+          List.iter (fun (id, _, _) -> classify ok id) br.smb_field_bindings)
+        branches
+    | _ -> () );
+    iter_stmt_children ~on_expr:(fun _ -> ()) ~on_stmts:(List.iter walk) s
+  in
+  List.iter walk body;
+  !unstable
+
 (** Build a call checker for struct methods. Matches [CPPmethod_call] on
     [method_name] and, when [has_self_param] is true, includes the receiver
     pointer as the first argument. Also matches [CPPglob] calls that resolve to
@@ -8619,11 +8691,27 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
          went through a [CPPmethod_call], declining 120 functions across the
          test corpus that have no value receiver at all. *)
       let calls = collect_stmts self_check ~in_visitor:false body_with_self in
+      (* A receiver that names existing storage is only safe when that storage
+         itself outlives the loop; a binder of a match on a temporary does
+         not. *)
+      let unstable =
+        unstable_locals
+          ~stable:
+            (List.fold_left
+               (fun s (id, _) -> Id.Set.add id s)
+               (Id.Set.singleton self_id) mf.mf_params)
+          body_with_self
+      in
+      let reads_unstable e =
+        expr_exists
+          (function CPPvar v -> Id.Set.mem v unstable | _ -> false)
+          e
+      in
       let has_value_receiver =
         List.exists (fun cs ->
           match cs.cs_recv with
           | None -> false
-          | Some (CPPderef _ | CPPvar _ | CPPthis) -> false
+          | Some (CPPderef _ | CPPvar _ | CPPthis as r) -> reads_unstable r
           | Some _ -> true)
           calls
       in
