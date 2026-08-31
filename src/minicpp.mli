@@ -384,6 +384,10 @@ and template_type =
   | TTtypename  (** Plain typename parameter *)
   | TTtypename_default of cpp_type
       (** typename with default: typename T = default_type *)
+  | TTtemplate of int
+      (** [template <typename, ...> class T] with the given arity.  A Rocq
+          parameter of kind [Type -> Type] is applied to arguments in the
+          signature it appears in, and a plain [typename] cannot be applied. *)
   | TTfun of (cpp_type list * cpp_type)
       (** Function type parameter for higher-order templates *)
   | TTconcept of GlobRef.t * cpp_type list

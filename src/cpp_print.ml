@@ -3254,6 +3254,11 @@ let pp_type t = pp_cpp_type false [] t
 let pp_template_type = function
   | TTtypename -> str "typename"
   | TTtypename_default _ -> str "typename"
+  | TTtemplate arity ->
+    str "template <"
+    ++ prlist_with_sep (fun () -> str ", ") (fun _ -> str "typename")
+         (List.init arity Fun.id)
+    ++ str "> class"
   | TTfun _ -> str "typename"
   | TTconcept (concept, []) -> pp_global Type concept
   | TTconcept (_, _ :: _) ->

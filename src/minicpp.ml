@@ -404,6 +404,10 @@ and cpp_constraint = cpp_expr
 and template_type =
   | TTtypename
   | TTtypename_default of cpp_type (* typename T = default_type *)
+  | TTtemplate of int
+      (* [template <typename, ...> class T] with the given arity.  A Rocq
+         parameter of kind [Type -> Type] is applied to arguments in the
+         signature it appears in, and a plain [typename] cannot be applied. *)
   | TTfun of (cpp_type list * cpp_type)
   | TTconcept of GlobRef.t * cpp_type list
       (* Concept-constrained parameter.  The [cpp_type list] holds the concept's

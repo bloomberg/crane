@@ -1658,6 +1658,108 @@ let collect_ml_type_index_tvars ml_ty =
   walk ml_ty;
   !result
 
+(** Arity of every type variable that [cty] applies to arguments, keyed by
+    template parameter name.  A Rocq parameter of kind [Type -> Type] reaches
+    C++ as the head of a {!Tapply}, and a plain [typename] cannot be applied,
+    so such a parameter has to be declared [template <typename> class]. *)
+let applied_tvar_arities cty =
+  let arities = Hashtbl.create 4 in
+  exists_cpp_type
+    (fun t ->
+      ( match t with
+      | Tapply (Tvar (i, name), args) ->
+        (* The head may or may not have been resolved to its parameter name;
+           key on both spellings so the caller's list matches either way. *)
+        let arity = List.length args in
+        Option.iter (fun n -> Hashtbl.replace arities n arity) name;
+        if i > 0 then Hashtbl.replace arities (tvar_id i) arity
+      | _ -> () );
+      false )
+    cty
+  |> ignore;
+  arities
+
+(** Re-declare as template template parameters those entries of [temps] that
+    [cty] applies to arguments; see {!applied_tvar_arities}. *)
+let with_applied_tvars cty temps =
+  let arities = applied_tvar_arities cty in
+  if Hashtbl.length arities = 0 then temps
+  else
+    List.map
+      (fun (tt, id) ->
+        (* A phantom parameter is already spelled with a default, which a
+           template template parameter cannot carry; leave it alone -- nothing
+           in the signature will apply it either. *)
+        match (tt, Hashtbl.find_opt arities id) with
+        | TTtypename, Some arity -> (TTtemplate arity, id)
+        | _ -> (tt, id) )
+      temps
+
+(** Relax a signature whose return type applies a template template parameter
+    (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
+    named only by the return type, and C++ deduces nothing from a return type,
+    so the call is ill-formed as written.  [B] is however pinned by the
+    signature of the callback [g] that produces it, so the return is respelled
+    in terms of that callback ([std::invoke_result_t<G &, A &>]) and [B] itself
+    is defaulted, which is all the [requires] clause still needs of it. *)
+let relax_applied_return temps decl =
+  let applies_tvar t =
+    exists_cpp_type (function Tapply (Tvar _, _) -> true | _ -> false) t
+  in
+  match decl with
+  | Dfundef (ns, cod, params, body, flags) when applies_tvar cod ->
+    (* The head of a tvar is not always resolved to its parameter name, so a
+       tvar answers to either spelling; cf. {!applied_tvar_arities}. *)
+    let is_tvar id = function
+      | Tvar (i, name) ->
+        (match name with Some n -> Id.equal n id | None -> false)
+        || (i > 0 && Id.equal (tvar_id i) id)
+      | _ -> false
+    in
+    let names id ty = exists_cpp_type (is_tvar id) ty in
+    let undeducible id = not (List.exists (fun (_, ty) -> names id ty) params) in
+    (* The result of the callback whose declared codomain is [id], spelled so
+       that C++ can compute it from the callback's deduced type. *)
+    let invoke_result id =
+      List.find_map
+        (fun (tt, fid) ->
+          match tt with
+          | TTfun (doms, cod) when is_tvar id cod ->
+            Some
+              (Tid_external
+                 ( Id.of_string_soft "std::invoke_result_t",
+                   Tref (Tid_external (fid, [])) :: List.map (fun d -> Tref d) doms
+                 ) )
+          | _ -> None )
+        temps
+    in
+    let cod =
+      map_cpp_type
+        (function
+          | Tvar _ as t -> (
+            match
+              List.find_map
+                (fun (_, id) ->
+                  if is_tvar id t && undeducible id then invoke_result id
+                  else None )
+                temps
+            with
+            | Some r -> r
+            | None -> t )
+          | t -> t )
+        cod
+    in
+    let temps =
+      List.map
+        (fun (tt, id) ->
+          match tt with
+          | TTtypename when undeducible id -> (TTtypename_default Tany, id)
+          | _ -> (tt, id) )
+        temps
+    in
+    (temps, Dfundef (ns, cod, params, body, flags))
+  | _ -> (temps, decl)
+
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
@@ -1675,6 +1777,8 @@ let collect_ml_type_index_tvars ml_ty =
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies. *)
 let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
+  with_applied_tvars cty
+  @@
   match cty with
   | Tfun (dom, cod) ->
     let tvars_indexed = get_tvars_indexed cty in
@@ -2434,7 +2538,7 @@ let gen_dfun n b cty ty temps =
     List.filter_map
       (fun (tt, id) ->
         match tt with
-        | TTtypename | TTtypename_default _ -> Some id
+        | TTtypename | TTtypename_default _ | TTtemplate _ -> Some id
         | _ -> None )
       regular_temps
   in
@@ -2767,6 +2871,7 @@ let gen_dfun n b cty ty temps =
   in
   (* Restore saved itree mode *)
   tctx.itree_mode <- saved_mode;
+  let temps, inner = relax_applied_return temps inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
