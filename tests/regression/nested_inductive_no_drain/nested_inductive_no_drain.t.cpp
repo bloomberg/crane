@@ -13,8 +13,12 @@ tree build(unsigned n) {
 } // namespace
 
 int main() {
-  // Sanity: shallow trees round-trip fine.
-  for (unsigned n : {1000u, 20000u}) {
+  // Sanity: shallow trees round-trip fine.  The depth is capped at 5k because
+  // `tsum` recurses through an inner `fix` over `lst tree` that loopify does
+  // not flatten, so the traversal -- unlike the destruction below -- still
+  // costs a stack frame per level.  That is a separate limitation from the
+  // drain this test covers.
+  for (unsigned n : {1000u, 5000u}) {
     tree t = build(n);
     unsigned long long want = (unsigned long long)n * (n + 1) / 2;
     unsigned long long got = t.tsum();
