@@ -160,20 +160,21 @@ template <SEM S> struct Make {
   using psem = std::pair<pred_ty, act_ty>;
   using entry = SigT<prod2, psem>;
 
-  template <typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, std::any &, std::any &>
-  static entry mk_entry(typename S::idx a, F1 &&eq) {
+  template <typename F1> static entry mk_entry(typename S::idx a, F1 &&eq) {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
         std::make_pair(
-            [=](const auto &tup) mutable {
-              const auto &[v, _x] = tup;
+            std::any(crane_erase_fn([=](const auto &tup) mutable {
+              const auto &[v, _x] =
+                  std::any_cast<std::pair<std::any, std::any>>(tup);
               return crane_call_erased(eq, v, v);
-            },
-            [=](const auto &tup) mutable {
-              const auto &[v, _x] = tup;
-              return crane_call_erased(eq, v, v);
-            }));
+            })),
+            std::any(crane_erase_fn([=](const auto &tup) mutable {
+              const auto &[v, _x] =
+                  std::any_cast<std::pair<std::any, std::any>>(tup);
+              return std::any_cast<std::function<std::any(std::any, std::any)>>(
+                  eq)(v, v);
+            }))));
   }
 
   template <typename F1>

@@ -2,14 +2,11 @@
 #define INCLUDED_HIGHER_RANK_ARGUMENT_PROBE
 
 #include <any>
-#include <type_traits>
 
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct HigherRankArgumentProbe {
-  template <typename F0>
-    requires std::is_invocable_r_v<std::any, F0 &, std::any &>
-  static Bool0 call_poly(F0 &&f) {
+  template <typename F0> static Bool0 call_poly(F0 &&f) {
     return std::any_cast<Bool0>(f(Bool0::TRUE_));
   }
 

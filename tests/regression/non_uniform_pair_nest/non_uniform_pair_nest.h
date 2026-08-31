@@ -47,8 +47,7 @@ struct NonUniformPairNest {
   };
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
-             std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
   static T1 nest_rect(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       const auto &[a0] = std::get<typename nest::NZ>(n.v());
@@ -61,8 +60,7 @@ struct NonUniformPairNest {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
-             std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, nest &, T1 &>
   static T1 nest_rec(F0 &&f, F1 &&f0, const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       const auto &[a0] = std::get<typename nest::NZ>(n.v());

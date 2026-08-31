@@ -10,16 +10,14 @@ List<ExistentialErasedApplyBadCpp::dyn>
 ExistentialErasedApplyBadCpp::mk(uint64_t n) {
   return List<ExistentialErasedApplyBadCpp::dyn>::cons(
       dyn::dyn0(n, std::function<uint64_t(std::any)>(
-                       [](const std::any &_any_k) -> uint64_t {
-                         std::any k = _any_k;
-                         return k;
+                       [](const std::any &k) -> uint64_t {
+                         return std::any_cast<uint64_t>(k);
                        })),
       List<ExistentialErasedApplyBadCpp::dyn>::cons(
           dyn::dyn0(
               std::make_pair(n, (n + 1)),
               std::function<uint64_t(std::any)>(
-                  [](const std::any &_any_p) -> uint64_t {
-                    std::any p = _any_p;
+                  [](const std::any &p) -> uint64_t {
                     return (
                         std::any_cast<std::pair<uint64_t, uint64_t>>(p).first +
                         std::any_cast<std::pair<uint64_t, uint64_t>>(p).second);
@@ -30,8 +28,7 @@ ExistentialErasedApplyBadCpp::mk(uint64_t n) {
                                    n, List<uint64_t>::cons(
                                           n, List<uint64_t>::nil()))),
                         std::function<uint64_t(std::any)>(
-                            [](const std::any &_any_l) -> uint64_t {
-                              std::any l = _any_l;
+                            [](const std::any &l) -> uint64_t {
                               return std::any_cast<List<uint64_t>>(l).length();
                             })),
               List<ExistentialErasedApplyBadCpp::dyn>::nil())));

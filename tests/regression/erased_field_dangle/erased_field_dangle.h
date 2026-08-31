@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include <any>
 #include <functional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -40,16 +39,12 @@ struct ErasedFieldDangle {
       return std::any_cast<T1>(a);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &>
-    T1 box_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
       return crane_call_erased(f, a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &>
-    T1 box_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return crane_call_erased(f, a0);
     }
@@ -107,31 +102,23 @@ struct ErasedFieldDangle {
       return a1(a);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                     std::function<uint64_t(std::any)> &>
-    T1 exists_box_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 exists_box_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                     std::function<uint64_t(std::any)> &>
-    T1 exists_box_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 exists_box_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
   };
 
   static inline const uint64_t test_exists = []() {
-    exists_box e = exists_box::pack(UINT64_C(7),
-                                    std::function<uint64_t(std::any)>(
-                                        [](const std::any &_any_x) -> uint64_t {
-                                          std::any x = _any_x;
-                                          return (std::any_cast<uint64_t>(x) *
-                                                  std::any_cast<uint64_t>(x));
-                                        }));
+    exists_box e = exists_box::pack(
+        UINT64_C(7),
+        std::function<uint64_t(std::any)>([](const std::any &x) -> uint64_t {
+          return (std::any_cast<uint64_t>(x) * std::any_cast<uint64_t>(x));
+        }));
     return std::move(e).run_exists();
   }();
 };

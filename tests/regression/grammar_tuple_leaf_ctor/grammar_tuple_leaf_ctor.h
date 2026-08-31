@@ -242,25 +242,31 @@ const List<grammar_entry> entries = List<
                 std::make_pair(std::any(),
                                List<Symbol>::cons(Symbol::t(Terminal::TSTRING),
                                                   List<Symbol>::nil())),
-                std::make_pair([](const auto &) { return true; },
-                               [](std::pair<std::string, std::monostate> tup) {
-                                 const auto &[s, _x] = tup;
-                                 return Val::vstr(s);
-                               })),
+                std::make_pair(
+                    std::any(crane_erase_fn([](const auto &) { return true; })),
+                    std::any(crane_erase_fn([](const auto &tup) {
+                      const auto &[s, _x] =
+                          std::any_cast<std::pair<std::any, std::any>>(tup);
+                      return Val::vstr(std::any_cast<std::string>(s));
+                    })))),
         List<SigT<std::pair<std::any, List<Symbol>>,
                   std::pair<std::any, std::any>>>::
             cons(SigT<std::pair<std::any, List<Symbol>>,
                       std::pair<std::any, std::any>>::
-                     existt(std::make_pair(
-                                std::any(),
-                                List<Symbol>::cons(Symbol::t(Terminal::TINT),
-                                                   List<Symbol>::nil())),
-                            std::make_pair(
-                                [](const auto &) { return true; },
-                                [](std::pair<uint64_t, std::monostate> tup) {
-                                  const auto &[i, _x] = tup;
-                                  return Val::vint(i);
-                                })),
+                     existt(
+                         std::make_pair(std::any(),
+                                        List<Symbol>::cons(
+                                            Symbol::t(Terminal::TINT),
+                                            List<Symbol>::nil())),
+                         std::make_pair(
+                             std::any(crane_erase_fn(
+                                 [](const auto &) { return true; })),
+                             std::any(crane_erase_fn([](const auto &tup) {
+                               const auto &[i, _x] =
+                                   std::any_cast<std::pair<std::any, std::any>>(
+                                       tup);
+                               return Val::vint(std::any_cast<uint64_t>(i));
+                             })))),
                  List<SigT<std::pair<std::any, List<Symbol>>,
                            std::pair<std::any, std::any>>>::nil()));
 uint64_t num_entries(std::monostate _x);

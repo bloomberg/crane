@@ -1,6 +1,7 @@
 #ifndef INCLUDED_GRAMMAR_POLY_PAIRLIST_PRED
 #define INCLUDED_GRAMMAR_POLY_PAIRLIST_PRED
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -194,17 +195,22 @@ const std::deque<grammar_entry> entries =
                        return _a1;
                      }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
                  std::make_pair(
-                     [](const std::pair<std::deque<std::pair<std::string, Val>>,
-                                        std::monostate> &tup) {
-                       const auto &[prs, _x] = tup;
-                       return nodupKeys<Val>(prs);
-                     },
-                     [](std::pair<std::deque<std::pair<std::string, Val>>,
-                                  std::monostate>
-                            tup) {
-                       const auto &[prs, _x] = tup;
-                       return Val::vassoc(prs);
+                     std::any(crane_erase_fn([](const auto &tup) {
+                       const auto &[prs, _x] =
+                           std::any_cast<std::pair<std::any, std::any>>(tup);
+                       return nodupKeys<Val>(
+                           crane_container_cast<
+                               std::deque<std::pair<std::string, Val>>>(
+                               std::any_cast<std::deque<std::any>>(prs)));
                      })),
+                     std::any(crane_erase_fn([](const auto &tup) {
+                       const auto &[prs, _x] =
+                           std::any_cast<std::pair<std::any, std::any>>(tup);
+                       return Val::vassoc(
+                           crane_container_cast<
+                               std::deque<std::pair<std::string, Val>>>(
+                               std::any_cast<std::deque<std::any>>(prs)));
+                     })))),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
@@ -216,11 +222,13 @@ const std::deque<grammar_entry> entries =
                                  _a1.push_front(_a0);
                                  return _a1;
                                }(Symbol::t(), std::deque<Symbol>{})),
-                std::make_pair([](const auto &) { return true; },
-                               [](std::pair<std::string, std::monostate> tup) {
-                                 const auto &[s, _x] = tup;
-                                 return Val::vstr(s);
-                               })),
+                std::make_pair(
+                    std::any(crane_erase_fn([](const auto &) { return true; })),
+                    std::any(crane_erase_fn([](const auto &tup) {
+                      const auto &[s, _x] =
+                          std::any_cast<std::pair<std::any, std::any>>(tup);
+                      return Val::vstr(std::any_cast<std::string>(s));
+                    })))),
         std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                         std::pair<std::any, std::any>>>{}));
 uint64_t num_entries(std::monostate _x);

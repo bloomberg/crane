@@ -1,6 +1,7 @@
 #ifndef INCLUDED_GRAMMAR_TUPLE_RECORD_CONS
 #define INCLUDED_GRAMMAR_TUPLE_RECORD_CONS
 
+#include "crane_fn.h"
 #include <any>
 #include <cstdint>
 #include <deque>
@@ -39,61 +40,66 @@ const std::deque<grammar_entry> entries =
       return _a1;
     }(SigT<std::pair<std::any, std::deque<Symbol>>,
            std::pair<std::any, std::any>>::
-          existt(
-              std::make_pair(std::any(),
-                             [](auto _a0, auto _a1) {
-                               _a1.push_front(_a0);
-                               return _a1;
-                             }(Symbol::T,
-                               [](auto _a0, auto _a1) {
-                                 _a1.push_front(_a0);
-                                 return _a1;
-                               }(Symbol::T,
-                                 [](auto _a0, auto _a1) {
-                                   _a1.push_front(_a0);
-                                   return _a1;
-                                 }(Symbol::T,
-                                   [](auto _a0, auto _a1) {
-                                     _a1.push_front(_a0);
-                                     return _a1;
-                                   }(Symbol::NT, std::deque<Symbol>{}))))),
-              std::make_pair(
-                  [](const std::pair<
-                      uint64_t, std::pair<symbol_semty,
-                                          std::pair<symbol_semty,
-                                                    std::pair<std::deque<rgb>,
-                                                              std::monostate>>>>
-                         &tup) {
-                    const auto &[x, y0] = tup;
-                    const auto &[_x, y1] = y0;
-                    const auto &[_x0, y2] = y1;
-                    const auto &[tpls, _x1] = y2;
-                    return triples_le_max(tpls, x);
-                  },
-                  [](std::pair<
-                      uint64_t,
-                      std::pair<uint64_t,
-                                std::pair<uint64_t, std::pair<std::deque<rgb>,
-                                                              std::monostate>>>>
-                         tup) {
-                    const auto &[x, y0] = tup;
-                    const auto &[y, y1] = y0;
-                    const auto &[z, y2] = y1;
-                    const auto &[tpls, _x] = y2;
-                    return [](auto _a0, auto _a1) {
-                      _a1.push_front(_a0);
-                      return _a1;
-                    }(rgb{x, y, z}, tpls);
-                  })),
+          existt(std::make_pair(std::any(),
+                                [](auto _a0, auto _a1) {
+                                  _a1.push_front(_a0);
+                                  return _a1;
+                                }(Symbol::T,
+                                  [](auto _a0, auto _a1) {
+                                    _a1.push_front(_a0);
+                                    return _a1;
+                                  }(Symbol::T,
+                                    [](auto _a0, auto _a1) {
+                                      _a1.push_front(_a0);
+                                      return _a1;
+                                    }(Symbol::T,
+                                      [](auto _a0, auto _a1) {
+                                        _a1.push_front(_a0);
+                                        return _a1;
+                                      }(Symbol::NT, std::deque<Symbol>{}))))),
+                 std::make_pair(
+                     std::any(crane_erase_fn([](const auto &tup) {
+                       const auto &[x, y0] =
+                           std::any_cast<std::pair<std::any, std::any>>(tup);
+                       const auto &[_x, y1] =
+                           std::any_cast<std::pair<std::any, std::any>>(y0);
+                       const auto &[_x0, y2] =
+                           std::any_cast<std::pair<std::any, std::any>>(y1);
+                       const auto &[tpls, _x1] =
+                           std::any_cast<std::pair<std::any, std::any>>(y2);
+                       return triples_le_max(
+                           crane_container_cast<std::deque<rgb>>(
+                               std::any_cast<std::deque<std::any>>(tpls)),
+                           std::any_cast<uint64_t>(x));
+                     })),
+                     std::any(crane_erase_fn([](const auto &tup) {
+                       const auto &[x, y0] =
+                           std::any_cast<std::pair<std::any, std::any>>(tup);
+                       const auto &[y, y1] =
+                           std::any_cast<std::pair<std::any, std::any>>(y0);
+                       const auto &[z, y2] =
+                           std::any_cast<std::pair<std::any, std::any>>(y1);
+                       const auto &[tpls, _x] =
+                           std::any_cast<std::pair<std::any, std::any>>(y2);
+                       return [](auto _a0, auto _a1) {
+                         _a1.push_front(_a0);
+                         return _a1;
+                       }(rgb{std::any_cast<uint64_t>(x),
+                              std::any_cast<uint64_t>(y),
+                              std::any_cast<uint64_t>(z)},
+                              std::any_cast<std::deque<std::any>>(tpls));
+                     })))),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
       }(SigT<std::pair<std::any, std::deque<Symbol>>,
              std::pair<std::any, std::any>>::
             existt(std::make_pair(std::any(), std::deque<Symbol>{}),
-                   std::make_pair(
-                       [](const auto &) { return true; },
-                       [](const auto &) { return std::deque<std::any>{}; })),
+                   std::make_pair(std::any(crane_erase_fn(
+                                      [](const auto &) { return true; })),
+                                  std::any(crane_erase_fn([](const auto &) {
+                                    return std::deque<std::any>{};
+                                  })))),
         std::deque<SigT<std::pair<std::any, std::deque<Symbol>>,
                         std::pair<std::any, std::any>>>{}));
 uint64_t num_entries(std::monostate _x);

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SIGT_LEAF_FORWARD_TOPFN
 #define INCLUDED_SIGT_LEAF_FORWARD_TOPFN
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -156,15 +157,16 @@ using psem = std::pair<pred_ty, act_ty>;
 using entry = SigT<prod2, psem>;
 const entry my_entry = SigT<prod2, psem>::existt(
     std::make_pair(UINT64_C(0), List<uint64_t>::nil()),
-    std::make_pair(
-        [](const std::pair<std::string, std::monostate> &tup) {
-          const auto &[v, _x] = tup;
-          return wrap_string(v);
-        },
-        [](const std::pair<std::string, std::monostate> &tup) {
-          const auto &[v, _x] = tup;
-          return wrap_string(v);
-        }));
+    std::make_pair(std::any(crane_erase_fn([](const auto &tup) {
+                     const auto &[v, _x] =
+                         std::any_cast<std::pair<std::any, std::any>>(tup);
+                     return wrap_string(std::any_cast<std::string>(v));
+                   })),
+                   std::any(crane_erase_fn([](const auto &tup) {
+                     const auto &[v, _x] =
+                         std::any_cast<std::pair<std::any, std::any>>(tup);
+                     return wrap_string(std::any_cast<std::string>(v));
+                   }))));
 domty garg(uint64_t n);
 bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
                     std::pair<std::any, std::any>> &e);

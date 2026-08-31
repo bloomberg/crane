@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ERASED_LIST_CONS
 #define INCLUDED_ERASED_LIST_CONS
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -267,7 +268,8 @@ template <SYM Ty> struct DefsFn {
           auto _cs = assemble(*a1, *a10);
           if (_cs.has_value()) {
             const auto &rest = *_cs;
-            return std::make_optional<symbols_semty>(std::make_pair(a11, rest));
+            return std::make_optional<symbols_semty>(
+                std::make_pair(std::any(a11), std::any(rest)));
           } else {
             return std::optional<symbols_semty>();
           }
@@ -387,14 +389,22 @@ const MyDefs::grammar entries =
                                      List<MyDefs::symbol>::cons(
                                          MyDefs::symbol::t(MySym::Term::RBRACE),
                                          List<MyDefs::symbol>::nil()))))),
-                     std::make_pair([](const auto &) { return true; },
-                                    [](const auto &tup) {
-                                      const auto &[_x, y0] = tup;
-                                      const auto &[pr, y1] = y0;
-                                      const auto &[prs, y2] = y1;
-                                      const auto &[_x0, _x1] = y2;
-                                      return List<std::any>::cons(pr, prs);
-                                    })),
+                     std::make_pair(
+                         std::any(
+                             crane_erase_fn([](const auto &) { return true; })),
+                         std::any(crane_erase_fn([](const auto &tup) {
+                           const auto &[_x, y0] =
+                               std::any_cast<std::pair<std::any, std::any>>(
+                                   tup);
+                           const auto &[pr, y1] =
+                               std::any_cast<std::pair<std::any, std::any>>(y0);
+                           const auto &[prs, y2] =
+                               std::any_cast<std::pair<std::any, std::any>>(y1);
+                           const auto &[_x0, _x1] =
+                               std::any_cast<std::pair<std::any, std::any>>(y2);
+                           return List<std::any>::cons(
+                               pr, std::any_cast<List<std::any>>(prs));
+                         })))),
              List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
                        std::pair<std::any, std::any>>>::nil());
 

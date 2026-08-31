@@ -3298,6 +3298,12 @@ let pp_requires_of_tparams tparams =
     List.filter_map
       (fun (tt, id) ->
         match tt with
+        (* A constraint is a claim about a representation.  An erased domain
+           is precisely the absence of one: the callback is stored through
+           [crane_erase_fn], which adapts whatever it is actually given, so
+           asserting that it takes a [std::any] rejects every honest caller.
+           Leave such a parameter unconstrained. *)
+        | TTfun (dom, _) when List.exists Ml_type_util.prints_as_any dom -> None
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in

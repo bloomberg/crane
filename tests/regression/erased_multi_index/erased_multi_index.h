@@ -40,16 +40,12 @@ struct ErasedMultiIndex {
       return std::any_cast<T1>(k0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
-    T1 tagged_rec(F0 &&f) const {
+    template <typename T1, typename F0> T1 tagged_rec(F0 &&f) const {
       const auto &[k0, v0] = *this;
       return crane_call_erased(f, k0, v0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::any &, std::any &>
-    T1 tagged_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v0] = *this;
       return crane_call_erased(f, k0, v0);
     }
@@ -161,9 +157,7 @@ struct ErasedMultiIndex {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, std::any &, hlist &, T1 &>
-    T1 hlist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 hlist_rec(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
@@ -209,9 +203,7 @@ struct ErasedMultiIndex {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, std::any &, hlist &, T1 &>
-    T1 hlist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 hlist_rect(T1 f, F1 &&f0) const {
       const hlist *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.

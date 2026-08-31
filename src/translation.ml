@@ -3045,6 +3045,14 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       else temps
     | _ -> []
   in
+  (* These are storage slots: writing a field down as [std::any] is what makes
+     the value in it boxed, so a slot whose representation was merely unknown
+     becomes known-boxed here (see {!materialise_opaque}).  Without this a
+     payload declared [pair<std::any, std::any>] would store its components
+     raw, and the consumer's [any_cast] on them would throw. *)
+  let draft_ctor_temps_for_wrap =
+    List.map materialise_opaque draft_ctor_temps_for_wrap
+  in
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_expected = tctx.expected_ml_type_for_arg in
@@ -5537,7 +5545,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                       Tnamespace (ns_g, Tglob (g, [Tany], ns))
                     | t -> t
                   in
-                  if concrete_ty <> Tany && concrete_ty <> Tauto then
+                  (* [Topaque] is no more castable than [Tany]: both print
+                     as [std::any], and neither names a representation to
+                     recover the parameter into. *)
+                  if (not (prints_as_any concrete_ty)) && concrete_ty <> Tauto
+                  then
                     let any_param_id = Id.of_string
                       ("_any_" ^ Id.to_string id) in
                     Some (j, id, any_param_id, concrete_ty)
