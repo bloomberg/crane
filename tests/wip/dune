@@ -88,3 +88,223 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
+
+(subdir concept_name_shadows_param
+ (rule
+  (targets concept_name_shadows_param.t.exe)
+  (deps ConceptNameShadowsParam.vo concept_name_shadows_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_name_shadows_param.t.exe concept_name_shadows_param.cpp concept_name_shadows_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_name_shadows_param.t.exe)
+  (action (run ./concept_name_shadows_param.t.exe))))
+
+(subdir concept_name_with_prime
+ (rule
+  (targets concept_name_with_prime.t.exe)
+  (deps ConceptNameWithPrime.vo concept_name_with_prime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_name_with_prime.t.exe concept_name_with_prime.cpp concept_name_with_prime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_name_with_prime.t.exe)
+  (action (run ./concept_name_with_prime.t.exe))))
+
+(subdir decl_order_forward_use
+ (rule
+  (targets decl_order_forward_use.t.exe)
+  (deps DeclOrderForwardUse.vo decl_order_forward_use.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_forward_use.t.exe decl_order_forward_use.cpp decl_order_forward_use.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decl_order_forward_use.t.exe)
+  (action (run ./decl_order_forward_use.t.exe))))
+
+(subdir empty_inductive_decimal_uint
+ (rule
+  (targets empty_inductive_decimal_uint.t.exe)
+  (deps EmptyInductiveDecimalUint.vo empty_inductive_decimal_uint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_inductive_decimal_uint.t.exe empty_inductive_decimal_uint.cpp empty_inductive_decimal_uint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_inductive_decimal_uint.t.exe)
+  (action (run ./empty_inductive_decimal_uint.t.exe))))
+
+(subdir erased_enum_switch
+ (rule
+  (targets erased_enum_switch.t.exe)
+  (deps ErasedEnumSwitch.vo erased_enum_switch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_enum_switch.t.exe erased_enum_switch.cpp erased_enum_switch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_enum_switch.t.exe)
+  (action (run ./erased_enum_switch.t.exe))))
+
+(subdir eta_match_returns_fun
+ (rule
+  (targets eta_match_returns_fun.t.exe)
+  (deps EtaMatchReturnsFun.vo eta_match_returns_fun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_match_returns_fun.t.exe eta_match_returns_fun.cpp eta_match_returns_fun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_match_returns_fun.t.exe)
+  (action (run ./eta_match_returns_fun.t.exe))))
+
+(subdir eta_methodified_binop
+ (rule
+  (targets eta_methodified_binop.t.exe)
+  (deps EtaMethodifiedBinop.vo eta_methodified_binop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_methodified_binop.t.exe eta_methodified_binop.cpp eta_methodified_binop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_methodified_binop.t.exe)
+  (action (run ./eta_methodified_binop.t.exe))))
+
+(subdir hkt_instance_any_mismatch
+ (rule
+  (targets hkt_instance_any_mismatch.t.exe)
+  (deps HktInstanceAnyMismatch.vo hkt_instance_any_mismatch.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_instance_any_mismatch.t.exe hkt_instance_any_mismatch.cpp hkt_instance_any_mismatch.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_instance_any_mismatch.t.exe)
+  (action (run ./hkt_instance_any_mismatch.t.exe))))
+
+(subdir loopify_frame_declval
+ (rule
+  (targets loopify_frame_declval.t.exe)
+  (deps LoopifyFrameDeclval.vo loopify_frame_declval.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_frame_declval.t.exe loopify_frame_declval.cpp loopify_frame_declval.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_frame_declval.t.exe)
+  (action (run ./loopify_frame_declval.t.exe))))
+
+(subdir loopify_frame_receiver_ptr
+ (rule
+  (targets loopify_frame_receiver_ptr.t.exe)
+  (deps LoopifyFrameReceiverPtr.vo loopify_frame_receiver_ptr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_frame_receiver_ptr.t.exe loopify_frame_receiver_ptr.cpp loopify_frame_receiver_ptr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_frame_receiver_ptr.t.exe)
+  (action (run ./loopify_frame_receiver_ptr.t.exe))))
+
+(subdir loopify_self_template_args
+ (rule
+  (targets loopify_self_template_args.t.exe)
+  (deps LoopifySelfTemplateArgs.vo loopify_self_template_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_self_template_args.t.exe loopify_self_template_args.cpp loopify_self_template_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_self_template_args.t.exe)
+  (action (run ./loopify_self_template_args.t.exe))))
+
+(subdir missing_inductive_pos_mask
+ (rule
+  (targets missing_inductive_pos_mask.t.exe)
+  (deps MissingInductivePosMask.vo missing_inductive_pos_mask.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} missing_inductive_pos_mask.t.exe missing_inductive_pos_mask.cpp missing_inductive_pos_mask.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps missing_inductive_pos_mask.t.exe)
+  (action (run ./missing_inductive_pos_mask.t.exe))))
+
+(subdir nested_eponymous_module
+ (rule
+  (targets nested_eponymous_module.t.exe)
+  (deps NestedEponymousModule.vo nested_eponymous_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_eponymous_module.t.exe nested_eponymous_module.cpp nested_eponymous_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_eponymous_module.t.exe)
+  (action (run ./nested_eponymous_module.t.exe))))
+
+(subdir option_recursive_match
+ (rule
+  (targets option_recursive_match.t.exe)
+  (deps OptionRecursiveMatch.vo option_recursive_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} option_recursive_match.t.exe option_recursive_match.cpp option_recursive_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps option_recursive_match.t.exe)
+  (action (run ./option_recursive_match.t.exe))))
+
+(subdir partial_local_fix
+ (rule
+  (targets partial_local_fix.t.exe)
+  (deps PartialLocalFix.vo partial_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_local_fix.t.exe partial_local_fix.cpp partial_local_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_local_fix.t.exe)
+  (action (run ./partial_local_fix.t.exe))))
+
+(subdir poly_rank2_record_field
+ (rule
+  (targets poly_rank2_record_field.t.exe)
+  (deps PolyRank2RecordField.vo poly_rank2_record_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_rank2_record_field.t.exe poly_rank2_record_field.cpp poly_rank2_record_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_rank2_record_field.t.exe)
+  (action (run ./poly_rank2_record_field.t.exe))))
+
+(subdir shadow_runtime_nat
+ (rule
+  (targets shadow_runtime_nat.t.exe)
+  (deps ShadowRuntimeNat.vo shadow_runtime_nat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shadow_runtime_nat.t.exe shadow_runtime_nat.cpp shadow_runtime_nat.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shadow_runtime_nat.t.exe)
+  (action (run ./shadow_runtime_nat.t.exe))))
+
+(subdir tc_carrier_option_cast
+ (rule
+  (targets tc_carrier_option_cast.t.exe)
+  (deps TcCarrierOptionCast.vo tc_carrier_option_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tc_carrier_option_cast.t.exe tc_carrier_option_cast.cpp tc_carrier_option_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tc_carrier_option_cast.t.exe)
+  (action (run ./tc_carrier_option_cast.t.exe))))
+
+(subdir type_level_fun_apply
+ (rule
+  (targets type_level_fun_apply.t.exe)
+  (deps TypeLevelFunApply.vo type_level_fun_apply.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fun_apply.t.exe type_level_fun_apply.cpp type_level_fun_apply.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fun_apply.t.exe)
+  (action (run ./type_level_fun_apply.t.exe))))
+
+(subdir vector_cases_deduction
+ (rule
+  (targets vector_cases_deduction.t.exe)
+  (deps VectorCasesDeduction.vo vector_cases_deduction.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} vector_cases_deduction.t.exe vector_cases_deduction.cpp vector_cases_deduction.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps vector_cases_deduction.t.exe)
+  (action (run ./vector_cases_deduction.t.exe))))
