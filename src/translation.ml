@@ -3529,6 +3529,16 @@ and coerce ?term ?from ~into expr =
       gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
     | _ -> expr
 
+(** [recover_boxed_result ~boxed expr] casts the result of a call back into
+    the type the enclosing context expects, when [boxed] says the callee hands
+    back a [std::any] whatever its ML type claims -- because its codomain
+    erases, or because it was itself recovered from a box and so goes through
+    the canonical [std::function<std::any(std::any...)>] adapter. *)
+and recover_boxed_result ~boxed expr =
+  match tctx.current_cpp_return_type with
+  | Some into when boxed -> coerce ~from:Tany ~into expr
+  | _ -> expr
+
 (** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
     is not callable, so the canonical [std::function<std::any(std::any...)>]
     adapter the producer stored via {!erase_fn_for_any_slot} is recovered with
@@ -6005,10 +6015,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | Some ft -> (not hkt_class) && ml_codomain_erases_to_any n_value_args ft
           | None -> false
         in
-        ( match (erased_cod, tctx.current_cpp_return_type) with
-        | (true, Some ty) when ty <> Tany && not (is_erased_type ty) && ty <> Tvoid ->
-          CPPany_cast (ty, call)
-        | _ -> call )
+        recover_boxed_result ~boxed:erased_cod call
       | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
     | _ ->
       (* Destructure record fields into local variables, then evaluate the body
@@ -7721,10 +7728,7 @@ and eta_fun env f args =
           (match get_env_type_opt i with Some ty -> ml_codomain_erases_to_any n ty | None -> false)
         | _ -> false
       in
-      ( match (erased_cod, tctx.current_cpp_return_type) with
-      | (true, Some ty) when ty <> Tany && not (is_erased_type ty) && ty <> Tvoid ->
-        CPPany_cast (ty, result)
-      | _ -> result )
+      recover_boxed_result ~boxed:erased_cod result
 
 (** Build the qualified constructor struct type for a pattern match branch.
 
