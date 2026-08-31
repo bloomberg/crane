@@ -718,12 +718,13 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
         | SEmodule m ->
           let mod_name = modular_rename Mod (Label.to_id l) in
           let clashes names = List.exists (String.equal mod_name) names in
-          let inner_names =
-            match mod_struct_body m with
-            | Some inner_sel -> inductive_names_of_sel inner_sel
-            | None -> []
-          in
-          if clashes inductive_names || clashes inner_names then
+          (* An inductive declared {e inside} the module and sharing its name
+             is the eponymous case: the backend merges the type into the module
+             struct instead of nesting it, so there is no collision to rename
+             away — and renaming would in fact defeat the merge (the two names
+             would no longer match).  Only a {e sibling} collision needs the
+             suffix. *)
+          if clashes inductive_names then
             Hashtbl.replace sibling_collision_renames
               (MPdot (parent_mp, l))
               (mod_name ^ "_Mod")
