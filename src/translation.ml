@@ -6097,8 +6097,18 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     let elems = Array.map (gen_expr env) elems in
     let def = gen_expr env def in
     CPPparray (elems, def)
-  | MLmagic (_, t) ->
+  | MLmagic (m, t) ->
     let inner = gen_expr env t in
+    (* What extraction recorded about the term's own side of the boundary.
+       Not materialised: this is an inferred type, so a [Topaque] here stays
+       [Topaque] and licenses nothing. *)
+    let recorded_from =
+      match m with
+      | Mcoerce (from, _) ->
+        Some (convert_ml_type_to_cpp_type env (get_current_type_vars ()) from)
+      | Mboxed -> Some Tany
+      | Mbarrier -> None
+    in
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
@@ -6128,9 +6138,19 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             | t -> t
           in
           coerce ~from:Tany ~into:(erase_top_args ty) inner
-        else if ml_expr_is_erased env t then
-          coerce ~from:Tany ~into:ty inner
-        else inner
+        else if ml_expr_is_erased env t then coerce ~from:Tany ~into:ty inner
+        else
+          (* [ml_expr_is_erased] only recognises a handful of shapes and says
+             [false] for the rest.  Extraction already unified the two sides
+             here, so fall back on what it recorded rather than on the
+             oracle's silence. *)
+          ( match recorded_from with
+            (* Only the boxed dimension: extraction's [from] describes the
+               Coq-level type, and the pointer- and converting-constructor
+               dimensions at this boundary have already been settled by the
+               sub-expression that produced [inner]. *)
+            | Some from when is_boxed_type from -> coerce ~from ~into:ty inner
+            | _ -> inner )
       | _ -> inner )
   | MLdummy _ ->
     (* Erased proof or type argument.  [CPPabort] is safe here because this
