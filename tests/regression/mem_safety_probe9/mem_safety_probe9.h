@@ -16,18 +16,6 @@ struct MemSafetyProbe9 {
   /// during tree traversal. Each closure captures subtrees
   /// (unique_ptr fields) that are also used in recursive calls.
   /// The captures must be independent clones.
-  template <typename T1> static uint64_t _anon_f1(const T1, const tree l) {
-    return l.tree_sum();
-  }
-
-  template <typename T1> static uint64_t _anon_f2(const T1, const tree r) {
-    return r.tree_sum();
-  }
-
-  template <typename T1> static uint64_t _anon_f3(const T1, const tree t) {
-    return t.tree_sum();
-  }
-
   struct tree {
     // TYPES
     struct Leaf {};
@@ -299,6 +287,18 @@ struct MemSafetyProbe9 {
       return _result;
     }
   };
+
+  template <typename T1> static uint64_t _anon_f1(const T1, const tree l) {
+    return l.tree_sum();
+  }
+
+  template <typename T1> static uint64_t _anon_f2(const T1, const tree r) {
+    return r.tree_sum();
+  }
+
+  template <typename T1> static uint64_t _anon_f3(const T1, const tree t) {
+    return t.tree_sum();
+  }
 
   template <typename A> struct mylist {
     // TYPES

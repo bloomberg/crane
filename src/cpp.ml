@@ -643,7 +643,15 @@ let rec pp_structure_elem ~is_header f = function
     let body =
       if Pp.ismt member_lifted then body
       else if Pp.ismt body then member_lifted
-      else member_lifted ++ cut2 () ++ body
+      else
+        (* A helper lifted out of an inductive's own declaration comes from a
+           definition that was turned into a method of that inductive, so it
+           names the inductive in its parameter types and must follow it.  Its
+           call sites are method bodies, which are complete-class contexts and
+           so may name a member declared later. *)
+        match d with
+        | Miniml.Dind _ -> body ++ cut2 () ++ member_lifted
+        | _ -> member_lifted ++ cut2 () ++ body
     in
     if Pp.ismt body then
       mt ()
