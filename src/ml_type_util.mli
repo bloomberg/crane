@@ -116,8 +116,25 @@ val list_ctor_struct_names : Names.GlobRef.t -> string * string
 (** Whether a C++ type is the dummy type. *)
 val is_cpp_dummy_type : Minicpp.cpp_type -> bool
 
-(** Whether a C++ type is erased. *)
+(** Whether a C++ type is spelled [std::any] in the generated header.  A
+    question about syntax only — it says nothing about whether a value of the
+    type may be boxed or cast, for which see {!is_boxed_type}. *)
+val prints_as_any : Minicpp.cpp_type -> bool
+
+(** Whether a value of this type is known to live inside a [std::any], and so
+    may be boxed into and [any_cast] out of.  Narrower than {!prints_as_any}:
+    {!Minicpp.Topaque} prints as [std::any] but claims nothing about the
+    representation, and is excluded. *)
+val is_boxed_type : Minicpp.cpp_type -> bool
+
+(** Whether a C++ type is erased.  An alias for {!prints_as_any}. *)
 val is_erased_type : Minicpp.cpp_type -> bool
+
+(** Replace every {!Minicpp.Topaque} in a type with {!Minicpp.Tany}.  Apply at
+    any position where the type is written down (field, parameter, return type,
+    template argument): spelling [std::any] in a declaration is what makes the
+    value boxed, so no [Topaque] may survive into the generated header. *)
+val materialise_opaque : Minicpp.cpp_type -> Minicpp.cpp_type
 
 (** Whether every component of a C++ type is erased. *)
 val is_all_erased : Minicpp.cpp_type -> bool

@@ -269,11 +269,40 @@ let is_cpp_dummy_type = function
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
+(** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
+    header: either of the two erased type nodes, or a dummy glob left behind by
+    proof/type erasure.  This is a question about {e syntax}, not about
+    representation: use it to decide how to render a type, never to decide
+    whether a value may be boxed or [any_cast] out.  For that, see
+    {!is_boxed_type}. *)
+let prints_as_any t =
+  t = Minicpp.Tany || t = Minicpp.Topaque || is_cpp_dummy_type t
+
+(** [is_boxed_type t] — true if a value of type [t] is known to be physically
+    inside a [std::any], and may therefore be boxed into and [any_cast] out of.
+    Deliberately narrower than {!prints_as_any}: {!Minicpp.Topaque} spells
+    itself [std::any] but makes no claim about the representation, so it is
+    excluded. *)
+let is_boxed_type t = t = Minicpp.Tany || is_cpp_dummy_type t
+
 (** [is_erased_type t] — true if [t] represents a type-erased position:
     either [Tany] ([std::any]) or a dummy glob (from proof/type erasure).
     At runtime these values are stored as [std::any] and need [any_cast]
     to recover the concrete type. *)
-let is_erased_type t = t = Minicpp.Tany || is_cpp_dummy_type t
+let is_erased_type = prints_as_any
+
+(** [materialise_opaque ty] — replace every {!Minicpp.Topaque} in [ty] with
+    {!Minicpp.Tany}.
+
+    Apply this wherever [ty] is about to be {e written down} — a field, a
+    parameter, a return type, a template argument in the generated header.
+    [Topaque] means "we do not know the representation", but spelling
+    [std::any] in a declaration is precisely what decides it: from that point
+    on the value really is boxed, and downstream code is entitled to box into
+    and [any_cast] out of the slot.  [Topaque] therefore survives only in the
+    inferred type of an expression, never in a declaration. *)
+let materialise_opaque (ty : cpp_type) : cpp_type =
+  map_cpp_type (function Topaque -> Tany | t -> t) ty
 
 (** [is_all_erased t] — true iff [t] is directly erased OR all of its type
     arguments are recursively all-erased.  Ground types without arguments
@@ -345,7 +374,7 @@ let is_skipped_ml_type = function
 (** Whether a single type node erases to [std::any]: [Tany] itself, and an
     unnamed [Tvar], which {!tvar_erase_type} turns into one. *)
 let is_tany_node = function
-  | Tany -> true
+  | Tany | Topaque -> true
   | Tvar (_, None) -> true
   | _ -> false
 
@@ -552,7 +581,7 @@ let has_unnamed_tvar : cpp_type -> bool =
     types are genuinely unresolvable dependent type families. *)
 let rec type_is_erased (ty : cpp_type) : bool =
   match ty with
-  | Tany -> true
+  | Tany | Topaque -> true
   | Tvar (_, None) -> true (* Will become Tany after tvar_erase_type *)
   | Tvar (_, Some _) -> false (* Named Tvar - not erased *)
   | Tglob (_, _, _) -> false

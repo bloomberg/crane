@@ -128,6 +128,16 @@ type cpp_type =
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
   | Tany  (** std::any for type-erased storage of existentials *)
+  | Topaque
+      (** A type whose C++ representation is not known here.  Prints as
+          [std::any] just as {!Tany} does, but carries the opposite claim:
+          {!Tany} asserts the value is physically boxed and so licenses boxing
+          and [any_cast], while [Topaque] admits ignorance and licenses
+          neither.  Consumers that must act fall back on the
+          representation-tolerant helpers in [crane_fn.h].  It survives only in
+          an expression's inferred type; at a declaration or storage position
+          [materialise_opaque] turns it into {!Tany}, since writing [std::any]
+          there is what makes the value boxed. *)
   | Tauto
       (** auto for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)

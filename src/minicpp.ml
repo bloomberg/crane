@@ -130,6 +130,16 @@ type cpp_type =
   | Ttodo (* placeholder for types inferred later by C++ (e.g. cache var decls) *)
   | Tunknown (* unresolved type from ML AST — should not reach the printer *)
   | Tany (* std::any - for type-erased storage of existential types *)
+  | Topaque
+    (* A type whose C++ representation is not known here.  Prints as
+       [std::any], like [Tany], but the two must not be confused: [Tany] is a
+       claim that the value *is* physically boxed, and so licenses boxing it
+       and casting it back out, whereas [Topaque] is an admission that we do
+       not know.  Nothing may box or cast on the strength of [Topaque] alone;
+       code that must act falls back on the representation-tolerant helpers in
+       [crane_fn.h].  It survives only in the inferred type of an expression:
+       at a declaration or storage position, writing [std::any] is what makes
+       a value boxed, so [materialise_opaque] turns it into [Tany] there. *)
   | Tauto (* auto - for phantom tvar positions where C++ cannot deduce the type *)
   | Tdecltype of cpp_expr (* decltype(expr) *)
   | Tdecay of cpp_type (* std::decay_t<T> - strips references/cv from template params *)
@@ -500,7 +510,8 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tapply (t, ts) -> Tapply (map_cpp_type f t, List.map (map_cpp_type f) ts)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
-  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Tauto -> ty
+  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Topaque
+  | Tauto -> ty
 
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
@@ -523,7 +534,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
   | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
   | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
-  | Tauto ->
+  | Topaque | Tauto ->
     false
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply — as the

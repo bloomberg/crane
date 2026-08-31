@@ -266,7 +266,8 @@ let rec worthwhile_move_type = function
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t
-  | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Tdecltype _ -> false
+  | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Topaque | Tdecltype _ ->
+    false
 
 (* Global mutable state in this file and their reset granularity:
    - mutual_fn_table : reset between extraction units (clear_mutual_table)
@@ -8354,7 +8355,9 @@ let hoist_rec_conditions (check : call_checker)
        concrete type [want] it dispatches on. *)
     let hoist_cond_as want cond =
       let binds, cond' = hoist_cond cond in
-      match (ret_ty, cond') with
+      (* The temporary is declared with the return type, so a [Topaque] in it
+         has been written down as [std::any] and the value really is boxed. *)
+      match (Ml_type_util.materialise_opaque ret_ty, cond') with
       | Tany, CPPvar _ when want <> Tany -> (binds, CPPany_cast (want, cond'))
       | _ -> (binds, cond')
     in

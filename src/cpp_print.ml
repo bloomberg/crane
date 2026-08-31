@@ -666,7 +666,7 @@ let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
     type modifiers ([Tmod], [Tref], [Tnamespace]), [Tunknown] aliases, and
     [Tid] names registered as any-type aliases via [Fnested_using]. *)
 let rec is_any_type = function
-  | Tany -> true
+  | Tany | Topaque -> true
   | Tmod (_, inner) -> is_any_type inner
   | Tref inner -> is_any_type inner
   | Tnamespace (_, inner) -> is_any_type inner
@@ -945,7 +945,9 @@ let rec pp_cpp_type par vl t =
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
     | Tunknown -> str "UNKNOWN"
-    | Tany ->
+    | Tany | Topaque ->
+      (* [Topaque] is a type we could not pin down; [std::any] is the only
+         spelling that accepts whatever it turns out to be. *)
       require_header "any";
       str "std::any"
     | Tauto -> str "auto"
@@ -2698,7 +2700,7 @@ and pp_cpp_stmt env args = function
     transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tany | Tauto | Ttodo | Tunknown -> false
+  | Tvoid | Tvar _ | Tany | Topaque | Tauto | Ttodo | Tunknown -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
@@ -2718,7 +2720,8 @@ and is_constexpr_type ty =
   if is_any_type ty then false else
   match ty with
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Tauto | Ttodo | Tunknown -> false
+  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto | Ttodo
+  | Tunknown -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ | Tdecay _ -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
@@ -2778,7 +2781,7 @@ and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
     and unknown types are not concrete - we can't cast to them. *)
 and is_concrete_cpp_type = function
   | Tvar _ -> false
-  | Tunknown | Ttodo | Tany | Tauto -> false
+  | Tunknown | Ttodo | Tany | Topaque | Tauto -> false
   | Tmod (_, inner) -> is_concrete_cpp_type inner
   | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true

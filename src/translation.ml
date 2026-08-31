@@ -2592,7 +2592,9 @@ let rec convert_ml_type_to_cpp_type
     Tglob (GlobRef.VarRef (Id.of_string "dummy_implicit"), [], [])
   | Tstring ->
     Tid_external (Id.of_string_soft "std::string", [])
-  | Tunknown -> Tany
+  (* Extraction gave up naming this type.  It prints as [std::any], but we
+     know nothing about how the value is actually represented. *)
+  | Tunknown -> Topaque
   | Taxiom -> Tglob (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 
 (** Convert ML type arguments to C++ template parameters, applying type
@@ -2632,10 +2634,11 @@ let rec convert_ml_type_to_cpp_type
 (** [convert_ml_type_to_cpp_type] only resolves [Tvar] indices within
     [tvars]; anything out of range comes back as [Tvar (_, None)], which
     prints as a bogus, undeclared template parameter name (e.g. "T3").
-    Normalize those to [Tany] instead, since they represent erased/
-    unresolvable data. *)
+    Normalize those to [Topaque]: the variable was quantified somewhere we
+    cannot see, so [std::any] is the only spelling available, but nothing here
+    establishes that the value is actually boxed. *)
 and erase_unresolved_tvars = function
-  | Tvar (_, None) -> Tany
+  | Tvar (_, None) -> Topaque
   | Tglob (g, ts, es) -> Tglob (g, List.map erase_unresolved_tvars ts, es)
   | Tfun (dom, cod) ->
     Tfun (List.map erase_unresolved_tvars dom, erase_unresolved_tvars cod)
@@ -2670,7 +2673,7 @@ and glob_is_nullary_function x =
     scrutinee's template argument makes a constructor field store its
     value as [std::any] at runtime. *)
 and resolves_to_any_type = function
-  | Tany -> true
+  | Tany | Topaque -> true
   | Tglob (g, [], _) when Table.is_erased_type_const g -> true
   | Tglob (g, [], _) ->
     let via_ml_ty =
@@ -3518,7 +3521,11 @@ and erase_fn_for_any_slot e expr =
 and erase_fn_arg_for_param env param_ml_ty e expr =
   let erased_fn_param =
     match
-      convert_ml_type_to_cpp_type env (get_current_type_vars ()) param_ml_ty
+      (* The callee has already written this parameter down, so any [Topaque]
+         in it has been spelled [std::any] in the header and the slot really
+         is boxed. *)
+      materialise_opaque
+        (convert_ml_type_to_cpp_type env (get_current_type_vars ()) param_ml_ty)
     with
     (* A parameter that erases only its ARGUMENTS (its result stays concrete,
        e.g. [std::function<typename I::M(std::any)>] for a higher-kinded class
