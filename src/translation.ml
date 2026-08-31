@@ -1975,7 +1975,11 @@ let detect_non_forwarded_params_generic ~is_self_call n_params body =
 let detect_non_forwarded_params_fix n_params n_fix fix_idx body =
   let base_self_db = n_params + n_fix - fix_idx in
   detect_non_forwarded_params_generic
-    ~is_self_call:(fun depth -> function
+    ~is_self_call:(fun depth f ->
+      (* A coercion around the self-reference (extraction inserts one when the
+         fixpoint's type was generalised) must not hide the recursive call. *)
+      let rec strip = function MLmagic (_, e) -> strip e | e -> e in
+      match strip f with
       | MLrel db -> db = base_self_db + depth
       | _ -> false )
     n_params body

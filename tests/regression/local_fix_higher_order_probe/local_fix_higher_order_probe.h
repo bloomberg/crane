@@ -3,8 +3,8 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <functional>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -67,9 +67,8 @@ public:
 };
 
 struct LocalFixHigherOrderProbe {
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &>
-  static T1 _sample_go(F0 &&k, const Nat n0) {
+  template <typename T1>
+  static T1 _sample_go(const std::function<T1(Nat)> k, const Nat n0) {
     if (std::holds_alternative<typename Nat::O>(n0.v())) {
       return k(Nat::o());
     } else {
