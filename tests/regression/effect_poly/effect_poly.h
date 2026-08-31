@@ -146,6 +146,7 @@ struct EffectPoly {
 
   /// 6. Polymorphic fold over itree results
   template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
   static T1 fold_m(F0 &&f, const T1 &init, const List<T2> &xs) {
     if (std::holds_alternative<typename List<T2>::Nil>(xs.v())) {
       return init;

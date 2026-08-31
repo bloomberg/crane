@@ -23,12 +23,14 @@ struct MemSafetyProbe12 {
   };
 
   template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &>
   static T1 wrap_rect(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
     return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
   }
 
   template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &>
   static T1 wrap_rec(F0 &&f, const wrap &w) {
     const auto &[a0] = w;
     return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));

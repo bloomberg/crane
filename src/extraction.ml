@@ -443,6 +443,14 @@ let fake_match_projection env p =
 
 (** {1 Extraction of a type} *)
 
+(** Whether [a], an argument of an applied type variable, is itself a type
+    rather than a value index (the [n] of [vec A n]).  Only a type argument can
+    be kept in a {!Miniml.Tapp}; extracting a value as a type asks {!sort_of}
+    for the sort of something that has none. *)
+let arg_is_type env sg a =
+  try EConstr.isSort sg (whd_all env sg (type_of env sg a))
+  with Retyping.RetypeError _ -> false
+
 (* [extract_type env db c args] is used to produce an ML type from the Rocq term
    [(c args)], which is supposed to be a Rocq type. *)
 
@@ -506,7 +514,10 @@ let rec extract_type env sg db j c args =
         let n' = List.nth db (n - 1) in
         if Int.equal n' 0 then
           Tunknown
-        else if List.is_empty args then
+        else if List.is_empty args || not (List.for_all (arg_is_type env sg) args)
+        then
+          (* No arguments, or arguments that are values: nothing a type-level
+             application can hold, so the variable stands alone as before. *)
           Tvar n'
         else
           (* A type variable of arrow kind applied to arguments — the [M A] of

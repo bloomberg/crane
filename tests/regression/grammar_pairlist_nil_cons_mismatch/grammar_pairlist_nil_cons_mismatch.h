@@ -1,7 +1,6 @@
 #ifndef INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
 #define INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
 
-#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -160,22 +159,20 @@ const std::deque<grammar_entry> entries =
     }(
         SigT<std::pair<Nonterminal, std::deque<Symbol>>,
              std::pair<std::any, std::any>>::
-            existt(
-                std::make_pair(
-                    Nonterminal::DOC,
-                    [](auto _a0, auto _a1) {
-                      _a1.push_front(_a0);
-                      return _a1;
-                    }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
-                std::make_pair(
-                    std::any(crane_erase_fn([](const auto &) { return true; })),
-                    std::any(crane_erase_fn([](const auto &tup) {
-                      const auto &[prs, _x] =
-                          std::any_cast<std::pair<std::any, std::any>>(tup);
-                      return val{crane_container_cast<
-                          std::deque<std::pair<String, uint64_t>>>(
-                          std::any_cast<std::deque<std::any>>(prs))};
-                    })))),
+            existt(std::make_pair(
+                       Nonterminal::DOC,
+                       [](auto _a0, auto _a1) {
+                         _a1.push_front(_a0);
+                         return _a1;
+                       }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
+                   std::make_pair(
+                       [](const auto &) { return true; },
+                       [](std::pair<std::deque<std::pair<String, uint64_t>>,
+                                    std::monostate>
+                              tup) {
+                         const auto &[prs, _x] = tup;
+                         return val{prs};
+                       })),
         [](auto _a0, auto _a1) {
           _a1.push_front(_a0);
           return _a1;
@@ -200,45 +197,43 @@ const std::deque<grammar_entry> entries =
                                           }(Symbol::t(Terminal::RBRACE),
                                             std::deque<Symbol>{}))))),
                      std::make_pair(
-                         std::any(
-                             crane_erase_fn([](const auto &) { return true; })),
-                         std::any(crane_erase_fn([](const auto &tup) {
-                           const auto &[_x, y0] =
-                               std::any_cast<std::pair<std::any, std::any>>(
-                                   tup);
-                           const auto &[pr, y1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y0);
-                           const auto &[prs, y2] =
-                               std::any_cast<std::pair<std::any, std::any>>(y1);
-                           const auto &[_x0, _x1] =
-                               std::any_cast<std::pair<std::any, std::any>>(y2);
+                         [](const auto &) { return true; },
+                         [](const std::pair<
+                             symbol_semty,
+                             std::pair<symbol_semty,
+                                       std::pair<std::deque<symbol_semty>,
+                                                 std::pair<symbol_semty,
+                                                           std::monostate>>>>
+                                &tup) {
+                           const auto &[_x, y0] = tup;
+                           const auto &[pr, y1] = y0;
+                           const auto &[prs, y2] = y1;
+                           const auto &[_x0, _x1] = y2;
                            return [](auto _a0, auto _a1) {
                              _a1.push_front(_a0);
                              return _a1;
-                           }(pr, std::any_cast<std::deque<std::any>>(prs));
-                         })))),
+                           }(pr, prs);
+                         })),
           [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
           }(
               SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                    std::pair<std::any, std::any>>::
-                  existt(
-                      std::make_pair(Nonterminal::OBJ,
-                                     [](auto _a0, auto _a1) {
-                                       _a1.push_front(_a0);
-                                       return _a1;
-                                     }(Symbol::t(Terminal::LBRACE),
-                                       [](auto _a0, auto _a1) {
-                                         _a1.push_front(_a0);
-                                         return _a1;
-                                       }(Symbol::t(Terminal::RBRACE),
-                                         std::deque<Symbol>{}))),
-                      std::make_pair(std::any(crane_erase_fn(
-                                         [](const auto &) { return true; })),
-                                     std::any(crane_erase_fn([](const auto &) {
-                                       return std::deque<std::any>{};
-                                     })))),
+                  existt(std::make_pair(Nonterminal::OBJ,
+                                        [](auto _a0, auto _a1) {
+                                          _a1.push_front(_a0);
+                                          return _a1;
+                                        }(Symbol::t(Terminal::LBRACE),
+                                          [](auto _a0, auto _a1) {
+                                            _a1.push_front(_a0);
+                                            return _a1;
+                                          }(Symbol::t(Terminal::RBRACE),
+                                            std::deque<Symbol>{}))),
+                         std::make_pair([](const auto &) { return true; },
+                                        [](const auto &) {
+                                          return std::deque<std::any>{};
+                                        })),
               [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
@@ -259,21 +254,20 @@ const std::deque<grammar_entry> entries =
                                               }(Symbol::nt(Nonterminal::PAIRS),
                                                 std::deque<Symbol>{})))),
                            std::make_pair(
-                               std::any(crane_erase_fn(
-                                   [](const auto &) { return true; })),
-                               std::any(crane_erase_fn([](const auto &tup) {
-                                 const auto &[_x, y0] = std::any_cast<
-                                     std::pair<std::any, std::any>>(tup);
-                                 const auto &[pr, y1] = std::any_cast<
-                                     std::pair<std::any, std::any>>(y0);
-                                 const auto &[prs, _x0] = std::any_cast<
-                                     std::pair<std::any, std::any>>(y1);
+                               [](const auto &) { return true; },
+                               [](const std::pair<
+                                   symbol_semty,
+                                   std::pair<symbol_semty,
+                                             std::pair<std::deque<symbol_semty>,
+                                                       std::monostate>>> &tup) {
+                                 const auto &[_x, y0] = tup;
+                                 const auto &[pr, y1] = y0;
+                                 const auto &[prs, _x0] = y1;
                                  return [](auto _a0, auto _a1) {
                                    _a1.push_front(_a0);
                                    return _a1;
-                                 }(pr, std::any_cast<std::deque<std::any>>(
-                                           prs));
-                               })))),
+                                 }(pr, prs);
+                               })),
                 [](auto _a0, auto _a1) {
                   _a1.push_front(_a0);
                   return _a1;
@@ -281,12 +275,10 @@ const std::deque<grammar_entry> entries =
                        std::pair<std::any, std::any>>::
                       existt(std::make_pair(Nonterminal::PAIRS,
                                             std::deque<Symbol>{}),
-                             std::make_pair(
-                                 std::any(crane_erase_fn(
-                                     [](const auto &) { return true; })),
-                                 std::any(crane_erase_fn([](const auto &) {
-                                   return std::deque<std::any>{};
-                                 })))),
+                             std::make_pair([](const auto &) { return true; },
+                                            [](const auto &) {
+                                              return std::deque<std::any>{};
+                                            })),
                   [](auto _a0, auto _a1) {
                     _a1.push_front(_a0);
                     return _a1;
@@ -307,17 +299,18 @@ const std::deque<grammar_entry> entries =
                                                   }(Symbol::t(Terminal::NAT),
                                                     std::deque<Symbol>{})))),
                                std::make_pair(
-                                   std::any(crane_erase_fn(
-                                       [](const auto &) { return true; })),
-                                   std::any(crane_erase_fn([](const auto &tup) {
-                                     const auto &[s, y] = std::any_cast<
-                                         std::pair<std::any, std::any>>(tup);
-                                     const auto &[_x, y1] = std::any_cast<
-                                         std::pair<std::any, std::any>>(y);
-                                     const auto &[n, _x0] = std::any_cast<
-                                         std::pair<std::any, std::any>>(y1);
+                                   [](const auto &) { return true; },
+                                   [](std::pair<
+                                       symbol_semty,
+                                       std::pair<symbol_semty,
+                                                 std::pair<symbol_semty,
+                                                           std::monostate>>>
+                                          tup) {
+                                     const auto &[s, y] = tup;
+                                     const auto &[_x, y1] = y;
+                                     const auto &[n, _x0] = y1;
                                      return std::make_pair(s, n);
-                                   })))),
+                                   })),
                     std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                                     std::pair<std::any, std::any>>>{}))))));
 uint64_t num_entries(std::monostate _x);

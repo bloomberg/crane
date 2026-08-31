@@ -1,12 +1,12 @@
 #ifndef INCLUDED_SIGT_PROD_FN_ANY
 #define INCLUDED_SIGT_PROD_FN_ANY
 
-#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -143,11 +143,11 @@ template <SEM S> struct Make {
   /// Store the predicate/action pair. The two lambdas are erased to std::any
   /// through the pair conversion — the fix's crane_erase_fn is NOT applied.
   template <typename F1, typename F2>
+    requires std::is_invocable_r_v<bool, F1 &, std::any &> &&
+             std::is_invocable_r_v<uint64_t, F2 &, std::any &>
   static entry mk(typename S::idx a, F1 &&f, F2 &&g) {
     return SigT<prod2, psem>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(std::any(crane_erase_fn(f)),
-                       std::any(crane_erase_fn(g))));
+        std::make_pair(a, List<typename S::idx>::nil()), std::make_pair(f, g));
   }
 
   /// Look up + apply the predicate, exactly like Parser.v:113 if p vs' ....
@@ -156,6 +156,7 @@ template <SEM S> struct Make {
   /// the stored pair so the payload keeps its product-of-erased-functions
   /// shape.
   template <typename F1>
+    requires std::is_invocable_r_v<std::any, F1 &, typename S::idx &>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
                              std::pair<std::any, std::any>> &e,
                   F1 &&arg) {

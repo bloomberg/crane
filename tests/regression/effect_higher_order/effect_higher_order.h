@@ -140,7 +140,9 @@ struct EffectHigherOrder {
   }
 
   /// 3. Callback that returns a value
-  template <typename F0> static std::string with_line(F0 &&f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &>
+  static std::string with_line(F0 &&f) {
     std::string _bind_result = []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

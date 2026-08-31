@@ -18,30 +18,31 @@ using sem_ty = std::any;
 using action = Specif::SigT<Tag, std::function<sem_ty(sem_ty)>>;
 const action base_action =
     Specif::template SigT<Tag, std::function<std::any(std::any)>>::existt(
-        Tag::TAGLIST,
-        std::function<std::any(std::any)>([](const std::any &_any__x) {
-          std::deque<std::any> _x =
-              std::any_cast<std::deque<std::any>>(_any__x);
-          return std::deque<std::any>{};
-        }));
+        Tag::TAGLIST, std::function<std::any(std::any)>(
+                          [](const std::any &_any__x) -> std::any {
+                            std::deque<std::any> _x =
+                                std::any_cast<std::deque<std::any>>(_any__x);
+                            return std::deque<std::any>{};
+                          }));
 const action cons_action =
     Specif::template SigT<Tag, std::function<std::any(std::any)>>::existt(
         Tag::TAGLIST,
-        std::function<std::any(std::any)>([](const std::any &_any_xs) {
-          std::deque<std::any> xs =
-              std::any_cast<std::deque<std::any>>(_any_xs);
-          return [](auto _a0, auto _a1) {
-            _a1.push_front(_a0);
-            return _a1;
-          }(std::make_pair(std::any(UINT64_C(42)), std::any(UINT64_C(99))), xs);
-        }));
+        std::function<std::any(std::any)>(
+            [](const std::any &_any_xs) -> std::any {
+              std::deque<std::any> xs =
+                  std::any_cast<std::deque<std::any>>(_any_xs);
+              return [](auto _a0, auto _a1) {
+                _a1.push_front(_a0);
+                return _a1;
+              }(std::make_pair(std::any(UINT64_C(42)), std::any(UINT64_C(99))),
+                     xs);
+            }));
 Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
              Specif::SigT<Tag, sem_ty> v);
 const Specif::SigT<Tag, sem_ty> chain = []() {
-  auto v0 =
-      Specif::template SigT<Tag, std::deque<std::pair<std::any, std::any>>>::
-          existt(Tag::TAGLIST, std::deque<std::any>{});
+  auto v0 = Specif::template SigT<Tag, std::any>::existt(
+      Tag::TAGLIST, std::deque<std::any>{});
   auto v1 = apply_action(base_action, std::move(v0));
   auto v2 = apply_action(cons_action, std::move(v1));
   return apply_action(cons_action, std::move(v2));

@@ -5,6 +5,7 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -229,6 +230,7 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, std::any &, tree &, T1 &>
   static T1 tree_rect(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -240,6 +242,7 @@ struct NestedTree {
   }
 
   template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, std::any &, tree &, T1 &>
   static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -273,9 +276,9 @@ struct NestedTree {
     return f(x).app(f(y));
   }
 
-  template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
-  static List<List<T2>> _flatten_tree_go(F0 &&f, const tree t0) {
+  template <typename T1, typename T2>
+  static List<List<T2>> _flatten_tree_go(const std::function<List<T2>(T1)> f,
+                                         const tree t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return List<List<T2>>::nil();
     } else {

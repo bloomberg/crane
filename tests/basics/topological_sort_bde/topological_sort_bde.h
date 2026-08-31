@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TOPOLOGICAL_SORT_BDE
 #define INCLUDED_TOPOLOGICAL_SORT_BDE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -118,91 +119,241 @@ public:
   const variant_t &v() const { return d_v_; }
   template <typename T1>
   List<bsl::pair<t_A, T1>> combine(const List<T1> &l_) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return List<bsl::pair<t_A, T1>>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      if (bsl::holds_alternative<typename List<T1>::Nil>(l_.v())) {
-        return List<bsl::pair<t_A, T1>>::nil();
+    bsl::shared_ptr<List<bsl::pair<t_A, T1>>> _head{};
+    bsl::shared_ptr<List<bsl::pair<t_A, T1>>> *_write = &_head;
+    const List *_loop_self = this;
+    const List<T1> *_loop_l_ = &l_;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        *_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+            List<bsl::pair<t_A, T1>>::nil());
+        break;
       } else {
-        const auto &[d_a00, d_a10] = bsl::get<typename List<T1>::Cons>(l_.v());
-        return List<bsl::pair<t_A, T1>>::cons(
-            bsl::make_pair(d_a0, d_a00), d_a1->template combine<T1>(*d_a10));
+        const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
+        if (bsl::holds_alternative<typename List<T1>::Nil>(_loop_l_->v())) {
+          *_write = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+              List<bsl::pair<t_A, T1>>::nil());
+          break;
+        } else {
+          const auto &[d_a00, d_a10] =
+              bsl::get<typename List<T1>::Cons>(_loop_l_->v());
+          auto _cell = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+              typename List<bsl::pair<t_A, T1>>::Cons(
+                  bsl::make_pair(d_a0, d_a00), nullptr));
+          *_write = bsl::move(_cell);
+          _write = &std::get<typename List<bsl::pair<t_A, T1>>::Cons>(
+                        (*_write)->v_mut())
+                        .d_l;
+          _loop_self = crane_raw(d_a1);
+          _loop_l_ = crane_raw(d_a10);
+          continue;
+        }
       }
     }
+    return bsl::move(*_head);
   }
   template <typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, t_A &>
   bsl::optional<t_A> find(F0 &&f) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return bsl::optional<t_A>();
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      if (f(d_a0)) {
-        return bsl::make_optional<t_A>(d_a0);
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        return bsl::optional<t_A>();
       } else {
-        return d_a1->find(f);
+        const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
+        if (f(d_a0)) {
+          return bsl::make_optional<t_A>(d_a0);
+        } else {
+          _loop_self = crane_raw(d_a1);
+        }
       }
     }
   }
   template <typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, t_A &>
   List<t_A> filter(F0 &&f) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return List<t_A>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      if (f(d_a0)) {
-        return List<t_A>::cons(d_a0, d_a1->filter(f));
+    bsl::shared_ptr<List<t_A>> _head{};
+    bsl::shared_ptr<List<t_A>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        *_write = bsl::make_shared<List<t_A>>(List<t_A>::nil());
+        break;
       } else {
-        return d_a1->filter(f);
+        const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
+        if (f(d_a0)) {
+          auto _cell = bsl::make_shared<List<t_A>>(
+              typename List<t_A>::Cons(d_a0, nullptr));
+          *_write = bsl::move(_cell);
+          _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
+          _loop_self = crane_raw(d_a1);
+          continue;
+        } else {
+          _loop_self = crane_raw(d_a1);
+          continue;
+        }
       }
     }
+    return bsl::move(*_head);
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return a0;
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return f(d_a0, d_a1->template fold_right<T1>(f, a0));
+    const List *_self = this;
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    struct _Resume_Cons {
+      std::decay_t<t_A> d_a0;
+    };
+    using _Frame = bsl::variant<_Enter, _Resume_Cons>;
+    T1 _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified fold_right: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = bsl::move(_stack.back());
+      _stack.pop_back();
+      if (bsl::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(bsl::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+          _result = a0;
+        } else {
+          const auto &[d_a0, d_a1] =
+              bsl::get<typename List<t_A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{d_a0});
+          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+        }
+      } else {
+        auto _f = std::move(bsl::get<_Resume_Cons>(_frame));
+        _result = f(bsl::move(_f.d_a0), bsl::move(_result));
+      }
     }
+    return _result;
   }
   template <typename T1> List<T1> concat() const {
-    if (bsl::holds_alternative<typename List<List<T1>>::Nil>(this->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[d_a0, d_a1] =
-          bsl::get<typename List<List<T1>>::Cons>(this->v());
-      return d_a0.app(d_a1->template concat<T1>());
+    const List *_self = this;
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+    /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
+    struct _Resume_Cons {
+      List<T1> d_a0;
+    };
+    using _Frame = bsl::variant<_Enter, _Resume_Cons>;
+    List<T1> _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified concat: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = bsl::move(_stack.back());
+      _stack.pop_back();
+      if (bsl::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(bsl::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (bsl::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
+          _result = List<T1>::nil();
+        } else {
+          const auto &[d_a0, d_a1] =
+              bsl::get<typename List<List<T1>>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{d_a0});
+          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+        }
+      } else {
+        auto _f = std::move(bsl::get<_Resume_Cons>(_frame));
+        _result = bsl::move(_f.d_a0).app(bsl::move(_result));
+      }
     }
+    return _result;
   }
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &>
   List<T1> map(F0 &&f) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return List<T1>::nil();
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return List<T1>::cons(f(d_a0), d_a1->template map<T1>(f));
+    bsl::shared_ptr<List<T1>> _head{};
+    bsl::shared_ptr<List<T1>> *_write = &_head;
+    const List *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        *_write = bsl::make_shared<List<T1>>(List<T1>::nil());
+        break;
+      } else {
+        const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
+        auto _cell = bsl::make_shared<List<T1>>(
+            typename List<T1>::Cons(f(d_a0), nullptr));
+        *_write = bsl::move(_cell);
+        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_l;
+        _loop_self = crane_raw(d_a1);
+        continue;
+      }
     }
+    return bsl::move(*_head);
   }
   unsigned int length() const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return 0u;
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return (d_a1->length() + 1);
+    const List *_self = this;
+    /// _Enter: captures varying parameters for each recursive call.
+    struct _Enter {
+      const List *_self;
+    };
+    /// _Resume_Cons: resumes after recursive call with _result.
+    struct _Resume_Cons {};
+    using _Frame = bsl::variant<_Enter, _Resume_Cons>;
+    unsigned int _result{};
+    crane::small_vector<_Frame> _stack;
+    _stack.emplace_back(_Enter{_self});
+    /// Loopified length: _Enter -> _Resume_Cons.
+    while (!_stack.empty()) {
+      _Frame _frame = bsl::move(_stack.back());
+      _stack.pop_back();
+      if (bsl::holds_alternative<_Enter>(_frame)) {
+        auto _f = std::move(bsl::get<_Enter>(_frame));
+        const List *_self = _f._self;
+        auto &&_sv = *_self;
+        if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+          _result = 0u;
+        } else {
+          const auto &[d_a0, d_a1] =
+              bsl::get<typename List<t_A>::Cons>(_sv.v());
+          _stack.emplace_back(_Resume_Cons{});
+          _stack.emplace_back(_Enter{crane_raw(d_a1)});
+        }
+      } else {
+        auto _f = std::move(bsl::get<_Resume_Cons>(_frame));
+        _result = (bsl::move(_result) + 1);
+      }
     }
+    return _result;
   }
   List<t_A> app(List<t_A> m) const {
-    if (bsl::holds_alternative<typename List<t_A>::Nil>(this->v())) {
-      return m;
-    } else {
-      const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(this->v());
-      return List<t_A>::cons(d_a0, d_a1->app(bsl::move(m)));
+    bsl::shared_ptr<List<t_A>> _head{};
+    bsl::shared_ptr<List<t_A>> *_write = &_head;
+    const List *_loop_self = this;
+    List<t_A> _loop_m = bsl::move(m);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
+        *_write = bsl::make_shared<List<t_A>>(bsl::move(_loop_m));
+        break;
+      } else {
+        const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
+        auto _cell = bsl::make_shared<List<t_A>>(
+            typename List<t_A>::Cons(d_a0, nullptr));
+        *_write = bsl::move(_cell);
+        _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
+        _loop_self = crane_raw(d_a1);
+        continue;
+      }
     }
+    return bsl::move(*_head);
   }
 };
 struct ListDef {

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -140,7 +141,9 @@ template <SEM S> struct Make {
 
   /// Build an entry from a concrete index and a predicate lambda.
   /// The lambda is stored at the erased type pred_ty (a, []) = std::any.
-  template <typename F1> static entry mk(typename S::idx a, F1 &&f) {
+  template <typename F1>
+    requires std::is_invocable_r_v<bool, F1 &, std::any &>
+  static entry mk(typename S::idx a, F1 &&f) {
     return SigT<prod2, std::any>::existt(
         std::make_pair(a, List<typename S::idx>::nil()), crane_erase_fn(f));
   }
@@ -149,6 +152,7 @@ template <SEM S> struct Make {
   /// Here the projected f has C++ static type std::any, so Crane emits
   /// any_cast<std::function<...>>(f)(...) — the failing cast.
   template <typename F1>
+    requires std::is_invocable_r_v<std::any, F1 &, typename S::idx &>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
                              std::any> &e,
                   F1 &&arg) {

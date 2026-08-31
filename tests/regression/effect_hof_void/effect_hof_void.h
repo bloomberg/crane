@@ -28,7 +28,9 @@ struct EffectHofVoid {
   }
 
   /// 3. Apply a value callback
-  template <typename F0> static std::string apply_value(F0 &&f, std::string x) {
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &>
+  static std::string apply_value(F0 &&f, std::string x) {
     return f(x);
   }
 

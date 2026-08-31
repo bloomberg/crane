@@ -66,7 +66,11 @@ struct FreeMonad {
   };
 
   template <typename T1, typename T2, typename F0, typename F1, typename F3>
-    requires std::is_invocable_r_v<T1, F3 &, std::string &>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+             std::is_invocable_r_v<T1, F1 &, IO &, T1 &,
+                                   std::function<IO(std::any)> &,
+                                   std::function<T1(std::any)> &> &&
+             std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rect(F0 &&f, F1 &&f0, T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
@@ -87,7 +91,11 @@ struct FreeMonad {
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F3>
-    requires std::is_invocable_r_v<T1, F3 &, std::string &>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+             std::is_invocable_r_v<T1, F1 &, IO &, T1 &,
+                                   std::function<IO(std::any)> &,
+                                   std::function<T1(std::any)> &> &&
+             std::is_invocable_r_v<T1, F3 &, std::string &>
   static T1 IO_rec(F0 &&f, F1 &&f0, T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());

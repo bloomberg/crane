@@ -125,11 +125,13 @@ struct ErasedFieldDangle {
   };
 
   static inline const uint64_t test_exists = []() {
-    exists_box e = exists_box::pack(
-        UINT64_C(7),
-        std::function<uint64_t(std::any)>([](const std::any &x) -> uint64_t {
-          return (std::any_cast<uint64_t>(x) * std::any_cast<uint64_t>(x));
-        }));
+    exists_box e = exists_box::pack(UINT64_C(7),
+                                    std::function<uint64_t(std::any)>(
+                                        [](const std::any &_any_x) -> uint64_t {
+                                          std::any x = _any_x;
+                                          return (std::any_cast<uint64_t>(x) *
+                                                  std::any_cast<uint64_t>(x));
+                                        }));
     return std::move(e).run_exists();
   }();
 };

@@ -234,10 +234,7 @@ struct GlobalStateTests {
   struct nat_stref {
     static std::any mkGlobRef(uint64_t x) { return GlobRefNat::mkglobref(x); }
 
-    static uint64_t GlobRefToIx(std::any _p_a0) {
-      GlobRefNat a0 = std::any_cast<GlobRefNat>(_p_a0);
-      return a0.GlobRefToIxNat();
-    }
+    static uint64_t GlobRefToIx(std::any a0) { return a0.GlobRefToIxNat(); }
   };
 
   static_assert(GlobRefClass<nat_stref, uint64_t>);

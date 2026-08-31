@@ -4,6 +4,7 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -11,10 +12,13 @@
 #include <variant>
 
 struct HigherKinded {
-  template <typename T1, typename T2 = void, typename T3 = void, typename F0,
-            typename F1>
-  static T1 hk_map(F0 &&map_f, F1 &&f, const T1 &x) {
-    return std::any_cast<T1>(map_f(f, x));
+  template <typename T1, typename T2, typename T3, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1<std::any>, F0 &,
+                                   std::function<std::any(std::any)> &,
+                                   T1<std::any> &> &&
+             std::is_invocable_r_v<T3, F1 &, T2 &>
+  static T1<T3> hk_map(F0 &&map_f, F1 &&f, T1<T2> x) {
+    return map_f(f, x);
   }
 
   template <typename A> struct Tree {

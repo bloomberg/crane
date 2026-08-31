@@ -1,12 +1,12 @@
 #ifndef INCLUDED_SIGT_PROD_FN_ANY_LIT
 #define INCLUDED_SIGT_PROD_FN_ANY_LIT
 
-#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -144,14 +144,13 @@ template <SEM S> struct Make {
   static entry mk_entry(typename S::idx a) {
     return SigT<prod2, psem>::existt(
         std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(
-            std::any(crane_erase_fn([](const auto &) { return true; })),
-            std::any(
-                crane_erase_fn([](const auto &) { return UINT64_C(0); }))));
+        std::make_pair([](const auto &) { return true; },
+                       [](const auto &) { return UINT64_C(0); }));
   }
 
   /// Apply the predicate, exactly like Parser.v:113 if p vs' ....
   template <typename F1>
+    requires std::is_invocable_r_v<std::any, F1 &, typename S::idx &>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
                              std::pair<std::any, std::any>> &e,
                   F1 &&arg) {
