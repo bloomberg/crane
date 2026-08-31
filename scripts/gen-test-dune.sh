@@ -42,7 +42,14 @@ for dir in tests/$category/*/; do
             cppsrcs=$(echo $cppsrcs)
         else
             vodeps="$vofile"
-            cppsrcs="$name.cpp"
+            # A test whose every extraction command is wrapped in `Fail` (a
+            # rejection regression) never produces a .cpp; only its .t.cpp is
+            # compiled.
+            if grep -hE '^[[:space:]]*Crane([[:space:]]+[A-Za-z]+)*[[:space:]]+Extraction' "${vfiles[@]}" >/dev/null 2>&1; then
+                cppsrcs="$name.cpp"
+            else
+                cppsrcs=""
+            fi
         fi
             cat << EOF
 (subdir $name

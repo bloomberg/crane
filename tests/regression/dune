@@ -25,7 +25,7 @@
   (targets extraction_path_traversal.t.exe)
   (deps ExtractionPathTraversal.vo extraction_path_traversal.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_path_traversal.t.exe extraction_path_traversal.cpp extraction_path_traversal.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} extraction_path_traversal.t.exe extraction_path_traversal.t.cpp)))
  (rule
   (alias runtest)
   (deps extraction_path_traversal.t.exe)
