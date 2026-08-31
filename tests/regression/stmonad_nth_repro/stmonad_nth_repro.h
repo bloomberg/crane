@@ -28,7 +28,10 @@ concept RefClass = requires {
 };
 
 struct nat_ref {
-  static uint64_t refToIx(std::any a0) { return a0.refToIxNat(); }
+  static uint64_t refToIx(std::any _p_a0) {
+    RefNat a0 = std::any_cast<RefNat>(_p_a0);
+    return a0.refToIxNat();
+  }
 };
 
 static_assert(RefClass<nat_ref, uint64_t>);

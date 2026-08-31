@@ -992,11 +992,15 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   List.mapi
                     (fun i arg_ty ->
                       let name = Id.of_string ("a" ^ string_of_int i) in
+                      (* A parameter is a declaration position: writing the
+                         slot down as [std::any] is what makes the value
+                         boxed, so a [Topaque] here becomes known-boxed. *)
                       let cpp_ty =
-                        convert_ml_type_to_cpp_type
-                          base_env
-                          type_var_names
-                          arg_ty
+                        materialise_opaque
+                          (convert_ml_type_to_cpp_type
+                             base_env
+                             type_var_names
+                             arg_ty)
                       in
                       (name, arg_ty, cpp_ty) )
                     arg_types
@@ -1023,8 +1027,20 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                    the env so method dispatch works, then prepend any_cast
                    bindings for params whose signature type is std::any. *)
                 let body_arg_types =
-                  match inner_body with
-                  | MLglob (r, _) -> (
+                  (* A body defined inside a Section is already applied to the
+                     section's (erased) variables, so the reference is under an
+                     application of dummies rather than bare. *)
+                  let rec body_ref = function
+                    | MLglob (r, _) -> Some r
+                    | MLapp (f, args)
+                      when List.for_all
+                             (function MLdummy _ -> true | _ -> false) args ->
+                      body_ref f
+                    | MLmagic (_, e) -> body_ref e
+                    | _ -> None
+                  in
+                  match body_ref inner_body with
+                  | Some r -> (
                     try
                       let bty = Table.find_type r in
                       let bargs, _ = get_args_and_ret [] bty in
@@ -1035,18 +1051,17 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                         Some bargs
                       else None
                     with Not_found -> None )
-                  | _ -> None
+                  | None -> None
                 in
                 let cast_info =
-                  List.filter_map (fun (i, (name, ml_ty, _cpp_ty)) ->
+                  List.filter_map (fun (i, (name, _ml_ty, sig_cpp)) ->
                     match body_arg_types with
                     | Some bargs ->
                       let body_ty = List.nth bargs i in
-                      let sig_cpp = convert_ml_type_to_cpp_type
-                        base_env type_var_names ml_ty in
                       let body_cpp = convert_ml_type_to_cpp_type
                         base_env type_var_names body_ty in
-                      if sig_cpp = Tany && body_cpp <> Tany then
+                      if is_boxed_type sig_cpp && not (prints_as_any body_cpp)
+                      then
                         Some (name, body_ty, body_cpp)
                       else None
                     | None -> None
