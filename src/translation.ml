@@ -3041,14 +3041,6 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       else temps
     | _ -> []
   in
-  (* When a pair/tuple constructor has at least one erased (Tany) type parameter,
-     ALL type-variable fields must be stored as std::any so that the runtime cast
-     in concat_tuple_rec_case (any_cast<pair<any,any>>) succeeds.  E.g., for
-     symbols_semty [x] = prod (symbol_semty x) unit: the first field is Tany
-     (erased symbol_semty x) but the second is concrete unit.  Without this flag
-     the second element stays as std::monostate{} and the pair<any,monostate> cast
-     in concat_tuple_rec_case fails. *)
-  let draft_has_any_tany = List.mem Tany draft_ctor_temps_for_wrap in
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_expected = tctx.expected_ml_type_for_arg in
@@ -3148,125 +3140,98 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
       let result = gen_ctor_arg ?expected_ty:expected_cpp_ty e in
       tctx.current_cpp_return_type <- saved_ret;
       tctx.expected_ml_type_for_arg <- saved_expected;
-      (* When this pair/tuple value flows directly into a value-dependent
-         erased slot — the enclosing function's C++ return type resolves to
-         [std::any] (e.g. [domty n], a type-level match) — a generic consumer
-         reconstructs its shape from the match structure and reads it back as
-         [pair<std::any, std::any>] with each component boxed.  The concrete
-         component types available here (e.g. [string], [unit]) would produce
+      (* Whether this constructor's value lands in a DEEPLY erased slot: one
+         whose consumer does not merely read a [std::any] back, but
+         reconstructs the shape underneath it and reads every component boxed
+         as well ([any_cast<pair<any,any>>]).  Two things put a value in that
+         position, and they mean the same thing:
+
+         - a sibling field of this very constructor is erased, so the whole
+           tuple is read back in erased form -- e.g. [(v, tt)] at
+           [symbols_semty [x] = prod (symbol_semty x) unit], where the first
+           component is erased and the second is a concrete [unit];
+         - the value flows straight out into a value-dependent erased slot,
+           the enclosing function's C++ return type having resolved to
+           [std::any] (e.g. [domty n], a type-level match).
+
+         In both cases a concrete component stored as itself would produce
          [pair<string, monostate>], which the consumer's
-         [any_cast<pair<any,any>>] cannot recover.  Box each concrete component
-         into [std::any] so the stored representation is the fully-erased
-         [pair<any,any>] the consumer expects. *)
-      let is_list_cons_ctor_for_flow =
+         [any_cast<pair<any,any>>] cannot recover.  A custom LIST cons is
+         excluded from the second case: its elements keep their own container
+         type (see [is_already_container] below).  *)
+      let is_list_cons_ctor =
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
           is_list_global ind && Table.is_custom ind
         | _ -> false
       in
-      let flows_into_erased_slot =
-        (not is_list_cons_ctor_for_flow)
-        &&
-        match tctx.current_cpp_return_type with
-        | Some t -> resolves_to_any_type t
-        | None -> false
+      let slot_is_deeply_erased =
+        List.mem Tany draft_ctor_temps_for_wrap
+        || ((not is_list_cons_ctor)
+            && match tctx.current_cpp_return_type with
+               | Some t -> resolves_to_any_type t
+               | None -> false)
       in
-      (* Box a constructor argument into the erased ([std::any])
-         representation of its field.  A FUNCTION value must not be stored as
-         a raw closure: the application site recovers it with
-         [any_cast<std::function<std::any(std::any...)>>], so it goes through
-         the [crane_erase_fn] runtime helper, which adapts any callable to
-         that canonical signature (unbox each argument, box the result).  This
-         covers both non-lambda callables (named [mk] parameters) and inline
-         lambda literals — including the generic [ [](const auto&){...} ] form
-         produced when the function's domain is an erased/abstract type. *)
-      let box_into_any result =
-        let erased = erase_fn_for_any_slot e result in
-        (* Box explicitly even for a callable already adapted by
-           [crane_erase_fn]: a custom constructor template (e.g.
-           [std::make_pair]) DEDUCES its field type from the argument, so
-           leaving the [std::function] unboxed would store
-           [pair<any, function<any(any)>>] where the consumer's
-           [any_cast<pair<any,any>>] expects both components boxed. *)
-        CPPconverting_ctor (Tany, [erased])
+      (* Where this argument is stored, as far as its representation goes:
+         [Some Tany] when the slot is erased and the value has to be boxed
+         into it, [None] when it is stored as itself. *)
+      let field_slot =
+        (* A pass-through constructor (registered as ["%a0"]) has no field
+           storage at all -- the argument is forwarded verbatim, so there is
+           nothing to box into. *)
+        if is_passthrough_ctor_arg i then None
+        else
+          match List.nth_opt field_types_for_wrap i with
+          | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
+            ( match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+              | Some Tany ->
+                ( match result with
+                  (* A lambda that is not a function value is a generated IIFE,
+                     not a callable being stored. *)
+                  | CPPlambda _ when not (ml_expr_is_function_value e) -> None
+                  | _ -> Some Tany )
+              | Some _ when slot_is_deeply_erased -> Some Tany
+              | _ -> None )
+          | _ -> None
       in
-      let result = match List.nth_opt field_types_for_wrap i with
-        | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
-          (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
-          | _ when is_passthrough_ctor_arg i -> result
-          | Some Tany ->
-            (match result with
-            | CPPlambda _ when not (ml_expr_is_function_value e) -> result
-            | _ -> box_into_any result)
-          | Some _ when draft_has_any_tany ->
-            (* Concrete-typed field in a constructor where another field is erased.
-               E.g. (v, tt) : symbols_semty [x] = prod (symbol_semty x) unit — the
-               second field is concrete unit but concat_tuple_rec_case casts the
-               pair as pair<any,any>, so std::monostate{} must become
-               std::any(std::monostate{}). *)
-            box_into_any result
-          | Some _
-            when flows_into_erased_slot
-                 && (match result with
-                     | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> false
-                     | _ -> true) ->
-            (* Concrete component of a pair/tuple whose whole value flows into
-               a value-dependent erased slot (see [flows_into_erased_slot]).
-               Box it so the stored representation is [pair<any,any>], matching
-               what a generic consumer's [any_cast<pair<any,any>>] recovers. *)
-            box_into_any result
-          | _ -> result)
-        | _ -> result
-      in
-      let result =
-        if tctx.wrap_for_any_param then
+      let into =
+        match field_slot with
+        | Some _ as slot -> slot
+        | None when tctx.wrap_for_any_param ->
           let is_recursive_field =
             match List.nth_opt field_types_for_wrap i with
             | Some (Miniml.Tglob (field_ind, _, _)) ->
-              (match r with
-              | GlobRef.ConstructRef ((kn, mi), _) ->
-                GlobRef.CanOrd.equal field_ind (GlobRef.IndRef (kn, mi))
-              | _ -> false)
+              ( match r with
+                | GlobRef.ConstructRef ((kn, mi), _) ->
+                  GlobRef.CanOrd.equal field_ind (GlobRef.IndRef (kn, mi))
+                | _ -> false )
             | _ -> false
           in
-          (* Don't wrap in std::any when building a custom LIST cons and the
-             element cpp type is a container (e.g. pair<any,any>).  Storing
-             pair<any,any> directly in deque<pair<any,any>> keeps element types
-             consistent with what gen_match_branch expects via erase_type_to_any.
-             Only apply this for LIST cons: pair/tuple fields must stay as
-             std::any so that any_cast<pair<any,any>> at the consumer works. *)
-          let is_list_cons_ctor =
-            match r with
-            | GlobRef.ConstructRef ((kn, _), _) ->
-              let ind = GlobRef.IndRef (kn, 0) in
-              is_list_global ind && Table.is_custom ind
-            | _ -> false
-          in
+          (* Don't box when building a custom LIST cons whose element cpp type
+             is itself a container (e.g. [pair<any,any>]).  Storing it directly
+             in [deque<pair<any,any>>] keeps element types consistent with what
+             [gen_match_branch] expects via [erase_type_to_any].  Only for LIST
+             cons: pair/tuple fields must stay [std::any] so the consumer's
+             [any_cast<pair<any,any>>] works. *)
           let is_already_container =
-            is_list_cons_ctor &&
+            is_list_cons_ctor
+            &&
             match new_expected with
             | Some ml_fty ->
               let tvars = get_current_type_vars () in
-              let cpp_fty = convert_ml_type_to_cpp_type env tvars ml_fty in
-              (match cpp_fty with
-               | Tglob (_, _ :: _, _) -> true
-               | _ -> false)
+              ( match convert_ml_type_to_cpp_type env tvars ml_fty with
+                | Tglob (_, _ :: _, _) -> true
+                | _ -> false )
             | None -> false
           in
-          (* [result] may already be boxed by the field-driven erasure above
-             (a pair component of a value-dependent [sigT] payload, say).
-             Boxing is not idempotent: a second [std::any(...)] stores an
-             [any] holding an [any], which no consumer unboxes twice. *)
-          let is_already_boxed =
-            match result with
-            | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> true
-            | _ -> false
-          in
-          if is_recursive_field || is_already_container || is_already_boxed
-          then result
-          else box_into_any result
-        else result
+          if is_recursive_field || is_already_container then None else Some Tany
+        | None -> None
+      in
+      let result =
+        match into with
+        | Some into -> coerce ~term:e ~into result
+        | None -> result
       in
       result) ts)
   in
@@ -3493,8 +3458,8 @@ and ml_expr_is_function_value e =
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
 
-(** [coerce ~from ~into expr] adapts [expr] across a representation boundary:
-    it is the single place that decides between boxing, [any_cast],
+(** [coerce ?term ?from ~into expr] adapts [expr] across a representation
+    boundary: it is the single place that decides between boxing, [any_cast],
     [crane_erase_fn] and doing nothing.
 
     The decision rests on {!Ml_type_util.is_boxed_type}, not on
@@ -3505,28 +3470,64 @@ and ml_expr_is_function_value e =
     representation-tolerant helpers in [crane_fn.h] to sort out at
     instantiation time.  The pointer dimension (bare value versus
     [shared_ptr]) is delegated to {!gen_type_conversion_expr}, which already
-    handles it. *)
-and coerce ~from ~into expr =
-  if cpp_ty_eq from into || into = Tvoid then expr
-  else if is_boxed_type into && not (is_boxed_type from) then
-    if prints_as_any from then
-      (* [Topaque] source: we do not know what is really there, so we cannot
-         claim to be boxing it. *)
-      expr
+    handles it.
+
+    Omit [from] where the value's C++ type is not tracked -- a freshly
+    generated constructor argument, say.  The value is then taken to be
+    concrete but unnamed, which licenses boxing it (boxing any value is
+    well-formed) but never an [any_cast] out of it, which would be a claim
+    about a representation we cannot see.
+
+    [term] is the ML expression [expr] was generated from.  It is consulted
+    only for the one question a missing [from] leaves open: whether the value
+    is a function, and so has to be adapted by [crane_erase_fn] before it is
+    boxed. *)
+and coerce ?term ?from ~into expr =
+  let boxed_source = match from with Some f -> is_boxed_type f | None -> false in
+  (* An unknown source is not an opaque one: [None] says we did not track the
+     type, [Topaque] says the type itself is unknowable here. *)
+  let opaque_source =
+    match from with Some f -> prints_as_any f && not (is_boxed_type f) | None -> false
+  in
+  let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
+  (* Boxing is not idempotent: [std::any] holding a [std::any] is a box no
+     consumer opens twice. *)
+  let already_boxed =
+    match expr with
+    | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> true
+    | _ -> false
+  in
+  if same_type || into = Tvoid then expr
+  else if is_boxed_type into && not boxed_source then
+    if opaque_source || already_boxed then expr
     else
-      match from with
-      (* A closure does not convert to the canonical
-         [std::function<std::any(std::any...)>] the consumer will [any_cast]
-         back out; [crane_erase_fn] builds that shape. *)
-      | Tfun _ -> wrap_crane_erase_fn expr
-      | _ -> CPPconverting_ctor (Tany, [expr])
-  else if is_boxed_type from && not (prints_as_any into) then
+      let is_function_value =
+        match from with
+        | Some (Tfun _) -> true
+        | Some _ -> false
+        | None -> ( match term with Some t -> ml_expr_is_function_value t | None -> false )
+      in
+      (* A closure does not survive as itself: the consumer recovers it with
+         [any_cast<std::function<std::any(std::any...)>>], so it is adapted to
+         that canonical shape first.  It is then boxed like any other value --
+         a custom constructor template such as [std::make_pair] deduces its
+         field type from the argument, and an unboxed [std::function] would
+         store [pair<any, function<any(any)>>] where the consumer expects
+         [pair<any,any>]. *)
+      let adapted =
+        if is_function_value then wrap_crane_erase_fn expr else expr
+      in
+      CPPconverting_ctor (Tany, [adapted])
+  else if boxed_source && not (prints_as_any into) then
     match expr with
     (* Already recovered; a second cast would be reading the same box twice. *)
     | CPPany_cast _ -> expr
     | _ -> CPPany_cast (into, expr)
-  else if prints_as_any from || prints_as_any into then expr
-  else gen_type_conversion_expr ~src_ty:from ~dst_ty:into expr
+  else
+    match from with
+    | Some f when not (prints_as_any f || prints_as_any into) ->
+      gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
+    | _ -> expr
 
 (** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
     is not callable, so the canonical [std::function<std::any(std::any...)>]
