@@ -3244,7 +3244,10 @@ let gen_spec__inner n b ty =
         has_magic || ml_head_has_magic b
       in
       tctx.cs_counter <- 0;
-      let b_expr = gen_expr (empty_env ()) inner_body in
+      (* The constant's own type is also the expected type of its body, so an
+         IIFE standing in for a let-in tail expression re-bases onto it rather
+         than onto nothing. *)
+      let b_expr = gen_expr ~expected_ty:ty (empty_env ()) inner_body in
       tctx.current_cpp_return_type <- saved_return_type;
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
