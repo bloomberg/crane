@@ -695,6 +695,24 @@ let inductive_names_of_sel sel =
       | _ -> [] )
     sel
 
+(** C++ names of the inductives declared directly in [sel] that cannot absorb
+    an enclosing module of the same name.  The eponymous merge folds the
+    module's members into the type's struct body; an [enum class] has no such
+    body, so a module eponymous with one has to be renamed instead. *)
+let unmergeable_inductive_names_of_sel sel =
+  List.concat_map
+    (fun (_l, se) ->
+      match se with
+      | SEdecl (Dind (_kn, ({ind_kind = Standard; _} as ind))) ->
+        List.filter_map
+          (fun i ->
+            if Table.is_enum_inductive_packet ind i then
+              Some (modular_rename Type ind.ind_packets.(i).ip_typename)
+            else None )
+          (List.init (Array.length ind.ind_packets) Fun.id)
+      | _ -> [] )
+    sel
+
 (** Body of a module entry, when it is a literal structure. *)
 let mod_struct_body m =
   match m.ml_mod_expr with MEstruct (_, sel) -> Some sel | _ -> None
@@ -723,8 +741,14 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
              struct instead of nesting it, so there is no collision to rename
              away — and renaming would in fact defeat the merge (the two names
              would no longer match).  Only a {e sibling} collision needs the
-             suffix. *)
-          if clashes inductive_names then
+             suffix -- unless the eponymous type is one the merge cannot
+             apply to, in which case the two names really would collide. *)
+          let unmergeable_inner =
+            match mod_struct_body m with
+            | Some inner -> unmergeable_inductive_names_of_sel inner
+            | None -> []
+          in
+          if clashes inductive_names || clashes unmergeable_inner then
             Hashtbl.replace sibling_collision_renames
               (MPdot (parent_mp, l))
               (mod_name ^ "_Mod")
