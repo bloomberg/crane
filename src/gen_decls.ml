@@ -681,7 +681,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
        extraction unification. *)
     let inner_body =
       match inner_body with
-      | MLmagic b -> b
+      | MLmagic (_, b) -> b
       | b -> b
     in
     ( match inner_body with
@@ -755,7 +755,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           (* Strip MLmagic wrappers from the field body — promoted dependent
              records produce MLmagic due to Tvar/Tglob mismatches. *)
           let rec strip_magic = function
-            | MLmagic b -> strip_magic b
+            | MLmagic (_, b) -> strip_magic b
             | b -> b
           in
           let field_body = strip_magic field_body in
@@ -1197,7 +1197,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             let name = get_db_name i base_env in
             Tvar (0, Some name)
           with Failure _ -> Tany )
-        | MLmagic e -> ml_expr_to_cpp_type e
+        | MLmagic (_, e) -> ml_expr_to_cpp_type e
         | MLcase (_, scrutinee, branches)
           when Array.length branches = 1 ->
           (* Single-branch case = record field projection.  The branch
@@ -3234,7 +3234,7 @@ let gen_spec__inner n b ty =
          type mismatch (e.g. Obj = std::any vs nat = unsigned int). *)
       let has_magic, inner_body =
         match b with
-        | MLmagic inner -> (true, inner)
+        | MLmagic (_, inner) -> (true, inner)
         | _ -> (false, b)
       in
       (* The optimization pass (simpl) transforms MLmagic(MLapp(f, args)) into

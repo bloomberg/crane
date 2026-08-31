@@ -520,7 +520,7 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
         cf )
   | MLapp (fn, args) ->
     MLapp (map_types_in_ast f fn, List.map (map_types_in_ast f) args)
-  | MLmagic a -> MLmagic (map_types_in_ast f a)
+  | MLmagic (m, a) -> MLmagic (Mlutil.map_magic_types f m, map_types_in_ast f a)
   | MLparray (arr, def) ->
     MLparray (Array.map (map_types_in_ast f) arr, map_types_in_ast f def)
   | MLtuple args -> MLtuple (List.map (map_types_in_ast f) args)

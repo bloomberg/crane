@@ -52,15 +52,22 @@ val try_mgu : ml_type -> ml_type -> unit
     @return [true] if the types cannot be unified and [MLmagic] is needed *)
 val needs_magic : ml_type * ml_type -> bool
 
-(** Conditionally wrap an ML term with magic if the flag is true.
-    @param b when [true], wraps [a] in [MLmagic]
-    @param a the ML expression to (possibly) wrap *)
-val put_magic_if : bool -> ml_ast -> ml_ast
+(** Conditionally wrap an ML term in a coercion.  The two types are passed
+    explicitly because {!needs_magic}'s pair is unordered — [mgu] is symmetric
+    — whereas a backend must know which side the term is on.
+    @param from the type the term itself has
+    @param into the type the context requires
+    @param b    when [true], wraps [a]
+    @param a    the ML expression to (possibly) wrap *)
+val put_magic_if :
+  from:ml_type -> into:ml_type -> bool -> ml_ast -> ml_ast
 
-(** Wrap an ML term with magic if the type pair requires it.
-    @param p a pair [(expected, actual)] of ML types
-    @param a the ML expression to (possibly) wrap *)
-val put_magic : ml_type * ml_type -> ml_ast -> ml_ast
+(** Wrap an ML term in a coercion iff its own type fails to unify with the one
+    its context requires.
+    @param from the type the term itself has
+    @param into the type the context requires
+    @param a    the ML expression to (possibly) wrap *)
+val put_magic : from:ml_type -> into:ml_type -> ml_ast -> ml_ast
 
 (** Check if an ML term can be generalized. *)
 val generalizable : ml_ast -> bool
@@ -266,6 +273,10 @@ val mlapp : ml_ast -> ml_ast list -> ml_ast
     @param f the transformation to apply to each direct child
     @param t the ML AST node whose children are to be mapped *)
 val ast_map : (ml_ast -> ml_ast) -> ml_ast -> ml_ast
+
+(** [map_magic_types f m] rewrites the types recorded on a coercion marker.
+    [Mbarrier] carries none and passes through unchanged. *)
+val map_magic_types : (ml_type -> ml_type) -> ml_magic -> ml_magic
 
 (** [ast_map_types f a] rewrites every [ml_type] embedded in [a] with [f],
     recursing through the whole term. *)

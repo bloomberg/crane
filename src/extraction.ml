@@ -1201,7 +1201,7 @@ and extract_term env sg mle mlt c args =
       (* If [mlt] cannot be unified with an arrow type, then magic! *)
       let magic = needs_magic (mlt, Tarr (a, b)) in
       let d' = extract_term env' sg (Mlenv.push_type mle a) b d [] in
-      put_magic_if magic (MLlam (id, a, d')) )
+      put_magic_if ~from:(Tarr (a, b)) ~into:mlt magic (MLlam (id, a, d')) )
   | LetIn (n, c1, t1, c2) ->
     let id = map_annot id_of_name n in
     let env' =
@@ -1250,7 +1250,9 @@ and extract_term env sg mle mlt c args =
   | Rel n ->
     (* As soon as the expected [mlt] for the head is known, *)
     (* we unify it with an fresh copy of the stored type of [Rel n]. *)
-    let extract_rel mlt = put_magic (mlt, Mlenv.get mle n) (MLrel n) in
+    let extract_rel mlt =
+      put_magic ~from:(Mlenv.get mle n) ~into:mlt (MLrel n)
+    in
     extract_app env sg mle mlt extract_rel args
   | Case (ci, u, pms, r, iv, c0, br) ->
     (* If invert_case then this is a match that will get erased later, but right
@@ -1278,7 +1280,7 @@ and extract_term env sg mle mlt c args =
     (* let metas = List.map new_meta args in let domain = make_tyargs env sg mle
        args metas in *)
     let extract_var mlt =
-      put_magic (mlt, vty) (MLglob (GlobRef.VarRef v, []))
+      put_magic ~from:vty ~into:mlt (MLglob (GlobRef.VarRef v, []))
     in
     extract_app env sg mle mlt extract_var args
   | Int i ->
@@ -1310,7 +1312,7 @@ and extract_maybe_term env sg mle mlt c =
   try
     check_default env sg (type_of env sg c);
     extract_term env sg mle mlt c []
-  with NotDefault d -> put_magic (mlt, Tdummy d) (MLdummy d)
+  with NotDefault d -> put_magic ~from:(Tdummy d) ~into:mlt (MLdummy d)
 
 (* We first type all arguments starting with unknown meta types. This gives us
    the expected type of the head. Then we use the [mk_head] to produce the ML
@@ -1682,6 +1684,8 @@ and extract_cst_app env sg mle mlt kn args =
   (* The internal head receives a magic if [magic1] *)
   let head =
     put_magic_if
+      ~from:(type_recomp (metas, a))
+      ~into:instantiated
       magic1
       (MLglob (GlobRef.ConstRef kn, List.map type_simpl domain))
   in
@@ -1696,7 +1700,8 @@ and extract_cst_app env sg mle mlt kn args =
   if la >= ls then
     (* Enough args, cleanup already done in [mla], we only add the additional
        dummy if needed. *)
-    put_magic_if (magic2 && not magic1) (mlapp head (optdummy @ mla))
+    put_magic_if ~from:a ~into:mlt (magic2 && not magic1)
+      (mlapp head (optdummy @ mla))
   else
     (* Partially applied function with some logical arg missing. We complete via
        eta and expunge logical args. *)
@@ -1708,7 +1713,8 @@ and extract_cst_app env sg mle mlt kn args =
     let missing_types = List.lastn ls' all_arg_types in
     let mla = List.map (ast_lift ls') mla @ eta_args_sign ls' s' in
     let e = anonym_or_dummy_lams_typed (mlapp head mla) missing_types s' in
-    put_magic_if magic2 (remove_n_lams (List.length optdummy) e)
+    put_magic_if ~from:a ~into:mlt magic2
+      (remove_n_lams (List.length optdummy) e)
 
 (* \begin{itemize} \item In ML, constructor arguments are uncurryfied. \item We
    managed to suppress logical parts inside inductive definitions, but they must
@@ -1892,7 +1898,11 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
        (promoted), and type_args = [Directed A, A, DirectedEdge A]. *)
     let all_typeargs = typeargs @ promoted_typeargs in
     let typ = Tglob (GlobRef.IndRef ip, all_typeargs, []) in
-    put_magic_if magic1 (MLcons (typ, GlobRef.ConstructRef cp, mla))
+    put_magic_if
+      ~from:type_cons
+      ~into:(type_recomp (metas, a))
+      magic1
+      (MLcons (typ, GlobRef.ConstructRef cp, mla))
   in
   (* Decompose the instantiated+unified constructor type to recover the resolved
      argument types. After [instantiation] replaced Tvars with metas, and
@@ -1905,6 +1915,8 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   if la < params_nb then
     let head' = head (eta_args_sign ls s) in
     put_magic_if
+      ~from:a
+      ~into:mlt
       magic2
       (dummy_lams
          (anonym_or_dummy_lams_typed head' resolved_arg_types s)
@@ -1912,7 +1924,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
   else
     let mla = make_mlargs env sg mle s args' metas in
     if Int.equal la (ls + params_nb) then
-      put_magic_if (magic2 && not magic1) (head mla)
+      put_magic_if ~from:a ~into:mlt (magic2 && not magic1) (head mla)
     else (* [ params_nb <= la <= ls + params_nb ] *)
       let ls' = params_nb + ls - la in
       let s' = List.lastn ls' s in
@@ -1949,12 +1961,16 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         let outer_types = List.firstn ca missing_types in
         let inner_types = List.skipn ca missing_types in
         let inner = anonym_or_dummy_lams_typed (head mla) inner_types inner_s in
-        let inner_barrier = MLmagic inner in
+        let inner_barrier = MLmagic (Mbarrier, inner) in
         put_magic_if
+          ~from:a
+          ~into:mlt
           magic2
           (anonym_or_dummy_lams_typed inner_barrier outer_types outer_s)
       else
         put_magic_if
+          ~from:a
+          ~into:mlt
           magic2
           (anonym_or_dummy_lams_typed (head mla) missing_types s')
 

@@ -44,7 +44,7 @@ let nb_occur_match =
       List.fold_left (fun total arg -> total + nb k arg) (nb k head) args
     | MLcons (_, _, args) | MLtuple args ->
       List.fold_left (fun total arg -> total + nb k arg) 0 args
-    | MLmagic a -> nb k a
+    | MLmagic (_, a) -> nb k a
     | MLparray (elts, def) ->
       Array.fold_left (fun total elt -> total + nb k elt) 0 elts + nb k def
     | MLglob _
@@ -73,7 +73,7 @@ let rec occurs k = function
     let k' = k + Array.length ids in
     Array.exists (occurs k') bodies
   | MLcons (_, _, args) | MLtuple args -> List.exists (occurs k) args
-  | MLmagic a -> occurs k a
+  | MLmagic (_, a) -> occurs k a
   | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
   | MLglob _
    |MLexn _
@@ -159,7 +159,7 @@ let escapes ?(refined = false) k t =
     | MLcons (_, _, args) ->
       List.exists (check k true false) args
     | MLtuple args -> List.exists (check k true false) args
-    | MLmagic a -> check k in_tail false a
+    | MLmagic (_, a) -> check k in_tail false a
     | MLparray (elts, def) -> Array.exists (occurs k) elts || occurs k def
     | MLglob _
      |MLexn _
@@ -208,7 +208,7 @@ let sub_bindings_escape k body =
          ) branches
     | MLletin (_, _, rhs, cont) ->
       check k rhs || check (k + 1) cont
-    | MLmagic a -> check k a
+    | MLmagic (_, a) -> check k a
     | _ -> false
   in
   check k body
@@ -230,7 +230,7 @@ let find_reuse_candidates (_typ : ml_type) (pv : ml_branch array) =
     | _ -> false
   in
   let rec tail_cons = function
-    | MLmagic a -> tail_cons a
+    | MLmagic (_, a) -> tail_cons a
     | MLletin (_, _, _, b) -> tail_cons b
     | MLcons (_, r, args) -> Some (r, args)
     | _ -> None
@@ -257,7 +257,7 @@ let is_reuse_scrutinee k body =
   let rec scan d = function
     | MLcase (typ, scrut, branches) ->
       ( match scrut with
-      | MLrel j | MLmagic (MLrel j) ->
+      | MLrel j | MLmagic (_, MLrel j) ->
         if j > d && j - d = k && find_reuse_candidates typ branches <> [] then
           found := true
       | _ -> () );
@@ -271,7 +271,7 @@ let is_reuse_scrutinee k body =
     | MLfix (_, ids, bodies, _) ->
       Array.iter (scan (d + Array.length ids)) bodies
     | MLcons (_, _, ts) | MLtuple ts -> List.iter (scan d) ts
-    | MLmagic a -> scan d a
+    | MLmagic (_, a) -> scan d a
     | MLparray (arr, def) -> Array.iter (scan d) arr; scan d def
     | _ -> ()
   in
@@ -331,7 +331,7 @@ let free_rels depth t =
       let d' = d + Array.length ids in
       Array.iter (collect d') bodies
     | MLcons (_, _, args) | MLtuple args -> List.iter (collect d) args
-    | MLmagic a -> collect d a
+    | MLmagic (_, a) -> collect d a
     | MLparray (elts, def) ->
       Array.iter (collect d) elts;
       collect d def
@@ -352,7 +352,7 @@ let free_rels depth t =
 let single_use_nargs k t =
   let result = ref 0 in
   let rec search k = function
-    | MLapp ((MLrel i | MLmagic (MLrel i)), args) when i = k ->
+    | MLapp ((MLrel i | MLmagic (_, MLrel i)), args) when i = k ->
       result :=
         List.length
           (List.filter (function MLdummy _ -> false | _ -> true) args)
@@ -373,7 +373,7 @@ let single_use_nargs k t =
       List.iter (search k) args
     | MLcons (_, _, args) -> List.iter (search k) args
     | MLtuple args -> List.iter (search k) args
-    | MLmagic a -> search k a
+    | MLmagic (_, a) -> search k a
     | MLparray (elts, def) ->
       Array.iter (search k) elts;
       search k def

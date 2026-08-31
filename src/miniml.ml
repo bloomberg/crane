@@ -145,11 +145,31 @@ and ml_ast =
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string
-  | MLmagic of ml_ast
+  | MLmagic of ml_magic * ml_ast
   | MLuint of Uint63.t
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+
+(** What an [MLmagic] node is doing.  Extraction inserts these wherever type
+    erasure has opened a gap, but not every gap is a coercion, and the two
+    kinds must not be confused. *)
+and ml_magic =
+  | Mcoerce of ml_type * ml_type
+    (* [Mcoerce (from, into)]: the term has type [from], the context requires
+       [into], and the two do not unify.  This is the representation boundary
+       Rocq's [needs_magic] detected, kept with both of its types so the
+       backend does not have to rediscover them. *)
+  | Mboxed
+    (* Not a coercion either: an assertion by the backend that, whatever the
+       term's ML type says, its value is physically inside a [std::any] at
+       runtime.  Emitted where the C++ calling convention boxes a value behind
+       extraction's back (see [crane_erase_fn]'s fallback), so a read of it
+       must go through an [any_cast]. *)
+  | Mbarrier
+    (* Not a coercion: a marker separating two groups of [MLlam] nodes so that
+       [collect_lams] stops between them.  Carries no type gap, and nothing
+       may be cast on account of it. *)
 
 (** Pattern for pattern matching. *)
 and ml_pattern =

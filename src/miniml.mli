@@ -178,7 +178,9 @@ and ml_branch = (ml_ident * ml_type) list * ml_type * ml_pattern * ml_ast
     the name/type of each, their bodies, and a flag distinguishing cofixpoints);
     [MLexn] a runtime error raised for an unrealisable term; [MLdummy] the value
     of an erased/logical slot; [MLaxiom] a value left abstract by an axiom;
-    [MLmagic] an unsafe coercion bridging type gaps opened by erasure; the
+    [MLmagic] a marker at a type gap opened by erasure — either an unsafe
+    coercion carrying both of its types, or a lambda-grouping barrier, as
+    {!ml_magic} records; the
     primitive literals [MLuint], [MLfloat] and [MLstring]; and [MLparray] a
     persistent-array literal (element array plus default value).
 
@@ -200,11 +202,32 @@ and ml_ast =
   | MLexn of string
   | MLdummy of kill_reason
   | MLaxiom of string
-  | MLmagic of ml_ast
+  | MLmagic of ml_magic * ml_ast
   | MLuint of Uint63.t
   | MLfloat of Float64.t
   | MLstring of Pstring.t
   | MLparray of ml_ast array * ml_ast
+
+(** What an [MLmagic] node is doing.  Extraction emits these wherever erasure
+    has opened a gap between the type a term has and the type its context
+    wants, but not every such marker is a coercion. *)
+and ml_magic =
+  | Mcoerce of ml_type * ml_type
+      (** [Mcoerce (from, into)]: the term has type [from], the context
+          requires [into], and the two do not unify.  Both types are kept so
+          that a backend can see exactly which representation boundary is
+          being crossed instead of rediscovering it. *)
+  | Mboxed
+    (* Not a coercion either: an assertion by the backend that, whatever the
+       term's ML type says, its value is physically inside a [std::any] at
+       runtime.  Emitted where the C++ calling convention boxes a value behind
+       extraction's back (see [crane_erase_fn]'s fallback), so a read of it
+       must go through an [any_cast]. *)
+  | Mbarrier
+      (** Not a coercion but a separator, placed between two groups of
+          [MLlam] nodes so that a backend collecting consecutive lambdas stops
+          between them.  There is no type gap here and nothing may be cast on
+          account of it. *)
 
 (** A match pattern. [Pcons (r, ps)] matches constructor [r] with sub-patterns
     [ps]; [Ptuple] matches a tuple; [Prel] refers to a bound branch variable by
