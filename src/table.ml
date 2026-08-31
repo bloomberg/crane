@@ -2424,6 +2424,15 @@ let add_custom r ids s =
   | _ -> ());
   customs := Refmap'.add r (ids, s) !customs
 
+(** Whether [r1] and [r2] are inductive types declared in the same mutual
+    block ([tree] and [forest] of an [Inductive tree ... with forest ...]).
+    Such siblings are generated together into one enclosing scope, so a
+    reference from one to the other needs no qualification. *)
+let same_mutual_block r1 r2 =
+  match (r1, r2) with
+  | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
+  | _ -> false
+
 let is_custom r = Refmap'.mem r !customs
 
 let is_inline_custom r = is_custom r && to_inline r

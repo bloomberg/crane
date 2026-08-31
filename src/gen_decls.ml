@@ -5989,7 +5989,11 @@ let gen_ind_header_v2
                   List.map
                     (fun (field_id, src_fty, dst_fty) ->
                       gen_type_conversion_expr
-                        ~skip:(fun g -> GlobRef.CanOrd.equal g name)
+                        (* A sibling of the same mutual block lives in this
+                           very scope, so it is spelled bare too. *)
+                        ~skip:(fun g ->
+                          GlobRef.CanOrd.equal g name
+                          || Table.same_mutual_block g name)
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         (CPPvar field_id))
                     field_info

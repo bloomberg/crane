@@ -73,7 +73,7 @@ struct MutualRecursion {
         }()};
       } else {
         const auto &[a0] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_shared<Forest<A>>(*a0) : nullptr};
+        this->v_ = Node{a0 ? std::make_shared<forest<A>>(*a0) : nullptr};
       }
     }
 
@@ -159,7 +159,7 @@ struct MutualRecursion {
         this->v_ = Empty{};
       } else {
         const auto &[a0, a1] = std::get<typename forest<_U>::Trees>(_other.v());
-        this->v_ = Trees{a0 ? std::make_shared<Tree<A>>(*a0) : nullptr,
+        this->v_ = Trees{a0 ? std::make_shared<tree<A>>(*a0) : nullptr,
                          a1 ? std::make_shared<forest<A>>(*a1) : nullptr};
       }
     }
