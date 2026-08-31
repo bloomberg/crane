@@ -5584,14 +5584,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            arguments substituted in — the [P] of [sigT A P] becomes the
            concrete C++ type the field holds at this call site. *)
         let instantiated_field_cpp_ty ft =
-          map_cpp_type
-            (fun t ->
-              match t with
-              | Tvar (i, _) -> (
-                match List.nth_opt ctor_temps (i - 1) with
-                | Some c -> c
-                | None -> t )
-              | t -> t )
+          subst_cpp_tvars
+            (fun i -> List.nth_opt ctor_temps (i - 1))
             (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ft)
         in
         let expected_for_arg =

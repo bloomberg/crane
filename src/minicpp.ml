@@ -513,6 +513,32 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Topaque
   | Tauto -> ty
 
+(** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by
+    [sub i], leaving the substituted type alone.
+
+    Unlike {!map_cpp_type}, the replacement is {e not} traversed again, so a
+    substitution whose image mentions the variable it replaces (the [T1] of
+    [list T1] instantiated at [Prod<T1, T2>]) terminates. *)
+let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_type =
+  let go = subst_cpp_tvars sub in
+  match ty with
+  | Tvar (i, _) -> ( match sub i with Some t -> t | None -> ty )
+  | Tglob (r, tys, args) -> Tglob (r, List.map go tys, args)
+  | Tid (id, tys) -> Tid (id, List.map go tys)
+  | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
+  | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
+  | Tmod (m, t) -> Tmod (m, go t)
+  | Tshared_ptr t -> Tshared_ptr (go t)
+  | Tref t -> Tref (go t)
+  | Tptr t -> Tptr (go t)
+  | Tvariant ts -> Tvariant (List.map go ts)
+  | Tnamespace (r, t) -> Tnamespace (r, go t)
+  | Tqualified (t, id) -> Tqualified (go t, id)
+  | Tapply (t, ts) -> Tapply (go t, List.map go ts)
+  | Tdecay t -> Tdecay (go t)
+  | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
+  | Topaque | Tauto -> ty
+
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
 

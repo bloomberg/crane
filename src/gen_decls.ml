@@ -221,12 +221,7 @@ let hkt_tvar_resolutions_of_type ty =
 let apply_hkt_resolutions resolutions ty =
   if resolutions = [] then ty
   else
-    Minicpp.map_cpp_type
-      (function
-        | Tvar (i, _) as t -> (
-          match List.assoc_opt i resolutions with Some r -> r | None -> t )
-        | t -> t )
-      ty
+    Minicpp.subst_cpp_tvars (fun i -> List.assoc_opt i resolutions) ty
 
 (** Rewrite those type variables throughout the statements of a function
     body, so type annotations there agree with the resolved signature. *)

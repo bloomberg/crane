@@ -491,6 +491,16 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
+(** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by [sub i].
+
+    Unlike {!map_cpp_type}, the replacement is not traversed again, so a
+    substitution whose image mentions the variable it replaces (the [T1] of
+    [list T1] instantiated at [Prod<T1, T2>]) terminates.
+    @param sub the replacement for a type variable index, [None] to keep it
+    @param ty the type to substitute in
+    @return the substituted type *)
+val subst_cpp_tvars : (int -> cpp_type option) -> cpp_type -> cpp_type
+
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
 
