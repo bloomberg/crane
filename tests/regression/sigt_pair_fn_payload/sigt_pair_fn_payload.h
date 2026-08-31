@@ -147,9 +147,7 @@ template <typename A, typename P> struct SigT {
 struct SigtPairFnPayload {
   using item = SigT<std::any, std::any>;
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, T1 &>
-  static item mk(T1 a, F1 &&f) {
+  template <typename T1, typename F1> static item mk(T1 a, F1 &&f) {
     return SigT<std::any, std::any>::existt(
         std::any(), std::make_pair(std::any(a), std::any(crane_erase_fn(f))));
   }

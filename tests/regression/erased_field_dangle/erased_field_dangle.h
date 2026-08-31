@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <any>
 #include <functional>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -102,12 +103,18 @@ struct ErasedFieldDangle {
       return a1(a);
     }
 
-    template <typename T1, typename F0> T1 exists_box_rec(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, std::any &,
+                                     std::function<uint64_t(std::any)> &>
+    T1 exists_box_rec(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }
 
-    template <typename T1, typename F0> T1 exists_box_rect(F0 &&f) const {
+    template <typename T1, typename F0>
+      requires std::is_invocable_r_v<T1, F0 &, std::any &,
+                                     std::function<uint64_t(std::any)> &>
+    T1 exists_box_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
     }

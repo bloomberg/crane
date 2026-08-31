@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <any>
 #include <deque>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -77,8 +76,6 @@ syms_semty concat_tuple_nil_case(const std::deque<Sym> &_x,
                                  syms_semty vs_);
 
 template <typename F6>
-  requires std::is_invocable_r_v<syms_semty, F6 &, std::deque<Sym> &,
-                                 std::deque<Sym> &, syms_semty &, syms_semty &>
 syms_semty concat_tuple_rec_case(Sym, const std::deque<Sym> &xs_,
                                  const std::deque<Sym> &,
                                  const std::deque<Sym> &ys, syms_semty vs,
@@ -93,8 +90,6 @@ syms_semty concat_tuple(const std::deque<Sym> &xs, const std::deque<Sym> &ys,
 syms_semty rev_tuple_nil_case(const std::deque<Sym> &_x, syms_semty vs);
 
 template <typename F4>
-  requires std::is_invocable_r_v<syms_semty, F4 &, std::deque<Sym> &,
-                                 syms_semty &>
 syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
                                const std::deque<Sym> &xs_, syms_semty vs,
                                F4 &&f) {

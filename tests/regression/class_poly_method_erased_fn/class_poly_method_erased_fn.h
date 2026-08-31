@@ -5,7 +5,6 @@
 #include <any>
 #include <concepts>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 /// A typeclass method polymorphic in its own type argument
@@ -23,7 +22,6 @@ concept Mapper = requires {
 
 struct ClassPolyMethodErasedFn {
   template <Mapper _tcI0, typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static T1 mapf(F0 &&x, const T1 &x0) {
     return std::any_cast<T1>(_tcI0::mapf(crane_erase_fn(x), x0));
   }

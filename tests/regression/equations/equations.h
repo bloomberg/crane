@@ -471,7 +471,11 @@ struct Equations {
 
   template <typename F0, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<std::any, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<std::any, F1 &, uint64_t &>
+             std::is_invocable_r_v<std::any, F1 &, uint64_t &> &&
+             std::is_invocable_r_v<std::any, F2 &, uint64_t &, uint64_t &,
+                                   std::any &> &&
+             std::is_invocable_r_v<std::any, F3 &, uint64_t &, uint64_t &,
+                                   std::any &>
   static std::any
   FunctionalElimination_gcd(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3,
                             const std::pair<uint64_t, uint64_t> &_x4) {
@@ -905,6 +909,8 @@ struct Equations {
   }
 
   template <typename F2, typename F3>
+    requires std::is_invocable_r_v<std::any, F2 &, uint64_t &, std::any &> &&
+             std::is_invocable_r_v<std::any, F3 &, uint64_t &, std::any &>
   static std::any FunctionalElimination_collatz_steps(std::any _x0,
                                                       std::any _x1, F2 &&_x2,
                                                       F3 &&_x3, uint64_t _x4) {

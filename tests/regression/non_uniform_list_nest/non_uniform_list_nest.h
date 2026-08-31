@@ -147,7 +147,8 @@ struct NonUniformListNest {
   };
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+             std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rect(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());
@@ -160,7 +161,8 @@ struct NonUniformListNest {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
+             std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());

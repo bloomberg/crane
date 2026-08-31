@@ -3279,6 +3279,59 @@ let pp_template_param (tt, id) =
     ++ pp_type default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
+(** Names the body only ever hands to a representation-tolerant helper from
+    [crane_fn.h]: erased into storage by [crane_erase_fn], or applied through
+    [crane_call_erased].  Those helpers accept whatever shape they are given
+    and adapt it with [if constexpr], so the signature has nothing to say
+    about how such a callback is called.  Every other callback IS applied
+    directly in the body, and its constraint is a real check -- see
+    {!pp_requires_of_tparams}.
+
+    These are the names of {e value} parameters; {!erased_into_storage_tparam}
+    maps them to the template parameters a [requires] clause speaks of. *)
+let erased_into_storage_ids body =
+  let ids = ref Id.Set.empty and applied = ref Id.Set.empty in
+  let rec name = function
+    | CPPvar id -> Some id
+    | CPPmove e | CPPforward (_, e) -> name e
+    | _ -> None
+  in
+  let add set e = Option.iter (fun id -> set := Id.Set.add id !set) (name e) in
+  let rec check_expr e =
+    ( match e with
+    | CPPerase_fn (_, inner) -> add ids inner
+    (* [crane_call_erased] takes the callee first, and every [CPPfun_call]
+       stores its arguments reversed, so the callee ends the list. *)
+    | CPPfun_call (CPPvar f, (_ :: _ as args))
+      when String.equal (Id.to_string f) "crane_call_erased" ->
+      add ids (List.nth args (List.length args - 1))
+    (* Applied here, so the signature does have something to claim -- even if
+       the same callback is also handed to a helper elsewhere in the body. *)
+    | CPPfun_call (callee, _) -> add applied callee
+    | _ -> () );
+    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
+  and check_stmt s =
+    iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
+  in
+  List.iter check_stmt body;
+  Id.Set.diff !ids !applied
+
+(** [erased_into_storage_tparam ~params body id] holds when the template
+    parameter [id] types a value parameter that [body] only erases into
+    storage (see {!erased_into_storage_ids}), so no constraint may be placed
+    on it. *)
+let erased_into_storage_tparam ~params body =
+  let stored = erased_into_storage_ids body in
+  if Id.Set.is_empty stored then fun _ -> false
+  else fun id ->
+    let names = function
+      | Tvar (_, Some n) | Tid (n, _) | Tid_external (n, _) -> Id.equal n id
+      | _ -> false
+    in
+    List.exists
+      (fun (pid, ty) -> Id.Set.mem pid stored && exists_cpp_type names ty)
+      params
+
 (** Build a [requires] clause from template parameters that have [TTfun]
     constraints.  Each [TTfun(dom, cod)] with parameter name [F] becomes
     [std::is_invocable_r_v<cod, F &, dom1 &, dom2 &, ...>].  Returns [None]
@@ -3289,7 +3342,8 @@ let pp_template_param (tt, id) =
                     template parameter declaration
     @return [Some pp] where [pp] is the full [requires ...] clause, or [None]
             if no [TTfun] constraints are present *)
-let pp_requires_of_tparams tparams =
+let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
+  let stored = erased_into_storage_tparam ~params body in
   let invocable_r =
     if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
     else "std::is_invocable_r_v"
@@ -3298,12 +3352,13 @@ let pp_requires_of_tparams tparams =
     List.filter_map
       (fun (tt, id) ->
         match tt with
-        (* A constraint is a claim about a representation.  An erased domain
-           is precisely the absence of one: the callback is stored through
-           [crane_erase_fn], which adapts whatever it is actually given, so
-           asserting that it takes a [std::any] rejects every honest caller.
-           Leave such a parameter unconstrained. *)
-        | TTfun (dom, _) when List.exists Ml_type_util.prints_as_any dom -> None
+        (* A constraint is a claim about a representation.  A callback the
+           body erases into storage has none to claim: [crane_erase_fn]
+           adapts whatever it is handed, so asserting that it takes a
+           [std::any] would reject every honest caller.  A callback the body
+           APPLIES keeps its constraint, erased argument positions included --
+           there the [std::any] is exactly what it will be passed. *)
+        | TTfun _ when stored id -> None
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in
@@ -3461,7 +3516,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | [] -> mt ()
       | _ ->
         let args = pp_list pp_template_param mf_tparams in
-        let req = pp_requires_of_tparams mf_tparams in
+        let req = pp_requires_of_tparams ~body:mf_body ~params:mf_params mf_tparams in
         str "template <" ++ args ++ str ">" ++ fnl ()
         ++ ( match req with
            | None -> mt ()
@@ -3743,6 +3798,16 @@ let rec decl_globref = function
   | Dnspace (Some r, _) -> Some r
   | _ -> None
 
+(** The parameters and statements of a declaration, for the traversals that
+    need to see what a signature's body actually does with its parameters (see
+    {!erased_into_storage_tparam}).  A declaration with no body gives empty
+    lists. *)
+let rec decl_body = function
+  | Dtemplate (_, _, inner) -> decl_body inner
+  | Dfundef (_, _, params, body, _) -> (params, body)
+  | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
+  | _ -> ([], [])
+
 (** Apply loopify transformation to a declaration before rendering. *)
 let maybe_loopify decl =
   let should =
@@ -3782,7 +3847,7 @@ and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty [] in
-    let req = pp_requires_of_tparams temps in
+    let req = pp_requires_of_tparams ~body:[Sreturn (Some e)] temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
@@ -3794,7 +3859,8 @@ and pp_cpp_decl_raw env = function
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
     let args = pp_list pp_template_param temps in
-    let req = pp_requires_of_tparams temps in
+    let params, body = decl_body decl in
+    let req = pp_requires_of_tparams ~body ~params temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
       | Some r, None -> r ++ fnl ()
