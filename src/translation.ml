@@ -3493,6 +3493,41 @@ and ml_expr_is_function_value e =
     | Some t -> count_ml_value_arrows t >= 1
     | None -> false )
 
+(** [coerce ~from ~into expr] adapts [expr] across a representation boundary:
+    it is the single place that decides between boxing, [any_cast],
+    [crane_erase_fn] and doing nothing.
+
+    The decision rests on {!Ml_type_util.is_boxed_type}, not on
+    {!Ml_type_util.prints_as_any}: {!Minicpp.Topaque} also prints as
+    [std::any], but it is an admission that the representation is unknown, and
+    nothing may be boxed or cast on the strength of it.  A boundary with a
+    [Topaque] on either side is therefore left alone, for the
+    representation-tolerant helpers in [crane_fn.h] to sort out at
+    instantiation time.  The pointer dimension (bare value versus
+    [shared_ptr]) is delegated to {!gen_type_conversion_expr}, which already
+    handles it. *)
+and coerce ~from ~into expr =
+  if cpp_ty_eq from into || into = Tvoid then expr
+  else if is_boxed_type into && not (is_boxed_type from) then
+    if prints_as_any from then
+      (* [Topaque] source: we do not know what is really there, so we cannot
+         claim to be boxing it. *)
+      expr
+    else
+      match from with
+      (* A closure does not convert to the canonical
+         [std::function<std::any(std::any...)>] the consumer will [any_cast]
+         back out; [crane_erase_fn] builds that shape. *)
+      | Tfun _ -> wrap_crane_erase_fn expr
+      | _ -> CPPconverting_ctor (Tany, [expr])
+  else if is_boxed_type from && not (prints_as_any into) then
+    match expr with
+    (* Already recovered; a second cast would be reading the same box twice. *)
+    | CPPany_cast _ -> expr
+    | _ -> CPPany_cast (into, expr)
+  else if prints_as_any from || prints_as_any into then expr
+  else gen_type_conversion_expr ~src_ty:from ~dst_ty:into expr
+
 (** Apply a callee whose static C++ type is the erased [std::any].  [std::any]
     is not callable, so the canonical [std::function<std::any(std::any...)>]
     adapter the producer stored via {!erase_fn_for_any_slot} is recovered with
@@ -6092,14 +6127,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               Tnamespace (ns_g, Tglob (g, List.map (fun _ -> Tany) args, ns))
             | t -> t
           in
-          let cast_ty = erase_top_args ty in
-          ( match inner with
-            | CPPany_cast _ -> inner
-            | _ -> CPPany_cast (cast_ty, inner) )
+          coerce ~from:Tany ~into:(erase_top_args ty) inner
         else if ml_expr_is_erased env t then
-          ( match inner with
-            | CPPany_cast _ -> inner
-            | _ -> CPPany_cast (ty, inner) )
+          coerce ~from:Tany ~into:ty inner
         else inner
       | _ -> inner )
   | MLdummy _ ->
