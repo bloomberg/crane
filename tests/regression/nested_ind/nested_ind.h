@@ -420,7 +420,7 @@ struct NestedInd {
             } else
               return A(a0);
           }(),
-          a1 ? std::make_shared<Custom_list<rose<A>>>(*a1) : nullptr};
+          a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {

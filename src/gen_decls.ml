@@ -5989,11 +5989,15 @@ let gen_ind_header_v2
                   List.map
                     (fun (field_id, src_fty, dst_fty) ->
                       gen_type_conversion_expr
-                        (* A sibling of the same mutual block lives in this
-                           very scope, so it is spelled bare too. *)
+                        (* Every inductive generated into this same scope --
+                           the type itself, its mutual siblings, and any other
+                           module-local inductive -- is spelled bare here, so
+                           it must not be namespace-qualified. *)
                         ~skip:(fun g ->
                           GlobRef.CanOrd.equal g name
-                          || Table.same_mutual_block g name)
+                          || Table.same_mutual_block g name
+                          || List.exists (GlobRef.CanOrd.equal g)
+                               (get_local_inductives ()))
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         (CPPvar field_id))
                     field_info
