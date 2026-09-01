@@ -113,6 +113,8 @@ val find_ancestor_qualifier_from : string -> string -> Pp.t
 (** The struct qualifier needed to reach a global from the given context. *)
 val struct_qualifier_for : Names.GlobRef.t -> string -> Pp.t
 
+val global_scope_qualifier_for : Names.GlobRef.t -> string -> Pp.t
+
 (** Whether the global must be referenced with a global-scope qualifier. *)
 val needs_global_qualifier : Names.GlobRef.t -> bool
 

@@ -97,14 +97,3 @@
   (alias runtest)
   (deps hkt_instance_any_mismatch.t.exe)
   (action (run ./hkt_instance_any_mismatch.t.exe))))
-
-(subdir shadow_runtime_nat
- (rule
-  (targets shadow_runtime_nat.t.exe)
-  (deps ShadowRuntimeNat.vo shadow_runtime_nat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} shadow_runtime_nat.t.exe shadow_runtime_nat.cpp shadow_runtime_nat.t.cpp)))
- (rule
-  (alias runtest)
-  (deps shadow_runtime_nat.t.exe)
-  (action (run ./shadow_runtime_nat.t.exe))))

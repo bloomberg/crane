@@ -579,6 +579,16 @@ let pending_wrapper_decls : (string, Pp.t) Hashtbl.t = Hashtbl.create 16
     unmerged (List::list<A>) name formats. Not consumed during rendering. *)
 let unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
 
+(** C++ names of the structs emitted as members of an enclosing struct, mapped
+    to the reference they stand for. Recorded by the struct printer, which is
+    where the name is actually rendered, so the two cannot drift.
+
+    A nested struct shadows any global-scope type of the same name for every
+    unqualified lookup from inside its enclosing struct;
+    {!Cpp_names.global_scope_qualifier_for} consults this to decide when the
+    global one must be spelled [::Name]. *)
+let nested_struct_names : (string, GlobRef.t) Hashtbl.t = Hashtbl.create 16
+
 (** Maps capitalized inductive names to their ModPaths across all modules.
     Pre-populated in do_struct_with_decl_tracking before code generation. Used
     to detect module-inductive name collisions (e.g., N/Z appearing as both an
@@ -771,6 +781,7 @@ let reset_cpp_state () =
   Hashtbl.clear global_scope_type_alias_table;
   Hashtbl.clear pending_wrapper_decls;
   Hashtbl.clear unmerged_wrappers;
+  Hashtbl.clear nested_struct_names;
   Hashtbl.clear global_inductive_names;
   Hashtbl.clear valid_output_modules;
   Hashtbl.clear global_unmerged_wrappers;

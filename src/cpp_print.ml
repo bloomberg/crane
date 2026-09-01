@@ -783,6 +783,7 @@ let rec pp_cpp_type par vl t =
         | [] ->
           typename_prefix_for name_str
           ++ struct_qualifier_for r name_str
+          ++ global_scope_qualifier_for r name_str
           ++ type_name
         | l ->
           let type_name_with_template =
@@ -790,6 +791,7 @@ let rec pp_cpp_type par vl t =
           in
           typename_prefix_for name_str
           ++ struct_qualifier_for r name_str
+          ++ global_scope_qualifier_for r name_str
           ++ type_name_with_template
           ++ str "<"
           ++ pp_list (pp_rec false) l
@@ -873,12 +875,14 @@ let rec pp_cpp_type par vl t =
           if needs_ns && Table.modular () then
             str (cap ^ "::" ^ cap) ++ templates
           else
-            str cap ++ templates
+            global_scope_qualifier_for r' cap ++ str cap ++ templates
         else
           if needs_ns then
             name ++ str "::" ++ str type_name_str ++ templates
           else
-            str type_name_str ++ templates
+            global_scope_qualifier_for r' type_name_str
+            ++ str type_name_str
+            ++ templates
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         str "typename " ++ name ++ str "::" ++ pp_rec false t )
@@ -1280,7 +1284,8 @@ and pp_cpp_expr env args t =
         else if needs_ns then
           if is_merged_inductive_cached x then
             (* Merged non-local inductive: use capitalized name directly *)
-            ns_name
+            global_scope_qualifier_for x (Pp.string_of_ppcmds ns_name)
+            ++ ns_name
           else (* Unmerged non-local inductive: Wrapper::inner *)
             ns_name ++ str "::" ++ str type_name_str
         else if Common.get_force_qualified_capitalization () then
@@ -4214,6 +4219,11 @@ and pp_cpp_decl_raw env = function
       | _ -> pp_global Type id
     in
     register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
+    if render_ctx.rc_in_struct then
+      Hashtbl.replace
+        nested_struct_names
+        (Pp.string_of_ppcmds struct_name)
+        id;
     let f_s =
       match tparams with
       | [] -> pp_cpp_fields_with_vis ~struct_name env fields

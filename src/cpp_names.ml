@@ -492,6 +492,27 @@ let struct_qualifier_for r name_str =
         mt ()
   | _ -> mt ()
 
+(** Prefix a global-scope type name with [::] when a module-local inductive of
+    the same name shadows it.
+
+    A user inductive named [Nat] is rendered inside its module struct as
+    [Nat], which is exactly the name Crane gives the runtime [nat] at C++
+    global scope.  Unqualified lookup from inside the struct then finds the
+    user's type, so [static Nat toNat(const Nat &n)] declares the wrong return
+    type.  Naming the global one [::Nat] is unambiguous wherever it appears --
+    including inside the global struct itself -- so no other name has to move.
+
+    The nested names come from {!Cpp_state.nested_struct_names}, recorded by
+    the struct printer itself, so the shadow test compares against the name
+    that was actually emitted. *)
+let global_scope_qualifier_for r name_str =
+  match r with
+  | GlobRef.IndRef _ when not (is_qualified_name name_str) ->
+    ( match Hashtbl.find_opt nested_struct_names name_str with
+    | Some l when not (globref_equal l r) -> str "::"
+    | _ -> mt () )
+  | _ -> mt ()
+
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions
     rather than recursing into the struct's own member. *)

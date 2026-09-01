@@ -301,6 +301,11 @@ val pending_wrapper_decls : (string, Pp.t) Hashtbl.t
     ([List::list<A>]) name forms. Cleared by [reset_cpp_state]. *)
 val unmerged_wrappers : (string, unit) Hashtbl.t
 
+(** C++ names of structs emitted as members of an enclosing struct, mapped to
+    the reference they stand for. A nested struct shadows any global-scope type
+    of the same name. Cleared by [reset_cpp_state]. *)
+val nested_struct_names : (string, Names.GlobRef.t) Hashtbl.t
+
 (** Capitalized inductive names mapped to their module paths across all modules,
     used to detect module/inductive name collisions. Cleared by
     [reset_cpp_state]. *)
