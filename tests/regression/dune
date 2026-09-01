@@ -7576,3 +7576,14 @@
   (deps tc_carrier_option_cast.t.exe)
   (action (run ./tc_carrier_option_cast.t.exe))))
 
+(subdir eta_match_returns_fun
+ (rule
+  (targets eta_match_returns_fun.t.exe)
+  (deps EtaMatchReturnsFun.vo eta_match_returns_fun.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_match_returns_fun.t.exe eta_match_returns_fun.cpp eta_match_returns_fun.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_match_returns_fun.t.exe)
+  (action (run ./eta_match_returns_fun.t.exe))))
+

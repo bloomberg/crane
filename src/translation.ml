@@ -7333,7 +7333,20 @@ and eta_fun env f args =
             captured_args
             @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
-          let call = CPPfun_call (cglob, List.rev call_args) in
+          let call =
+            if is_inline_custom id then
+              (* An inline-custom template has a fixed placeholder arity, and
+                 arguments past the last placeholder are dropped when it is
+                 rendered.  The eta parameters must therefore be applied to
+                 the template's result -- which is a callable, since that is
+                 why there are missing arguments to begin with -- rather than
+                 handed to the template itself. *)
+              CPPfun_call
+                ( CPPfun_call (cglob, List.rev captured_args),
+                  List.rev
+                    (List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args) )
+            else CPPfun_call (cglob, List.rev call_args)
+          in
           let ret_ty, body =
             if cod = Tvoid then
               (* Void-returning function: execute for side effects, then

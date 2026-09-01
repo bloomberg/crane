@@ -109,17 +109,6 @@
   (deps empty_inductive_decimal_uint.t.exe)
   (action (run ./empty_inductive_decimal_uint.t.exe))))
 
-(subdir eta_match_returns_fun
- (rule
-  (targets eta_match_returns_fun.t.exe)
-  (deps EtaMatchReturnsFun.vo eta_match_returns_fun.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_match_returns_fun.t.exe eta_match_returns_fun.cpp eta_match_returns_fun.t.cpp)))
- (rule
-  (alias runtest)
-  (deps eta_match_returns_fun.t.exe)
-  (action (run ./eta_match_returns_fun.t.exe))))
-
 (subdir eta_methodified_binop
  (rule
   (targets eta_methodified_binop.t.exe)
