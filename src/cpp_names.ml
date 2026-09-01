@@ -441,6 +441,19 @@ let struct_qualifier_for r name_str =
        be qualified with [StructName::] in the .cpp out-of-line definitions. *)
     else if Cpp_state.is_global_scope_type_alias r then
       mt ()
+    (* The kernel module path settles the question outright when it is known:
+       the type is a member of this struct exactly when it was declared in the
+       module the struct came from.  Ask that before the textual tests below,
+       which compare the struct's C++ name against the type's Rocq path and so
+       give up whenever the module was emitted under a different name -- a
+       duplicate-avoidance rename ([Pos] and [Coq_Pos]) or a collision
+       suffix. *)
+    else if
+      match render_ctx.rc_struct_mp with
+      | Some mp -> ModPath.equal mp (modpath_of_r r)
+      | None -> false
+    then
+      struct_name ++ str "::"
     (* Default: qualify when the type's Rocq path nests under the struct,
        or when the type already carries a qualified C++ name whose Rocq path
        nests under the struct's parent module. *)

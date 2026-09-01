@@ -411,6 +411,14 @@ let resolve_varref_id s =
 (** Resolve an [IndRef] to its base C++ type name.  When the reference is
     in [raw_inductives], returns the raw Coq name; otherwise computes the
     C++ struct name with standard mappings (e.g. [prod] → [std::pair]).
+
+    Those two standard mappings only apply when [prod]/[option] really were
+    custom-extracted: the parametrized templates ([std::pair<%t0, %t1>]) cannot
+    be spliced in as a bare name, so this is where they are spelled out.  With
+    no mapping loaded the types are ordinary Crane inductives named [Prod] and
+    [Option], and naming them [std::pair]/[std::optional] here would contradict
+    every other rendering of the same type.
+
     [~with_option] controls whether [option] maps to [std::optional] (only
     meaningful for zero-argument occurrences). *)
 let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
@@ -429,9 +437,11 @@ let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
         | _ -> false )
       | _ -> false
     in
-    let skip_custom = Refset'.mem r no_custom_inductives in
-    if (not skip_custom) && String.equal base "prod" then "std::pair"
-    else if (not skip_custom) && with_option
+    let use_std_alias =
+      (not (Refset'.mem r no_custom_inductives)) && Table.is_custom r
+    in
+    if use_std_alias && String.equal base "prod" then "std::pair"
+    else if use_std_alias && with_option
          && (String.equal base "option" || String.equal base "Option")
     then "std::optional"
     else if parent_is_cap || String.equal base "nat" then cap

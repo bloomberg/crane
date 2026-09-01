@@ -10,8 +10,7 @@
    Stdlib
    Crane
    ITree Equations ExtLib Paco)
- (flags (:standard -output-directory ../../tests/wip)))
-(subdir z_abs_min
+ (flags (:standard -output-directory ../../tests/wip)))(subdir z_abs_min
  (rule
   (targets z_abs_min.t.exe)
   (deps ZAbsMin.vo z_abs_min.t.cpp (source_tree .))
@@ -186,28 +185,6 @@
   (alias runtest)
   (deps loopify_self_template_args.t.exe)
   (action (run ./loopify_self_template_args.t.exe))))
-
-(subdir missing_inductive_pos_mask
- (rule
-  (targets missing_inductive_pos_mask.t.exe)
-  (deps MissingInductivePosMask.vo missing_inductive_pos_mask.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} missing_inductive_pos_mask.t.exe missing_inductive_pos_mask.cpp missing_inductive_pos_mask.t.cpp)))
- (rule
-  (alias runtest)
-  (deps missing_inductive_pos_mask.t.exe)
-  (action (run ./missing_inductive_pos_mask.t.exe))))
-
-(subdir option_recursive_match
- (rule
-  (targets option_recursive_match.t.exe)
-  (deps OptionRecursiveMatch.vo option_recursive_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} option_recursive_match.t.exe option_recursive_match.cpp option_recursive_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps option_recursive_match.t.exe)
-  (action (run ./option_recursive_match.t.exe))))
 
 (subdir partial_local_fix
  (rule
