@@ -889,6 +889,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              alone they would render as the concept's template parameter [T1],
              which is not in scope inside the instance struct. *)
           let field_body = Mlutil.ast_map_types subst_promoted_tvars field_body in
+          (* The body was extracted at the class's erased field type, so its
+             [MLcase] and [MLcons] annotations say [option _] where the
+             declared signature says [option A].  Push the declared type back
+             down, or the body would spell [Option<std::any>] against a value
+             the signature typed [Option<_A0>]. *)
+          let field_body = Mlutil.recover_erased_types subst_ty field_body in
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
              ([subst_ty]) knows better: it still names the element type. *)

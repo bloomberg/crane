@@ -3324,8 +3324,10 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
           (* Not an inductive ref - keep all type args *)
           tys
       in
-      (* Step 2: Convert ML types to C++ types *)
-      let temps = build_template_params env [] tys in
+      (* Step 2: Convert ML types to C++ types.  The enclosing type-variable
+         names matter: inside a member template a [Tvar] is one of the
+         method's own parameters ([_A0]), not an anonymous [T2]. *)
+      let temps = build_template_params env (get_current_type_vars ()) tys in
       let temps = filter_erased_type_args temps in
       (* Step 2b: Recover type args from the return type when unresolved metas
          caused all type args to be erased.  This happens for nullary custom

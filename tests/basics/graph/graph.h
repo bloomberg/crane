@@ -265,19 +265,18 @@ struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
   static Directed<T1> empty() {
-    return Directed<std::any>{List<std::any>::nil(),
-                              List<DirectedEdge<std::any>>::nil()};
+    return Directed<T1>{List<std::any>::nil(),
+                        List<DirectedEdge<std::any>>::nil()};
   }
 
   static Directed<T1> add_node(Directed<std::any> g, T1 n) {
-    return Directed<std::any>{List<std::any>::cons(n, g.directed_nodes),
-                              g.directed_edges};
+    return Directed<T1>{List<std::any>::cons(n, g.directed_nodes),
+                        g.directed_edges};
   }
 
   static Directed<T1> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
-    return Directed<std::any>{
-        g.directed_nodes,
-        List<DirectedEdge<std::any>>::cons(e, g.directed_edges)};
+    return Directed<T1>{g.directed_nodes, List<DirectedEdge<std::any>>::cons(
+                                              e, g.directed_edges)};
   }
 
   static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
@@ -313,17 +312,17 @@ struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
   static Undirected<T1> empty() {
-    return Undirected<std::any>{List<std::any>::nil(),
-                                List<UndirectedEdge<std::any>>::nil()};
+    return Undirected<T1>{List<std::any>::nil(),
+                          List<UndirectedEdge<std::any>>::nil()};
   }
 
   static Undirected<T1> add_node(Undirected<std::any> g, T1 n) {
-    return Undirected<std::any>{List<std::any>::cons(n, g.undirected_nodes),
-                                g.undirected_edges};
+    return Undirected<T1>{List<std::any>::cons(n, g.undirected_nodes),
+                          g.undirected_edges};
   }
 
   static Undirected<T1> add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
-    return Undirected<std::any>{
+    return Undirected<T1>{
         g.undirected_nodes,
         List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
   }

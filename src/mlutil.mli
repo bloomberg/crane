@@ -282,6 +282,16 @@ val map_magic_types : (ml_type -> ml_type) -> ml_magic -> ml_magic
     recursing through the whole term. *)
 val ast_map_types : (ml_type -> ml_type) -> ml_ast -> ml_ast
 
+(** [has_unknown t] — whether [t] mentions [Tunknown], the marker extraction
+    leaves where a type was erased. *)
+val has_unknown : ml_type -> bool
+
+(** [recover_erased_types expected a] fills in the annotations extraction
+    erased to [Tunknown], using the type [a] is known to have. Only erased
+    annotations are touched, and only where the context supplies something
+    better. *)
+val recover_erased_types : ml_type -> ml_ast -> ml_ast
+
 (** Map a function over all immediate subterms with a binding-depth counter.
     @param f   the transformation; receives the current depth and the child term
     @param n   the current binding depth (passed to [f] for each child)

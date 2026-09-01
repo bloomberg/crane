@@ -231,12 +231,12 @@ struct HktClassParam {
     template <typename _A0> using C = List<_A0>;
 
     template <typename _A0 = std::any> static List<_A0> empty() {
-      return List<std::any>::nil();
+      return List<_A0>::nil();
     }
 
     template <typename _A0 = std::any>
     static List<_A0> insert(_A0 x, List<_A0> xs) {
-      return List<std::any>::cons(x, xs);
+      return List<_A0>::cons(x, xs);
     }
 
     template <typename _A0 = std::any> static List<_A0> toList(List<_A0> xs) {

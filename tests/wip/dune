@@ -86,14 +86,3 @@
   (alias runtest)
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
-
-(subdir hkt_instance_any_mismatch
- (rule
-  (targets hkt_instance_any_mismatch.t.exe)
-  (deps HktInstanceAnyMismatch.vo hkt_instance_any_mismatch.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_instance_any_mismatch.t.exe hkt_instance_any_mismatch.cpp hkt_instance_any_mismatch.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_instance_any_mismatch.t.exe)
-  (action (run ./hkt_instance_any_mismatch.t.exe))))

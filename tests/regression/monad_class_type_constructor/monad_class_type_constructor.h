@@ -1,7 +1,6 @@
 #ifndef INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
 #define INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
 
-#include "crane_fn.h"
 #include <any>
 #include <concepts>
 #include <functional>
@@ -53,8 +52,8 @@ struct MonadClassTypeConstructor {
     static std::optional<_A1> mbind(std::optional<_A0> m,
                                     std::function<std::optional<_A1>(_A0)> f) {
       if (m.has_value()) {
-        const auto &a = *m;
-        return crane_call_erased(f, a);
+        const _A0 &a = *m;
+        return f(a);
       } else {
         return std::optional<_A1>();
       }

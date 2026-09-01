@@ -700,6 +700,83 @@ let rec ast_map_types f = function
     | MLfloat _
     | MLstring _ ) as a -> a
 
+(** [has_unknown t] — whether [t] mentions {!Tunknown} anywhere.
+
+    [Tunknown] is what extraction leaves where a type was erased, so its
+    presence is the marker that an annotation is missing information rather
+    than genuinely opaque. *)
+let rec has_unknown = function
+  | Tunknown -> true
+  | Tarr (a, b) -> has_unknown a || has_unknown b
+  | Tglob (_, l, _) -> List.exists has_unknown l
+  | Tmeta {contents = Some t} -> has_unknown t
+  | _ -> false
+
+(** [recover_erased_types expected a] fills in the annotations extraction
+    erased to {!Tunknown}, using the type [a] is known to have.
+
+    A class field's body is extracted at the class's own erased field type, so
+    every type it records is spelled [option Tunknown] even when the caller
+    knows perfectly well which element type is meant.  The declared type is
+    recovered elsewhere for the {e signature} (from the projection constant,
+    which kept the quantifier); this pushes the same information down into the
+    {e body}, so the two agree.  A body that says [Option<std::any>::Some]
+    against a value of type [Option<_A0>] does not compile.
+
+    Only annotations that mention [Tunknown] are touched, and only where the
+    context supplies something better, so a term whose types survived
+    extraction intact passes through unchanged. *)
+let recover_erased_types (expected : ml_type) (a : ml_ast) : ml_ast =
+  (* [env] holds the binders' types, innermost first, as de Bruijn demands. *)
+  let type_of_rel env n = try Some (List.nth env (n - 1)) with _ -> None in
+  let better ~have ~from =
+    match from with
+    | Some t when has_unknown have && not (has_unknown t) -> t
+    | _ -> have
+  in
+  let rec go env expected a =
+    match a with
+    | MLlam (i, ty, b) when isTdummy ty ->
+      (* An erased binder -- the [forall A] the class field quantified away --
+         consumes no arrow of the declared type. *)
+      MLlam (i, ty, go (ty :: env) expected b)
+    | MLlam (i, ty, b) ->
+      let dom, cod =
+        match expected with
+        | Some (Tarr (d, c)) -> (Some d, Some c)
+        | _ -> (None, None)
+      in
+      (* The binder's own annotation is left alone -- the caller recovers
+         parameter types from the declared signature directly, and rewriting
+         them here would disturb how the parameters are collected.  Only the
+         environment learns the better type, so the [MLcase] heads below can
+         use it. *)
+      MLlam (i, ty, go (better ~have:ty ~from:dom :: env) cod b)
+    | MLletin (i, ty, e, b) ->
+      let e = go env (if has_unknown ty then None else Some ty) e in
+      MLletin (i, ty, e, go (ty :: env) expected b)
+    | MLcase (ty, scrut, branches) ->
+      (* The head type is the scrutinee's, and the scrutinee is usually a
+         binder whose type the signature has already pinned down. *)
+      let ty = better ~have:ty ~from:(match scrut with
+        | MLrel n -> type_of_rel env n
+        | _ -> None )
+      in
+      let branch (binds, bty, pat, body) =
+        let bty = better ~have:bty ~from:expected in
+        let env = List.rev_map snd binds @ env in
+        (binds, bty, pat, go env expected body)
+      in
+      MLcase (ty, go env None scrut, Array.map branch branches)
+    | MLcons (ty, c, args) ->
+      MLcons (better ~have:ty ~from:expected, c, List.map (go env None) args)
+    | MLapp (f, args) ->
+      MLapp (go env None f, List.map (go env None) args)
+    | MLmagic (m, e) -> MLmagic (m, go env expected e)
+    | a -> a
+  in
+  go [] (Some expected) a
+
 (** {2 Map over asts, with binding depth as parameter} *)
 
 let ast_map_lift_branch f n (ids, r, p, a) =
