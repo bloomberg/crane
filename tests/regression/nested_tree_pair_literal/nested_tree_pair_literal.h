@@ -78,12 +78,12 @@ struct NestedTreePairLiteral {
     }
   }
 
-  template <typename T1 = std::any> static uint64_t size(const tree &t) {
+  template <typename T1> static uint64_t size(const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return (UINT64_C(2) * size(*a0));
+      return (UINT64_C(2) * size<T1>(*a0));
     }
   }
 

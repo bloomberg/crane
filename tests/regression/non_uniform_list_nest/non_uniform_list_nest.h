@@ -175,12 +175,12 @@ struct NonUniformListNest {
     }
   }
 
-  template <typename T1 = std::any> static uint64_t depth(const n2 &x) {
+  template <typename T1> static uint64_t depth(const n2 &x) {
     if (std::holds_alternative<typename n2::Z2>(x.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0] = std::get<typename n2::S2>(x.v());
-      return (depth(*a0) + 1);
+      return (depth<T1>(*a0) + 1);
     }
   }
 

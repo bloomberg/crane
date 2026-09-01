@@ -2525,8 +2525,18 @@ let gen_dfun n b cty ty temps =
     in
     List.exists (fun (_, ty) -> mentions ty) ids
   in
+  (* ... unless the type parameters are erased out of the signature entirely
+     (the inductive is rendered with [std::any] fields and the function takes
+     no function-typed argument to name them).  Then no argument mentions
+     them and deduction has nothing to work from -- but nothing in the body
+     reads them either, so the self-call passes the enclosing parameters
+     straight through.  That keeps the recursion to a single instantiation,
+     and, unlike defaulting them, still rejects a caller that supplies
+     nothing. *)
+  let tvars_are_phantom = recurses_on_non_uniform_ind && fun_tys = [] in
   let rec_call_temps =
-    if recurses_on_non_uniform_ind then typeclass_temps_basic
+    if recurses_on_non_uniform_ind && not tvars_are_phantom then
+      typeclass_temps_basic
     else
       typeclass_temps_basic
       @ List.filter
@@ -2539,18 +2549,6 @@ let gen_dfun n b cty ty temps =
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
-  (* Such a function's own type parameters are erased out of its signature
-     (the inductive is rendered with [std::any] fields), so they are no longer
-     deducible.  Give them a default so the argument-less self-call above still
-     resolves; explicit call sites elsewhere keep working. *)
-  let temps =
-    if recurses_on_non_uniform_ind && fun_tys = [] then
-      List.map
-        (fun (tt, id) ->
-          match tt with TTtypename -> (TTtypename_default Tany, id) | _ -> (tt, id) )
-        temps
-    else temps
-  in
   let regular_temps = temps @ List.map (fun (_, t, n) -> (t, n)) fun_tys in
   (* Variables standing for a higher-kinded class parameter are rendered as
      associated types of the instance, so they must not also be declared as

@@ -74,12 +74,12 @@ struct NonUniformPairNest {
     }
   }
 
-  template <typename T1 = std::any> static uint64_t size(const nest &n) {
+  template <typename T1> static uint64_t size(const nest &n) {
     if (std::holds_alternative<typename nest::NZ>(n.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename nest::NS>(n.v());
-      return (UINT64_C(2) * size(*a0));
+      return (UINT64_C(2) * size<T1>(*a0));
     }
   }
 
