@@ -664,6 +664,11 @@ let try_register_method epon_ref func_ref body ty =
 let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
   Method_registry.is_registered_method (get_method_registry ()) func_ref
 
+(** The number of value parameters a registered method takes, receiver
+    included; [0] when unknown. *)
+let lookup_method_arity (func_ref : GlobRef.t) : int =
+  Method_registry.lookup_arity (get_method_registry ()) func_ref
+
 (** Look up the inductive's type variable positions (0-based indices into the
     function's tys list) for a registered method. These positions correspond to
     the inductive's template params which are already deducible from the

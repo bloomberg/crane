@@ -62,6 +62,11 @@ type method_info = {
           represented in C++ (the "type erasure" pattern). When true, the method
           signature uses [std::any] as return type and callers must use
           [std::any_cast] to recover the value. *)
+  arity : int;
+      (** Number of value parameters the method takes, receiver included, or
+          [0] when the registration site had no type to count them from.  A
+          consumer that turns the method back into a function value needs it to
+          build a lambda of the right shape. *)
 }
 
 (** A method candidate: (func_ref, body, type, this_position). Stored during
@@ -110,6 +115,11 @@ val lookup : t -> GlobRef.t -> method_info option
       inductive and [this_pos] is the 0-based index of the receiver argument,
       or [None] if not a method *)
 val is_registered_method : t -> GlobRef.t -> (GlobRef.t * int) option
+
+(** [lookup_arity reg r] is the number of value parameters of [r] as a method,
+    the receiver included, or [0] when the registration site could not count
+    them. *)
+val lookup_arity : t -> GlobRef.t -> int
 
 (** Return the inductive type-variable positions for a registered method.
     Returns [[]] if the function is not registered. Used by [cpp.ml] to omit

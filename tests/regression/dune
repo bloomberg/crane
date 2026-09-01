@@ -7598,3 +7598,14 @@
   (deps partial_local_fix.t.exe)
   (action (run ./partial_local_fix.t.exe))))
 
+(subdir eta_methodified_binop
+ (rule
+  (targets eta_methodified_binop.t.exe)
+  (deps EtaMethodifiedBinop.vo eta_methodified_binop.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_methodified_binop.t.exe eta_methodified_binop.cpp eta_methodified_binop.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_methodified_binop.t.exe)
+  (action (run ./eta_methodified_binop.t.exe))))
+

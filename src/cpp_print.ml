@@ -1222,10 +1222,29 @@ and pp_cpp_expr env args t =
          | None -> render_ctx.rc_struct_name = None ->
     let method_name = Common.id_of_global Term x in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
-    str "[](const auto &_x) { return _x"
-    ++ str accessor
-    ++ Id.print method_name
-    ++ str "(); }"
+    let arity = lookup_method_arity x in
+    if arity <= 1 then
+      str "[](const auto &_x) { return _x"
+      ++ str accessor
+      ++ Id.print method_name
+      ++ str "(); }"
+    else
+      (* The method takes more than its receiver, so the forwarding lambda has
+         to accept every parameter and pass the non-receiver ones on -- calling
+         it with none would not even name an overload. *)
+      let this_pos =
+        match lookup_method_this_pos x with Some p -> p | None -> 0
+      in
+      let names = List.init arity (fun i -> "_x" ^ string_of_int i) in
+      let params =
+        String.concat ", " (List.map (fun n -> "const auto &" ^ n) names)
+      in
+      let call_args =
+        String.concat ", " (List.filteri (fun i _ -> i <> this_pos) names)
+      in
+      str ("[](" ^ params ^ ") { return _x" ^ string_of_int this_pos ^ accessor)
+      ++ Id.print method_name
+      ++ str ("(" ^ call_args ^ "); }")
   | CPPglob (x, [], _) when Table.is_projection x ->
     let field_name = label_of_r x |> Names.Label.to_string in
     str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"

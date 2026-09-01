@@ -335,6 +335,10 @@ val try_register_method :
       method, [None] otherwise *)
 val is_registered_method : Names.GlobRef.t -> (Names.GlobRef.t * int) option
 
+(** Number of value parameters a registered method takes, receiver included;
+    [0] when unknown. *)
+val lookup_method_arity : Names.GlobRef.t -> int
+
 (** Return the 0-based positions, in a registered method's type-variable list,
     of the inductive's own template parameters — those deducible from the
     receiver and thus omitted from explicit template arguments. *)

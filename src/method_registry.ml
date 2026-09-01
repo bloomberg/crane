@@ -31,6 +31,11 @@ type method_info = {
   this_pos : int;
   ind_tvar_positions : int list;
   returns_any : bool;
+  arity : int;
+      (** Number of value parameters the method takes, receiver included.  [0]
+          when the registration site had no type to count from.  Consumers use
+          it to build a lambda of the right shape when the method is passed
+          around as a function value. *)
 }
 
 (** A method candidate: (func_ref, body, type, this_pos). *)
@@ -345,9 +350,21 @@ let find_best_inductive ind_refs ty =
 
 (** {2 Internal: registration helpers} *)
 
+(** Number of value parameters in a curried ML type: the arrows whose domain
+    survives extraction.  Erased ([Tdummy]) domains contribute no C++
+    parameter and so are not counted. *)
+let rec ml_value_arity = function
+  | Miniml.Tarr (t, rest) ->
+    (match t with
+     | Miniml.Tdummy _ -> ml_value_arity rest
+     | _ -> 1 + ml_value_arity rest)
+  | Miniml.Tmeta {contents = Some t} -> ml_value_arity t
+  | _ -> 0
+
 (** Add a method entry to the hashtable. [returns_any] is initialized to [false]
     and computed in a separate pass after all methods are found. *)
 let register_into
+    ?(arity = 0)
     tbl
     (func_ref : GlobRef.t)
     (epon_ref : GlobRef.t)
@@ -362,6 +379,7 @@ let register_into
       ind_tvar_positions;
       returns_any = false;
       (* computed later by [compute_returns_any] *)
+      arity;
     }
 
 (** Register all eligible methods for a given eponymous type from a list of
@@ -454,7 +472,7 @@ let register_methods_for_epon
     (* Helper to add a candidate to both the method table and candidates
        table *)
     let add_candidate r body ty pos ind_tvar_positions =
-      register_into tbl r epon_ref pos ~ind_tvar_positions;
+      register_into ~arity:(ml_value_arity ty) tbl r epon_ref pos ~ind_tvar_positions;
       let existing =
         match Hashtbl.find_opt cands epon_ref with
         | Some l -> l
@@ -558,7 +576,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     in check ty
   in
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
-    register_into tbl r ind_ref pos ~ind_tvar_positions;
+    register_into ~arity:(ml_value_arity ty) tbl r ind_ref pos ~ind_tvar_positions;
     let existing = match Hashtbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
@@ -883,6 +901,12 @@ let is_registered_method (reg : t) (func_ref : GlobRef.t) :
   | Some info -> Some (info.epon_ref, info.this_pos)
   | None -> None
 
+(** The method's value-parameter count, receiver included; [0] when unknown. *)
+let lookup_arity (reg : t) (func_ref : GlobRef.t) : int =
+  match Hashtbl.find_opt reg.methods func_ref with
+  | Some info -> info.arity
+  | None -> 0
+
 (** Get inductive type variable positions deducible from the method receiver.
     Returns the list of type variable indices that can be omitted from the
     method's template parameters. *)
@@ -949,7 +973,8 @@ let try_register_method (reg : t) (epon_ref : GlobRef.t)
     when body_safe_for_method ~this_pos:pos
            ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
            body ->
-    register_into reg.methods func_ref epon_ref pos ~ind_tvar_positions;
+    register_into ~arity:(ml_value_arity ty) reg.methods func_ref epon_ref pos
+      ~ind_tvar_positions;
     let cand = (func_ref, body, ty, pos) in
     add_candidate reg epon_ref cand;
     Some cand
