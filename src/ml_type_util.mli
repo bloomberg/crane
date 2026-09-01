@@ -284,3 +284,34 @@ val signed_pos_idx : int
 (** 1-based constructor index of [Neg] in Rocq's [Decimal.signed_int] /
     [Hexadecimal.signed_int]. *)
 val signed_neg_idx : int
+
+(** {2 Template-parameter shape of a C++ signature} *)
+
+(** Set of type-variable indices. *)
+module IntSet : module type of Escape.IntSet
+
+(** The 0-based [%tN] positions a custom template string mentions. *)
+val template_referenced_positions : string -> IntSet.t
+
+(** The type-argument positions a custom/monad global's template string
+    mentions, or [None] when it has no template (all positions count). *)
+val custom_referenced_positions_opt : Names.GlobRef.t -> IntSet.t option
+
+(** [(index, name)] of every type variable in a C++ type, sorted by index. *)
+val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
+
+(** The names of the type variables in a C++ type, sorted by index. *)
+val get_tvars : Minicpp.cpp_type -> Names.Id.t list
+
+(** The indices of the type variables in a C++ type. *)
+val get_tvar_indices : Minicpp.cpp_type -> int list
+
+(** The type-variable indices a C++ type actually renders, skipping the
+    positions a custom template drops. *)
+val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
+
+(** [primary_tvar_indices dom cod] is the set of type-variable indices
+    represented concretely in a generated signature, and so deducible from a
+    call. The rest are phantom: a caller must spell them out. *)
+val primary_tvar_indices :
+  Minicpp.cpp_type list -> Minicpp.cpp_type -> IntSet.t

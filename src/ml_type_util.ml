@@ -691,3 +691,149 @@ let num_uint_hex_idx     = 2
    Pos, Neg *)
 let signed_pos_idx = 1
 let signed_neg_idx = 2
+
+(** {2 Template-parameter shape of a C++ signature}
+
+    These live here rather than in {!Gen_decls} because both the declaration
+    emitter and the call emitter need them: the first to decide which template
+    parameters a signature can leave to deduction, the second to supply the
+    ones it cannot. *)
+
+module IntSet = Escape.IntSet
+
+(** Parse a custom template string to find which [%tN] positions are
+    referenced.  Returns the set of 0-based indices that appear in the
+    template.  E.g. ["std::shared_ptr<ITree<%t1>>"] returns [{1}]. *)
+let template_referenced_positions template_str =
+  let len = String.length template_str in
+  let rec scan i acc =
+    if i > len - 3 then acc
+    else if template_str.[i] = '%' && template_str.[i + 1] = 't' then
+      let digit_start = i + 2 in
+      let rec find_digit_end j =
+        if j < len && template_str.[j] >= '0' && template_str.[j] <= '9' then
+          find_digit_end (j + 1)
+        else j
+      in
+      let digit_end = find_digit_end digit_start in
+      if digit_end > digit_start then
+        let idx =
+          int_of_string
+            (String.sub template_str digit_start (digit_end - digit_start))
+        in
+        scan digit_end (IntSet.add idx acc)
+      else scan (i + 1) acc
+    else scan (i + 1) acc
+  in
+  scan 0 IntSet.empty
+
+(** For a custom/monad GlobRef, return the set of type-arg positions that
+    appear in its template string.  Returns [None] if no custom template
+    exists or the template is empty (all positions are implicitly
+    referenced). *)
+let custom_referenced_positions_opt g =
+  let check_template = function
+    | Some s when s <> "" -> Some (template_referenced_positions s)
+    | _ -> None
+  in
+  match check_template (Table.get_monad_template_opt g) with
+  | Some _ as r -> r
+  | None -> check_template (Table.find_custom_opt g)
+
+(** Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
+let get_tvars_indexed t =
+  let get_name i n =
+    match n with
+    | None -> tvar_id i
+    | Some n -> n
+  in
+  let rec aux l = function
+    | Tpromoted _ ->
+      (* Promoted type var marker from a Record-turned-TypeClass.  These
+         represent projected type members (e.g., [Obj] from [PreCategory])
+         and must be resolved through typeclass instance access — not as
+         standalone template parameters. *)
+      l
+    | Tvar (i, n) ->
+      if List.exists (fun (x, _) -> i == x) l then
+        l
+      else
+        (i, get_name i n) :: l
+    | Tglob (_, tys, _) -> List.fold_left aux l tys
+    | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
+    | Tmod (_, ty) -> aux l ty
+    | Tnamespace (_, ty) -> aux l ty
+    | Tref ty -> aux l ty
+    | Tvariant tys -> List.fold_left aux l tys
+    | Tshared_ptr ty -> aux l ty
+    | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
+    | _ -> l
+  in
+  List.sort (fun (x, _) (y, _) -> Int.compare x y) (aux [] t)
+
+(** Like [get_tvar_indices] but only collects tvars that will actually
+    appear in the rendered C++ type.  For custom types with a template
+    (e.g. [std::shared_ptr<ITree<%t1>>]), only type-arg positions
+    referenced by the template are visited.  Unreferenced positions hold
+    phantom tvars (e.g. E in [itree E R] where the template only uses
+    [%t1] = R) that the C++ compiler cannot deduce. *)
+let get_rendered_tvar_indices t =
+  let rec aux l = function
+    | Tpromoted _ -> l
+    | Tvar (i, _) ->
+      if List.mem i l then l else i :: l
+    | Tglob (g, tys, _) ->
+      let tys_to_visit =
+        match custom_referenced_positions_opt g with
+        | Some referenced ->
+          List.filteri (fun i _ -> IntSet.mem i referenced) tys
+        | None -> tys
+      in
+      List.fold_left aux l tys_to_visit
+    | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
+    | Tmod (_, ty) -> aux l ty
+    | Tnamespace (_, ty) -> aux l ty
+    | Tref ty -> aux l ty
+    | Tvariant tys -> List.fold_left aux l tys
+    | Tshared_ptr ty -> aux l ty
+    | Tapply (ty, tys) -> List.fold_left aux l (ty :: tys)
+    | _ -> l
+  in
+  aux [] t
+
+(** Tvar names, sorted by index *)
+let get_tvars t = List.map snd (get_tvars_indexed t)
+
+(** Tvar indices only (unsorted) *)
+let get_tvar_indices t = List.map fst (get_tvars_indexed t)
+
+(** Collect tvar indices that are represented concretely in the generated C++
+    signature.
+
+    In addition to the codomain and non-function domain parameters, tvars from
+    fully rendered function signatures are primary: {!gen_dfun} can represent
+    those signatures with [is_invocable_r_v] constraints.  This matters for a
+    type such as [(B -> C) -> (A -> B) -> A -> C], where [B] occurs only in
+    function-typed parameters but is nevertheless a real part of both callable
+    signatures.
+
+    Used by both {!gen_dfun} (to choose between an [is_invocable_r_v]
+    constraint and plain [TTtypename]) and {!phantom_aware_temps} (to choose
+    whether a template parameter needs a [void] default). *)
+let primary_tvar_indices dom cod =
+  let add_rendered acc t =
+    List.fold_left
+      (fun acc i -> IntSet.add i acc)
+      acc
+      (get_rendered_tvar_indices t)
+  in
+  let concrete, clean_fun =
+    List.fold_left
+      (fun (concrete, clean_fun) t ->
+        match t with
+        | Tfun _ -> (concrete, add_rendered clean_fun t)
+        | _ -> (add_rendered concrete t, clean_fun) )
+      (add_rendered IntSet.empty cod, IntSet.empty)
+      dom
+  in
+  IntSet.union concrete clean_fun
