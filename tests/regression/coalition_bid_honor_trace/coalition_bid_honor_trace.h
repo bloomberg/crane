@@ -11,6 +11,10 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+struct Positive;
+struct Z;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

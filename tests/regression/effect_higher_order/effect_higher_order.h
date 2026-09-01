@@ -16,6 +16,8 @@
 
 using namespace std::string_literals;
 
+template <typename A> struct List;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

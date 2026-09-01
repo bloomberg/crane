@@ -7,6 +7,8 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+
 struct Nat {
   // TYPES
   struct O {};

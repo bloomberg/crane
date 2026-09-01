@@ -6,6 +6,10 @@
 #include <utility>
 #include <variant>
 
+struct RefNat;
+struct nat_ref;
+template <typename I> struct MyEvent;
+
 struct RefNat {
   // DATA
   uint64_t a;

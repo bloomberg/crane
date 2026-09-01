@@ -5,6 +5,9 @@
 #include <concepts>
 #include <utility>
 
+struct RefNat;
+struct nat_ref;
+
 struct RefNat {
   // DATA
   uint64_t a;

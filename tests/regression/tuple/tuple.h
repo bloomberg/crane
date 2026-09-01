@@ -7,6 +7,9 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A, typename B> struct Prod;
+
 struct Nat {
   // TYPES
   struct O {};

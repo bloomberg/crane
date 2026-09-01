@@ -7,6 +7,8 @@
 #include <utility>
 #include <variant>
 
+struct Positive;
+
 struct Positive {
   // TYPES
   struct XI {

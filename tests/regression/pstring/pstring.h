@@ -12,6 +12,9 @@
 
 using namespace std::string_literals;
 
+struct Nat;
+template <typename A> struct List;
+
 struct Nat {
   // TYPES
   struct O {};

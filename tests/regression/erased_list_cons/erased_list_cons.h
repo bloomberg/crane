@@ -13,6 +13,9 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+template <typename A, typename P> struct SigT;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

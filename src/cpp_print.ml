@@ -3287,6 +3287,24 @@ let pp_template_type = function
        via {!pp_requires_of_tparams}. *)
     str "typename"
 
+(** Forward declarations for the structs rendered at C++ global scope,
+    accumulated as they are printed.
+
+    A module struct can be emitted before an inductive a later module pulled up
+    to global scope, so a member declaration may name a type whose definition
+    comes further down the header ([static Prod<nat, nat> divmod(...)] ahead of
+    [struct Prod]).  A declaration only needs the name to have been introduced,
+    so the header prologue replays these up front.  Recording them here, in the
+    printer that also emits the definition, keeps the two spellings of the
+    template parameter list from drifting apart. *)
+let forward_struct_decls = ref ([] : Pp.t list)
+
+(** Take and clear the forward declarations accumulated since the last call. *)
+let take_forward_struct_decls () =
+  let l = List.rev !forward_struct_decls in
+  forward_struct_decls := [];
+  l
+
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =
   match tt with
@@ -3297,6 +3315,10 @@ let pp_template_param (tt, id) =
     ++ str " = "
     ++ pp_type default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
+
+(** Print a template parameter for a re-declaration: same kind, but without the
+    default argument, which C++ allows to appear only once per parameter. *)
+let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.print id
 
 (** Names the body only ever hands to a representation-tolerant helper from
     [crane_fn.h]: erased into storage by [crane_erase_fn], or applied through
@@ -3416,6 +3438,30 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
       ++ List.fold_left
            (fun acc c -> acc ++ fnl () ++ str "      && " ++ c)
            (mt ()) (List.tl clauses) )
+
+(** Record a forward declaration for a struct about to be rendered at C++
+    global scope, so {!take_forward_struct_decls} can replay it in the header
+    prologue.  Nested structs are skipped -- a member is not nameable before
+    its enclosing struct anyway -- as are constrained templates, whose
+    re-declaration would have to repeat a [requires] clause -- whether written
+    on the struct or implied by a concept-kinded parameter -- that the compiler
+    does not reliably see as the same constraint. *)
+let register_forward_struct_decl ~name ~tparams ~cstr =
+  if
+    (not render_ctx.rc_in_struct)
+    && cstr = None
+    && pp_requires_of_tparams tparams = None
+  then
+    forward_struct_decls :=
+      ( ( match tparams with
+        | [] -> mt ()
+        | _ ->
+          h (str "template <" ++ pp_list pp_template_param_redecl tparams ++ str "> ")
+        )
+      ++ str "struct "
+      ++ name
+      ++ str ";" )
+      :: !forward_struct_decls
 
 (** Render a doc comment as [///]-prefixed lines followed by a newline, or
     [mt ()] if no comment is registered for [name].  This is the single lookup
@@ -3901,6 +3947,13 @@ and pp_cpp_decl_raw env = function
     in
     let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
     ( match (decls, has_pending) with
+    | ([Dstruct {ds_tparams; ds_constraint; _}], false) ->
+      register_forward_struct_decl
+        ~name:(str struct_name_str)
+        ~tparams:ds_tparams
+        ~cstr:ds_constraint
+    | _ -> () );
+    ( match (decls, has_pending) with
     | ( [
           Dstruct
             {
@@ -4160,6 +4213,7 @@ and pp_cpp_decl_raw env = function
       | GlobRef.IndRef _ -> pp_global Type id
       | _ -> pp_global Type id
     in
+    register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
     let f_s =
       match tparams with
       | [] -> pp_cpp_fields_with_vis ~struct_name env fields

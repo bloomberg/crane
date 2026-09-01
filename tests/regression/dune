@@ -7652,3 +7652,13 @@
   (deps vector_cases_deduction.t.exe)
   (action (run ./vector_cases_deduction.t.exe))))
 
+(subdir empty_inductive_decimal_uint
+ (rule
+  (targets empty_inductive_decimal_uint.t.exe)
+  (deps EmptyInductiveDecimalUint.vo empty_inductive_decimal_uint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_inductive_decimal_uint.t.exe empty_inductive_decimal_uint.cpp empty_inductive_decimal_uint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_inductive_decimal_uint.t.exe)
+  (action (run ./empty_inductive_decimal_uint.t.exe))))

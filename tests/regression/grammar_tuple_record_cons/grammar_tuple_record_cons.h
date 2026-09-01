@@ -8,6 +8,9 @@
 #include <utility>
 #include <variant>
 
+template <typename A, typename P> struct SigT;
+struct rgb;
+
 template <typename A, typename P> struct SigT {
   // DATA
   A x;

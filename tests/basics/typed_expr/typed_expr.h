@@ -9,6 +9,7 @@
 #include <utility>
 #include <variant>
 
+struct Expr;
 enum class Ty { TNAT, TBOOL };
 
 struct Expr {

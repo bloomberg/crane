@@ -11,6 +11,8 @@
 
 namespace String {
 
+struct String;
+
 struct String {
   // TYPES
   struct EmptyString {};

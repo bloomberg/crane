@@ -13,6 +13,11 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+template <typename Err> struct ExceptE;
+struct Err;
+struct GlobRefNat;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

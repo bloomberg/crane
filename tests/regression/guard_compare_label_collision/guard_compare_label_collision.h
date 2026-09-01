@@ -7,6 +7,9 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename X> struct Compare;
+
 struct Nat {
   // TYPES
   struct O {};

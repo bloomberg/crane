@@ -2210,7 +2210,17 @@ let do_struct_with_decl_tracking ~is_header f s =
     repeat (List.length wrapper_names) pop_visible ();
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
-  v 0 (p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs) ++ fnl ()
+  let forward_decls =
+    if is_header then
+      match Cpp_print.take_forward_struct_decls () with
+      | [] -> mt ()
+      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
+    else (
+      ignore (Cpp_print.take_forward_struct_decls ());
+      mt () )
+  in
+  v 0 (forward_decls ++ p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs)
+  ++ fnl ()
 
 (** Simple structure renderer without wrapper module handling. Used for
     signature rendering.

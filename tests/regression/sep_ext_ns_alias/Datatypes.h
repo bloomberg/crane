@@ -9,6 +9,8 @@
 
 namespace Datatypes {
 
+struct Nat;
+
 struct Nat {
   // TYPES
   struct O {};

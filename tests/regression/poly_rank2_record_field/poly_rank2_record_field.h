@@ -11,6 +11,8 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A> struct List;
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {

@@ -9,6 +9,10 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A, typename P> struct SigT;
+struct Ascii;
+struct String;
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {

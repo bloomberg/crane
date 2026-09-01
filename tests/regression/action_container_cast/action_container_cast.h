@@ -11,6 +11,11 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A, typename B> struct Prod;
+template <typename A, typename P> struct SigT;
+struct R;
+struct Symbol;
 enum class Unit { TT };
 enum class Bool0 { TRUE_, FALSE_ };
 

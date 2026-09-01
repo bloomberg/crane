@@ -5,6 +5,8 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct Sig;
+
 template <typename A> struct Sig {
   // DATA
   A x;

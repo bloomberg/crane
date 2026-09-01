@@ -10,6 +10,9 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A, typename B> struct Prod;
+template <typename A, typename P> struct SigT;
 enum class Unit { TT };
 
 struct Nat {

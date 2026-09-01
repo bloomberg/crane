@@ -10,6 +10,8 @@
 
 namespace Datatypes {
 
+template <typename A> struct List;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

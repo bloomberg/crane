@@ -10,6 +10,7 @@
 
 namespace SepExtUptrCloneQual {
 
+template <typename A> struct MyList;
 template <typename M>
 concept OrderedType = requires { typename M::t; };
 

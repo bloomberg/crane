@@ -3,6 +3,8 @@
 
 namespace Ascii {
 
+struct Ascii;
+
 struct Ascii {
   // DATA
   bool a0;

@@ -6,6 +6,8 @@
 #include <utility>
 #include <variant>
 
+template <typename A, typename B> struct Sum;
+
 template <typename A, typename B> struct Sum {
   // TYPES
   struct Inl {

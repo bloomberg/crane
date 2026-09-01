@@ -12,6 +12,9 @@
 
 namespace Datatypes {
 
+struct Nat;
+template <typename A> struct List;
+
 struct Nat {
   // TYPES
   struct O {};

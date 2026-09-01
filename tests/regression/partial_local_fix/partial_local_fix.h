@@ -7,6 +7,7 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {

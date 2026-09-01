@@ -11,6 +11,14 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A> struct List;
+template <typename A> struct DirectedEdge;
+template <typename A> struct Directed;
+template <typename A> struct UndirectedEdge;
+template <typename A> struct Undirected;
+struct NatEq;
+
 struct Nat {
   // TYPES
   struct O {};

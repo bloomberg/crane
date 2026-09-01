@@ -9,6 +9,8 @@
 
 namespace PairIndexedInductiveAnyCast {
 
+struct Pair_wrap;
+
 struct Pair_wrap {
   // DATA
   std::any a;

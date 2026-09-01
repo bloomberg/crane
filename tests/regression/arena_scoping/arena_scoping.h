@@ -12,6 +12,8 @@
 #include "small_vector.h"
 #include <atomic>
 
+struct Nat;
+
 struct Nat {
   // TYPES
   struct O {};

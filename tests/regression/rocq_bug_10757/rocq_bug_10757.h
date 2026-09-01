@@ -7,6 +7,7 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct Sig;
 enum class Bool0 { TRUE_, FALSE_ };
 
 template <typename A> struct Sig {

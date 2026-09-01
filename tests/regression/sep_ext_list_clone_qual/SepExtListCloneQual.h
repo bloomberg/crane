@@ -12,6 +12,8 @@
 
 namespace SepExtListCloneQual {
 
+template <typename A> struct Forest;
+
 template <typename A> struct Forest {
   // TYPES
   struct Leaf {};

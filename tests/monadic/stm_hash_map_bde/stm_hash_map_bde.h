@@ -30,6 +30,7 @@ concept convertible_to = bsl::is_convertible<From, To>::value;
 template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
+template <typename t_A> struct List;
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};

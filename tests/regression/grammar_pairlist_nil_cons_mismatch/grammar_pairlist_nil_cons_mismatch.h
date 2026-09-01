@@ -11,6 +11,12 @@
 #include <utility>
 #include <variant>
 
+template <typename A, typename P> struct SigT;
+struct Ascii;
+struct String;
+struct val;
+struct Symbol;
+
 template <typename A, typename P> struct SigT {
   // DATA
   A x;

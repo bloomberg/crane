@@ -9,6 +9,10 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+struct Ascii;
+struct String;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

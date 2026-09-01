@@ -14,6 +14,14 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+template <typename Err> struct ExceptE;
+struct Err;
+struct STRefNat;
+template <typename S> struct Point;
+template <typename S> struct Account;
+template <typename S> struct BankAccountCollection;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

@@ -8,6 +8,8 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A, typename P> struct SigT;
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {

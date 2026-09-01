@@ -10,6 +10,11 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+template <typename A, typename P> struct SigT;
+struct Val;
+struct Symbol;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};

@@ -11,6 +11,9 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A> struct List;
+
 struct Nat {
   // TYPES
   struct O {};

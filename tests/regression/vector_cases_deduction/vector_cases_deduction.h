@@ -10,6 +10,9 @@
 #include <utility>
 #include <variant>
 
+struct Nat;
+template <typename A> struct T;
+
 struct Nat {
   // TYPES
   struct O {};

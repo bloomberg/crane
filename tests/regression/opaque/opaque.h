@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <utility>
 
+template <typename A> struct Sig;
+
 template <typename A> struct Sig {
   // DATA
   A x;

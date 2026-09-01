@@ -9,6 +9,9 @@
 #include <utility>
 #include <variant>
 
+template <typename A, typename B> struct Prod;
+template <typename A> struct List;
+
 template <typename A, typename B> struct Prod {
   // DATA
   A a0;

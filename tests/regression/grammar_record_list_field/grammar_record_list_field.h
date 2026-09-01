@@ -8,6 +8,11 @@
 #include <utility>
 #include <variant>
 
+template <typename A, typename P> struct SigT;
+struct elt;
+struct rec;
+struct Symbol;
+
 template <typename A, typename P> struct SigT {
   // DATA
   A x;

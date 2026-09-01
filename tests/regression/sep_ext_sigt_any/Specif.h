@@ -5,6 +5,8 @@
 
 namespace Specif {
 
+template <typename A, typename P> struct SigT;
+
 template <typename A, typename P> struct SigT {
   // DATA
   A x;
