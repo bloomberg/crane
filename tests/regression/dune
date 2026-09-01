@@ -7609,3 +7609,13 @@
   (deps eta_methodified_binop.t.exe)
   (action (run ./eta_methodified_binop.t.exe))))
 
+(subdir loopify_frame_receiver_ptr
+ (rule
+  (targets loopify_frame_receiver_ptr.t.exe)
+  (deps LoopifyFrameReceiverPtr.vo loopify_frame_receiver_ptr.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_frame_receiver_ptr.t.exe loopify_frame_receiver_ptr.cpp loopify_frame_receiver_ptr.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_frame_receiver_ptr.t.exe)
+  (action (run ./loopify_frame_receiver_ptr.t.exe))))

@@ -3839,9 +3839,18 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | None -> Tunknown )
     | CPPmove inner -> infer_saved_type tparams env inner
     | CPPderef inner ->
-      ( match infer_saved_type tparams env inner with
-      | Tshared_ptr t | Tptr t -> t
-      | t -> t )
+      (* Peel the qualifiers off the pointer before taking its pointee: the
+         loopified receiver [_self] has type [const T *], and
+         [strip_ref_and_const_type] deliberately keeps the [const] on such a
+         type.  Missing the pointee would give the saved frame field the
+         pointer's type while the push and the handler both use it as a
+         value. *)
+      let rec pointee = function
+        | Tref t | Tmod (TMconst, t) -> pointee t
+        | Tshared_ptr t | Tptr t -> t
+        | t -> t
+      in
+      pointee (infer_saved_type tparams env inner)
     | CPPbinop (_, lhs, rhs) ->
       (* Try left operand first; fall back to right.  This handles the common
          pattern [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda
