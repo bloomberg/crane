@@ -8329,6 +8329,23 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_is_flat = is_flat;
     smb_body = body_stmts }
 
+(** Whether an [MLmagic] node says its subterm is physically inside a
+    [std::any] here, and so has to be opened before it can be used.
+
+    A [Mbarrier] carries no type gap at all.  An [Mcoerce] is a box only when
+    one of its two types erases at this instantiation: a coercion between two
+    types that are both written down concretely -- a typeclass carrier
+    resolved by the instance being generated, say -- is a static mismatch the
+    C++ types already agree on, and casting on account of it would read a box
+    that was never built. *)
+and magic_is_boxed env = function
+  | Mboxed -> true
+  | Mbarrier -> false
+  | Mcoerce (from, into) ->
+    let tvars = get_current_type_vars () in
+    let erases ty = resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ty) in
+    erases from || erases into
+
 (** [recover_erased_scrutinee env ~is_magic typ expr] casts a scrutinee that is
     carried at runtime as [std::any] -- an existential witness, say -- back to
     [typ], the inductive recovered from the branch patterns.  Neither the
@@ -8918,17 +8935,23 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      [std::any]) even though the ML AST may carry a concrete type annotation.
      Covers both explicit [Obj.magic] wrappers and variables retyped to [Tany]
      by an outer [fix_a_fired] pair match (detected via [env_types]). *)
-  let scrut_is_mlmagic = match t with MLmagic (_, _) -> true | _ -> false in
+  let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
   let scrut_is_cpp_erased = match t with
     | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
     | _ -> false
   in
   let scrut_is_magic = match t with
-    | MLmagic (_, _) -> true
+    | MLmagic (m, _) -> magic_is_boxed env m
     | MLrel i ->
       Escape.IntSet.mem i tctx.cpp_erased_env
       || (match get_env_type_opt i with
-          | Some ty -> is_erased_ml_type ty
+          (* An ML type that erases on its own may still have been written
+             down concretely here -- a typeclass carrier resolved by the
+             instance being generated, say -- in which case the binder holds
+             the value itself and there is no box to open. *)
+          | Some ty ->
+            is_erased_ml_type ty
+            && resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ty)
           | None -> false)
     | _ -> false
   in

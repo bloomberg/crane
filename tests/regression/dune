@@ -7565,3 +7565,14 @@
   (deps erased_enum_switch.t.exe)
   (action (run ./erased_enum_switch.t.exe))))
 
+(subdir tc_carrier_option_cast
+ (rule
+  (targets tc_carrier_option_cast.t.exe)
+  (deps TcCarrierOptionCast.vo tc_carrier_option_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tc_carrier_option_cast.t.exe tc_carrier_option_cast.cpp tc_carrier_option_cast.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tc_carrier_option_cast.t.exe)
+  (action (run ./tc_carrier_option_cast.t.exe))))
+
