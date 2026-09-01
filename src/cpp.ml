@@ -107,6 +107,30 @@ let qualify_custom_template custom_str args qualify_type =
   in
   parse 0 (mt ())
 
+(** The template parameter every module-type concept is written over.
+
+    [pp_spec_as_requirement] spells the modelled module ["M"] throughout the
+    requirement bodies it builds, so the name is fixed rather than generated;
+    {!concept_name_of_label} is what keeps a concept from colliding with it. *)
+let concept_self_param = "M"
+
+(** The C++ concept identifier for the module type labelled [l].
+
+    A label otherwise reaches the output verbatim, so it needs the same
+    escaping as any other identifier — C++ keywords and primes, via
+    {!Common.modular_rename} — and one more besides: a concept named
+    [concept_self_param] would be shadowed by its own template parameter
+    ([template<typename M> concept M = ...]), which C++ rejects outright.
+
+    Every site that names a module-type concept, defining or referring, must
+    go through this function or the two will disagree. *)
+let concept_name_of_label l =
+  let s = Common.modular_rename Type (Label.to_id l) in
+  if String.equal s concept_self_param then s ^ "_" else s
+
+(** {!concept_name_of_label} as a document. *)
+let pp_concept_name l = str (concept_name_of_label l)
+
 (** Pretty-print a structure signature element (module spec). *)
 let rec pp_specif = function
   | _, Spec (Sval _ as s) -> pp_spec s
@@ -347,7 +371,7 @@ and pp_concept_ref kn =
       if (match mp0 with MPfile _ -> true | _ -> false)
          && not (ModPath.equal mp0 current_file_mp)
          && not (is_qualified_name name_str) then
-        name ++ str "::" ++ str (Label.to_string l')
+        name ++ str "::" ++ pp_concept_name l'
       else
         name
     end else begin
@@ -356,7 +380,7 @@ and pp_concept_ref kn =
          pp_module_type.  Keep the short label and just trigger include
          tracking. *)
       ignore (Common.pp_module kn);
-      str (Label.to_string l')
+      pp_concept_name l'
     end
   | _ -> pp_modname kn
 
@@ -404,7 +428,7 @@ and pp_module_type params = function
         | _ -> mt () )
       | Smodtype nested_mt ->
         let def = pp_module_type [] nested_mt in
-        let modtype_name = str (Label.to_string label) in
+        let modtype_name = pp_concept_name label in
         let concept_pp =
           if Pp.ismt def then
             str "template<typename M>"
@@ -948,7 +972,7 @@ let rec pp_structure_elem ~is_header f = function
               (fun (l, se) ->
                 match se with
                 | SEmodtype m ->
-                  let modtype_name = str (Label.to_string l) in
+                  let modtype_name = pp_concept_name l in
                   let concept_pp =
                     match get_base_concept m with
                     | Some base_kn ->

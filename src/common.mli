@@ -177,6 +177,12 @@ type kind =
     [IndRef] or [ConstructRef]. *)
 val label_of_r : GlobRef.t -> Label.t
 
+(** Escape a Rocq identifier into one C++ accepts: suffix reserved keywords
+    with [_], and replace primes with [_].  Names that reach C++ without
+    passing through the reference tables (module-type labels, for instance)
+    must still be run through this. *)
+val modular_rename : kind -> Id.t -> string
+
 (** Print a reference using a specific kernel name key. *)
 val pp_global_with_key : kind -> KerName.t -> GlobRef.t -> string
 

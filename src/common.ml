@@ -717,18 +717,23 @@ let unmergeable_inductive_names_of_sel sel =
 let mod_struct_body m =
   match m.ml_mod_expr with MEstruct (_, sel) -> Some sel | _ -> None
 
-(** Scan [s] for cases where a module's C++ name clashes with that of an
-    inductive type, and pre-populate {!sibling_collision_renames} so that
-    {!mp_renaming_fun} can append a ["_Mod"] suffix to the module.  Both
-    positions are illegal in C++ and are detected here:
-    - the inductive is a {e sibling} of the module, so the two would become
+(** Scan [s] for modules whose C++ name is already taken where the module is
+    emitted, and pre-populate {!sibling_collision_renames} so that
+    {!mp_renaming_fun} can append a ["_Mod"] suffix.  A module becomes a
+    struct, so all three of these positions are illegal in C++:
+    - an inductive is a {e sibling} of the module, so the two would become
       same-named members of the same enclosing struct;
-    - the inductive is declared {e inside} the module, so the generated nested
-      type would have the same name as the struct that encloses it.
+    - an inductive is declared {e inside} the module, so the generated nested
+      type would have the same name as the struct that encloses it;
+    - the module is declared inside a module of the same name, which C++
+      rejects as a member sharing the name of its class.
+
+    The module is always the side that gets renamed: it is a struct only
+    incidentally, whereas the name of a type is what its users refer to.
     @param s The full [ml_structure] to scan (typically the whole extraction result) *)
 let detect_sibling_module_inductive_collisions (s : ml_structure) =
   Hashtbl.clear sibling_collision_renames;
-  let rec scan_sel parent_mp sel =
+  let rec scan_sel ?enclosing parent_mp sel =
     let inductive_names = inductive_names_of_sel sel in
     List.iter
       (fun (l, se) ->
@@ -748,18 +753,30 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
             | Some inner -> unmergeable_inductive_names_of_sel inner
             | None -> []
           in
-          if clashes inductive_names || clashes unmergeable_inner then
+          if
+            clashes inductive_names
+            || clashes unmergeable_inner
+            || clashes (match enclosing with Some n -> [n] | None -> [])
+          then
             Hashtbl.replace sibling_collision_renames
               (MPdot (parent_mp, l))
               (mod_name ^ "_Mod")
         | _ -> () )
       sel;
     List.iter
-      (fun (_l, se) ->
+      (fun (l, se) ->
         match se with
         | SEmodule m ->
           ( match m.ml_mod_expr with
-          | MEstruct (inner_mp, inner_sel) -> scan_sel inner_mp inner_sel
+          | MEstruct (inner_mp, inner_sel) ->
+            (* The enclosing name a nested module competes with is the one the
+               parent is finally emitted under, suffix included. *)
+            let enclosing =
+              match Hashtbl.find_opt sibling_collision_renames (MPdot (parent_mp, l)) with
+              | Some renamed -> renamed
+              | None -> modular_rename Mod (Label.to_id l)
+            in
+            scan_sel ~enclosing inner_mp inner_sel
           | _ -> () )
         | _ -> () )
       sel

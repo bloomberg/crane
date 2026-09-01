@@ -7488,3 +7488,36 @@
   (alias runtest)
   (deps hkt_class_param.t.exe)
   (action (run ./hkt_class_param.t.exe))))
+
+(subdir concept_name_with_prime
+ (rule
+  (targets concept_name_with_prime.t.exe)
+  (deps ConceptNameWithPrime.vo concept_name_with_prime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_name_with_prime.t.exe concept_name_with_prime.cpp concept_name_with_prime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_name_with_prime.t.exe)
+  (action (run ./concept_name_with_prime.t.exe))))
+
+(subdir concept_name_shadows_param
+ (rule
+  (targets concept_name_shadows_param.t.exe)
+  (deps ConceptNameShadowsParam.vo concept_name_shadows_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} concept_name_shadows_param.t.exe concept_name_shadows_param.cpp concept_name_shadows_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps concept_name_shadows_param.t.exe)
+  (action (run ./concept_name_shadows_param.t.exe))))
+
+(subdir nested_eponymous_module
+ (rule
+  (targets nested_eponymous_module.t.exe)
+  (deps NestedEponymousModule.vo nested_eponymous_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_eponymous_module.t.exe nested_eponymous_module.cpp nested_eponymous_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_eponymous_module.t.exe)
+  (action (run ./nested_eponymous_module.t.exe))))
