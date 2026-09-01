@@ -7587,3 +7587,14 @@
   (deps eta_match_returns_fun.t.exe)
   (action (run ./eta_match_returns_fun.t.exe))))
 
+(subdir partial_local_fix
+ (rule
+  (targets partial_local_fix.t.exe)
+  (deps PartialLocalFix.vo partial_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_local_fix.t.exe partial_local_fix.cpp partial_local_fix.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_local_fix.t.exe)
+  (action (run ./partial_local_fix.t.exe))))
+

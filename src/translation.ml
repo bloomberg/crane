@@ -11159,11 +11159,11 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           gen_local_fix_ycomb env renamed_ids funs_with_params
         in
         let remaining_params =
-          let rec drop n lst =
-            if n = 0 then lst
-            else match lst with [] -> [] | _ :: t -> drop (n - 1) t
-          in
-          drop n_provided fix_params
+          (* [fix_params] is in de Bruijn order -- last parameter first -- so
+             the arguments already supplied fill its tail, not its head.  What
+             is left over is the front of the list, returned in source order
+             so the wrapper's parameters line up with the call below. *)
+          List.rev (safe_firstn (n_fix_params - n_provided) fix_params)
         in
         let tvars = get_current_type_vars () in
         let pa_params =
