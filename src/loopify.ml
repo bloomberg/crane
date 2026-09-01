@@ -3933,6 +3933,27 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
           args
       in
       (match concrete_arg with Some t -> t | None -> Tunknown)
+    | CPPfun_call (CPPglob (r, tys, _), args)
+      when String.equal
+             (Id.to_string (Label.to_id (Common.label_of_r r)))
+             "map"
+           && tys <> [] ->
+      (* [map] returns the receiver's own container over the element type it
+         was instantiated at, which is the last of the call's type arguments.
+         Resolving it here matters more than for most calls: the [decltype]
+         fallback would have to render the mapped function, and a lambda that
+         captures cannot be written at struct-definition scope. *)
+      let receiver =
+        List.find_map
+          (fun a ->
+            match strip_ref_and_const_type (infer_saved_type tparams env a) with
+            | Tglob (cr, [_], vs) -> Some (cr, vs)
+            | _ -> None )
+          args
+      in
+      ( match receiver with
+      | Some (cr, vs) -> Tglob (cr, [List.nth tys (List.length tys - 1)], vs)
+      | None -> Tunknown )
     | CPPfun_call (CPPglob _, _) -> Tunknown
     | CPPfun_call (CPPmember (inner, id), [])
       when String.equal (Id.to_string id) "get" ->

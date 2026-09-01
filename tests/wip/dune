@@ -98,17 +98,6 @@
   (deps hkt_instance_any_mismatch.t.exe)
   (action (run ./hkt_instance_any_mismatch.t.exe))))
 
-(subdir loopify_frame_declval
- (rule
-  (targets loopify_frame_declval.t.exe)
-  (deps LoopifyFrameDeclval.vo loopify_frame_declval.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_frame_declval.t.exe loopify_frame_declval.cpp loopify_frame_declval.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_frame_declval.t.exe)
-  (action (run ./loopify_frame_declval.t.exe))))
-
 (subdir shadow_runtime_nat
  (rule
   (targets shadow_runtime_nat.t.exe)
