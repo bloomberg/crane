@@ -7099,7 +7099,15 @@ and eta_fun env f args =
               | Miniml.Tarr (t1, t2) -> doms (resolve_tmeta t1 :: acc) t2
               | _ -> acc
             in
-            not (List.exists mentions (doms [] ml_ty_orig))
+            (* A function-typed parameter reaches C++ as an opaque template
+               parameter [F0], not as a spelled-out signature, so a variable
+               occurring inside it -- as the callback's own codomain, say -- is
+               in no deducible context either. *)
+            let deducible = function
+              | Miniml.Tarr _ -> false
+              | t -> mentions t
+            in
+            not (List.exists deducible (doms [] ml_ty_orig))
           | _ -> false )
       in
       if filtered = [] && regular_type_args <> [] then

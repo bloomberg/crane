@@ -591,7 +591,7 @@ struct RocqBug14174 {
 
     template <typename T1, typename T2>
     static T2 eq_sig_rect_exist(T1 u1, T1 v1, const T2 &f) {
-      return sig<T1>::exist(u1).eq_sig_rect(sig<T1>::exist(v1), f);
+      return sig<T1>::exist(u1).template eq_sig_rect<T2>(sig<T1>::exist(v1), f);
     }
 
     template <typename T1, typename T2, typename T3, typename T4>
@@ -603,7 +603,8 @@ struct RocqBug14174 {
 
     template <typename T1, typename T2>
     static T2 eq_sig2_rect_exist2(T1 u1, T1 v1, const T2 &f) {
-      return sig2<T1>::exist2(u1).eq_sig2_rect(sig2<T1>::exist2(v1), f);
+      return sig2<T1>::exist2(u1).template eq_sig2_rect<T2>(
+          sig2<T1>::exist2(v1), f);
     }
     enum class Sumbool { LEFT, RIGHT };
 

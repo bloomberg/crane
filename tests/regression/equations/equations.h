@@ -451,7 +451,7 @@ struct Equations {
              std::is_invocable_r_v<T1, F3 &, uint64_t &, uint64_t &, T1 &>
   static T1 gcd_elim(F0 &&f, F1 &&f0, F2 &&f2, F3 &&f3,
                      std::pair<uint64_t, uint64_t> p) {
-    return gcd_graph_mut(
+    return gcd_graph_mut<T1>(
         f, f0,
         [=](uint64_t, uint64_t, const gcd_clause_3_graph &,
             const T1 &x) mutable {

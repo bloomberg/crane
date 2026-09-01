@@ -141,14 +141,3 @@
   (alias runtest)
   (deps shadow_runtime_nat.t.exe)
   (action (run ./shadow_runtime_nat.t.exe))))
-
-(subdir vector_cases_deduction
- (rule
-  (targets vector_cases_deduction.t.exe)
-  (deps VectorCasesDeduction.vo vector_cases_deduction.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} vector_cases_deduction.t.exe vector_cases_deduction.cpp vector_cases_deduction.t.cpp)))
- (rule
-  (alias runtest)
-  (deps vector_cases_deduction.t.exe)
-  (action (run ./vector_cases_deduction.t.exe))))
