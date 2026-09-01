@@ -8329,6 +8329,20 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     smb_is_flat = is_flat;
     smb_body = body_stmts }
 
+(** [recover_erased_scrutinee env ~is_magic typ expr] casts a scrutinee that is
+    carried at runtime as [std::any] -- an existential witness, say -- back to
+    [typ], the inductive recovered from the branch patterns.  Neither the
+    [switch] of an enum match nor the [v()] of a variant match is applicable to
+    a [std::any].  When [typ] itself erases there is nothing to recover to and
+    the scrutinee is returned unchanged. *)
+and recover_erased_scrutinee env ~is_magic typ expr =
+  if not is_magic then expr
+  else
+    let cpp_ty =
+      convert_ml_type_to_cpp_type env (get_current_type_vars ()) typ
+    in
+    if is_erased_type cpp_ty then expr else CPPany_cast (cpp_ty, expr)
+
 (** Generate C++ pattern matching for an [MLcase].
 
     Dispatches based on the inductive's structure:
@@ -8434,7 +8448,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | _ ->
         CErrors.anomaly (Pp.str "gen_case_cpp: enum type expected to be Tglob")
     in
-    let scrutinee = gen_expr env t in
+    let scrutinee =
+      recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ
+        (gen_expr env t)
+    in
     let rec gen_enum_branches = function
       | [] -> []
       | (ids, _rty, p, body) :: cs ->
@@ -8522,16 +8539,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
     tctx.move_dead_after <- Escape.IntSet.empty;
     let scrut_expr = gen_expr env t in
     tctx.move_dead_after <- saved_dead_visit;
-    (* When the scrutinee is MLmagic (runtime std::any) and we recovered a
-       concrete inductive type from branch patterns, wrap with any_cast. *)
     let scrut_expr =
-      if scrut_is_mlmagic_case then
-        let tvars = get_current_type_vars () in
-        let cpp_ty = convert_ml_type_to_cpp_type env tvars typ in
-        if not (is_erased_type cpp_ty) then
-          CPPany_cast (cpp_ty, scrut_expr)
-        else scrut_expr
-      else scrut_expr
+      recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ scrut_expr
     in
     (* Methodification rewrites the receiver parameter to [this] (or [*this]
        when the value is needed).  Ownership analysis may still mark the

@@ -109,17 +109,6 @@
   (deps empty_inductive_decimal_uint.t.exe)
   (action (run ./empty_inductive_decimal_uint.t.exe))))
 
-(subdir erased_enum_switch
- (rule
-  (targets erased_enum_switch.t.exe)
-  (deps ErasedEnumSwitch.vo erased_enum_switch.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_enum_switch.t.exe erased_enum_switch.cpp erased_enum_switch.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_enum_switch.t.exe)
-  (action (run ./erased_enum_switch.t.exe))))
-
 (subdir eta_match_returns_fun
  (rule
   (targets eta_match_returns_fun.t.exe)
