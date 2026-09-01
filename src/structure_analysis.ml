@@ -343,6 +343,150 @@ let topological_sort
         (* Append the main module at the end. *)
         sorted_entries @ [arr.(n - 1)]
 
+(** {2 Intra-module inductive ordering} *)
+
+(** Map each inductive to the declarations registered as its methods.
+
+    A method is rendered as an inline member of the inductive's struct, so what
+    its body needs is part of what the inductive needs -- even though the
+    declaration itself may live in another module. *)
+let methods_by_owner (reg : Method_registry.t) (s : ml_structure) =
+  let tbl : (GlobRef.t, ml_decl list) Hashtbl.t = Hashtbl.create 16 in
+  let add r d =
+    match Method_registry.is_registered_method reg r with
+    | Some (owner, _pos) ->
+      let prev = Option.default [] (Hashtbl.find_opt tbl owner) in
+      Hashtbl.replace tbl owner (d :: prev)
+    | None -> ()
+  in
+  List.iter
+    (fun (_mp, sel) ->
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | SEdecl (Dterm (r, _, _) as d) -> add r d
+          | SEdecl (Dfix (rv, _, _) as d) -> Array.iter (fun r -> add r d) rv
+          | _ -> () )
+        sel )
+    s;
+  tbl
+
+(** Index every term declaration in the structure by the reference it defines,
+    so a method body's dependencies can be followed one call further. *)
+let decls_by_ref (s : ml_structure) =
+  let tbl : (GlobRef.t, ml_decl) Hashtbl.t = Hashtbl.create 64 in
+  List.iter
+    (fun (_mp, sel) ->
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | SEdecl (Dterm (r, _, _) as d) -> Hashtbl.replace tbl r d
+          | SEdecl (Dfix (rv, _, _) as d) ->
+            Array.iter (fun r -> Hashtbl.replace tbl r d) rv
+          | _ -> () )
+        sel )
+    s;
+  tbl
+
+(** Order a module's inductive declarations so that each comes after the ones
+    whose complete definition it needs.
+
+    An inductive's methods are rendered as inline members, so a body that reads
+    [Nat::divmod(x, y).fst()] needs [Prod] to be complete right there -- a
+    forward declaration will not do.  Rocq's own order need not respect that:
+    [nat] and [prod] are both declared in [Datatypes], [nat] first.  Only the
+    inductives move; every other structure element keeps its slot, and a
+    dependency cycle leaves the order untouched. *)
+let sort_inductives_within_module reg (s : ml_structure) sel =
+  let arr = Array.of_list sel in
+  let ind_slots =
+    Array.to_list (Array.mapi (fun i x -> (i, x)) arr)
+    |> List.filter_map (fun (i, (_l, se)) ->
+           match se with SEdecl (Dind _) -> Some i | _ -> None )
+  in
+  if List.length ind_slots <= 1 then
+    sel
+  else
+    let methods = methods_by_owner reg s in
+    let term_decls = decls_by_ref s in
+    (* Which slot defines a given inductive reference. *)
+    let slot_of_ref : (GlobRef.t, int) Hashtbl.t = Hashtbl.create 16 in
+    List.iter
+      (fun i ->
+        match arr.(i) with
+        | _l, SEdecl (Dind (kn, ind)) ->
+          Array.iteri
+            (fun j _p ->
+              Hashtbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
+            ind.ind_packets
+        | _ -> () )
+      ind_slots;
+    let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
+    List.iter
+      (fun i ->
+        let acc = ref [] in
+        let add_dep r =
+          match Hashtbl.find_opt slot_of_ref r with
+          | Some j when j <> i && not (List.mem j !acc) -> acc := j :: !acc
+          | _ -> ()
+        in
+        (* A method body reaches the type it needs through the functions it
+           calls -- [nat::div] calls [Nat::divmod], and it is [divmod] that
+           returns a [Prod] -- so follow the call graph, not just the immediate
+           references. *)
+        let seen : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16 in
+        let rec scan d =
+          Modutil.decl_iter_references (follow add_dep) add_dep add_dep d
+        and follow k r =
+          k r;
+          if not (Hashtbl.mem seen r) then begin
+            Hashtbl.replace seen r ();
+            Option.iter scan (Hashtbl.find_opt term_decls r)
+          end
+        in
+        ( match arr.(i) with
+        | _l, SEdecl (Dind (kn, ind) as d) ->
+          scan d;
+          Array.iteri
+            (fun j _p ->
+              List.iter
+                scan
+                (Option.default
+                   []
+                   (Hashtbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
+            ind.ind_packets
+        | _ -> () );
+        Hashtbl.replace deps i !acc )
+      ind_slots;
+    (* Kahn over the inductive slots, taking ready slots in their original
+       order so an unconstrained inductive does not move. *)
+    let remaining = ref ind_slots in
+    let emitted : (int, unit) Hashtbl.t = Hashtbl.create 16 in
+    let order = ref [] in
+    let progress = ref true in
+    while !progress && !remaining <> [] do
+      let ready, blocked =
+        List.partition
+          (fun i ->
+            List.for_all
+              (fun j -> Hashtbl.mem emitted j)
+              (Option.default [] (Hashtbl.find_opt deps i)) )
+          !remaining
+      in
+      match ready with
+      | [] -> progress := false
+      | _ ->
+        List.iter (fun i -> Hashtbl.replace emitted i ()) ready;
+        order := !order @ ready;
+        remaining := blocked
+    done;
+    if List.length !order <> List.length ind_slots then
+      sel (* Cycle: leave the order as extraction produced it. *)
+    else begin
+      List.iter2 (fun slot src -> arr.(slot) <- List.nth sel src) ind_slots !order;
+      Array.to_list arr
+    end
+
 (** {2 Main analysis entry point} *)
 
 (** Perform all structure analysis in a single call.
@@ -373,7 +517,9 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   in
   let entries =
     List.map
-      (fun (mp, sel) -> ((mp, sel), classify_module ~main_mp (mp, sel)))
+      (fun (mp, sel) ->
+        let sel = sort_inductives_within_module reg s sel in
+        ((mp, sel), classify_module ~main_mp (mp, sel)) )
       s
   in
   let sorted = topological_sort reg entries in

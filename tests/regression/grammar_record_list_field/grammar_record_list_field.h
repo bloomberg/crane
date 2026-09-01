@@ -30,12 +30,12 @@ struct elt {
   uint64_t a;
   uint64_t b;
 };
+enum class Nonterminal { DOC, ITEMS };
 
 /// Record with a concrete-element list field, like ppm_value's triples.
 struct rec {
   std::deque<elt> items;
 };
-enum class Nonterminal { DOC, ITEMS };
 
 struct Symbol {
   // TYPES

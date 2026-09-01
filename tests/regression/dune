@@ -7662,3 +7662,14 @@
   (alias runtest)
   (deps empty_inductive_decimal_uint.t.exe)
   (action (run ./empty_inductive_decimal_uint.t.exe))))
+
+(subdir decl_order_forward_use
+ (rule
+  (targets decl_order_forward_use.t.exe)
+  (deps DeclOrderForwardUse.vo decl_order_forward_use.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_forward_use.t.exe decl_order_forward_use.cpp decl_order_forward_use.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decl_order_forward_use.t.exe)
+  (action (run ./decl_order_forward_use.t.exe))))
