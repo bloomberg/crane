@@ -97,12 +97,15 @@ struct DoubleOppositeWitnessesCase {
 
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
   static Functor compose_functor(Functor f, Functor g) {
-    return Functor{
-        [=](const auto &x) mutable { return f.object_of(g.object_of(x)); },
-        [=](const auto &x, const auto &y, const auto &f0) mutable {
-          return f.morphism_of(g.object_of(x), g.object_of(y),
-                               g.morphism_of(x, y, f0));
-        }};
+    return Functor{[=](const auto &x) mutable {
+                     return f.object_of(crane_erase_fn(g.object_of(x)));
+                   },
+                   [=](const auto &x, const auto &y, const auto &f0) mutable {
+                     return f.morphism_of(
+                         crane_erase_fn(g.object_of(x)),
+                         crane_erase_fn(g.object_of(y)),
+                         crane_erase_fn(g.morphism_of(x, y, f0)));
+                   }};
   }
 
   template <PreStableCategory _tcI0> struct opposite_prestable_category {

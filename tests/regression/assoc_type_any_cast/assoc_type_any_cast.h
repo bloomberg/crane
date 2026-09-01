@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ASSOC_TYPE_ANY_CAST
 #define INCLUDED_ASSOC_TYPE_ANY_CAST
 
+#include "crane_fn.h"
 #include <any>
 #include <concepts>
 #include <utility>
@@ -34,7 +35,7 @@ struct AssocTypeAnyCast {
   static_assert(Wrap<PairWrap>);
 
   template <Wrap _tcI0> static uint64_t roundtrip(uint64_t n) {
-    return _tcI0::unwrap(_tcI0::wrap(n));
+    return _tcI0::unwrap(crane_erase_fn(_tcI0::wrap(n)));
   }
 
   static uint64_t run(uint64_t k);

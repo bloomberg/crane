@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RANK2_METHOD_ARG
 #define INCLUDED_RANK2_METHOD_ARG
 
+#include "crane_fn.h"
 #include <any>
 #include <concepts>
 #include <functional>
