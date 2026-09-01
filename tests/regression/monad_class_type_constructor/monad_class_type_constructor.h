@@ -17,12 +17,13 @@ template <typename I>
 concept Mon = requires {
   typename I::template M<std::any>;
   {
-    I::mret(std::declval<std::any>())
+    I::template mret<std::any>(std::declval<std::any>())
   } -> std::convertible_to<typename I::template M<std::any>>;
   {
-    I::mbind(std::declval<typename I::template M<std::any>>(),
-             std::declval<
-                 std::function<typename I::template M<std::any>(std::any)>>())
+    I::template mbind<std::any, std::any>(
+        std::declval<typename I::template M<std::any>>(),
+        std::declval<
+            std::function<typename I::template M<std::any>(std::any)>>())
   } -> std::convertible_to<typename I::template M<std::any>>;
 };
 
@@ -44,11 +45,11 @@ struct MonadClassTypeConstructor {
   struct MOpt {
     template <typename _A0> using M = std::optional<_A0>;
 
-    template <typename _A0 = std::any> static std::optional<_A0> mret(_A0 a) {
+    template <typename _A0> static std::optional<_A0> mret(_A0 a) {
       return std::make_optional<_A0>(a);
     }
 
-    template <typename _A0 = std::any, typename _A1 = std::any>
+    template <typename _A0, typename _A1>
     static std::optional<_A1> mbind(std::optional<_A0> m,
                                     std::function<std::optional<_A1>(_A0)> f) {
       if (m.has_value()) {

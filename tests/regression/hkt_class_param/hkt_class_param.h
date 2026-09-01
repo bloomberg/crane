@@ -200,13 +200,17 @@ public:
 template <typename I>
 concept Container = requires {
   typename I::template C<std::any>;
-  { I::empty() } -> std::convertible_to<typename I::template C<std::any>>;
   {
-    I::insert(std::declval<std::any>(),
-              std::declval<typename I::template C<std::any>>())
+    I::template empty<std::any>()
   } -> std::convertible_to<typename I::template C<std::any>>;
   {
-    I::toList(std::declval<typename I::template C<std::any>>())
+    I::template insert<std::any>(
+        std::declval<std::any>(),
+        std::declval<typename I::template C<std::any>>())
+  } -> std::convertible_to<typename I::template C<std::any>>;
+  {
+    I::template toList<std::any>(
+        std::declval<typename I::template C<std::any>>())
   } -> std::convertible_to<List<std::any>>;
 };
 
@@ -230,18 +234,15 @@ struct HktClassParam {
   struct ListContainer {
     template <typename _A0> using C = List<_A0>;
 
-    template <typename _A0 = std::any> static List<_A0> empty() {
+    template <typename _A0> static List<_A0> empty() {
       return List<_A0>::nil();
     }
 
-    template <typename _A0 = std::any>
-    static List<_A0> insert(_A0 x, List<_A0> xs) {
+    template <typename _A0> static List<_A0> insert(_A0 x, List<_A0> xs) {
       return List<_A0>::cons(x, xs);
     }
 
-    template <typename _A0 = std::any> static List<_A0> toList(List<_A0> xs) {
-      return xs;
-    }
+    template <typename _A0> static List<_A0> toList(List<_A0> xs) { return xs; }
   };
 
   static_assert(Container<ListContainer>);

@@ -146,12 +146,13 @@ template <typename I>
 concept Mon = requires {
   typename I::template M<std::any>;
   {
-    I::ret(std::declval<std::any>())
+    I::template ret<std::any>(std::declval<std::any>())
   } -> std::convertible_to<typename I::template M<std::any>>;
   {
-    I::bind(std::declval<typename I::template M<std::any>>(),
-            std::declval<
-                std::function<typename I::template M<std::any>(std::any)>>())
+    I::template bind<std::any, std::any>(
+        std::declval<typename I::template M<std::any>>(),
+        std::declval<
+            std::function<typename I::template M<std::any>(std::any)>>())
   } -> std::convertible_to<typename I::template M<std::any>>;
 };
 
@@ -171,11 +172,11 @@ struct HktInstanceAnyMismatch {
   struct optMon {
     template <typename _A0> using M = Option<_A0>;
 
-    template <typename _A0 = std::any> static Option<_A0> ret(_A0 a) {
+    template <typename _A0> static Option<_A0> ret(_A0 a) {
       return Option<_A0>::some(a);
     }
 
-    template <typename _A0 = std::any, typename _A1 = std::any>
+    template <typename _A0, typename _A1>
     static Option<_A1> bind(Option<_A0> m, std::function<Option<_A1>(_A0)> f) {
       if (std::holds_alternative<typename Option<_A0>::Some>(m.v())) {
         const auto &[a0] = std::get<typename Option<_A0>::Some>(m.v());

@@ -112,6 +112,37 @@ let is_class_tparam class_ref i =
     template binds. *)
 let hkt_alias_param_name i = Id.of_string (Printf.sprintf "_A%d" i)
 
+(** [recover_method_quantifier class_ref field_ref erased] is the type of a
+    class field with its own [forall A] intact.
+
+    A class's [ip_types] entry has already erased the quantifier; the
+    projection constant has not.  An instance of a higher-kinded class needs
+    it back, because its carrier is an alias template and the element type is
+    what the template is applied to.  For a class that is not higher-kinded
+    there is nothing to recover, so [erased] is returned unchanged. *)
+let recover_method_quantifier class_ref field_ref erased =
+  if Table.get_ind_hkt_params class_ref = [] then erased
+  else
+    let rec strip = function
+      | Miniml.Tarr (d, rest)
+        when Mlutil.isTdummy d || Table.is_typeclass_type d ->
+        strip rest
+      | t -> t
+    in
+    try strip (Table.find_type field_ref) with Not_found -> erased
+
+(** [method_tvar_count class_ref ty] is the arity of the member template an
+    instance method of type [ty] emits: the type variables the method
+    quantifies on its own, past the class's parameters.
+
+    The instance's definition and the concept's requirement must agree on this
+    number -- the definition binds that many [_A]s, and the requirement has to
+    supply that many arguments -- so both read it from here. *)
+let method_tvar_count class_ref ty =
+  if Table.get_ind_hkt_params class_ref = [] then 0
+  else
+    max 0 (Mlutil.type_maxvar ty - List.length (Table.get_ind_ip_vars class_ref))
+
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
     [Instance ListContainer : Container list] becomes [List<_A0>], to be
     emitted as [template <typename _A0> using C = List<_A0>;].  The element
@@ -497,10 +528,28 @@ let gen_typeclass_cpp name fields ind =
            when rendering), so we pre-reverse to get the correct printed
            order. *)
         let call_args = List.rev arg_declvals in
-        let call =
-          CPPfun_call
-            (CPPqualified (CPPvar inst_id, Id.of_string method_name), call_args)
+        (* A method of a higher-kinded class is a member template, and the
+           probe states its requirement at the erased element type, so the
+           arguments are spelled out rather than deduced: a nullary method
+           ([I::empty()]) offers nothing to deduce from, and defaulting the
+           parameters instead would let a call that fails to deduce silently
+           fall back to [std::any].  {!method_tvar_count} is the same count
+           the instance binds. *)
+        let ntv =
+          method_tvar_count
+            name
+            (recover_method_quantifier name field_ref field_ty)
         in
+        let callee =
+          if ntv = 0 then
+            CPPqualified (CPPvar inst_id, Id.of_string method_name)
+          else
+            CPPqualified_tpl
+              ( CPPvar inst_id,
+                Id.of_string method_name,
+                List.init ntv (fun _ -> Tany) )
+        in
+        let call = CPPfun_call (callee, call_args) in
         (* Constraint: use the cpp_type directly - cpp.ml will render it *)
         let constraint_expr = CPPconvertible_to ret_cpp in
         Some (`Normal ([], (call, constraint_expr)))
@@ -759,22 +808,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              eqb: A -> A -> bool). For promoted dependent records, type_args may
              be empty, leaving Tvars unsubstituted — we handle that below by
              using lambda binder types. *)
-          (* A class's [ip_types] entry has already erased the method's own
-             [forall A]; the projection constant has not.  An instance of a
-             higher-kinded class needs that quantifier back, because its
-             carrier is an alias template and the element type is what the
-             template is applied to. *)
           let field_ml_ty =
-            if Table.get_ind_hkt_params class_ref = [] then field_ml_ty
-            else
-              let rec strip = function
-                | Miniml.Tarr (d, rest)
-                  when Mlutil.isTdummy d || Table.is_typeclass_type d ->
-                  strip rest
-                | t -> t
-              in
-              try strip (Table.find_type method_ref) with Not_found ->
-                field_ml_ty
+            recover_method_quantifier class_ref method_ref field_ml_ty
           in
           (* Extraction eta-expands a type-constructor argument, so the
              carrier arrives as [option<_>] rather than the bare [option] the
@@ -795,15 +830,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              signature erased to [std::any].  Its own type variables sit past
              the class's, which [type_subst_list] has just replaced. *)
           let method_tvars, type_var_names =
-            if Table.get_ind_hkt_params class_ref = [] then
-              ([], type_var_names)
-            else
+            match method_tvar_count class_ref subst_ty with
+            | 0 -> ([], type_var_names)
+            | n ->
               let ipv = List.length (Table.get_ind_ip_vars class_ref) in
-              let names =
-                List.init
-                  (max 0 (Mlutil.type_maxvar subst_ty - ipv))
-                  hkt_alias_param_name
-              in
+              let names = List.init n hkt_alias_param_name in
               let pad =
                 List.init
                   (max 0 (ipv - List.length type_var_names))
@@ -1142,11 +1173,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             ( Fmethod
                 {
                   mf_name = method_name;
-                  (* Defaulted to [std::any] so the concept can state its
-                     requirements at the erased probe type without naming the
-                     arguments, while a real call still deduces them. *)
-                  mf_tparams =
-                    List.map (fun p -> (TTtypename_default Tany, p)) method_tvars;
+                  (* Undefaulted: every caller spells the arguments out --
+                     the forwarding wrapper as [_tcI0::template ret<T2>(x)],
+                     the concept probe at [std::any].  A default here would
+                     let a call that fails to deduce silently fall back to
+                     [std::any] instead of failing to compile. *)
+                  mf_tparams = List.map (fun p -> (TTtypename, p)) method_tvars;
                   mf_ret_type = ret_ty;
                   mf_params = cpp_params;
                   mf_body = body_stmts;

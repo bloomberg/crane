@@ -16,14 +16,15 @@ template <typename I>
 concept Container = requires {
   typename I::template F<std::any>;
   {
-    I::cmap(std::declval<std::function<std::any(std::any)>>(),
-            std::declval<typename I::template F<std::any>>())
+    I::template cmap<std::any, std::any>(
+        std::declval<std::function<std::any(std::any)>>(),
+        std::declval<typename I::template F<std::any>>())
   } -> std::convertible_to<typename I::template F<std::any>>;
   {
-    I::cwrap(std::declval<std::any>())
+    I::template cwrap<std::any>(std::declval<std::any>())
   } -> std::convertible_to<typename I::template F<std::any>>;
   {
-    I::cout(std::declval<typename I::template F<std::any>>())
+    I::template cout<std::any>(std::declval<typename I::template F<std::any>>())
   } -> std::convertible_to<std::any>;
 };
 
@@ -48,14 +49,14 @@ struct ClassTypeConstructorParam {
   struct IdC {
     template <typename _A0> using F = _A0;
 
-    template <typename _A0 = std::any, typename _A1 = std::any>
+    template <typename _A0, typename _A1>
     static _A1 cmap(std::function<_A1(_A0)> f, _A0 a0) {
       return f(a0);
     }
 
-    template <typename _A0 = std::any> static _A0 cwrap(_A0 x) { return x; }
+    template <typename _A0> static _A0 cwrap(_A0 x) { return x; }
 
-    template <typename _A0 = std::any> static _A0 cout(_A0 x) { return x; }
+    template <typename _A0> static _A0 cout(_A0 x) { return x; }
   };
 
   static_assert(Container<IdC>);
