@@ -650,6 +650,14 @@ let method_this_pos_lookup : (GlobRef.t -> int option) ref = ref (fun _ -> None)
 
 let set_method_this_pos_lookup f = method_this_pos_lookup := f
 
+(** The positions, in a methodified function's type-variable list, of the type
+    variables the receiver already fixes.  A call spelled as a method must not
+    pass those explicitly.  Installed by {!Cpp_print} alongside
+    {!method_this_pos_lookup}. *)
+let method_ind_tvars_lookup : (GlobRef.t -> int list) ref = ref (fun _ -> [])
+
+let set_method_ind_tvars_lookup f = method_ind_tvars_lookup := f
+
 let is_methodified r = !method_this_pos_lookup r <> None
 
 (** Render [ty] as a string spelled exactly as the real printer would spell it
@@ -4287,6 +4295,38 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           else
           let arg_names = List.init n (fun i -> field_param_name i) in
           let fn_name = Common.pp_global_name Term r in
+          (* How the call reads inside the forwarding lambda.  A methodified
+             function is spelled [recv.f(rest)]: naming it as a free function
+             would not resolve.  Explicit template arguments on a dependent
+             receiver need the [template] disambiguator. *)
+          let call_str ty_args args =
+            let spell = function
+              | [] -> ""
+              | tas -> "<" ^ String.concat ", " (List.map snd tas) ^ ">"
+            in
+            match !method_this_pos_lookup r with
+            | Some pos when pos < List.length args ->
+              let recv = List.nth args pos in
+              let rest = List.filteri (fun i _ -> i <> pos) args in
+              (* The receiver already fixes the inductive's own type
+                 variables, so the method drops them from its template
+                 parameter list; passing them here would misalign the rest. *)
+              let ind_tvars = !method_ind_tvars_lookup r in
+              let kept =
+                List.filter
+                  (fun (i, _) ->
+                    match i with
+                    | Some i -> not (List.mem (i - 1) ind_tvars)
+                    | None -> true )
+                  ty_args
+              in
+              let ty_str = spell kept in
+              recv
+              ^ (if String.equal ty_str "" then "." else ".template ")
+              ^ fn_name ^ ty_str ^ "(" ^ String.concat ", " rest ^ ")"
+            | _ ->
+              fn_name ^ spell ty_args ^ "(" ^ String.concat ", " args ^ ")"
+          in
           (* Collect all tvars from the ML type *)
           let all_tvars_set =
             List.fold_left
@@ -4421,21 +4461,18 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               Buffer.contents buf
             | Miniml.Tdummy _ -> "std::any"
             | Miniml.Tglob (g, ts, _) ->
-              let is_ind =
-                match g with
-                | GlobRef.IndRef _ -> true
-                | _ -> false
-              in
-              let base =
-                Common.pp_global_name (if is_ind then Type else Term) g
-              in
-              if ts = [] then
-                base
-              else
-                base
-                ^ "<"
-                ^ String.concat ", " (List.map render_ml_ty ts)
-                ^ ">"
+              (* Spell the head the way the type printer does: the inductive
+                 [list] is the struct [List], and a bare [pp_global_name] would
+                 name a type that does not exist.  The arguments are already
+                 rendered here, so they go back in as opaque names. *)
+              render_cpp_type_simple
+                (Tglob
+                   ( g,
+                     List.map
+                       (fun t ->
+                         Tid_external (Id.of_string_soft (render_ml_ty t), []) )
+                       ts,
+                     [] ))
             | _ -> "auto"
           in
           if non_deducible_tvars <> [] && not (IntSet.is_empty deducible_set)
@@ -4462,26 +4499,26 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             in
             let params_str = String.concat ", " params in
             let fwd_args =
-              String.concat
-                ", "
-                (List.mapi
-                   (fun i ty ->
-                     match ty with
-                     | Miniml.Tarr _ ->
-                       "std::forward<decltype("
-                       ^ List.nth arg_names i
-                       ^ ")>("
-                       ^ List.nth arg_names i
-                       ^ ")"
-                     | _ -> List.nth arg_names i )
-                   non_dummy_param_tys )
+              List.mapi
+                (fun i ty ->
+                  match ty with
+                  | Miniml.Tarr _ ->
+                    "std::forward<decltype("
+                    ^ List.nth arg_names i
+                    ^ ")>("
+                    ^ List.nth arg_names i
+                    ^ ")"
+                  | _ -> List.nth arg_names i )
+                non_dummy_param_tys
             in
             (* Build explicit type args: deducible tvars + non-deducible
                computed via invoke_result_t *)
-            let deducible_args = List.map tvar_name deducible_tvars in
+            let deducible_args =
+              List.map (fun i -> (Some i, tvar_name i)) deducible_tvars
+            in
             let non_deducible_args =
               List.map
-                (fun _i ->
+                (fun i ->
                   (* Compute as invoke_result_t<F&, deducible_tvars&...> where F
                      is the first function param *)
                   let f_param = List.nth arg_names 0 in
@@ -4490,26 +4527,23 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                       ", "
                       (List.map (fun j -> tvar_name j ^ " &") deducible_tvars)
                   in
-                  "std::invoke_result_t<decltype("
-                  ^ f_param
-                  ^ ") &, "
-                  ^ deducible_refs
-                  ^ ">" )
+                  ( Some i,
+                    "std::invoke_result_t<decltype("
+                    ^ f_param
+                    ^ ") &, "
+                    ^ deducible_refs
+                    ^ ">" ) )
                 non_deducible_tvars
             in
-            let all_type_args = deducible_args @ non_deducible_args in
-            let ty_args_str = "<" ^ String.concat ", " all_type_args ^ ">" in
+            let ty_args_str = deducible_args @ non_deducible_args in
             CPPraw
               ( "[]<"
               ^ template_params
               ^ ">("
               ^ params_str
               ^ ") -> decltype(auto) { return "
-              ^ fn_name
-              ^ ty_args_str
-              ^ "("
-              ^ fwd_args
-              ^ "); }" )
+              ^ call_str ty_args_str fwd_args
+              ^ "; }" )
           else
             (* No non-deducible tvars or no deducible tvars — simple
                forwarding *)
@@ -4517,11 +4551,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               String.concat ", " (List.map (fun s -> "auto &&" ^ s) arg_names)
             in
             let fwd_args =
-              String.concat
-                ", "
-                (List.map
-                   (fun s -> "std::forward<decltype(" ^ s ^ ")>(" ^ s ^ ")")
-                   arg_names )
+              List.map
+                (fun s -> "std::forward<decltype(" ^ s ^ ")>(" ^ s ^ ")")
+                arg_names
             in
             (* Convert inner type args to C++ types, filtering out Tany *)
             let inner_tvars = get_current_type_vars () in
@@ -4533,7 +4565,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             let tys_cpp = List.filter (fun t -> t <> Tany) tys_cpp in
             let ty_args_str =
               match tys_cpp with
-              | [] -> ""
+              | [] -> []
               | _ ->
                 let rec render_ty = function
                   | Tvar (_, Some n) -> Id.to_string n
@@ -4548,17 +4580,14 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                     Table.shared_ptr_name () ^ "<" ^ render_ty ty ^ ">"
                   | _ -> "auto"
                 in
-                "<" ^ String.concat ", " (List.map render_ty tys_cpp) ^ ">"
+                List.map (fun t -> (None, render_ty t)) tys_cpp
             in
             CPPraw
               ( "[]("
               ^ params_str
               ^ ") -> decltype(auto) { return "
-              ^ fn_name
-              ^ ty_args_str
-              ^ "("
-              ^ fwd_args
-              ^ "); }" )
+              ^ call_str ty_args_str fwd_args
+              ^ "; }" )
         else
           gen_expr env a
       | _ ->

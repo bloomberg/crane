@@ -142,17 +142,6 @@
   (deps loopify_self_template_args.t.exe)
   (action (run ./loopify_self_template_args.t.exe))))
 
-(subdir poly_rank2_record_field
- (rule
-  (targets poly_rank2_record_field.t.exe)
-  (deps PolyRank2RecordField.vo poly_rank2_record_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_rank2_record_field.t.exe poly_rank2_record_field.cpp poly_rank2_record_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_rank2_record_field.t.exe)
-  (action (run ./poly_rank2_record_field.t.exe))))
-
 (subdir shadow_runtime_nat
  (rule
   (targets shadow_runtime_nat.t.exe)

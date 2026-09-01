@@ -164,6 +164,11 @@ val set_cpp_type_printer : (cpp_type -> string) -> unit
     break the dependency cycle. *)
 val set_method_this_pos_lookup : (GlobRef.t -> int option) -> unit
 
+(** Install the lookup ([Cpp_names.lookup_method_ind_tvar_positions]) giving
+    the type-variable positions a methodified reference's receiver already
+    fixes.  Called by {!Cpp_print} at load time, as above. *)
+val set_method_ind_tvars_lookup : (GlobRef.t -> int list) -> unit
+
 (** Render a C++ type as a string spelled exactly as the real printer spells
     it inside a template body -- namespace-qualified, with the [typename] and
     [template] disambiguators a dependent name needs.  Use this instead of
