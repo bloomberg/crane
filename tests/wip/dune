@@ -131,17 +131,6 @@
   (deps loopify_frame_declval.t.exe)
   (action (run ./loopify_frame_declval.t.exe))))
 
-(subdir loopify_self_template_args
- (rule
-  (targets loopify_self_template_args.t.exe)
-  (deps LoopifySelfTemplateArgs.vo loopify_self_template_args.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_self_template_args.t.exe loopify_self_template_args.cpp loopify_self_template_args.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_self_template_args.t.exe)
-  (action (run ./loopify_self_template_args.t.exe))))
-
 (subdir shadow_runtime_nat
  (rule
   (targets shadow_runtime_nat.t.exe)

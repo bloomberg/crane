@@ -114,11 +114,11 @@ struct RecRecord {
     const variant_t &v() const { return v_; }
 
     uint64_t rlist_length() const {
-      const rlist *_self = this;
+      const rlist<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const rlist *_self;
+        const rlist<A> *_self;
       };
 
       /// _Resume_Rcons: resumes after recursive call with _result.
@@ -134,7 +134,7 @@ struct RecRecord {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const rlist *_self = _f._self;
+          const rlist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = UINT64_C(0);
@@ -154,11 +154,11 @@ struct RecRecord {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
     T1 rlist_rec(T1 f, F1 &&f0) const {
-      const rlist *_self = this;
+      const rlist<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const rlist *_self;
+        const rlist<A> *_self;
       };
 
       /// _Resume_Rcons: saves [a1, a0], resumes after recursive call with
@@ -178,7 +178,7 @@ struct RecRecord {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const rlist *_self = _f._self;
+          const rlist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = f;
@@ -198,11 +198,11 @@ struct RecRecord {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
     T1 rlist_rect(T1 f, F1 &&f0) const {
-      const rlist *_self = this;
+      const rlist<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const rlist *_self;
+        const rlist<A> *_self;
       };
 
       /// _Resume_Rcons: saves [a1, a0], resumes after recursive call with
@@ -222,7 +222,7 @@ struct RecRecord {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const rlist *_self = _f._self;
+          const rlist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = f;

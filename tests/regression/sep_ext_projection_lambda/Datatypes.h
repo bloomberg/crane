@@ -117,7 +117,7 @@ public:
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {

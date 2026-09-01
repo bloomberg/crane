@@ -113,11 +113,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons: saves [a1], resumes after recursive call with _result.
@@ -135,7 +135,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;

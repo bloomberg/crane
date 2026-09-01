@@ -110,7 +110,7 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> skipn(uint64_t n) const {
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {
@@ -132,7 +132,7 @@ public:
   List<A> firstn(uint64_t n) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     uint64_t _loop_n = std::move(n);
     while (true) {
       if (_loop_n <= 0) {

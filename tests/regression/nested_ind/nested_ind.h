@@ -113,7 +113,7 @@ public:
   List<A> app(List<A> m) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
@@ -238,11 +238,11 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     uint64_t custom_list_length() const {
-      const custom_list *_self = this;
+      const custom_list<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const custom_list *_self;
+        const custom_list<A> *_self;
       };
 
       /// _Resume_Ccons: saves [_s0], resumes after recursive call with _result.
@@ -260,7 +260,7 @@ struct NestedInd {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const custom_list *_self = _f._self;
+          const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
             _result = UINT64_C(0);
@@ -281,11 +281,11 @@ struct NestedInd {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rec(T1 f, F1 &&f0) const {
-      const custom_list *_self = this;
+      const custom_list<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const custom_list *_self;
+        const custom_list<A> *_self;
       };
 
       /// _Resume_Ccons: saves [a1, a0], resumes after recursive call with
@@ -305,7 +305,7 @@ struct NestedInd {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const custom_list *_self = _f._self;
+          const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
             _result = f;
@@ -326,11 +326,11 @@ struct NestedInd {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rect(T1 f, F1 &&f0) const {
-      const custom_list *_self = this;
+      const custom_list<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const custom_list *_self;
+        const custom_list<A> *_self;
       };
 
       /// _Resume_Ccons: saves [a1, a0], resumes after recursive call with
@@ -350,7 +350,7 @@ struct NestedInd {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const custom_list *_self = _f._self;
+          const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
             _result = f;

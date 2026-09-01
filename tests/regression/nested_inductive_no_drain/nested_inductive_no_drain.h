@@ -115,11 +115,11 @@ struct NestedInductiveNoDrain {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
     T1 lst_rec(T1 f, F1 &&f0) const {
-      const lst *_self = this;
+      const lst<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const lst *_self;
+        const lst<A> *_self;
       };
 
       /// _Resume_Cons: saves [a1, a0], resumes after recursive call with
@@ -139,7 +139,7 @@ struct NestedInductiveNoDrain {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const lst *_self = _f._self;
+          const lst<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst<A>::Nil>(_sv.v())) {
             _result = f;
@@ -159,11 +159,11 @@ struct NestedInductiveNoDrain {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, lst<A> &, T1 &>
     T1 lst_rect(T1 f, F1 &&f0) const {
-      const lst *_self = this;
+      const lst<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const lst *_self;
+        const lst<A> *_self;
       };
 
       /// _Resume_Cons: saves [a1, a0], resumes after recursive call with
@@ -183,7 +183,7 @@ struct NestedInductiveNoDrain {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const lst *_self = _f._self;
+          const lst<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst<A>::Nil>(_sv.v())) {
             _result = f;

@@ -112,7 +112,7 @@ public:
   List<A> app(List<A> m) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
@@ -245,11 +245,11 @@ struct LoopifyTrees {
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, A &>
     tree<T1> tree_map(F0 &&f) const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
@@ -275,7 +275,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = tree<T1>::leaf();
@@ -300,11 +300,11 @@ struct LoopifyTrees {
 
     /// mirror_equal t1 t2 checks if t1 and t2 are mirror images.
     bool mirror_equal(const tree<A> &t2) const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
         const tree<A> *t2;
       };
 
@@ -332,7 +332,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           const tree<A> &t2 = *_f.t2;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -368,11 +368,11 @@ struct LoopifyTrees {
 
     /// tree_to_list inorder traversal.
     List<A> tree_to_list() const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
@@ -398,7 +398,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = List<A>::nil();
@@ -424,11 +424,11 @@ struct LoopifyTrees {
 
     /// count_leaves counts leaf nodes.
     uint64_t count_leaves() const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0], dispatches next recursive call.
@@ -452,7 +452,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(1);
@@ -475,7 +475,7 @@ struct LoopifyTrees {
     }
 
     A rightmost(A default0) const {
-      const tree *_loop_self = this;
+      const tree<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -494,7 +494,7 @@ struct LoopifyTrees {
 
     /// leftmost/rightmost finds edge values.
     A leftmost(A default0) const {
-      const tree *_loop_self = this;
+      const tree<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -513,11 +513,11 @@ struct LoopifyTrees {
 
     /// same_shape tests structural equality.
     template <typename T1> bool same_shape(const tree<T1> &t2) const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
         const tree<T1> *t2;
       };
 
@@ -538,7 +538,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           const tree<T1> &t2 = *_f.t2;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -575,11 +575,11 @@ struct LoopifyTrees {
     }
 
     tree<A> mirror() const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a2, a1], dispatches next recursive call.
@@ -605,7 +605,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = tree<A>::leaf();
@@ -630,11 +630,11 @@ struct LoopifyTrees {
     }
 
     uint64_t tree_size() const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0], dispatches next recursive call.
@@ -658,7 +658,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
@@ -681,11 +681,11 @@ struct LoopifyTrees {
     }
 
     uint64_t tree_height() const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _Cont_Node: saves [a2], resumes after recursive call, then processes
@@ -710,7 +710,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
@@ -740,11 +740,11 @@ struct LoopifyTrees {
       requires std::is_invocable_r_v<T1, F1 &, tree<A> &, T1 &, A &, tree<A> &,
                                      T1 &>
     T1 tree_rec(T1 f, F1 &&f0) const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0_0, a2, a1, a0_1], dispatches next recursive
@@ -775,7 +775,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = f;
@@ -804,11 +804,11 @@ struct LoopifyTrees {
       requires std::is_invocable_r_v<T1, F1 &, tree<A> &, T1 &, A &, tree<A> &,
                                      T1 &>
     T1 tree_rect(T1 f, F1 &&f0) const {
-      const tree *_self = this;
+      const tree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const tree *_self;
+        const tree<A> *_self;
       };
 
       /// _After_Node: saves [a0_0, a2, a1, a0_1], dispatches next recursive
@@ -839,7 +839,7 @@ struct LoopifyTrees {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
+          const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = f;

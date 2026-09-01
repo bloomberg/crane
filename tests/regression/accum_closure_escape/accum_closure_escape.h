@@ -125,7 +125,7 @@ struct AccumClosureEscape {
     mylist<A> mylist_append(mylist<A> l2) const {
       std::shared_ptr<mylist<A>> _head{};
       std::shared_ptr<mylist<A>> *_write = &_head;
-      const mylist *_loop_self = this;
+      const mylist<A> *_loop_self = this;
       mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
@@ -148,11 +148,11 @@ struct AccumClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist *_self = this;
+      const mylist<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const mylist *_self;
+        const mylist<A> *_self;
       };
 
       /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
@@ -172,7 +172,7 @@ struct AccumClosureEscape {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist *_self = _f._self;
+          const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;
@@ -193,11 +193,11 @@ struct AccumClosureEscape {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
     T1 mylist_rect(T1 f, F1 &&f0) const {
-      const mylist *_self = this;
+      const mylist<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const mylist *_self;
+        const mylist<A> *_self;
       };
 
       /// _Resume_Mycons: saves [a1, a0], resumes after recursive call with
@@ -217,7 +217,7 @@ struct AccumClosureEscape {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist *_self = _f._self;
+          const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = f;

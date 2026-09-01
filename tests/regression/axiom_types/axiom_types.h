@@ -198,11 +198,11 @@ struct AxiomTypes {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
     T1 list_rec(T1 f, F1 &&f0) const {
-      const list *_self = this;
+      const list<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const list *_self;
+        const list<A> *_self;
       };
 
       /// _Resume_Cons: saves [a1, a0], resumes after recursive call with
@@ -222,7 +222,7 @@ struct AxiomTypes {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const list *_self = _f._self;
+          const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;
@@ -242,11 +242,11 @@ struct AxiomTypes {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
     T1 list_rect(T1 f, F1 &&f0) const {
-      const list *_self = this;
+      const list<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const list *_self;
+        const list<A> *_self;
       };
 
       /// _Resume_Cons: saves [a1, a0], resumes after recursive call with
@@ -266,7 +266,7 @@ struct AxiomTypes {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const list *_self = _f._self;
+          const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;

@@ -9005,7 +9005,15 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
   | Dfundef (names, ret_ty, params, body, no_pure) ->
     transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
   | Dstruct ds ->
-    let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, [], []))) in
+    (* Name the struct's own template arguments: inside a nested inductive the
+       receiver type is spelled through its module ([typename List::template
+       list<A>]), and the bare template name there is not a type. *)
+    let self_args =
+      List.map
+        (fun (_, id) -> Tvar (0, Some id))
+        (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
+    in
+    let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, self_args, []))) in
     (* Try inlining mutual recursion among struct fields before transforms *)
     let fields = try_inline_mutual_fields ds.ds_fields in
     (* Collect smart-pointer field indices from variant structs for TMC *)

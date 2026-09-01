@@ -191,7 +191,7 @@ public:
   Nat length() const {
     std::shared_ptr<Nat> _head{};
     std::shared_ptr<Nat> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {

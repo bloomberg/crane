@@ -435,7 +435,7 @@ struct DepElim {
     vec<T1> vec_map(uint64_t, F1 &&f) const {
       std::shared_ptr<vec<T1>> _head{};
       std::shared_ptr<vec<T1>> *_write = &_head;
-      const vec *_loop_self = this;
+      const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
@@ -457,7 +457,7 @@ struct DepElim {
     List<A> vec_to_list(uint64_t) const {
       std::shared_ptr<List<A>> _head{};
       std::shared_ptr<List<A>> *_write = &_head;
-      const vec *_loop_self = this;
+      const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
@@ -479,11 +479,11 @@ struct DepElim {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
-      const vec *_self = this;
+      const vec<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const vec *_self;
+        const vec<A> *_self;
         uint64_t _x;
       };
 
@@ -505,7 +505,7 @@ struct DepElim {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const vec *_self = _f._self;
+          const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
@@ -528,11 +528,11 @@ struct DepElim {
     template <typename T1, typename F1>
       requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rect(T1 f, F1 &&f0, uint64_t _x) const {
-      const vec *_self = this;
+      const vec<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const vec *_self;
+        const vec<A> *_self;
         uint64_t _x;
       };
 
@@ -554,7 +554,7 @@ struct DepElim {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const vec *_self = _f._self;
+          const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {

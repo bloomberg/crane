@@ -297,11 +297,11 @@ struct PolyInductive {
     const variant_t &v() const { return v_; }
 
     uint64_t ptree_size() const {
-      const ptree *_self = this;
+      const ptree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const ptree *_self;
+        const ptree<A> *_self;
       };
 
       /// _After_PNode: saves [a0], dispatches next recursive call.
@@ -325,7 +325,7 @@ struct PolyInductive {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const ptree *_self = _f._self;
+          const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
             _result = UINT64_C(1);
@@ -351,11 +351,11 @@ struct PolyInductive {
                std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
                                      T1 &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
-      const ptree *_self = this;
+      const ptree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const ptree *_self;
+        const ptree<A> *_self;
       };
 
       /// _After_PNode: saves [a0_0, a1, a0_1], dispatches next recursive call.
@@ -383,7 +383,7 @@ struct PolyInductive {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const ptree *_self = _f._self;
+          const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename ptree<A>::PLeaf>(_sv.v());
@@ -412,11 +412,11 @@ struct PolyInductive {
                std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
                                      T1 &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
-      const ptree *_self = this;
+      const ptree<A> *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
-        const ptree *_self;
+        const ptree<A> *_self;
       };
 
       /// _After_PNode: saves [a0_0, a1, a0_1], dispatches next recursive call.
@@ -444,7 +444,7 @@ struct PolyInductive {
         _stack.pop_back();
         if (std::holds_alternative<_Enter>(_frame)) {
           auto _f = std::move(std::get<_Enter>(_frame));
-          const ptree *_self = _f._self;
+          const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
             const auto &[a0] = std::get<typename ptree<A>::PLeaf>(_sv.v());
