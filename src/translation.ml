@@ -3478,7 +3478,11 @@ and ml_expr_is_function_value e =
   | other ->
     ( match infer_ml_body_type other with
     | Some t -> count_ml_value_arrows t >= 1
-    | None -> false )
+    (* Inference is best-effort and gives up when a binder's type is itself a
+       type-level computation ([sem (TArr a b)] for a [Fixpoint sem : ty ->
+       Type]).  A syntactic lambda is a function value whatever its type, so
+       fall back on the shape rather than on the failed inference. *)
+    | None -> ( match other with MLlam _ -> true | _ -> false ) )
 
 (** [coerce ?term ?from ~into expr] adapts [expr] across a representation
     boundary: it is the single place that decides between boxing, [any_cast],
@@ -3540,7 +3544,12 @@ and coerce ?term ?from ~into expr =
         if is_function_value then wrap_crane_erase_fn expr else expr
       in
       CPPconverting_ctor (Tany, [adapted])
-  else if boxed_source && not (prints_as_any into) then
+  (* [prints_as_any] is structural, so it misses a named alias for the box --
+     a type-level [Fixpoint] emitted as [using sem = std::any].  Casting a box
+     to such a name is not a recovery but an [any_cast<std::any>], which only
+     succeeds on a doubly-boxed value and otherwise throws. *)
+  else if boxed_source && not (prints_as_any into || resolves_to_any_type into)
+  then
     match expr with
     (* Already recovered; a second cast would be reading the same box twice. *)
     | CPPany_cast _ -> expr
@@ -3601,6 +3610,12 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
        twice. *)
     | Tfun (dom, cod) when cod <> Tany && List.mem Tany dom -> Some (Some cod)
     | Tfun (dom, cod) when cod = Tany || List.mem Tany dom -> Some None
+    (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
+       [using sem = std::any], say.  A callee that applies such a value goes
+       through the canonical [std::function<std::any(std::any...)>] adapter,
+       so a raw closure dropped into the [std::any] would not match the cast
+       that reads it back out. *)
+    | ty when resolves_to_any_type ty -> Some None
     | _ -> None
   in
   match erased_fn_param with
@@ -7514,23 +7529,29 @@ and eta_fun env f args =
           | None -> false ) )
       | _ -> false
     in
+    (* A callee is only callable through the canonical adapter when nothing
+       with a C++ call operator is left of its type -- which is what
+       [std::any] means here.  The ML type may say so outright ([Tdummy],
+       [Tunknown], a bare [Tvar]) or only once converted: a type-level
+       [Fixpoint] applied to an argument is a perfectly concrete [Tglob] in
+       MiniML and still lands on a [using sem = std::any] alias in C++. *)
+    let erases_to_any ty =
+      is_ml_erased_ty ty
+      || resolves_to_any_type
+           (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ty)
+    in
     let callee_is_bare_any =
       callee_cpp_erased
       || ( (not callee_known_concrete)
          &&
          match callee_env_ty with
-         | Some ty -> is_ml_erased_ty ty
+         | Some ty -> erases_to_any ty
          | None -> false )
-      (* Not a local binder: a callee whose own type erases to [std::any]
-         (e.g. a value of a type-level [Fixpoint]'s result, or a definition
-         returning a dependent [if ... then nat else nat -> nat]) is likewise
-         only callable through the canonical adapter. *)
+      (* Not a local binder: the callee's own inferred type decides. *)
       || ( callee_rel_idx = None
          &&
-         let tvars = get_current_type_vars () in
          match infer_ml_body_type (strip_magic f) with
-         | Some t ->
-           resolves_to_any_type (convert_ml_type_to_cpp_type env tvars t)
+         | Some t -> erases_to_any t
          | None -> false )
     in
     let callee_has_erased_params =

@@ -230,17 +230,6 @@
   (deps tc_carrier_option_cast.t.exe)
   (action (run ./tc_carrier_option_cast.t.exe))))
 
-(subdir type_level_fun_apply
- (rule
-  (targets type_level_fun_apply.t.exe)
-  (deps TypeLevelFunApply.vo type_level_fun_apply.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fun_apply.t.exe type_level_fun_apply.cpp type_level_fun_apply.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_level_fun_apply.t.exe)
-  (action (run ./type_level_fun_apply.t.exe))))
-
 (subdir vector_cases_deduction
  (rule
   (targets vector_cases_deduction.t.exe)

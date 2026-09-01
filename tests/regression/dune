@@ -7543,3 +7543,14 @@
   (alias runtest)
   (deps option_recursive_match.t.exe)
   (action (run ./option_recursive_match.t.exe))))
+(subdir type_level_fun_apply
+ (rule
+  (targets type_level_fun_apply.t.exe)
+  (deps TypeLevelFunApply.vo type_level_fun_apply.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fun_apply.t.exe type_level_fun_apply.cpp type_level_fun_apply.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fun_apply.t.exe)
+  (action (run ./type_level_fun_apply.t.exe))))
+
