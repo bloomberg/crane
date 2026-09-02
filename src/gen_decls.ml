@@ -1560,9 +1560,10 @@ let with_applied_tvars cty temps =
     (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
     named only by the return type, and C++ deduces nothing from a return type,
     so the call is ill-formed as written.  [B] is however pinned by the
-    signature of the callback [g] that produces it, so the return is respelled
-    in terms of that callback ([std::invoke_result_t<G &, A &>]) and [B] itself
-    is defaulted, which is all the [requires] clause still needs of it. *)
+    signature of the callback [g] that produces it, so [B] is redeclared last
+    with that result as its default ([typename B = std::invoke_result_t<G &,
+    A &>]) -- last because a default may only name parameters declared before
+    it, and the callback is one of those. *)
 let relax_applied_return temps decl =
   let applies_tvar t =
     exists_cpp_type (function Tapply (Tvar _, _) -> true | _ -> false) t
@@ -1594,36 +1595,28 @@ let relax_applied_return temps decl =
           | _ -> None )
         temps
     in
-    let cod =
-      map_cpp_type
-        (function
-          | Tvar _ as t -> (
-            match
-              List.find_map
-                (fun (_, id) ->
-                  if is_tvar id t && undeducible id then invoke_result id
-                  else None )
-                temps
-            with
-            | Some r -> r
-            | None -> t )
-          | t -> t )
-        cod0
-    in
-    let temps =
-      List.map
+    (* [id] is pinned by a callback rather than by an argument, so instead of
+       naming it in the signature the declaration gives it that callback's
+       result as its default and the return type keeps its own spelling.  The
+       default names parameters declared after [id], so [id] moves to the end
+       of the list; nothing supplies this signature's arguments explicitly, so
+       the order is free. *)
+    let computed =
+      List.filter_map
         (fun (tt, id) ->
           match tt with
-          (* Only a variable the respelling above actually rewrote away needs
-             this.  One with no callback to pin it was never made deducible by
-             defaulting it either -- it is phantom, and the call site spells it
-             out ({!Ml_type_util.explicit_tvar_prefix}). *)
-          | TTtypename when undeducible id && invoke_result id <> None ->
-            (TTtypename_default Tany, id)
-          | _ -> (tt, id) )
+          | TTtypename when undeducible id ->
+            Option.map (fun r -> (TTtypename_default r, id)) (invoke_result id)
+          | _ -> None )
         temps
     in
-    (temps, Dfundef (ns, cod, params, body, flags))
+    let temps =
+      List.filter
+        (fun (_, id) -> not (List.exists (fun (_, j) -> Id.equal id j) computed))
+        temps
+      @ computed
+    in
+    (temps, Dfundef (ns, cod0, params, body, flags))
   | _ -> (temps, decl)
 
 (** Build template parameter list with phantom detection.
