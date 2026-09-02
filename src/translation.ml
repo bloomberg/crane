@@ -2789,6 +2789,20 @@ and restore_erased_env (saved_env, saved_type_env) =
   tctx.cpp_erased_env <- saved_env;
   tctx.cpp_erased_type_env <- saved_type_env
 
+(** Follow a name for a type through to the type it stands for.  A [using]
+    alias hides the arguments its right-hand side was written with, and those
+    arguments are exactly what a value built into such a slot has to agree
+    with.  Returns the type unchanged when it is not an alias. *)
+and unfold_cpp_typedef env cpp_ty =
+  match cpp_ty with
+  | Tnamespace (_, inner) -> unfold_cpp_typedef env inner
+  | Tglob (GlobRef.ConstRef kn, [], _) -> (
+    match Table.lookup_typedef_unchecked kn with
+    | Some ml_ty ->
+      convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty
+    | None -> cpp_ty )
+  | _ -> cpp_ty
+
 (** The type arguments the enclosing function's return type supplies for the
     inductive [ind], when it names [ind] with exactly [arity] of them.
 
@@ -2797,13 +2811,19 @@ and restore_erased_env (saved_env, saved_type_env) =
     where that expectation is recorded.  Namespace and [shared_ptr] wrappers
     are seen through, as are typedefs, which may name [ind] only indirectly.
     [None] when the return type says nothing about [ind]. *)
-and expected_type_args_from_return env ind ~arity =
+and expected_type_args_from_return env ?slot ind ~arity =
   let rec go cpp_ty =
     match cpp_ty with
     | Tglob (r, tys, _)
       when Names.GlobRef.CanOrd.equal ind r && List.length tys = arity ->
       Some tys
     | Tnamespace (_, inner) | Tshared_ptr inner -> go inner
+    (* An element type counts: a value can be built into a slot the return
+       type only mentions inside a container ([list {T : Type & T}]), and the
+       arguments the container was declared with are what the element has to
+       agree with. *)
+    | Tglob (_, tys, _) when List.exists (fun t -> go t <> None) tys ->
+      List.find_map go tys
     | Tglob (GlobRef.ConstRef kn, _, _) -> (
       match Table.lookup_typedef_unchecked kn with
       | Some ml_ty ->
@@ -2811,7 +2831,12 @@ and expected_type_args_from_return env ind ~arity =
       | None -> None )
     | _ -> None
   in
-  match tctx.current_cpp_return_type with Some rt -> go rt | None -> None
+  (* The slot the value is being built into is the closer answer, and the
+     only one available inside a constructor argument -- generating those
+     clears the enclosing return type. *)
+  match slot with
+  | Some t when go t <> None -> go t
+  | _ -> ( match tctx.current_cpp_return_type with Some rt -> go rt | None -> None )
 
 (** Collapse the erased parts of a type to [std::any]: the type itself when it
     resolves to [std::any], and, structurally, a function type's arguments and
@@ -5001,7 +5026,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           let temps =
             if Table.has_dependent_params n then
               let expected_temps =
-                expected_type_args_from_return env n
+                expected_type_args_from_return env ?slot:expected_ty n
                   ~arity:(List.length temps)
               in
               match expected_temps with
@@ -5181,9 +5206,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           in
           let tvars = get_current_type_vars () in
           let temps = build_template_params env tvars tys_filt in
-              if Table.has_dependent_params n then
+          if Table.has_dependent_params n then
             let expected_temps =
-              expected_type_args_from_return env n ~arity:(List.length temps)
+              expected_type_args_from_return env ?slot:expected_ty n
+                ~arity:(List.length temps)
             in
             match expected_temps with
             | Some exp_tys ->
@@ -5739,6 +5765,16 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               | _ -> false
             in
             ( match ft with
+            | (Miniml.Tvar _ | Miniml.Tvar' _)
+              when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
+                    | Tglob (_, args, _) ->
+                      args <> [] && List.exists has_tany_in_type args
+                    | _ -> false) ->
+              (* An element type the slot has already erased.  A nested
+                 constructor has to be built at that same instantiation --
+                 [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
+                 produces does not convert into the container holding it. *)
+              Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
             | Miniml.Tvar _ | Miniml.Tvar' _ -> None
             | _ when is_erased_rel ->
               let tvars = get_current_type_vars () in

@@ -216,9 +216,9 @@ struct SigtListHeterogeneousBox {
   /// sigt_type_witness_container and sigt_erased_structured_binding.
   using anyv = SigT<std::any, std::any>;
   static inline const List<anyv> items = List<SigT<std::any, std::any>>::cons(
-      SigT<std::any, Nat>::existt(std::any(), Nat::s(Nat::o())),
+      SigT<std::any, std::any>::existt(std::any(), Nat::s(Nat::o())),
       List<SigT<std::any, std::any>>::cons(
-          SigT<std::any, bool>::existt(std::any(), true),
+          SigT<std::any, std::any>::existt(std::any(), true),
           List<SigT<std::any, std::any>>::nil()));
   static Nat count(const List<anyv> &_x0);
   static inline const Nat run = count(items);

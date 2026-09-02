@@ -125,16 +125,6 @@
   (action (run ./mutual_tmc_loopify.t.exe))))
 
 
-(subdir sigt_list_heterogeneous_box
- (rule
-  (targets sigt_list_heterogeneous_box.t.exe)
-  (deps SigtListHeterogeneousBox.vo sigt_list_heterogeneous_box.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_list_heterogeneous_box.t.exe sigt_list_heterogeneous_box.cpp sigt_list_heterogeneous_box.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_list_heterogeneous_box.t.exe)
-  (action (run ./sigt_list_heterogeneous_box.t.exe))))
 
 (subdir sigt_type_witness_container
  (rule
