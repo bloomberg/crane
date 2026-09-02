@@ -140,21 +140,17 @@ type translation_ctx = {
       so the constructed value's runtime type matches what the erased
       function body expects from [any_cast]. *)
   mutable wrap_for_any_param : bool;
-  (** De Bruijn indices of pattern variables whose C++ struct field is
-      stored as [std::any] due to type erasure.  Populated by
-      {!populate_erased_field_env} during pattern-match branch setup;
-      consulted by the [MLrel] and [MLmagic] handlers to emit
-      [std::any_cast] when such a variable is used at a concrete type.
-      Indices are shifted by {!push_env_types} and cleared by
-      {!reset_env_types}. *)
-  mutable cpp_erased_env : Escape.IntSet.t;
-  (** Maps de Bruijn indices of [Tvar]-typed pattern variables to the
-      concrete C++ type from the scrutinee's template arguments.
-      For example, when matching [SigT<Tag, std::function<any(any)>>],
-      the function field maps to [Tfun(\[Tany\], Tany)].  Used by
-      [eta_fun] to detect that the callee's parameters are [std::any].
-      Shifted and cleared together with {!cpp_erased_env}. *)
-  mutable cpp_erased_type_env : cpp_type IntMap.t;
+  (** The C++ type each pattern variable actually has, by de Bruijn index --
+      the constructor field's definition-site type as the scrutinee
+      instantiates it.  Matching [SigT<Tag, std::function<any(any)>>] records
+      [Tfun (\[Tany\], Tany)] for the function field, and a field the
+      instantiation erases records [Tany].
+
+      Whether a binder is boxed is therefore read off this map rather than
+      tracked beside it: the two answers cannot drift apart.  Populated by
+      [populate_erased_field_env] during pattern-match branch setup,
+      shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
+  mutable cpp_binder_types : cpp_type IntMap.t;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -189,8 +185,7 @@ let tctx =
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
     wrap_for_any_param = false;
-    cpp_erased_env = Escape.IntSet.empty;
-    cpp_erased_type_env = IntMap.empty;
+    cpp_binder_types = IntMap.empty;
   }
 
 (** Accessors for {!translation_ctx.current_type_vars}: the template type
@@ -246,15 +241,14 @@ let take_lifted_decls () =
 let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
 (** Prepend bindings to the de Bruijn environment type stack.
-    Also shifts all indices in {!cpp_erased_env} and {!cpp_erased_type_env}
-    upward by [n] to account for the new bindings, keeping de Bruijn
-    references consistent. *)
+    Also shifts all indices in {!cpp_binder_types} upward by [n] to account
+    for the new bindings, keeping de Bruijn references consistent. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
   let n = List.length ids in
-  if n > 0 && not (Escape.IntSet.is_empty tctx.cpp_erased_env) then begin
-    tctx.cpp_erased_env <- Escape.IntSet.map (fun i -> i + n) tctx.cpp_erased_env;
-    tctx.cpp_erased_type_env <- IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) tctx.cpp_erased_type_env IntMap.empty
-  end;
+  if n > 0 && not (IntMap.is_empty tctx.cpp_binder_types) then
+    tctx.cpp_binder_types <-
+      IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) tctx.cpp_binder_types
+        IntMap.empty;
   tctx.env_types <- ids @ tctx.env_types
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
@@ -269,8 +263,7 @@ let get_env_type_opt (i : int) : ml_type option =
        | None -> None
 
 (** Reset the environment type stack to empty.
-    Also clears {!cpp_erased_env} and {!cpp_erased_type_env}. *)
+    Also clears {!cpp_binder_types}. *)
 let reset_env_types () =
   tctx.env_types <- [];
-  tctx.cpp_erased_env <- Escape.IntSet.empty;
-  tctx.cpp_erased_type_env <- IntMap.empty
+  tctx.cpp_binder_types <- IntMap.empty

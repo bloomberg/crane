@@ -2743,8 +2743,8 @@ and cpp_of_ml env t = convert_ml_type_to_cpp_type env (get_current_type_vars ())
 and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
 
 (** [populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
-    ~non_erased_def_site_field_tys] populates {!cpp_erased_env} and
-    {!cpp_erased_type_env} for a pattern-match branch.  For each
+    ~non_erased_def_site_field_tys] populates {!cpp_binder_types} for a
+    pattern-match branch.  For each
     constructor field whose definition-site type is a type variable that
     resolves to [std::any] via the scrutinee's template arguments, marks
     the corresponding de Bruijn index as erased and records its concrete
@@ -2789,23 +2789,43 @@ and populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
   List.iteri (fun field_i _ ->
     let db_idx = n_pat_vars - field_i in
     if is_field_stored_as_any field_i then
-      tctx.cpp_erased_env <- Escape.IntSet.add db_idx tctx.cpp_erased_env;
+      record_binder_type db_idx Tany;
     (match List.nth_opt non_erased_def_site_field_tys field_i with
      | Some (Miniml.Tvar k | Miniml.Tvar' k) ->
        (match List.nth_opt scrut_template_args (k - 1) with
-        | Some t -> tctx.cpp_erased_type_env <- IntMap.add db_idx t tctx.cpp_erased_type_env
+        | Some t -> record_binder_type db_idx t
         | None -> ())
      | _ -> ())
   ) (List.init n_fields Fun.id)
 
-(** Save the current erased-env state for later restoration. *)
-and save_erased_env () =
-  (tctx.cpp_erased_env, tctx.cpp_erased_type_env)
+(** The C++ type recorded for the pattern variable at de Bruijn index [i], if
+    this branch pinned one down. *)
+and binder_cpp_type i = IntMap.find_opt i tctx.cpp_binder_types
 
-(** Restore erased-env state from a previously saved pair. *)
-and restore_erased_env (saved_env, saved_type_env) =
-  tctx.cpp_erased_env <- saved_env;
-  tctx.cpp_erased_type_env <- saved_type_env
+(** Whether the pattern variable at de Bruijn index [i] holds a box, and so
+    must be recovered with an [any_cast] before it is used at a concrete
+    type.  Read off the recorded type rather than tracked alongside it: a
+    binder is boxed exactly when the scrutinee's instantiation erased its
+    field. *)
+and binder_is_boxed i =
+  match binder_cpp_type i with Some t -> resolves_to_any_type t | None -> false
+
+(** Record the C++ type of the pattern variable at de Bruijn index [i].
+
+    A box is never overwritten by a concrete type.  Several passes describe
+    the same binder -- an outer erased pair match says every field is a
+    [std::any], and the per-field pass then reports the definition-site type
+    the scrutinee instantiates -- and the erased view is the one that
+    describes the runtime value. *)
+and record_binder_type i t =
+  if not (binder_is_boxed i) then
+    tctx.cpp_binder_types <- IntMap.add i t tctx.cpp_binder_types
+
+(** Save the current binder-type state for later restoration. *)
+and save_erased_env () = tctx.cpp_binder_types
+
+(** Restore binder-type state saved by {!save_erased_env}. *)
+and restore_erased_env saved = tctx.cpp_binder_types <- saved
 
 (** Follow a name for a type through to the type it stands for.  A [using]
     alias hides the arguments its right-hand side was written with, and those
@@ -3566,12 +3586,12 @@ and strip_magic = function MLmagic (_, e) -> strip_magic e | e -> e
     runtime helper so the canonical [std::function<std::any(std::any...)>]
     representation is stored (matching the [any_cast] on the application side)
     rather than a raw closure.  An [MLrel] already erased to [std::any]
-    ([tctx.cpp_erased_env]) is excluded: it is not callable, so wrapping it
+    ([binder_is_boxed]) is excluded: it is not callable, so wrapping it
     would miscompile. *)
 and ml_expr_is_function_value e =
   match strip_magic e with
   | MLrel i ->
-    (not (Escape.IntSet.mem i tctx.cpp_erased_env))
+    (not (binder_is_boxed i))
     && ( match get_env_type_opt i with
        | Some t -> count_ml_value_arrows t >= 1
        | None -> false )
@@ -4043,7 +4063,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       && Escape.IntSet.mem i tctx.move_owned_vars
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
-    if Escape.IntSet.mem i tctx.cpp_erased_env then begin
+    if binder_is_boxed i then begin
       match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid ->
         if resolves_to_any_type ty then result
@@ -4923,7 +4943,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       let is_erased_rel =
         match ml_arg with
         | MLrel j | MLmagic (_, MLrel j) ->
-          Escape.IntSet.mem j tctx.cpp_erased_env
+          binder_is_boxed j
         | _ -> false
       in
       if not is_erased_rel then expr
@@ -5841,7 +5861,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             let is_erased_rel =
               match e with
               | MLrel j | MLmagic (_, MLrel j) ->
-                Escape.IntSet.mem j tctx.cpp_erased_env
+                binder_is_boxed j
               | _ -> false
             in
             ( match ft with
@@ -5961,7 +5981,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             let is_erased_rel =
               match e with
               | MLrel j | MLmagic (_, MLrel j) ->
-                Escape.IntSet.mem j tctx.cpp_erased_env
+                binder_is_boxed j
               | _ -> false
             in
             ( match ft with
@@ -6215,8 +6235,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              environment must be pushed alongside [env'] for the erasure
              checks below to see their real types. *)
           let saved_env_types = tctx.env_types in
-          let saved_erased = tctx.cpp_erased_env in
-          let saved_erased_tys = tctx.cpp_erased_type_env in
+          let saved_erased = save_erased_env () in
           push_env_types branch_binders;
           let arg_exprs =
             List.rev
@@ -6229,8 +6248,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                  value_args )
           in
           tctx.env_types <- saved_env_types;
-          tctx.cpp_erased_env <- saved_erased;
-          tctx.cpp_erased_type_env <- saved_erased_tys;
+          restore_erased_env saved_erased;
           let callee =
             if not hkt_class then make_field_access (gen_expr env t) fld
             else
@@ -6376,7 +6394,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
         let rec is_cpp_erased_var_rec = function
-          | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
+          | MLrel i -> binder_is_boxed i
           | MLmagic (_, t') -> is_cpp_erased_var_rec t'
           | _ -> false
         in
@@ -6980,13 +6998,13 @@ and eta_fun env f args =
         | _ -> expr
       in
       (* A bare local variable known to be boxed as [std::any]
-         ([cpp_erased_env]) — e.g. a leaf pulled out of an erased-pair
+         ([binder_is_boxed]) — e.g. a leaf pulled out of an erased-pair
          destructure — passed directly to a plain global function whose
          parameter type is concrete.  Mirrors the equivalent check for
          non-global callees (~[MLrel j when Escape.IntSet.mem ...] above). *)
       let ml_arg_is_erased_rel =
         match ml_arg with
-        | MLrel j | MLmagic (_, MLrel j) -> Escape.IntSet.mem j tctx.cpp_erased_env
+        | MLrel j | MLmagic (_, MLrel j) -> binder_is_boxed j
         | _ -> false
       in
       match List.nth_opt fn_param_ml_tys i with
@@ -7764,20 +7782,21 @@ and eta_fun env f args =
     in
     let callee_cpp_erased =
       match callee_rel_idx with
-      | Some i -> Escape.IntSet.mem i tctx.cpp_erased_env
+      | Some i -> binder_is_boxed i
       | None -> false
     in
     (* A pattern binder whose definition-site field type is a type variable
        still has a concrete C++ type when the scrutinee instantiates that
        variable concretely — [populate_erased_field_env] recorded it in
-       [cpp_erased_type_env] and deliberately left it out of [cpp_erased_env].
+       [cpp_binder_types] at that concrete type, which is what makes
+       [binder_is_boxed] answer no for it.
        Its erased ML type must not be taken at face value here, or a perfectly
        concrete [std::function<uint64_t(uint64_t)>] field gets wrapped in an
        [any_cast] that does not compile. *)
     let callee_known_concrete =
       match callee_rel_idx with
       | Some i when not callee_cpp_erased ->
-        ( match IntMap.find_opt i tctx.cpp_erased_type_env with
+        ( match binder_cpp_type i with
         | Some t -> not (resolves_to_any_type t)
         | None ->
           (* Likewise for a parameter of the enclosing function: the ambient
@@ -7827,7 +7846,7 @@ and eta_fun env f args =
       | _ -> false) ||
       (match callee_rel_idx with
        | Some i ->
-         (match IntMap.find_opt i tctx.cpp_erased_type_env with
+         (match binder_cpp_type i with
           | Some (Tfun (params, _)) -> List.exists (fun p -> p = Tany) params
           | _ -> false)
        | None -> false)
@@ -7836,7 +7855,7 @@ and eta_fun env f args =
     if callee_has_erased_params then
       tctx.wrap_for_any_param <- true;
     (* [has_unresolved_boxed_arg]: set when an argument is statically known to
-       be boxed as [std::any] ([cpp_erased_env]) but the callee's parameter
+       be boxed as [std::any] ([binder_is_boxed]) but the callee's parameter
        type at this position can't be resolved to a concrete C++ type (it is
        itself abstract/erased, e.g. a value-dependent type scheme like
        [S.sem a]).  This happens when the callee is a genuinely-concrete
@@ -7861,7 +7880,7 @@ and eta_fun env f args =
             | None -> None
           in
           gen_expr ?expected_ty:expected env x
-        | MLrel j when Escape.IntSet.mem j tctx.cpp_erased_env ->
+        | MLrel j when binder_is_boxed j ->
           let inner = gen_expr env x in
           let expected = match List.nth_opt callee_param_tys i with
             | Some ml_ty ->
@@ -9167,9 +9186,9 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
       let body_is_erased =
         match body with
         | MLrel i ->
-          not (Escape.IntSet.mem i tctx.cpp_erased_env) && is_env_var_erased env tvars i
+          not (binder_is_boxed i) && is_env_var_erased env tvars i
         | Miniml.MLmagic (_, MLrel i) ->
-          not (Escape.IntSet.mem i tctx.cpp_erased_env) && is_env_var_erased env tvars i
+          not (binder_is_boxed i) && is_env_var_erased env tvars i
         | _ -> false
       in
       if body_is_erased then (fun e -> k (CPPany_cast (ret, e)))
@@ -9204,13 +9223,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      by an outer [fix_a_fired] pair match (detected via [env_types]). *)
   let scrut_is_mlmagic = match t with MLmagic (m, _) -> magic_is_boxed env m | _ -> false in
   let scrut_is_cpp_erased = match t with
-    | MLrel i -> Escape.IntSet.mem i tctx.cpp_erased_env
+    | MLrel i -> binder_is_boxed i
     | _ -> false
   in
   let scrut_is_magic = match t with
     | MLmagic (m, _) -> magic_is_boxed env m
     | MLrel i ->
-      Escape.IntSet.mem i tctx.cpp_erased_env
+      binder_is_boxed i
       || (match get_env_type_opt i with
           (* An ML type that erases on its own may still have been written
              down concretely here -- a typeclass carrier resolved by the
@@ -9522,14 +9541,14 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       push_env_types ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
-         ALL fields are [std::any] at runtime.  Mark them in [cpp_erased_env]
+         ALL fields are [std::any] at runtime.  Record them as boxed
          so that [gen_expr] emits [any_cast<T>] when they're used at concrete
          types, and so inner pair matches emit [any_cast<pair<any,any>>].
          Use original [ids] types (not the retyped [ids']) to detect field types. *)
       if fix_a_fired then begin
         List.iteri (fun field_i _ ->
           let db_idx = n_pat_vars - field_i in
-          tctx.cpp_erased_env <- Escape.IntSet.add db_idx tctx.cpp_erased_env)
+          record_binder_type db_idx Tany)
           ids
       end;
       let non_erased_def_tys =
@@ -9552,7 +9571,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           in
           if not is_self_ref then begin
             let db_idx = n_pat_vars - field_i in
-            tctx.cpp_erased_env <- Escape.IntSet.add db_idx tctx.cpp_erased_env
+            record_binder_type db_idx Tany
           end)
           (List.init n_fields Fun.id)
       end;

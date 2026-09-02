@@ -29,14 +29,13 @@ module IntSet = Escape.IntSet
     reads as erased and provokes a spurious [any_cast]). *)
 let with_method_env_types params f =
   let saved_env_types = tctx.env_types in
-  let saved_erased = (tctx.cpp_erased_env, tctx.cpp_erased_type_env) in
+  let saved_erased = tctx.cpp_binder_types in
   reset_env_types ();
   push_env_types params;
   Fun.protect
     ~finally:(fun () ->
       tctx.env_types <- saved_env_types;
-      tctx.cpp_erased_env <- fst saved_erased;
-      tctx.cpp_erased_type_env <- snd saved_erased )
+      tctx.cpp_binder_types <- saved_erased )
     f
 
 let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
