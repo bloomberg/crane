@@ -21,8 +21,7 @@ MemSafetyProbe6::build_chain(const MemSafetyProbe6::mylist<uint64_t> &l) {
               _loop_l.v());
       const MemSafetyProbe6::mylist<uint64_t> &a1_value = *a1;
       uint64_t rest_len = a1_value.length();
-      auto _cell = std::make_shared<
-          MemSafetyProbe6::mylist<std::function<uint64_t(uint64_t)>>>(
+      auto _cell = std::make_shared<mylist<std::function<uint64_t(uint64_t)>>>(
           typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
               [=](uint64_t n) mutable { return ((a0 + rest_len) + n); },
               nullptr));

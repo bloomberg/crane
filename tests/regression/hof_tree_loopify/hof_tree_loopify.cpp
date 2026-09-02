@@ -11,11 +11,10 @@ HofTreeLoopify::tree<uint64_t> HofTreeLoopify::depth_tree(uint64_t n) {
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<HofTreeLoopify::tree<uint64_t>>(
-          typename tree<uint64_t>::Node(
+      auto _cell =
+          std::make_shared<tree<uint64_t>>(typename tree<uint64_t>::Node(
               nullptr, _loop_n,
-              std::make_shared<HofTreeLoopify::tree<uint64_t>>(
-                  tree<uint64_t>::leaf())));
+              std::make_shared<tree<uint64_t>>(tree<uint64_t>::leaf())));
       *_write = std::move(_cell);
       _write = &std::get<typename tree<uint64_t>::Node>((*_write)->v_mut()).l;
       _loop_n = m;

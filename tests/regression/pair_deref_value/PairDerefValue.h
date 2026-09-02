@@ -60,7 +60,7 @@ template <HasKey K> struct Collector {
                 _loop_ps->v());
         const auto &[x_, gamma] = a0;
         if (K::key_eq_dec(x_, x)) {
-          auto _cell = std::make_shared<typename Datatypes::template List<
+          auto _cell = std::make_shared<Datatypes::template List<
               typename Datatypes::template List<typename K::key>>>(
               typename Datatypes::template List<
                   typename Datatypes::template List<typename K::key>>::

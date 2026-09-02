@@ -2969,8 +2969,16 @@ let rec try_tmc_decompose check expr =
     in
     ( match direct with
     | [(idx, cs)] ->
-      (* Single direct recursive call — innermost cell *)
-      Some { tmc_cells = [make_cell idx]; tmc_rec_args = cs.cs_args }
+      (* Single direct recursive call — innermost cell.  Destination passing
+         needs a hole it can leave empty and point at, so the field the call
+         fills must be a [shared_ptr].  It is not always: a constructor may
+         nest one of another inductive whose corresponding field is a value
+         ([rnode (cons r nil)] fills [list rose]'s element).  There is no null
+         [rose] to write, so such a chain is not TMC-eligible and the function
+         stays plainly recursive. *)
+      let cell = make_cell idx in
+      if not (List.mem idx cell.tca_uptr_field_idxs) then None
+      else Some { tmc_cells = [cell]; tmc_rec_args = cs.cs_args }
     | [] ->
       (* No direct call — look for a nested constructor wrapping a call *)
       let nested =
@@ -3152,6 +3160,15 @@ let wrap_base_for_vt vt_ret val_expr =
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
 let build_cell_call ?token ~vt_ret pp_expr cell =
+  (* The cell being built is not always of the function's return type: a
+     constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
+     wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
+     type.  [tca_type_expr] carries that type as the already-rendered
+     expression the factory is qualified by, and the surrounding code already
+     splices it textually (see the [typename T::Ctor] initialisers below). *)
+  let mk_shared_cell =
+    CPPraw ("std::make_shared<" ^ pp_expr cell.tca_type_expr ^ ">")
+  in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
     | Some (type_expr, _, _, _) ->
@@ -3171,14 +3188,14 @@ let build_cell_call ?token ~vt_ret pp_expr cell =
           in
           if should_wrap then
             (match vt_ret with
-             | Some ret_ty -> CPPfun_call (CPPmk_shared ret_ty, [e])
+             | Some _ -> CPPfun_call (mk_shared_cell, [e])
              | None -> e)
           else e
         | None ->
           CPPconverting_ctor (Tany, []) )
   in
   match vt_ret with
-  | Some ret_ty ->
+  | Some _ ->
     (* Direct struct construction wrapped in make_unique:
        std::make_unique<Type>(typename Type::Ctor{args...}) *)
     let type_str = pp_expr cell.tca_type_expr in
@@ -3192,7 +3209,7 @@ let build_cell_call ?token ~vt_ret pp_expr cell =
           the constructor struct exactly as [make_rc] would build it. *)
        CPPfun_call (CPPraw "crane::make_rc_reusing_unchecked",
                     [cell_expr; tok])   (* reversed: (token, cell) *)
-     | None -> CPPfun_call (CPPmk_shared ret_ty, [cell_expr]))
+     | None -> CPPfun_call (mk_shared_cell, [cell_expr]))
   | None ->
     CPPfun_call (cell.tca_factory, args)
 

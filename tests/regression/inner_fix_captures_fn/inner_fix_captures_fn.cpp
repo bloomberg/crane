@@ -10,8 +10,8 @@ InnerFixCapturesFn::lst InnerFixCapturesFn::mk(uint64_t n) {
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell = std::make_shared<InnerFixCapturesFn::lst>(
-          typename lst::Cons(UINT64_C(1), nullptr));
+      auto _cell =
+          std::make_shared<lst>(typename lst::Cons(UINT64_C(1), nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename lst::Cons>((*_write)->v_mut()).a1;
       _loop_n = m;

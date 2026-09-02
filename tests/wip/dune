@@ -157,16 +157,6 @@
   (deps sigt_type_witness_container.t.exe)
   (action (run ./sigt_type_witness_container.t.exe))))
 
-(subdir tmc_nested_ctor_wrap
- (rule
-  (targets tmc_nested_ctor_wrap.t.exe)
-  (deps TmcNestedCtorWrap.vo tmc_nested_ctor_wrap.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} tmc_nested_ctor_wrap.t.exe tmc_nested_ctor_wrap.cpp tmc_nested_ctor_wrap.t.cpp)))
- (rule
-  (alias runtest)
-  (deps tmc_nested_ctor_wrap.t.exe)
-  (action (run ./tmc_nested_ctor_wrap.t.exe))))
 
 (subdir type_alias_applied_ctor_param
  (rule

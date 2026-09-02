@@ -148,9 +148,8 @@ MemSafetyProbe13::tree MemSafetyProbe13::make_deep(uint64_t n) {
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<MemSafetyProbe13::tree>(typename tree::Node(
-          nullptr, _loop_n,
-          std::make_shared<MemSafetyProbe13::tree>(tree::leaf())));
+      auto _cell = std::make_shared<tree>(typename tree::Node(
+          nullptr, _loop_n, std::make_shared<tree>(tree::leaf())));
       *_write = std::move(_cell);
       _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
       _loop_n = n_;
@@ -183,8 +182,7 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
       std::function<uint64_t(uint64_t)> f = [=](uint64_t n) mutable {
         return ((_loop_parent_val + a1) + n);
       };
-      auto _cell = std::make_shared<
-          MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>>>(
+      auto _cell = std::make_shared<mylist<std::function<uint64_t(uint64_t)>>>(
           typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(f,
                                                                      nullptr));
       *_write = std::move(_cell);

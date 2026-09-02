@@ -139,7 +139,7 @@ public:
         } else {
           const auto &[d_a00, d_a10] =
               bsl::get<typename List<T1>::Cons>(_loop_l_->v());
-          auto _cell = bsl::make_shared<List<bsl::pair<t_A, T1>>>(
+          auto _cell = std::make_shared<List<bsl::pair<t_A, T1>>>(
               typename List<bsl::pair<t_A, T1>>::Cons(
                   bsl::make_pair(d_a0, d_a00), nullptr));
           *_write = bsl::move(_cell);
@@ -186,7 +186,7 @@ public:
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
         if (f(d_a0)) {
-          auto _cell = bsl::make_shared<List<t_A>>(
+          auto _cell = std::make_shared<List<t_A>>(
               typename List<t_A>::Cons(d_a0, nullptr));
           *_write = bsl::move(_cell);
           _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
@@ -289,7 +289,7 @@ public:
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = bsl::make_shared<List<T1>>(
+        auto _cell = std::make_shared<List<T1>>(
             typename List<T1>::Cons(f(d_a0), nullptr));
         *_write = bsl::move(_cell);
         _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).d_l;
@@ -346,7 +346,7 @@ public:
         break;
       } else {
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
-        auto _cell = bsl::make_shared<List<t_A>>(
+        auto _cell = std::make_shared<List<t_A>>(
             typename List<t_A>::Cons(d_a0, nullptr));
         *_write = bsl::move(_cell);
         _write = &std::get<typename List<t_A>::Cons>((*_write)->v_mut()).d_l;
