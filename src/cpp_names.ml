@@ -508,9 +508,7 @@ let struct_qualifier_for r name_str =
 let global_scope_qualifier_for r name_str =
   match r with
   | GlobRef.IndRef _ when not (is_qualified_name name_str) ->
-    ( match Hashtbl.find_opt nested_struct_names name_str with
-    | Some l when not (globref_equal l r) -> str "::"
-    | _ -> mt () )
+    if Cpp_state.is_shadowed_global_name name_str r then str "::" else mt ()
   | _ -> mt ()
 
 (** Check if a global function needs :: prefix to avoid name collision. When

@@ -86,6 +86,28 @@
   (deps dependent_elim_stdexcept_probe.t.exe)
   (action (run ./dependent_elim_stdexcept_probe.t.exe))))
 
+(subdir hkt_instance_carrier_slot
+ (rule
+  (targets hkt_instance_carrier_slot.t.exe)
+  (deps HktInstanceCarrierSlot.vo hkt_instance_carrier_slot.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_instance_carrier_slot.t.exe hkt_instance_carrier_slot.cpp hkt_instance_carrier_slot.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_instance_carrier_slot.t.exe)
+  (action (run ./hkt_instance_carrier_slot.t.exe))))
+
+(subdir hkt_nullary_method_tyarg
+ (rule
+  (targets hkt_nullary_method_tyarg.t.exe)
+  (deps HktNullaryMethodTyarg.vo hkt_nullary_method_tyarg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_nullary_method_tyarg.t.exe hkt_nullary_method_tyarg.cpp hkt_nullary_method_tyarg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_nullary_method_tyarg.t.exe)
+  (action (run ./hkt_nullary_method_tyarg.t.exe))))
+
 (subdir record_function_field_stdlib_probe
  (rule
   (targets record_function_field_stdlib_probe.t.exe)

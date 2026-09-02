@@ -4220,10 +4220,7 @@ and pp_cpp_decl_raw env = function
     in
     register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
     if render_ctx.rc_in_struct then
-      Hashtbl.replace
-        nested_struct_names
-        (Pp.string_of_ppcmds struct_name)
-        id;
+      add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       match tparams with
       | [] -> pp_cpp_fields_with_vis ~struct_name env fields

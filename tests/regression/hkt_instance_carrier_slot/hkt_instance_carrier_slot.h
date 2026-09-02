@@ -1,5 +1,5 @@
-#ifndef INCLUDED_HKT_NULLARY_METHOD_TYARG
-#define INCLUDED_HKT_NULLARY_METHOD_TYARG
+#ifndef INCLUDED_HKT_INSTANCE_CARRIER_SLOT
+#define INCLUDED_HKT_INSTANCE_CARRIER_SLOT
 
 #include "small_vector.h"
 #include <any>
@@ -170,44 +170,27 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// emptyc takes no value argument, so its element type is not deducible and
-/// must be passed explicitly.  The generic body omits it:
+/// An instance method that delegates to a standalone polymorphic function
+/// passes the *carrier* F A where the callee's *element* type belongs:
 ///
-/// return sizec<_tcI0>(addc<_tcI0>(x, addc<_tcI0>(y, emptyc<_tcI0>())));
+/// template <typename _A0> static Nat sz(List<_A0> a0) {
+/// return llen<List<std::any>>(a0);      // should be llen<_A0>
+/// }
 ///
-/// error: no matching function for call to 'emptyc'
-/// (the wrapper is declared template <Coll _tcI0, typename T2>)
+/// error: no matching conversion for functional-style cast from 'const Nat'
+/// to 'List<std::any>'
 template <typename I>
-concept Coll = requires {
-  typename I::template C<std::any>;
+concept Sizeable = requires {
+  typename I::template F<std::any>;
   {
-    I::template emptyc<std::any>()
-  } -> std::convertible_to<typename I::template C<std::any>>;
-  {
-    I::template addc<std::any>(std::declval<std::any>(),
-                               std::declval<typename I::template C<std::any>>())
-  } -> std::convertible_to<typename I::template C<std::any>>;
-  {
-    I::template sizec<std::any>(
-        std::declval<typename I::template C<std::any>>())
+    I::template sz<std::any>(std::declval<typename I::template F<std::any>>())
   } -> std::convertible_to<Nat>;
 };
 
-struct HktNullaryMethodTyarg {
-  template <Coll _tcI0, typename T2>
-  static typename _tcI0::template C<T2> emptyc() {
-    return _tcI0::template emptyc<T2>();
-  }
-
-  template <Coll _tcI0, typename T2>
-  static typename _tcI0::template C<T2>
-  addc(const T2 &x, typename _tcI0::template C<T2> x0) {
-    return _tcI0::template addc<T2>(x, x0);
-  }
-
-  template <Coll _tcI0, typename T2>
-  static Nat sizec(typename _tcI0::template C<T2> x) {
-    return _tcI0::template sizec<T2>(x);
+struct HktInstanceCarrierSlot {
+  template <Sizeable _tcI0, typename T2>
+  static Nat sz(typename _tcI0::template F<T2> x) {
+    return _tcI0::template sz<T2>(x);
   }
 
   template <typename T1> static Nat llen(const List<T1> &l) {
@@ -219,30 +202,16 @@ struct HktNullaryMethodTyarg {
     }
   }
 
-  struct LC {
-    template <typename _A0> using C = List<_A0>;
+  struct SL {
+    template <typename _A0> using F = List<_A0>;
 
-    template <typename _A0> static List<_A0> emptyc() {
-      return List<_A0>::nil();
-    }
-
-    template <typename _A0> static List<_A0> addc(_A0 x, List<_A0> l) {
-      return List<_A0>::cons(x, l);
-    }
-
-    template <typename _A0> static Nat sizec(List<_A0> a0) {
-      return llen<List<std::any>>(a0);
+    template <typename _A0> static Nat sz(List<_A0> a0) {
+      return llen<_A0>(a0);
     }
   };
 
-  static_assert(Coll<LC>);
-
-  template <Coll _tcI0, typename T2> static Nat two(const T2 &x, const T2 &y) {
-    return sizec<_tcI0>(addc<_tcI0>(x, addc<_tcI0>(y, emptyc<_tcI0>())));
-  }
-
-  static inline const Nat run =
-      two<LC, Nat>(Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())));
+  static_assert(Sizeable<SL>);
+  static Nat run(const List<Nat> &l);
 };
 
-#endif // INCLUDED_HKT_NULLARY_METHOD_TYARG
+#endif // INCLUDED_HKT_INSTANCE_CARRIER_SLOT

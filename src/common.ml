@@ -312,6 +312,22 @@ let rec rename_id id avoid =
   let id = remove_prime_id id in
   if Id.Set.mem id avoid then rename_id (increment_subscript id) avoid else id
 
+(** The C++ identifier a Rocq constructor is emitted under: constructors become
+    PascalCase nested structs, so [Foo] and [foo] compete for the same C++
+    name even though Rocq keeps them apart.  Collision detection between
+    constructor siblings therefore has to be done on this spelling. *)
+let ctor_cpp_id id = Id.of_string (String.capitalize_ascii (ascii_of_id id))
+
+(** Find a fresh name for [id] by incrementing its subscript until [key] maps
+    it outside [avoid].  Unlike {!Namegen.next_ident_away}, the set is consulted
+    through [key], which lets a caller reserve names in a normalized spelling
+    (see {!ctor_cpp_id}) while still handing back the original casing. *)
+let rec next_ident_away_keyed key id avoid =
+  if Id.Set.mem (key id) avoid then
+    next_ident_away_keyed key (increment_subscript id) avoid
+  else
+    id
+
 (** Shared helper for renaming variables with optional extra data. Takes a
     projection to extract the identifier, a constructor to rebuild the element,
     and processes the list in reverse order to maintain the same renaming
@@ -902,27 +918,23 @@ let ref_renaming_fun (k, r) =
          accumulate stale entries. *)
       ( match r with
       | GlobRef.ConstructRef (ind, _) when not is_bound ->
-        let siblings = get_ctor_siblings ind in
-        (* In C++, a nested struct cannot share its name with the enclosing
-           struct. Reserve the parent inductive type's C++ name so that any
-           constructor with the same name is automatically renamed. We reserve
-           both the raw name and the capitalized form, because an eponymous
-           Dnspace merge may capitalize the enclosing struct name (e.g. module
-           Ascii + type ascii -> struct Ascii). *)
+        (* Constructor siblings are reserved under the PascalCase name they are
+           emitted with, so a pair like [Foo]/[foo] is recognized as one C++
+           name. In C++ a nested struct also cannot share its name with the
+           enclosing struct, so the parent inductive's name is reserved too --
+           in the same spelling, since an eponymous Dnspace merge may capitalize
+           the enclosing struct (e.g. module Ascii + type ascii -> struct
+           Ascii). *)
         let parent_idg = safe_basename_of_global (GlobRef.IndRef ind) in
         let parent_s, _ = modular_rename_ex k parent_idg in
-        let siblings = Id.Set.add (Id.of_string parent_s) siblings in
-        let parent_cap = String.capitalize_ascii parent_s in
         let siblings =
-          if parent_cap <> parent_s then
-            Id.Set.add (Id.of_string parent_cap) siblings
-          else
-            siblings
+          Id.Set.add
+            (ctor_cpp_id (Id.of_string parent_s))
+            (get_ctor_siblings ind)
         in
-        let id = next_ident_away (Id.of_string s) siblings in
-        let s = Id.to_string id in
-        add_ctor_sibling ind (Id.of_string s);
-        s
+        let id = next_ident_away_keyed ctor_cpp_id (Id.of_string s) siblings in
+        add_ctor_sibling ind (ctor_cpp_id id);
+        Id.to_string id
       | _ when not is_bound ->
         let siblings = get_mp_siblings mp in
         let id = next_ident_away (Id.of_string s) siblings in

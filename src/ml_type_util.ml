@@ -543,6 +543,16 @@ let rec subst_tvars_type subst = function
   | Miniml.Tglob (r, args, a) ->
     Miniml.Tglob (r, List.map (subst_tvars_type subst) args, a)
   | Miniml.Tmeta {contents = Some t} -> subst_tvars_type subst t
+  | Miniml.Tapp (i, args) ->
+    (* The head of an application is a type variable too, but only another
+       variable can stand in that position, so a mapping to a structured type
+       leaves it alone. *)
+    let i =
+      match List.assoc_opt i subst with
+      | Some (Miniml.Tvar j | Miniml.Tvar' j) -> j
+      | _ -> i
+    in
+    Miniml.Tapp (i, List.map (subst_tvars_type subst) args)
   | t -> t
 
 (** Replace all unnamed Tvars with Tany (for type erasure in indexed

@@ -3,17 +3,12 @@ From Crane.Mapping Require Import Std.
 
 Module SiblingModuleSameInductive.
 
-(** Two sibling submodules each declare an inductive named [t].  The second
-    declaration makes Crane emit a doubly-qualified, empty namespace component
-    for the first:
+(** Two sibling submodules each declare an inductive named [t].  Both are
+    nested structs, so neither shadows a global-scope [t]; the out-of-line
+    definitions must stay plainly qualified:
 
       Nat SiblingModuleSameInductive::A::get(
-          const SiblingModuleSameInductive::A:: ::t &x)
-
-    error: expected unqualified-id
-
-    With only module [A] present the same file extracts correctly, so this is
-    a name-resolution collision between the siblings, not eponymy. *)
+          const SiblingModuleSameInductive::A::t &x) *)
 
 Module A.
   Inductive t := mk : nat -> t.

@@ -89,17 +89,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-(subdir ctor_case_collision
- (rule
-  (targets ctor_case_collision.t.exe)
-  (deps CtorCaseCollision.vo ctor_case_collision.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_case_collision.t.exe ctor_case_collision.cpp ctor_case_collision.t.cpp)))
- (rule
-  (alias runtest)
-  (deps ctor_case_collision.t.exe)
-  (action (run ./ctor_case_collision.t.exe))))
-
 (subdir gadt_eval_branch_type
  (rule
   (targets gadt_eval_branch_type.t.exe)
@@ -122,17 +111,6 @@
   (deps hkt_curried_pure_arity.t.exe)
   (action (run ./hkt_curried_pure_arity.t.exe))))
 
-(subdir hkt_instance_carrier_slot
- (rule
-  (targets hkt_instance_carrier_slot.t.exe)
-  (deps HktInstanceCarrierSlot.vo hkt_instance_carrier_slot.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_instance_carrier_slot.t.exe hkt_instance_carrier_slot.cpp hkt_instance_carrier_slot.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_instance_carrier_slot.t.exe)
-  (action (run ./hkt_instance_carrier_slot.t.exe))))
-
 (subdir hkt_lambda_param_carrier
  (rule
   (targets hkt_lambda_param_carrier.t.exe)
@@ -143,17 +121,6 @@
   (alias runtest)
   (deps hkt_lambda_param_carrier.t.exe)
   (action (run ./hkt_lambda_param_carrier.t.exe))))
-
-(subdir hkt_nullary_method_tyarg
- (rule
-  (targets hkt_nullary_method_tyarg.t.exe)
-  (deps HktNullaryMethodTyarg.vo hkt_nullary_method_tyarg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_nullary_method_tyarg.t.exe hkt_nullary_method_tyarg.cpp hkt_nullary_method_tyarg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_nullary_method_tyarg.t.exe)
-  (action (run ./hkt_nullary_method_tyarg.t.exe))))
 
 (subdir hkt_single_ctor_instance_body
  (rule
@@ -176,17 +143,6 @@
   (alias runtest)
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
-
-(subdir sibling_module_same_inductive
- (rule
-  (targets sibling_module_same_inductive.t.exe)
-  (deps SiblingModuleSameInductive.vo sibling_module_same_inductive.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sibling_module_same_inductive.t.exe sibling_module_same_inductive.cpp sibling_module_same_inductive.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sibling_module_same_inductive.t.exe)
-  (action (run ./sibling_module_same_inductive.t.exe))))
 
 (subdir sigt_erased_structured_binding
  (rule
@@ -220,17 +176,6 @@
   (alias runtest)
   (deps sigt_type_witness_container.t.exe)
   (action (run ./sigt_type_witness_container.t.exe))))
-
-(subdir submodule_named_nat
- (rule
-  (targets submodule_named_nat.t.exe)
-  (deps SubmoduleNamedNat.vo submodule_named_nat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} submodule_named_nat.t.exe submodule_named_nat.cpp submodule_named_nat.t.cpp)))
- (rule
-  (alias runtest)
-  (deps submodule_named_nat.t.exe)
-  (action (run ./submodule_named_nat.t.exe))))
 
 (subdir tmc_nested_ctor_wrap
  (rule

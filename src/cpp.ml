@@ -709,6 +709,13 @@ let rec pp_structure_elem ~is_header f = function
         let escaped = Table.escape_reserved_struct_name s in
         if String.equal s escaped then raw else str escaped
     in
+    (* A submodule becomes a nested struct, which shadows any global-scope type
+       of the same name for unqualified lookups from inside the parent -- a
+       [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
+       would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
+       global one [::Nat]. *)
+    if render_ctx.rc_in_struct then
+      add_nested_struct_name (Pp.string_of_ppcmds name) (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
       | MEfunctor _ ->

@@ -579,15 +579,54 @@ let pending_wrapper_decls : (string, Pp.t) Hashtbl.t = Hashtbl.create 16
     unmerged (List::list<A>) name formats. Not consumed during rendering. *)
 let unmerged_wrappers : (string, unit) Hashtbl.t = Hashtbl.create 16
 
+(** What a nested struct name was emitted for. A Rocq module has no
+    [GlobRef.t], so it is identified by its module path instead -- which also
+    covers the types declared inside it, since an eponymous record merged into
+    the module struct is emitted as that same nested struct. *)
+type nested_struct_owner = NSref of GlobRef.t | NSmodule of ModPath.t
+
 (** C++ names of the structs emitted as members of an enclosing struct, mapped
-    to the reference they stand for. Recorded by the struct printer, which is
+    to every owner they stand for. Recorded by the struct printer, which is
     where the name is actually rendered, so the two cannot drift.
 
     A nested struct shadows any global-scope type of the same name for every
     unqualified lookup from inside its enclosing struct;
-    {!Cpp_names.global_scope_qualifier_for} consults this to decide when the
-    global one must be spelled [::Name]. *)
-let nested_struct_names : (string, GlobRef.t) Hashtbl.t = Hashtbl.create 16
+    {!Cpp_names.global_scope_qualifier_for} consults this through
+    {!is_shadowed_global_name} to decide when the global one must be spelled
+    [::Name]. One name can map to several references -- sibling modules may
+    each declare a type [t] -- which is why the shadowed reference has to be
+    identified rather than assumed. *)
+let nested_struct_names : (string, nested_struct_owner list) Hashtbl.t =
+  Hashtbl.create 16
+
+let nested_struct_owner_equal a b =
+  match (a, b) with
+  | NSref x, NSref y -> Common.globref_equal x y
+  | NSmodule x, NSmodule y -> ModPath.equal x y
+  | _ -> false
+
+(** Whether [owner] is the nested struct that [r] is itself emitted as, either
+    because [r] is that struct or because [r] is a member of the module that
+    is. *)
+let nested_struct_owner_covers r = function
+  | NSref r' -> Common.globref_equal r r'
+  | NSmodule mp -> ModPath.equal mp (modpath_of_r r)
+
+(** Record that [owner] was emitted as a nested struct named [name]. *)
+let add_nested_struct_name name owner =
+  let prev = Option.default [] (Hashtbl.find_opt nested_struct_names name) in
+  if not (List.exists (nested_struct_owner_equal owner) prev) then
+    Hashtbl.replace nested_struct_names name (owner :: prev)
+
+(** Whether [r], rendered unqualified as [name], is shadowed by some nested
+    struct of the same name. A reference that is itself emitted as a nested
+    struct is not shadowed: it is the shadower, and naming it [::name] would
+    point at global scope, where it does not live. *)
+let is_shadowed_global_name name r =
+  match Hashtbl.find_opt nested_struct_names name with
+  | Some owners ->
+    not (List.exists (nested_struct_owner_covers r) owners)
+  | None -> false
 
 (** Maps capitalized inductive names to their ModPaths across all modules.
     Pre-populated in do_struct_with_decl_tracking before code generation. Used

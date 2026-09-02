@@ -1,16 +1,11 @@
 #include "sibling_module_same_inductive.h"
 
-/// Two sibling submodules each declare an inductive named t.  The second
-/// declaration makes Crane emit a doubly-qualified, empty namespace component
-/// for the first:
+/// Two sibling submodules each declare an inductive named t.  Both are
+/// nested structs, so neither shadows a global-scope t; the out-of-line
+/// definitions must stay plainly qualified:
 ///
 /// Nat SiblingModuleSameInductive::A::get(
-/// const SiblingModuleSameInductive::A:: ::t &x)
-///
-/// error: expected unqualified-id
-///
-/// With only module A present the same file extracts correctly, so this is
-/// a name-resolution collision between the siblings, not eponymy.
+/// const SiblingModuleSameInductive::A::t &x)
 Nat SiblingModuleSameInductive::A::get(
     const SiblingModuleSameInductive::A:: ::t &x) {
   const auto &[a0] = x;
@@ -18,7 +13,7 @@ Nat SiblingModuleSameInductive::A::get(
 }
 
 bool SiblingModuleSameInductive::B::get(
-    const SiblingModuleSameInductive::B::t &x) {
+    const SiblingModuleSameInductive::B:: ::t &x) {
   const auto &[a0] = x;
   return a0;
 }

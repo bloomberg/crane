@@ -301,10 +301,24 @@ val pending_wrapper_decls : (string, Pp.t) Hashtbl.t
     ([List::list<A>]) name forms. Cleared by [reset_cpp_state]. *)
 val unmerged_wrappers : (string, unit) Hashtbl.t
 
+(** What a nested struct name was emitted for: a Rocq reference, or a module
+    (which has no [GlobRef.t]). *)
+type nested_struct_owner =
+  | NSref of Names.GlobRef.t
+  | NSmodule of Names.ModPath.t
+
 (** C++ names of structs emitted as members of an enclosing struct, mapped to
-    the reference they stand for. A nested struct shadows any global-scope type
+    every owner they stand for. A nested struct shadows any global-scope type
     of the same name. Cleared by [reset_cpp_state]. *)
-val nested_struct_names : (string, Names.GlobRef.t) Hashtbl.t
+val nested_struct_names : (string, nested_struct_owner list) Hashtbl.t
+
+(** Record that an owner was emitted as a nested struct under the given C++
+    name. *)
+val add_nested_struct_name : string -> nested_struct_owner -> unit
+
+(** Whether a reference rendered unqualified under the given name is shadowed
+    by a nested struct of that name. False for the shadower itself. *)
+val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
 
 (** Capitalized inductive names mapped to their module paths across all modules,
     used to detect module/inductive name collisions. Cleared by

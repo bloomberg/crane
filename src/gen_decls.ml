@@ -829,8 +829,9 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
              the class's, which [type_subst_list] has just replaced. *)
+          let n_method_tvars = method_tvar_count class_ref subst_ty in
           let method_tvars, type_var_names =
-            match method_tvar_count class_ref subst_ty with
+            match n_method_tvars with
             | 0 -> ([], type_var_names)
             | n ->
               let ipv = List.length (Table.get_ind_ip_vars class_ref) in
@@ -843,6 +844,26 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               (names, type_var_names @ pad @ names)
           in
           set_current_type_vars type_var_names;
+          (* The declared signature numbers the method's own type variables
+             after every parameter of the class, while the body -- extracted
+             on its own -- numbers them after the instance's parameters only.
+             A higher-kinded class parameter is not an instance parameter, so
+             the two disagree by exactly that many slots and the body would
+             name [A] where the class carrier sits.  Shift the body onto the
+             signature's numbering, which is the one [type_var_names] and the
+             substitutions below are built for. *)
+          let field_body =
+            let ipv = List.length (Table.get_ind_ip_vars class_ref) in
+            let shift = ipv - List.length tv_temps in
+            if n_method_tvars = 0 || shift <= 0 then field_body
+            else
+              let base = List.length tv_temps in
+              let subst =
+                List.init n_method_tvars (fun k ->
+                    (base + k + 1, Miniml.Tvar (base + k + 1 + shift)))
+              in
+              Mlutil.ast_map_types (subst_tvars_type subst) field_body
+          in
           (* An instance method may have been eta-reduced below the arity its
              class field declares ([cmap A B f x := f x] extracts to
              [fun A B f => f]).  The concept requires the declared arity, so
@@ -2043,6 +2064,53 @@ let gen_dfun n b cty ty temps =
       let apply_subst ty = subst_tvars_type subst ty in
       ( List.map (fun (id, ty) -> (id, apply_subst ty)) ids,
         map_types_in_ast apply_subst b )
+  in
+  (* Extraction numbers a type variable inside a body by the position of its
+     binder among *all* the leading binders, while the recorded type numbers it
+     among the type binders only.  A value binder that comes before a type
+     binder -- a type-class instance, or [hk_map]'s [map_f] -- therefore shifts
+     everything after it, and the body would name a template parameter that
+     stands for something else.  Rebuild the correspondence from the binder
+     kinds and put the body on the signature's numbering, which is the one the
+     template parameters are named for.  The parameter types in [ids] have
+     already been reconciled with the signature above, so only the body needs
+     it.  The map is the identity whenever no value binder comes first, which
+     is the common case. *)
+  let b =
+    let _, n_type_binders, renumbering =
+      List.fold_left
+        (fun (pos, rank, acc) dom ->
+          match dom with
+          | Miniml.Tdummy Miniml.Ktype ->
+            let acc =
+              if pos = rank then acc else (pos, Miniml.Tvar rank) :: acc
+            in
+            (pos + 1, rank + 1, acc)
+          | _ -> (pos + 1, rank, acc) )
+        (1, 1, [])
+        (List.rev (get_dom [] (try Table.find_type n with Not_found -> ty)))
+    in
+    let n_type_binders = n_type_binders - 1 in
+    (* Extraction does not always fall out of step: when the body happens to
+       have been numbered against the type binders alone it is already right,
+       and renumbering it again would move a variable off its own template
+       parameter.  The one observable symptom of the mismatch is the body
+       naming an index past the last type binder, which the signature
+       numbering cannot produce, so take that as the trigger. *)
+    let body_max =
+      let m = ref 0 in
+      ignore
+        (map_types_in_ast
+           (fun ty ->
+             m := max !m (Mlutil.type_maxvar ty);
+             ty )
+           b);
+      !m
+    in
+    let renumbering = if body_max > n_type_binders then renumbering else [] in
+    match renumbering with
+    | [] -> b
+    | subst -> map_types_in_ast (subst_tvars_type subst) b
   in
   (* Detect which function-typed parameters are NOT simply forwarded at
      self-recursive call sites.  These are excluded from template-parameter

@@ -133,8 +133,8 @@ struct HktLambdaParamCarrier {
     requires std::is_invocable_r_v<typename _tcI0::template M<T2>, F1 &, T2 &>
   static typename _tcI0::template M<T2> twice(typename _tcI0::template M<T2> m,
                                               F1 &&f) {
-    return bind<_tcI0>(m, [=](const T2 &x) mutable {
-      return bind<_tcI0>(f(x), [](M y) { return ret<_tcI0>(y); });
+    return bind<_tcI0, T2, T2>(m, [=](const T2 &x) mutable {
+      return bind<_tcI0, T2, T2>(f(x), [](M y) { return ret<_tcI0, T2>(y); });
     });
   }
 

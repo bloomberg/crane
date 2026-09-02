@@ -593,7 +593,7 @@ struct RocqBug14174 {
 
     template <typename T1, typename T2, typename T3>
     static T3 eq_sigT_rect_existT(T1 u1, T2 u2, T1 v1, T2 v2, const T3 &f) {
-      return sigT<T1, T2>::existt(u1, u2).eq_sigT_rect(
+      return sigT<T1, T2>::existt(u1, u2).template eq_sigT_rect<T3>(
           sigT<T1, T2>::existt(v1, v2), f);
     }
 
@@ -606,7 +606,8 @@ struct RocqBug14174 {
     static T4 eq_sigT2_rect_existT2(T1 u1, T2 u2, T3 u3, T1 v1, T2 v2, T3 v3,
                                     const T4 &f) {
       return sigT2<T1, T2, T3>::existt2(u1, u2, u3)
-          .eq_sigT2_rect(sigT2<T1, T2, T3>::existt2(v1, v2, v3), f);
+          .template eq_sigT2_rect<T4>(sigT2<T1, T2, T3>::existt2(v1, v2, v3),
+                                      f);
     }
 
     template <typename T1, typename T2>

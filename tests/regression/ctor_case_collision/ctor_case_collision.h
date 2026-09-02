@@ -1,5 +1,5 @@
-#ifndef INCLUDED_SUBMODULE_NAMED_NAT
-#define INCLUDED_SUBMODULE_NAMED_NAT
+#ifndef INCLUDED_CTOR_CASE_COLLISION
+#define INCLUDED_CTOR_CASE_COLLISION
 
 #include "small_vector.h"
 #include <atomic>
@@ -67,22 +67,49 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct SubmoduleNamedNat {
-  /// A submodule named Nat collides with the runtime Nat struct.  Inside the
-  /// generated struct Nat, the unqualified return type Nat resolves to the
-  /// submodule rather than to the global inductive:
+struct CtorCaseCollision {
+  /// Constructors are emitted as PascalCase nested structs, so two constructors
+  /// of the same inductive that differ only in the case of their first letter
+  /// compete for one C++ name.  Sibling reservation is done on that spelling,
+  /// so the second one is renamed:
   ///
-  /// error: return type of out-of-line definition of
-  /// 'SubmoduleNamedNat::Nat::succ' differs from that in the declaration
-  /// error: no member named 's' in 'SubmoduleNamedNat::Nat'
-  ///
-  /// Unlike shadow_runtime_nat, the shadowing name here is a *module*, so the
-  /// fix has to qualify references from inside module scopes too.
-  struct Nat {
-    static Nat succ(Nat n);
+  /// using variant_t = std::variant<Foo, Foo0>;
+  struct c {
+    // TYPES
+    struct Foo {
+      Nat a0;
+    };
+
+    struct Foo0 {
+      bool a0;
+    };
+
+    using variant_t = std::variant<Foo, Foo0>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    c() {}
+
+    explicit c(Foo _v) : v_(std::move(_v)) {}
+
+    explicit c(Foo0 _v) : v_(std::move(_v)) {}
+
+    static c foo(Nat a0) { return c(Foo{std::move(a0)}); }
+
+    static c foo0(bool a0) { return c(Foo0{a0}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
   };
 
-  static Nat run(const Nat &_x0);
+  static Nat get(const c &x);
 };
 
-#endif // INCLUDED_SUBMODULE_NAMED_NAT
+#endif // INCLUDED_CTOR_CASE_COLLISION
