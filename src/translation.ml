@@ -2729,6 +2729,19 @@ and resolves_to_any_type = function
   | t when is_erased_type t -> true
   | _ -> false
 
+(** [cpp_of_ml env t] converts an ML type in the type-variable scope that is
+    currently in effect.  Nearly every conversion inside expression generation
+    wants this, and spelling out {!get_current_type_vars} at each one invites
+    passing the wrong scope. *)
+and cpp_of_ml env t = convert_ml_type_to_cpp_type env (get_current_type_vars ()) t
+
+(** [ml_erases_to_box env t] -- whether [t] is represented as a [std::any]
+    here.  Conversion is what answers this: a value-dependent type such as
+    [syms_semty xs], or a type variable this scope leaves unresolved, is only
+    revealed as a box once converted, and a [Type]-valued definition hides one
+    behind a [using] alias that {!resolves_to_any_type} follows. *)
+and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
+
 (** [populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
     ~non_erased_def_site_field_tys] populates {!cpp_erased_env} and
     {!cpp_erased_type_env} for a pattern-match branch.  For each
@@ -2804,7 +2817,7 @@ and unfold_cpp_typedef env cpp_ty =
   | Tglob (GlobRef.ConstRef kn, [], _) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some ml_ty ->
-      convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty
+      cpp_of_ml env ml_ty
     | None -> cpp_ty )
   | _ -> cpp_ty
 
@@ -2832,7 +2845,7 @@ and expected_type_args_from_return env ?slot ind ~arity =
     | Tglob (GlobRef.ConstRef kn, _, _) -> (
       match Table.lookup_typedef_unchecked kn with
       | Some ml_ty ->
-        go (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty)
+        go (cpp_of_ml env ml_ty)
       | None -> None )
     | _ -> None
   in
@@ -3757,7 +3770,7 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
          in it has been spelled [std::any] in the header and the slot really
          is boxed. *)
       materialise_opaque
-        (convert_ml_type_to_cpp_type env (get_current_type_vars ()) param_ml_ty)
+        (cpp_of_ml env param_ml_ty)
     with
     (* A parameter that erases only its ARGUMENTS (its result stays concrete,
        e.g. [std::function<typename I::M(std::any)>] for a higher-kinded class
@@ -5820,7 +5833,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         let instantiated_field_cpp_ty ft =
           subst_cpp_tvars
             (fun i -> List.nth_opt ctor_temps (i - 1))
-            (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ft)
+            (cpp_of_ml env ft)
         in
         let expected_for_arg =
           match ft_opt with
@@ -6355,7 +6368,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     let recorded_from =
       match m with
       | Mcoerce (from, _) ->
-        Some (convert_ml_type_to_cpp_type env (get_current_type_vars ()) from)
+        Some (cpp_of_ml env from)
       | Mboxed -> Some Tany
       | Mbarrier -> None
     in
@@ -6440,7 +6453,7 @@ and curry_to_expected env ?expected_ty x cglob =
     match find_type_opt x with
     | Some ml_ty -> (
       match
-        convert_ml_type_to_cpp_type env (get_current_type_vars ()) ml_ty
+        cpp_of_ml env ml_ty
       with
       | Tfun (dom, _) -> dom
       | _ -> [] )
@@ -6909,9 +6922,7 @@ and eta_fun env f args =
          for the duration of its generation. *)
       let param_resolves_to_any =
         match List.nth_opt fn_param_ml_tys i with
-        | Some ml_ty ->
-          let tvars = get_current_type_vars () in
-          resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ml_ty)
+        | Some ml_ty -> ml_erases_to_box env ml_ty
         | None -> false
       in
       let saved_ret_for_arg = tctx.current_cpp_return_type in
@@ -7440,10 +7451,7 @@ and eta_fun env f args =
         in
         let cod_is_erased =
           match find_type_opt id with
-          | Some ml_ty ->
-            let tvars = get_current_type_vars () in
-            resolves_to_any_type
-              (convert_ml_type_to_cpp_type env tvars (ml_codomain ml_ty))
+          | Some ml_ty -> ml_erases_to_box env (ml_codomain ml_ty)
           | None -> false
         in
         if ret_is_chainable then
@@ -7642,8 +7650,7 @@ and eta_fun env f args =
           let rel_is_erased ty =
             let ty = resolve_tmeta ty in
             is_erased_ml_type ty
-            || resolves_to_any_type
-                 (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ty)
+            || ml_erases_to_box env ty
           in
           let rec has_magic = function
             (* A coercion around a local variable says nothing on its own: in
@@ -7797,8 +7804,7 @@ and eta_fun env f args =
        MiniML and still lands on a [using sem = std::any] alias in C++. *)
     let erases_to_any ty =
       is_ml_erased_ty ty
-      || resolves_to_any_type
-           (convert_ml_type_to_cpp_type env (get_current_type_vars ()) ty)
+      || ml_erases_to_box env ty
     in
     let callee_is_bare_any =
       callee_cpp_erased
@@ -8602,8 +8608,7 @@ and magic_is_boxed env = function
   | Mboxed -> true
   | Mbarrier -> false
   | Mcoerce (from, into) ->
-    let tvars = get_current_type_vars () in
-    let erases ty = resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ty) in
+    let erases ty = ml_erases_to_box env ty in
     erases from || erases into
 
 (** [recover_erased_scrutinee env ~is_magic typ expr] casts a scrutinee that is
@@ -8616,7 +8621,7 @@ and recover_erased_scrutinee env ~is_magic typ expr =
   if not is_magic then expr
   else
     let cpp_ty =
-      convert_ml_type_to_cpp_type env (get_current_type_vars ()) typ
+      cpp_of_ml env typ
     in
     if is_erased_type cpp_ty then expr else CPPany_cast (cpp_ty, expr)
 
@@ -9213,7 +9218,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              the value itself and there is no box to open. *)
           | Some ty ->
             is_erased_ml_type ty
-            && resolves_to_any_type (convert_ml_type_to_cpp_type env tvars ty)
+            && ml_erases_to_box env ty
           | None -> false)
     | _ -> false
   in
