@@ -139,6 +139,16 @@
   (deps record_function_field_stdlib_probe.t.exe)
   (action (run ./record_function_field_stdlib_probe.t.exe))))
 
+(subdir type_level_tuple_fixpoint
+ (rule
+  (targets type_level_tuple_fixpoint.t.exe)
+  (deps TypeLevelTupleFixpoint.vo type_level_tuple_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_tuple_fixpoint.t.exe type_level_tuple_fixpoint.cpp type_level_tuple_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_tuple_fixpoint.t.exe)
+  (action (run ./type_level_tuple_fixpoint.t.exe))))
 (subdir typeclass_function_field_probe
  (rule
   (targets typeclass_function_field_probe.t.exe)

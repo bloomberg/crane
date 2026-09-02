@@ -11675,7 +11675,20 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           [Sexpr e] @ inline_iife k (mk_tt_expr ())
     end
     else begin
+      let saved_pair_any = tctx.last_pair_accessor_any_cast in
+      tctx.last_pair_accessor_any_cast <- false;
       let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
+      (* A pair accessor applied to an erased pair yields a [std::any] at run
+         time even though its ML type is concrete.  In tail position that value
+         is the result, so cast it back to the declared return type -- the same
+         recovery the let-binding path performs by marking the bound variable
+         erased. *)
+      let e =
+        match (tctx.last_pair_accessor_any_cast, tctx.current_cpp_return_type) with
+        | true, Some rt when not (is_erased_type rt) -> CPPany_cast (rt, e)
+        | _ -> e
+      in
+      tctx.last_pair_accessor_any_cast <- saved_pair_any;
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result
