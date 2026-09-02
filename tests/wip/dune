@@ -180,13 +180,3 @@
   (action (run ./type_alias_applied_ctor_param.t.exe))))
 
 
-(subdir type_valued_if_eliminator
- (rule
-  (targets type_valued_if_eliminator.t.exe)
-  (deps TypeValuedIfEliminator.vo type_valued_if_eliminator.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_valued_if_eliminator.t.exe type_valued_if_eliminator.cpp type_valued_if_eliminator.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_valued_if_eliminator.t.exe)
-  (action (run ./type_valued_if_eliminator.t.exe))))

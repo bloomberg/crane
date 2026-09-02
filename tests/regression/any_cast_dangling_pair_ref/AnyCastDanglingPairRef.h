@@ -31,10 +31,10 @@ template <SymTypes Ty> struct Destruct {
   use_both(typename Ty::sym, typename Ty::sym,
            const typename Datatypes::template List<typename Ty::sym> &,
            symbols_semty vs) {
-    auto a = std::any_cast<std::pair<std::any, std::any>>(
-        std::any_cast<std::pair<std::any, std::any>>(vs).first);
-    auto tail = std::any_cast<std::pair<std::any, std::any>>(
-        std::any_cast<std::pair<std::any, std::any>>(vs).second);
+    auto a = std::any_cast<std::pair<std::any, std::any>>(vs).first;
+    auto tail =
+        std::any_cast<std::pair<std::any, std::pair<std::any, std::any>>>(vs)
+            .second;
     auto b = std::move(tail).first;
     return std::make_pair(std::any(a), std::any(b));
   }

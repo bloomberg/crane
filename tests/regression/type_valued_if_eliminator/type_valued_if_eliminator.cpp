@@ -10,8 +10,8 @@ TypeValuedIfEliminator::sel TypeValuedIfEliminator::zero(bool b) {
 
 Nat TypeValuedIfEliminator::size(bool b, TypeValuedIfEliminator::sel x) {
   if (b) {
-    return x;
+    return std::any_cast<Nat>(x);
   } else {
-    return x.length();
+    return std::any_cast<List<std::any>>(x).length();
   }
 }

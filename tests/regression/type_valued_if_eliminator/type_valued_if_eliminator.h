@@ -202,7 +202,7 @@ struct TypeValuedIfEliminator {
   using sel = std::any;
   static sel zero(bool b);
   static Nat size(bool b, sel x);
-  static inline const Nat run = size(true, std::any_cast<sel>(zero(true)));
+  static inline const Nat run = size(true, zero(true));
 };
 
 #endif // INCLUDED_TYPE_VALUED_IF_ELIMINATOR

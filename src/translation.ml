@@ -3534,6 +3534,23 @@ and ml_expr_is_function_value e =
        fall back on the shape rather than on the failed inference. *)
     | None -> ( match other with MLlam _ -> true | _ -> false ) )
 
+(** [is_boxed_source t] -- whether a value whose C++ type is [t] is
+    physically inside a [std::any], and so may be read back out with an
+    [any_cast].
+
+    {!Ml_type_util.is_boxed_type} answers this structurally, which misses a
+    named alias for the box: a [Type]-valued definition is emitted as
+    [using sel = std::any], and only following the alias chain reveals that a
+    parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
+    excluded -- it prints as [std::any] without promising one, so nothing may
+    be cast out of it. *)
+and is_boxed_source t =
+  is_boxed_type t
+  || (match t with
+      | Topaque -> false
+      | Tglob _ -> resolves_to_any_type t
+      | _ -> false)
+
 (** [coerce ?term ?from ~into expr] adapts [expr] across a representation
     boundary: it is the single place that decides between boxing, [any_cast],
     [crane_erase_fn] and doing nothing.
@@ -3559,11 +3576,23 @@ and ml_expr_is_function_value e =
     is a function, and so has to be adapted by [crane_erase_fn] before it is
     boxed. *)
 and coerce ?term ?from ~into expr =
-  let boxed_source = match from with Some f -> is_boxed_type f | None -> false in
+  let boxed_source = match from with Some f -> is_boxed_source f | None -> false in
   (* An unknown source is not an opaque one: [None] says we did not track the
      type, [Topaque] says the type itself is unknowable here. *)
   let opaque_source =
-    match from with Some f -> prints_as_any f && not (is_boxed_type f) | None -> false
+    match from with Some f -> prints_as_any f && not (is_boxed_source f) | None -> false
+  in
+  (* Unboxing is the one direction in which [Topaque] must act.  The value
+     reached this boundary out of a declared slot, and materialising the
+     declaration gave that slot [std::any], so the box is real even though the
+     inferred type stops short of saying so.  A function target is still left
+     alone: there the representation-tolerant helpers in [crane_fn.h] decide at
+     instantiation time, which is the whole reason [Topaque] exists. *)
+  let boxed_source =
+    boxed_source
+    || opaque_source
+       && (not (prints_as_any into))
+       && (match into with Tfun _ -> false | _ -> true)
   in
   let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
   (* Boxing is not idempotent: [std::any] holding a [std::any] is a box no
@@ -6227,6 +6256,17 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | Mboxed -> Some Tany
       | Mbarrier -> None
     in
+    (* The other side of the same boundary.  Recovering against it rather than
+       against the context's expectation matters when the two disagree in
+       their type arguments: a value boxed at a slot whose arguments erased is
+       physically a [List<std::any>], so casting it to the [List<Nat>] the
+       context has in mind would throw. *)
+    let recorded_into =
+      match m with
+      | Mcoerce (_, into) ->
+        Some (convert_ml_type_to_cpp_type env (get_current_type_vars ()) into)
+      | Mboxed | Mbarrier -> None
+    in
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
@@ -6267,7 +6307,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                Coq-level type, and the pointer- and converting-constructor
                dimensions at this boundary have already been settled by the
                sub-expression that produced [inner]. *)
-            | Some from when is_boxed_type from -> coerce ~from ~into:ty inner
+            | Some from when prints_as_any from ->
+              let into =
+                match recorded_into with
+                | Some i when not (prints_as_any i) -> i
+                | _ -> ty
+              in
+              coerce ~from ~into inner
             | _ -> inner )
       | _ -> inner )
   | MLdummy _ ->
@@ -6955,7 +7001,12 @@ and eta_fun env f args =
             CPPcontainer_cast (clean_cpp_ty, inner, callee_generic_here)
           end
           else inner
-        | _ -> CPPany_cast (cpp_ty, as_value ()) )
+        (* The value is boxed; recover it at the parameter's type.  Going
+           through {!coerce} rather than casting outright keeps the one rule
+           that a destination which is itself a name for the box -- [using sel
+           = std::any] -- is not a recovery target: [any_cast<sel>] reads a box
+           that was never doubly wrapped and throws. *)
+        | _ -> coerce ~from:Tany ~into:cpp_ty (as_value ()) )
       (* Monadic parameter (reified mode only): the callee expects
          [shared_ptr<ITree<R>>].  If the argument already produces a reified
          tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
