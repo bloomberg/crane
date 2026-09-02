@@ -97,6 +97,16 @@
   (deps hkt_instance_carrier_slot.t.exe)
   (action (run ./hkt_instance_carrier_slot.t.exe))))
 
+(subdir hkt_lambda_param_carrier
+ (rule
+  (targets hkt_lambda_param_carrier.t.exe)
+  (deps HktLambdaParamCarrier.vo hkt_lambda_param_carrier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_lambda_param_carrier.t.exe hkt_lambda_param_carrier.cpp hkt_lambda_param_carrier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_lambda_param_carrier.t.exe)
+  (action (run ./hkt_lambda_param_carrier.t.exe))))
 (subdir hkt_nullary_method_tyarg
  (rule
   (targets hkt_nullary_method_tyarg.t.exe)

@@ -111,16 +111,6 @@
   (deps hkt_curried_pure_arity.t.exe)
   (action (run ./hkt_curried_pure_arity.t.exe))))
 
-(subdir hkt_lambda_param_carrier
- (rule
-  (targets hkt_lambda_param_carrier.t.exe)
-  (deps HktLambdaParamCarrier.vo hkt_lambda_param_carrier.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_lambda_param_carrier.t.exe hkt_lambda_param_carrier.cpp hkt_lambda_param_carrier.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_lambda_param_carrier.t.exe)
-  (action (run ./hkt_lambda_param_carrier.t.exe))))
 
 (subdir hkt_single_ctor_instance_body
  (rule

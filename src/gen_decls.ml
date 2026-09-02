@@ -3038,11 +3038,18 @@ let rewrite_typeclass_projection_type (n : GlobRef.t) (ty : ml_type) : ml_type =
   | _ -> ty
 
 (** Get the erased projection map for a function's type, if it takes a promoted
-    typeclass as first argument. *)
+    typeclass as first argument.
+
+    A higher-kinded carrier is left out: it stands for a type constructor, so it
+    can never be the type of a value, and {!rewrite_ml_ast_types} would spell
+    its name -- a bare [M] -- wherever a body has an unknown annotation that
+    really wants the element type. *)
 let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
   match ty with
   | Tarr (Tglob (class_ref, _, _), _) when Table.is_typeclass class_ref ->
-    erased_proj_tvar_map class_ref
+    List.filteri
+      (fun i _ -> not (Table.is_hkt_param class_ref i))
+      (erased_proj_tvar_map class_ref)
   | _ -> []
 
 (** Generate C++ declaration from ML definition (main entry point) *)

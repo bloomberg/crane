@@ -134,7 +134,8 @@ struct HktLambdaParamCarrier {
   static typename _tcI0::template M<T2> twice(typename _tcI0::template M<T2> m,
                                               F1 &&f) {
     return bind<_tcI0, T2, T2>(m, [=](const T2 &x) mutable {
-      return bind<_tcI0, T2, T2>(f(x), [](M y) { return ret<_tcI0, T2>(y); });
+      return bind<_tcI0, T2, T2>(
+          f(x), [](const auto &y) { return ret<_tcI0, T2>(y); });
     });
   }
 
