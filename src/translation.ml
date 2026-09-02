@@ -3601,6 +3601,32 @@ and is_boxed_source t =
       | Tglob _ -> resolves_to_any_type t
       | _ -> false)
 
+(** [yields_boxed_component expr] -- whether [expr] reads a component out of a
+    pair that was itself recovered from a box, and so hands back a
+    [std::any] however concrete its ML type looks.
+
+    A boxed pair stores each component separately boxed, so recovering it
+    lands on [pair<any, any>] and [.first] on that is still a box.  The
+    accessor path in {!gen_expr_custom} builds exactly this shape, and the
+    let-binding and tail-position paths ask here rather than being told out of
+    band: the emitted expression is the evidence, so no flag has to be
+    threaded from producer to consumer. *)
+and yields_boxed_component = function
+  | CPPfun_call (CPPglob (_, _, Some ci), [CPPany_cast (Tglob (g, args, _), _)])
+    when is_prod_global g && args <> [] && List.for_all is_erased_type args ->
+    ( match ci.ci_inline with
+    | Some s ->
+      Common.contains_substring s ".first" || Common.contains_substring s ".second"
+    | None -> false )
+  | _ -> false
+
+(** Whether the statements a let-binding's right-hand side generated assign a
+    value that is really a box.  The right-hand side is generated as an
+    assignment, so the bound value is the one expression in it. *)
+and stmts_yield_boxed = function
+  | [Sasgn (_, _, v)] -> yields_boxed_component v
+  | _ -> false
+
 (** [coerce ?term ?from ~into expr] adapts [expr] across a representation
     boundary: it is the single place that decides between boxing, [any_cast],
     [crane_erase_fn] and doing nothing.
@@ -7678,12 +7704,11 @@ and eta_fun env f args =
             (* The argument arrived already recovered from its box, and at the
                erased shape [pair<any, any>].  Its components are boxes too, so
                the accessor's result needs the same recovery at the use site as
-               when this branch inserts the cast itself. *)
-            tctx.last_pair_accessor_any_cast <- true;
+               when this branch inserts the cast itself --
+               {!yields_boxed_component} recognises both shapes. *)
             primary_result
           | _, CPPany_cast _ -> primary_result
           | Some g, _ ->
-            tctx.last_pair_accessor_any_cast <- true;
             CPPfun_call (cglob',
               [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)])
           | None, _ -> primary_result )
@@ -10571,16 +10596,12 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
       end else
         let afun v = Sasgn (x_renamed, None, v) in
-        tctx.last_pair_accessor_any_cast <- false;
         let asgn = gen_stmts env afun a in
         (* When the RHS was a pair accessor on an erased argument (e.g.
            snd vs where vs : std::any), the result is std::any at runtime
            even though the ML type says prod(...).  Override to Tdummy so
            downstream pair accessor calls (fst tail) detect erasure. *)
-        let t_for_env =
-          if tctx.last_pair_accessor_any_cast then Miniml.Tdummy Ktype else t
-        in
-        tctx.last_pair_accessor_any_cast <- false;
+        let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
         (* Push env_types AFTER generating the value expression [a]. *)
         push_env_types [(x_renamed, t_for_env)];
         let tvars = get_current_type_vars () in
@@ -11121,17 +11142,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         end
       in
       tctx.expected_ml_type_for_arg <- Some t_effective;
-      tctx.last_pair_accessor_any_cast <- false;
       let asgn = gen_stmts env afun a in
       tctx.expected_ml_type_for_arg <- saved_expected_letin;
       tctx.eta_keep_moves <- saved_eta_keep;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
-      let t_for_env =
-        if tctx.last_pair_accessor_any_cast then Miniml.Tdummy Ktype else t
-      in
-      tctx.last_pair_accessor_any_cast <- false;
+      let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
       push_env_types [(x_renamed, t_for_env)];
       tctx.move_suppress_tail <- saved_suppress;
       (* Shift saved_dead +1 for the body [b]: the new let binding adds one
@@ -11821,8 +11838,6 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       (* Whether this continuation is the function's result rather than a
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
-      let saved_pair_any = tctx.last_pair_accessor_any_cast in
-      tctx.last_pair_accessor_any_cast <- false;
       let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its ML type is concrete.  In tail position that value
@@ -11830,15 +11845,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match (tctx.last_pair_accessor_any_cast, tctx.current_cpp_return_type) with
-        | true, Some rt when k_returns && not (is_erased_type rt) ->
-          CPPany_cast (rt, e)
+        match tctx.current_cpp_return_type with
+        | Some rt when k_returns && yields_boxed_component e -> coerce ~from:Tany ~into:rt e
         | _ -> e
       in
-      (* A binding continuation has its own use for the flag: the let path
-         reads it to record that the bound variable holds a box.  Only a
-         return consumes it here, so only a return may restore it. *)
-      if k_returns then tctx.last_pair_accessor_any_cast <- saved_pair_any;
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result

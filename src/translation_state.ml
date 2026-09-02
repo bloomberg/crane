@@ -134,7 +134,6 @@ type translation_ctx = {
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
      Reset per-file via clear_seen_lifted_refs. *)
   mutable seen_lifted_refs : GlobRef.t list;
-  mutable last_pair_accessor_any_cast : bool;
   (** When true, constructor expressions wrap each non-recursive field in
       [std::any] and force template args to [Tany].  Active while generating
       arguments for a call whose parameter type is erased to [std::any],
@@ -189,7 +188,6 @@ let tctx =
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
-    last_pair_accessor_any_cast = false;
     wrap_for_any_param = false;
     cpp_erased_env = Escape.IntSet.empty;
     cpp_erased_type_env = IntMap.empty;
