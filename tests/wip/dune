@@ -124,16 +124,6 @@
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
 
-(subdir sigt_erased_structured_binding
- (rule
-  (targets sigt_erased_structured_binding.t.exe)
-  (deps SigtErasedStructuredBinding.vo sigt_erased_structured_binding.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_erased_structured_binding.t.exe sigt_erased_structured_binding.cpp sigt_erased_structured_binding.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_erased_structured_binding.t.exe)
-  (action (run ./sigt_erased_structured_binding.t.exe))))
 
 (subdir sigt_list_heterogeneous_box
  (rule

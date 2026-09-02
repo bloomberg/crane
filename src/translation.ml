@@ -9144,7 +9144,13 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         ( match strip_tarr_n (count_real_ml_args args) fty with
         | Some rty ->
           let tvars' = get_current_type_vars () in
-          resolves_to_any_type (convert_ml_type_to_cpp_type env tvars' rty)
+          (* Both spellings of "is a [std::any] at run time" are needed here:
+             [resolves_to_any_type] follows a named alias for the box, and
+             [prints_as_any] catches the codomain a callee left as an erased
+             type argument, which converts to a dummy glob rather than to
+             [Tany]. *)
+          let rty_cpp = convert_ml_type_to_cpp_type env tvars' rty in
+          resolves_to_any_type rty_cpp || prints_as_any rty_cpp
         | None -> false )
       | None -> false )
     | _ -> false
