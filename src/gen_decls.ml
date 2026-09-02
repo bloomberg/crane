@@ -1519,46 +1519,6 @@ let is_typeclass_instance (_body : ml_ast) (ty : ml_type) : bool =
   | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
   | _ -> false
 
-(** Collect tvar indices that appear in type INDEX positions of inductives
-    in the ML type.  Type indices are stripped from the C++ type by
-    {!convert_ml_type_to_cpp_type} but may be needed in function bodies
-    for [any_cast] when matching on type-indexed inductives with
-    wholesale-erased fields.
-
-    Only collects tvars from inductives where [get_ind_num_param_vars_opt]
-    succeeds and the number of type args exceeds the parameter count
-    (indicating genuine indices, not parameters). *)
-let collect_ml_type_index_tvars ml_ty =
-  let result = ref IntSet.empty in
-  let rec collect_tvars = function
-    | Miniml.Tvar i | Miniml.Tvar' i ->
-      result := IntSet.add i !result
-    | Miniml.Tarr (t1, t2) ->
-      collect_tvars t1; collect_tvars t2
-    | Miniml.Tglob (_, ts, _) ->
-      List.iter collect_tvars ts
-    | Miniml.Tmeta {contents = Some t} -> collect_tvars t
-    | _ -> ()
-  in
-  let rec walk = function
-    | Miniml.Tarr (t1, t2) -> walk t1; walk t2
-    | Miniml.Tglob (g, ts, _) ->
-      ( match g with
-      | GlobRef.IndRef (kn, _) ->
-        ( match Table.get_ind_num_param_vars_opt kn with
-        | Some num_param_vars when num_param_vars < List.length ts ->
-          List.iteri (fun i t ->
-            if i >= num_param_vars then collect_tvars t
-          ) ts
-        | _ -> () );
-        List.iter walk ts
-      | _ -> List.iter walk ts )
-    | Miniml.Tmeta {contents = Some t} -> walk t
-    | _ -> ()
-  in
-  walk ml_ty;
-  !result
-
 (** Arity of every type variable that [cty] applies to arguments, keyed by
     template parameter name.  A Rocq parameter of kind [Type -> Type] reaches
     C++ as the head of a {!Tapply}, and a plain [typename] cannot be applied,
@@ -1608,7 +1568,7 @@ let relax_applied_return temps decl =
     exists_cpp_type (function Tapply (Tvar _, _) -> true | _ -> false) t
   in
   match decl with
-  | Dfundef (ns, cod, params, body, flags) when applies_tvar cod ->
+  | Dfundef (ns, cod0, params, body, flags) when applies_tvar cod0 ->
     (* The head of a tvar is not always resolved to its parameter name, so a
        tvar answers to either spelling; cf. {!applied_tvar_arities}. *)
     let is_tvar id = function
@@ -1648,13 +1608,18 @@ let relax_applied_return temps decl =
             | Some r -> r
             | None -> t )
           | t -> t )
-        cod
+        cod0
     in
     let temps =
       List.map
         (fun (tt, id) ->
           match tt with
-          | TTtypename when undeducible id -> (TTtypename_default Tany, id)
+          (* Only a variable the respelling above actually rewrote away needs
+             this.  One with no callback to pin it was never made deducible by
+             defaulting it either -- it is phantom, and the call site spells it
+             out ({!Ml_type_util.explicit_tvar_prefix}). *)
+          | TTtypename when undeducible id && invoke_result id <> None ->
+            (TTtypename_default Tany, id)
           | _ -> (tt, id) )
         temps
     in
@@ -1678,7 +1643,20 @@ let relax_applied_return temps decl =
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies. *)
 let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
-  with_applied_tvars cty
+  (* The leading phantoms are spelled out at every call site
+     ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
+     default there would let a call that supplies nothing silently pick
+     [void] instead of failing to compile. *)
+  let undefault n temps =
+    List.mapi
+      (fun i (tt, id) ->
+        match tt with
+        | TTtypename_default Tvoid when i < n -> (TTtypename, id)
+        | _ -> (tt, id) )
+      temps
+  in
+  undefault (explicit_tvar_prefix ~force_required cty)
+  @@ with_applied_tvars cty
   @@
   match cty with
   | Tfun (dom, cod) ->

@@ -21,7 +21,7 @@ struct ITreeReified {
   /// Traverse an itree E T, logging at every Tau and Vis node.
   /// The result lives in itree (ioE +' E) T: original effects on
   /// the right, logging effects (IO) on the left.
-  template <typename T1 = void, typename T2, typename F0>
+  template <typename T1, typename T2, typename F0>
   static std::shared_ptr<ITree<T2>> with_logging_body(F0 &&rec,
                                                       const itreeF_t<T2> &ot) {
     if (std::holds_alternative<typename ITree<T2>::Ret>(ot)) {
@@ -58,7 +58,7 @@ struct ITreeReified {
     }
   }
 
-  template <typename T1 = void, typename T2>
+  template <typename T1, typename T2>
   static std::shared_ptr<ITree<T2>>
   with_logging(const std::shared_ptr<ITree<T2>> &t) {
     return with_logging_body<T1, T2>(with_logging<T1, T2>, t->observe());

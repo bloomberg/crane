@@ -9,5 +9,5 @@ void bug_create(std::string title) {
 
 int64_t bug_main() {
   bug_create("hello");
-  return bug_read();
+  return bug_read<void>();
 }

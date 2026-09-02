@@ -46,7 +46,7 @@ std::shared_ptr<ITree<void>> ITreeReified::greet() {
 
 /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
 std::shared_ptr<ITree<void>> ITreeReified::test_logging() {
-  return with_logging([]() -> std::shared_ptr<ITree<void>> {
+  return with_logging<void>([]() -> std::shared_ptr<ITree<void>> {
     greet();
     return ITree<void>::ret();
   }());

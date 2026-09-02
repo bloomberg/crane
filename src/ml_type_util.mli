@@ -315,3 +315,15 @@ val get_rendered_tvar_indices : Minicpp.cpp_type -> int list
     call. The rest are phantom: a caller must spell them out. *)
 val primary_tvar_indices :
   Minicpp.cpp_type list -> Minicpp.cpp_type -> IntSet.t
+
+(** The type-variable indices appearing in type INDEX positions of inductives
+    in an ML type. [convert_ml_type_to_cpp_type] strips these from the C++
+    type, but function bodies may still need them for [any_cast]. *)
+val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
+
+(** [explicit_tvar_prefix ~force_required cty] is how many leading template
+    parameters of a signature of type [cty] a call must supply explicitly
+    because the signature does not represent them. Only a leading run counts:
+    C++ lets a call supply a prefix of the arguments and deduce the rest. *)
+val explicit_tvar_prefix :
+  ?force_required:IntSet.t -> Minicpp.cpp_type -> int

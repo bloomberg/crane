@@ -837,3 +837,82 @@ let primary_tvar_indices dom cod =
       dom
   in
   IntSet.union concrete clean_fun
+
+(** Collect tvar indices that appear in type INDEX positions of inductives
+    in the ML type.  Type indices are stripped from the C++ type by
+    {!convert_ml_type_to_cpp_type} but may be needed in function bodies
+    for [any_cast] when matching on type-indexed inductives with
+    wholesale-erased fields.
+
+    Only collects tvars from inductives where [get_ind_num_param_vars_opt]
+    succeeds and the number of type args exceeds the parameter count
+    (indicating genuine indices, not parameters). *)
+let collect_ml_type_index_tvars ml_ty =
+  let result = ref IntSet.empty in
+  let rec collect_tvars = function
+    | Miniml.Tvar i | Miniml.Tvar' i ->
+      result := IntSet.add i !result
+    | Miniml.Tarr (t1, t2) ->
+      collect_tvars t1; collect_tvars t2
+    | Miniml.Tglob (_, ts, _) ->
+      List.iter collect_tvars ts
+    | Miniml.Tmeta {contents = Some t} -> collect_tvars t
+    | _ -> ()
+  in
+  let rec walk = function
+    | Miniml.Tarr (t1, t2) -> walk t1; walk t2
+    | Miniml.Tglob (g, ts, _) ->
+      ( match g with
+      | GlobRef.IndRef (kn, _) ->
+        ( match Table.get_ind_num_param_vars_opt kn with
+        | Some num_param_vars when num_param_vars < List.length ts ->
+          List.iteri (fun i t ->
+            if i >= num_param_vars then collect_tvars t
+          ) ts
+        | _ -> () );
+        List.iter walk ts
+      | _ -> List.iter walk ts )
+    | Miniml.Tmeta {contents = Some t} -> walk t
+    | _ -> ()
+  in
+  walk ml_ty;
+  !result
+
+(** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
+    leading template parameters the signature does not represent, and which a
+    call therefore has to spell out instead of leaving to deduction.
+
+    Only a leading run counts.  C++ lets a call supply the first few template
+    arguments and deduce the rest, but not skip one in the middle, so a
+    phantom sitting behind a deducible parameter is out of reach this way and
+    keeps its [void] default at the declaration.
+
+    The declaration emitter ({!Gen_decls.phantom_aware_temps}) and the call
+    emitter both read the count from here, off the callee's type alone, so
+    they agree whichever is generated first.
+
+    @param force_required  as in {!Gen_decls.phantom_aware_temps}: indices that
+      count as represented even though they do not appear in [cty]. *)
+let explicit_tvar_prefix ?(force_required = IntSet.empty) cty =
+  match cty with
+  | Tfun (dom, cod) ->
+    let primary =
+      IntSet.union (primary_tvar_indices dom cod) force_required
+    in
+    let indexed =
+      List.sort
+        (fun (x, _) (y, _) -> Int.compare x y)
+        ( get_tvars_indexed cty
+        @ IntSet.fold
+            (fun i acc ->
+              if List.exists (fun (j, _) -> j = i) (get_tvars_indexed cty) then
+                acc
+              else (i, tvar_id i) :: acc )
+            force_required [] )
+    in
+    let rec count = function
+      | (i, _) :: rest when not (IntSet.mem i primary) -> 1 + count rest
+      | _ -> 0
+    in
+    count indexed
+  | _ -> 0

@@ -2823,6 +2823,25 @@ and normalize_erased_types = function
     Tfun (List.map normalize_erased_types ps, normalize_erased_types r)
   | t -> t
 
+(** [phantom_prefix_args id] is the list of template arguments a call to [id]
+    has to spell out because [id]'s generated signature does not represent
+    them: one [void] per leading phantom parameter, as counted by
+    {!Ml_type_util.explicit_tvar_prefix} off [id]'s declared type.
+
+    The declaration emitter counts the same run and leaves those parameters
+    undefaulted, so the two stay in step without either recording anything for
+    the other -- which matters because a call can precede its callee's
+    declaration (mutual recursion, forward references). *)
+and phantom_prefix_args id =
+  match find_type_opt id with
+  | None -> []
+  | Some ml_ty ->
+    let cty =
+      convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ml_ty)
+    in
+    let force_required = collect_ml_type_index_tvars ml_ty in
+    List.init (explicit_tvar_prefix ~force_required cty) (fun _ -> Tvoid)
+
 and build_template_params env tvars tys =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
@@ -4631,7 +4650,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | _ -> t )
         tys
     in
-    let cglob = mk_cppglob x (filter_erased_type_args tys_cpp) in
+    let cglob =
+      match filter_erased_type_args tys_cpp with
+      | [] -> mk_cppglob x (phantom_prefix_args x)
+      | tys -> mk_cppglob x tys
+    in
     let needs_call =
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
@@ -7175,6 +7198,12 @@ and eta_fun env f args =
     in
     let all_type_args =
       typeclass_type_args @ regular_type_args @ promoted_type_args
+    in
+    (* Nothing survived the erasure filters, so if the callee opens with
+       parameters its signature never mentions, deduction has nothing to work
+       from and the call has to name them. *)
+    let all_type_args =
+      if all_type_args = [] then phantom_prefix_args id else all_type_args
     in
 
     let cglob = mk_cppglob id all_type_args in
