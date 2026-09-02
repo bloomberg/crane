@@ -2838,6 +2838,26 @@ and expected_type_args_from_return env ?slot ind ~arity =
   | Some t when go t <> None -> go t
   | _ -> ( match tctx.current_cpp_return_type with Some rt -> go rt | None -> None )
 
+(** Whether [e] reads a component straight out of a pair recovered from a
+    [std::any].  Such a component is itself a box, so it needs no further
+    recovery here -- the site that consumes it does its own. *)
+and is_erased_pair_component = function
+  | CPPfun_call (_, [CPPany_cast (Tglob (g, (_ :: _ as args), _), _)]) ->
+    is_prod_global g && List.for_all is_erased_type args
+  | _ -> false
+
+(** The shape a value physically has once it has been through a [std::any]:
+    unchanged for a leaf, and one level of template with every argument boxed
+    for a compound ([pair<Nat, tup>] becomes [pair<any, any>]).  A compound's
+    components are separately boxed, so the erasure stops at one level --
+    nesting it would name [pair<any, pair<any, any>>] for a box whose second
+    component is itself only a box.  This is the type an [any_cast] reading
+    such a value back has to name, whatever concrete type the context has in
+    mind for it. *)
+and boxed_shape_of = function
+  | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
+  | t -> t
+
 (** Collapse the erased parts of a type to [std::any]: the type itself when it
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
@@ -6292,17 +6312,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | Mboxed -> Some Tany
       | Mbarrier -> None
     in
-    (* The other side of the same boundary.  Recovering against it rather than
-       against the context's expectation matters when the two disagree in
-       their type arguments: a value boxed at a slot whose arguments erased is
-       physically a [List<std::any>], so casting it to the [List<Nat>] the
-       context has in mind would throw. *)
-    let recorded_into =
-      match m with
-      | Mcoerce (_, into) ->
-        Some (convert_ml_type_to_cpp_type env (get_current_type_vars ()) into)
-      | Mboxed | Mbarrier -> None
-    in
     ( match expected_ty with
       | Some ty when not (is_erased_type ty) && ty <> Tvoid
                     && not (match ty with Tglob (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
@@ -6343,13 +6352,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                Coq-level type, and the pointer- and converting-constructor
                dimensions at this boundary have already been settled by the
                sub-expression that produced [inner]. *)
-            | Some from when prints_as_any from ->
-              let into =
-                match recorded_into with
-                | Some i when not (prints_as_any i) -> i
-                | _ -> ty
-              in
-              coerce ~from ~into inner
+            (* Unless the value is a component just read out of an erased
+               pair.  That read already handed back the component's own box,
+               and the type the context has in mind describes the pair, not
+               the component -- recovering here would name the wrong one. *)
+            | Some from
+              when prints_as_any from && not (is_erased_pair_component inner) ->
+              coerce ~from ~into:(boxed_shape_of ty) inner
             | _ -> inner )
       | _ -> inner )
   | MLdummy _ ->
@@ -7642,6 +7651,15 @@ and eta_fun env f args =
             with Not_found -> None
           in
           ( match prod_g_opt, single_arg with
+          | _, CPPany_cast (Tglob (g, cast_args, _), _)
+            when is_prod_global g && cast_args <> []
+                 && List.for_all is_erased_type cast_args ->
+            (* The argument arrived already recovered from its box, and at the
+               erased shape [pair<any, any>].  Its components are boxes too, so
+               the accessor's result needs the same recovery at the use site as
+               when this branch inserts the cast itself. *)
+            tctx.last_pair_accessor_any_cast <- true;
+            primary_result
           | _, CPPany_cast _ -> primary_result
           | Some g, _ ->
             tctx.last_pair_accessor_any_cast <- true;
@@ -11768,6 +11786,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           [Sexpr e] @ inline_iife k (mk_tt_expr ())
     end
     else begin
+      (* Whether this continuation is the function's result rather than a
+         binding.  Probing [k] is how the void case above already asks. *)
+      let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
       let saved_pair_any = tctx.last_pair_accessor_any_cast in
       tctx.last_pair_accessor_any_cast <- false;
       let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
@@ -11778,10 +11799,14 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          erased. *)
       let e =
         match (tctx.last_pair_accessor_any_cast, tctx.current_cpp_return_type) with
-        | true, Some rt when not (is_erased_type rt) -> CPPany_cast (rt, e)
+        | true, Some rt when k_returns && not (is_erased_type rt) ->
+          CPPany_cast (rt, e)
         | _ -> e
       in
-      tctx.last_pair_accessor_any_cast <- saved_pair_any;
+      (* A binding continuation has its own use for the flag: the let path
+         reads it to record that the bound variable holds a box.  Only a
+         return consumes it here, so only a return may restore it. *)
+      if k_returns then tctx.last_pair_accessor_any_cast <- saved_pair_any;
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result

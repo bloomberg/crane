@@ -12,6 +12,6 @@ Nat TypeValuedIfEliminator::size(bool b, TypeValuedIfEliminator::sel x) {
   if (b) {
     return std::any_cast<Nat>(x);
   } else {
-    return std::any_cast<List<std::any>>(x).length();
+    return std::any_cast<List<Nat>>(x).length();
   }
 }
