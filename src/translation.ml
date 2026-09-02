@@ -2823,6 +2823,27 @@ and normalize_erased_types = function
     Tfun (List.map normalize_erased_types ps, normalize_erased_types r)
   | t -> t
 
+(** [inline_custom_arg_arity id] is the number of [%aN] term placeholders an
+    inline-custom mapping for [id] names -- one past the largest index it
+    uses -- or [None] when [id] has no inline-custom mapping.
+
+    A call has to supply exactly that many arguments: the printer drops any
+    beyond the last placeholder, and raises on a placeholder it cannot fill. *)
+and inline_custom_arg_arity id =
+  if not (Table.is_inline_custom id) then None
+  else
+    match Table.find_custom_opt id with
+    | None -> None
+    | Some tmpl ->
+      let re = Str.regexp "%a\\([0-9]+\\)" in
+      let rec scan pos acc =
+        match Str.search_forward re tmpl pos with
+        | i ->
+          scan (i + 1) (max acc (int_of_string (Str.matched_group 1 tmpl) + 1))
+        | exception Not_found -> acc
+      in
+      Some (scan 0 0)
+
 (** [phantom_prefix_args id] is the list of template arguments a call to [id]
     has to spell out because [id]'s generated signature does not represent
     them: one [void] per leading phantom parameter, as counted by
@@ -7402,18 +7423,25 @@ and eta_fun env f args =
             @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
           let call =
-            if is_inline_custom id then
-              (* An inline-custom template has a fixed placeholder arity, and
+            match inline_custom_arg_arity id with
+            | Some arity ->
+              (* An inline-custom template has a fixed placeholder arity:
                  arguments past the last placeholder are dropped when it is
-                 rendered.  The eta parameters must therefore be applied to
-                 the template's result -- which is a callable, since that is
-                 why there are missing arguments to begin with -- rather than
-                 handed to the template itself. *)
-              CPPfun_call
-                ( CPPfun_call (cglob, List.rev captured_args),
-                  List.rev
-                    (List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args) )
-            else CPPfun_call (cglob, List.rev call_args)
+                 rendered, and a placeholder with no argument cannot be
+                 rendered at all.  So the eta parameters first finish filling
+                 the template, and only what is left over is applied to its
+                 result -- which is a callable, since that is why there were
+                 missing arguments to begin with. *)
+              let eta_vars =
+                List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
+              in
+              let k = max 0 (arity - List.length captured_args) in
+              let fill = List.filteri (fun i _ -> i < k) eta_vars in
+              let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
+              let base = CPPfun_call (cglob, List.rev (captured_args @ fill)) in
+              if surplus = [] then base
+              else CPPfun_call (base, List.rev surplus)
+            | None -> CPPfun_call (cglob, List.rev call_args)
           in
           let ret_ty, body =
             if cod = Tvoid then

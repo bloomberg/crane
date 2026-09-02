@@ -14,6 +14,8 @@
 
 using namespace std::string_literals;
 
+template <typename A> struct List;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -117,7 +119,7 @@ public:
   List<std::pair<A, T1>> combine(const List<T1> &l_) const {
     std::shared_ptr<List<std::pair<A, T1>>> _head{};
     std::shared_ptr<List<std::pair<A, T1>>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     const List<T1> *_loop_l_ = &l_;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -153,7 +155,7 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   std::optional<A> find(F0 &&f) const {
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -174,7 +176,7 @@ public:
   List<A> filter(F0 &&f) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -201,11 +203,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons: saves [a1], resumes after recursive call with _result.
@@ -223,7 +225,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
@@ -241,11 +243,11 @@ public:
   }
 
   template <typename T1> List<T1> concat() const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
@@ -263,7 +265,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
           _result = List<T1>::nil();
@@ -286,7 +288,7 @@ public:
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -306,11 +308,11 @@ public:
   }
 
   uint64_t length() const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons: resumes after recursive call with _result.
@@ -326,7 +328,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
@@ -346,7 +348,7 @@ public:
   List<A> app(List<A> m) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;

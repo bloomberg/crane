@@ -13,6 +13,12 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+template <typename A> struct Sig;
+template <typename A, typename P> struct SigT;
+template <typename A> struct T0;
+struct T;
+
 template <typename A> struct List {
   // TYPES
   struct Nil0 {};
@@ -116,11 +122,11 @@ public:
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, A &>
   bool forallb(F0 &&f) const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
@@ -138,7 +144,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = true;
@@ -158,11 +164,11 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons0: saves [a1], resumes after recursive call with _result.
@@ -180,7 +186,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = a0;
@@ -198,11 +204,11 @@ public:
   }
 
   template <typename T1> List<T1> concat() const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons0: saves [a0], resumes after recursive call with _result.
@@ -220,7 +226,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
           _result = List<T1>::nil0();
@@ -243,7 +249,7 @@ public:
   List<T1> map(F0 &&f) const {
     std::shared_ptr<List<T1>> _head{};
     std::shared_ptr<List<T1>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
@@ -263,11 +269,11 @@ public:
   }
 
   uint64_t length() const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons0: resumes after recursive call with _result.
@@ -283,7 +289,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
           _result = UINT64_C(0);
@@ -303,7 +309,7 @@ public:
   List<A> app(List<A> m) const {
     std::shared_ptr<List<A>> _head{};
     std::shared_ptr<List<A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<A> *_loop_self = this;
     List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;

@@ -28,6 +28,7 @@ concept convertible_to = bsl::is_convertible<From, To>::value;
 template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
+template <typename t_A> struct List;
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -121,7 +122,7 @@ public:
   List<bsl::pair<t_A, T1>> combine(const List<T1> &l_) const {
     bsl::shared_ptr<List<bsl::pair<t_A, T1>>> _head{};
     bsl::shared_ptr<List<bsl::pair<t_A, T1>>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<t_A> *_loop_self = this;
     const List<T1> *_loop_l_ = &l_;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -156,7 +157,7 @@ public:
   template <typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, t_A &>
   bsl::optional<t_A> find(F0 &&f) const {
-    const List *_loop_self = this;
+    const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -176,7 +177,7 @@ public:
   List<t_A> filter(F0 &&f) const {
     bsl::shared_ptr<List<t_A>> _head{};
     bsl::shared_ptr<List<t_A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -202,10 +203,10 @@ public:
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &>
   T1 fold_right(F0 &&f, T1 a0) const {
-    const List *_self = this;
+    const List<t_A> *_self = this;
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<t_A> *_self;
     };
     /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
     struct _Resume_Cons {
@@ -221,7 +222,7 @@ public:
       _stack.pop_back();
       if (bsl::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(bsl::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = a0;
@@ -239,10 +240,10 @@ public:
     return _result;
   }
   template <typename T1> List<T1> concat() const {
-    const List *_self = this;
+    const List<t_A> *_self = this;
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<t_A> *_self;
     };
     /// _Resume_Cons: saves [d_a0], resumes after recursive call with _result.
     struct _Resume_Cons {
@@ -258,7 +259,7 @@ public:
       _stack.pop_back();
       if (bsl::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(bsl::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
           _result = List<T1>::nil();
@@ -280,7 +281,7 @@ public:
   List<T1> map(F0 &&f) const {
     bsl::shared_ptr<List<T1>> _head{};
     bsl::shared_ptr<List<T1>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -299,10 +300,10 @@ public:
     return bsl::move(*_head);
   }
   unsigned int length() const {
-    const List *_self = this;
+    const List<t_A> *_self = this;
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<t_A> *_self;
     };
     /// _Resume_Cons: resumes after recursive call with _result.
     struct _Resume_Cons {};
@@ -316,7 +317,7 @@ public:
       _stack.pop_back();
       if (bsl::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(bsl::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
@@ -336,7 +337,7 @@ public:
   List<t_A> app(List<t_A> m) const {
     bsl::shared_ptr<List<t_A>> _head{};
     bsl::shared_ptr<List<t_A>> *_write = &_head;
-    const List *_loop_self = this;
+    const List<t_A> *_loop_self = this;
     List<t_A> _loop_m = bsl::move(m);
     while (true) {
       auto &&_sv = *_loop_self;

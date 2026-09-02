@@ -12,6 +12,9 @@
 #include <utility>
 #include <variant>
 
+template <typename A> struct List;
+struct Q;
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -112,11 +115,11 @@ public:
   const variant_t &v() const { return v_; }
 
   uint64_t length() const {
-    const List *_self = this;
+    const List<A> *_self = this;
 
     /// _Enter: captures varying parameters for each recursive call.
     struct _Enter {
-      const List *_self;
+      const List<A> *_self;
     };
 
     /// _Resume_Cons: resumes after recursive call with _result.
@@ -132,7 +135,7 @@ public:
       _stack.pop_back();
       if (std::holds_alternative<_Enter>(_frame)) {
         auto _f = std::move(std::get<_Enter>(_frame));
-        const List *_self = _f._self;
+        const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
