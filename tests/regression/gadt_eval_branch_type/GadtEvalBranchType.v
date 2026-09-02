@@ -4,10 +4,8 @@ From Crane.Mapping Require Import Std.
 Module GadtEvalBranchType.
 
 (** A type-indexed [expr] evaluated recursively.  Each branch of [eval] has a
-    different result type; Crane gives the whole match one branch's type:
-
-      error: no viable conversion from returned value of type 'const Nat'
-             to function return type 'std::pair<Nat, bool>' *)
+    different result type, so no single C++ return type serves them all: the
+    result is erased to [std::any] and recovered at each use. *)
 
 Inductive expr : Type -> Type :=
 | lit : nat -> expr nat

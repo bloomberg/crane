@@ -888,6 +888,61 @@ let collect_ml_type_index_tvars ml_ty =
   walk ml_ty;
   !result
 
+(** Whether a function type returns a type variable that its arguments carry
+    only as the type index of an inductive with several constructors.
+
+    [eval : expr A -> A] is the shape.  Nothing in the argument's C++ type
+    mentions [A] -- an index is stripped from the generated type -- so a call
+    cannot deduce it; and because sibling constructors of [expr] fix different
+    indices, the branches genuinely return different types.  No single template
+    parameter stands for all of them, so the honest result type is [std::any],
+    recovered at the call.
+
+    Neither weaker shape qualifies.  A single-constructor inductive
+    ([wrap A -> A]) fixes one index, so the function has one result type and a
+    template parameter says it exactly.  And a variable the arguments also
+    carry outside an index position is deducible as usual. *)
+let result_is_index_only_tvar ml_ty =
+  let rec split acc = function
+    | Miniml.Tarr (t1, t2) -> split (t1 :: acc) t2
+    | Miniml.Tmeta {contents = Some t} -> split acc t
+    | res -> (acc, res)
+  in
+  let doms, res = split [] ml_ty in
+  match res with
+  | (Miniml.Tvar n | Miniml.Tvar' n) when doms <> [] ->
+    (* [as_index]: variables an argument carries only as an index of a
+       many-constructor inductive.  [elsewhere]: everything it carries in any
+       other position, which is deducible and so disqualifies. *)
+    let as_index = ref IntSet.empty and elsewhere = ref IntSet.empty in
+    let rec tvars_of into = function
+      | Miniml.Tvar i | Miniml.Tvar' i -> into := IntSet.add i !into
+      | Miniml.Tarr (t1, t2) -> tvars_of into t1; tvars_of into t2
+      | Miniml.Tglob (_, ts, _) -> List.iter (tvars_of into) ts
+      | Miniml.Tmeta {contents = Some t} -> tvars_of into t
+      | _ -> ()
+    in
+    let rec walk = function
+      | Miniml.Tarr (t1, t2) -> walk t1; walk t2
+      | Miniml.Tglob (GlobRef.IndRef (kn, i), ts, _) ->
+        let nparams =
+          match Table.get_ind_num_param_vars_opt kn with Some k -> k | None -> 0
+        in
+        let many_ctors =
+          match Table.get_ind_nb_ctors_opt kn i with Some c -> c > 1 | None -> false
+        in
+        List.iteri
+          (fun j t ->
+            if j >= nparams && many_ctors then tvars_of as_index t else walk t )
+          ts
+      | Miniml.Tglob (_, ts, _) -> List.iter walk ts
+      | Miniml.Tmeta {contents = Some t} -> walk t
+      | t -> tvars_of elsewhere t
+    in
+    List.iter walk doms;
+    IntSet.mem n !as_index && not (IntSet.mem n !elsewhere)
+  | _ -> false
+
 (** [explicit_tvar_prefix ~force_required cty] is how many of a signature's
     leading template parameters the signature does not represent, and which a
     call therefore has to spell out instead of leaving to deduction.

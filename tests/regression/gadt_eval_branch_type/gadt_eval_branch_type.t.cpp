@@ -3,6 +3,6 @@
 
 int main() {
   auto p = GadtEvalBranchType::run;
-  assert(p.second == Bool0::TRUE_);
+  assert(p.second == true);
   return 0;
 }

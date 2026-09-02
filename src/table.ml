@@ -430,6 +430,12 @@ let get_ind_ip_vars r =
       with Not_found | Invalid_argument _ -> [] )
   | _ -> []
 
+(** How many constructors an inductive's [i]th packet has.  [None] when the
+    inductive is not in the table. *)
+let get_ind_nb_ctors_opt kn i =
+  try Some (Array.length (unsafe_lookup_ind kn).ind_packets.(i).Miniml.ip_types)
+  with Not_found | Invalid_argument _ -> None
+
 (** Count the number of kept (non-erased) fields in an inductive's ip_sign, i.e.
     real type parameters. *)
 let get_ind_nb_sign_keeps r =

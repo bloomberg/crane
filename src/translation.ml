@@ -2385,6 +2385,11 @@ let rec convert_ml_type_to_cpp_type
         else if ml_type_is_unit (ml_result_type t2) then Tvoid
         else c
       in
+      (* A result the arguments only pin down as a type index is not something
+         a template parameter can stand for; erase it. *)
+      let voidify_cod c =
+        if result_is_index_only_tvar ml_t then Tany else voidify_cod c
+      in
       match
         t2c
       with
@@ -4146,7 +4151,23 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | _ -> MLapp (body, lifted_outer)
     in
     gen_expr env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
-  | MLapp (f, args) -> eta_fun env f args
+  | MLapp (f, args) ->
+    let result = eta_fun env f args in
+    (* A callee whose result is only pinned down by a type index hands back a
+       [std::any] (see {!result_is_index_only_tvar}); recover it at the type
+       this position expects. *)
+    let callee_ty =
+      match f with
+      | MLglob (r, _) -> find_type_opt r
+      | MLrel i -> get_env_type_opt i
+      | _ -> None
+    in
+    ( match (callee_ty, expected_ty) with
+    | Some ty, Some into
+      when result_is_index_only_tvar ty
+           && not (is_erased_type into || contains_tvar into) ->
+      coerce ~from:Tany ~into result
+    | _ -> result )
   | MLlam _ as a ->
     let args, a = collect_lams a in
     (* Nested binders normally flatten into one multi-parameter C++ lambda.
@@ -9295,7 +9316,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     tctx.move_dead_after <- Escape.IntSet.empty
   else
     tctx.move_dead_after <- Escape.IntSet.union saved_dead dead_in_scrut;
-  let t = gen_expr env t in
+  (* A scrutinee whose result is only pinned down by a type index arrives
+     boxed, and a match cannot inspect a [std::any].  Telling the call what
+     type this position wants is what makes it recover the value. *)
+  let scrut_expected =
+    match flatten_app t with
+    | MLapp (MLglob (r, _), _)
+      when (match find_type_opt r with
+            | Some fty -> result_is_index_only_tvar fty
+            | None -> false) -> Some typ
+    | _ -> None
+  in
+  let t = gen_expr ?expected_ty:scrut_expected env t in
   tctx.move_dead_after <- saved_dead;
   let pair_g_opt = match concrete_match_type with
     | Tglob (g, _, _) when is_prod_global g -> Some g

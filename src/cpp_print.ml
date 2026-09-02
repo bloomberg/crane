@@ -654,6 +654,13 @@ let current_lambda_ret_ty : cpp_type option ref = ref None
     causes the cast to be emitted at EVERY use site, unconditionally. *)
 let concrete_typed_any_params : cpp_type Id.Map.t ref = ref Id.Map.empty
 
+(** Whether a C++ type is [std::pair]. *)
+let is_prod_cpp_type = function
+  | Tglob (g, [_; _], _) ->
+    let n = Common.pp_global_name Type g in
+    n = "prod" || n = "Prod"
+  | _ -> false
+
 (** Cached prod (pair) global reference, used to construct [pair<any,any>] casts
     when the CCscrut expected_type is not itself a pair type (e.g. Tany). *)
 let known_prod_g : GlobRef.t option ref = ref None
@@ -679,6 +686,17 @@ let rec is_any_type = function
   | Tglob (GlobRef.VarRef id, [], _) ->
     let name = Id.to_string id in
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
+  | _ -> false
+
+(** Whether recovering this type from a [std::any] needs [crane_any_cast]
+    rather than a plain [std::any_cast]: a pair with a concrete component may
+    have had its components boxed one at a time, so the box holds
+    [pair<any, any>] and each component has to be recovered in turn.  An
+    all-erased pair is stored as itself and needs no such walk. *)
+let needs_deep_any_cast t =
+  match t with
+  | Tglob (_, ([_; _] as args), _) ->
+    is_prod_cpp_type t && List.exists (fun a -> not (is_any_type a)) args
   | _ -> false
 
 (** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
@@ -1025,12 +1043,7 @@ and deque_elem_extract_expr elem_ty src_expr =
      Pairs are stored as pair<any,any>; other types are stored directly.
      Strip shared_ptr from elem_ty first: semantic values in std::any are bare. *)
   let elem_ty = bare_elem_ty elem_ty in
-  let is_prod_type = function
-    | Tglob (g, [_; _], _) ->
-      let n = Common.pp_global_name Type g in n = "prod" || n = "Prod"
-    | _ -> false
-  in
-  if is_prod_type elem_ty then begin
+  if is_prod_cpp_type elem_ty then begin
     require_header "any";
     require_header "utility";
     match elem_ty with
@@ -2172,7 +2185,7 @@ and pp_cpp_expr env args t =
          rather than acting as the identity.  [crane_any_cast] (crane_fn.h)
          decides that at instantiation time. *)
       let caster =
-        if Minicpp.instance_dependent ty <> None then begin
+        if Minicpp.instance_dependent ty <> None || needs_deep_any_cast ty then begin
           Table.mark_needs_erase_fn ();
           "crane_any_cast"
         end

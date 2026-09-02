@@ -316,6 +316,9 @@ val record_field_types : GlobRef.t -> ml_type list
 (** Get inductive type parameter variables. *)
 val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
 
+(** How many constructors the given packet of an inductive has. *)
+val get_ind_nb_ctors_opt : MutInd.t -> int -> int option
+
 (** Get number of significant type parameters. *)
 val get_ind_nb_sign_keeps : GlobRef.t -> int
 

@@ -86,6 +86,16 @@
   (deps dependent_elim_stdexcept_probe.t.exe)
   (action (run ./dependent_elim_stdexcept_probe.t.exe))))
 
+(subdir gadt_eval_branch_type
+ (rule
+  (targets gadt_eval_branch_type.t.exe)
+  (deps GadtEvalBranchType.vo gadt_eval_branch_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} gadt_eval_branch_type.t.exe gadt_eval_branch_type.cpp gadt_eval_branch_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps gadt_eval_branch_type.t.exe)
+  (action (run ./gadt_eval_branch_type.t.exe))))
 (subdir hkt_instance_carrier_slot
  (rule
   (targets hkt_instance_carrier_slot.t.exe)

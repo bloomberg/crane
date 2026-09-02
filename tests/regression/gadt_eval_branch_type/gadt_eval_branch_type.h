@@ -1,7 +1,9 @@
 #ifndef INCLUDED_GADT_EVAL_BRANCH_TYPE
 #define INCLUDED_GADT_EVAL_BRANCH_TYPE
 
+#include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -69,10 +71,8 @@ public:
 
 struct GadtEvalBranchType {
   /// A type-indexed expr evaluated recursively.  Each branch of eval has a
-  /// different result type; Crane gives the whole match one branch's type:
-  ///
-  /// error: no viable conversion from returned value of type 'const Nat'
-  /// to function return type 'std::pair<Nat, bool>'
+  /// different result type, so no single C++ return type serves them all: the
+  /// result is erased to std::any and recovered at each use.
   struct expr {
     // TYPES
     struct Lit {
@@ -134,7 +134,7 @@ struct GadtEvalBranchType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1> static T1 eval(const expr &e) {
+  template <typename T1> static std::any eval(const expr &e) {
     if (std::holds_alternative<typename expr::Lit>(e.v())) {
       const auto &[a0] = std::get<typename expr::Lit>(e.v());
       return a0;
@@ -143,19 +143,21 @@ struct GadtEvalBranchType {
       return a0;
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (eval<T1>(*a)) {
+      if (std::any_cast<bool>(eval<T1>(*a))) {
         return eval<T1>(*a1);
       } else {
         return eval<T1>(*a2);
       }
     } else {
       const auto &[a, b] = std::get<typename expr::PairE>(e.v());
-      return std::make_pair(eval<T1>(*a), eval<T1>(*b));
+      return std::make_pair(std::any(eval<T1>(*a)), std::any(eval<T1>(*b)));
     }
   }
 
-  static inline const std::pair<Nat, bool> run = eval<std::pair<Nat, bool>>(
-      expr::paire(expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true)));
+  static inline const std::pair<Nat, bool> run =
+      crane_any_cast<std::pair<Nat, bool>>(
+          eval<std::pair<Nat, bool>>(expr::paire(
+              expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true))));
 };
 
 #endif // INCLUDED_GADT_EVAL_BRANCH_TYPE

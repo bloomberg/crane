@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 #define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
 
+#include "crane_fn.h"
 #include <any>
 #include <utility>
 #include <variant>
@@ -25,12 +26,12 @@ struct Pair_wrap {
 struct Ops {
   template <typename T1> static T1 get_fst(const Pair_wrap &p) {
     const auto &[a] = p;
-    return std::any_cast<std::pair<T1, Datatypes::Nat>>(a).first;
+    return crane_any_cast<std::pair<T1, Datatypes::Nat>>(a).first;
   }
 
   template <typename T1> static Datatypes::Nat get_snd(const Pair_wrap &p) {
     const auto &[a] = p;
-    return std::any_cast<std::pair<T1, Datatypes::Nat>>(a).second;
+    return crane_any_cast<std::pair<T1, Datatypes::Nat>>(a).second;
   }
 
   template <typename T1> static Pair_wrap make(T1 a, Datatypes::Nat n) {

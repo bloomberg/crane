@@ -321,6 +321,12 @@ val primary_tvar_indices :
     type, but function bodies may still need them for [any_cast]. *)
 val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
 
+(** Whether a function type returns a type variable its arguments carry only as
+    an inductive's type index ([eval : expr A -> A]).  Such a result cannot be
+    a template parameter -- the branches return genuinely different types -- so
+    it is erased to [std::any] and recovered at the call. *)
+val result_is_index_only_tvar : Miniml.ml_type -> bool
+
 (** [explicit_tvar_prefix ~force_required cty] is how many leading template
     parameters of a signature of type [cty] a call must supply explicitly
     because the signature does not represent them. Only a leading run counts:
