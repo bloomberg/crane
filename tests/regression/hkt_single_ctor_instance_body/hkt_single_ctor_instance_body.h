@@ -114,7 +114,7 @@ struct HktSingleCtorInstanceBody {
 
     static box<std::any> fmap(std::function<std::any(std::any)> f,
                               box<std::any> b) {
-      const auto &[a0] = std::get<Mkbox>(b.v());
+      const auto &[a0] = b;
       return box<std::any>::mkbox(f(a0));
     }
   };

@@ -118,6 +118,16 @@
   (deps hkt_nullary_method_tyarg.t.exe)
   (action (run ./hkt_nullary_method_tyarg.t.exe))))
 
+(subdir hkt_single_ctor_instance_body
+ (rule
+  (targets hkt_single_ctor_instance_body.t.exe)
+  (deps HktSingleCtorInstanceBody.vo hkt_single_ctor_instance_body.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_single_ctor_instance_body.t.exe hkt_single_ctor_instance_body.cpp hkt_single_ctor_instance_body.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hkt_single_ctor_instance_body.t.exe)
+  (action (run ./hkt_single_ctor_instance_body.t.exe))))
 (subdir record_function_field_stdlib_probe
  (rule
   (targets record_function_field_stdlib_probe.t.exe)

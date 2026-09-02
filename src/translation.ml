@@ -8535,15 +8535,18 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | None -> typ )
     | _ -> typ
   in
-  (* When the type is still unresolved (Tunknown / Tdummy / non-Tglob) but the
-     scrutinee is MLmagic (_, erased at runtime), recover the inductive type from
-     the first branch's constructor pattern.  This handles dependent fields
-     (e.g. sigT's second projection) stored as std::any. *)
+  (* When the type is still unresolved (Tunknown / Tdummy / non-Tglob), recover
+     the inductive from the first branch's constructor pattern -- a constructor
+     determines the inductive it belongs to, so this is sound wherever the
+     scrutinee's own type failed to resolve.  It happens for a dependent field
+     stored as [std::any] (sigT's second projection) and for the body of an
+     instance method, which is extracted against the class's erased carrier and
+     so carries no type for the scrutinee at all. *)
   let scrut_is_mlmagic_case = match t with MLmagic (_, _) -> true | _ -> false in
   let typ =
     match typ with
     | Miniml.Tglob _ -> typ
-    | _ when scrut_is_mlmagic_case ->
+    | _ ->
       ( try
           let _, _, pat0, _ = pv.(0) in
           match pat0 with
@@ -8552,7 +8555,6 @@ and gen_cpp_case (typ : ml_type) t env pv =
             Miniml.Tglob (GlobRef.IndRef ip, [], [])
           | _ -> typ
         with _ -> typ )
-    | _ -> typ
   in
   (* Check if this is an enum inductive type *)
   let is_enum =
