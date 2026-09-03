@@ -81,27 +81,27 @@ struct SiblingModuleSameInductive {
       Nat a0;
 
       // ACCESSORS
-      ::t clone() const { return {a0}; }
+      t clone() const { return {a0}; }
 
       // CREATORS
-      static ::t mk(Nat a0) { return {std::move(a0)}; }
+      static t mk(Nat a0) { return {std::move(a0)}; }
     };
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Nat &>
-    static T1 t_rect(F0 &&f, const ::t &t0) {
+    static T1 t_rect(F0 &&f, const t &t0) {
       const auto &[a0] = t0;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, Nat &>
-    static T1 t_rec(F0 &&f, const ::t &t0) {
+    static T1 t_rec(F0 &&f, const t &t0) {
       const auto &[a0] = t0;
       return f(a0);
     }
 
-    static Nat get(const ::t &x);
+    static Nat get(const t &x);
   };
 
   struct B {
@@ -110,27 +110,27 @@ struct SiblingModuleSameInductive {
       bool a0;
 
       // ACCESSORS
-      ::t clone() const { return {a0}; }
+      t clone() const { return {a0}; }
 
       // CREATORS
-      static ::t mk(bool a0) { return {a0}; }
+      static t mk(bool a0) { return {a0}; }
     };
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, bool &>
-    static T1 t_rect(F0 &&f, const ::t &t0) {
+    static T1 t_rect(F0 &&f, const t &t0) {
       const auto &[a0] = t0;
       return f(a0);
     }
 
     template <typename T1, typename F0>
       requires std::is_invocable_r_v<T1, F0 &, bool &>
-    static T1 t_rec(F0 &&f, const ::t &t0) {
+    static T1 t_rec(F0 &&f, const t &t0) {
       const auto &[a0] = t0;
       return f(a0);
     }
 
-    static bool get(const ::t &x);
+    static bool get(const t &x);
   };
 
   static Nat run(Nat n);
