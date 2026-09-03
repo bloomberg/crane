@@ -611,6 +611,26 @@ let rec is_typeclass_type_cpp = function
 let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
   make_refset_can ()
 
+(** {2 Higher-kinded inductive parameters} *)
+
+(* Positions (0-based, in the C++ template parameter list) of an inductive's
+   parameters that are declared [template <typename> class] because a
+   constructor field applies them.  Populated by [Gen_decls.hkt_templates] when
+   the inductive's header is generated, and read back when a *use* of the
+   inductive is converted: such a position must receive a bare template name
+   ([holder<std::optional>]), not an instantiation. *)
+let hkt_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+
+let init_hkt_ind_params () = Hashtbl.reset hkt_ind_params
+
+let add_hkt_ind_params r positions =
+  if positions <> [] then Hashtbl.replace hkt_ind_params r positions
+
+let is_hkt_ind_param r i =
+  match Hashtbl.find_opt hkt_ind_params r with
+  | Some s -> List.mem i s
+  | None -> false
+
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type
     arguments (e.g. [list (tree A)] counts for [tree]).
@@ -3286,6 +3306,7 @@ let reset_tables () =
   init_inductives ();
   init_inductive_kinds ();
   init_flat_inductives ();
+  init_hkt_ind_params ();
   init_enum_inductives ();
   init_sigma_assertions ();
   init_recursors ();

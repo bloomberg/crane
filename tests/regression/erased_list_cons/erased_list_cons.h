@@ -257,7 +257,7 @@ template <SYM Ty> struct DefsFn {
   static std::optional<symbols_semty>
   assemble(const List<symbol> &ys, const List<SigT<symbol, std::any>> &stk) {
     if (std::holds_alternative<typename List<symbol>::Nil>(ys.v())) {
-      return std::make_optional<symbols_semty>(std::monostate{});
+      return std::make_optional<std::monostate>(std::monostate{});
     } else {
       const auto &[a0, a1] = std::get<typename List<symbol>::Cons>(ys.v());
       if (std::holds_alternative<typename List<SigT<symbol, std::any>>::Nil>(
@@ -271,7 +271,7 @@ template <SYM Ty> struct DefsFn {
           auto _cs = assemble(*a1, *a10);
           if (_cs.has_value()) {
             const auto &rest = *_cs;
-            return std::make_optional<symbols_semty>(
+            return std::make_optional<std::pair<std::any, std::any>>(
                 std::make_pair(std::any(a11), std::any(rest)));
           } else {
             return std::optional<symbols_semty>();

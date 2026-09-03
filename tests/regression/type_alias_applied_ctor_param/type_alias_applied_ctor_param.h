@@ -83,24 +83,23 @@ struct TypeAliasAppliedCtorParam {
   ///
   /// f needs to be template <typename> class f, and the use site must pass
   /// F, not F<std::any>.
-  template <typename f, typename a> using ap = f<a>;
+  template <template <typename> class f, typename a> using ap = f<a>;
 
-  template <typename F> struct holder {
+  template <template <typename> class F> struct holder {
     // DATA
-    ap<F<std::any>, Nat> a0;
+    ap<F, Nat> a0;
 
     // ACCESSORS
     holder<F> clone() const { return {a0}; }
 
     // CREATORS
-    static holder<F> hold(ap<F<std::any>, Nat> a0) { return {std::move(a0)}; }
+    static holder<F> hold(ap<F, Nat> a0) { return {std::move(a0)}; }
   };
 
-  static inline const holder<std::optional<std::any>> mk =
-      holder<std::optional<std::any>>::hold(
-          std::make_optional<std::any>(std::any(Nat::s(Nat::o()))));
+  static inline const holder<std::optional> mk =
+      holder<std::optional>::hold(std::make_optional<Nat>(Nat::s(Nat::o())));
 
-  static std::optional<Nat> get(const holder<std::optional<std::any>> &h);
+  static std::optional<Nat> get(const holder<std::optional> &h);
 };
 
 #endif // INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM

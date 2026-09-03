@@ -1576,6 +1576,47 @@ let with_applied_tvars cty temps =
         | _ -> (tt, id) )
       temps
 
+(** Arity of every MiniML type variable that [tys] applies to arguments, keyed
+    by its 1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type]
+    reaches MiniML as the head of a {!Miniml.Tapp}, and a plain [typename]
+    cannot be applied, so such a parameter has to be declared
+    [template <typename> class]. *)
+let applied_ml_tvar_arities tys =
+  let arities = Hashtbl.create 4 in
+  let rec scan = function
+    | Miniml.Tapp (i, args) ->
+      Hashtbl.replace arities i (List.length args);
+      List.iter scan args
+    | Miniml.Tglob (_, args, _) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  arities
+
+(** Template parameter list for a declaration whose parameters [vars] are used
+    by the types [tys] -- an inductive's constructor fields, or the body of a
+    type alias.  The arities are read off the ML types rather than the
+    converted C++ ones because the parameter list has to be fixed before the
+    types are converted.  Registers the template template positions so that
+    {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
+let hkt_templates r vars tys =
+  let arities = applied_ml_tvar_arities tys in
+  let temps =
+    List.mapi
+      (fun i n ->
+        match Hashtbl.find_opt arities (i + 1) with
+        | Some arity -> (TTtemplate arity, n)
+        | None -> (TTtypename, n) )
+      vars
+  in
+  Table.add_hkt_ind_params r
+    (List.filter_map
+       (fun (i, (tt, _)) -> match tt with TTtemplate _ -> Some i | _ -> None)
+       (List.mapi (fun i t -> (i, t)) temps) );
+  temps
+
 (** Relax a signature whose return type applies a template template parameter
     (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
     named only by the return type, and C++ deduces nothing from a return type,
@@ -4374,7 +4415,9 @@ let gen_ind_header_v2
     && (not is_coinductive)
     && not is_mutual
   in
-  let templates = List.map (fun n -> (TTtypename, n)) vars in
+  let templates =
+    hkt_templates name vars (List.concat (Array.to_list tys))
+  in
   let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
 
   (* Handle empty inductives (no constructors) - generate uninhabitable

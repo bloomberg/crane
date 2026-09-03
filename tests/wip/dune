@@ -117,15 +117,4 @@
 
 
 
-(subdir type_alias_applied_ctor_param
- (rule
-  (targets type_alias_applied_ctor_param.t.exe)
-  (deps TypeAliasAppliedCtorParam.vo type_alias_applied_ctor_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_alias_applied_ctor_param.t.exe type_alias_applied_ctor_param.cpp type_alias_applied_ctor_param.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_alias_applied_ctor_param.t.exe)
-  (action (run ./type_alias_applied_ctor_param.t.exe))))
-
 

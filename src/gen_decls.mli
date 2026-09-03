@@ -145,4 +145,13 @@ val gen_instance_struct :
 
 (** Check if a term is a type class instance (constructs a type class record).
 *)
+(** [hkt_templates r vars tys] is the C++ template parameter list for a
+    declaration [r] whose parameters [vars] are used by the types [tys] -- an
+    inductive's constructor fields, or the body of a type alias.  A parameter
+    that [tys] applies to arguments is declared [template <typename> class],
+    and its position is registered so that uses of [r] pass a bare template
+    name; see {!Table.is_hkt_ind_param}. *)
+val hkt_templates :
+  GlobRef.t -> Id.t list -> ml_type list -> (Minicpp.template_type * Id.t) list
+
 val is_typeclass_instance : ml_ast -> ml_type -> bool

@@ -128,6 +128,10 @@ type cpp_type =
   | Ttodo  (** Placeholder during development *)
   | Tunknown  (** Type inference failed *)
   | Tany  (** std::any for type-erased storage of existentials *)
+  | Ttyctor of cpp_type
+      (** A type constructor named but not applied, as required at a template
+          template argument position ([holder<std::optional>]): prints as the
+          head of the wrapped type, with its argument list dropped. *)
   | Topaque
       (** A type whose C++ representation is not known here.  Prints as
           [std::any] just as {!Tany} does, but carries the opposite claim:

@@ -266,7 +266,8 @@ let rec worthwhile_move_type = function
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t
-  | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Topaque | Tdecltype _ ->
+  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Topaque
+  | Tdecltype _ ->
     false
 
 (* Global mutable state in this file and their reset granularity:

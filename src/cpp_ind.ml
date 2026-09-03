@@ -75,24 +75,16 @@ let pp_cpp_ind kn ind =
     @param ids list of type parameter identifiers
     @param name rendered name for the type
     @param def rendered definition (e.g., "= std::vector<int>") *)
-let pp_tydef ids name def =
+let pp_tydef temps name def =
   let templates =
-    match ids with
+    match temps with
     | [] -> mt ()
     | _ ->
       str "template <"
-      ++ List.fold_left
-           (fun s v -> s ++ v)
-           (mt ())
-           (List.mapi
-              (fun i v ->
-                if i = 0 then
-                  str "typename " ++ Id.print v
-                else
-                  str ", typename " ++ Id.print v )
-              ids )
+      ++ prlist_with_sep (fun () -> str ", ") pp_template_param temps
       ++ str "> "
   in
+
   hov 2 (templates ++ str "using " ++ name ++ def ++ str ";")
 
 (** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
@@ -626,7 +618,7 @@ let pp_hdecl d =
             str " =" ++ spc () ++ pp_type false l t )
     in
     restore_method_self_ns saved_method_ns;
-    pp_tydef l name def
+    pp_tydef (Gen_decls.hkt_templates r l [t]) name def
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
       gen_dfuns_header
@@ -768,7 +760,7 @@ let pp_hdecl_spec_only = function
             str " =" ++ spc () ++ pp_type false l t )
     in
     restore_method_self_ns saved_method_ns;
-    pp_tydef l name def
+    pp_tydef (Gen_decls.hkt_templates r l [t]) name def
   | Dterm (r, _, _)
     when List.exists
            (fun (r', _, _, _) -> globref_equal r r')
@@ -835,4 +827,6 @@ let pp_spec = function
         | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )
     in
     restore_method_self_ns saved_method_ns;
-    pp_tydef l name def
+    pp_tydef
+      (Gen_decls.hkt_templates r l (match ot with Some t -> [t] | None -> []))
+      name def

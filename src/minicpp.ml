@@ -130,6 +130,10 @@ type cpp_type =
   | Ttodo (* placeholder for types inferred later by C++ (e.g. cache var decls) *)
   | Tunknown (* unresolved type from ML AST — should not reach the printer *)
   | Tany (* std::any - for type-erased storage of existential types *)
+  | Ttyctor of cpp_type
+    (* A type constructor named but not applied, as required at a template
+       template argument position ([holder<std::optional>]).  Prints as the
+       head of [cpp_type] with its argument list dropped. *)
   | Topaque
     (* A type whose C++ representation is not known here.  Prints as
        [std::any], like [Tany], but the two must not be confused: [Tany] is a
@@ -514,6 +518,9 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tapply (t, ts) -> Tapply (map_cpp_type f t, List.map (map_cpp_type f) ts)
   | Tdecltype _ -> ty (* decltype wraps CPPraw, no sub-types to map *)
   | Tdecay t -> Tdecay (map_cpp_type f t)
+  (* [Ttyctor] is a leaf: only its head is printed, so rewriting inside it
+     (erasing an argument to [std::any], say) could only make it unprintable. *)
+  | Ttyctor _
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Topaque
   | Tauto -> ty
 
@@ -540,8 +547,8 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tqualified (t, id) -> Tqualified (go t, id)
   | Tapply (t, ts) -> Tapply (go t, List.map go ts)
   | Tdecay t -> Tdecay (go t)
-  | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
-  | Topaque | Tauto -> ty
+  | Ttyctor _ | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo
+  | Tunknown | Tany | Topaque | Tauto -> ty
 
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
@@ -563,8 +570,8 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
     exists_cpp_type p t
   | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
   | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
-  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany
-  | Topaque | Tauto ->
+  | Ttyctor _ | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown
+  | Tany | Topaque | Tauto ->
     false
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere, however deeply — as the

@@ -18,9 +18,10 @@
 (** Render a mutual inductive block to its full C++ definition. *)
 val pp_cpp_ind : Names.MutInd.t -> Miniml.ml_ind -> Pp.t
 
-(** [pp_tydef ids name def] renders a C++ type alias/definition [name = def]
-    parameterised over the type variables [ids]. *)
-val pp_tydef : Names.variable list -> Pp.t -> Pp.t -> Pp.t
+(** [pp_tydef temps name def] renders a C++ type alias/definition
+    [name = def] parameterised over the template parameters [temps]. *)
+val pp_tydef :
+  (Minicpp.template_type * Names.variable) list -> Pp.t -> Pp.t -> Pp.t
 
 (** Render a top-level declaration (function, type, term) to its C++ definition. *)
 val pp_decl : Miniml.ml_decl -> Pp.t

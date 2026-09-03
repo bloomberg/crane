@@ -394,6 +394,16 @@ val add_flat_inductive : GlobRef.t -> unit
 (** Check if inductive is flat. *)
 val is_flat_inductive : GlobRef.t -> bool
 
+(** Record the 0-based positions of an inductive's template parameters that are
+    declared [template <typename> class] because a constructor field applies
+    them; see [Gen_decls.ind_templates]. *)
+val add_hkt_ind_params : GlobRef.t -> int list -> unit
+
+(** Whether the template parameter at 0-based position [i] of this inductive is
+    a template template parameter, so a use of the inductive must pass a bare
+    template name rather than an instantiation. *)
+val is_hkt_ind_param : GlobRef.t -> int -> bool
+
 (** Mark inductive as enum. *)
 val add_enum_inductive : GlobRef.t -> unit
 

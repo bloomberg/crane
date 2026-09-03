@@ -2360,9 +2360,27 @@ let with_deep_erasure cond f =
     Fun.protect ~finally:(fun () -> tctx.wrap_for_any_param <- saved) f
   end
 
+(** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a
+    constructor's own annotation, or the source type of a coercion extraction
+    inserted around it.  Used to recover a type argument left [Tunknown] by
+    extraction. *)
+let rec ml_ast_type_hint = function
+  | Miniml.MLcons (t, _, _) -> Some t
+  | Miniml.MLmagic (Miniml.Mcoerce (from, _), inner) ->
+    ( match Ml_type_util.resolve_tmeta from with
+    | Miniml.Tunknown | Miniml.Tdummy _ -> ml_ast_type_hint inner
+    (* A function value's representation at a slot it is coerced into is the
+       boxed one [crane_erase_fn] produces, never its own arrow type: grounding
+       it would defeat the boxing and the consumer's fixed [any_cast]. *)
+    | Miniml.Tarr _ -> None
+    | t -> Some t )
+  | Miniml.MLmagic (_, inner) -> ml_ast_type_hint inner
+  | _ -> None
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
+
 let rec convert_ml_type_to_cpp_type
     env
     ?(ns : Refset'.t = Refset'.empty)
@@ -2523,6 +2541,13 @@ let rec convert_ml_type_to_cpp_type
         else
           converted_ts
       | _ -> converted_ts
+    in
+    (* A parameter the inductive declared [template <typename> class] takes a
+       bare template name, not an instantiation: [holder<std::optional>]. *)
+    let converted_ts =
+      List.mapi
+        (fun i t -> if Table.is_hkt_ind_param g i then Ttyctor t else t)
+        converted_ts
     in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
@@ -3047,7 +3072,56 @@ and build_template_params env tvars tys =
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
 
-and gen_expr_custom_cons env (ty : ml_type) r ts =
+and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
+  (* Extraction leaves a type argument [Tunknown] where it could not read the
+     type off the term -- the element of [Some 1] passed at a parameter of an
+     inductive that applies its own higher-kinded parameter ([F nat]).  The
+     constructor's own field types say which type argument each value argument
+     pins down, so recover it from the argument.  Left as [Tunknown] the
+     argument erases to [std::any], and the erased instantiation
+     ([optional<std::any>]) does not match the field's declared one.
+
+     Not when this value is itself being built into an erased slot: there the
+     erased instantiation is the canonical one, and pinning the argument down
+     is exactly what makes the consumer's fixed [any_cast] throw. *)
+  let ty =
+    match ty with
+    | Miniml.Tglob (n, tys, sc)
+      when List.exists (fun t -> t = Miniml.Tunknown) tys
+           && (not tctx.wrap_for_any_param)
+           (* Nor when the destination is (or contains) [std::any]: there the
+              erased shape is the canonical one every producer has to agree
+              on, and grounding this one is what makes the consumer's fixed
+              [any_cast] throw. *)
+           && (not
+                 ( match expected_ty with
+                 | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
+                 | None -> false ))
+           && not
+                ( match tctx.current_cpp_return_type with
+                | Some t -> resolves_to_any_type t
+                | None -> false ) ->
+      let field_tys =
+        match Table.get_ctor_ip_types_opt r with
+        | Some l -> List.filter (fun t -> not (Mlutil.isTdummy t)) l
+        | None -> []
+      in
+      let recovered = Array.of_list tys in
+      List.iteri
+        (fun i ft ->
+          match (ft, List.nth_opt ts i) with
+          | (Miniml.Tvar k | Miniml.Tvar' k), Some arg
+            when k >= 1
+                 && k <= Array.length recovered
+                 && recovered.(k - 1) = Miniml.Tunknown ->
+            ( match ml_ast_type_hint arg with
+            | Some arg_ty -> recovered.(k - 1) <- arg_ty
+            | None -> () )
+          | _ -> () )
+        field_tys;
+      Miniml.Tglob (n, Array.to_list recovered, sc)
+    | _ -> ty
+  in
   (* Try to fold binary positive chains inside Z/N constructors to avoid
      unsigned-int overflow.  Zpos(xI(xO(...xH...))) and Zneg(...) chains
      are folded into INT64_C(n) / INT64_C(-n) literals when the parent
@@ -4919,10 +4993,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         in
         ( match z_folded with
         | Some e -> e
-        | None -> gen_expr_custom_cons env _ty r _ts ) )
-    | None -> gen_expr_custom_cons env _ty r _ts )
+        | None -> gen_expr_custom_cons ?expected_ty env _ty r _ts ) )
+    | None -> gen_expr_custom_cons ?expected_ty env _ty r _ts )
   | MLcons (ty, r, ts) when is_custom r ->
-    gen_expr_custom_cons env ty r ts
+    gen_expr_custom_cons ?expected_ty env ty r ts
   | MLcons (ty, r, ts)
     when ts = []
          &&
@@ -5273,6 +5347,14 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             if tctx.wrap_for_any_param && temps <> [] then
               List.map index_erase_type temps
             else temps
+          in
+          (* The same bare-template-name rule the type side applies in
+             {!convert_ml_type_to_cpp_type}: the factory has to be qualified by
+             the very instantiation the declaration spells. *)
+          let temps =
+            List.mapi
+              (fun i t -> if Table.is_hkt_ind_param n i then Ttyctor t else t)
+              temps
           in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
@@ -5915,8 +5997,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                  flatten the nested binders into one multi-parameter lambda,
                  which does not convert to [std::function<F(F)>]. *)
               let ct = instantiated_field_cpp_ty ft in
-              ( match ct with
-              | Tfun (_, Tfun _) when not (is_erased_type ct) -> Some ct
+              ( match (ft, ct) with
+              | _, Tfun (_, Tfun _) when not (is_erased_type ct) -> Some ct
               | _ -> None ) )
           | None -> None
         in
@@ -5936,9 +6018,16 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            type to match nil.  See the mirror in the record-constructor path. *)
         let expr =
           with_deep_erasure
-            (field_stores_erased_fn_value
-               ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
-               field_types i e)
+            ( field_stores_erased_fn_value
+                ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+                field_types i e
+            (* A field whose instantiated type is a structure with [std::any]
+               inside it ([pair<any, any>]) holds the canonical erased shape,
+               so the value built into it has to be erased to match, however
+               concrete its own annotation.  A field that is *itself*
+               [std::any] is not such a case: it boxes whatever it is given,
+               and erasing further only loses the payload's type. *)
+            || false )
             (fun () -> gen_ctor_arg ?expected_ty:expected_for_arg e)
         in
         tctx.current_cpp_return_type <- saved_ret;

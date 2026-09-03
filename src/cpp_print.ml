@@ -972,6 +972,15 @@ let rec pp_cpp_type par vl t =
          spelling that accepts whatever it turns out to be. *)
       require_header "any";
       str "std::any"
+    | Ttyctor t ->
+      (* A template template argument is the bare template name.  There is no
+         structural way to ask for "the head" of an arbitrary rendering --
+         a custom mapping is a free-form string like [std::optional<%1>] --
+         so the applied form is printed and its argument list cut off. *)
+      let s = Pp.string_of_ppcmds (pp_rec false t) in
+      str (match String.index_opt s '<' with
+           | Some i -> String.sub s 0 i
+           | None -> s)
     | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
@@ -2778,7 +2787,7 @@ and is_constexpr_type ty =
   | Tqualified (t, _) -> is_constexpr_type t
   (* An applied associated type is whatever the instance makes it; nothing
      here can establish it is a literal type. *)
-  | Tapply _ -> false
+  | Ttyctor _ | Tapply _ -> false
 
 (** Check if a function is constexpr-eligible: all param types AND return
     type must be constexpr-eligible literal types.
