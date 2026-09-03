@@ -2341,6 +2341,25 @@ let rec clean_self_ns t =
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
+(** [with_deep_erasure cond f] runs [f] with {!wrap_for_any_param} set when
+    [cond] holds, and restores it afterwards.
+
+    A value flowing into a slot that is really [std::any] has to be built at
+    the canonical erased shape, so that every producer of the same Coq type
+    agrees with the [any_cast] that reads it back -- a "cons" production
+    keeping [deque<Prod<Nat, Nat>>] where the matching "nil" erased to
+    [deque<Prod<any, any>>] is what [std::bad_any_cast] at the consumer looks
+    like.  The flag says so for the duration of one subtree, and restoring it
+    on the exceptional path as well keeps a translation error in one argument
+    from silently deep-erasing everything generated after it. *)
+let with_deep_erasure cond f =
+  if not cond then f ()
+  else begin
+    let saved = tctx.wrap_for_any_param in
+    tctx.wrap_for_any_param <- true;
+    Fun.protect ~finally:(fun () -> tctx.wrap_for_any_param <- saved) f
+  end
+
 (** Convert ML type to C++ type. Handles custom types, inductives, type
     variables, and erased parameters. env: variable environment; ns: set of
     local references; tvars: type variable names *)
@@ -5492,11 +5511,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
-                  let saved_wrap = tctx.wrap_for_any_param in
-                  tctx.wrap_for_any_param <- true;
-                  let new_expr = gen_ctor_arg ml_e in
-                  tctx.wrap_for_any_param <- saved_wrap;
-                  new_expr
+                  with_deep_erasure true (fun () -> gen_ctor_arg ml_e)
                 end else begin
                   (* A non-lambda FUNCTION value (e.g. a forwarded callback
                      parameter [f]) stored into an erased field must be wrapped
@@ -5906,14 +5921,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            [std::bad_any_cast] at the consumer.  Generate the body with
            [wrap_for_any_param] so cons productions deep-erase their element
            type to match nil.  See the mirror in the record-constructor path. *)
-        let saved_wrap = tctx.wrap_for_any_param in
-        if
-          field_stores_erased_fn_value
-            ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
-            field_types i e
-        then tctx.wrap_for_any_param <- true;
-        let expr = gen_ctor_arg ?expected_ty:expected_for_arg e in
-        tctx.wrap_for_any_param <- saved_wrap;
+        let expr =
+          with_deep_erasure
+            (field_stores_erased_fn_value
+               ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+               field_types i e)
+            (fun () -> gen_ctor_arg ?expected_ty:expected_for_arg e)
+        in
         tctx.current_cpp_return_type <- saved_ret;
         let expr =
           match ft_opt with
@@ -6001,12 +6015,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
                 wrap_void_call_as_value (gen_expr env e)
               | _ ->
-                let saved_wrap = tctx.wrap_for_any_param in
-                if field_stores_erased_fn_value field_types_rec i e then
-                  tctx.wrap_for_any_param <- true;
-                let r = gen_expr ?expected_ty:(expected_for_field i e) env e in
-                tctx.wrap_for_any_param <- saved_wrap;
-                r)
+                with_deep_erasure
+                  (field_stores_erased_fn_value field_types_rec i e)
+                  (fun () -> gen_expr ?expected_ty:(expected_for_field i e) env e))
             ts
         in
         tctx.in_ctor_arg <- saved_in_ctor_arg;
@@ -7851,9 +7862,6 @@ and eta_fun env f args =
           | _ -> false)
        | None -> false)
     in
-    let saved_wrap = tctx.wrap_for_any_param in
-    if callee_has_erased_params then
-      tctx.wrap_for_any_param <- true;
     (* [has_unresolved_boxed_arg]: set when an argument is statically known to
        be boxed as [std::any] ([binder_is_boxed]) but the callee's parameter
        type at this position can't be resolved to a concrete C++ type (it is
@@ -7866,7 +7874,8 @@ and eta_fun env f args =
        direct call, so the concrete parameter types can be recovered via
        [std::function] CTAD once C++ instantiates the template. *)
     let has_unresolved_boxed_arg = ref false in
-    let args = List.mapi (fun i x ->
+    let args = with_deep_erasure callee_has_erased_params (fun () ->
+      List.mapi (fun i x ->
       let expr =
         match x with
         | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
@@ -7907,8 +7916,8 @@ and eta_fun env f args =
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
-      | None -> expr) args in
-    tctx.wrap_for_any_param <- saved_wrap;
+      | None -> expr) args)
+    in
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
        into a primary call and a chained application of excess args. Example: [f
