@@ -148,26 +148,28 @@ template <typename A, typename P> struct SigT {
 /// erased-callable adapter -- so the consumer recovers the pair with a single
 /// any_cast<pair<any,any>> and applies the callable.
 struct SigtPairFnPayload {
-  using item = SigT<std::any, std::any>;
+  using item = SigT<std::any, std::pair<std::any, std::any>>;
 
   template <typename T1, typename F1> static item mk(T1 a, F1 &&f) {
-    return SigT<std::any, std::any>::existt(
+    return SigT<std::any, std::pair<std::any, std::any>>::existt(
         std::any(), std::make_pair(std::any(a), std::any(crane_erase_fn(f))));
   }
 
-  static inline const List<item> items = List<SigT<std::any, std::any>>::cons(
-      mk<uint64_t>(UINT64_C(3), [](uint64_t n) { return n; }),
-      List<SigT<std::any, std::any>>::cons(
-          mk<bool>(true,
-                   [](bool b) {
-                     if (b) {
-                       return UINT64_C(1);
-                     } else {
-                       return UINT64_C(0);
-                     }
-                   }),
-          List<SigT<std::any, std::any>>::nil()));
-  static uint64_t score(const SigT<std::any, std::any> &it);
+  static inline const List<item> items =
+      List<SigT<std::any, std::pair<std::any, std::any>>>::cons(
+          mk<uint64_t>(UINT64_C(3), [](uint64_t n) { return n; }),
+          List<SigT<std::any, std::pair<std::any, std::any>>>::cons(
+              mk<bool>(true,
+                       [](bool b) {
+                         if (b) {
+                           return UINT64_C(1);
+                         } else {
+                           return UINT64_C(0);
+                         }
+                       }),
+              List<SigT<std::any, std::pair<std::any, std::any>>>::nil()));
+  static uint64_t
+  score(const SigT<std::any, std::pair<std::any, std::any>> &it);
   static inline const uint64_t go = items.template fold_left<uint64_t>(
       [](uint64_t acc, const auto &it) { return (acc + score(it)); },
       UINT64_C(0));

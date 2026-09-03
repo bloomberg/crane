@@ -217,11 +217,12 @@ struct SigtTypeWitnessContainer {
   ///
   /// The payload's *outer* constructor is known (list); only the element type
   /// is existential, so List<std::any> would be the right erasure.
-  template <typename T1> static SigT<std::any, std::any> pack(List<T1> l) {
-    return SigT<std::any, std::any>::existt(std::any(), std::move(l));
+  template <typename T1>
+  static SigT<std::any, List<std::any>> pack(List<T1> l) {
+    return SigT<std::any, List<std::any>>::existt(std::any(), std::move(l));
   }
 
-  static Nat depth(const SigT<std::any, std::any> &p);
+  static Nat depth(const SigT<std::any, List<std::any>> &p);
   static inline const Nat run = depth(pack<Nat>(List<Nat>::cons(
       Nat::s(Nat::o()),
       List<Nat>::cons(Nat::s(Nat::s(Nat::o())), List<Nat>::nil()))));

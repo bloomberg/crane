@@ -575,6 +575,34 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
   | _ -> ty (* Tvoid, Ttodo, Tunknown, Tany *)
 
+(** Erase a type argument down to its outermost applied type constructors,
+    boxing every leaf: [List<Nat>] becomes [List<std::any>] and a bare [Nat]
+    becomes [std::any].
+
+    This is the erasure required wherever one C++ type has to serve every
+    instantiation of an existential -- an index-position argument of an
+    indexed inductive (after an erased [Tdummy Ktype] index), or a value
+    flowing into an erased slot.  Collapsing the whole argument to [std::any]
+    would also be uniform, but it throws away a structure the consumer needs:
+    the payload of a [{ T : Type & list T }] is still a list, and only its
+    element type is existential.
+
+    A leaf is collapsed rather than recursed into so that a namespaced [Tglob]
+    like [Nat] yields plain [std::any], not the malformed
+    [typename Nat::std::any]. *)
+let rec index_erase_type (ty : cpp_type) : cpp_type =
+  match ty with
+  | Tglob (r, (_ :: _ as tys), args) ->
+    Tglob (r, List.map index_erase_type tys, args)
+  | Tid (id, (_ :: _ as tys)) -> Tid (id, List.map index_erase_type tys)
+  | Tid_external (id, (_ :: _ as tys)) ->
+    Tid_external (id, List.map index_erase_type tys)
+  | Tnamespace (r, inner) ->
+    ( match index_erase_type inner with
+    | Tany -> Tany
+    | t -> Tnamespace (r, t) )
+  | _ -> Tany
+
 (** Check if a C++ type contains any unnamed Tvar (Tvar(_, None)). Used to
     detect types that can't be fully resolved in monomorphized contexts
     (tvars=[]), where nested Tvar(_, None) would print as invalid C++ like

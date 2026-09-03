@@ -240,18 +240,21 @@ struct SigtErasedStructuredBinding {
   /// (crane_fn.h:148)
   ///
   /// The payload has to be any_cast to std::pair<std::any, std::any> first.
-  using item = SigT<std::any, std::any>;
+  using item = SigT<std::any, std::pair<std::any, std::any>>;
 
   template <typename T1, typename F1> static item mkitem(T1 x, F1 &&f) {
-    return SigT<std::any, std::any>::existt(
+    return SigT<std::any, std::pair<std::any, std::any>>::existt(
         std::any(), std::make_pair(std::any(x), std::any(crane_erase_fn(f))));
   }
 
-  static Nat score(const SigT<std::any, std::any> &i);
-  static Nat total(const List<SigT<std::any, std::any>> &l);
-  static inline const List<item> ex = List<SigT<std::any, std::any>>::cons(
-      mkitem<Nat>(Nat::s(Nat::s(Nat::s(Nat::o()))), [](Nat n) { return n; }),
-      List<SigT<std::any, std::any>>::nil());
+  static Nat score(const SigT<std::any, std::pair<std::any, std::any>> &i);
+  static Nat
+  total(const List<SigT<std::any, std::pair<std::any, std::any>>> &l);
+  static inline const List<item> ex =
+      List<SigT<std::any, std::pair<std::any, std::any>>>::cons(
+          mkitem<Nat>(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                      [](Nat n) { return n; }),
+          List<SigT<std::any, std::pair<std::any, std::any>>>::nil());
   static inline const Nat run = total(ex);
 };
 

@@ -176,7 +176,7 @@ struct SigtListPayloadAnyCast {
   static inline const uint64_t go = []() {
     const auto &_sv0 = pack;
     const auto &[x0, a10] = _sv0;
-    if (x0) {
+    if (std::any_cast<bool>(x0)) {
       return std::any_cast<uint64_t>(a10);
     } else {
       return List<uint64_t>(std::any_cast<List<std::any>>(a10)).length();

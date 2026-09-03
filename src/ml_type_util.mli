@@ -188,6 +188,10 @@ val subst_tvars_type :
 (** Erase type variables within a C++ type. *)
 val tvar_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
 
+(** Erase a type down to its outermost applied type constructors, boxing every
+    leaf: [List<Nat>] becomes [List<std::any>], [Nat] becomes [std::any]. *)
+val index_erase_type : Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** Whether a C++ type contains an unnamed type variable. *)
 val has_unnamed_tvar : Minicpp.cpp_type -> bool
 

@@ -2517,7 +2517,9 @@ let rec convert_ml_type_to_cpp_type
         in
         let cutoff = first_ktype_idx 0 filtered_ts in
         if cutoff < max_int then
-          List.mapi (fun i t -> if i > cutoff then Tany else t) converted_ts
+          List.mapi
+            (fun i t -> if i > cutoff then index_erase_type t else t)
+            converted_ts
         else
           converted_ts
       | _ -> converted_ts
@@ -2769,6 +2771,8 @@ and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
     the corresponding de Bruijn index as erased and records its concrete
     C++ type from the template arguments.
 
+    @param scrut_db  de Bruijn index of the scrutinee within this branch, when
+           it is a local binder whose C++ type an enclosing branch recorded
     @param cname  constructor reference (to look up parameter count)
     @param typ    ML type of the scrutinee
     @param env    translation environment
@@ -2776,18 +2780,46 @@ and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
     @param n_fields    number of non-erased constructor fields
     @param non_erased_def_site_field_tys  definition-site field types
            with erased (dummy) entries filtered out *)
-and populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
-    ~non_erased_def_site_field_tys =
+and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
+    ~non_erased_def_site_field_tys () =
   let scrut_cpp_ty =
-    let tvars = get_current_type_vars () in
-    convert_ml_type_to_cpp_type env tvars typ
+    (* An enclosing branch may already have pinned the scrutinee's C++ type
+       down -- [SigT<any, pair<any,any>>] tells us its payload binder is a
+       [pair<any,any>], which its ML type (a bare type variable) does not.
+       Prefer that over re-deriving from the ML type. *)
+    match Option.bind scrut_db binder_cpp_type with
+    | Some t when not (resolves_to_any_type t) -> t
+    | _ ->
+      let tvars = get_current_type_vars () in
+      convert_ml_type_to_cpp_type env tvars typ
   in
-  let scrut_template_args = extract_template_args scrut_cpp_ty in
+  let scrut_template_args =
+    let args = extract_template_args scrut_cpp_ty in
+    (* One boxed argument means the whole instantiation was erased, so every
+       argument is boxed -- the same rule the type-index cutoff applies to a
+       [Tdummy Ktype] index, here for an argument erased because it mentions a
+       free (existential) type variable.  Without it a payload
+       [pair<any, function<nat(any)>>] would be read back component-wise at
+       two different erasures from the [pair<any, any>] its producer stored. *)
+    if List.exists resolves_to_any_type args then List.map index_erase_type args
+    else args
+  in
   let num_pv = Table.get_ctor_num_param_vars cname in
-  let check_tvar k =
-    match List.nth_opt scrut_template_args (k - 1) with
-    | Some t -> resolves_to_any_type t
-    | None -> false
+  (* The scrutinee's template argument that fixes this field's type, if the
+     field's definition-site type is one of the inductive's own parameters.
+     [Tapp (k, _)] counts: [sigT]'s payload field is written [P x], a
+     parameter applied to the witness, and it is [P] that the instantiation
+     pins down. *)
+  let rec field_template_arg = function
+    | Miniml.Tvar k | Miniml.Tvar' k | Miniml.Tapp (k, _) ->
+      List.nth_opt scrut_template_args (k - 1)
+    | Miniml.Tmeta {contents = Some t} -> field_template_arg t
+    | _ -> None
+  in
+  let field_arg field_i =
+    if num_pv = 0 then None
+    else Option.bind (List.nth_opt non_erased_def_site_field_tys field_i)
+           field_template_arg
   in
   let is_field_stored_as_any field_i =
     if num_pv = 0 then
@@ -2799,22 +2831,15 @@ and populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
         has_unnamed_tvar cpp_ty
       | None -> false
     else
-      match List.nth_opt non_erased_def_site_field_tys field_i with
-      | Some (Miniml.Tvar k | Miniml.Tvar' k) -> check_tvar k
-      | Some (Miniml.Tmeta {contents = Some (Miniml.Tvar k | Miniml.Tvar' k)}) ->
-        check_tvar k
-      | _ -> false
+      match field_arg field_i with Some t -> resolves_to_any_type t | None -> false
   in
   List.iteri (fun field_i _ ->
     let db_idx = n_pat_vars - field_i in
     if is_field_stored_as_any field_i then
       record_binder_type db_idx Tany;
-    (match List.nth_opt non_erased_def_site_field_tys field_i with
-     | Some (Miniml.Tvar k | Miniml.Tvar' k) ->
-       (match List.nth_opt scrut_template_args (k - 1) with
-        | Some t -> record_binder_type db_idx t
-        | None -> ())
-     | _ -> ())
+    match field_arg field_i with
+    | Some t -> record_binder_type db_idx t
+    | None -> ()
   ) (List.init n_fields Fun.id)
 
 (** The C++ type recorded for the pattern variable at de Bruijn index [i], if
@@ -5219,7 +5244,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              is erased, [P x] is equally abstract and the concrete type
              inferred from the value argument (e.g. [bool] from [true : bool])
              would produce an incompatible template instantiation
-             ([SigT<std::any, Bool0>] vs. the declared [SigT<std::any, std::any>]). *)
+             ([SigT<std::any, Bool0>] vs. the declared
+             [SigT<std::any, List<std::any>>]).  {!index_erase_type} is the
+             same erasure the type side applies to those positions in
+             {!convert_ml_type_to_cpp_type}, so the two agree by construction. *)
           let temps =
             let rec first_ktype_dummy i = function
               | [] -> max_int
@@ -5227,16 +5255,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               | _ :: rest -> first_ktype_dummy (i + 1) rest
             in
             let cutoff = first_ktype_dummy 0 ts_updated in
-            let rec is_all_any = function
-              | Tany -> true
-              | Tglob (_, args, _) -> List.for_all is_all_any args
-              | Tnamespace (_, inner) -> is_all_any inner
-              | Tfun (ps, r) -> List.for_all is_all_any ps && is_all_any r
-              | _ -> false
-            in
-            List.mapi (fun i t ->
-              if i > cutoff && not (is_all_any t) then Tany else t
-            ) temps
+            List.mapi
+              (fun i t -> if i > cutoff then index_erase_type t else t)
+              temps
           in
           (* When this constructor value flows into an erased ([std::any]) slot
              ([wrap_for_any_param]) — e.g. a [Prod] pair built inside a
@@ -5247,18 +5268,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              Concrete field values implicitly convert to [std::any], so the
              factory call still type-checks.  This mirrors the custom-list
              element erasure in the custom-cons path, extending it to plain
-             value-type constructors.  Uses a namespace-collapsing erase (a
-             leaf like [Nat] must become plain [std::any], not the malformed
-             [typename Nat::std::any] that the shared [erase_type_to_any]
-             would produce for a namespaced [Tglob]). *)
+             value-type constructors. *)
           let temps =
             if tctx.wrap_for_any_param && temps <> [] then
-              let rec erase_arg = function
-                | Tglob (g, (_ :: _ as args), ns) ->
-                  Tglob (g, List.map erase_arg args, ns)
-                | _ -> Tany
-              in
-              List.map erase_arg temps
+              List.map index_erase_type temps
             else temps
           in
           let ctor_struct = ctor_struct_name_of_ref r in
@@ -8287,9 +8300,11 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       let saved_return_type = tctx.current_cpp_return_type in
       ( if tctx.current_cpp_return_type = Some Tvoid then
           tctx.current_cpp_return_type <- None );
-      populate_erased_field_env ~cname ~typ ~env ~n_pat_vars
+      populate_erased_field_env
+        ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
+        ~cname ~typ ~env ~n_pat_vars
         ~n_fields:(List.length rev_ids)
-        ~non_erased_def_site_field_tys;
+        ~non_erased_def_site_field_tys ();
       let body_stmts = gen_stmts env_for_body (fun x -> Sreturn (Some x)) body in
       tctx.current_cpp_return_type <- saved_return_type;
       tctx.match_param_counter <- saved_match_counter;
@@ -9567,9 +9582,14 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         in
         List.filter (fun t -> not (isTdummy t)) def_site_field_tys
       in
-      populate_erased_field_env ~cname:r ~typ:ml_typ ~env ~n_pat_vars
+      populate_erased_field_env
+        ?scrut_db:
+          ( match t with
+          | MLrel i | MLmagic (_, MLrel i) -> Some (i + n_pat_vars)
+          | _ -> None )
+        ~cname:r ~typ:ml_typ ~env ~n_pat_vars
         ~n_fields:(List.length ids)
-        ~non_erased_def_site_field_tys:non_erased_def_tys;
+        ~non_erased_def_site_field_tys:non_erased_def_tys ();
       if scrut_elems_are_any then begin
         let n_fields = List.length ids in
         List.iteri (fun field_i _ ->

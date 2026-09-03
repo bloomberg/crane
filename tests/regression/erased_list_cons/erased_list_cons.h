@@ -267,7 +267,7 @@ template <SYM Ty> struct DefsFn {
         const auto &[a00, a10] =
             std::get<typename List<SigT<symbol, std::any>>::Cons>(stk.v());
         const auto &[x1, a11] = a00;
-        if (symbol_eq_dec(x1, a0)) {
+        if (symbol_eq_dec(std::any_cast<symbol>(x1), a0)) {
           auto _cs = assemble(*a1, *a10);
           if (_cs.has_value()) {
             const auto &rest = *_cs;

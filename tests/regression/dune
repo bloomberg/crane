@@ -7808,3 +7808,14 @@
   (alias runtest)
   (deps hkt_instance_any_mismatch.t.exe)
   (action (run ./hkt_instance_any_mismatch.t.exe))))
+
+(subdir sigt_type_witness_container
+ (rule
+  (targets sigt_type_witness_container.t.exe)
+  (deps SigtTypeWitnessContainer.vo sigt_type_witness_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_type_witness_container.t.exe sigt_type_witness_container.cpp sigt_type_witness_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_type_witness_container.t.exe)
+  (action (run ./sigt_type_witness_container.t.exe))))
