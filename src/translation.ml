@@ -3291,7 +3291,7 @@ and gen_expr_custom_cons env (ty : ml_type) r ts =
                so at runtime it is invoked with its argument boxed as a single
                [std::any] holding the fully-erased representation
                ([pair<any,any>] for a pair domain) — that is what producers of
-               a value-dependent type emit (see [flows_into_erased_slot]).  Its
+               a value-dependent type emit (see {!with_deep_erasure}).  Its
                parameter's own pattern match must therefore treat the scrutinee
                as erased and go through [any_cast<pair<any,any>>]. *)
             let tvars = get_current_type_vars () in
@@ -6944,11 +6944,11 @@ and eta_fun env f args =
          literal passed at this call site (e.g. [(n, (n, tt))] for a literal
          [xs]) must be DEEP-erased — every component boxed into [std::any] —
          so that the callee's generic body, which reconstructs the value via
-         [any_cast<pair<any,any>>], can recover it.  Reuse the
-         [flows_into_erased_slot] mechanism in [gen_expr_custom_cons] (normally
-         driven by the enclosing function's erased return type) by treating
-         this call argument as if it were itself in erased "return" position
-         for the duration of its generation. *)
+         [any_cast<pair<any,any>>], can recover it.  The deep-erasing
+         constructor path in [gen_expr_custom_cons] is normally driven by the
+         enclosing function's erased return type, so it is reached here by
+         treating this call argument as if it were itself in erased "return"
+         position for the duration of its generation. *)
       let param_resolves_to_any =
         match List.nth_opt fn_param_ml_tys i with
         | Some ml_ty -> ml_erases_to_box env ml_ty
