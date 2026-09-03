@@ -90,19 +90,6 @@
   (action (run ./loopify_gap_ackermann.t.exe))))
 
 
-(subdir hkt_curried_pure_arity
- (rule
-  (targets hkt_curried_pure_arity.t.exe)
-  (deps HktCurriedPureArity.vo hkt_curried_pure_arity.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hkt_curried_pure_arity.t.exe hkt_curried_pure_arity.cpp hkt_curried_pure_arity.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hkt_curried_pure_arity.t.exe)
-  (action (run ./hkt_curried_pure_arity.t.exe))))
-
-
-
 (subdir mutual_tmc_loopify
  (rule
   (targets mutual_tmc_loopify.t.exe)

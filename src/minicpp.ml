@@ -524,6 +524,23 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Topaque
   | Tauto -> ty
 
+(** [curry_fun_type ty] respells every multi-parameter function type inside
+    [ty] as nested single-parameter ones: [Nat(Nat, Nat)] becomes
+    [std::function<Nat(Nat)>(Nat)].
+
+    Crane's calling convention flattens a chain of Rocq arrows into one
+    multi-parameter function, which is what a {e definition} wants.  A type
+    standing at a template argument position cannot be flattened: a signature
+    that rebuilds an arrow out of separate template parameters ([F<function<B
+    (A)>>]) spells it one argument at a time, so an instantiation has to as
+    well or the two do not match. *)
+let curry_fun_type ty =
+  map_cpp_type
+    (function
+      | Tfun (a :: (_ :: _ as rest), cod) -> Tfun ([a], Tfun (rest, cod))
+      | t -> t )
+    ty
+
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by
     [sub i], leaving the substituted type alone.
 

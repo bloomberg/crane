@@ -499,6 +499,11 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
+(** [curry_fun_type ty] respells every multi-parameter function type inside
+    [ty] as nested single-parameter ones, as required of a type standing at a
+    template argument position. *)
+val curry_fun_type : cpp_type -> cpp_type
+
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by [sub i].
 
     Unlike {!map_cpp_type}, the replacement is not traversed again, so a

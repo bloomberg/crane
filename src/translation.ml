@@ -3015,17 +3015,20 @@ and phantom_prefix_args id =
     let force_required = collect_ml_type_index_tvars ml_ty in
     List.init (explicit_tvar_prefix ~force_required cty) (fun _ -> Tvoid)
 
-and build_template_params env tvars tys =
+(** [template_arg_of_ml_type env tvars ty] converts [ty] for a template
+    argument position, where a function type has to keep the currying the
+    Rocq arrows had; see {!Minicpp.curry_fun_type}. *)
+and template_arg_of_ml_type env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  let ns = Refset'.empty in
+  curry_fun_type
+    (convert_ml_type_to_cpp_type env ~ns:Refset'.empty tvars (type_simpl ty))
+
+and build_template_params env tvars tys =
   List.map
     (fun ty ->
-      (* Simplify and convert the ML type to C++ *)
-      let t =
-        convert_ml_type_to_cpp_type env ~ns tvars (type_simpl ty)
-      in
+      let t = template_arg_of_ml_type env tvars ty in
       (* Check for unbound type variables *)
       match t with
       | Tvar (_, None) when tvars <> [] ->
@@ -7016,16 +7019,32 @@ and eta_fun env f args =
       in
       (* The [i]th declared parameter type of the callee, as a C++ type, taken
          from [param_tys]; [None] when it is erased and so says nothing. *)
-      let param_expected_cpp_ty param_tys =
-        match List.nth_opt param_tys i with
+      let param_expected_cpp_ty ?(at = i) param_tys =
+        match List.nth_opt param_tys at with
         | Some ml_ty ->
           let tvars = get_current_type_vars () in
           let cpp_ty = convert_ml_type_to_cpp_type env tvars ml_ty in
           if is_erased_type cpp_ty then None else Some cpp_ty
         | None -> None
       in
+      (* A parameter declared as one of the callee's type variables holds
+         whatever the template argument at that position says, and a template
+         argument keeps its currying (see {!template_arg_of_ml_type}).  So the
+         value has to be curried too, however many arrows its own type has.
+         The callee's parameters are indexed from its class-dictionary
+         arguments, which [regular_ml_args] does not include. *)
+      let tvar_param_expected_cpp_ty () =
+        let j = i + List.length typeclass_ml_args in
+        match List.nth_opt fn_param_ml_tys_orig j with
+        | Some (Miniml.Tvar _ | Miniml.Tvar' _) ->
+          Option.map curry_fun_type (param_expected_cpp_ty ~at:j fn_param_ml_tys)
+        | _ -> None
+      in
       let arg_expected_ty =
-        match ml_arg with
+        match tvar_param_expected_cpp_ty () with
+        | Some _ as t -> t
+        | None ->
+        ( match ml_arg with
         | MLmagic (_, _) -> param_expected_cpp_ty fn_param_ml_tys
         (* [MLglob]: a bare function name handed over as a value may need
            re-currying.  Count the arrows in the callee's {e unsubstituted}
@@ -7033,7 +7052,7 @@ and eta_fun env f args =
            type variable belong to the element type the callee is generic in,
            not to the callable it expects. *)
         | MLglob _ -> param_expected_cpp_ty fn_param_ml_tys_orig
-        | _ -> None
+        | _ -> None )
       in
       let saved_expected_for_arg = tctx.expected_ml_type_for_arg in
       ( match List.nth_opt fn_param_ml_tys i with
@@ -7350,7 +7369,7 @@ and eta_fun env f args =
       List.filteri (fun i _ -> keep_position (i + 1)) tys
       |> List.map
            (fun ty ->
-             let t = convert_ml_type_to_cpp_type env tvars (type_simpl ty) in
+             let t = template_arg_of_ml_type env tvars ty in
              if has_unnamed_tvar t then
                Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
              else t )
