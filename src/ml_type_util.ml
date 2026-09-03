@@ -344,6 +344,12 @@ and erase_type_to_any = function
     Tnamespace (ns_g, erase_type_to_any inner)
   | _ -> Tany
 
+(** [resolve_tvars_to_any ty] replaces every unresolved type variable
+    ([Tvar (_, None)]) in [ty] with [Tany], so that an [any_cast] target
+    renders as [std::any] rather than as a placeholder with no C++ spelling. *)
+and resolve_tvars_to_any ty =
+  map_cpp_type (function Tvar (_, None) -> Tany | t -> t) ty
+
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
     ML AST: a bare type variable, [Tunknown], or an empty [Tmeta].  These
     arise from type-level parameters that were erased during extraction

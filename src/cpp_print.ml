@@ -1129,7 +1129,7 @@ and pp_cpp_expr env args t =
       | Some ty ->
         (* For List<T> (T ≠ std::any) grammar productions always store List<std::any>
            at runtime.  Use the converting constructor so element casts are correct. *)
-        let resolved_ty = resolve_tvars_to_any ty in
+        let resolved_ty = Ml_type_util.resolve_tvars_to_any ty in
         if is_list_with_concrete_elem resolved_ty then
           let g_of_list, elem_ty_of_list =
             match resolved_ty with
@@ -2850,28 +2850,6 @@ and expr_is_any_typed_param = function
   | CPPmove e -> expr_is_any_typed_param e
   | _ -> false
 
-(** Erase leaf types to [Tany], preserving container structure.
-    E.g. [pair<uint64_t, uint64_t>] → [pair<any, any>],
-    [deque<pair<uint64_t, uint64_t>>] → [deque<pair<any, any>>]. *)
-and erase_type_to_any = function
-  | Tglob (g, args, ns) when args <> [] ->
-    Tglob (g, List.map erase_type_to_any args, ns)
-  | Tnamespace (ns_g, inner) ->
-    Tnamespace (ns_g, erase_type_to_any inner)
-  | _ -> Tany
-
-(** Replace unresolved type variables ([Tvar(_, None)]) with [Tany] so that
-    [any_cast] targets render as [std::any] instead of invalid placeholders. *)
-and resolve_tvars_to_any = function
-  | Tvar (_, None) -> Tany
-  | Tglob (g, ts, es) -> Tglob (g, List.map resolve_tvars_to_any ts, es)
-  | Tfun (dom, cod) ->
-    Tfun (List.map resolve_tvars_to_any dom, resolve_tvars_to_any cod)
-  | Tmod (m, t) -> Tmod (m, resolve_tvars_to_any t)
-  | Tref t -> Tref (resolve_tvars_to_any t)
-  | Tshared_ptr t -> Tshared_ptr (resolve_tvars_to_any t)
-  | t -> t
-
 (** Wrap a pretty-printed expression in [std::any_cast<T>(...)] when it
     returns [std::any] but the context expects a concrete type [T].
     Unresolved type variables in [T] are replaced with [std::any].
@@ -2885,7 +2863,7 @@ and wrap_any_cast_if_needed expr expr_printed expected_ty vl =
   let fires = (expr_is_any_returning_method expr || expr_is_any_typed_param expr)
      && is_concrete_cpp_type expected_ty in
   if fires then
-    let resolved_ty = resolve_tvars_to_any expected_ty in
+    let resolved_ty = Ml_type_util.resolve_tvars_to_any expected_ty in
     str (sn ()).any_cast
     ++ str "<"
     ++ pp_cpp_type false vl resolved_ty
@@ -3119,9 +3097,9 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
               else if not (is_any_type ty) then
                 let erased_ty = match ty with
                   | Tglob (g, args, ns) when args <> [] ->
-                    Tglob (g, List.map erase_type_to_any args, ns)
+                    Tglob (g, List.map Ml_type_util.erase_type_to_any args, ns)
                   | Tnamespace (ns_g, inner) ->
-                    Tnamespace (ns_g, erase_type_to_any inner)
+                    Tnamespace (ns_g, Ml_type_util.erase_type_to_any inner)
                   | t -> t
                 in
                 concrete_typed_any_params :=

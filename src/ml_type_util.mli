@@ -145,6 +145,10 @@ val extract_template_args : Minicpp.cpp_type -> Minicpp.cpp_type list
 (** Erase a C++ type to [any]. *)
 val erase_type_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
 
+(** [resolve_tvars_to_any ty] replaces every unresolved type variable in [ty]
+    with [Tany], so an [any_cast] target has a C++ spelling. *)
+val resolve_tvars_to_any : Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** Whether a MiniML type is an erased type. *)
 val is_ml_erased_ty : Miniml.ml_type -> bool
 
