@@ -117,7 +117,6 @@ let id_empty        = Id.of_string "empty"
 let id_emplace_back = Id.of_string "emplace_back"
 let id_pop_back     = Id.of_string "pop_back"
 let id_back         = Id.of_string "back"
-let id_reserve      = Id.of_string "reserve"
 
 (** Raised when a function's shape defeats a linearising transform -- for
     instance a self-call whose arity differs from the enclosing definition's, so

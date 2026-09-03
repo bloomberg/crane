@@ -3037,46 +3037,6 @@ let rewrite_ml_ast_types
     in
     Mlutil.ast_map_types rty ast
 
-(** Rewrite projection types for promoted dependent records. When a function's
-    first parameter is a promoted typeclass (e.g., Magma), and the remaining
-    args/return have erased carrier refs, replace them with Tvar references from
-    the typeclass's field types.
-
-    The function name [n] is used to find which field of the typeclass this
-    projection corresponds to. *)
-let rewrite_typeclass_projection_type (n : GlobRef.t) (ty : ml_type) : ml_type =
-  match ty with
-  | Tarr ((Tglob (class_ref, _, _) as tc_arg), rest)
-    when Table.is_typeclass class_ref ->
-    let fields = Table.get_record_fields class_ref in
-    let field_types = Table.record_field_types class_ref in
-    let proj_map = erased_proj_tvar_map class_ref in
-    if proj_map <> [] then (* Check if n is a projection of this typeclass *)
-      let non_dummy_types =
-        filter_value_types field_types
-      in
-      let non_dummy_fields_types =
-        if List.length fields = List.length non_dummy_types then
-          List.combine fields non_dummy_types
-        else
-          List.map (fun f -> (f, Miniml.Tunknown)) fields
-      in
-      let proj_name = Common.pp_global_name Term n in
-      let matching_field_type =
-        List.find_map
-          (fun (field_ref_opt, ft) ->
-            match field_ref_opt with
-            | Some fr when Common.pp_global_name Term fr = proj_name -> Some ft
-            | _ -> None )
-          non_dummy_fields_types
-      in
-      match matching_field_type with
-      | Some field_ty -> Tarr (tc_arg, field_ty)
-      | None -> Tarr (tc_arg, replace_erased_proj_refs proj_map rest)
-    else
-      ty
-  | _ -> ty
-
 (** Get the erased projection map for a function's type, if it takes a promoted
     typeclass as first argument.
 
@@ -4336,35 +4296,6 @@ let ml_type_recurses_through_boxed_container ~ind_ref ml_ty =
 let maybe_record_boxed_recursive_ind ~ind_ref ml_ty =
   if ml_type_recurses_through_boxed_container ~ind_ref ml_ty then
     Table.add_boxed_recursive_ind ind_ref
-
-(** Check whether the self/mutual reference inside [ml_ty] is uniform
-    (i.e. its type arguments are exactly the parent's type parameters
-    in order).  Non-uniform recursion needs [shared_ptr]. *)
-let ml_self_ref_is_uniform ~ind_ref ~cname ml_ty =
-  let ind_kn_opt =
-    match ind_ref with
-    | GlobRef.IndRef (kn, _) -> Some kn
-    | _ -> None
-  in
-  let is_self_or_mutual r =
-    globref_equal r ind_ref
-    || match r, ind_kn_opt with
-       | GlobRef.IndRef (kn2, _), Some kn ->
-         MutInd.CanOrd.equal kn2 kn
-       | _ -> false
-  in
-  match find_self_ref_args ~is_self_or_mutual ml_ty with
-  | Some args ->
-    let n_params = Table.get_ctor_num_param_vars cname in
-    List.length args = n_params
-    && List.for_all (fun (j, arg) ->
-      match arg with
-      | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-      | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-      | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
-      | _ -> false
-    ) (List.mapi (fun j a -> (j, a)) args)
-  | None -> true
 
 (** Generate the C++ struct definition for an inductive type.
 
