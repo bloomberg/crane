@@ -51,7 +51,7 @@ val get_local_inductives : unit -> GlobRef.t list
 (** Set method_self_ns from local_inductives for standalone functions.
     Returns the saved previous value for restoration via
     {!restore_method_self_ns}. *)
-val set_method_ns_for_locals : unit -> Refset'.t
+val set_method_ns_for_locals : ?base:Refset'.t -> unit -> Refset'.t
 
 (** Restore method_self_ns to a previously saved value. *)
 val restore_method_self_ns : Refset'.t -> unit

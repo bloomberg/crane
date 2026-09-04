@@ -4053,21 +4053,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      types when processing the method body (e.g., recursive calls carry type
      args). *)
   set_current_type_vars (vars @ extra_tvar_names);
-  let saved_method_ns = tctx.method_self_ns in
   (* Include all local value-type inductives with recursive fields in the
      method ns.  This ensures that when the method body constructs or
      manipulates containers of recursive types (e.g. List<tree>), the
      type arguments get shared_ptr wrapping to match struct field types. *)
-  let full_method_ns =
-    List.fold_left
-      (fun acc g ->
-        if Table.has_recursive_fields g && not (is_enum_inductive g)
-        then Refset'.add g acc
-        else acc)
-      method_ns
-      (get_local_inductives ())
-  in
-  tctx.method_self_ns <- full_method_ns;
+  let saved_method_ns = set_method_ns_for_locals ~base:method_ns () in
   let stmts = gen_stmts env method_k inner_body in
   tctx.method_self_ns <- saved_method_ns;
   set_current_type_vars saved_type_vars;

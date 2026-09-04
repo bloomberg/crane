@@ -1586,6 +1586,10 @@ let with_iife_return_type expected_ty f =
     @param add_owned  Optional de Bruijn index to add to the owned set after
       shifting.  Used for monadic bind continuation parameters that receive an
       owned [shared_ptr] value (e.g. [>>=] callback arguments).
+    @param exclude_owned_set  Indices to REMOVE from the owned set after
+      shifting.  Used for the variables a local fixpoint captures: the
+      continuation still reads them through the fixpoint's closure, so moving
+      out of them would leave the closure holding a moved-from value.
     @param exclude_owned  Optional de Bruijn index to REMOVE from the owned set
       after shifting.  Used for match scrutinees: after shifting by [n], the
       scrutinee's outer index [db] becomes [db + n].  Excluding it prevents
@@ -1593,11 +1597,14 @@ let with_iife_return_type expected_ty f =
       pattern-variable structured bindings ([const auto& [d_a0, d_a1] = ...])
       still hold const references into it — which would cause use-after-move. *)
 let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
-    ?(add_owned_set = Escape.IntSet.empty) ?exclude_owned f =
+    ?(add_owned_set = Escape.IntSet.empty)
+    ?(exclude_owned_set = Escape.IntSet.empty) ?exclude_owned f =
   let saved_owned = tctx.move_owned_vars in
   let saved_dead = tctx.move_dead_after in
   tctx.move_owned_vars <-
-    Escape.IntSet.map (fun i -> i + n) tctx.move_owned_vars;
+    Escape.IntSet.diff
+      (Escape.IntSet.map (fun i -> i + n) tctx.move_owned_vars)
+      exclude_owned_set;
   ( match add_owned with
   | Some idx -> tctx.move_owned_vars <- Escape.IntSet.add idx tctx.move_owned_vars
   | None -> () );
@@ -1609,10 +1616,11 @@ let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
   tctx.move_dead_after <-
     ( if clear_dead then Escape.IntSet.empty
       else Escape.IntSet.map (fun i -> i + n) tctx.move_dead_after );
-  let result = f () in
-  tctx.move_owned_vars <- saved_owned;
-  tctx.move_dead_after <- saved_dead;
-  result
+  Fun.protect
+    ~finally:(fun () ->
+      tctx.move_owned_vars <- saved_owned;
+      tctx.move_dead_after <- saved_dead )
+    f
 
 (* ============================================================================
    Shared helpers for method generation (used by gen_ind_header_v2 and
@@ -10574,17 +10582,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       in
       (* Phase 2: shift owned vars and dead-after for the single let binding.
          Remove captured variables from owned set to prevent moves. *)
-      let saved_owned = tctx.move_owned_vars in
-      let saved_dead_fix = tctx.move_dead_after in
-      tctx.move_owned_vars <-
-        Escape.IntSet.diff
-          (Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars)
-          captured_shifted;
-      tctx.move_dead_after <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
-      let cont = gen_stmts env_with_fix k b in
-      tctx.move_owned_vars <- saved_owned;
-      tctx.move_dead_after <- saved_dead_fix;
+      let cont =
+        with_shifted_move_tracking 1 ~exclude_owned_set:captured_shifted
+          (fun () -> gen_stmts env_with_fix k b)
+      in
       (* Check if any fixpoint variable escapes in the continuation.
          If so, use shared_ptr + [=] to prevent dangling references.
          Otherwise, use the simpler [&] capture pattern. *)
@@ -10720,15 +10721,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         let iife = CPPfun_call (
           CPPlambda ([], Some reified_ty, body_stmts, false), []) in
         (* Shift owned vars and dead-after for the continuation *)
-        let saved_owned_lam = tctx.move_owned_vars in
-        let saved_dead_lam = tctx.move_dead_after in
-        tctx.move_owned_vars <-
-          Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-        tctx.move_dead_after <-
-          Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
-        let cont = gen_stmts env' k b in
-        tctx.move_owned_vars <- saved_owned_lam;
-        tctx.move_dead_after <- saved_dead_lam;
+        let cont =
+          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+        in
         (* Generate the assignment with reified type *)
         [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
       end else
@@ -10744,17 +10739,8 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         (* Phase 2: shift owned vars and dead-after for lambda let binding.
            The body [b] has one more de Bruijn binder, so all indices must
            be shifted +1. *)
-        let saved_owned_lam = tctx.move_owned_vars in
-        let saved_dead_lam = tctx.move_dead_after in
-        tctx.move_owned_vars <-
-          Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-        tctx.move_dead_after <-
-          Escape.IntSet.map (fun i -> i + 1) tctx.move_dead_after;
         let gen_cont () =
-          let cont = gen_stmts env' k b in
-          tctx.move_owned_vars <- saved_owned_lam;
-          tctx.move_dead_after <- saved_dead_lam;
-          cont
+          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
         in
         match asgn with
         | [Sasgn (_, None, e)] ->
@@ -12099,8 +12085,11 @@ let is_foldable_numeral_converter_app = function
     Functions inside wrapper modules (e.g. Cotree.tree_of_cotree) construct
     containers whose type parameters must use shared_ptr for recursive
     value-type inductives, matching struct field types.  Returns the saved
-    previous value for restoration. *)
-let set_method_ns_for_locals () =
+    previous value for restoration.
+
+    @param base  The namespace to extend, when the caller has one of its own in
+      hand.  Defaults to the ambient {!Translation_state.method_self_ns}. *)
+let set_method_ns_for_locals ?base () =
   let saved = tctx.method_self_ns in
   let full_ns =
     List.fold_left
@@ -12108,7 +12097,7 @@ let set_method_ns_for_locals () =
         if Table.has_recursive_fields g && not (is_enum_inductive g)
         then Refset'.add g acc
         else acc)
-      tctx.method_self_ns
+      (Option.default tctx.method_self_ns base)
       (get_local_inductives ())
   in
   tctx.method_self_ns <- full_ns;
