@@ -668,7 +668,7 @@ let render_cpp_type_in_template ty =
   | Some f -> f ty
   | None -> render_cpp_type_for_raw_template ty
 
-let build_guard_compare_stmts ?type_string_of n ids cod =
+let build_guard_compare_stmts n ids =
   match Table.find_guard_compare n with
   | None -> []
   | Some ctor_ref ->
@@ -710,33 +710,20 @@ let build_guard_compare_stmts ?type_string_of n ids cod =
           let ctor_struct = ctor_struct_name_of_ref ctor_ref in
           let ind_type_name = Common.pp_global_name Type ind in
           let fname = factory_name_of_ctor ~type_name:ind_type_name ctor_struct in
-          (* [ind_type_name] alone is the bare struct name (e.g. "Compare"),
-             not namespace-qualified -- reuse [qualify_inductives] to prepend
-             its enclosing module (e.g. "OrderedType::Compare"), matching how
-             every other call site of this type prints it (see
-             [OrderedTypeEx.h]/[FSetInterface.h]: "OrderedType::Compare<T>"). *)
-          let ind_qual_name =
-            render_cpp_type_for_raw_template
-              (qualify_inductives (Tglob (ind, [], [])))
-          in
-          (* Render the compared value's OWN type (from [ids], properly
-             qualified with any enclosing-functor "D::Defs::" prefix) via the
-             real [Cpp_print.pp_cpp_type] printer (passed in as
-             [type_string_of] since this module cannot depend on
-             [Cpp_print]), rather than [cod]'s converted return type, which
-             loses that prefix during ml_type -> cpp_type conversion of
-             return types (a pre-existing asymmetry with parameter-type
-             conversion, confirmed via debug dumps: the same underlying type
-             prints as a bare unqualified name from [cod] but as
-             "typename D::Defs::sll_subparser" from the parameter list). *)
+          (* The qualifier is a type and is spelled as one, so the type printer
+             supplies both halves this used to render by hand: the enclosing
+             module of the inductive (e.g. "OrderedType::Compare", see
+             [OrderedTypeEx.h]/[FSetInterface.h]), and any enclosing-functor
+             "D::Defs::" prefix on the compared value's own type.  That prefix
+             is why the argument comes from [ids] rather than from [cod]'s
+             converted return type, which loses it during ml_type -> cpp_type
+             conversion (a pre-existing asymmetry with parameter-type
+             conversion: the same underlying type converts to a bare
+             unqualified name from [cod] but to "typename
+             D::Defs::sll_subparser" from the parameter list). *)
           let p1_ty = strip_wrappers (snd (List.find (fun (i, _) -> i = p1) ids)) in
-          let elem_str =
-            match type_string_of with
-            | Some f -> f p1_ty
-            | None ->
-              render_cpp_type_for_raw_template (qualify_inductives p1_ty)
-          in
-          CPPraw (Printf.sprintf "%s<%s>::%s()" ind_qual_name elem_str fname)
+          CPPfun_call
+            (CPPqualified_t (Tglob (ind, [p1_ty], []), Id.of_string fname), [])
         | _ -> mk_cppglob ctor_ref []
       in
       [ Sif_then

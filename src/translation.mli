@@ -200,17 +200,13 @@ val set_method_ind_tvars_lookup : (GlobRef.t -> int list) -> unit
 val render_cpp_type_in_template : cpp_type -> string
 
 (** Build guard-compare statements for a constructor whose fields alias-check
-    two identical-typed pointer parameters. [type_string_of], when given,
-    renders a compared parameter's own [cpp_type] (e.g. via
-    [Cpp_print.pp_cpp_type]) to instantiate the guard constructor's template
-    parameters when it is parametric (e.g. [Compare<T>::eq()]) -- needed
-    because the enclosing function's converted return type loses any
-    functor-parameter-dependent module qualification that the parameter
-    types themselves retain. The trailing [cpp_type] (the return type) is
-    otherwise unused by this function but kept for interface stability. *)
+    two identical-typed pointer parameters.  A parametric guard constructor
+    (e.g. [Compare<T>::eq()]) is instantiated with a compared parameter's own
+    type, taken from the parameter list rather than from the enclosing
+    function's return type: the latter loses any functor-parameter-dependent
+    module qualification that the parameter types retain. *)
 val build_guard_compare_stmts :
-  ?type_string_of:(cpp_type -> string) ->
-  GlobRef.t -> (Id.t * cpp_type) list -> cpp_type -> cpp_stmt list
+  GlobRef.t -> (Id.t * cpp_type) list -> cpp_stmt list
 
 (** Post-processing pass: insert [std::move] for the state-threading pattern
     in tail-recursive functions returning [pair<S,R>]. *)

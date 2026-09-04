@@ -2693,9 +2693,7 @@ let gen_dfun n b cty ty temps =
         | _ -> (ids, b)
       in
       let guard =
-        build_guard_compare_stmts
-          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
-          n ids cod
+        build_guard_compare_stmts n ids
       in
       clear_current_type_vars ();
       clear_current_param_types ();
@@ -2748,9 +2746,7 @@ let gen_dfun n b cty ty temps =
       let b = return_captures_by_value b in
       (* let b = List.map forward_fun_args b in *)
       let guard =
-        build_guard_compare_stmts
-          ~type_string_of:(fun t -> Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] t))
-          n ids cod
+        build_guard_compare_stmts n ids
       in
       clear_current_type_vars ();
       clear_current_param_types ();
