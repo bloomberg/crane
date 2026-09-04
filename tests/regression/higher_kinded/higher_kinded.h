@@ -52,10 +52,11 @@ struct HigherKinded {
       if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
         const auto &[a0] = std::get<typename Tree<_U>::Leaf>(_other.v());
         this->v_ = Leaf{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>)
+          if constexpr (std::is_same_v<_U, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       } else {
         const auto &[a0, a1] = std::get<typename Tree<_U>::Branch>(_other.v());

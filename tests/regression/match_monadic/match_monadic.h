@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -54,10 +55,11 @@ public:
       const auto &[a0, a1, a2] = std::get<typename Tree<_U>::Node>(_other.v());
       this->v_ = Node{(a0 ? std::make_shared<Tree<A>>(*a0) : nullptr),
                       [&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a1);
-                        else
+                        } else {
                           return A(a1);
+                        }
                       }(),
                       (a2 ? std::make_shared<Tree<A>>(*a2) : nullptr)};
     }

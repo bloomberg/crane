@@ -44,10 +44,11 @@ struct List {
             std::get<typename List::template list<_U>::Cons>(_other.v());
         this->v_ =
             Cons{[&]() -> A {
-                   if constexpr (std::is_same_v<_U, std::any>)
+                   if constexpr (std::is_same_v<_U, std::any>) {
                      return crane_any_cast<A>(a);
-                   else
+                   } else {
                      return A(a);
+                   }
                  }(),
                  (l ? std::make_shared<typename List::template list<A>>(*l)
                     : nullptr)};

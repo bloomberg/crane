@@ -11,6 +11,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -48,10 +49,11 @@ public:
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a);
-                        else
+                        } else {
                           return A(a);
+                        }
                       }(),
                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }

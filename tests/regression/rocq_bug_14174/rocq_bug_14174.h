@@ -106,10 +106,11 @@ public:
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
       this->v_ = Some{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>)
+        if constexpr (std::is_same_v<_U, std::any>) {
           return crane_any_cast<A>(a);
-        else
+        } else {
           return A(a);
+        }
       }()};
     } else {
       this->v_ = None{};
@@ -227,10 +228,11 @@ public:
     if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
       const auto &[a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
       this->v_ = Inleft{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>)
+        if constexpr (std::is_same_v<_U, std::any>) {
           return crane_any_cast<A>(a0);
-        else
+        } else {
           return A(a0);
+        }
       }()};
     } else {
       this->v_ = Inright{};
@@ -626,10 +628,11 @@ struct RocqBug14174 {
         if (std::holds_alternative<typename sumor<_U>::Inleft>(_other.v())) {
           const auto &[a0] = std::get<typename sumor<_U>::Inleft>(_other.v());
           this->v_ = Inleft{[&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>)
+            if constexpr (std::is_same_v<_U, std::any>) {
               return crane_any_cast<A>(a0);
-            else
+            } else {
               return A(a0);
+            }
           }()};
         } else {
           this->v_ = Inright{};

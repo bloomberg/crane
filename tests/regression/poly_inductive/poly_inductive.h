@@ -107,10 +107,11 @@ struct PolyInductive {
       } else {
         const auto &[a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
         this->v_ = PJust{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>)
+          if constexpr (std::is_same_v<_U, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       }
     }
@@ -197,10 +198,11 @@ struct PolyInductive {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
         const auto &[a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
         this->v_ = PLeaf{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>)
+          if constexpr (std::is_same_v<_U, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       } else {
         const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());

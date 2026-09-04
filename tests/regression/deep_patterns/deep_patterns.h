@@ -42,10 +42,11 @@ public:
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a);
-                        else
+                        } else {
                           return A(a);
+                        }
                       }(),
                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
@@ -355,10 +356,11 @@ struct DeepPatterns {
       } else {
         const auto &[a0, a1] = std::get<typename mylist<_U>::Cons>(_other.v());
         this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>)
+                          if constexpr (std::is_same_v<_U, std::any>) {
                             return crane_any_cast<A>(a0);
-                          else
+                          } else {
                             return A(a0);
+                          }
                         }(),
                         (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }

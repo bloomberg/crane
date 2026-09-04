@@ -49,10 +49,11 @@ template <S X> struct HashTrie {
             std::get<typename Trie<_U>::Node>(_other.v());
         this->v_ = Node{k,
                         [&]() -> V {
-                          if constexpr (std::is_same_v<_U, std::any>)
+                          if constexpr (std::is_same_v<_U, std::any>) {
                             return crane_any_cast<V>(v);
-                          else
+                          } else {
                             return V(v);
+                          }
                         }(),
                         (left ? std::make_shared<Trie<V>>(*left) : nullptr),
                         (right ? std::make_shared<Trie<V>>(*right) : nullptr)};

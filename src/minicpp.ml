@@ -172,6 +172,7 @@ and cpp_stmt =
   | Sassert of string * string option
     (* runtime assert: C++ expression string, optional Rocq predicate comment *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
+  | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
     (* if-else: condition, then-branch, else-branch. Used for reuse
        optimization's use_count() check. *)
   | Sif_then of cpp_expr * cpp_stmt list
@@ -360,6 +361,7 @@ and cpp_expr =
   | CPPstd_holds_alternative of cpp_type * Id.t option
     (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
   | CPPdeclval of cpp_type
+  | CPPis_same of cpp_type * cpp_type
     (* std::declval<T>() *)
   | CPPtypename_qualified of cpp_type * Id.t
     (* typename T::Nested, usable where a dependent nested struct name is
@@ -667,6 +669,7 @@ let map_expr
   | CPPstd_get (ty, ctor, e_opt) -> CPPstd_get (ft ty, ctor, Option.map fe e_opt)
   | CPPstd_holds_alternative (ty, ctor) -> CPPstd_holds_alternative (ft ty, ctor)
   | CPPdeclval ty -> CPPdeclval (ft ty)
+  | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
   | CPPraw _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
@@ -713,6 +716,8 @@ let map_stmt
       (fe scrut, r, List.map (fun (id, body) -> (id, List.map fs body)) branches,
        Option.map (List.map fs) default)
   | Sassert _ -> s
+  | Sif_constexpr (cond, then_br, else_br) ->
+    Sif_constexpr (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
@@ -760,6 +765,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPis_same _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
@@ -798,6 +804,8 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> ()
   | Sasgn (_, _, e) -> on_expr e
+  | Sif_constexpr (cond, then_br, else_br) ->
+    on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
@@ -839,6 +847,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
+  | CPPis_same _
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
@@ -875,6 +884,8 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
   | Sstruct_def _ | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> acc
   | Sasgn (_, _, e) -> on_expr acc e
+  | Sif_constexpr (cond, then_br, else_br) ->
+    on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif (cond, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif_then (cond, then_br) -> on_stmts (on_expr acc cond) then_br

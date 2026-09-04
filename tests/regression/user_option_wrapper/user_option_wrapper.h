@@ -39,10 +39,11 @@ struct UserOptionWrapper {
       } else {
         const auto &[a0] = std::get<typename opt<_U>::So>(_other.v());
         this->v_ = So{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>)
+          if constexpr (std::is_same_v<_U, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       }
     }

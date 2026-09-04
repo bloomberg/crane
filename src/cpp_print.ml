@@ -2168,6 +2168,13 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
+  | CPPis_same (t1, t2) ->
+    require_header "type_traits";
+    str "std::is_same_v<"
+    ++ pp_cpp_type false [] t1
+    ++ str ", "
+    ++ pp_cpp_type false [] t2
+    ++ str ">"
   | CPPstd_get_if (ty, ctor, e) ->
     require_header "variant";
     let targ = match ctor with
@@ -2286,6 +2293,18 @@ and pp_cpp_stmt env args = function
       ++ str ");"
     | None -> str "assert(" ++ str expr_str ++ str ");" )
   (* Reuse optimization constructs *)
+  | Sif_constexpr (cond, then_stmts, else_stmts) ->
+    str "if constexpr ("
+    ++ pp_cpp_expr env args cond
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
+    ++ fnl ()
+    ++ str "} else {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+    ++ fnl ()
+    ++ str "}"
   | Sif (cond, then_stmts, else_stmts) ->
     str "if ("
     ++ pp_cpp_expr env args cond

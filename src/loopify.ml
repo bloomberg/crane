@@ -727,6 +727,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPuint _
    |CPPfloat _
    |CPPrequires _
+   |CPPis_same _
    |CPPmk_reuse _ -> []
 
 (** Collect recursive call sites from a list of statements.
@@ -798,6 +799,10 @@ and collect_stmt check ~in_visitor = function
   | Sexpr e -> collect_expr check e
   | Sasgn (_, _, e) | Sderef_asgn (_, e) -> collect_expr check e
   | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
+  | Sif_constexpr (cond, then_br, else_br) ->
+    collect_expr check cond
+    @ collect_stmts check ~in_visitor then_br
+    @ collect_stmts check ~in_visitor else_br
   | Sif (cond, then_br, else_br) ->
     collect_expr check cond
     @ collect_stmts check ~in_visitor then_br
@@ -4485,6 +4490,10 @@ and stmt_has_unique_owner_decomposition check tparams env = function
   | Sassign_expr (lhs, e) ->
     expr_has_unique_owner_decomposition check tparams env lhs
     || expr_has_unique_owner_decomposition check tparams env e
+  | Sif_constexpr (cond, then_br, else_br) ->
+    expr_has_unique_owner_decomposition check tparams env cond
+    || body_has_unique_owner_decomposition check tparams env then_br
+    || body_has_unique_owner_decomposition check tparams env else_br
   | Sif (cond, then_br, else_br) ->
     expr_has_unique_owner_decomposition check tparams env cond
     || body_has_unique_owner_decomposition check tparams env then_br

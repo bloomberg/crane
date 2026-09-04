@@ -61,10 +61,11 @@ struct ReuseMapTypeChange {
       } else {
         const auto &[a0, a1] = std::get<typename lst<_U>::Cons>(_other.v());
         this->v_ = Cons{[&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>)
+                          if constexpr (std::is_same_v<_U, std::any>) {
                             return crane_any_cast<A>(a0);
-                          else
+                          } else {
                             return A(a0);
+                          }
                         }(),
                         (a1 ? crane::make_rc<lst<A>>(*a1) : nullptr)};
       }

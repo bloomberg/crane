@@ -450,10 +450,11 @@ struct MemSafetyProbe24 {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
         this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>)
+                            if constexpr (std::is_same_v<_U, std::any>) {
                               return crane_any_cast<A>(a0);
-                            else
+                            } else {
                               return A(a0);
+                            }
                           }(),
                           (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }

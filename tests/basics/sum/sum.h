@@ -38,19 +38,21 @@ struct Sum {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
         this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>)
+          if constexpr (std::is_same_v<_U0, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
         this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>)
+          if constexpr (std::is_same_v<_U1, std::any>) {
             return crane_any_cast<B>(a0);
-          else
+          } else {
             return B(a0);
+          }
         }()};
       }
     }
@@ -169,10 +171,11 @@ struct Sum {
         const auto &[a0] =
             std::get<typename triple<_U0, _U1, _U2>::First>(_other.v());
         this->v_ = First{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>)
+          if constexpr (std::is_same_v<_U0, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       } else {
         if (std::holds_alternative<typename triple<_U0, _U1, _U2>::Second>(
@@ -180,19 +183,21 @@ struct Sum {
           const auto &[a0] =
               std::get<typename triple<_U0, _U1, _U2>::Second>(_other.v());
           this->v_ = Second{[&]() -> B {
-            if constexpr (std::is_same_v<_U1, std::any>)
+            if constexpr (std::is_same_v<_U1, std::any>) {
               return crane_any_cast<B>(a0);
-            else
+            } else {
               return B(a0);
+            }
           }()};
         } else {
           const auto &[a0] =
               std::get<typename triple<_U0, _U1, _U2>::Third>(_other.v());
           this->v_ = Third{[&]() -> C {
-            if constexpr (std::is_same_v<_U2, std::any>)
+            if constexpr (std::is_same_v<_U2, std::any>) {
               return crane_any_cast<C>(a0);
-            else
+            } else {
               return C(a0);
+            }
           }()};
         }
       }

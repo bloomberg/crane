@@ -44,10 +44,11 @@ struct MatchRefAfterMove {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
         this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>)
+                            if constexpr (std::is_same_v<_U, std::any>) {
                               return crane_any_cast<A>(a0);
-                            else
+                            } else {
                               return A(a0);
+                            }
                           }(),
                           (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }
@@ -366,19 +367,21 @@ struct MatchRefAfterMove {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
         this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>)
+          if constexpr (std::is_same_v<_U0, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
         this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>)
+          if constexpr (std::is_same_v<_U1, std::any>) {
             return crane_any_cast<B>(a0);
-          else
+          } else {
             return B(a0);
+          }
         }()};
       }
     }

@@ -48,10 +48,11 @@ template <OrderedType X> struct Make {
             std::get<typename Fmap<_U>::Node>(_other.v());
         this->v_ = Node{a0,
                         [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>)
+                          if constexpr (std::is_same_v<_U, std::any>) {
                             return crane_any_cast<A>(a1);
-                          else
+                          } else {
                             return A(a1);
+                          }
                         }(),
                         (a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr)};
       }

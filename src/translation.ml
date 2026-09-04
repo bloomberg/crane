@@ -1324,26 +1324,29 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          pair<K,V>), and falling back to a two-level cast from pair<any,any>
          when A has first_type/second_type members (i.e. A is a std::pair). *)
       require_header "any";
-      let u_s = render src_ty in
-      let a_s = render dst_ty in
-      (match render_cpp_expr_simple expr with
-      | Some field_s ->
+      if not (is_access_path expr) then CPPconverting_ctor (orig_dst_ty, [expr])
+      else begin
         (* Recovering [A] from a box -- including the case where [A] is a pair
            whose components were boxed one at a time -- is exactly what
            [crane_any_cast] does, and it recurses, so nested pairs work too.
            All that is left here is the outer question, which genuinely cannot
            be answered until C++ substitutes [U]: is there a box at all?  If
            [U] is not [std::any] the value is already a [U] and wants an
-           ordinary conversion.
-           Raw text because MiniCpp has no [if constexpr] node -- see item 4 of
-           docs/nanopass-plan.md. *)
+           ordinary conversion.  Hence [if constexpr]: only the taken side has
+           to compile. *)
         Table.mark_needs_erase_fn ();
-        CPPraw
-          ( "[&]() -> " ^ a_s ^ " { if constexpr (std::is_same_v<" ^ u_s
-          ^ ", std::any>) return crane_any_cast<" ^ a_s ^ ">(" ^ field_s
-          ^ "); else return " ^ a_s ^ "(" ^ field_s ^ "); }()" )
-      | None ->
-        CPPconverting_ctor (orig_dst_ty, [expr]))
+        let dst = qualify_inductives ~skip orig_dst_ty in
+        CPPfun_call
+          ( CPPlambda
+              ( [],
+                Some dst,
+                [ Sif_constexpr
+                    ( CPPis_same (src_ty, Tany),
+                      [Sreturn (Some (CPPany_cast_tolerant (dst, expr)))],
+                      [Sreturn (Some (CPPconverting_ctor (dst, [expr])))] ) ],
+                false ),
+            [] )
+      end
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
                      match strip_ns dst with
                      | Tglob (g, [elem_ty], _) ->

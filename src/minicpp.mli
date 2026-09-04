@@ -181,6 +181,10 @@ and cpp_stmt =
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
       (** Conditional: condition, then-branch, else-branch (used for reuse
           optimization) *)
+  | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
+      (** [if constexpr (cond) { ... } else { ... }] -- a branch resolved when
+          the enclosing template is instantiated, so only the taken side is
+          required to compile. *)
   | Sif_then of cpp_expr * cpp_stmt list
       (** Conditional without an else branch *)
   | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
@@ -357,6 +361,9 @@ and cpp_expr =
       (** [std::holds_alternative<T>(...)] or
           [std::holds_alternative<typename T::Ctor>(...)] *)
   | CPPdeclval of cpp_type  (** std::declval<T>() *)
+  | CPPis_same of cpp_type * cpp_type
+      (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
+          only be asked inside an {!Sif_constexpr}. *)
   | CPPtypename_qualified of cpp_type * Id.t
       (** typename T::Nested *)
   | CPPraw of string  (** Raw C++ expression code *)

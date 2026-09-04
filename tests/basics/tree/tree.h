@@ -152,10 +152,11 @@ public:
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a);
-                        else
+                        } else {
                           return A(a);
+                        }
                       }(),
                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
@@ -255,10 +256,11 @@ public:
       const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
       this->v_ = Node{(t1 ? std::make_shared<Tree<A>>(*t1) : nullptr),
                       [&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(x);
-                        else
+                        } else {
                           return A(x);
+                        }
                       }(),
                       (t2 ? std::make_shared<Tree<A>>(*t2) : nullptr)};
     }

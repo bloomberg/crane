@@ -42,10 +42,11 @@ public:
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a);
-                        else
+                        } else {
                           return A(a);
+                        }
                       }(),
                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
@@ -318,10 +319,11 @@ struct DepElim {
         const auto &[n, a1, a2] = std::get<typename vec<_U>::Vcons>(_other.v());
         this->v_ = Vcons{n,
                          [&]() -> A {
-                           if constexpr (std::is_same_v<_U, std::any>)
+                           if constexpr (std::is_same_v<_U, std::any>) {
                              return crane_any_cast<A>(a1);
-                           else
+                           } else {
                              return A(a1);
+                           }
                          }(),
                          (a2 ? std::make_shared<vec<A>>(*a2) : nullptr)};
       }

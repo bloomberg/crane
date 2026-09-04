@@ -321,10 +321,11 @@ struct MemSafetyProbe19 {
       } else {
         const auto &[a0] = std::get<typename myopt<_U>::Mysome>(_other.v());
         this->v_ = Mysome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>)
+          if constexpr (std::is_same_v<_U, std::any>) {
             return crane_any_cast<A>(a0);
-          else
+          } else {
             return A(a0);
+          }
         }()};
       }
     }

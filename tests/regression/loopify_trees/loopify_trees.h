@@ -41,10 +41,11 @@ public:
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(a);
-                        else
+                        } else {
                           return A(a);
+                        }
                       }(),
                       (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
@@ -144,10 +145,11 @@ struct LoopifyTrees {
         const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
         this->v_ = Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
                         [&]() -> A {
-                          if constexpr (std::is_same_v<_U, std::any>)
+                          if constexpr (std::is_same_v<_U, std::any>) {
                             return crane_any_cast<A>(x);
-                          else
+                          } else {
                             return A(x);
+                          }
                         }(),
                         (r ? std::make_shared<tree<A>>(*r) : nullptr)};
       }

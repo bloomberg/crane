@@ -102,10 +102,11 @@ public:
     } else {
       const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
       this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>)
+                        if constexpr (std::is_same_v<_U, std::any>) {
                           return crane_any_cast<A>(h);
-                        else
+                        } else {
                           return A(h);
+                        }
                       }(),
                       n, (a2 ? std::make_shared<T<A>>(*a2) : nullptr)};
     }

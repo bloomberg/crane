@@ -80,10 +80,11 @@ struct InductiveInModule {
           } else {
             const auto &[a] = std::get<typename option<_U>::Some>(_other.v());
             this->v_ = Some{[&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>)
+              if constexpr (std::is_same_v<_U, std::any>) {
                 return crane_any_cast<A>(a);
-              else
+              } else {
                 return A(a);
+              }
             }()};
           }
         }

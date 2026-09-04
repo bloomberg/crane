@@ -40,18 +40,20 @@ public:
     if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
       const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
       this->v_ = Inl{[&]() -> A {
-        if constexpr (std::is_same_v<_U0, std::any>)
+        if constexpr (std::is_same_v<_U0, std::any>) {
           return crane_any_cast<A>(a0);
-        else
+        } else {
           return A(a0);
+        }
       }()};
     } else {
       const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
       this->v_ = Inr{[&]() -> B {
-        if constexpr (std::is_same_v<_U1, std::any>)
+        if constexpr (std::is_same_v<_U1, std::any>) {
           return crane_any_cast<B>(a0);
-        else
+        } else {
           return B(a0);
+        }
       }()};
     }
   }
