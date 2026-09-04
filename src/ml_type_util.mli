@@ -127,8 +127,6 @@ val prints_as_any : Minicpp.cpp_type -> bool
     representation, and is excluded. *)
 val is_boxed_type : Minicpp.cpp_type -> bool
 
-(** Whether a C++ type is erased.  An alias for {!prints_as_any}. *)
-val is_erased_type : Minicpp.cpp_type -> bool
 
 (** Replace every {!Minicpp.Topaque} in a type with {!Minicpp.Tany}.  Apply at
     any position where the type is written down (field, parameter, return type,

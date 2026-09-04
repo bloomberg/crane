@@ -3071,7 +3071,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
                current_any_typed_params to avoid double-casting. *)
           (* Also fire when the scrutinee expression was already wrapped with
              any_cast<pair<any,any>>(…) by the translation layer (scrut_is_magic
-             or is_erased_type in gen_custom_cpp_case).  In that case the printer's
+             or prints_as_any in gen_custom_cpp_case).  In that case the printer's
              CCscrut never matches CPPvar id (scrut is a CPPany_cast node), so
              outer_any_pair_overrode stays false even though all branch params are
              std::any at runtime. *)

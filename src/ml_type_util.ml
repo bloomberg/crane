@@ -285,11 +285,6 @@ let prints_as_any t =
     excluded. *)
 let is_boxed_type t = t = Minicpp.Tany || is_cpp_dummy_type t
 
-(** [is_erased_type t] — true if [t] represents a type-erased position:
-    either [Tany] ([std::any]) or a dummy glob (from proof/type erasure).
-    At runtime these values are stored as [std::any] and need [any_cast]
-    to recover the concrete type. *)
-let is_erased_type = prints_as_any
 
 (** [materialise_opaque ty] — replace every {!Minicpp.Topaque} in [ty] with
     {!Minicpp.Tany}.
@@ -314,7 +309,7 @@ let materialise_opaque (ty : cpp_type) : cpp_type =
     Used to detect fully-erased tuple chains where the runtime encoding
     stores [pair<any,any>] at every level regardless of the static type. *)
 let rec is_all_erased = function
-  | ty when is_erased_type ty -> true
+  | ty when prints_as_any ty -> true
   | Tglob (_, args, _) when args <> [] -> List.for_all is_all_erased args
   | _ -> false
 
@@ -485,8 +480,8 @@ let is_cpp_dummy_prop = function
 let filter_erased_type_args ?(preserve_positions = false) tys =
   let tys = List.filter (fun t -> not (is_cpp_dummy_prop t)) tys in
   if preserve_positions then
-    List.map (fun t -> if is_erased_type t then Minicpp.Tany else t) tys
-  else if List.exists is_erased_type tys then [] else tys
+    List.map (fun t -> if prints_as_any t then Minicpp.Tany else t) tys
+  else if List.exists prints_as_any tys then [] else tys
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
     Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to guard
