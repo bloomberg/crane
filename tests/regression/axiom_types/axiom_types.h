@@ -126,7 +126,7 @@ struct AxiomTypes {
                           else
                             return A(a0);
                         }(),
-                        a1 ? std::make_shared<list<A>>(*a1) : nullptr};
+                        (a1 ? std::make_shared<list<A>>(*a1) : nullptr)};
       }
     }
 

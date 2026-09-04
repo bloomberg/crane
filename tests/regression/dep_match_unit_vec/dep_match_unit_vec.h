@@ -48,7 +48,7 @@ struct DepMatchUnitVec {
                            else
                              return A(a1);
                          }(),
-                         a2 ? std::make_shared<vec<A>>(*a2) : nullptr};
+                         (a2 ? std::make_shared<vec<A>>(*a2) : nullptr)};
       }
     }
 

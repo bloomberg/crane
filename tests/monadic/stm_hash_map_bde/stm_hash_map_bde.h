@@ -61,7 +61,7 @@ public:
                           else
                             return t_A(d_a);
                         }(),
-                        d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr};
+                        (d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr)};
     }
   }
   static List<t_A> nil() { return List<t_A>(Nil{}); }

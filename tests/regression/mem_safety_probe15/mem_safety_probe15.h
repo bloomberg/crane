@@ -423,7 +423,7 @@ struct MemSafetyProbe15 {
                             else
                               return A(a0);
                           }(),
-                          a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
+                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }
     }
 

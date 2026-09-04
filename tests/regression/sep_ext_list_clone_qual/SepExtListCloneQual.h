@@ -50,9 +50,9 @@ public:
             else
               return A(a0);
           }(),
-          a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(
-                   *a1)
-             : nullptr};
+          (a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(
+                    *a1)
+              : nullptr)};
     }
   }
 

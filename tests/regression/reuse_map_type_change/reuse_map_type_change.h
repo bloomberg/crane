@@ -66,7 +66,7 @@ struct ReuseMapTypeChange {
                           else
                             return A(a0);
                         }(),
-                        a1 ? crane::make_rc<lst<A>>(*a1) : nullptr};
+                        (a1 ? crane::make_rc<lst<A>>(*a1) : nullptr)};
       }
     }
 

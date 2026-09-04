@@ -50,8 +50,8 @@ struct List {
                    else
                      return A(a);
                  }(),
-                 l ? std::make_shared<typename List::template list<A>>(*l)
-                   : nullptr};
+                 (l ? std::make_shared<typename List::template list<A>>(*l)
+                    : nullptr)};
       }
     }
 

@@ -47,7 +47,7 @@ struct LoopifyPatterns {
                           else
                             return A(a);
                         }(),
-                        l ? std::make_shared<list<A>>(*l) : nullptr};
+                        (l ? std::make_shared<list<A>>(*l) : nullptr)};
       }
     }
 

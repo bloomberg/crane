@@ -53,7 +53,7 @@ template <OrderedType X> struct Make {
                           else
                             return A(a1);
                         }(),
-                        a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr};
+                        (a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr)};
       }
     }
 

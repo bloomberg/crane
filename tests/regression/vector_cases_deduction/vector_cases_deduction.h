@@ -107,7 +107,7 @@ public:
                         else
                           return A(h);
                       }(),
-                      n, a2 ? std::make_shared<T<A>>(*a2) : nullptr};
+                      n, (a2 ? std::make_shared<T<A>>(*a2) : nullptr)};
     }
   }
 

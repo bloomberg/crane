@@ -53,7 +53,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 

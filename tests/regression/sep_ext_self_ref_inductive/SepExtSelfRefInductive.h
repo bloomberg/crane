@@ -54,8 +54,8 @@ template <S X> struct HashTrie {
                           else
                             return V(v);
                         }(),
-                        left ? std::make_shared<Trie<V>>(*left) : nullptr,
-                        right ? std::make_shared<Trie<V>>(*right) : nullptr};
+                        (left ? std::make_shared<Trie<V>>(*left) : nullptr),
+                        (right ? std::make_shared<Trie<V>>(*right) : nullptr)};
       }
     }
 

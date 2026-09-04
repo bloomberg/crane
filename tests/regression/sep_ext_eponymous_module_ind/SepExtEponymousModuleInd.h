@@ -42,8 +42,8 @@ public:
     } else {
       const auto &[t, t0, t1] = std::get<typename Trie<_U>::Branch>(_other.v());
       this->v_ = Branch{std::optional<A>(t),
-                        t0 ? std::make_shared<Trie<A>>(*t0) : nullptr,
-                        t1 ? std::make_shared<Trie<A>>(*t1) : nullptr};
+                        (t0 ? std::make_shared<Trie<A>>(*t0) : nullptr),
+                        (t1 ? std::make_shared<Trie<A>>(*t1) : nullptr)};
     }
   }
 

@@ -41,14 +41,14 @@ struct DeepMap {
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{a0 ? std::make_shared<tree<A>>(*a0) : nullptr,
+        this->v_ = Node{(a0 ? std::make_shared<tree<A>>(*a0) : nullptr),
                         [&]() -> A {
                           if constexpr (std::is_same_v<_U, std::any>)
                             return crane_any_cast<A>(a1);
                           else
                             return A(a1);
                         }(),
-                        a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
+                        (a2 ? std::make_shared<tree<A>>(*a2) : nullptr)};
       }
     }
 

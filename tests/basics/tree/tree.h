@@ -157,7 +157,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -253,14 +253,14 @@ public:
       this->v_ = Leaf{};
     } else {
       const auto &[t1, x, t2] = std::get<typename Tree<_U>::Node>(_other.v());
-      this->v_ = Node{t1 ? std::make_shared<Tree<A>>(*t1) : nullptr,
+      this->v_ = Node{(t1 ? std::make_shared<Tree<A>>(*t1) : nullptr),
                       [&]() -> A {
                         if constexpr (std::is_same_v<_U, std::any>)
                           return crane_any_cast<A>(x);
                         else
                           return A(x);
                       }(),
-                      t2 ? std::make_shared<Tree<A>>(*t2) : nullptr};
+                      (t2 ? std::make_shared<Tree<A>>(*t2) : nullptr)};
     }
   }
 

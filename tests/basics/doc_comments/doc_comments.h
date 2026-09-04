@@ -60,7 +60,7 @@ struct DocComments {
                             else
                               return A(a);
                           }(),
-                          l ? std::make_shared<mylist<A>>(*l) : nullptr};
+                          (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
       }
     }
 

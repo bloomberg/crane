@@ -46,7 +46,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -142,14 +142,14 @@ struct LoopifyTrees {
         this->v_ = Leaf{};
       } else {
         const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{l ? std::make_shared<tree<A>>(*l) : nullptr,
+        this->v_ = Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
                         [&]() -> A {
                           if constexpr (std::is_same_v<_U, std::any>)
                             return crane_any_cast<A>(x);
                           else
                             return A(x);
                         }(),
-                        r ? std::make_shared<tree<A>>(*r) : nullptr};
+                        (r ? std::make_shared<tree<A>>(*r) : nullptr)};
       }
     }
 

@@ -59,8 +59,8 @@ struct HigherKinded {
         }()};
       } else {
         const auto &[a0, a1] = std::get<typename Tree<_U>::Branch>(_other.v());
-        this->v_ = Branch{a0 ? std::make_shared<Tree<A>>(*a0) : nullptr,
-                          a1 ? std::make_shared<Tree<A>>(*a1) : nullptr};
+        this->v_ = Branch{(a0 ? std::make_shared<Tree<A>>(*a0) : nullptr),
+                          (a1 ? std::make_shared<Tree<A>>(*a1) : nullptr)};
       }
     }
 

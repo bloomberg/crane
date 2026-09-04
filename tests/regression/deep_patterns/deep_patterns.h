@@ -47,7 +47,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -360,7 +360,7 @@ struct DeepPatterns {
                           else
                             return A(a0);
                         }(),
-                        a1 ? std::make_shared<mylist<A>>(*a1) : nullptr};
+                        (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }
     }
 

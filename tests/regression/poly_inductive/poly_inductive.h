@@ -204,8 +204,8 @@ struct PolyInductive {
         }()};
       } else {
         const auto &[a0, a1] = std::get<typename ptree<_U>::PNode>(_other.v());
-        this->v_ = PNode{a0 ? std::make_shared<ptree<A>>(*a0) : nullptr,
-                         a1 ? std::make_shared<ptree<A>>(*a1) : nullptr};
+        this->v_ = PNode{(a0 ? std::make_shared<ptree<A>>(*a0) : nullptr),
+                         (a1 ? std::make_shared<ptree<A>>(*a1) : nullptr)};
       }
     }
 

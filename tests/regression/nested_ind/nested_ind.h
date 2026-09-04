@@ -47,7 +47,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -142,13 +142,14 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
-        this->v_ = Ccons{[&]() -> A {
-                           if constexpr (std::is_same_v<_U, std::any>)
-                             return crane_any_cast<A>(a0);
-                           else
-                             return A(a0);
-                         }(),
-                         a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr};
+        this->v_ =
+            Ccons{[&]() -> A {
+                    if constexpr (std::is_same_v<_U, std::any>)
+                      return crane_any_cast<A>(a0);
+                    else
+                      return A(a0);
+                  }(),
+                  (a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr)};
       }
     }
 
@@ -350,7 +351,7 @@ struct NestedInd {
                  else
                    return A(a0);
                }(),
-               a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr};
+               (a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr)};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {

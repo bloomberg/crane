@@ -46,7 +46,7 @@ struct RecRecord {
                            else
                              return A(a0);
                          }(),
-                         a1 ? std::make_shared<rlist<A>>(*a1) : nullptr};
+                         (a1 ? std::make_shared<rlist<A>>(*a1) : nullptr)};
       }
     }
 

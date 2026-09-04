@@ -918,6 +918,12 @@ let rec render_cpp_expr_simple = function
   | CPPraw s -> Some s
   | _ -> None
 
+(** [is_access_path e] -- [e] is a chain of variable reads, dereferences,
+    field selections and nullary accessors, so naming it twice in one
+    expression duplicates no work and no side effect.  That is exactly the
+    fragment {!render_cpp_expr_simple} can render, which is why it answers. *)
+let is_access_path e = render_cpp_expr_simple e <> None
+
 (** Substitute placeholders in a Crane template string.
     Recognises: [%scrut], [%t{i}], [%b{i}a{j}], [%br{i}], [%a{i}].
     [scrut]: replacement for [%scrut].
@@ -1234,19 +1240,20 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
             false),
           [inner_expr])
   in
-  (* Helper: build a [CPPraw] using a string renderer, falling back to an
-     IIFE lambda wrapper when [expr] cannot be rendered to a simple string.
-     [lambda_ty] is the C++ return type for the wrapper. [make_body s] is
-     called with either the rendered [expr] string or ["__x"] (the lambda
-     param name). *)
-  let with_expr_s ~lambda_ty ~make_body =
-    match render_cpp_expr_simple expr with
-    | Some s -> CPPraw (make_body s)
-    | None ->
-      let body = make_body "__x" in
+  (* Build an expression that names [expr] twice.  An access path can simply
+     be repeated; anything else is bound once as the parameter of an
+     immediately-applied lambda, so that its effects happen once.
+     [lambda_ty] is that lambda's return type. *)
+  let naming_expr ~lambda_ty ~body =
+    if is_access_path expr then body expr
+    else
+      let x = Id.of_string "__x" in
       CPPfun_call
-        ( CPPraw
-            ("[](auto&& __x) -> " ^ lambda_ty ^ " { return " ^ body ^ "; }"),
+        ( CPPlambda
+            ( [(rval_ref Tauto, Some x)],
+              Some lambda_ty,
+              [Sreturn (Some (body (CPPvar x)))],
+              false ),
           [expr] )
   in
   if src_ty = dst_ty then expr
@@ -1264,12 +1271,11 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | Tshared_ptr _src_inner, Tshared_ptr dst_inner ->
       (* shared_ptr<S> → shared_ptr<T>: null-check + dereference inner *)
       require_header "memory";
-      let dst_inner_s = render dst_inner in
-      let ty_s = render dst_ty in
-      with_expr_s ~lambda_ty:ty_s
-        ~make_body:(fun s ->
-          s ^ " ? " ^ Table.make_shared_name () ^ "<" ^ dst_inner_s
-          ^ ">(*" ^ s ^ ") : nullptr")
+      naming_expr ~lambda_ty:dst_ty ~body:(fun x ->
+        CPPcond
+          ( x,
+            CPPfun_call (CPPmk_shared dst_inner, [CPPderef x]),
+            CPPnullptr ))
     | Tshared_ptr inner, _ ->
       (* shared_ptr<T> → T: dereference.  Also strip Tnamespace from inner
          before comparing to dst_ty: strip_ns was applied to dst_ty at the

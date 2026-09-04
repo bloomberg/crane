@@ -48,7 +48,7 @@ public:
                         else
                           return A(a);
                       }(),
-                      l ? std::make_shared<List<A>>(*l) : nullptr};
+                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -241,14 +241,14 @@ struct Cotree {
 
     template <typename _U> tree(const tree<_U> &_other) {
       const auto &[a, children] = std::get<typename tree<_U>::Node>(_other.v());
-      this->v_ =
-          Node{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>)
-                   return crane_any_cast<A>(a);
-                 else
-                   return A(a);
-               }(),
-               children ? std::make_shared<List<tree<A>>>(*children) : nullptr};
+      this->v_ = Node{
+          [&]() -> A {
+            if constexpr (std::is_same_v<_U, std::any>)
+              return crane_any_cast<A>(a);
+            else
+              return A(a);
+          }(),
+          (children ? std::make_shared<List<tree<A>>>(*children) : nullptr)};
     }
 
     static tree<A> node(A a, List<tree<A>> children) {
