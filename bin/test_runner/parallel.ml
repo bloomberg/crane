@@ -72,13 +72,16 @@ let run_executable test_dir exe_name =
     in
     (passed, Buffer.contents buffer, end_time -. start_time) )
 
-(** [build_batch targets] runs [dune build --keep-going <targets>] in a
-    forked child with stdout/stderr suppressed.  Returns [true] on exit
-    code 0.  Without [--keep-going] dune abandons the whole build at the
-    first target that fails, so a single broken test would be reported as
-    a compilation failure for every target dune had not reached yet. *)
+(** [build_batch targets] runs [dune build <targets>] in a forked child with
+    stdout/stderr suppressed.  Returns [true] on exit code 0.
+
+    Note that dune keeps going past a failing target by default — the opposite
+    behaviour is the opt-in [--stop-on-first-error].  That matters here: were
+    the build to abandon everything at the first failure, a single broken test
+    would be reported as a compilation failure for every target dune had not
+    yet reached. *)
 let build_batch targets =
-  let args = "build" :: "--keep-going" :: targets in
+  let args = "build" :: targets in
   let pid = Unix.fork () in
   if pid = 0 then (
     let dev_null = Unix.openfile "/dev/null" [Unix.O_WRONLY] 0 in
