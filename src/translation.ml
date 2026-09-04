@@ -5524,8 +5524,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           let fname =
             factory_name_of_ctor ~type_name:ind_type_name ctor_struct
           in
-          (* Build: Type<temps>::factory(args) *)
-          let type_expr = mk_cppglob n temps in
+          (* Build: Type<temps>::factory(args).  The qualifier is a type, and
+             is spelled as one: loopify reads it back off the call to build
+             [make_shared], [std::get] and [typename T::Ctor] nodes, and can
+             only do that if it is not hidden inside an expression. *)
+          let type_expr = Tglob (n, temps, []) in
           (* Perceus reuse: if a reuse token is pending for this constructor
              (set by a use_count()==1-guarded arm in gen_cpp_case), call the
              [<factory>__reuse] variant with the token appended (stored last =
@@ -5534,15 +5537,16 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
           | Some (tok, ctor) when globref_equal r ctor ->
             tctx.pending_reuse_token <- None;
             CPPfun_call
-              ( CPPqualified (type_expr, Id.of_string (fname ^ "__reuse")),
+              ( CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
                 args @ [CPPmove tok] )
           | _ ->
-            CPPfun_call (CPPqualified (type_expr, Id.of_string fname), args) )
+            CPPfun_call (CPPqualified_t (type_expr, Id.of_string fname), args) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let ctor_struct = ctor_struct_name_of_ref r in
           let fname = factory_name_of_ctor ctor_struct in
-          CPPfun_call (CPPqualified (mk_cppglob r [], Id.of_string fname), args)
+          CPPfun_call
+            (CPPqualified_t (Tglob (r, [], []), Id.of_string fname), args)
       in
       (* [CPPfun_call] stores args reversed; [List.rev_map] compensates.
          Erased proof/type args ([MLdummy]) produce [std::any{}] — the
@@ -9484,7 +9488,8 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
     than once. *)
 and is_trivial_scrut = function
   | CPPvar _ | CPPget _ | CPPget' _ | CPParrow _ | CPPmember _
-  | CPPqualified _ | CPPderef _ | CPPenum_val _ | CPPglob _ -> true
+  | CPPqualified _ | CPPqualified_t _ | CPPderef _ | CPPenum_val _
+  | CPPglob _ -> true
   | _ -> false
 
 (** Generate a custom case expression using user-provided extraction syntax.

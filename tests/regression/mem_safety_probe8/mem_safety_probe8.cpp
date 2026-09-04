@@ -133,10 +133,14 @@ MemSafetyProbe8::tree MemSafetyProbe8::make_left_spine(uint64_t n) {
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<tree>(typename tree::Node(
-          nullptr, _loop_n, std::make_shared<tree>(tree::leaf())));
+      auto _cell = std::make_shared<MemSafetyProbe8::tree>(
+          typename MemSafetyProbe8::tree::Node(
+              nullptr, _loop_n,
+              std::make_shared<MemSafetyProbe8::tree>(tree::leaf())));
       *_write = std::move(_cell);
-      _write = &std::get<typename tree::Node>((*_write)->v_mut()).a0;
+      _write =
+          &std::get<typename MemSafetyProbe8::tree::Node>((*_write)->v_mut())
+               .a0;
       _loop_n = n_;
       continue;
     }

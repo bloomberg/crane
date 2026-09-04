@@ -78,12 +78,13 @@ MemSafetyProbe18::build_tree_list(MemSafetyProbe18::tree t, uint64_t n) {
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
-      auto _cell = std::make_shared<mylist<MemSafetyProbe18::tree>>(
-          typename mylist<MemSafetyProbe18::tree>::Mycons(
-              tree::node(t, _loop_n, tree::leaf()), nullptr));
+      auto _cell =
+          std::make_shared<MemSafetyProbe18::mylist<MemSafetyProbe18::tree>>(
+              typename MemSafetyProbe18::mylist<MemSafetyProbe18::tree>::Mycons(
+                  tree::node(t, _loop_n, tree::leaf()), nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename mylist<MemSafetyProbe18::tree>::Mycons>(
-                    (*_write)->v_mut())
+      _write = &std::get<typename MemSafetyProbe18::mylist<
+          MemSafetyProbe18::tree>::Mycons>((*_write)->v_mut())
                     .a1;
       _loop_n = n_;
       continue;

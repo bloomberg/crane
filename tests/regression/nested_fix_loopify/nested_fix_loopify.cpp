@@ -92,10 +92,12 @@ NestedFixLoopify::lst NestedFixLoopify::mk(uint64_t n) {
       break;
     } else {
       uint64_t m = _loop_n - 1;
-      auto _cell =
-          std::make_shared<lst>(typename lst::Cons(UINT64_C(2), nullptr));
+      auto _cell = std::make_shared<NestedFixLoopify::lst>(
+          typename NestedFixLoopify::lst::Cons(UINT64_C(2), nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename lst::Cons>((*_write)->v_mut()).a1;
+      _write =
+          &std::get<typename NestedFixLoopify::lst::Cons>((*_write)->v_mut())
+               .a1;
       _loop_n = m;
       continue;
     }

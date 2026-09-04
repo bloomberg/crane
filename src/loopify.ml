@@ -2420,8 +2420,8 @@ type decomposed = {
 type tmc_cell_alloc = {
   tca_factory : cpp_expr;
       (** Constructor factory function, e.g., [list<T>::ctor::Cons_] *)
-  tca_type_expr : cpp_expr;
-      (** The type expression before [::ctor], e.g., [list<T>] *)
+  tca_type : cpp_type;
+      (** The type the factory is qualified by, e.g., [list<T>] *)
   tca_ctor_name : string;
       (** Constructor name without trailing underscore, e.g., ["Cons"] *)
   tca_rec_field_idx : int;
@@ -2882,15 +2882,15 @@ and decompose_double_call check expr =
     non-tail recursive calls nested inside one or more constructor factories. *)
 
 (** Test whether an expression is a constructor factory call, i.e.,
-    [Type::cons(args)].  Returns [(type_expr, ctor_name, factory_name, args)]
-    where [type_expr] is the base type (e.g., [list<T>]), [ctor_name] is the
+    [Type::cons(args)].  Returns [(ty, ctor_name, factory_name, args)]
+    where [ty] is the base type (e.g., [list<T>]), [ctor_name] is the
     constructor struct name (e.g., ["Cons"]), [factory_name] is the factory
     method name (e.g., ["cons"]), and [args] are the constructor arguments.
 
-    Factory calls are the only use of [CPPfun_call(CPPqualified(...), ...)]
+    Factory calls are the only use of [CPPfun_call(CPPqualified_t(...), ...)]
     in the MiniCpp AST.  The struct name is the capitalized factory name. *)
 let is_ctor_factory_call = function
-  | CPPfun_call (CPPqualified (type_expr, factory_id), args) ->
+  | CPPfun_call (CPPqualified_t (ty, factory_id), args) ->
     let factory_s = Id.to_string factory_id in
     let n = String.length factory_s in
     (* Strip trailing underscore (collision escape) before capitalizing *)
@@ -2912,7 +2912,7 @@ let is_ctor_factory_call = function
        || not (Hashtbl.mem ctor_ptr_fields struct_name)
     then None
     else
-      Some (type_expr, struct_name, factory_s, args)
+      Some (ty, struct_name, factory_s, args)
   | _ -> None
 
 (** Try to decompose a return expression as a TMC-eligible branch.  Handles
@@ -2936,7 +2936,7 @@ let rec try_tmc_decompose check expr =
   let expr' = match expr with CPPmove e -> e | e -> e in
   match is_ctor_factory_call expr' with
   | None -> None
-  | Some (type_expr, ctor_name, factory_s, args) ->
+  | Some (cell_ty, ctor_name, factory_s, args) ->
     let n_args = List.length args in
     let indexed = List.mapi (fun i a -> (i, a)) args in
     let non_rec_of idx =
@@ -2959,8 +2959,8 @@ let rec try_tmc_decompose check expr =
       in
       {
       tca_factory =
-        CPPqualified (type_expr, Id.of_string factory_s);
-      tca_type_expr = type_expr;
+        CPPqualified_t (cell_ty, Id.of_string factory_s);
+      tca_type = cell_ty;
       tca_ctor_name = ctor_name;
       tca_rec_field_idx = idx;
       tca_non_rec_args = non_rec_of idx;
@@ -3108,17 +3108,22 @@ let try_tmc_classify check body =
     resolved via {!Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
     during inductive definition, or falls back to the positional name
-    [d_a{idx}]. *)
-let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
-    ptr val_expr =
+    [d_a{idx}].
+
+    {!cell_rec_field} returns that lvalue split as [(object, field)], because
+    the write-pointer update needs to take its address rather than assign to
+    it; {!patch_cell_field} is the assignment. *)
+let cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr =
   let field_idx = n_args - 1 - rec_field_idx in
-  let field_id = Common.lookup_ctor_field_name ctor_name field_idx in
-  let type_str = pp_expr type_expr in
-  let get_expr =
-    CPPraw ("std::get<typename " ^ type_str ^ "::" ^ ctor_name ^ ">")
-  in
   let v_mut = CPPmethod_call (ptr, id_v_mut, []) in
-  Sassign_field (CPPfun_call (get_expr, [v_mut]), field_id, val_expr)
+  ( CPPstd_get (cell_ty, Some (Id.of_string ctor_name), Some v_mut),
+    Common.lookup_ctor_field_name ctor_name field_idx )
+
+let patch_cell_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr val_expr =
+  let obj, field_id =
+    cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr
+  in
+  Sassign_field (obj, field_id, val_expr)
 
 (** Generate the if/else that links a value into the TMC chain.  On the first
     iteration, assigns to [_head]; on subsequent iterations, patches the
@@ -3131,7 +3136,7 @@ let patch_cell_field pp_expr ~type_expr ~ctor_name ~n_args ~rec_field_idx
         _head = val;
       \}
     ]} *)
-let patch_tmc_dest ~vt_ret _pp_expr _ti val_expr =
+let patch_tmc_dest ~vt_ret _ti val_expr =
   (* Write-pointer technique: *_write = val.
      _write always points to where the next value should go — initially
      &_head, then the recursive field of the most recently allocated cell.
@@ -3166,20 +3171,15 @@ let wrap_base_for_vt vt_ret val_expr =
       instead of allocating (see {!section:reuse-cursor}).  [None] allocates.
     @param cell A single TMC cell allocation descriptor
     @param vt_ret [Some ret_ty] for value-type returns, [None] otherwise *)
-let build_cell_call ?token ~vt_ret pp_expr cell =
+let build_cell_call ?token ~vt_ret cell =
   (* The cell being built is not always of the function's return type: a
      constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
      wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
-     type.  [tca_type_expr] carries that type as the already-rendered
-     expression the factory is qualified by, and the surrounding code already
-     splices it textually (see the [typename T::Ctor] initialisers below). *)
-  let mk_shared_cell =
-    CPPraw ("std::make_shared<" ^ pp_expr cell.tca_type_expr ^ ">")
-  in
+     type, which [tca_type] carries. *)
+  let mk_shared_cell = CPPmk_shared cell.tca_type in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
-    | Some (type_expr, _, _, _) ->
-      String.equal (pp_expr type_expr) (pp_expr cell.tca_type_expr)
+    | Some (ty, _, _, _) -> ty = cell.tca_type
     | None -> false
   in
   let args =
@@ -3205,9 +3205,8 @@ let build_cell_call ?token ~vt_ret pp_expr cell =
   | Some _ ->
     (* Direct struct construction wrapped in make_unique:
        std::make_unique<Type>(typename Type::Ctor{args...}) *)
-    let type_str = pp_expr cell.tca_type_expr in
     let struct_init =
-      CPPraw ("typename " ^ type_str ^ "::" ^ cell.tca_ctor_name)
+      CPPtypename_qualified (cell.tca_type, Id.of_string cell.tca_ctor_name)
     in
     let cell_expr = CPPfun_call (struct_init, args) in
     (match token with
@@ -3393,7 +3392,7 @@ let tmc_reuse_cursor ~vt_ret varying shadow_params br =
       _last = _cell1;                     // advance
       <shadow updates>
     ]} *)
-let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
+let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
     varying shadow_params =
   (* 0. Perceus reuse cursor.  See {!section:reuse-cursor}: when the loop walks
         an owned spine by pointer, the cell it is standing on is dead as soon as
@@ -3430,7 +3429,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
     List.mapi
       (fun i (cell_id, cell) ->
         let token = if i = 0 then token else None in
-        Sasgn (cell_id, Some Tauto, build_cell_call ?token ~vt_ret pp_expr cell))
+        Sasgn (cell_id, Some Tauto, build_cell_call ?token ~vt_ret cell))
       (List.combine cell_names br.tmc_cells)
   in
   (* 2. Link consecutive cells: outer.rec_field = inner.
@@ -3441,8 +3440,8 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
   let rec link_cells cells names =
     match cells, names with
     | cell :: rest_cells, outer_name :: (inner_name :: _ as rest_names) ->
-      patch_cell_field pp_expr
-        ~type_expr:cell.tca_type_expr ~ctor_name:cell.tca_ctor_name
+      patch_cell_field
+        ~cell_ty:cell.tca_type ~ctor_name:cell.tca_ctor_name
         ~n_args:cell.tca_n_args ~rec_field_idx:cell.tca_rec_field_idx
         (CPPvar outer_name)
         (match vt_ret with
@@ -3453,53 +3452,39 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
   in
   let link_stmts = List.rev (link_cells br.tmc_cells cell_names) in
   (* 3. Patch destination with outermost cell via write pointer *)
-  let patch = patch_tmc_dest ~vt_ret pp_expr ti (CPPvar (List.hd cell_names)) in
+  let patch = patch_tmc_dest ~vt_ret ti (CPPvar (List.hd cell_names)) in
   (* 4. Advance _write to the recursive field of the innermost cell.
         Generates: _write = &std::get<typename Type::Ctor>(inner->v_mut()).field; *)
   let inner_ti = List.rev br.tmc_cells |> List.hd in
-  let field_idx = inner_ti.tca_n_args - 1 - inner_ti.tca_rec_field_idx in
-  let field_id = Common.lookup_ctor_field_name inner_ti.tca_ctor_name field_idx in
+  let inner_field ptr =
+    let obj, field_id =
+      cell_rec_field ~cell_ty:inner_ti.tca_type
+        ~ctor_name:inner_ti.tca_ctor_name ~n_args:inner_ti.tca_n_args
+        ~rec_field_idx:inner_ti.tca_rec_field_idx ptr
+    in
+    CPPget (obj, field_id)
+  in
   let update_write =
-    match vt_ret with
-    | Some _ ->
-      let rec ptr_to_cell current_ptr = function
-        | [] | [_] -> current_ptr
-        | cell :: rest ->
-          let field_idx = cell.tca_n_args - 1 - cell.tca_rec_field_idx in
-          let field_id = Common.lookup_ctor_field_name cell.tca_ctor_name field_idx in
-          let type_str = pp_expr cell.tca_type_expr in
-          let field =
-            "std::get<typename " ^ type_str ^ "::" ^ cell.tca_ctor_name
-            ^ ">(" ^ current_ptr ^ "->v_mut())." ^ Id.to_string field_id
-          in
-          ptr_to_cell field rest
-      in
-      let innermost_ptr = ptr_to_cell "(*_write)" br.tmc_cells in
-      let type_str = pp_expr inner_ti.tca_type_expr in
-      Sexpr
-        (CPPbinop
-           ( "=",
-             CPPvar (id_write),
-             CPPraw
-               ( "&std::get<typename " ^ type_str ^ "::"
-                 ^ inner_ti.tca_ctor_name ^ ">(" ^ innermost_ptr
-                 ^ "->v_mut())." ^ Id.to_string field_id ) ))
-    | None ->
-      let innermost_name = List.rev cell_names |> List.hd in
-      let type_str = pp_expr inner_ti.tca_type_expr in
-      let get_expr =
-        CPPraw
-          ("std::get<typename " ^ type_str ^ "::" ^ inner_ti.tca_ctor_name ^ ">")
-      in
-      let v_mut =
-        CPPmethod_call (CPPvar innermost_name, id_v_mut, [])
-      in
-      Sexpr
-        (CPPbinop
-           ( "=",
-             CPPvar (id_write),
-             CPPunop
-               ("&", CPPget (CPPfun_call (get_expr, [v_mut]), field_id)) ))
+    let target =
+      match vt_ret with
+      | Some _ ->
+        (* Value-type returns hold the chain by value inside the cells rather
+           than as separately-named locals, so walk down from [*_write] through
+           each outer cell's recursive field to reach the innermost one. *)
+        let rec ptr_to_cell current_ptr = function
+          | [] | [_] -> current_ptr
+          | cell :: rest ->
+            let obj, field_id =
+              cell_rec_field ~cell_ty:cell.tca_type
+                ~ctor_name:cell.tca_ctor_name ~n_args:cell.tca_n_args
+                ~rec_field_idx:cell.tca_rec_field_idx current_ptr
+            in
+            ptr_to_cell (CPPget (obj, field_id)) rest
+        in
+        inner_field (ptr_to_cell (CPPderef (CPPvar id_write)) br.tmc_cells)
+      | None -> inner_field (CPPvar (List.rev cell_names |> List.hd))
+    in
+    Sexpr (CPPbinop ("=", CPPvar id_write, CPPunop ("&", target)))
   in
   (* 5. Shadow variable updates.  The cursor advances through [_own] instead:
         the recursive field has been stolen into [_rs.next] (the cell it lived
@@ -3537,9 +3522,8 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret pp_expr ti br
 
     @param vt_ret  [Some ret_ty] when the return type is a value type
     @param check   Call checker for identifying recursive calls
-    @param pp_expr Expression pretty-printer (for rendering types in std::get)
     @param ti      TMC info from {!try_tmc_classify} *)
-let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check pp_expr ti
+let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check ti
     varying shadow_params =
   (* Emit code for a non-tail return in the TMC context.
      [suffix] is appended after TMC branches: empty inside visitor lambdas,
@@ -3548,13 +3532,13 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check pp_expr ti
     let n = count_calls_expr check e in
     if n = 0 then
       (* Base case — patch destination and stop *)
-      patch_tmc_dest ~vt_ret:None pp_expr ti (wrap_base_for_vt vt_ret e)
+      patch_tmc_dest ~vt_ret:None ti (wrap_base_for_vt vt_ret e)
       @ [Sbreak]
     else
       (* TMC branch — allocate cell(s) with holes, patch, continue *)
       match try_tmc_decompose check e with
       | Some br ->
-        build_tmc_branch_stmts ~cursor_used ~vt_ret pp_expr ti br varying
+        build_tmc_branch_stmts ~cursor_used ~vt_ret ti br varying
           shadow_params
         @ suffix
       | None ->
@@ -3582,13 +3566,12 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check pp_expr ti
 
     @param param_inits Optional custom initializers for shadow variables
     @param check Call checker for identifying recursive calls
-    @param pp_expr Expression pretty-printer (for rendering types in std::get)
     @param ti TMC info from {!try_tmc_classify}
     @param params Function parameters
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
+let transform_tmc ?(param_inits = []) check ti params ret_ty body =
   let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
@@ -3635,7 +3618,7 @@ let transform_tmc ?(param_inits = []) check pp_expr ti params ret_ty body =
   let cursor_used = ref false in
   let body'' =
     List.map
-      (rewrite_tmc_visit_stmt ~cursor_used ~vt_ret check pp_expr ti varying
+      (rewrite_tmc_visit_stmt ~cursor_used ~vt_ret check ti varying
          shadow_params)
       body'
     |> strip_unnecessary_blocks
@@ -8150,7 +8133,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_expr
        real C++ self-call.  That is exactly the stack growth this pass exists to
        remove, so check the postcondition and fall back to the frame transform,
        which handles the scrutinising shape via a continuation frame. *)
-    let tmc = transform_tmc ~param_inits check pp_expr ti params ret_ty body in
+    let tmc = transform_tmc ~param_inits check ti params ret_ty body in
     if classify check tmc = No_recursion then begin
       last_nontail_strategy := Lp_tmc;
       (tmc, true)

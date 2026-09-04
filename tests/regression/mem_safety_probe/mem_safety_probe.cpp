@@ -24,17 +24,16 @@ MemSafetyProbe::build_adders(
           typename MemSafetyProbe::mylist<MemSafetyProbe::tree>::Mycons>(
           _loop_trees.v());
       const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
-      auto _cell = std::make_shared<mylist<std::function<uint64_t(uint64_t)>>>(
-          typename mylist<std::function<uint64_t(uint64_t)>>::Mycons(
-              [=](uint64_t _x0) mutable -> uint64_t {
-                return a0.sum_values(_x0);
-              },
-              nullptr));
+      auto _cell = std::make_shared<
+          MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>>(
+          typename MemSafetyProbe::mylist<std::function<uint64_t(uint64_t)>>::
+              Mycons([=](uint64_t _x0) mutable
+                         -> uint64_t { return a0.sum_values(_x0); },
+                     nullptr));
       *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<std::function<uint64_t(uint64_t)>>::Mycons>(
-               (*_write)->v_mut())
-               .a1;
+      _write = &std::get<typename MemSafetyProbe::mylist<
+          std::function<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
+                    .a1;
       _loop_trees = a1_value;
       continue;
     }

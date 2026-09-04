@@ -219,11 +219,13 @@ MemSafetyProbe4::mylist<uint64_t> MemSafetyProbe4::transform_list(
       std::function<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
         return a0.sum_values(_x0);
       };
-      auto _cell = std::make_shared<mylist<uint64_t>>(
-          typename mylist<uint64_t>::Mycons(f(UINT64_C(0)), nullptr));
+      auto _cell = std::make_shared<MemSafetyProbe4::mylist<uint64_t>>(
+          typename MemSafetyProbe4::mylist<uint64_t>::Mycons(f(UINT64_C(0)),
+                                                             nullptr));
       *_write = std::move(_cell);
-      _write =
-          &std::get<typename mylist<uint64_t>::Mycons>((*_write)->v_mut()).a1;
+      _write = &std::get<typename MemSafetyProbe4::mylist<uint64_t>::Mycons>(
+                    (*_write)->v_mut())
+                    .a1;
       _loop_l = crane_raw(a1);
       continue;
     }

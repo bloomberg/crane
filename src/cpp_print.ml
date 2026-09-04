@@ -984,6 +984,33 @@ and expr_contains_string e =
 and pp_typename_member ty id =
   pp_cpp_type false [] (Tqualified (ty, id))
 
+(** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
+    a nested type.
+
+    A type and a value spell the same global differently.  The type spelling
+    carries a leading [typename] for a dependent qualifier (see
+    {!Cpp_names.typename_prefix_for}), which is ill-formed in front of a static
+    member function -- [typename C::t::pair(x)] claims [pair] names a type --
+    and it qualifies a global by its namespace where the value spelling elides
+    the prefix that is already in scope.  A named global therefore goes through
+    the expression printer; anything else only needs the keyword removed. *)
+and pp_value_qualifier env ty =
+  match ty with
+  | Tglob (r, tys, []) ->
+    let ci =
+      { ci_inline = (if to_inline r then find_custom_opt r else None);
+        ci_is_custom = Table.is_custom r }
+    in
+    pp_cpp_expr env [] (CPPglob (r, tys, Some ci))
+  | _ ->
+  let s = string_of_ppcmds (pp_cpp_type false [] ty) in
+  let kw = "typename " in
+  let n = String.length kw in
+  str
+    ( if String.length s >= n && String.sub s 0 n = kw then
+        String.sub s n (String.length s - n)
+      else s )
+
 (** Pretty-print a MiniCpp expression as C++ source.
 
     @param env   pair [(vl, any_ids)] where [vl] is the list of type-variable
@@ -1604,13 +1631,13 @@ and pp_cpp_expr env args t =
        element type rather than the stored type, so e.g. nktree(ts) produces
        deque<Newick_node> while nkinode(ts,l) produces
        deque<shared_ptr<Newick_node>> — matching each function's signature. *)
-    (* Constructor calls use CPPqualified(CPPglob(IndRef(kn,i), ...), fname),
+    (* Constructor calls use CPPqualified_t(Tglob(IndRef(kn,i), ...), fname),
        NOT CPPglob(ConstructRef(...)). Extract the enclosing IndRef so we can
        determine whether a list element type is a self-reference (needs
        shared_ptr) or a cross-inductive reference (needs value type). *)
     let ctor_ind_kn_opt =
       match f with
-      | CPPqualified (CPPglob (GlobRef.IndRef (kn, _), _, _), _) -> Some kn
+      | CPPqualified_t (Tglob (GlobRef.IndRef (kn, _), _, _), _) -> Some kn
       | _ -> None
     in
     let render_ctor_arg arg =
@@ -2036,7 +2063,7 @@ and pp_cpp_expr env args t =
     pp_cpp_expr env args e ++ str "::template " ++ Id.print id ++ str "<"
     ++ pp_list (pp_cpp_type false []) tys ++ str ">"
   | CPPqualified_t (ty, id) ->
-    pp_cpp_type false [] ty ++ str "::" ++ Id.print id
+    pp_value_qualifier env ty ++ str "::" ++ Id.print id
   | CPPconvertible_to ty ->
     require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
