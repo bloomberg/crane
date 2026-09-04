@@ -5265,13 +5265,17 @@ let gen_ind_header_v2
               let wl_id = Id.of_string wl in
               let pv = Id.of_string (wl ^ "p")
               and ev = Id.of_string (wl ^ "e") in
-              let sp_str = render_q_destr (Tshared_ptr (verbatim_ml g_ty)) in
+              let wl_ty =
+                Tid
+                  ( Id.of_string_soft "crane::small_vector",
+                    [Tshared_ptr (verbatim_ml g_ty)] )
+              in
               let push fe =
                 [Sexpr (CPPdot_method_call (
                    CPPvar wl_id, Id.of_string "push_back", [CPPmove fe]))]
               in
               let on_spine = Some push in
-              [Sraw ("crane::small_vector<" ^ sp_str ^ "> " ^ wl ^ ";")]
+              [Sdecl (wl_id, wl_ty)]
               @ body_for on_spine e
               @ [Swhile (
                    CPPunop ("!", dot0 (CPPvar wl_id) "empty"),
