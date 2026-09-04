@@ -2323,9 +2323,10 @@ let strip_ns_tglob = function
   | t -> t
 
 (** Binder-type state: the pattern-variable assignment
-    ({!Translation_state.cpp_binder_types}) paired with its total shadow
-    ({!Translation_state.cpp_binder_types_all}).  Saved and restored together
-    so the two can never describe different scopes. *)
+    ({!Translation_state.cpp_binder_types}) paired with the total binding-site
+    assignment ({!Translation_state.cpp_binder_types_all}) it falls back to.
+    Saved and restored together so the two can never describe different
+    scopes. *)
 type binder_env = cpp_type IntMap.t * cpp_type IntMap.t
 
 (** Strip self-referential [Tnamespace] wrappers, at every depth.
@@ -2922,34 +2923,14 @@ and binder_cpp_type i = IntMap.find_opt i tctx.cpp_binder_types
     binder is boxed exactly when the scrutinee's instantiation erased its
     field. *)
 and binder_is_boxed i =
-  let recorded = binder_cpp_type i in
-  let answer = match recorded with Some t -> resolves_to_any_type t | None -> false in
-  report_binder_disagreement i recorded answer;
-  answer
-
-(** Compare the answer {!binder_is_boxed} gives today against the one the
-    total assignment ({!Translation_state.cpp_binder_types_all}) would give,
-    and report where they differ.
-
-    This measures the risk in migrating readers onto the assignment: today an
-    unassigned binder answers [false] by default, and after the migration it
-    answers from its binding site instead.  Every difference is either a bug
-    being fixed or a behaviour change to justify, and the sweep is what tells
-    the two apart.  Temporary: it goes when the readers move over. *)
-and report_binder_disagreement i recorded answer =
-  match Sys.getenv_opt "CRANE_CHECK_IR" with
-  | None | Some "" | Some "0" -> ()
-  | Some _ ->
+  match binder_cpp_type i with
+  | Some t -> resolves_to_any_type t
+  | None ->
+    (* No pattern-match instantiation pinned this binder down, so fall back to
+       the type assigned where it was bound. *)
     ( match IntMap.find_opt i tctx.cpp_binder_types_all with
-    | Some shadow when resolves_to_any_type shadow <> answer ->
-      Minicpp_check.violation "binder assignment"
-        (Printf.sprintf "boxed=%b from %s, but the binding site assigned %s"
-           answer
-           ( match recorded with
-           | Some t -> Minicpp_check.show_ty t
-           | None -> "no recorded type" )
-           (Minicpp_check.show_ty shadow))
-    | _ -> () )
+    | Some t -> resolves_to_any_type t
+    | None -> false )
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -2988,11 +2969,22 @@ and record_binder_type i t =
     cannot currently type does not become a new way for extraction to fail. *)
 and push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
   push_env_types ids;
+  assign_binder_types ~cpp env ids
+
+(** Record the C++ type of each of the [ids] most recently pushed binders,
+    without pushing them again.  [?cpp] overrides the conversion for binders
+    whose declared C++ type the caller has already computed; a declaration is
+    always a better answer than re-deriving from the ML type, because it is
+    what the emitted code actually says.  Call sites that only learn the
+    declared types after pushing (a lambda decides [const auto &] for its
+    erased parameters well after opening their scope) call this a second time
+    to correct the assignment. *)
+and assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
   List.iteri
     (fun j (_, ml_ty) ->
       let assigned =
         match List.nth_opt cpp j with
-        | Some (Some t) -> Some t
+        | Some (Some t) -> Some (strip_param_wrappers t)
         | _ -> (try Some (cpp_of_ml env ml_ty) with _ -> None)
       in
       match assigned with
@@ -3000,6 +2992,13 @@ and push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
         tctx.cpp_binder_types_all <- IntMap.add (j + 1) t tctx.cpp_binder_types_all
       | _ -> ())
     ids
+
+(** Strip the const/reference decoration a parameter type carries, leaving the
+    type of the value the binder denotes.  [const auto &] assigns [Tauto]:
+    a deduced parameter is never physically a box. *)
+and strip_param_wrappers = function
+  | Tref t | Tmod (TMconst, t) -> strip_param_wrappers t
+  | t -> t
 
 (** Save the current binder-type state for later restoration. *)
 and save_erased_env () : binder_env =
@@ -4610,6 +4609,21 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         in
         let cpp_args =
           List.map (fun (ty, id, _) -> (ty, id)) cpp_arg_info
+        in
+        (* The parameters' declared C++ types are only known here, after
+           [cpp_arg_info]; correct the assignment made when their scope was
+           opened above so the body reads what the signature says.  A
+           parameter dropped by [filtered_args_with_owned] keeps its
+           conversion-derived assignment. *)
+        let () =
+          let declared =
+            List.map2
+              (fun (id, _, _) (ty, _, _) -> (id, ty))
+              filtered_args_with_owned cpp_arg_info
+          in
+          assign_binder_types env
+            ~cpp:(List.map (fun (id, _) -> List.assoc_opt id declared) args)
+            args
         in
         let saved_expected_lam = tctx.expected_ml_type_for_arg in
         let () =

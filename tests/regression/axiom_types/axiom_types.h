@@ -65,28 +65,26 @@ struct AxiomTypes {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, MysteryType &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
       return f(a0);
     } else {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr2>(a.v());
-      return f0(a0);
+      return crane_call_erased(f0, a0);
     }
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, MysteryType &>
+    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
       return f(a0);
     } else {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr2>(a.v());
-      return f0(a0);
+      return crane_call_erased(f0, a0);
     }
   }
 

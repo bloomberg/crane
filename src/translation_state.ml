@@ -153,10 +153,12 @@ type translation_ctx = {
   mutable cpp_binder_types : cpp_type IntMap.t;
   (** The C++ type assigned to {e every} binder at the point it is bound,
       rather than only to the pattern variables an erased instantiation
-      pinned down.  Written by [push_binders], never read by translation:
-      this is the shadow of {!cpp_binder_types} that the assignment is being
-      migrated onto, and [Minicpp_check] reports where the two disagree so
-      the migration can be judged before readers switch over.
+      pinned down.  Written by [push_binders], and by [assign_binder_types]
+      again at call sites that only settle a binder's declared C++ type after
+      opening its scope.  Consulted when {!cpp_binder_types} has nothing to
+      say, so that a binder with no pattern-match instantiation behind it is
+      still answered from its binding site rather than defaulting to
+      not-boxed.
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}, exactly
       as {!cpp_binder_types} is. *)

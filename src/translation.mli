@@ -84,7 +84,8 @@ val type_is_erased : cpp_type -> bool
 val push_binders :
   ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
 
-(** Binder-type state: the pattern-variable assignment and its total shadow. *)
+(** Binder-type state: the pattern-variable assignment paired with the total
+    binding-site assignment it falls back to. *)
 type binder_env =
   cpp_type Translation_state.IntMap.t * cpp_type Translation_state.IntMap.t
 
