@@ -63,17 +63,13 @@ let escape_cpp_string (s : string) : string =
    - axiom_type_refs: accumulates across the full extraction session; never cleared
      because axiom classifications are global to a Rocq session. *)
 
-(** Registry of GlobRefs that are axiom types (extracted as std::any). Functions
-    whose return type involves an axiom type should not be marked
-    __attribute__((pure)) because they may transitively call axiom stubs that
-    throw std::logic_error. *)
-let axiom_type_refs : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16
+(** Axiom types (extracted as [std::any]) live in {!Cpp_erasure}, which owns
+    the erasure decisions.  Re-exported here because functions whose return
+    type involves one must not be marked [__attribute__((pure))]: they may
+    transitively call an axiom stub that throws [std::logic_error]. *)
+let register_axiom_type = Cpp_erasure.register_axiom_type
 
-(** Register a GlobRef as an axiom type in the {!axiom_type_refs} table. *)
-let register_axiom_type (r : GlobRef.t) = Hashtbl.replace axiom_type_refs r ()
-
-(** Check whether a GlobRef has been registered as an axiom type. *)
-let is_axiom_type_ref (r : GlobRef.t) = Hashtbl.mem axiom_type_refs r
+let is_axiom_type_ref = Cpp_erasure.is_axiom_type_ref
 
 (** Check if an identifier is referenced in a list of statements.
     Used to decide whether a parameter name should be emitted or omitted
@@ -656,45 +652,20 @@ let concrete_typed_any_params : cpp_type Id.Map.t ref = ref Id.Map.empty
 
 (** Whether a C++ type is [std::pair]. *)
 let is_prod_cpp_type = function
-  | Tglob (g, [_; _], _) ->
-    let n = Common.pp_global_name Type g in
-    n = "prod" || n = "Prod"
+  | Tglob (g, [_; _], _) -> Ml_type_util.is_prod_global g
   | _ -> false
 
 (** Cached prod (pair) global reference, used to construct [pair<any,any>] casts
     when the CCscrut expected_type is not itself a pair type (e.g. Tany). *)
 let known_prod_g : GlobRef.t option ref = ref None
 
-(** Set of type names introduced by [using X = std::any;] — tracked so
-    [is_any_type] can recognize [Tid] aliases for [std::any]. *)
-let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
+(** Names introduced by [using X = std::any;], and the question "is this type
+    spelled [std::any]" — both owned by {!Cpp_erasure}, so that the pass that
+    decides how to cross an erasure boundary and the printer that renders the
+    result cannot disagree. *)
+let any_type_aliases = Cpp_erasure.any_type_aliases
 
-(** [true] iff the C++ type ultimately resolves to [std::any], including through
-    type modifiers ([Tmod], [Tref], [Tnamespace]), [Tunknown] aliases, and
-    [Tid] names registered as any-type aliases via [Fnested_using]. *)
-let rec is_any_type = function
-  | Tany | Topaque -> true
-  | Tmod (_, inner) -> is_any_type inner
-  | Tref inner -> is_any_type inner
-  | Tnamespace (_, inner) -> is_any_type inner
-  | Tid (id, []) -> Id.Set.mem id !any_type_aliases
-  | Tglob (GlobRef.ConstRef c, _, _) ->
-    is_axiom_type_ref (GlobRef.ConstRef c)
-    || (try let t = Table.find_type (GlobRef.ConstRef c) in
-            t = Miniml.Tunknown || t = Miniml.Taxiom
-        with Not_found -> false)
-  | t -> Ml_type_util.is_cpp_dummy_type t
-
-(** Whether recovering this type from a [std::any] needs [crane_any_cast]
-    rather than a plain [std::any_cast]: a pair with a concrete component may
-    have had its components boxed one at a time, so the box holds
-    [pair<any, any>] and each component has to be recovered in turn.  An
-    all-erased pair is stored as itself and needs no such walk. *)
-let needs_deep_any_cast t =
-  match t with
-  | Tglob (_, ([_; _] as args), _) ->
-    is_prod_cpp_type t && List.exists (fun a -> not (is_any_type a)) args
-  | _ -> false
+let is_any_type = Cpp_erasure.is_any_shaped
 
 (** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
     with a concrete (non-[std::any]) element type.  Used to detect when a
@@ -2163,47 +2134,32 @@ and pp_cpp_expr env args t =
       | _ -> pp_cpp_expr env args e
     in
     str op ++ operand
-  | CPPany_cast (ty, e) ->
-    if is_any_type ty then
-      pp_cpp_expr env args e
-    else begin
-      require_header "any";
-      (* When [e] is a bare variable already registered in
-         [concrete_typed_any_params], the [CPPvar id] printer case below
-         would independently insert its OWN use-site [any_cast] for [id],
-         producing a nested [any_cast<Outer>(any_cast<Inner>(id))]. That is
-         only safe when [Outer] and [Inner] are the same type (an idempotent
-         box/unbox round-trip); when this [CPPany_cast] node already
-         supplies the correct target type [ty] (an AST-level cast
-         translation.ml built for this exact expression), print the bare
-         variable directly instead of letting the printer-level mechanism
-         wrap it again with a possibly DIFFERENT type, which throws
-         [std::bad_any_cast] at runtime. *)
-      let inner =
-        match e with
-        | CPPvar id when Id.Map.mem id !concrete_typed_any_params ->
-          Id.print id
-        | _ -> pp_cpp_expr env args e
-      in
-      (* A cast whose target is an associated type of a type-class instance
-         parameter ([typename _tcI0::F]) cannot be resolved here: the instance
-         may define it as [std::any] itself, and [any_cast<std::any>] throws
-         rather than acting as the identity.  [crane_any_cast] (crane_fn.h)
-         decides that at instantiation time. *)
-      let caster =
-        if Minicpp.instance_dependent ty <> None || needs_deep_any_cast ty then begin
-          Table.mark_needs_erase_fn ();
-          "crane_any_cast"
-        end
-        else (sn ()).any_cast
-      in
-      str caster
-      ++ str "<"
-      ++ pp_cpp_type false [] ty
-      ++ str ">("
-      ++ inner
-      ++ str ")"
-    end
+  | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
+    require_header "any";
+    (* When [e] is a bare variable already registered in
+       [concrete_typed_any_params], the [CPPvar id] printer case below
+       would independently insert its OWN use-site [any_cast] for [id],
+       producing a nested [any_cast<Outer>(any_cast<Inner>(id))]. That is
+       only safe when [Outer] and [Inner] are the same type (an idempotent
+       box/unbox round-trip); when this cast node already supplies the
+       correct target type [ty] (an AST-level cast translation.ml built for
+       this exact expression), print the bare variable directly instead of
+       letting the printer-level mechanism wrap it again with a possibly
+       DIFFERENT type, which throws [std::bad_any_cast] at runtime. *)
+    let inner =
+      match e with
+      | CPPvar id when Id.Map.mem id !concrete_typed_any_params -> Id.print id
+      | _ -> pp_cpp_expr env args e
+    in
+    (* Which caster, and whether the cast is needed at all, was decided by
+       {!Cpp_erasure.resolve_casts}. *)
+    let caster =
+      match t with
+      | CPPany_cast_tolerant _ -> "crane_any_cast"
+      | _ -> (sn ()).any_cast
+    in
+    str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
+    ++ str ")"
   | CPPerase_fn (ret_ty, e) ->
     str "crane_erase_fn"
     ++ ( match ret_ty with
@@ -3905,7 +3861,13 @@ let maybe_loopify decl =
 
     @param env   name environment for sub-expression and sub-type printers
     @param decl  the MiniCpp declaration to render *)
-let rec pp_cpp_decl env decl = pp_cpp_decl_raw env (maybe_loopify decl)
+let rec pp_cpp_decl env decl =
+  (* Validate at both pass boundaries, so a report names the pass that
+     introduced the violation rather than merely the last one to run. *)
+  Minicpp_check.check ~where:"translation" decl;
+  let decl = maybe_loopify decl in
+  Minicpp_check.check ~where:"loopify" decl;
+  pp_cpp_decl_raw env (Cpp_erasure.resolve_casts decl)
 
 (** Inner declaration printer, called after loopification has been applied.
 

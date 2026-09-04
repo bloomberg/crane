@@ -367,8 +367,14 @@ and cpp_expr =
   | CPPbrace_init  (** Empty brace initialization: {} *)
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
+      (** [std::any_cast<T>(expr)] — recovers a typed value from a
+          [std::any] at a shape known exactly at codegen time. *)
+  | CPPany_cast_tolerant of cpp_type * cpp_expr
+      (** [crane_any_cast<T>(expr)] — as {!CPPany_cast}, but the shape the
+          value has in the box is only knowable once C++ instantiates the
+          surrounding template, so the [crane_fn.h] helper decides.  Produced
+          by {!Cpp_erasure.resolve_casts}, never by translation. *)
   | CPPerase_fn of cpp_type option * cpp_expr
-      (** std::any_cast<T>(expr) — recovers typed value from std::any *)
   | CPPcontainer_cast of cpp_type * cpp_expr * bool
       (** crane_container_cast<Dst>(expr) — converts a type-erased sequence
           container (element type std::any) into a concrete-element container

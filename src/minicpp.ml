@@ -379,7 +379,11 @@ and cpp_expr =
   | CPPbrace_init (* {} — empty brace initialization *)
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
-    (* std::any_cast<T>(expr) — recovers a typed value from std::any *)
+    (* std::any_cast<T>(expr) — recovers a typed value from std::any at a
+       shape known exactly here *)
+  | CPPany_cast_tolerant of cpp_type * cpp_expr
+    (* crane_any_cast<T>(expr) — same, but the shape in the box is only
+       knowable when C++ instantiates the surrounding template *)
   | CPPerase_fn of cpp_type option * cpp_expr
     (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to the canonical
        erased representation std::function<Ret(std::any...)>.  [None] means the
@@ -673,6 +677,7 @@ let map_expr
   | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
+  | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ft ty, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
   | CPPcontainer_cast (ty, e', sb) -> CPPcontainer_cast (ft ty, fe e', sb)
   | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
@@ -765,7 +770,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPqualified (e', _)
   | CPPqualified_tpl (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
+  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
@@ -844,7 +850,8 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPqualified (e', _)
   | CPPqualified_tpl (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
+  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
