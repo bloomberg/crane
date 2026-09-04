@@ -2067,6 +2067,11 @@ and pp_cpp_expr env args t =
       | Some id -> pp_typename_member ty id
     in
     str ((sn ()).get ^ "<") ++ targ ++ str ">"
+  | CPPstd_get_idx (n, e) ->
+    require_header "variant";
+    str ((sn ()).get ^ "<" ^ string_of_int n ^ ">(")
+    ++ pp_cpp_expr env args e
+    ++ str ")"
   | CPPstd_get (ty, ctor, Some e) ->
     require_header "variant";
     let targ = match ctor with

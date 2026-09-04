@@ -9298,11 +9298,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               else CPPfun_call (CPPmember (scrut_expr, Id.of_string "v_mut"), [])
             in
             let rf i =
-              CPPmember
-                ( CPPfun_call
-                    ( CPPraw ("std::get<" ^ string_of_int branch_idx ^ ">"),
-                      [scrut_vmut] ),
-                  field_param_id i )
+              CPPmember (CPPstd_get_idx (branch_idx, scrut_vmut), field_param_id i)
             in
             let token_expr = ref None in
             let extract =

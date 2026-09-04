@@ -677,7 +677,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPmember (e, _)
    |CPParrow (e, _)
    |CPPqualified (e, _)
-   |CPPqualified_tpl (e, _, _) -> collect_expr check e
+   |CPPqualified_tpl (e, _, _)
+   |CPPstd_get_idx (_, e) -> collect_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -858,7 +859,8 @@ let rec count_calls_expr (check : call_checker) expr =
    |CPPmember (e, _)
    |CPParrow (e, _)
    |CPPqualified (e, _)
-   |CPPqualified_tpl (e, _, _) -> count_calls_expr check e
+   |CPPqualified_tpl (e, _, _)
+   |CPPstd_get_idx (_, e) -> count_calls_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
