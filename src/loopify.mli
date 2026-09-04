@@ -15,17 +15,11 @@ open Minicpp
     wrappers to find inner [Dfundef] nodes. Also transforms recursive methods
     inside [Dstruct] fields ([Fmethod]).
 
-    @param pp_type
-      converts a [cpp_type] to its C++ string representation. Used by the
-      non-tail recursion pass to generate frame type declarations and vector
-      element types as raw C++ strings.
-
     @param pp_expr
       converts a [cpp_expr] to its C++ string representation. Used to generate
       [decltype(expr)] for struct fields when the type cannot be inferred. *)
 val transform_decl :
   ?tparams:(template_type * Id.t) list ->
-  pp_type:(cpp_type -> string) ->
   pp_expr:(cpp_expr -> string) ->
   cpp_decl ->
   cpp_decl

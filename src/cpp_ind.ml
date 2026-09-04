@@ -533,11 +533,10 @@ let pp_cpp_ind_header kn ind =
                wrapper, so we must loopify here. *)
             let decl =
               if Table.loopify () then
-                let pp_type t = Pp.string_of_ppcmds (pp_cpp_type false [] t) in
                 let pp_expr e =
                   Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e)
                 in
-                Loopify.transform_decl ~pp_type ~pp_expr decl
+                Loopify.transform_decl ~pp_expr decl
               else
                 decl
             in

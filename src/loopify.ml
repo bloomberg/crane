@@ -2279,12 +2279,11 @@ let drop_unread_shadows shadow_decls body =
     @param param_inits Optional custom initializers for shadow variables
                        (default: copy from original parameter)
     @param check Call checker for identifying recursive calls
-    @param pp_type Type pretty-printer (unused, kept for signature uniformity)
     @param params Function parameters [(id, type)] list
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) check _pp_type params ret_ty body =
+let transform_tail ?(param_inits = []) check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
     build_shadow_setup check params body
@@ -4278,7 +4277,6 @@ let filter_cont_vars ~exclude_id rest_free =
     @param offset Starting field index in the frame
     @param cont_vars The continuation variable names
     @param cont_types Their types (parallel to [cont_vars])
-    @param pp_type Type printer function
     @return List of raw C++ binding statements *)
 let make_cont_bindings ~offset ~field_names cont_vars cont_types =
   List.mapi
@@ -4955,8 +4953,6 @@ type enter_rewrite_ctx = {
       (** Type environment — changes when entering sub-scopes *)
   er_ret_ty : cpp_type;
       (** Return type of the function being loopified *)
-  er_pp_type : cpp_type -> string;
-      (** Pretty-printer for types (used in [decltype] generation) *)
   er_call_counter : int ref;
       (** Mutable counter for generating unique frame names *)
   er_frames_ref : call_frame_info list ref;
@@ -5021,7 +5017,7 @@ let partition_saved_invariant invariant_params saved_exprs saved_types =
             first [_Enter] frame onto the stack *)
 let gen_chained_call_frames ctx (acd : all_calls_decomp) =
   let { er_check = check; er_varying = varying; er_tparams = tparams;
-        er_env = env; er_ret_ty = ret_ty; er_pp_type = _pp_type;
+        er_env = env; er_ret_ty = ret_ty;
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_varying_param_types = varying_param_types;
         er_branch_ctx = branch_ctx;
@@ -5339,7 +5335,7 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
     @return A list of rewritten statements (frame pushes or result assignments) *)
 let rec rewrite_enter_lambda_return ctx stmt =
   let { er_check = check; er_varying = varying; er_tparams = tparams;
-        er_env = env; er_ret_ty = ret_ty; er_pp_type = pp_type;
+        er_env = env; er_ret_ty = ret_ty;
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_varying_param_types = varying_param_types;
         er_branch_ctx = branch_ctx;
@@ -5895,7 +5891,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     @return Rewritten statement list (typically stack push operations) *)
 and rewrite_enter_stmts ctx stmts =
   let { er_check = check; er_varying = varying; er_tparams = tparams;
-        er_env = env; er_ret_ty = ret_ty; er_pp_type = _pp_type;
+        er_env = env; er_ret_ty = ret_ty;
         er_call_counter = call_counter; er_frames_ref = frames_ref;
         er_varying_param_types = varying_param_types;
         er_branch_ctx = branch_ctx;
@@ -6788,9 +6784,6 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
     [std::declval<CtorType&>().d_a0] and plain [b] becomes
     [std::declval<unsigned int&>()].
 
-    @param pp_type  Type pretty-printer, used to render struct types in the
-                    [std::declval<T&>()] expression (unused in this function but
-                    threaded through for interface consistency)
     @param env      Type environment mapping variable [Id.t]s to their types,
                     used to resolve the concrete type for [std::declval]
     @param expr     Expression to rewrite
@@ -6816,7 +6809,7 @@ let collect_env_vars env body =
   List.iter (fun s -> ignore (fs s)) body;
   !acc
 
-let rec rewrite_field_access_for_decltype pp_type env expr =
+let rec rewrite_field_access_for_decltype env expr =
   match expr with
   | CPPfun_call (CPPlambda (params, rt, body, _), args)
     when body <> [] && collect_env_vars env body <> [] ->
@@ -6851,7 +6844,7 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
     CPPfun_call
       ( CPPlambda (extra @ params, rt, body, false),
         extra_args
-        @ List.map (rewrite_field_access_for_decltype pp_type env) args )
+        @ List.map (rewrite_field_access_for_decltype env) args )
   | CPPvar id ->
     ( match lookup_var_type env id with
     | Some ty ->
@@ -6888,25 +6881,23 @@ let rec rewrite_field_access_for_decltype pp_type env expr =
     (* Rewrite variables inside the lambda body to use std::declval, and remove
        any capture-default so the lambda is valid inside decltype (which is an
        unevaluated context where capture-defaults are not allowed in C++23). *)
-    let fe = rewrite_field_access_for_decltype pp_type env in
+    let fe = rewrite_field_access_for_decltype env in
     let rec fs stmt = map_stmt fe fs Fun.id stmt in
     CPPlambda (params, ret_ty, List.map fs body, false)
   | _ ->
-    map_expr (rewrite_field_access_for_decltype pp_type env) Fun.id Fun.id expr
+    map_expr (rewrite_field_access_for_decltype env) Fun.id Fun.id expr
 
 (** Build a [Tdecltype(expr)] type, suitable for struct field type annotations
     when the actual type is unknown. Rewrites variable references to use
     std::declval so that decltype is valid at struct definition scope.
 
-    @param pp_type  Type pretty-printer, forwarded to
-                    {!rewrite_field_access_for_decltype}
     @param env      Type environment for resolving variable types in the
                     [decltype] expression
     @param expr     The expression whose type to capture via [decltype]
     @return [Tdecltype(rewritten_expr)] where [rewritten_expr] uses
             [std::declval] for any in-scope variables *)
-let make_decltype_ty pp_type env expr =
-  let expr = rewrite_field_access_for_decltype pp_type env expr in
+let make_decltype_ty env expr =
+  let expr = rewrite_field_access_for_decltype env expr in
   Tdecltype expr
 
 (** Fix bindings in a continuation frame handler for fields that became
@@ -7035,8 +7026,6 @@ let fix_handler_bindings field_names cf_ps handler =
     @param fn_name  Optional function name used to annotate the generated
                     [while] loop comment (aids readability of the emitted C++)
     @param check    Call checker for identifying recursive calls
-    @param pp_type  Type pretty-printer (used for [decltype] fallback types
-                    in frame struct fields)
     @param tparams  Template parameter context of the enclosing function
     @param params   Function parameters [(id, type)]
     @param ret_ty   Return type of the function
@@ -7044,7 +7033,7 @@ let fix_handler_bindings field_names cf_ps handler =
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams params ret_ty body =
+let transform_nontail ?(fn_name : string option) check _pp_expr tparams params ret_ty body =
   let varying = find_varying_params check params body in
   let binding_env = collect_binding_env body in
   let pointer_safe = tail_pointer_safe_flags check params body ~binding_env () in
@@ -7065,7 +7054,7 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
       Id.Set.empty params varying
   in
   let ctx = { er_check = check; er_varying = varying; er_tparams = tparams;
-               er_env = env; er_ret_ty = ret_ty; er_pp_type = pp_type;
+               er_env = env; er_ret_ty = ret_ty;
                er_call_counter = call_counter; er_frames_ref = frames_ref;
                er_varying_param_types = varying_param_types;
                er_branch_ctx = None;
@@ -7173,10 +7162,10 @@ let transform_nontail ?(fn_name : string option) check pp_type _pp_expr tparams 
                  in
                  (match extract_lambda_return_expr body with
                   | Some ret_expr ->
-                    let rewritten = rewrite_field_access_for_decltype pp_type cf.cf_env ret_expr in
+                    let rewritten = rewrite_field_access_for_decltype cf.cf_env ret_expr in
                     Tfun (param_types, Tdecltype rewritten)
-                  | None -> make_decltype_ty pp_type cf.cf_env expr)
-               | _ -> make_decltype_ty pp_type cf.cf_env expr)
+                  | None -> make_decltype_ty cf.cf_env expr)
+               | _ -> make_decltype_ty cf.cf_env expr)
             | ty -> ty)
           | _ ->
             let stripped = strip_ref_and_const_type ty in
@@ -7735,12 +7724,11 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     [std::visit] lambdas, switch, blocks) and into lambda expressions within
     assignments and returns, to find recursive lambda patterns at any depth.
 
-    @param pp_type  Type pretty-printer (threaded to transformation functions)
     @param pp_expr  Expression pretty-printer (threaded to {!transform_nontail})
     @param tparams  Type parameters of the enclosing function
     @param body     The statement list to scan and transform
     @return The statement list with all self-recursive inner lambdas loopified *)
-let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
+let loopify_inner_lambdas ~pp_expr ~tparams body =
   let try_loopify_lambda id lparams ret_ty_opt lbody cap =
     let check = lambda_checker id in
     match classify check lbody with
@@ -7764,10 +7752,10 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
         match kind with
         | Tail_recursion ->
           report_outcome ~name ~check ~strategy:Lp_tail
-            (transform_tail check pp_type params ret_ty lbody)
+            (transform_tail check params ret_ty lbody)
         | Nontail_recursion ->
           report_outcome ~name ~check ~strategy:Lp_frame
-            (transform_nontail ~fn_name:name check pp_type pp_expr tparams
+            (transform_nontail ~fn_name:name check pp_expr tparams
                params ret_ty lbody)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
@@ -7859,7 +7847,7 @@ let loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body =
             loop_lparams
         in
         let ret_ty = match ret_ty_opt with Some ty -> ty | None -> Tvoid in
-        let body' = transform_tail check pp_type params ret_ty lbody in
+        let body' = transform_tail check params ret_ty lbody in
         (* Drop names of params (including the self-param) that no longer
            appear in the printed loop body, so unused ones become unnamed
            rather than triggering [-Wunused-parameter]. *)
@@ -8120,7 +8108,6 @@ let body_contains_lazy_factory body =
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
     @param check       Call checker for identifying recursive calls
-    @param pp_type     Type pretty-printer
     @param pp_expr     Expression pretty-printer
     @param tparams     Template parameter context
     @param params      Function parameters [(id, type)]
@@ -8130,7 +8117,7 @@ let body_contains_lazy_factory body =
     when [param_inits] were consumed by the transform (TMC uses them for
     method-self initialisation), meaning the caller does not need a separate
     initialiser statement. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_expr
+let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_expr
     tparams params ret_ty body =
   last_nontail_strategy := Lp_frame;
   if has_recursive_branch_dependency check body then
@@ -8139,7 +8126,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_type pp_ex
   else
   let frame () =
     last_nontail_strategy := Lp_frame;
-    ( transform_nontail ?fn_name check pp_type pp_expr tparams params ret_ty body,
+    ( transform_nontail ?fn_name check pp_expr tparams params ret_ty body,
       false )
   in
   (* A transform may discover mid-flight that the body's shape has no
@@ -8569,7 +8556,6 @@ let hoist_rec_conditions (check : call_checker)
     [lazy_] pattern via {!has_lazy_body} and skip the main loopification
     pass.  See the {!has_lazy_body} section header for the full rationale.
 
-    @param pp_type   Type pretty-printer (forwarded to transformation passes)
     @param pp_expr   Expression pretty-printer (forwarded to transformation
                      passes and [decltype] generation)
     @param tparams   Template parameters of the enclosing declaration
@@ -8581,7 +8567,7 @@ let hoist_rec_conditions (check : call_checker)
     @param no_pure   Whether the function is marked [no_pure] (passed through
                      to the [Dfundef] node unchanged)
     @return A [Dfundef] declaration with the loopified body *)
-let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
+let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names params body;
   (* Try to inline mutual recursion partners *)
@@ -8617,7 +8603,7 @@ let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_
     if has_lazy_body body || body_contains_lazy_factory body then begin
       if classify check body <> No_recursion then
         record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
-      loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body
+      loopify_inner_lambdas ~pp_expr ~tparams body
     end else
       (* Normal (non-lazy) function — existing path *)
       let kind = classify check body in
@@ -8625,10 +8611,10 @@ let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_
         match kind with
         | No_recursion -> (body, None)
         | Tail_recursion ->
-          (transform_tail check pp_type params ret_ty body, Some Lp_tail)
+          (transform_tail check params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
             let body' =
-              fst (apply_nontail_loopification ?fn_name check pp_type pp_expr
+              fst (apply_nontail_loopification ?fn_name check pp_expr
                      tparams params ret_ty body)
             in
             (body', Some !last_nontail_strategy)
@@ -8640,7 +8626,7 @@ let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_
          self-call.  The inner pass records outcomes of its own, which clobbers
          [pending_decline], so carry our reason across it. *)
       let pending = !pending_decline in
-      let body = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body in
+      let body = loopify_inner_lambdas ~pp_expr ~tparams body in
       pending_decline := pending;
       (match strategy with
        | None -> pending_decline := None; body
@@ -8652,9 +8638,9 @@ let transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body no_
     transform is turned into a decline for this one function: the original body
     is emitted unchanged and the outcome is recorded, so a shape the pass cannot
     linearise never aborts the surrounding extraction. *)
-let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure =
+let transform_fundef ~pp_expr ~tparams names ret_ty params body no_pure =
   try
-    transform_fundef_exn ~pp_type ~pp_expr ~tparams names ret_ty params body
+    transform_fundef_exn ~pp_expr ~tparams names ret_ty params body
       no_pure
   with Not_linearisable reason ->
     ignore (decline reason body);
@@ -8678,14 +8664,13 @@ let transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
     + For nontail recursion: prepends [_self = this] initialization before the
       loop, since the [_Enter] frame references [_self] by name.
 
-    @param pp_type        Type pretty-printer
     @param pp_expr        Expression pretty-printer
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g.,
                           [Tmod (TMconst, Tptr (Tglob (...)))])
     @param mf             The method record to transform
     @return An [Fmethod] field with the loopified body *)
-let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
+let transform_method ~pp_expr ~tparams ~self_ty mf =
   let n_params = List.length mf.mf_params in
   let this_pos = mf.mf_this_pos in
   (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
@@ -8866,7 +8851,6 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
               (transform_tail
                  ~param_inits:[(self_id, CPPthis)]
                  self_check
-                 pp_type
                  augmented_params
                  mf.mf_ret_type
                  body_with_self),
@@ -8877,7 +8861,7 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
               ?fn_name
-              self_check pp_type pp_expr tparams
+              self_check pp_expr tparams
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =
@@ -8905,16 +8889,15 @@ let transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf =
     Non-method fields (e.g., [Ffield], [Ftype]) are returned unchanged. For
     [Fmethod] fields, delegates to {!transform_method}.
 
-    @param pp_type        Type pretty-printer
     @param pp_expr        Expression pretty-printer
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g., [Tmod (TMconst, Tptr (Tglob (...)))])
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
-let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+let rec transform_field ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   (* Same contract as {!transform_fundef}: a shape the pass cannot linearise
      declines this one field instead of aborting the extraction. *)
-  try transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag)
+  try transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag)
   with Not_linearisable reason ->
     let body =
       match fld with
@@ -8925,10 +8908,10 @@ let rec transform_field ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     ignore (decline reason body);
     (fld, vis, tag)
 
-and transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+and transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
-    (transform_method ~pp_type ~pp_expr ~tparams ~self_ty mf, vis, tag)
+    (transform_method ~pp_expr ~tparams ~self_ty mf, vis, tag)
   | Ffundef (name, ret_ty, params, body) ->
     let check = lambda_checker name in
     let kind = classify check body in
@@ -8937,10 +8920,10 @@ and transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
       match kind with
       | No_recursion -> (body, None)
       | Tail_recursion ->
-        (transform_tail check pp_type params ret_ty body, Some Lp_tail)
+        (transform_tail check params ret_ty body, Some Lp_tail)
       | Nontail_recursion ->
         let body' =
-          fst (apply_nontail_loopification ~fn_name:dname check pp_type pp_expr
+          fst (apply_nontail_loopification ~fn_name:dname check pp_expr
                  tparams params ret_ty body)
         in
         (body', Some !last_nontail_strategy)
@@ -8948,7 +8931,7 @@ and transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     (* As in {!transform_fundef}: the postcondition is only meaningful once
        inner lambdas have been linearised too. *)
     let pending = !pending_decline in
-    let body' = loopify_inner_lambdas ~pp_type ~pp_expr ~tparams body' in
+    let body' = loopify_inner_lambdas ~pp_expr ~tparams body' in
     pending_decline := pending;
     let body' =
       match strategy with
@@ -8958,7 +8941,7 @@ and transform_field_exn ~pp_type ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     (Ffundef (name, ret_ty, params, body'), vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =
-      List.map (transform_field ~pp_type ~pp_expr ~tparams ~self_ty) fields
+      List.map (transform_field ~pp_expr ~tparams ~self_ty) fields
     in
     (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
@@ -9037,12 +9020,12 @@ let try_inline_mutual_fields fields =
     declarations (templates, structs, namespaces). Dispatches to
     {!transform_fundef}, {!transform_method}, or recurses for composite
     declarations. *)
-let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
+let rec transform_decl ?(tparams = []) ~pp_expr = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
-      (tparams, constraint_opt, transform_decl ~tparams ~pp_type ~pp_expr inner)
+      (tparams, constraint_opt, transform_decl ~tparams ~pp_expr inner)
   | Dfundef (names, ret_ty, params, body, no_pure) ->
-    transform_fundef ~pp_type ~pp_expr ~tparams names ret_ty params body no_pure
+    transform_fundef ~pp_expr ~tparams names ret_ty params body no_pure
   | Dstruct ds ->
     (* Name the struct's own template arguments: inside a nested inductive the
        receiver type is spelled through its module ([typename List::template
@@ -9083,7 +9066,7 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
         ds with
         ds_fields =
           List.map
-            (transform_field ~pp_type ~pp_expr ~tparams ~self_ty)
+            (transform_field ~pp_expr ~tparams ~self_ty)
             fields;
       }
   | Dnspace (r, decls) ->
@@ -9096,5 +9079,5 @@ let rec transform_decl ?(tparams = []) ~pp_type ~pp_expr = function
           register_fundef names params body
         | _ -> () )
       decls;
-    Dnspace (r, List.map (transform_decl ~tparams ~pp_type ~pp_expr) decls)
+    Dnspace (r, List.map (transform_decl ~tparams ~pp_expr) decls)
   | d -> d
