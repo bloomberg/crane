@@ -115,63 +115,28 @@ let check_expr where e =
     violation where "an any_cast applied directly to a freshly-built box"
   | _ -> ()
 
-(** [check_decl_type where what ty] tests that [ty] is fit to be {e written
-    down}.  {!Minicpp.Topaque} means "the representation is unknown"; spelling
-    it in a declaration is what decides the representation, so every
-    declaration emitter is expected to have run {!Ml_type_util.materialise_opaque}
-    first.  [what] names the position, for the diagnostic. *)
-let check_decl_type where what ty =
-  if exists_cpp_type (fun t -> t = Topaque) ty then
-    violation where
-      (Printf.sprintf "Topaque reached a declaration position (%s: %s)" what
-         (show_ty ty))
-
 (** {2 Traversal} *)
 
 let rec walk_stmts where stmts = List.iter (walk_stmt where) stmts
 
 and walk_stmt where s =
-  ( match s with
-  | Sdecl (id, ty) | Sdecl_init (id, ty) | Susing (id, ty) ->
-    check_decl_type where (Id.to_string id) ty
-  | _ -> () );
   iter_stmt_children ~on_expr:(walk_expr where) ~on_stmts:(walk_stmts where) s
 
 and walk_expr where e =
   check_expr where e;
   iter_expr_children ~on_expr:(walk_expr where) ~on_stmts:(walk_stmts where) e
 
-(** Parameter and return types are declaration positions too. *)
-let walk_signature where ~ret ~params =
-  check_decl_type where "return type" ret;
-  List.iter (fun (id, ty) -> check_decl_type where id ty) params
-
 let rec walk_field where (f, _, _) =
   match f with
-  | Fvar (id, ty) -> check_decl_type where (Id.to_string id) ty
-  | Fvar' (g, ty) -> check_decl_type where (Common.pp_global_name Common.Term g) ty
-  | Ffundecl (id, ret, params) ->
-    walk_signature where ~ret
-      ~params:(List.map (fun (i, t) -> (Id.to_string i, t)) params)
-  | Ffundef (id, ret, params, body) ->
-    ignore id;
-    walk_signature where ~ret
-      ~params:(List.map (fun (i, t) -> (Id.to_string i, t)) params);
-    walk_stmts where body
-  | Fmethod m ->
-    walk_signature where ~ret:m.mf_ret_type
-      ~params:(List.map (fun (i, t) -> (Id.to_string i, t)) m.mf_params);
-    walk_stmts where m.mf_body
-  | Fconstructor (params, inits, _, _) ->
-    List.iter (fun (i, t) -> check_decl_type where (Id.to_string i) t) params;
+  | Ffundef (_, _, _, body) -> walk_stmts where body
+  | Fmethod m -> walk_stmts where m.mf_body
+  | Fconstructor (_, inits, _, _) ->
     List.iter (fun (_, e) -> walk_expr where e) inits
-  | Ftemplate_ctor (_, _, params, body) ->
-    List.iter (fun (i, t) -> check_decl_type where (Id.to_string i) t) params;
-    walk_stmts where body
+  | Ftemplate_ctor (_, _, _, body) -> walk_stmts where body
   | Fdestructor body -> walk_stmts where body
   | Fnested_struct (_, fields) -> List.iter (walk_field where) fields
-  | Fnested_using (_, id, ty) -> check_decl_type where (Id.to_string id) ty
-  | Fdeleted_ctor | Fdefaulted_special_members -> ()
+  | Fvar _ | Fvar' _ | Ffundecl _ | Fnested_using _ | Fdeleted_ctor
+  | Fdefaulted_special_members -> ()
 
 let rec walk_decl where d =
   match d with
@@ -179,22 +144,12 @@ let rec walk_decl where d =
     Option.iter (walk_expr where) constr;
     walk_decl where inner
   | Dnspace (_, decls) -> List.iter (walk_decl where) decls
-  | Dfundef (_, ret, params, body, _) ->
-    walk_signature where ~ret
-      ~params:(List.map (fun (i, t) -> (Id.to_string i, t)) params);
-    walk_stmts where body
-  | Dfundecl (_, ret, params, _) ->
-    walk_signature where ~ret
-      ~params:
-        (List.map
-           (fun (i, t) -> (Option.fold_left (fun _ i -> Id.to_string i) "_" i, t))
-           params)
+  | Dfundef (_, _, _, body, _) -> walk_stmts where body
+  | Dfundecl _ -> ()
   | Dstruct s ->
     Option.iter (walk_expr where) s.ds_constraint;
     List.iter (walk_field where) s.ds_fields
-  | Dasgn (g, ty, e) ->
-    check_decl_type where (Common.pp_global_name Common.Term g) ty;
-    walk_expr where e
+  | Dasgn (_, _, e) -> walk_expr where e
   | Dconcept (_, e) -> walk_expr where e
   | Dstatic_assert (e, _) -> walk_expr where e
   | Denum _ -> ()

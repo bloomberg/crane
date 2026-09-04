@@ -543,9 +543,11 @@ let pp_cpp_ind_header kn ind =
             (* Also run the seam here: this branch renders fields directly and
                so never reaches {!pp_cpp_decl}, where the other paths go
                through it. *)
-            let decl = Cpp_erasure.materialise decl in
             Minicpp_check.check ~where:"promoted inductive" decl;
-            let decl = Cpp_erasure.resolve_casts decl in
+            let decl =
+              ( Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl)
+                :> cpp_decl )
+            in
             match decl with
             | Dstruct {ds_fields; ds_needs_shared_from_this; ds_tparams; _} ->
               eponymous_promote_sft := ds_needs_shared_from_this;

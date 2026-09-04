@@ -121,7 +121,9 @@ let rec resolve_field ((f, vis, tag) as field) =
 
     Call it on declarations in emission order: [using] aliases are recorded as
     they are met, mirroring where C++ would have them in scope. *)
-let rec resolve_casts (d : cpp_decl) : cpp_decl =
+type settled = cpp_decl
+
+let rec resolve_casts (d : settled) : settled =
   match d with
   (* Spelled out rather than left to [map_decl] only where the alias registry
      has to see a field, or where the recursion must be into [resolve_casts]
@@ -146,7 +148,7 @@ let rec resolve_casts (d : cpp_decl) : cpp_decl =
     {!Ml_type_util.materialise_opaque}, apply it once to the whole declaration
     on the way out of translation.  Print-neutral by construction: [Topaque] and
     [Tany] have the same C++ spelling. *)
-let materialise (d : cpp_decl) : cpp_decl =
+let materialise (d : cpp_decl) : settled =
   let ft = Ml_type_util.materialise_opaque in
   let rec fe e = map_expr fe fs ft e
   and fs s = map_stmt fe fs ft s in

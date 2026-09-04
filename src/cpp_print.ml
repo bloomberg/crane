@@ -3855,23 +3855,27 @@ let maybe_loopify decl =
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.
 
-    Applies {!maybe_loopify} before rendering; use {!pp_cpp_decl_raw} directly
-    to skip that step.
+    Applies {!maybe_loopify} and the {!Cpp_erasure.materialise} seam before
+    rendering; use {!pp_cpp_decl_raw} directly to skip those steps.
 
     @param env   name environment for sub-expression and sub-type printers
     @param decl  the MiniCpp declaration to render *)
 let rec pp_cpp_decl env decl =
-  (* Writing a type down is what decides its representation, so settle the
-     [Topaque] slots before anything reads the declaration as final. *)
-  let decl = Cpp_erasure.materialise decl in
   (* Validate at both pass boundaries, so a report names the pass that
      introduced the violation rather than merely the last one to run. *)
   Minicpp_check.check ~where:"translation" decl;
   let decl = maybe_loopify decl in
   Minicpp_check.check ~where:"loopify" decl;
-  pp_cpp_decl_raw env (Cpp_erasure.resolve_casts decl)
+  (* Writing a type down is what decides its representation, so settle the
+     [Topaque] slots before anything reads the declaration as final.  Crossing
+     this seam is what gives {!Cpp_erasure.settled}, the printer's input
+     type. *)
+  pp_cpp_decl_raw env
+    (Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl) :> cpp_decl)
 
-(** Inner declaration printer, called after loopification has been applied.
+(** Inner declaration printer, called after loopification and after the
+    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
+    written out.
 
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env = function

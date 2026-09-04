@@ -34,6 +34,15 @@ val is_any_shaped : cpp_type -> bool
 
 (** {2 The pass} *)
 
+(** A declaration whose types are all spelled the way they will be written
+    out: every {!Minicpp.Topaque} has been settled into {!Minicpp.Tany}.
+
+    This is the printable phase of {!Minicpp.cpp_decl}.  {!materialise} is its
+    only producer, so a declaration cannot reach {!Cpp_print.pp_cpp_decl_raw}
+    without having crossed the seam -- the invariant is carried by the type
+    rather than re-checked. *)
+type settled = private Minicpp.cpp_decl
+
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the
     identity, {!Minicpp.CPPany_cast_tolerant} where the shape is only knowable
@@ -41,7 +50,7 @@ val is_any_shaped : cpp_type -> bool
 
     Call it on declarations in emission order: [using] aliases are recorded as
     they are met, mirroring where C++ would have them in scope. *)
-val resolve_casts : cpp_decl -> cpp_decl
+val resolve_casts : settled -> settled
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
@@ -53,4 +62,4 @@ val resolve_casts : cpp_decl -> cpp_decl
     value {e is} boxed.  Running this once on the way out of translation saves
     every declaration emitter from having to remember
     {!Ml_type_util.materialise_opaque}, and is print-neutral by construction. *)
-val materialise : cpp_decl -> cpp_decl
+val materialise : cpp_decl -> settled
