@@ -32,6 +32,18 @@ val any_type_aliases : Id.Set.t ref
     because it is an axiom type. *)
 val is_any_shaped : cpp_type -> bool
 
+(** [erased_list_shape ty] is the shape a value of list type [ty] physically
+    has once it has been through a [std::any]: its elements were boxed one at a
+    time, so the container holds [std::any] however concrete [ty]'s element
+    type is.  Returns the list's global alongside the shape, because only a
+    generated list has the converting constructor [List<A>(const List<_U>&)]
+    that recovers the concrete-element container from it; a custom-extracted
+    one stays flat.
+
+    [None] for anything that is not a list, and for a list whose elements are
+    erased already. *)
+val erased_list_shape : cpp_type -> (Names.GlobRef.t * cpp_type) option
+
 (** {2 The pass} *)
 
 (** A declaration whose types are all spelled the way they will be written

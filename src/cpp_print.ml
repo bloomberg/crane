@@ -667,15 +667,6 @@ let any_type_aliases = Cpp_erasure.any_type_aliases
 
 let is_any_type = Cpp_erasure.is_any_shaped
 
-(** Check whether [ty] is a [List<elem_ty>] (bare or namespace-qualified)
-    with a concrete (non-[std::any]) element type.  Used to detect when a
-    grammar-framework [List<std::any>] value needs its element type restored
-    via the converting constructor rather than a plain [any_cast]. *)
-let is_list_with_concrete_elem = function
-  | Tnamespace (_, Tglob (g, [elem_ty], _)) -> is_list_global g && elem_ty <> Tany
-  | Tglob (g, [elem_ty], _) -> is_list_global g && elem_ty <> Tany
-  | _ -> false
-
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -1125,21 +1116,8 @@ and pp_cpp_expr env args t =
         (* For List<T> (T ≠ std::any) grammar productions always store List<std::any>
            at runtime.  Use the converting constructor so element casts are correct. *)
         let resolved_ty = Ml_type_util.resolve_tvars_to_any ty in
-        if is_list_with_concrete_elem resolved_ty then
-          let g_of_list, elem_ty_of_list =
-            match resolved_ty with
-            | Tnamespace (_, Tglob (g, [elem_ty], _)) -> g, elem_ty
-            | Tglob (g, [elem_ty], _) -> g, elem_ty
-            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
-          in
-          let list_any_ty =
-            match resolved_ty with
-            | Tnamespace (ns_g, Tglob (g, _, _)) ->
-              Tnamespace (ns_g, Tglob (g, [Tany], []))
-            | Tglob (g, _, _) ->
-              Tglob (g, [Tany], [])
-            | _ -> CErrors.anomaly (Pp.str "any_cast: expected list type")
-          in
+        ( match Cpp_erasure.erased_list_shape resolved_ty with
+        | Some (g_of_list, list_any_ty) ->
           if Table.is_custom g_of_list then begin
             (* Canonical erased shape for a custom list is [deque<std::any>]
                (a bare [std::any] per element), never a structure-preserving
@@ -1152,7 +1130,6 @@ and pp_cpp_expr env args t =
                to the flat form.  Cast to the flat [list_any_ty] instead; a
                downstream consumer that needs the concrete-element container
                converts it with [crane_container_cast] at its own site. *)
-            ignore elem_ty_of_list;
             require_header "any";
             str (sn ()).any_cast ++ str "<"
             ++ pp_cpp_type false [] list_any_ty
@@ -1162,7 +1139,7 @@ and pp_cpp_expr env args t =
           ++ str "(" ++ str (sn ()).any_cast ++ str "<"
           ++ pp_cpp_type false [] list_any_ty
           ++ str ">(" ++ Id.print id ++ str "))"
-        else begin
+        | None -> begin
           match ty with
           | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
             (* Qualified member type (e.g. typename Ty::sym_semty) or opaque
@@ -1182,7 +1159,7 @@ and pp_cpp_expr env args t =
           | _ ->
             str (sn ()).any_cast ++ str "<" ++ pp_cpp_type false [] resolved_ty
             ++ str ">(" ++ Id.print id ++ str ")"
-        end
+        end )
       | None -> Id.print id )
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in

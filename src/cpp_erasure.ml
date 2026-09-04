@@ -61,6 +61,31 @@ let rec is_any_shaped = function
          with Not_found -> false )
   | t -> Ml_type_util.is_cpp_dummy_type t
 
+(** [erased_list_shape ty] is the shape a value of list type [ty] physically
+    has once it has been through a [std::any]: its elements were boxed one at a
+    time, so the container holds [std::any] however concrete [ty]'s element
+    type is.  Returns the list's global alongside the shape, because whether
+    the concrete-element container can be recovered from it depends on whether
+    the list is custom-extracted -- a generated list has the converting
+    constructor [List<A>(const List<_U>&)] that unboxes each element, a custom
+    one does not and stays flat until a consumer converts it.
+
+    [None] for anything that is not a list, and for a list whose elements are
+    erased already: there is nothing to restore. *)
+let erased_list_shape ty =
+  let rec go = function
+    | Tnamespace (ns_g, t) -> (
+      match go t with
+      | Some (g, t') -> Some (g, Tnamespace (ns_g, t'))
+      | None -> None )
+    | Tglob (g, [elem], _)
+      when Ml_type_util.is_list_global g
+           && not (Ml_type_util.prints_as_any elem) ->
+      Some (g, Tglob (g, [Tany], []))
+    | _ -> None
+  in
+  go ty
+
 (** [needs_deep_recovery ty] — recovering a [ty] from a box needs the tolerant
     caster rather than a plain [std::any_cast].  A pair with a concrete
     component may have had its components boxed one at a time, so the box holds

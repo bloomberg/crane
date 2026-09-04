@@ -3078,25 +3078,6 @@ and boxed_shape_of = function
   | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
   | t -> t
 
-(** [erased_list_shape ty] is the shape a value of list type [ty] physically
-    has once it has been through a [std::any]: the same list with its element
-    type boxed.  [None] for anything else, including a custom-extracted list
-    and one whose elements are boxed already -- recovering at this shape is
-    only sound where the generated converting constructor [List<A>(const
-    List<_U>&)] exists to unbox each element on the way back. *)
-and erased_list_shape ty =
-  let rec go = function
-    | Tnamespace (ns_g, t) -> ( match go t with
-      | Some t' -> Some (Tnamespace (ns_g, t'))
-      | None -> None )
-    | Tglob (g, [elem], _)
-      when is_list_global g
-           && (not (Table.is_custom g))
-           && not (prints_as_any elem) -> Some (Tglob (g, [Tany], []))
-    | _ -> None
-  in
-  go ty
-
 (** Collapse the erased parts of a type to [std::any]: the type itself when it
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
@@ -3985,8 +3966,12 @@ and coerce ?term ?from ~into expr =
         (* A list went into the box with its elements boxed, so that is the
            shape the cast has to name however concrete the context's element
            type is; the converting constructor then recovers each element. *)
-        match erased_list_shape into with
-        | Some shape -> CPPconverting_ctor (into, [CPPany_cast (shape, expr)])
+        match Cpp_erasure.erased_list_shape into with
+        (* A custom list has no converting constructor to unbox its elements
+           with, so it stays at the flat shape until a consumer converts it. *)
+        | Some (g, shape) when Table.is_custom g -> CPPany_cast (shape, expr)
+        | Some (_, shape) ->
+          CPPconverting_ctor (into, [CPPany_cast (shape, expr)])
         | None -> CPPany_cast (into, expr) ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
