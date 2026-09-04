@@ -17,7 +17,7 @@ DepTypeFnAnyCast::dt DepTypeFnAnyCast::mk(uint64_t n) {
 
 uint64_t DepTypeFnAnyCast::run(uint64_t k) {
   return ((std::any_cast<uint64_t>(mk(UINT64_C(0))) +
-           List<uint64_t>(std::any_cast<List<uint64_t>>(mk(UINT64_C(1))))
+           List<uint64_t>(std::any_cast<List<std::any>>(mk(UINT64_C(1))))
                .length()) +
           k);
 }

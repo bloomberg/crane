@@ -17,6 +17,6 @@ std::any DepReturnAnyCast::dep(bool b) {
 
 uint64_t DepReturnAnyCast::run(uint64_t k) {
   return ((std::any_cast<uint64_t>(dep(true)) +
-           List<uint64_t>(std::any_cast<List<uint64_t>>(dep(false))).length()) +
+           List<uint64_t>(std::any_cast<List<std::any>>(dep(false))).length()) +
           k);
 }

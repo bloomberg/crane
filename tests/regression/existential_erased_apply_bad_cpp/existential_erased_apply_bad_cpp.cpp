@@ -29,7 +29,9 @@ ExistentialErasedApplyBadCpp::mk(uint64_t n) {
                                           n, List<std::any>::nil()))),
                         std::function<uint64_t(std::any)>(
                             [](const std::any &l) -> uint64_t {
-                              return std::any_cast<List<uint64_t>>(l).length();
+                              return List<uint64_t>(
+                                         std::any_cast<List<std::any>>(l))
+                                  .length();
                             })),
               List<ExistentialErasedApplyBadCpp::dyn>::nil())));
 }

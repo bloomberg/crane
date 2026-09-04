@@ -3014,6 +3014,25 @@ and boxed_shape_of = function
   | Tglob (g, (_ :: _ as args), ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
   | t -> t
 
+(** [erased_list_shape ty] is the shape a value of list type [ty] physically
+    has once it has been through a [std::any]: the same list with its element
+    type boxed.  [None] for anything else, including a custom-extracted list
+    and one whose elements are boxed already -- recovering at this shape is
+    only sound where the generated converting constructor [List<A>(const
+    List<_U>&)] exists to unbox each element on the way back. *)
+and erased_list_shape ty =
+  let rec go = function
+    | Tnamespace (ns_g, t) -> ( match go t with
+      | Some t' -> Some (Tnamespace (ns_g, t'))
+      | None -> None )
+    | Tglob (g, [elem], _)
+      when is_list_global g
+           && (not (Table.is_custom g))
+           && not (prints_as_any elem) -> Some (Tglob (g, [Tany], []))
+    | _ -> None
+  in
+  go ty
+
 (** Collapse the erased parts of a type to [std::any]: the type itself when it
     resolves to [std::any], and, structurally, a function type's arguments and
     result.  Lets an expected type argument be compared against a computed one
@@ -3892,9 +3911,16 @@ and coerce ?term ?from ~into expr =
        succeeds on a doubly-boxed value and otherwise throws. *)
     | `Boxed when prints_as_any into || resolves_to_any_type into -> expr
     (* Already recovered; a second cast would be reading the same box twice. *)
-    | `Boxed -> ( match expr with
+    | `Boxed -> (
+      match expr with
       | CPPany_cast _ -> expr
-      | _ -> CPPany_cast (into, expr) )
+      | _ -> (
+        (* A list went into the box with its elements boxed, so that is the
+           shape the cast has to name however concrete the context's element
+           type is; the converting constructor then recovers each element. *)
+        match erased_list_shape into with
+        | Some shape -> CPPconverting_ctor (into, [CPPany_cast (shape, expr)])
+        | None -> CPPany_cast (into, expr) ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
     | `Opaque -> expr
@@ -7236,13 +7262,16 @@ and eta_fun env f args =
              does this for a variable bound to an erased field).  Casting
              again would re-box that concrete list into a fresh [std::any]
              only to unbox it — mirror the custom-list branch below and reuse
-             the existing cast. *)
-          let inner =
-            match as_value () with
-            | CPPany_cast _ as already_cast -> already_cast
-            | v -> CPPany_cast (list_any_ty, v)
-          in
-          CPPconverting_ctor (cpp_ty, [inner])
+             the existing cast.  It may also have gone the whole way and
+             recovered the concrete list already ({!coerce} does this for a
+             value crossing out of a box), in which case there is nothing
+             left to convert. *)
+          ( match as_value () with
+          | CPPconverting_ctor (t, _) as recovered when cpp_ty_eq t cpp_ty ->
+            recovered
+          | CPPany_cast _ as already_cast ->
+            CPPconverting_ctor (cpp_ty, [already_cast])
+          | v -> CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, v)]) )
         | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
           let clean_cpp_ty = clean_self_ns cpp_ty in
           (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]

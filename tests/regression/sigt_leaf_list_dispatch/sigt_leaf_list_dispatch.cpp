@@ -17,5 +17,5 @@ domty run(const SigT<uint64_t, std::function<std::any(std::monostate)>> &e) {
 
 bool check(std::monostate) {
   return wrap_list(
-      List<uint64_t>(std::any_cast<List<uint64_t>>(run(entry_trees))));
+      List<uint64_t>(std::any_cast<List<std::any>>(run(entry_trees))));
 }
