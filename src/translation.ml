@@ -3535,13 +3535,16 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
         match field_slot with
         | Some _ as slot -> slot
         | None when tctx.wrap_for_any_param ->
-          let is_recursive_field =
+          (* This constructor names a concrete type for the field, so there is
+             no erased slot to box into: the custom C++ form consumes the
+             argument at that type.  [Ascii] is the clearest case -- its eight
+             [bool] arguments are folded into a [static_cast<char>] bitmask, and
+             a [std::any] is not contextually convertible to [bool].  A
+             recursive field ([Tglob] naming the constructor's own inductive) is
+             the same situation. *)
+          let field_is_concrete =
             match List.nth_opt field_types_for_wrap i with
-            | Some (Miniml.Tglob (field_ind, _, _)) ->
-              ( match r with
-                | GlobRef.ConstructRef ((kn, mi), _) ->
-                  GlobRef.CanOrd.equal field_ind (GlobRef.IndRef (kn, mi))
-                | _ -> false )
+            | Some (Miniml.Tglob _ as ft) -> not (prints_as_any (cpp_of_ml env ft))
             | _ -> false
           in
           (* Don't box when building a custom LIST cons whose element cpp type
@@ -3560,7 +3563,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
                 | _ -> false )
             | None -> false
           in
-          if is_recursive_field || is_already_container then None else Some Tany
+          if field_is_concrete || is_already_container then None else Some Tany
         | None -> None
       in
       let result =
