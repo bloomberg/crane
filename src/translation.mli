@@ -77,6 +77,23 @@ val convert_ml_type_to_cpp_type :
     Returns true if the type is Tany or contains an unnamed Tvar. *)
 val type_is_erased : cpp_type -> bool
 
+(** [push_binders env ids] is {!Translation_state.push_env_types} plus the C++
+    type assignment: each binder's C++ type is decided once, here, at the
+    point it is bound.  [?cpp] overrides the conversion for binders whose type
+    the caller knows better than their ML type says. *)
+val push_binders :
+  ?cpp:cpp_type option list -> env -> (Id.t * ml_type) list -> unit
+
+(** Binder-type state: the pattern-variable assignment and its total shadow. *)
+type binder_env =
+  cpp_type Translation_state.IntMap.t * cpp_type Translation_state.IntMap.t
+
+(** Save the current binder-type state. *)
+val save_erased_env : unit -> binder_env
+
+(** Restore binder-type state saved by {!save_erased_env}. *)
+val restore_erased_env : binder_env -> unit
+
 (** {2 Expression Generation} *)
 
 (** Whether the expression is a numeral-converter application (e.g.

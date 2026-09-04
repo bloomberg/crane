@@ -18,24 +18,26 @@ open Translation
 
 module IntSet = Escape.IntSet
 
-(** [with_method_env_types params f] runs [f] with the de Bruijn type stack
-    holding exactly [params] (innermost binder first, as returned by
-    {!push_vars'}), restoring the ambient stack afterwards.
+(** [with_method_env_types env params f] runs [f] with the de Bruijn type
+    stack holding exactly [params] (innermost binder first, as returned by
+    {!push_vars'}), restoring the ambient stack afterwards.  [env] is the
+    type-variable scope the parameters' C++ types are assigned in; see
+    {!Translation.push_binders}.
 
     An instance method's body is generated outside any enclosing function, so
     without this the stack still describes whatever was translated last — and
     a lookup of a parameter's type answers with a stale, unrelated entry (for
     a class's associated [Type], the unresolved class type variable, which
     reads as erased and provokes a spurious [any_cast]). *)
-let with_method_env_types params f =
+let with_method_env_types env params f =
   let saved_env_types = tctx.env_types in
-  let saved_erased = tctx.cpp_binder_types in
+  let saved_erased = save_erased_env () in
   reset_env_types ();
-  push_env_types params;
+  push_binders env params;
   Fun.protect
     ~finally:(fun () ->
       tctx.env_types <- saved_env_types;
-      tctx.cpp_binder_types <- saved_erased )
+      restore_erased_env saved_erased )
     f
 
 let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
@@ -1133,7 +1135,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 in
                 let renamed_eta, env = push_vars' ml_vars base_env in
                 let stmts =
-                  with_method_env_types renamed_eta (fun () ->
+                  with_method_env_types env renamed_eta (fun () ->
                     gen_stmts env (fun x -> Sreturn (Some x)) call_expr )
                 in
                 let stmts =
@@ -1182,7 +1184,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               let saved_param_tys = tctx.current_param_types in
               set_current_param_types (List.rev renamed_ml);
               let stmts =
-                with_method_env_types renamed_ml (fun () ->
+                with_method_env_types env renamed_ml (fun () ->
                   gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
               tctx.current_param_types <- saved_param_tys;
@@ -2329,7 +2331,7 @@ let gen_dfun n b cty ty temps =
      f1->v() ... } where 'f1' in the body didn't match any parameter name. *)
   let all_ids, env = push_vars' all_params_for_env (empty_env ()) in
   reset_env_types ();
-  push_env_types all_ids;
+  push_binders env all_ids;
   let n_params = List.length all_params in
   let owned_flags = infer_owned_flags n_params b all_ids in
   (* Zip all_ids with ownership flags. all_ids and all_params have the same
@@ -3896,7 +3898,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
-  push_env_types all_ids;
+  push_binders env all_ids;
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in

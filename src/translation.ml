@@ -2322,6 +2322,12 @@ let strip_ns_tglob = function
   | Tnamespace (_, (Tglob _ as inner)) -> inner
   | t -> t
 
+(** Binder-type state: the pattern-variable assignment
+    ({!Translation_state.cpp_binder_types}) paired with its total shadow
+    ({!Translation_state.cpp_binder_types_all}).  Saved and restored together
+    so the two can never describe different scopes. *)
+type binder_env = cpp_type IntMap.t * cpp_type IntMap.t
+
 (** Strip self-referential [Tnamespace] wrappers, at every depth.
 
     Flat single-file extraction sometimes wraps a module-local inductive in
@@ -2929,11 +2935,48 @@ and record_binder_type i t =
   if not (binder_is_boxed i) then
     tctx.cpp_binder_types <- IntMap.add i t tctx.cpp_binder_types
 
+(** [push_binders env ids] is {!push_env_types} plus the C++ type assignment:
+    each binder's C++ type is decided here, once, at the point it is bound,
+    and recorded in {!Translation_state.cpp_binder_types_all}.
+
+    This is the assignment that use sites are being migrated onto.  Today they
+    re-derive a binder's C++ type wherever they need it, from whatever type
+    variable scope happens to be in effect, so two uses of one binder can
+    disagree about whether it holds a box -- which is what a [bad_any_cast]
+    is.  Deciding at the binding site makes that disagreement unrepresentable.
+
+    [?cpp] overrides the conversion for a binder whose type the caller already
+    knows better than its ML type says, which is the case for pattern
+    variables: it is the scrutinee's instantiation, not the field's
+    definition-site type, that fixes those.  A [None] entry (or a short list)
+    falls back to converting the ML type.
+
+    Conversion failures are skipped rather than propagated: nothing reads this
+    map yet, and a binder Crane cannot currently type must not become a new
+    way for extraction to fail. *)
+and push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
+  push_env_types ids;
+  List.iteri
+    (fun j (_, ml_ty) ->
+      let assigned =
+        match List.nth_opt cpp j with
+        | Some (Some t) -> Some t
+        | _ -> (try Some (cpp_of_ml env ml_ty) with _ -> None)
+      in
+      match assigned with
+      | Some t ->
+        tctx.cpp_binder_types_all <- IntMap.add (j + 1) t tctx.cpp_binder_types_all
+      | None -> ())
+    ids
+
 (** Save the current binder-type state for later restoration. *)
-and save_erased_env () = tctx.cpp_binder_types
+and save_erased_env () : binder_env =
+  (tctx.cpp_binder_types, tctx.cpp_binder_types_all)
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
-and restore_erased_env saved = tctx.cpp_binder_types <- saved
+and restore_erased_env (saved, saved_all) =
+  tctx.cpp_binder_types <- saved;
+  tctx.cpp_binder_types_all <- saved_all
 
 (** Follow a name for a type through to the type it stands for.  A [using]
     alias hides the arguments its right-hand side was written with, and those
@@ -4473,7 +4516,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in
     let saved_env_types = tctx.env_types in
-    push_env_types args;
+    push_binders env args;
     (* Infer owned/borrowed for each lambda parameter using escape analysis.
 
        Owned parameters (stored in a data structure or returned) are passed by
@@ -6416,7 +6459,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              checks below to see their real types. *)
           let saved_env_types = tctx.env_types in
           let saved_erased = save_erased_env () in
-          push_env_types branch_binders;
+          push_binders env branch_binders;
           let arg_exprs =
             List.rev
               (List.mapi
@@ -9076,7 +9119,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           env
       in
       let env_ids' = retype_dependent_params typ ids' in
-      push_env_types env_ids';
+      push_binders env env_ids';
       let dummies =
         List.map (fun (x, _) -> match x with Dummy -> false | _ -> true) ids
       in
@@ -9213,7 +9256,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           (match rec_idx with
           | Some rec_idx when n_rec = 1 ->
             let saved_env_types = tctx.env_types in
-            push_env_types ids';
+            push_binders env ids';
             let scrut_vmut =
               if scrut_is_ptr then
                 CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])
@@ -9725,7 +9768,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
-      push_env_types ids';
+      push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
          ALL fields are [std::any] at runtime.  Record them as boxed
@@ -10523,7 +10566,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          name into the env so that MLrel references in b resolve correctly. *)
       let projected_fix_id = (fst ids.(x), snd ids.(x)) in
       let _, env_with_fix = push_vars' [projected_fix_id] env in
-      push_env_types [projected_fix_id];
+      push_binders env [projected_fix_id];
       (* Generate b, then replace references to the fixpoint var with calls to
          the lifted function. Build explicit type args: outer tvars stay as Tvar
          references, extra tvars are resolved to concrete types from the
@@ -10626,7 +10669,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         (db, avoid')
       in
       let _, env_with_fix = push_vars' [projected_id] env_for_cont in
-      push_env_types [projected_id];
+      push_binders env [projected_id];
       (* Compute outer variables captured by the fixpoint bodies.
          If the fixpoint ends up using [&] capture, these variables must
          not be moved in the continuation — the fixpoint holds references
@@ -10769,13 +10812,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let renamed_ids, env' = push_vars' [(x', t)] env in
       let x_renamed = fst (List.hd renamed_ids) in
       if x == Dummy then (
-        push_env_types [(x_renamed, t)];
+        push_binders env [(x_renamed, t)];
         gen_stmts env' k b )
       else if tctx.itree_mode = Reified && is_monadic_ml_type t then begin
         (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
            the variable has type [shared_ptr<ITree<R>>]. *)
         Table.require_itree_header ();
-        push_env_types [(x_renamed, t)];
+        push_binders env [(x_renamed, t)];
         let r_ml = extract_itree_result_ml t in
         let r_cpp = cpp_of_ml env r_ml in
         (* Voidify unit result type in ITree wrapper *)
@@ -10800,7 +10843,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            downstream pair accessor calls (fst tail) detect erasure. *)
         let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
         (* Push env_types AFTER generating the value expression [a]. *)
-        push_env_types [(x_renamed, t_for_env)];
+        push_binders env [(x_renamed, t_for_env)];
         (* Phase 2: shift owned vars and dead-after for lambda let binding.
            The body [b] has one more de Bruijn binder, so all indices must
            be shifted +1. *)
@@ -11017,7 +11060,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         let body_params_for_env = free_var_params @ param_ids in
         let body_param_ids, body_env = push_vars' body_params_for_env env in
         let saved_env_types = tctx.env_types in
-        push_env_types body_param_ids;
+        push_binders env body_param_ids;
 
         (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
            -> lambda params (at positions n_free+1..n_free+n_params in our env)
@@ -11040,7 +11083,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            params on top of the outer env. *)
         let lam_param_ids, lam_env = push_vars' param_ids env in
         tctx.env_types <- saved_env_types;
-        push_env_types lam_param_ids;
+        push_binders env lam_param_ids;
         (* Lambda bodies have their own return type; clear the enclosing
            function's void flag to avoid bare 'return;' inside the lambda. *)
         let saved_return_type = tctx.current_cpp_return_type in
@@ -11100,7 +11143,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            calls to the lifted function *)
         let lifted_ids, env' = push_vars' [(x', t)] env in
         let x_lifted = fst (List.hd lifted_ids) in
-        push_env_types [(x_lifted, t)];
+        push_binders env [(x_lifted, t)];
         (* Phase 2: shift move tracking for lifted lambda binding *)
         let cont =
           with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
@@ -11117,7 +11160,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
     if x == Dummy then (
-      push_env_types [(x_renamed, t)];
+      push_binders env [(x_renamed, t)];
       with_shifted_move_tracking 1 (fun () ->
         gen_stmts env' k b) )
     else if ml_type_is_unit t then (
@@ -11125,7 +11168,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      push_env_types [(x_renamed, t)];
+      push_binders env [(x_renamed, t)];
       let rhs = gen_stmts env (fun e -> Sexpr e) a in
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun s ->
@@ -11333,7 +11376,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
       let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
-      push_env_types [(x_renamed, t_for_env)];
+      push_binders env [(x_renamed, t_for_env)];
       tctx.move_suppress_tail <- saved_suppress;
       (* Shift saved_dead +1 for the body [b]: the new let binding adds one
          de Bruijn level, so all parent-scope indices must be shifted to stay
@@ -11706,7 +11749,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids')
         env
     in
-    push_env_types ids;
+    push_binders env ids;
     (* The continuation's lambda parameter adds one de Bruijn level.
        Shift move tracking sets so that parent-scope owned-variable indices
        stay in sync with the body's coordinate system.  Without this shift,
@@ -11967,7 +12010,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           (List.combine renamed_ids_fwd ids)
         |> retype_dependent_params typ
       in
-      push_env_types env_ids;
+      push_binders env env_ids;
       asgns @ gen_stmts env' k body
   | t ->
     (* Tail position: generate expression with dead-after tracking.
@@ -12074,7 +12117,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let fix_names_db_order = List.rev fix_names in
   let renamed_fix_ids, env = push_vars' (ids @ fix_names_db_order) env in
   let saved_env_types = tctx.env_types in
-  push_env_types (ids @ fix_names_db_order);
+  push_binders env (ids @ fix_names_db_order);
   (* Extract the renamed name for THIS fixpoint function. fix_names_db_order
      is reversed from the array order, so fix array index i corresponds to
      position (n_fix_funs - 1 - i) in the reversed list. *)

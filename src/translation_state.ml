@@ -151,6 +151,16 @@ type translation_ctx = {
       [populate_erased_field_env] during pattern-match branch setup,
       shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
   mutable cpp_binder_types : cpp_type IntMap.t;
+  (** The C++ type assigned to {e every} binder at the point it is bound,
+      rather than only to the pattern variables an erased instantiation
+      pinned down.  Written by [push_binders], never read by translation:
+      this is the shadow of {!cpp_binder_types} that the assignment is being
+      migrated onto, and [Minicpp_check] reports where the two disagree so
+      the migration can be judged before readers switch over.
+
+      Shifted by {!push_env_types} and cleared by {!reset_env_types}, exactly
+      as {!cpp_binder_types} is. *)
+  mutable cpp_binder_types_all : cpp_type IntMap.t;
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
@@ -186,6 +196,7 @@ let tctx =
     seen_lifted_refs = [];
     wrap_for_any_param = false;
     cpp_binder_types = IntMap.empty;
+    cpp_binder_types_all = IntMap.empty;
   }
 
 (** Accessors for {!translation_ctx.current_type_vars}: the template type
@@ -241,14 +252,18 @@ let take_lifted_decls () =
 let clear_seen_lifted_refs () = tctx.seen_lifted_refs <- []
 
 (** Prepend bindings to the de Bruijn environment type stack.
-    Also shifts all indices in {!cpp_binder_types} upward by [n] to account
-    for the new bindings, keeping de Bruijn references consistent. *)
+    Also shifts all indices in {!cpp_binder_types} and
+    {!cpp_binder_types_all} upward by [n] to account for the new bindings,
+    keeping de Bruijn references consistent. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
   let n = List.length ids in
-  if n > 0 && not (IntMap.is_empty tctx.cpp_binder_types) then
-    tctx.cpp_binder_types <-
-      IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) tctx.cpp_binder_types
-        IntMap.empty;
+  let shift m =
+    if n > 0 && not (IntMap.is_empty m) then
+      IntMap.fold (fun k v acc -> IntMap.add (k + n) v acc) m IntMap.empty
+    else m
+  in
+  tctx.cpp_binder_types <- shift tctx.cpp_binder_types;
+  tctx.cpp_binder_types_all <- shift tctx.cpp_binder_types_all;
   tctx.env_types <- ids @ tctx.env_types
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
@@ -263,7 +278,8 @@ let get_env_type_opt (i : int) : ml_type option =
        | None -> None
 
 (** Reset the environment type stack to empty.
-    Also clears {!cpp_binder_types}. *)
+    Also clears {!cpp_binder_types} and {!cpp_binder_types_all}. *)
 let reset_env_types () =
   tctx.env_types <- [];
-  tctx.cpp_binder_types <- IntMap.empty
+  tctx.cpp_binder_types <- IntMap.empty;
+  tctx.cpp_binder_types_all <- IntMap.empty
