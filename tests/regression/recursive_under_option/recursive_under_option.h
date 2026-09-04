@@ -42,9 +42,8 @@ struct RecursiveUnderOption {
         if (auto *_alt = std::get_if<N>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            if (((*(_alt->a0))).has_value()) {
-              _stack.push_back(
-                  std::make_shared<c>(std::move((*((*(_alt->a0)))))));
+            if ((*_alt->a0).has_value()) {
+              _stack.push_back(std::make_shared<c>(std::move(*(*_alt->a0))));
             }
             _alt->a0.reset();
           }

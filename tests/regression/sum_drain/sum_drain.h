@@ -98,7 +98,7 @@ struct SumDrain {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             if (auto *_ha2 = std::get_if<typename Sum<uint64_t, t>::Inr>(
-                    &((*(_alt->a0))).v_mut())) {
+                    &(*_alt->a0).v_mut())) {
               _stack.push_back(std::make_shared<t>(std::move(_ha2->a0)));
             }
             _alt->a0.reset();

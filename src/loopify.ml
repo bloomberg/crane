@@ -809,7 +809,7 @@ and collect_stmt check ~in_visitor = function
     @ collect_stmts check ~in_visitor else_br
   | Sif_then (cond, then_br) ->
     collect_expr check cond @ collect_stmts check ~in_visitor then_br
-  | Swhile (cond, body) ->
+  | Swhile (cond, body) | Sfor_range (_, cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
   | Sblock stmts -> collect_stmts check ~in_visitor stmts
   | Sswitch (scrut, _, branches, _) ->
@@ -992,7 +992,8 @@ and has_recursive_branch_dependency check stmts =
         (match default with
         | Some body -> has_recursive_branch_dependency check body
         | None -> false)
-      | Sblock body | Swhile (_, body) -> has_recursive_branch_dependency check body
+      | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
+    has_recursive_branch_dependency check body
       | Sassign_field (obj, _, e) ->
         expr_has_recursive_branch_dependency check obj
         || expr_has_recursive_branch_dependency check e
@@ -4523,7 +4524,7 @@ and stmt_has_unique_owner_decomposition check tparams env = function
     || (match default with
        | Some body -> body_has_unique_owner_decomposition check tparams env body
        | None -> false)
-  | Sblock body | Swhile (_, body) ->
+  | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
     body_has_unique_owner_decomposition check tparams env body
   | Sassign_field (obj, _, e) ->
     expr_has_unique_owner_decomposition check tparams env obj

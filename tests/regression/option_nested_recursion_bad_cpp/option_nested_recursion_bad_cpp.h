@@ -57,9 +57,9 @@ struct OptionNestedRecursionBadCpp {
         if (auto *_alt = std::get_if<Link>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            if (((*(_alt->a1))).has_value()) {
+            if ((*_alt->a1).has_value()) {
               _stack.push_back(
-                  std::make_shared<chain>(std::move((*((*(_alt->a1)))))));
+                  std::make_shared<chain>(std::move(*(*_alt->a1))));
             }
             _alt->a1.reset();
           }

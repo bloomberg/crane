@@ -206,7 +206,7 @@ struct NestedInductiveNoDrain {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->a1.get();
+            auto _lp = _alt->a1.get();
             while (std::holds_alternative<
                    typename NestedInductiveNoDrain::lst<tree>::Cons>(
                 _lp->v())) {

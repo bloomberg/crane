@@ -121,13 +121,13 @@ struct TripleListDrain {
             std::atomic_thread_fence(std::memory_order_acquire);
             crane::small_vector<std::shared_ptr<List<List<List<t>>>>> _hw1;
             if (auto *_ha20 = std::get_if<typename List<List<List<t>>>::Cons>(
-                    &((*(_alt->a1))).v_mut())) {
+                    &(*_alt->a1).v_mut())) {
               crane::small_vector<std::shared_ptr<List<List<t>>>> _hw21;
               if (auto *_ha30 = std::get_if<typename List<List<t>>::Cons>(
-                      &(_ha20->a).v_mut())) {
+                      &_ha20->a.v_mut())) {
                 crane::small_vector<std::shared_ptr<List<t>>> _hw31;
                 if (auto *_ha35 = std::get_if<typename List<t>::Cons>(
-                        &(_ha30->a).v_mut())) {
+                        &_ha30->a.v_mut())) {
                   _stack.push_back(std::make_shared<t>(std::move(_ha35->a)));
                   _hw31.push_back(std::move(_ha35->l));
                 }
@@ -140,7 +140,7 @@ struct TripleListDrain {
                   std::atomic_thread_fence(std::memory_order_acquire);
                   auto &_hw31e = *_hw31p;
                   if (auto *_ha33 = std::get_if<typename List<t>::Cons>(
-                          &(_hw31e).v_mut())) {
+                          &_hw31e.v_mut())) {
                     _stack.push_back(std::make_shared<t>(std::move(_ha33->a)));
                     _hw31.push_back(std::move(_ha33->l));
                   }
@@ -156,10 +156,10 @@ struct TripleListDrain {
                 std::atomic_thread_fence(std::memory_order_acquire);
                 auto &_hw21e = *_hw21p;
                 if (auto *_ha23 = std::get_if<typename List<List<t>>::Cons>(
-                        &(_hw21e).v_mut())) {
+                        &_hw21e.v_mut())) {
                   crane::small_vector<std::shared_ptr<List<t>>> _hw24;
                   if (auto *_ha28 = std::get_if<typename List<t>::Cons>(
-                          &(_ha23->a).v_mut())) {
+                          &_ha23->a.v_mut())) {
                     _stack.push_back(std::make_shared<t>(std::move(_ha28->a)));
                     _hw24.push_back(std::move(_ha28->l));
                   }
@@ -172,7 +172,7 @@ struct TripleListDrain {
                     std::atomic_thread_fence(std::memory_order_acquire);
                     auto &_hw24e = *_hw24p;
                     if (auto *_ha26 = std::get_if<typename List<t>::Cons>(
-                            &(_hw24e).v_mut())) {
+                            &_hw24e.v_mut())) {
                       _stack.push_back(
                           std::make_shared<t>(std::move(_ha26->a)));
                       _hw24.push_back(std::move(_ha26->l));
@@ -192,13 +192,13 @@ struct TripleListDrain {
               std::atomic_thread_fence(std::memory_order_acquire);
               auto &_hw1e = *_hw1p;
               if (auto *_ha3 = std::get_if<typename List<List<List<t>>>::Cons>(
-                      &(_hw1e).v_mut())) {
+                      &_hw1e.v_mut())) {
                 crane::small_vector<std::shared_ptr<List<List<t>>>> _hw4;
                 if (auto *_ha13 = std::get_if<typename List<List<t>>::Cons>(
-                        &(_ha3->a).v_mut())) {
+                        &_ha3->a.v_mut())) {
                   crane::small_vector<std::shared_ptr<List<t>>> _hw14;
                   if (auto *_ha18 = std::get_if<typename List<t>::Cons>(
-                          &(_ha13->a).v_mut())) {
+                          &_ha13->a.v_mut())) {
                     _stack.push_back(std::make_shared<t>(std::move(_ha18->a)));
                     _hw14.push_back(std::move(_ha18->l));
                   }
@@ -211,7 +211,7 @@ struct TripleListDrain {
                     std::atomic_thread_fence(std::memory_order_acquire);
                     auto &_hw14e = *_hw14p;
                     if (auto *_ha16 = std::get_if<typename List<t>::Cons>(
-                            &(_hw14e).v_mut())) {
+                            &_hw14e.v_mut())) {
                       _stack.push_back(
                           std::make_shared<t>(std::move(_ha16->a)));
                       _hw14.push_back(std::move(_ha16->l));
@@ -228,10 +228,10 @@ struct TripleListDrain {
                   std::atomic_thread_fence(std::memory_order_acquire);
                   auto &_hw4e = *_hw4p;
                   if (auto *_ha6 = std::get_if<typename List<List<t>>::Cons>(
-                          &(_hw4e).v_mut())) {
+                          &_hw4e.v_mut())) {
                     crane::small_vector<std::shared_ptr<List<t>>> _hw7;
                     if (auto *_ha11 = std::get_if<typename List<t>::Cons>(
-                            &(_ha6->a).v_mut())) {
+                            &_ha6->a.v_mut())) {
                       _stack.push_back(
                           std::make_shared<t>(std::move(_ha11->a)));
                       _hw7.push_back(std::move(_ha11->l));
@@ -245,7 +245,7 @@ struct TripleListDrain {
                       std::atomic_thread_fence(std::memory_order_acquire);
                       auto &_hw7e = *_hw7p;
                       if (auto *_ha9 = std::get_if<typename List<t>::Cons>(
-                              &(_hw7e).v_mut())) {
+                              &_hw7e.v_mut())) {
                         _stack.push_back(
                             std::make_shared<t>(std::move(_ha9->a)));
                         _hw7.push_back(std::move(_ha9->l));

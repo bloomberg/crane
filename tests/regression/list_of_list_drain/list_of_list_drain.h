@@ -210,12 +210,12 @@ struct ListOfListDrain {
                 std::shared_ptr<ListOfListDrain::lst<ListOfListDrain::lst<t>>>>
                 _hw1;
             if (auto *_ha10 = std::get_if<typename ListOfListDrain::lst<
-                    ListOfListDrain::lst<t>>::Cons>(&((*(_alt->a1))).v_mut())) {
+                    ListOfListDrain::lst<t>>::Cons>(&(*_alt->a1).v_mut())) {
               crane::small_vector<std::shared_ptr<ListOfListDrain::lst<t>>>
                   _hw11;
               if (auto *_ha15 =
                       std::get_if<typename ListOfListDrain::lst<t>::Cons>(
-                          &(_ha10->a0).v_mut())) {
+                          &_ha10->a0.v_mut())) {
                 _stack.push_back(std::make_shared<t>(std::move(_ha15->a0)));
                 _hw11.push_back(std::move(_ha15->a1));
               }
@@ -229,7 +229,7 @@ struct ListOfListDrain {
                 auto &_hw11e = *_hw11p;
                 if (auto *_ha13 =
                         std::get_if<typename ListOfListDrain::lst<t>::Cons>(
-                            &(_hw11e).v_mut())) {
+                            &_hw11e.v_mut())) {
                   _stack.push_back(std::make_shared<t>(std::move(_ha13->a0)));
                   _hw11.push_back(std::move(_ha13->a1));
                 }
@@ -245,12 +245,12 @@ struct ListOfListDrain {
               std::atomic_thread_fence(std::memory_order_acquire);
               auto &_hw1e = *_hw1p;
               if (auto *_ha3 = std::get_if<typename ListOfListDrain::lst<
-                      ListOfListDrain::lst<t>>::Cons>(&(_hw1e).v_mut())) {
+                      ListOfListDrain::lst<t>>::Cons>(&_hw1e.v_mut())) {
                 crane::small_vector<std::shared_ptr<ListOfListDrain::lst<t>>>
                     _hw4;
                 if (auto *_ha8 =
                         std::get_if<typename ListOfListDrain::lst<t>::Cons>(
-                            &(_ha3->a0).v_mut())) {
+                            &_ha3->a0.v_mut())) {
                   _stack.push_back(std::make_shared<t>(std::move(_ha8->a0)));
                   _hw4.push_back(std::move(_ha8->a1));
                 }
@@ -264,7 +264,7 @@ struct ListOfListDrain {
                   auto &_hw4e = *_hw4p;
                   if (auto *_ha6 =
                           std::get_if<typename ListOfListDrain::lst<t>::Cons>(
-                              &(_hw4e).v_mut())) {
+                              &_hw4e.v_mut())) {
                     _stack.push_back(std::make_shared<t>(std::move(_ha6->a0)));
                     _hw4.push_back(std::move(_ha6->a1));
                   }

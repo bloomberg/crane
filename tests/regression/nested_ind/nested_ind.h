@@ -365,7 +365,7 @@ struct NestedInd {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->a1.get();
+            auto _lp = _alt->a1.get();
             while (std::holds_alternative<
                    typename NestedInd::custom_list<rose<A>>::Ccons>(_lp->v())) {
               auto &_lc =
@@ -497,7 +497,7 @@ struct NestedInd {
         if (auto *_alt = std::get_if<Add>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->a0.get();
+            auto _lp = _alt->a0.get();
             while (
                 std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
@@ -515,7 +515,7 @@ struct NestedInd {
         if (auto *_alt = std::get_if<Mul>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->a0.get();
+            auto _lp = _alt->a0.get();
             while (
                 std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());

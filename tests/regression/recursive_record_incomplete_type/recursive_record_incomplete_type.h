@@ -134,7 +134,7 @@ struct RecursiveRecordIncompleteType {
         if (auto *_alt = std::get_if<MkCell>(&_v)) {
           if (_alt->kids && _alt->kids.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->kids.get();
+            auto _lp = _alt->kids.get();
             while (
                 std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<cell>::Cons>(_lp->v_mut());

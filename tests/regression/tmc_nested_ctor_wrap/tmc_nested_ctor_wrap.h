@@ -227,7 +227,7 @@ struct TmcNestedCtorWrap {
         if (auto *_alt = std::get_if<Rnode>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->a0.get();
+            auto _lp = _alt->a0.get();
             while (
                 std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());

@@ -123,9 +123,9 @@ struct ListOptionDrain {
             std::atomic_thread_fence(std::memory_order_acquire);
             crane::small_vector<std::shared_ptr<List<std::optional<t>>>> _hw1;
             if (auto *_ha5 = std::get_if<typename List<std::optional<t>>::Cons>(
-                    &((*(_alt->a1))).v_mut())) {
-              if ((_ha5->a).has_value()) {
-                _stack.push_back(std::make_shared<t>(std::move((*(_ha5->a)))));
+                    &(*_alt->a1).v_mut())) {
+              if (_ha5->a.has_value()) {
+                _stack.push_back(std::make_shared<t>(std::move(*_ha5->a)));
               }
               _hw1.push_back(std::move(_ha5->l));
             }
@@ -139,10 +139,9 @@ struct ListOptionDrain {
               auto &_hw1e = *_hw1p;
               if (auto *_ha3 =
                       std::get_if<typename List<std::optional<t>>::Cons>(
-                          &(_hw1e).v_mut())) {
-                if ((_ha3->a).has_value()) {
-                  _stack.push_back(
-                      std::make_shared<t>(std::move((*(_ha3->a)))));
+                          &_hw1e.v_mut())) {
+                if (_ha3->a.has_value()) {
+                  _stack.push_back(std::make_shared<t>(std::move(*_ha3->a)));
                 }
                 _hw1.push_back(std::move(_ha3->l));
               }

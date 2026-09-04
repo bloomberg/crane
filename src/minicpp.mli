@@ -203,6 +203,10 @@ and cpp_stmt =
           [shared_ptr<std::function>] fixpoint pattern to assign through
           the pointer indirection, and for [reset()] body: [*this = T()].
           See {!Translation.gen_local_fix_shared_ptr}. *)
+  | Sfor_range of Id.t * cpp_expr * cpp_stmt list
+      (** Range-based for: [for (auto& id : e) { body }].  The binding is
+          always [auto&] -- every producer walks a container in order to move
+          out of it. *)
   | Swhile of cpp_expr * cpp_stmt list
       (** While loop: condition and body (used by loopify pass) *)
   | Sblock of cpp_stmt list  (** Scoped block for local declarations *)

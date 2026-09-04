@@ -205,6 +205,7 @@ and cpp_stmt =
      the by-value lambda to capture [f] (a [shared_ptr] copy) instead of a
      dangling [&]-reference.  Also used for [reset()] body: [*this = T()].
      See {!Translation.gen_local_fix_shared_ptr}. *)
+  | Sfor_range of Id.t * cpp_expr * cpp_stmt list
   | Swhile of cpp_expr * cpp_stmt list
     (* while (condition) { body } — used by loopify pass *)
   | Sblock of cpp_stmt list
@@ -727,6 +728,7 @@ let map_stmt
   | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
   | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
   | Sderef_asgn (lhs, e) -> Sderef_asgn (fe lhs, fe e)
+  | Sfor_range (id, e, body) -> Sfor_range (id, fe e, List.map fs body)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
   | Scontinue -> s
@@ -813,6 +815,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
   | Sassign_expr (lhs, e) -> on_expr lhs; on_expr e
   | Sderef_asgn (lhs, e) -> on_expr lhs; on_expr e
+  | Sfor_range (_, e, body) -> on_expr e; on_stmts body
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args
@@ -889,6 +892,7 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Sassign_field (obj, _, e) -> on_expr (on_expr acc obj) e
   | Sassign_expr (lhs, e) -> on_expr (on_expr acc lhs) e
   | Sderef_asgn (lhs, e) -> on_expr (on_expr acc lhs) e
+  | Sfor_range (_, e, body) -> on_stmts (on_expr acc e) body
   | Swhile (cond, body) -> on_stmts (on_expr acc cond) body
   | Sblock stmts -> on_stmts acc stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.fold_left on_expr acc args

@@ -263,7 +263,7 @@ struct Cotree {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->children && _alt->children.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            auto *_lp = _alt->children.get();
+            auto _lp = _alt->children.get();
             while (std::holds_alternative<typename List<tree<A>>::Cons>(
                 _lp->v())) {
               auto &_lc = std::get<typename List<tree<A>>::Cons>(_lp->v_mut());

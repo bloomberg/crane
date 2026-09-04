@@ -2380,6 +2380,14 @@ and pp_cpp_stmt env args = function
     str "using " ++ Id.print name ++ str " = " ++ pp_cpp_type false [] ty ++ str ";"
   | Sdecl_init (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str "{};"
+  | Sfor_range (id, e, body) ->
+    str "for (auto& " ++ Id.print id ++ str " : "
+    ++ pp_cpp_expr env args e
+    ++ str ") {"
+    ++ fnl ()
+    ++ pp_list_stmt (pp_cpp_stmt env args) body
+    ++ fnl ()
+    ++ str "}"
   | Swhile (cond, body) ->
     str "while ("
     ++ pp_cpp_expr env args cond

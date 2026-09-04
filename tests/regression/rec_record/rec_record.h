@@ -246,9 +246,9 @@ struct RecRecord {
         if (auto *_alt = std::get_if<MkRNode>(&_v)) {
           if (_alt->rn_next && _alt->rn_next.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            if (((*(_alt->rn_next))).has_value()) {
+            if ((*_alt->rn_next).has_value()) {
               _stack.push_back(
-                  std::make_shared<RNode>(std::move((*((*(_alt->rn_next)))))));
+                  std::make_shared<RNode>(std::move(*(*_alt->rn_next))));
             }
             _alt->rn_next.reset();
           }

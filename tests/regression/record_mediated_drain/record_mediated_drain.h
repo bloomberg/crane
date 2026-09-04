@@ -49,8 +49,7 @@ struct RecordMediatedDrain {
         if (auto *_alt = std::get_if<More>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            _stack.push_back(
-                std::make_shared<t>(std::move(((*(_alt->a0))).tl)));
+            _stack.push_back(std::make_shared<t>(std::move(_alt->a0->tl)));
             _alt->a0.reset();
           }
         }

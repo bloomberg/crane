@@ -140,9 +140,8 @@ struct AssocPairList {
                 _hw1;
             if (auto *_ha5 =
                     std::get_if<typename List<std::pair<uint64_t, t>>::Cons>(
-                        &((*(_alt->a0))).v_mut())) {
-              _stack.push_back(
-                  std::make_shared<t>(std::move((_ha5->a).second)));
+                        &(*_alt->a0).v_mut())) {
+              _stack.push_back(std::make_shared<t>(std::move(_ha5->a.second)));
               _hw1.push_back(std::move(_ha5->l));
             }
             while (!_hw1.empty()) {
@@ -155,9 +154,9 @@ struct AssocPairList {
               auto &_hw1e = *_hw1p;
               if (auto *_ha3 =
                       std::get_if<typename List<std::pair<uint64_t, t>>::Cons>(
-                          &(_hw1e).v_mut())) {
+                          &_hw1e.v_mut())) {
                 _stack.push_back(
-                    std::make_shared<t>(std::move((_ha3->a).second)));
+                    std::make_shared<t>(std::move(_ha3->a.second)));
                 _hw1.push_back(std::move(_ha3->l));
               }
             }

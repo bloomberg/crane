@@ -4860,9 +4860,15 @@ let gen_ind_header_v2
           let _pv_id = Id.of_string "_pv" in
           let variant_t_ty = Tid (Id.of_string "variant_t", []) in
           let self_ty = Tglob (name, ty_vars, []) in
-          let render_q_destr ty =
+          (* Qualify inductive references for use outside [name]'s own scope;
+             [name] itself is skipped because the destructor is written inside
+             it. *)
+          let q_destr ty =
             let skip g = GlobRef.CanOrd.equal g name in
-            render_cpp_type_for_raw_template (qualify_inductives ~skip ty)
+            qualify_inductives ~skip ty
+          in
+          let render_q_destr ty =
+            render_cpp_type_for_raw_template (q_destr ty)
           in
           (* Expand a [Drain "..."] template for a custom container field into a
              statement list. [%scrut] -> the container field expression [scrut];
@@ -5019,18 +5025,39 @@ let gen_ind_header_v2
             incr hv_seq;
             p ^ string_of_int !hv_seq
           in
-          let self_str = render_q_destr self_ty in
           let cpp_of_ml t =
             convert_ml_type_to_cpp_type (empty_env ()) vars t
           in
           let render_ml t = render_q_destr (cpp_of_ml t) in
+          (* Wrap a type's {!render_q_destr} spelling as an opaque name, so it
+             reaches the printer verbatim.  The destructor is emitted inside
+             the inductive's own declaration and must agree with the struct
+             names printed there; the type printer, reached from here without
+             that context, spells some inductives differently. *)
+          let verbatim_ty ty = Tid (Id.of_string_soft (render_q_destr ty), []) in
+          let verbatim_ml t = verbatim_ty (cpp_of_ml t) in
+          (* [e.m()] -- the harvester only ever calls nullary members
+             ([use_count], [reset], [has_value], [v_mut]) on a value. *)
+          let dot0 e m = CPPdot_method_call (e, Id.of_string m, []) in
+          (* [p->m()], for a [p] that is a raw or smart pointer. *)
+          let arrow0 e m = CPPmethod_call (e, Id.of_string m, []) in
+          (* Guard [body] on [p] being the sole owner of its pointee -- every
+             drain moves a value out of one, so it must first establish that
+             nobody else can see it.  The acquire fence follows the [use_count]
+             test rather than preceding it; see {!unique_fence}. *)
+          let sole_owner p body =
+            [Sif_then (
+              CPPbinop ("&&", p,
+                CPPbinop ("==", dot0 p "use_count", CPPint 1)),
+              unique_fence @ body)]
+          in
+          (* [_stack.push_back(make_shared<Self>(std::move(e)))] -- hand one
+             discovered [Self] to the destructor's worklist. *)
           let push_self_stmt e =
             Sexpr (CPPdot_method_call (
               CPPvar _stack_id,
               Id.of_string "push_back",
-              [CPPraw (
-                 Table.make_shared_name () ^ "<" ^ self_str
-                 ^ ">(std::move(" ^ e ^ "))")]))
+              [CPPfun_call (CPPmk_shared (verbatim_ty self_ty), [CPPmove e])]))
           in
           (* Substitute a mediator's actual type arguments into one of its
              declared constructor field types. *)
@@ -5100,33 +5127,28 @@ let gen_ind_header_v2
                  | Some tmpl when starts_with "std::optional" tmpl ->
                    (match args with
                     | [a] ->
-                      let body =
-                        harvest_val (fuel - 1) a ("(*(" ^ e ^ "))")
-                      in
+                      let body = harvest_val (fuel - 1) a (CPPderef e) in
                       if body = [] then []
-                      else [Sif_then (CPPraw ("(" ^ e ^ ").has_value()"), body)]
+                      else [Sif_then (dot0 e "has_value", body)]
                     | _ -> raise Harvest_bail)
                  | Some tmpl when starts_with "std::pair" tmpl ->
                    (match args with
                     | [a; b] ->
+                      let fld n = CPPmember (e, Id.of_string n) in
                       (if contains_self a
-                       then harvest_val (fuel - 1) a ("(" ^ e ^ ").first")
+                       then harvest_val (fuel - 1) a (fld "first")
                        else [])
                       @ (if contains_self b
-                         then harvest_val (fuel - 1) b ("(" ^ e ^ ").second")
+                         then harvest_val (fuel - 1) b (fld "second")
                          else [])
                     | _ -> raise Harvest_bail)
                  | Some _ -> raise Harvest_bail
                  | None -> harvest_ind (fuel - 1) g args e)
               | _ -> raise Harvest_bail
           and harvest_ptr fuel ty p =
-            let body = harvest_val fuel ty ("(*(" ^ p ^ "))") in
+            let body = harvest_val fuel ty (CPPderef p) in
             if body = [] then []
-            else
-              [Sif_then (
-                CPPbinop ("&&", CPPraw p,
-                  CPPbinop ("==", CPPraw (p ^ ".use_count()"), CPPint 1)),
-                unique_fence @ body @ [Sraw (p ^ ".reset();")])]
+            else sole_owner p (body @ [Sexpr (dot0 p "reset")])
           and harvest_ind fuel g args e =
             (* Mutual blocks would need a heterogeneous worklist; the mutual
                drain further down handles those for [Self] itself, but not for
@@ -5143,6 +5165,7 @@ let gen_ind_header_v2
               | Some c -> c
             in
             let g_ty = Miniml.Tglob (g, args, []) in
+            let g_cpp = verbatim_ml g_ty in
             let g_str = render_ml g_ty in
             let self_recursive =
               List.exists
@@ -5166,9 +5189,7 @@ let gen_ind_header_v2
                        if not (contains_self inst) then []
                        else
                          let fe =
-                           access
-                             (Id.to_string
-                                (Common.lookup_ctor_field_name cname_str k))
+                           access (Common.lookup_ctor_field_name cname_str k)
                          in
                          let is_ptr = field_is_ptr g fty in
                          match on_spine with
@@ -5205,7 +5226,9 @@ let gen_ind_header_v2
                        let inst = subst_targs args fty in
                        if not (contains_self inst) then []
                        else
-                         let fe = "(" ^ x ^ ")." ^ List.nth names k in
+                         let fe =
+                           CPPmember (x, Id.of_string_soft (List.nth names k))
+                         in
                          if field_is_ptr g fty
                          then harvest_ptr (fuel - 1) inst fe
                          else harvest_val (fuel - 1) inst fe)
@@ -5216,7 +5239,7 @@ let gen_ind_header_v2
                 let cname_str =
                   ctor_struct_name_of_ref ~fallback_idx:0 (ctor_ref j)
                 in
-                field_stmts cname_str (fun f -> "(" ^ x ^ ")." ^ f) ftys
+                field_stmts cname_str (fun f -> CPPmember (x, f)) ftys
               | _ ->
                 List.concat_map
                   (fun (j, ftys) ->
@@ -5224,47 +5247,56 @@ let gen_ind_header_v2
                     let cname_str =
                       ctor_struct_name_of_ref ~fallback_idx:(j - 1) cref
                     in
-                    let av = fresh_hv "_ha" in
+                    let av = Id.of_string (fresh_hv "_ha") in
                     let inner =
-                      field_stmts cname_str (fun f -> av ^ "->" ^ f) ftys
+                      field_stmts cname_str (fun f -> CPParrow (CPPvar av, f))
+                        ftys
                     in
                     if inner = [] then []
                     else
-                      [Sraw (
-                         "if (auto* " ^ av ^ " = std::get_if<typename "
-                         ^ g_str ^ "::" ^ cname_str ^ ">(&(" ^ x
-                         ^ ").v_mut())) {")]
-                      @ inner @ [Sraw "}"])
+                      [Sif_decl (
+                         av, Tptr Tauto,
+                         CPPstd_get_if (
+                           g_cpp, Some (Id.of_string_soft cname_str),
+                           CPPunop ("&", dot0 x "v_mut")),
+                         inner, [])])
                   ctors
             in
             if not self_recursive then body_for None e
             else begin
               Table.mark_needs_small_vector ();
               let wl = fresh_hv "_hw" in
-              let pv = wl ^ "p" and ev = wl ^ "e" in
-              let sp_str =
-                render_q_destr (Tshared_ptr (Tid (Id.of_string_soft g_str, [])))
+              let wl_id = Id.of_string wl in
+              let pv = Id.of_string (wl ^ "p")
+              and ev = Id.of_string (wl ^ "e") in
+              let sp_str = render_q_destr (Tshared_ptr (verbatim_ml g_ty)) in
+              let push fe =
+                [Sexpr (CPPdot_method_call (
+                   CPPvar wl_id, Id.of_string "push_back", [CPPmove fe]))]
               in
-              let push fe = [Sraw (wl ^ ".push_back(std::move(" ^ fe ^ "));")] in
               let on_spine = Some push in
               [Sraw ("crane::small_vector<" ^ sp_str ^ "> " ^ wl ^ ";")]
               @ body_for on_spine e
-              @ [Sraw ("while (!" ^ wl ^ ".empty()) {");
-                 Sraw ("auto " ^ pv ^ " = std::move(" ^ wl ^ ".back()); "
-                       ^ wl ^ ".pop_back();");
-                 Sraw ("if (!" ^ pv ^ " || " ^ pv
-                       ^ ".use_count() != 1) { continue; }")]
-              @ unique_fence
-              @ [Sraw ("auto& " ^ ev ^ " = *" ^ pv ^ ";")]
-              @ body_for on_spine ev
-              @ [Sraw "}"]
+              @ [Swhile (
+                   CPPunop ("!", dot0 (CPPvar wl_id) "empty"),
+                   [ Sasgn (pv, Some Tauto,
+                       CPPmove (dot0 (CPPvar wl_id) "back"));
+                     Sexpr (dot0 (CPPvar wl_id) "pop_back");
+                     Sif_then (
+                       CPPbinop ("||", CPPunop ("!", CPPvar pv),
+                         CPPbinop ("!=", dot0 (CPPvar pv) "use_count",
+                           CPPint 1)),
+                       [Scontinue]) ]
+                   @ unique_fence
+                   @ [Sasgn (ev, Some (Tref Tauto), CPPderef (CPPvar pv))]
+                   @ body_for on_spine (CPPvar ev))]
             end
           in
           (* Drain statements for a nested-mediator field, or [None] if the
              shape is one the harvester does not handle. *)
           let harvest_field field_id ml_ty =
             try
-              let fe = Id.to_string _alt_id ^ "->" ^ Id.to_string field_id in
+              let fe = CPParrow (CPPvar _alt_id, field_id) in
               match harvest_ptr harvest_fuel ml_ty fe with
               | [] -> None
               | stmts -> Some stmts
@@ -5286,35 +5318,12 @@ let gen_ind_header_v2
                      [CPPmove fe]))])]
               | `Wrapper wfields ->
                 (* Reach through a uniquely-owned wrapper cell and move each
-                   nested [Self] onto the worklist, then drop the cell.  The
-                   ownership test is the same one the other drains use, and
-                   needs the same acquire fence -- see [unique_fence]. *)
-                let ss = render_q_destr self_ty in
-                let fes =
-                  Id.to_string _alt_id ^ "->" ^ Id.to_string field_id
-                in
-                [Sif_then (
-                  CPPbinop ("&&", fe,
-                    CPPbinop ("==",
-                      CPPraw (fes ^ ".use_count()"),
-                      CPPint 1)),
-                  unique_fence
-                  @ List.map (fun wf ->
-                      Sexpr (CPPdot_method_call (
-                        CPPvar _stack_id,
-                        Id.of_string "push_back",
-                        [CPPraw (
-                           Table.make_shared_name () ^ "<" ^ ss
-                           ^ ">(std::move(" ^ fes ^ "->"
-                           ^ Id.to_string wf ^ "))")])))
-                      wfields
-                  @ [Sraw (fes ^ ".reset();")])]
+                   nested [Self] onto the worklist, then drop the cell. *)
+                sole_owner fe
+                  (List.map (fun wf -> push_self_stmt (CPParrow (fe, wf)))
+                     wfields
+                   @ [Sexpr (dot0 fe "reset")])
               | `List list_g ->
-                let ss = render_q_destr self_ty in
-                let fes =
-                  Id.to_string _alt_id ^ "->"
-                  ^ Id.to_string field_id
-                in
                 (* This iterative drain replaces the naive recursive destructor,
                    so cleanup of a deep deque-backed recursive value no longer
                    overflows the call stack (the primary CWE-674 mitigation;
@@ -5334,35 +5343,25 @@ let gen_ind_header_v2
                      smart-pointer-wrapped container. *)
                   begin match Table.find_custom_drain_opt list_g with
                   | Some tmpl ->
-                    expand_drain_template ~scrut:fes ~self:ss tmpl
+                    expand_drain_template
+                      ~scrut:(Id.to_string _alt_id ^ "->"
+                              ^ Id.to_string field_id)
+                      ~self:(render_q_destr self_ty) tmpl
                   | None ->
-                  [Sif_then (
-                    CPPbinop ("&&", fe,
-                      CPPbinop ("==",
-                        CPPraw (fes ^ ".use_count()"),
-                        CPPint 1)),
-                    unique_fence
-                    @ [ Sraw ("for (auto& _elem : *" ^ fes ^ ") {");
-                      Sexpr (CPPdot_method_call (
-                        CPPvar _stack_id,
-                        Id.of_string "push_back",
-                        [CPPraw (
-                           Table.make_shared_name () ^ "<" ^ ss
-                           ^ ">(std::move(_elem))")]));
-                      Sraw "}";
-                      Sraw (fes ^ ".reset();") ])]
+                    let elem = Id.of_string "_elem" in
+                    sole_owner fe
+                      [ Sfor_range (elem, CPPderef fe,
+                          [push_self_stmt (CPPvar elem)]);
+                        Sexpr (dot0 fe "reset") ]
                   end
                 else
-                  let ls = render_q_destr (Tglob (list_g, [self_ty], [])) in
+                  let ls = verbatim_ty (Tglob (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
-                  let elem_field =
-                    Id.to_string
-                      (Common.lookup_ctor_field_name cons_s 0)
-                  in
-                  let tail_field =
-                    Id.to_string
-                      (Common.lookup_ctor_field_name cons_s 1)
-                  in
+                  let cons_id = Id.of_string_soft cons_s in
+                  let elem_field = Common.lookup_ctor_field_name cons_s 0 in
+                  let tail_field = Common.lookup_ctor_field_name cons_s 1 in
+                  let lp = Id.of_string "_lp" and lc = Id.of_string "_lc" in
+                  let tail = CPPmember (CPPvar lc, tail_field) in
                   (* Walk the cons spine, moving each element onto the
                      worklist.  Ownership must be re-established at every cell,
                      not just the head: list cells share their tails through
@@ -5371,46 +5370,25 @@ let gen_ind_header_v2
                      a list someone else is holding, so stop the walk as soon as
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
-                  let tail_unique =
-                    "_lc." ^ tail_field ^ " && _lc." ^ tail_field
-                    ^ ".use_count() == 1"
-                  in
-                  (* [unique_fence] as a string, to sit inline in the raw
-                     advance statement below; see its definition above for why
-                     the fence follows the [use_count] test rather than
-                     preceding it. *)
-                  let tail_fence =
-                    if Table.non_atomic_rc () then ""
-                    else
-                      " std::atomic_thread_fence(std::memory_order_acquire);"
-                  in
-                  [Sif_then (
-                    CPPbinop ("&&", fe,
-                      CPPbinop ("==",
-                        CPPraw (fes ^ ".use_count()"),
-                        CPPint 1)),
-                    unique_fence
-                    @ [ Sraw ("auto* _lp = " ^ fes ^ ".get();");
+                  sole_owner fe
+                    [ Sasgn (lp, Some Tauto, dot0 fe "get");
                       Swhile (
-                        CPPraw (
-                          "std::holds_alternative<typename "
-                          ^ ls ^ "::" ^ cons_s
-                          ^ ">(_lp->v())"),
-                        [ Sraw (
-                            "auto& _lc = std::get<typename "
-                            ^ ls ^ "::" ^ cons_s
-                            ^ ">(_lp->v_mut());");
-                          Sexpr (CPPdot_method_call (
-                            CPPvar _stack_id,
-                            Id.of_string "push_back",
-                            [CPPraw (
-                               Table.make_shared_name () ^ "<" ^ ss
-                               ^ ">(std::move(_lc." ^ elem_field ^ "))")]));
-                          Sraw (
-                            "if (" ^ tail_unique ^ ") {" ^ tail_fence
-                            ^ " _lp = _lc." ^ tail_field ^ ".get();"
-                            ^ " } else { break; }") ]);
-                      Sraw (fes ^ ".reset();") ])]
+                        CPPfun_call (
+                          CPPstd_holds_alternative (ls, Some cons_id),
+                          [arrow0 (CPPvar lp) "v"]),
+                        [ Sasgn (lc, Some (Tref Tauto),
+                            CPPstd_get (ls, Some cons_id,
+                              Some (arrow0 (CPPvar lp) "v_mut")));
+                          push_self_stmt (CPPmember (CPPvar lc, elem_field));
+                          Sif (
+                            CPPbinop ("&&", tail,
+                              CPPbinop ("==", dot0 tail "use_count", CPPint 1)),
+                            (* The fence follows the [use_count] test rather
+                               than preceding it -- see [unique_fence]. *)
+                            unique_fence
+                            @ [Sasgn (lp, None, dot0 tail "get")],
+                            [Sbreak]) ]);
+                      Sexpr (dot0 fe "reset") ]
               | _ -> []) classified_fields
           in
           (* For each constructor, classify recursive fields and build an

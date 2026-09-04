@@ -151,7 +151,7 @@ struct OptionRecursiveMatch {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             if (auto *_ha1 = std::get_if<typename Option<chain>::Some>(
-                    &((*(_alt->a1))).v_mut())) {
+                    &(*_alt->a1).v_mut())) {
               _stack.push_back(std::make_shared<chain>(std::move(_ha1->a)));
             }
             _alt->a1.reset();

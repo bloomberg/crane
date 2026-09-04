@@ -50,9 +50,9 @@ struct OptionalSelfDeepCopy {
         if (auto *_alt = std::get_if<More>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
-            if (((*(_alt->a0))).has_value()) {
+            if ((*_alt->a0).has_value()) {
               _stack.push_back(
-                  std::make_shared<chain>(std::move((*((*(_alt->a0)))))));
+                  std::make_shared<chain>(std::move(*(*_alt->a0))));
             }
             _alt->a0.reset();
           }
