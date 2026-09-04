@@ -140,10 +140,22 @@ let rec castable_to = function
 let note_alias id ty =
   if is_any_shaped ty then any_type_aliases := Id.Set.add id !any_type_aliases
 
-let rec resolve_expr e =
+(** [boxed_var boxed e] -- [e] reads a binder that is declared [std::any]. *)
+let rec boxed_var boxed = function
+  | CPPvar id -> Id.Set.mem id boxed
+  | CPPmove e -> boxed_var boxed e
+  | _ -> false
+
+(* [boxed] is the set of binders in scope whose declared type is [std::any].
+   It is threaded through the walk rather than kept in a ref so that a binder
+   is boxed exactly where C++ would see its declaration -- the printer used to
+   keep the same set in an ambient ref and save/restore it around every
+   construct that introduced one.  [ret] is the enclosing lambda's declared
+   return type, or [None] outside one. *)
+let rec resolve_expr boxed e =
   match e with
   | CPPany_cast (ty, inner) ->
-    let inner = resolve_expr inner in
+    let inner = resolve_expr boxed inner in
     if is_any_shaped ty then
       (* Casting a box to [std::any] is the identity, not a cast: [any_cast]
          would look for a further [std::any] stored inside and throw. *)
@@ -154,13 +166,54 @@ let rec resolve_expr e =
     end
     else
       CPPany_cast (ty, inner)
-  | _ -> map_expr resolve_expr resolve_stmt (fun t -> t) e
+  | CPPlambda (params, ret_ty, body, by_value) ->
+    let boxed =
+      List.fold_left
+        (fun acc (ty, id_opt) ->
+          match id_opt with
+          | Some id when is_any_shaped ty -> Id.Set.add id acc
+          | _ -> acc)
+        boxed params
+    in
+    CPPlambda (params, ret_ty,
+      List.map (resolve_stmt ~ret:ret_ty boxed) body, by_value)
+  | _ ->
+    map_expr (resolve_expr boxed) (resolve_stmt ~ret:None boxed) (fun t -> t) e
 
-and resolve_stmt s =
+and resolve_stmt ?(ret = None) boxed s =
   ( match s with
   | Susing (id, ty) -> note_alias id ty
   | _ -> () );
-  map_stmt resolve_expr resolve_stmt (fun t -> t) s
+  match s with
+  (* A lambda that returns one of its own boxed parameters has to unbox it to
+     reach the declared return type -- [std::function<uint64_t(std::any)>]
+     does not compile otherwise.  Only a bare parameter: an any-returning call
+     in the same position is already correctly typed in loopified bodies, and
+     casting it would silently change the value (regression:
+     tests/regression/loopify_variant_self_assign and friends). *)
+  | Sreturn (Some e)
+    when (match ret with Some t -> castable_to t | None -> false)
+         && boxed_var boxed e ->
+    let t = Ml_type_util.resolve_tvars_to_any (Option.get ret) in
+    Sreturn (Some (resolve_expr boxed (CPPany_cast (t, e))))
+  | Scustom_case (rty, scrut, targs, branches, custom) ->
+    Scustom_case (rty, resolve_expr boxed scrut, targs,
+      List.map
+        (fun (ps, bty, body) ->
+          let boxed =
+            List.fold_left
+              (fun acc (id, ty) ->
+                if is_any_shaped ty then Id.Set.add id acc else acc)
+              boxed ps
+          in
+          (ps, bty, List.map (resolve_stmt ~ret boxed) body))
+        branches,
+      custom)
+  | _ ->
+    map_stmt (resolve_expr boxed) (resolve_stmt ~ret boxed) (fun t -> t) s
+
+let resolve_expr = resolve_expr Id.Set.empty
+let resolve_stmt = resolve_stmt ~ret:None Id.Set.empty
 
 let rec resolve_field ((f, vis, tag) as field) =
   match f with

@@ -632,15 +632,6 @@ let print_cpp_type_var vl i =
     cleared after. *)
 let current_any_typed_params : Id.Set.t ref = ref Id.Set.empty
 
-(** Declared return type of the lambda whose body is currently being printed,
-    or [None] outside a lambda with an explicit return type.  A lambda erased
-    to [std::function<T(std::any)>] takes its argument as [std::any] but still
-    returns the concrete [T], so an erased value reaching [return] has to be
-    cast back.  Use sites with a known expected type (a [.first], a method
-    call) already get that cast from {!wrap_any_cast_if_needed}; a bare
-    [return k;] has no such site, and its expected type is exactly this. *)
-let current_lambda_ret_ty : cpp_type option ref = ref None
-
 (** Map from parameter IDs to their concrete C++ type, for variables that
     are std::any at runtime (because their outer pair match used pair<any,any>)
     but have a concrete declared type (e.g. [prs : List<std::any>]).  When such
@@ -1806,10 +1797,7 @@ and pp_cpp_expr env args t =
         current_any_typed_params := Id.Set.add id !current_any_typed_params
       | _ -> ()
     ) params;
-    let saved_ret_ty = !current_lambda_ret_ty in
-    current_lambda_ret_ty := ret_ty;
     let body_s = pp_list_stmt (pp_cpp_stmt env args) body in
-    current_lambda_ret_ty := saved_ret_ty;
     current_any_typed_params := saved_any_params;
     let params_s, capture =
       match params with
@@ -2220,27 +2208,7 @@ and pp_cpp_stmt env args = function
                  | CPPstruct_id _) as inner) -> inner
       | _ -> e
     in
-    (* An erased value returned bare from a lambda whose declared return type
-       is concrete needs the [any_cast] that a use site would otherwise have
-       supplied -- e.g. the identity consumer of an existential package,
-       [std::function<uint64_t(std::any)>([](const std::any& k) -> uint64_t
-       { return k; })], which does not compile without it.
-
-       Restricted to a bare [std::any]-typed *parameter* of the enclosing
-       lambda.  The broader test {!wrap_any_cast_if_needed} applies also
-       counts any-returning method calls, which misfires on loopified bodies:
-       their generated lambdas return accumulators and inlined callee results
-       that are already correctly typed, and casting those silently changes
-       the value (regression: tests/regression/loopify_variant_self_assign
-       and friends). *)
-    let printed = pp_cpp_expr env args e in
-    let printed =
-      match !current_lambda_ret_ty with
-      | Some ret_ty when expr_is_any_typed_param e ->
-        wrap_any_cast_if_needed e printed ret_ty []
-      | _ -> printed
-    in
-    str "return " ++ printed ++ str ";"
+    str "return " ++ pp_cpp_expr env args e ++ str ";"
   | Sdecl (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
   | Sasgn (id, Some ty, e) ->
