@@ -1520,6 +1520,15 @@ let with_escape_analysis body f =
   let saved_match_counter = tctx.match_param_counter in
   let saved_cs_counter = tctx.cs_counter in
   let saved_return_type = tctx.current_cpp_return_type in
+  (* A lambda body is not part of the constructor expression that encloses it.
+     Both flags make an unresolvable type variable erase to [std::any], which
+     is right for a constructor's own arguments and wrong for the body of a
+     lambda that merely happens to be one -- the lambda has its own binders
+     and its own slots. *)
+  let saved_in_ctor = tctx.in_constructor_expr in
+  let saved_in_ctor_arg = tctx.in_ctor_arg in
+  tctx.in_constructor_expr <- false;
+  tctx.in_ctor_arg <- false;
   tctx.current_letin_depth <- 0;
   tctx.move_dead_after <- Escape.IntSet.empty;
   tctx.move_owned_vars <- Escape.IntSet.empty;
@@ -1539,6 +1548,8 @@ let with_escape_analysis body f =
   tctx.match_param_counter <- saved_match_counter;
   tctx.cs_counter <- saved_cs_counter;
   tctx.current_cpp_return_type <- saved_return_type;
+  tctx.in_constructor_expr <- saved_in_ctor;
+  tctx.in_ctor_arg <- saved_in_ctor_arg;
   result
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
