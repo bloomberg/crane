@@ -506,9 +506,9 @@ let init_std_names () =
   std_names :=
     if Table.non_atomic_rc () then
       { base with
-        shared_ptr = "crane::rc";
-        make_shared = "crane::make_rc";
-        enable_from_this = "crane::enable_rc_from_this" }
+        shared_ptr = Crane_rt.rc;
+        make_shared = Crane_rt.make_rc;
+        enable_from_this = Crane_rt.enable_rc_from_this }
     else base
 
 (** Short accessor for current standard library names. *)

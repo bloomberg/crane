@@ -3214,7 +3214,7 @@ let build_cell_call ?token ~vt_ret cell =
      | Some tok ->
        (* T is deduced from the token's [rc<T>]; the cell value is built from
           the constructor struct exactly as [make_rc] would build it. *)
-       CPPfun_call (CPPraw "crane::make_rc_reusing_unchecked",
+       CPPfun_call (CPPraw Crane_rt.make_rc_reusing_unchecked,
                     [cell_expr; tok])   (* reversed: (token, cell) *)
      | None -> CPPfun_call (mk_shared_cell, [cell_expr]))
   | None ->
@@ -3407,7 +3407,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
       [ Sasgn (id_rstep, Some Tauto,
-               CPPfun_call (CPPraw "crane::reuse_step",
+               CPPfun_call (CPPraw Crane_rt.reuse_step,
                             [rec_field; CPPvar id_uniq; CPPvar id_own])) ]
     | None -> []
   in
@@ -6725,7 +6725,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
      comparison-heavy workload. *)
   Table.mark_needs_small_vector ();
   let vector_ty =
-    Tid_external (Id.of_string_soft "crane::small_vector", [frame_ty])
+    Tid_external (Id.of_string_soft Crane_rt.small_vector, [frame_ty])
   in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in

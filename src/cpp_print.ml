@@ -1844,13 +1844,13 @@ and pp_cpp_expr env args t =
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
   | CPPmk_reuse t ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
-    cpp_angle "crane::make_rc_reusing" (pp_cpp_type false [] t)
+    cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type false [] t)
   | CPParena_alloc t ->
     Table.mark_needs_arena ();
-    cpp_angle "crane::arena_alloc" (pp_cpp_type false [] t)
+    cpp_angle Crane_rt.arena_alloc (pp_cpp_type false [] t)
   | CPParena_shared_alloc t ->
     Table.mark_needs_arena ();
-    cpp_angle "crane::arena_shared_alloc" (pp_cpp_type false [] t)
+    cpp_angle Crane_rt.arena_shared_alloc (pp_cpp_type false [] t)
   | CPParena_make t ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
@@ -1859,14 +1859,14 @@ and pp_cpp_expr env args t =
     if Table.non_atomic_rc () then begin
       (* crane::rc<T>::make(...) -- rc.h transitively includes arena.h. *)
       require_header "memory";
-      cpp_angle "crane::rc" inner ++ str "::make"
+      cpp_angle Crane_rt.rc inner ++ str "::make"
     end
     else if Table.std_lib () = "BDE" then
       (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
       cpp_angle (sn ()).make_shared inner
     else begin
       Table.mark_needs_arena ();
-      cpp_angle "crane::arena_make_shared" inner
+      cpp_angle Crane_rt.arena_make_shared inner
     end
   | CPPoverloaded ls ->
     let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
@@ -1984,7 +1984,7 @@ and pp_cpp_expr env args t =
     (* [crane::rc] returns a mutable [rc<T>] from [rc_from_this()], so no
        const_pointer_cast is needed; [std::shared_ptr] needs the cast to strip
        the const that [shared_from_this()] adds in const methods. *)
-    if String.equal (sn ()).shared_ptr "crane::rc" then
+    if String.equal (sn ()).shared_ptr Crane_rt.rc then
       str "this->rc_from_this()"
     else
       str "std::const_pointer_cast<"
@@ -2145,13 +2145,13 @@ and pp_cpp_expr env args t =
        {!Cpp_erasure.resolve_casts}. *)
     let caster =
       match t with
-      | CPPany_cast_tolerant _ -> "crane_any_cast"
+      | CPPany_cast_tolerant _ -> Crane_rt.any_cast
       | _ -> (sn ()).any_cast
     in
     str caster ++ str "<" ++ pp_cpp_type false [] ty ++ str ">(" ++ inner
     ++ str ")"
   | CPPerase_fn (ret_ty, e) ->
-    str "crane_erase_fn"
+    str Crane_rt.erase_fn
     ++ ( match ret_ty with
        | None -> mt ()
        | Some ty -> str "<" ++ pp_cpp_type false [] ty ++ str ">" )

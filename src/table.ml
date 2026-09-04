@@ -1886,12 +1886,12 @@ let {Goptions.get = arena_enabled} =
    Translation/Gen_decls agree without a module cycle).  [Crane NonAtomicRc]
    selects the namespace-neutral [crane::rc]; otherwise the std/BDE flavor. *)
 let shared_ptr_name () =
-  if non_atomic_rc () then "crane::rc"
+  if non_atomic_rc () then Crane_rt.rc
   else if std_lib () = "BDE" then "bsl::shared_ptr"
   else "std::shared_ptr"
 
 let make_shared_name () =
-  if non_atomic_rc () then "crane::make_rc"
+  if non_atomic_rc () then Crane_rt.make_rc
   else if std_lib () = "BDE" then "bsl::make_shared"
   else "std::make_shared"
 

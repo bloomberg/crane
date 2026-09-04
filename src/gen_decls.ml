@@ -4622,7 +4622,7 @@ let gen_ind_header_v2
       let variant_member_ty =
         if is_coinductive then
           Tid
-            ( Id.of_string_soft "crane::lazy",
+            ( Id.of_string_soft Crane_rt.lazy_,
               [variant_alias_ty] )
         else
           variant_alias_ty
@@ -4649,7 +4649,7 @@ let gen_ind_header_v2
                     d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) *)
                  let init_expr =
                    CPPfun_call
-                     ( CPPvar (Id.of_string_soft ("crane::lazy<" ^ variant_alias_name ^ ">")),
+                     ( CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
                        [
                          CPPfun_call
                            ( CPPvar variant_alias_id,
@@ -5267,7 +5267,7 @@ let gen_ind_header_v2
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
                 Tid
-                  ( Id.of_string_soft "crane::small_vector",
+                  ( Id.of_string_soft Crane_rt.small_vector,
                     [Tshared_ptr (verbatim_ml g_ty)] )
               in
               let push fe =
@@ -5460,7 +5460,7 @@ let gen_ind_header_v2
             let stack_elem_ty = Tshared_ptr self_ty in
             let stack_ty =
               Table.mark_needs_small_vector ();
-              Tid_external (Id.of_string_soft "crane::small_vector", [stack_elem_ty])
+              Tid_external (Id.of_string_soft Crane_rt.small_vector, [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
@@ -5507,7 +5507,7 @@ let gen_ind_header_v2
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
               Table.mark_needs_small_vector ();
-              Tid_external (Id.of_string_soft "crane::small_vector", [Tany])
+              Tid_external (Id.of_string_soft Crane_rt.small_vector, [Tany])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
@@ -5605,7 +5605,7 @@ let gen_ind_header_v2
           let param_ty = Tfun ([], variant_alias_ty) in
           let init_expr =
             CPPfun_call
-              ( CPPvar (Id.of_string_soft ("crane::lazy<" ^ variant_alias_name ^ ">")),
+              ( CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
                 [CPPmove (CPPvar param_name)] )
           in
           let init_list = [(vmn_id, init_expr)] in
