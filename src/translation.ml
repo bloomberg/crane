@@ -2353,25 +2353,6 @@ let rec clean_self_ns t =
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
-(** [with_deep_erasure cond f] runs [f] with {!wrap_for_any_param} set when
-    [cond] holds, and restores it afterwards.
-
-    A value flowing into a slot that is really [std::any] has to be built at
-    the canonical erased shape, so that every producer of the same Coq type
-    agrees with the [any_cast] that reads it back -- a "cons" production
-    keeping [deque<Prod<Nat, Nat>>] where the matching "nil" erased to
-    [deque<Prod<any, any>>] is what [std::bad_any_cast] at the consumer looks
-    like.  The flag says so for the duration of one subtree, and restoring it
-    on the exceptional path as well keeps a translation error in one argument
-    from silently deep-erasing everything generated after it. *)
-let with_deep_erasure cond f =
-  if not cond then f ()
-  else begin
-    let saved = tctx.wrap_for_any_param in
-    tctx.wrap_for_any_param <- true;
-    Fun.protect ~finally:(fun () -> tctx.wrap_for_any_param <- saved) f
-  end
-
 (** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
     inserted around it.  Used to recover a type argument left [Tunknown] by
@@ -3195,7 +3176,8 @@ and build_template_params env tvars tys =
     @param ts  ML expression arguments (converted to C++ recursively)
     @return C++ expression applying custom syntax with type/value arguments *)
 
-and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
+and gen_expr_custom_cons ?expected_ty ?(deep_erase = false) env (ty : ml_type)
+    r ts =
   (* Extraction leaves a type argument [Tunknown] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
@@ -3211,7 +3193,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
     match ty with
     | Miniml.Tglob (n, tys, sc)
       when List.exists (fun t -> t = Miniml.Tunknown) tys
-           && (not tctx.wrap_for_any_param)
+           && (not deep_erase)
            (* Nor when the destination is (or contains) [std::any]: there the
               erased shape is the canonical one every producer has to agree
               on, and grounding this one is what makes the consumer's fixed
@@ -3327,8 +3309,8 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
     match e with
     | MLdummy _ -> CPPconverting_ctor (Tany, [])
     | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
-      wrap_void_call_as_value (gen_expr env e)
-    | _ -> gen_expr ?expected_ty env e
+      wrap_void_call_as_value (gen_expr ~deep_erase env e)
+    | _ -> gen_expr ?expected_ty ~deep_erase env e
   in
   (* Generate args with expected type hints: set expected_ml_type_for_arg to
      the i-th type arg of the constructor's inductive type before generating
@@ -3508,7 +3490,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
                so at runtime it is invoked with its argument boxed as a single
                [std::any] holding the fully-erased representation
                ([pair<any,any>] for a pair domain) — that is what producers of
-               a value-dependent type emit (see {!with_deep_erasure}).  Its
+               a value-dependent type emit (see [deep_erase]).  Its
                parameter's own pattern match must therefore treat the scrutinee
                as erased and go through [any_cast<pair<any,any>>]. *)
             let param_cpp_ty = cpp_of_ml env ty in
@@ -3586,7 +3568,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
       let into =
         match field_slot with
         | Some _ as slot -> slot
-        | None when tctx.wrap_for_any_param ->
+        | None when deep_erase ->
           (* This constructor names a concrete type for the field, so there is
              no erased slot to box into: the custom C++ form consumes the
              argument at that type.  [Ascii] is the clearest case -- its eight
@@ -3742,7 +3724,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
          to bare [std::any] would produce two incompatible container shapes
          for the same runtime list, causing an [any_cast] mismatch at the
          consumer.  Collapse to bare [std::any] whenever the container is
-         hollow, regardless of [wrap_for_any_param], so nil/cons always
+         hollow, regardless of [deep_erase], so nil/cons always
          agree on representation. *)
       let is_custom_list =
         match r with
@@ -3775,7 +3757,7 @@ and gen_expr_custom_cons ?expected_ty env (ty : ml_type) r ts =
       let temps =
         if hollow_container && temps <> [] then
           List.map (fun _ -> Tany) temps
-        else if tctx.wrap_for_any_param && temps <> [] then
+        else if deep_erase && temps <> [] then
           (* Canonical erased shape for a list is [deque<std::any>] -- a bare
              [std::any] per element, not a structure-preserving
              [deque<pair<any,any>>].  A sibling production for the same Coq
@@ -4096,7 +4078,7 @@ and wrap_crane_erase_fn ?ret_ty expr =
     runtime and recovered by consumers with a fixed [any_cast] shape.  To keep
     that shape consistent across every producer of the same Coq type (e.g. the
     "cons" and "nil" productions of a value-dependent [list (nat*nat)] action),
-    the function body must be generated with [wrap_for_any_param] so its
+    the function body must be generated with [deep_erase] so its
     list/pair/record producers deep-erase to the canonical erased C++ form.
     Without this, a "cons" production built from concrete values would keep a
     concrete element type (e.g. [deque<Prod<Nat,Nat>>]) while the matching
@@ -4304,8 +4286,24 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
 
 (** Generate C++ expression from ML AST. Main expression compiler - handles
     lambdas, applications, constructors, pattern matching, etc. Monadic
-    non-function globals are wrapped in CPPfun_call by the MLglob case below. *)
-and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
+    non-function globals are wrapped in CPPfun_call by the MLglob case below.
+
+    [deep_erase] says that [ml_e] flows into a slot that is really
+    [std::any], so any constructor it builds has to use the canonical erased
+    shape: every producer of the same Coq type must agree with the fixed
+    [any_cast] that reads it back.  A "cons" production keeping
+    [deque<Prod<Nat, Nat>>] where the matching "nil" erased to
+    [deque<Prod<any, any>>] is what [std::bad_any_cast] at the consumer looks
+    like.
+
+    Only constructors read it, but the slot is a property of the whole
+    subterm, so it is carried down every position whose value ends up in that
+    slot -- an argument, a coercion's operand, a branch result, a tail
+    expression, the body of a lambda that is itself the stored value.  A
+    position that opens a new slot (a let-bound right-hand side, a
+    non-tail statement) does not take it. *)
+and gen_expr ?(expected_ty : cpp_type option) ?(deep_erase = false) env
+    (ml_e : ml_ast) : cpp_expr =
   match ml_e with
   | MLrel i ->
     let var_expr =
@@ -4381,7 +4379,8 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | _ -> result
     end
     else result
-  | MLapp (MLmagic (_, t), args) -> gen_expr ?expected_ty env (MLapp (t, args))
+  | MLapp (MLmagic (_, t), args) ->
+    gen_expr ?expected_ty ~deep_erase env (MLapp (t, args))
   | MLapp (((MLdummy _ | MLexn _) as absurd), _) ->
     (* Applying an absurd head — the eliminator of a branch that the indices
        rule out.  The application is itself unreachable, so emit the throw
@@ -4442,7 +4441,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
        extracts as MLapp(MLapp(MLglob(dcs), [x,f1,f2]), [l]). Flattening to
        MLapp(MLglob(dcs), [x,f1,f2,l]) lets eta_fun see the complete argument
        list and generate a direct call. *)
-    eta_fun env g (inner_args @ outer_args)
+    eta_fun ~deep_erase env g (inner_args @ outer_args)
   | MLapp (MLglob (r, _), [arg]) when Table.is_numeral_converter r ->
     (* Fold Number.uint/signed_int digit chain into a direct integer literal.
        Tries unsigned (of_num_uint) then signed (of_num_int).
@@ -4476,9 +4475,9 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | MLapp (f, inner_args) -> MLapp (f, inner_args @ lifted_outer)
       | _ -> MLapp (body, lifted_outer)
     in
-    gen_expr env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
+    gen_expr ~deep_erase env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
   | MLapp (f, args) ->
-    let result = eta_fun env f args in
+    let result = eta_fun ~deep_erase env f args in
     (* A callee whose result is only pinned down by a type index hands back a
        [std::any] (see {!result_is_index_only_tvar}); recover it at the type
        this position expects. *)
@@ -4641,7 +4640,11 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            applications with an MLmagic (_, barrier)). If so, convert the returned
            lambda to capture by value to avoid dangling references to the outer
            lambda's parameters. *)
-        let body_stmts = gen_stmts env (fun x -> Sreturn (Some x)) a in
+        (* A lambda stored into an erased slot IS the value in that slot, so
+           what it returns is erased too and its body inherits [deep_erase]. *)
+        let body_stmts =
+          gen_stmts ~deep_erase env (fun x -> Sreturn (Some x)) a
+        in
         tctx.expected_ml_type_for_arg <- saved_expected_lam;
         let body_stmts =
           List.fold_left
@@ -5156,10 +5159,10 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
         in
         ( match z_folded with
         | Some e -> e
-        | None -> gen_expr_custom_cons ?expected_ty env _ty r _ts ) )
-    | None -> gen_expr_custom_cons ?expected_ty env _ty r _ts )
+        | None -> gen_expr_custom_cons ?expected_ty ~deep_erase env _ty r _ts ) )
+    | None -> gen_expr_custom_cons ?expected_ty ~deep_erase env _ty r _ts )
   | MLcons (ty, r, ts) when is_custom r ->
-    gen_expr_custom_cons ?expected_ty env ty r ts
+    gen_expr_custom_cons ?expected_ty ~deep_erase env ty r ts
   | MLcons (ty, r, ts)
     when ts = []
          &&
@@ -5183,12 +5186,15 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
        whose return type is value-dependent -- must use the canonical erased
        shape: a consumer of such a slot recovers it with a fixed [any_cast]
        and cannot know the concrete type arguments.  That is the same
-       requirement [wrap_for_any_param] expresses for a value flowing into an
+       requirement [deep_erase] expresses for a value flowing into an
        erased field or parameter. *)
-    let saved_wrap_cons = tctx.wrap_for_any_param in
-    ( match tctx.current_cpp_return_type with
-    | Some t when resolves_to_any_type t -> tctx.wrap_for_any_param <- true
-    | _ -> () );
+    let deep_erase =
+      deep_erase
+      ||
+      match tctx.current_cpp_return_type with
+      | Some t -> resolves_to_any_type t
+      | None -> false
+    in
     (* Setting [in_constructor_expr] makes unresolvable promoted vars (those
        NOT in [promoted_var_map]) fall back to [Tany] = [std::any].
 
@@ -5489,7 +5495,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               temps
           in
           (* When this constructor value flows into an erased ([std::any]) slot
-             ([wrap_for_any_param]) — e.g. a [Prod] pair built inside a
+             ([deep_erase]) — e.g. a [Prod] pair built inside a
              value-dependent action whose result is boxed into [std::any] —
              erase its type arguments so a "cons" production's element type
              (e.g. [Prod<Nat,Nat>]) matches the canonical erased form the
@@ -5499,7 +5505,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
              element erasure in the custom-cons path, extending it to plain
              value-type constructors. *)
           let temps =
-            if tctx.wrap_for_any_param && temps <> [] then
+            if deep_erase && temps <> [] then
               List.map index_erase_type temps
             else temps
           in
@@ -5551,12 +5557,12 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
          only marks variables that occur exactly once in the entire tail
          expression (nb_occur_match = 1), so a variable appearing in multiple
          constructor args is NOT in move_dead_after and cannot be moved twice. *)
-      let gen_ctor_arg ?expected_ty e =
-        match e with
+      let gen_ctor_arg ?expected_ty ?(deep_erase = deep_erase) e =
+      match e with
         | MLdummy _ -> CPPconverting_ctor (Tany, [])
         | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
-          wrap_void_call_as_value (gen_expr env e)
-        | _ -> gen_expr ?expected_ty env e
+          wrap_void_call_as_value (gen_expr ~deep_erase env e)
+        | _ -> gen_expr ?expected_ty ~deep_erase env e
       in
       (* When a constructor's field type is a type variable (Tvar i) that
          resolves to an owning pointer type (because T is in method_self_ns),
@@ -5751,7 +5757,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                 CPPconverting_ctor (func_ty, [new_lambda])
               | _ ->
                 (* When a custom list literal (e.g. deque<Val>) is stored in a
-                   std::any field, regenerate it with wrap_for_any_param=true so
+                   std::any field, regenerate it with [deep_erase] so
                    elements are erased to std::any.  The stored value becomes
                    deque<any>, matching what any_cast<deque<any>> expects when
                    consuming through the erased field. *)
@@ -5763,7 +5769,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                   | _ -> false
                 in
                 if is_custom_list_cons ml_e then begin
-                  with_deep_erasure true (fun () -> gen_ctor_arg ml_e)
+                  gen_ctor_arg ~deep_erase:true ml_e
                 end else begin
                   (* A non-lambda FUNCTION value (e.g. a forwarded callback
                      parameter [f]) stored into an erased field must be wrapped
@@ -6167,21 +6173,16 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
            concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
            a different C++ type for the same Coq type, causing
            [std::bad_any_cast] at the consumer.  Generate the body with
-           [wrap_for_any_param] so cons productions deep-erase their element
+           [deep_erase] so cons productions deep-erase their element
            type to match nil.  See the mirror in the record-constructor path. *)
         let expr =
-          with_deep_erasure
-            ( field_stores_erased_fn_value
-                ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
-                field_types i e
-            (* A field whose instantiated type is a structure with [std::any]
-               inside it ([pair<any, any>]) holds the canonical erased shape,
-               so the value built into it has to be erased to match, however
-               concrete its own annotation.  A field that is *itself*
-               [std::any] is not such a case: it boxes whatever it is given,
-               and erasing further only loses the payload's type. *)
-            || false )
-            (fun () -> gen_ctor_arg ?expected_ty:expected_for_arg e)
+          gen_ctor_arg
+            ~deep_erase:
+              ( deep_erase
+              || field_stores_erased_fn_value
+                   ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+                   field_types i e )
+            ?expected_ty:expected_for_arg e
         in
         tctx.current_cpp_return_type <- saved_ret;
         let expr =
@@ -6268,11 +6269,13 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             (fun i e ->
               match e with
               | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
-                wrap_void_call_as_value (gen_expr env e)
+                wrap_void_call_as_value (gen_expr ~deep_erase env e)
               | _ ->
-                with_deep_erasure
-                  (field_stores_erased_fn_value field_types_rec i e)
-                  (fun () -> gen_expr ?expected_ty:(expected_for_field i e) env e))
+                gen_expr
+                  ~deep_erase:
+                    ( deep_erase
+                    || field_stores_erased_fn_value field_types_rec i e )
+                  ?expected_ty:(expected_for_field i e) env e)
             ts
         in
         tctx.in_ctor_arg <- saved_in_ctor_arg;
@@ -6309,7 +6312,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     in
     tctx.promoted_var_map <- saved_promoted_cons;
     tctx.in_constructor_expr <- saved_in_ctor_cons;
-    tctx.wrap_for_any_param <- saved_wrap_cons;
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let iife_ret =
@@ -6506,7 +6508,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
             List.rev
               (List.mapi
                  (fun j a ->
-                   let e = gen_expr env' a in
+                   let e = gen_expr ~deep_erase env' a in
                    match List.nth_opt fld_param_tys j with
                    | Some pt -> erase_fn_arg_for_param env' pt a e
                    | None -> e )
@@ -6615,7 +6617,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
               None,
               asgns
               @ with_iife_return_type expected_ty (fun () ->
-                    gen_stmts env' (fun x -> Sreturn (Some x)) body),
+                    gen_stmts ~deep_erase env' (fun x -> Sreturn (Some x)) body),
               false ),
           [] ) )
     (* Known limitation: simultaneous pattern matching on record fields is not
@@ -6649,7 +6651,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
        consumer recovers it with a fixed [any_cast] and cannot know the
        concrete component types.  Extraction recorded both sides of this
        boundary, so ask for that shape whenever [into] is the erased one and
-       [from] is not.  See {!with_deep_erasure}. *)
+       [from] is not.  See [deep_erase] on {!gen_expr}. *)
     let into_is_erased_only =
       match m with
       | Mcoerce (from, into) ->
@@ -6658,7 +6660,7 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
       | Mboxed | Mbarrier -> false
     in
     let inner =
-      with_deep_erasure into_is_erased_only (fun () -> gen_expr env t)
+      gen_expr ~deep_erase:(deep_erase || into_is_erased_only) env t
     in
     (* What extraction recorded about the term's own side of the boundary.
        Not materialised: this is an inferred type, so a [Topaque] here stays
@@ -6805,7 +6807,8 @@ and curry_to_expected env ?expected_ty x cglob =
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
-and eta_fun env f args =
+and eta_fun ?(deep_erase = false) env f args =
+
   let rec get_eta_args dom args =
     match (dom, args) with
     | _ :: dom, _ :: args -> get_eta_args dom args
@@ -7242,7 +7245,7 @@ and eta_fun env f args =
       in
       let saved_ret_for_arg = tctx.current_cpp_return_type in
       if param_resolves_to_any then tctx.current_cpp_return_type <- Some Tany;
-      let expr = gen_expr ?expected_ty:arg_expected_ty env ml_arg in
+      let expr = gen_expr ?expected_ty:arg_expected_ty ~deep_erase env ml_arg in
       if param_resolves_to_any then tctx.current_cpp_return_type <- saved_ret_for_arg;
       tctx.expected_ml_type_for_arg <- saved_expected_for_arg;
       (* Annotate the outer lambda with the explicit return type computed
@@ -7773,7 +7776,7 @@ and eta_fun env f args =
           | None -> false
         in
         if ret_is_chainable then
-          let excess = List.map (gen_expr env) excess_args in
+          let excess = List.map (gen_expr ~deep_erase env) excess_args in
           if cod_is_erased then apply_erased_callee base excess
           else CPPfun_call (base, List.rev excess)
         else
@@ -8163,17 +8166,18 @@ and eta_fun env f args =
        direct call, so the concrete parameter types can be recovered via
        [std::function] CTAD once C++ instantiates the template. *)
     let has_unresolved_boxed_arg = ref false in
-    let args = with_deep_erasure callee_has_erased_params (fun () ->
+    let arg_deep_erase = deep_erase || callee_has_erased_params in
+    let args =
       List.mapi (fun i x ->
       let expr =
         match x with
         | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
-          wrap_void_call_as_value (gen_expr env x)
+          wrap_void_call_as_value (gen_expr ~deep_erase:arg_deep_erase env x)
         | MLmagic (_, _) ->
           let expected = param_expected_cpp_ty env callee_param_tys i in
-          gen_expr ?expected_ty:expected env x
+          gen_expr ?expected_ty:expected ~deep_erase:arg_deep_erase env x
         | MLrel j when binder_is_boxed j ->
-          let inner = gen_expr env x in
+          let inner = gen_expr ~deep_erase:arg_deep_erase env x in
           let expected = param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
             | Some ty ->
@@ -8181,11 +8185,11 @@ and eta_fun env f args =
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
-        | _ -> gen_expr env x
+        | _ -> gen_expr ~deep_erase:arg_deep_erase env x
       in
       match List.nth_opt callee_param_tys i with
       | Some param_ty -> erase_fn_arg_for_param env param_ty x expr
-      | None -> expr) args)
+      | None -> expr) args
     in
     (* Detect over-application: when a local variable's C++ type has fewer
        value-domain arrows than the number of ML args, the call must be split
@@ -10518,7 +10522,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations. *)
-and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
+and gen_stmts ?(deep_erase = false) env (k : cpp_expr -> cpp_stmt) ast =
   match ast with
   | MLletin (_, _, MLfix (x, ids, funs, _), b) as _whole ->
     (* Special case for let-fix: the let binding name is the fix function name *)
@@ -10660,7 +10664,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let lifted_call = mk_cppglob lifted_ref call_type_args in
       (* Phase 2: shift move tracking for the single let binding *)
       let result =
-        with_shifted_move_tracking 1 (fun () -> gen_stmts env_with_fix k b)
+        with_shifted_move_tracking 1 (fun () -> gen_stmts ~deep_erase env_with_fix k b)
       in
       List.map (local_var_subst_stmt fix_name lifted_call) result )
     else
@@ -10739,7 +10743,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          Remove captured variables from owned set to prevent moves. *)
       let cont =
         with_shifted_move_tracking 1 ~exclude_owned_set:captured_shifted
-          (fun () -> gen_stmts env_with_fix k b)
+          (fun () -> gen_stmts ~deep_erase env_with_fix k b)
       in
       (* Check if any fixpoint variable escapes in the continuation.
          If so, use shared_ptr + [=] to prevent dangling references.
@@ -10860,7 +10864,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       let x_renamed = fst (List.hd renamed_ids) in
       if x == Dummy then (
         push_binders env [(x_renamed, t)];
-        gen_stmts env' k b )
+        gen_stmts ~deep_erase env' k b )
       else if tctx.itree_mode = Reified && is_monadic_ml_type t then begin
         (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
            the variable has type [shared_ptr<ITree<R>>]. *)
@@ -10877,7 +10881,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           CPPlambda ([], Some reified_ty, body_stmts, false), []) in
         (* Shift owned vars and dead-after for the continuation *)
         let cont =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+          with_shifted_move_tracking 1 (fun () -> gen_stmts ~deep_erase env' k b)
         in
         (* Generate the assignment with reified type *)
         [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
@@ -10895,7 +10899,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
            The body [b] has one more de Bruijn binder, so all indices must
            be shifted +1. *)
         let gen_cont () =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+          with_shifted_move_tracking 1 (fun () -> gen_stmts ~deep_erase env' k b)
         in
         match asgn with
         | [Sasgn (_, None, e)] ->
@@ -10957,7 +10961,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           | t -> ast_map beta_normalize t
         in
         let b' = beta_normalize b' in
-        gen_stmts env k b'
+        gen_stmts ~deep_erase env k b'
       else
         (* 2. Build tvar names: outer tvars keep their names, extra tvars get
            fresh names *)
@@ -11193,7 +11197,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         push_binders env [(x_lifted, t)];
         (* Phase 2: shift move tracking for lifted lambda binding *)
         let cont =
-          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+          with_shifted_move_tracking 1 (fun () -> gen_stmts ~deep_erase env' k b)
         in
         (* Build the free variable argument expressions *)
         let free_var_cpps =
@@ -11209,7 +11213,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     if x == Dummy then (
       push_binders env [(x_renamed, t)];
       with_shifted_move_tracking 1 (fun () ->
-        gen_stmts env' k b) )
+        gen_stmts ~deep_erase env' k b) )
     else if ml_type_is_unit t then (
       (* Unit-typed let bindings: the RHS may call a void-ified function,
          so we can't assign its result to a variable.  Execute the RHS for
@@ -11228,7 +11232,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          generated C++ (not just the ML AST, since optimizations like
          unit-match elimination may drop references). *)
       let body =
-        with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+        with_shifted_move_tracking 1 (fun () -> gen_stmts ~deep_erase env' k b)
       in
       let decl =
         if stmts_reference_var x_renamed body then
@@ -11511,13 +11515,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
             begin match extract_block_template e with
             | Some (ref, tmpl, args, tys) ->
               Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
-              :: gen_stmts env' k b
+              :: gen_stmts ~deep_erase env' k b
             | None ->
-              Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts env' k b
+              Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts ~deep_erase env' k b
             end
           | _ ->
             let cpp_ty = cpp_of_ml env t in
-            (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts env' k b
+            (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts ~deep_erase env' k b
       in
       tctx.move_owned_vars <- saved_owned;
       result
@@ -11769,7 +11773,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
     (* Reified mode: bind is a real function call, not desugared. *)
     if tctx.itree_mode = Reified then
       let saved_dead = tctx.move_dead_after in
-      let e = gen_tail_expr env ast in
+      let e = gen_tail_expr ~deep_erase env ast in
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result
@@ -11830,7 +11834,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         (* Generate the continuation first, then check if the variable is
            actually referenced in the generated C++ (unit-match elimination
            and Ret-in-void optimization may drop ML-level references). *)
-        let body = gen_stmts env k f in
+        let body = gen_stmts ~deep_erase env k f in
         let cpp_ty = cpp_of_ml env ml_ty in
         let decl =
           if not (stmts_reference_var x body) then []
@@ -11846,9 +11850,9 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         match extract_block_template a with
         | Some (ref, tmpl, args, tys) ->
           Sblock_custom (ref, tmpl, x, ty, args, tys)
-          :: gen_stmts env k f
+          :: gen_stmts ~deep_erase env k f
         | None ->
-          Sasgn (x, Some ty, a) :: gen_stmts env k f
+          Sasgn (x, Some ty, a) :: gen_stmts ~deep_erase env k f
       end
     | _ ->
       (* No lambda parameters (eta-reduced continuation like bare Ret).
@@ -11887,13 +11891,13 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           let app = CPPfun_call (f_expr, [CPPvar temp_id]) in
           [Sasgn (temp_id, Some cpp_ty, a); k app]
         | None ->
-          side_effect @ gen_stmts env k f ) ) )
+          side_effect @ gen_stmts ~deep_erase env k f ) ) )
     end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
     if tctx.itree_mode = Reified then begin
       (* Reified mode: Ret is a constructor call, not desugared. *)
       let saved_dead = tctx.move_dead_after in
-      let e = gen_tail_expr env ast in
+      let e = gen_tail_expr ~deep_erase env ast in
       let result = inline_iife k e in
       tctx.move_dead_after <- saved_dead;
       result
@@ -12058,7 +12062,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         |> retype_dependent_params typ
       in
       push_binders env env_ids;
-      asgns @ gen_stmts env' k body
+      asgns @ gen_stmts ~deep_erase env' k body
   | t ->
     (* Tail position: generate expression with dead-after tracking.
        No deref_reified needed: in sequential mode, monadic variables are
@@ -12090,7 +12094,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
+      let e = gen_tail_expr ~deep_erase ?expected_ty:tctx.current_cpp_return_type env t in
       tctx.move_dead_after <- saved_dead;
       if tctx.current_cpp_return_type = Some Tvoid then
         [Sexpr e; Sreturn None]
@@ -12108,7 +12112,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
       (* Whether this continuation is the function's result rather than a
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
-      let e = gen_tail_expr ?expected_ty:tctx.current_cpp_return_type env t in
+      let e = gen_tail_expr ~deep_erase ?expected_ty:tctx.current_cpp_return_type env t in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its ML type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
@@ -12131,7 +12135,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
 
     Used by the default tail case and by reified-mode bind/ret handlers
     (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
-and gen_tail_expr ?expected_ty env t =
+and gen_tail_expr ?expected_ty ?(deep_erase = false) env t =
   ( if not tctx.move_suppress_tail then
       let tail_dead =
         Escape.IntSet.filter
@@ -12140,7 +12144,7 @@ and gen_tail_expr ?expected_ty env t =
       in
       tctx.move_dead_after <-
         Escape.IntSet.union tctx.move_dead_after tail_dead );
-  gen_expr ?expected_ty env t
+  gen_expr ?expected_ty ~deep_erase env t
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
     mutually recursive functions. [all_fix_ids] contains names of all mutual

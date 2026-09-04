@@ -104,8 +104,15 @@ val restore_erased_env : binder_env -> unit
     [of_num_uint]/[Uint] machinery. *)
 val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
 
-(** Generate a C++ expression from an ML AST. *)
-val gen_expr : ?expected_ty:cpp_type -> env -> ml_ast -> cpp_expr
+(** Generate a C++ expression from an ML AST.
+
+    [deep_erase] says the expression flows into a slot that is really
+    [std::any], so a constructor it builds must use the canonical erased
+    shape every other producer of the same Coq type agrees on.  Internal to
+    the generator, which carries it down every position whose value reaches
+    that slot; callers outside translation have no erased slot to describe. *)
+val gen_expr :
+  ?expected_ty:cpp_type -> ?deep_erase:bool -> env -> ml_ast -> cpp_expr
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
@@ -117,13 +124,18 @@ val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
 
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the
     final expression into a statement (e.g., return, assignment). Handles
-    let-bindings, pattern matching, fix expressions, and monadic operations. *)
-val gen_stmts : env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
+    let-bindings, pattern matching, fix expressions, and monadic operations.
+
+    [deep_erase] is {!gen_expr}'s, carried into the tail positions of these
+    statements. *)
+val gen_stmts :
+  ?deep_erase:bool -> env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
 
 (** Try eta-expanding/applying [f] to [args] when a call is under-applied or
     involves a type-erased higher-order callback. Falls back to a plain
     application. *)
-val eta_fun : env -> ml_ast -> ml_ast list -> cpp_expr
+val eta_fun : ?deep_erase:bool -> env -> ml_ast -> ml_ast list -> cpp_expr
+(** [deep_erase] is {!gen_expr}'s, carried into the argument expressions. *)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
     in the ML AST and should be ignored by numeral-folding traversals. *)

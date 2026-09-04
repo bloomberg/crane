@@ -134,12 +134,6 @@ type translation_ctx = {
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
      Reset per-file via clear_seen_lifted_refs. *)
   mutable seen_lifted_refs : GlobRef.t list;
-  (** When true, constructor expressions wrap each non-recursive field in
-      [std::any] and force template args to [Tany].  Active while generating
-      arguments for a call whose parameter type is erased to [std::any],
-      so the constructed value's runtime type matches what the erased
-      function body expects from [any_cast]. *)
-  mutable wrap_for_any_param : bool;
   (** The C++ type each pattern variable actually has, by de Bruijn index --
       the constructor field's definition-site type as the scrutinee
       instantiates it.  Matching [SigT<Tag, std::function<any(any)>>] records
@@ -196,7 +190,6 @@ let tctx =
     method_self_ns = Refset'.empty;
     expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
-    wrap_for_any_param = false;
     cpp_binder_types = IntMap.empty;
     cpp_binder_types_all = IntMap.empty;
   }
