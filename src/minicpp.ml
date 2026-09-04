@@ -356,7 +356,6 @@ and cpp_expr =
   | CPPnullptr (* nullptr *)
   | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
   | CPPstd_get of cpp_type * Id.t option * cpp_expr option
-  | CPPstd_get_idx of int * cpp_expr
     (* std::get<T>(expr), std::get<typename T::Ctor>(expr), or bare *)
   | CPPstd_holds_alternative of cpp_type * Id.t option
     (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
@@ -666,7 +665,6 @@ let map_expr
   | CPPnullptr -> e
   | CPPbraced args -> CPPbraced (List.map fe args)
   | CPPstd_get (ty, ctor, e_opt) -> CPPstd_get (ft ty, ctor, Option.map fe e_opt)
-  | CPPstd_get_idx (n, e') -> CPPstd_get_idx (n, fe e')
   | CPPstd_holds_alternative (ty, ctor) -> CPPstd_holds_alternative (ft ty, ctor)
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
@@ -774,7 +772,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
-  | CPPunop (_, e') | CPPstd_get_if (_, _, e') | CPPstd_get_idx (_, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -854,7 +852,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
-  | CPPunop (_, e') | CPPstd_get_if (_, _, e') | CPPstd_get_idx (_, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->

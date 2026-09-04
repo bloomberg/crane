@@ -9253,7 +9253,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           Ml_type_util.cpp_ty_eq scrut_cpp_ty
             (cpp_of_ml env rty)
         in
-        let try_cand (branch_idx, _mc, _ar, tail_ctor, _ta) =
+        let try_cand (branch_idx, matched_ctor, _ar, tail_ctor, _ta) =
           if not (branch_rebuilds_scrut_ty branch_idx) then None
           else
           let ids, _rty, _pat, body = pv.(branch_idx) in
@@ -9297,8 +9297,16 @@ and gen_cpp_case (typ : ml_type) t env pv =
                 CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])
               else CPPfun_call (CPPmember (scrut_expr, Id.of_string "v_mut"), [])
             in
+            (* Name the alternative rather than number it: the branch index
+               and the variant position coincide, but [std::get<typename
+               T::Ctor>] says which constructor is being reused. *)
+            let matched_alt =
+              Id.of_string_soft (ctor_struct_name_of_ref matched_ctor)
+            in
             let rf i =
-              CPPmember (CPPstd_get_idx (branch_idx, scrut_vmut), field_param_id i)
+              CPPmember
+                ( CPPstd_get (scrut_cpp_ty, Some matched_alt, Some scrut_vmut),
+                  field_param_id i )
             in
             let token_expr = ref None in
             let extract =

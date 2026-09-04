@@ -353,9 +353,6 @@ and cpp_expr =
   | CPPbraced of cpp_expr list  (** Braced initializer: {a, b, ...} *)
   | CPPstd_get of cpp_type * Id.t option * cpp_expr option
       (** [std::get<T>(expr)] or [std::get<typename T::Ctor>(expr)] *)
-  | CPPstd_get_idx of int * cpp_expr
-      (** [std::get<N>(e)] -- selecting an alternative by position rather than
-          by name, so there is no type to spell. *)
   | CPPstd_holds_alternative of cpp_type * Id.t option
       (** [std::holds_alternative<T>(...)] or
           [std::holds_alternative<typename T::Ctor>(...)] *)

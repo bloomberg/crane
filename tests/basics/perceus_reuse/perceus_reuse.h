@@ -100,11 +100,12 @@ struct R {
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static lst map1(F0 &&f, lst l) {
     if (l.v().index() == 1) {
-      if (std::get<1>(l.v_mut()).a1.use_count() == 1) {
-        uint64_t x = std::move(std::get<1>(l.v_mut()).a0);
-        lst xs = std::move(*std::get<1>(l.v_mut()).a1);
-        return lst::cons__reuse(std::move(std::get<1>(l.v_mut()).a1), f(x),
-                                map1(f, std::move(xs)));
+      if (std::get<typename lst::Cons>(l.v_mut()).a1.use_count() == 1) {
+        uint64_t x = std::move(std::get<typename lst::Cons>(l.v_mut()).a0);
+        lst xs = std::move(*std::get<typename lst::Cons>(l.v_mut()).a1);
+        return lst::cons__reuse(
+            std::move(std::get<typename lst::Cons>(l.v_mut()).a1), f(x),
+            map1(f, std::move(xs)));
       } else {
         if (std::holds_alternative<typename lst::Nil>(l.v_mut())) {
           return lst::nil();
