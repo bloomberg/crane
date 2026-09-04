@@ -41,37 +41,13 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              if (a.type() == typeid(A))
-                return std::any_cast<A>(a);
-              if constexpr (requires {
-                              typename A::first_type;
-                              typename A::second_type;
-                            }) {
-                const auto &[_k, _v] =
-                    std::any_cast<std::pair<std::any, std::any>>(a);
-                return A{[&]() -> typename A::first_type {
-                           if constexpr (std::is_same_v<typename A::first_type,
-                                                        std::any>)
-                             return _k;
-                           else
-                             return std::any_cast<typename A::first_type>(_k);
-                         }(),
-                         [&]() -> typename A::second_type {
-                           if constexpr (std::is_same_v<typename A::second_type,
-                                                        std::any>)
-                             return _v;
-                           else
-                             return std::any_cast<typename A::second_type>(_v);
-                         }()};
-              }
-              return std::any_cast<A>(a);
-            } else
-              return A(a);
-          }(),
-          l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{[&]() -> A {
+                        if constexpr (std::is_same_v<_U, std::any>)
+                          return crane_any_cast<A>(a);
+                        else
+                          return A(a);
+                      }(),
+                      l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 
@@ -166,38 +142,13 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
-        this->v_ = Ccons{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                if (a0.type() == typeid(A))
-                  return std::any_cast<A>(a0);
-                if constexpr (requires {
-                                typename A::first_type;
-                                typename A::second_type;
-                              }) {
-                  const auto &[_k, _v] =
-                      std::any_cast<std::pair<std::any, std::any>>(a0);
-                  return A{
-                      [&]() -> typename A::first_type {
-                        if constexpr (std::is_same_v<typename A::first_type,
-                                                     std::any>)
-                          return _k;
-                        else
-                          return std::any_cast<typename A::first_type>(_k);
-                      }(),
-                      [&]() -> typename A::second_type {
-                        if constexpr (std::is_same_v<typename A::second_type,
-                                                     std::any>)
-                          return _v;
-                        else
-                          return std::any_cast<typename A::second_type>(_v);
-                      }()};
-                }
-                return std::any_cast<A>(a0);
-              } else
-                return A(a0);
-            }(),
-            a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr};
+        this->v_ = Ccons{[&]() -> A {
+                           if constexpr (std::is_same_v<_U, std::any>)
+                             return crane_any_cast<A>(a0);
+                           else
+                             return A(a0);
+                         }(),
+                         a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr};
       }
     }
 
@@ -392,37 +343,14 @@ struct NestedInd {
 
     template <typename _U> rose(const rose<_U> &_other) {
       const auto &[a0, a1] = std::get<typename rose<_U>::Node>(_other.v());
-      this->v_ = Node{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              if (a0.type() == typeid(A))
-                return std::any_cast<A>(a0);
-              if constexpr (requires {
-                              typename A::first_type;
-                              typename A::second_type;
-                            }) {
-                const auto &[_k, _v] =
-                    std::any_cast<std::pair<std::any, std::any>>(a0);
-                return A{[&]() -> typename A::first_type {
-                           if constexpr (std::is_same_v<typename A::first_type,
-                                                        std::any>)
-                             return _k;
-                           else
-                             return std::any_cast<typename A::first_type>(_k);
-                         }(),
-                         [&]() -> typename A::second_type {
-                           if constexpr (std::is_same_v<typename A::second_type,
-                                                        std::any>)
-                             return _v;
-                           else
-                             return std::any_cast<typename A::second_type>(_v);
-                         }()};
-              }
-              return std::any_cast<A>(a0);
-            } else
-              return A(a0);
-          }(),
-          a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr};
+      this->v_ =
+          Node{[&]() -> A {
+                 if constexpr (std::is_same_v<_U, std::any>)
+                   return crane_any_cast<A>(a0);
+                 else
+                   return A(a0);
+               }(),
+               a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {

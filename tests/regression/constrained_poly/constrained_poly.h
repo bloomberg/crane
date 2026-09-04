@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CONSTRAINED_POLY
 #define INCLUDED_CONSTRAINED_POLY
 
+#include "crane_fn.h"
 #include <any>
 #include <type_traits>
 #include <utility>
@@ -50,32 +51,9 @@ struct ConstrainedPoly {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
         const auto &[a0] = std::get<typename UOption<_U>::USome>(_other.v());
         this->v_ = USome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            if (a0.type() == typeid(A))
-              return std::any_cast<A>(a0);
-            if constexpr (requires {
-                            typename A::first_type;
-                            typename A::second_type;
-                          }) {
-              const auto &[_k, _v] =
-                  std::any_cast<std::pair<std::any, std::any>>(a0);
-              return A{[&]() -> typename A::first_type {
-                         if constexpr (std::is_same_v<typename A::first_type,
-                                                      std::any>)
-                           return _k;
-                         else
-                           return std::any_cast<typename A::first_type>(_k);
-                       }(),
-                       [&]() -> typename A::second_type {
-                         if constexpr (std::is_same_v<typename A::second_type,
-                                                      std::any>)
-                           return _v;
-                         else
-                           return std::any_cast<typename A::second_type>(_v);
-                       }()};
-            }
-            return std::any_cast<A>(a0);
-          } else
+          if constexpr (std::is_same_v<_U, std::any>)
+            return crane_any_cast<A>(a0);
+          else
             return A(a0);
         }()};
       } else {

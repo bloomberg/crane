@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTSELFREFINDUCTIVE
 #define INCLUDED_SEPEXTSELFREFINDUCTIVE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -46,40 +47,15 @@ template <S X> struct HashTrie {
       } else {
         const auto &[k, v, left, right] =
             std::get<typename Trie<_U>::Node>(_other.v());
-        this->v_ = Node{
-            k,
-            [&]() -> V {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                if (v.type() == typeid(V))
-                  return std::any_cast<V>(v);
-                if constexpr (requires {
-                                typename V::first_type;
-                                typename V::second_type;
-                              }) {
-                  const auto &[_k, _v] =
-                      std::any_cast<std::pair<std::any, std::any>>(v);
-                  return V{
-                      [&]() -> typename V::first_type {
-                        if constexpr (std::is_same_v<typename V::first_type,
-                                                     std::any>)
-                          return _k;
-                        else
-                          return std::any_cast<typename V::first_type>(_k);
-                      }(),
-                      [&]() -> typename V::second_type {
-                        if constexpr (std::is_same_v<typename V::second_type,
-                                                     std::any>)
-                          return _v;
-                        else
-                          return std::any_cast<typename V::second_type>(_v);
-                      }()};
-                }
-                return std::any_cast<V>(v);
-              } else
-                return V(v);
-            }(),
-            left ? std::make_shared<Trie<V>>(*left) : nullptr,
-            right ? std::make_shared<Trie<V>>(*right) : nullptr};
+        this->v_ = Node{k,
+                        [&]() -> V {
+                          if constexpr (std::is_same_v<_U, std::any>)
+                            return crane_any_cast<V>(v);
+                          else
+                            return V(v);
+                        }(),
+                        left ? std::make_shared<Trie<V>>(*left) : nullptr,
+                        right ? std::make_shared<Trie<V>>(*right) : nullptr};
       }
     }
 

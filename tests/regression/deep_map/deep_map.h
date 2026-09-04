@@ -41,39 +41,14 @@ struct DeepMap {
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{
-            a0 ? std::make_shared<tree<A>>(*a0) : nullptr,
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                if (a1.type() == typeid(A))
-                  return std::any_cast<A>(a1);
-                if constexpr (requires {
-                                typename A::first_type;
-                                typename A::second_type;
-                              }) {
-                  const auto &[_k, _v] =
-                      std::any_cast<std::pair<std::any, std::any>>(a1);
-                  return A{
-                      [&]() -> typename A::first_type {
-                        if constexpr (std::is_same_v<typename A::first_type,
-                                                     std::any>)
-                          return _k;
-                        else
-                          return std::any_cast<typename A::first_type>(_k);
-                      }(),
-                      [&]() -> typename A::second_type {
-                        if constexpr (std::is_same_v<typename A::second_type,
-                                                     std::any>)
-                          return _v;
-                        else
-                          return std::any_cast<typename A::second_type>(_v);
-                      }()};
-                }
-                return std::any_cast<A>(a1);
-              } else
-                return A(a1);
-            }(),
-            a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
+        this->v_ = Node{a0 ? std::make_shared<tree<A>>(*a0) : nullptr,
+                        [&]() -> A {
+                          if constexpr (std::is_same_v<_U, std::any>)
+                            return crane_any_cast<A>(a1);
+                          else
+                            return A(a1);
+                        }(),
+                        a2 ? std::make_shared<tree<A>>(*a2) : nullptr};
       }
     }
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_VECTOR_CASES_DEDUCTION
 #define INCLUDED_VECTOR_CASES_DEDUCTION
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -100,37 +101,13 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
-      this->v_ = Cons{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              if (h.type() == typeid(A))
-                return std::any_cast<A>(h);
-              if constexpr (requires {
-                              typename A::first_type;
-                              typename A::second_type;
-                            }) {
-                const auto &[_k, _v] =
-                    std::any_cast<std::pair<std::any, std::any>>(h);
-                return A{[&]() -> typename A::first_type {
-                           if constexpr (std::is_same_v<typename A::first_type,
-                                                        std::any>)
-                             return _k;
-                           else
-                             return std::any_cast<typename A::first_type>(_k);
-                         }(),
-                         [&]() -> typename A::second_type {
-                           if constexpr (std::is_same_v<typename A::second_type,
-                                                        std::any>)
-                             return _v;
-                           else
-                             return std::any_cast<typename A::second_type>(_v);
-                         }()};
-              }
-              return std::any_cast<A>(h);
-            } else
-              return A(h);
-          }(),
-          n, a2 ? std::make_shared<T<A>>(*a2) : nullptr};
+      this->v_ = Cons{[&]() -> A {
+                        if constexpr (std::is_same_v<_U, std::any>)
+                          return crane_any_cast<A>(h);
+                        else
+                          return A(h);
+                      }(),
+                      n, a2 ? std::make_shared<T<A>>(*a2) : nullptr};
     }
   }
 

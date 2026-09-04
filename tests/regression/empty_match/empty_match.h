@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EMPTY_MATCH
 #define INCLUDED_EMPTY_MATCH
 
+#include "crane_fn.h"
 #include <any>
 #include <stdexcept>
 #include <type_traits>
@@ -56,64 +57,18 @@ struct EmptyMatch {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
         this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>) {
-            if (a0.type() == typeid(A))
-              return std::any_cast<A>(a0);
-            if constexpr (requires {
-                            typename A::first_type;
-                            typename A::second_type;
-                          }) {
-              const auto &[_k, _v] =
-                  std::any_cast<std::pair<std::any, std::any>>(a0);
-              return A{[&]() -> typename A::first_type {
-                         if constexpr (std::is_same_v<typename A::first_type,
-                                                      std::any>)
-                           return _k;
-                         else
-                           return std::any_cast<typename A::first_type>(_k);
-                       }(),
-                       [&]() -> typename A::second_type {
-                         if constexpr (std::is_same_v<typename A::second_type,
-                                                      std::any>)
-                           return _v;
-                         else
-                           return std::any_cast<typename A::second_type>(_v);
-                       }()};
-            }
-            return std::any_cast<A>(a0);
-          } else
+          if constexpr (std::is_same_v<_U0, std::any>)
+            return crane_any_cast<A>(a0);
+          else
             return A(a0);
         }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
         this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>) {
-            if (a0.type() == typeid(B))
-              return std::any_cast<B>(a0);
-            if constexpr (requires {
-                            typename B::first_type;
-                            typename B::second_type;
-                          }) {
-              const auto &[_k, _v] =
-                  std::any_cast<std::pair<std::any, std::any>>(a0);
-              return B{[&]() -> typename B::first_type {
-                         if constexpr (std::is_same_v<typename B::first_type,
-                                                      std::any>)
-                           return _k;
-                         else
-                           return std::any_cast<typename B::first_type>(_k);
-                       }(),
-                       [&]() -> typename B::second_type {
-                         if constexpr (std::is_same_v<typename B::second_type,
-                                                      std::any>)
-                           return _v;
-                         else
-                           return std::any_cast<typename B::second_type>(_v);
-                       }()};
-            }
-            return std::any_cast<B>(a0);
-          } else
+          if constexpr (std::is_same_v<_U1, std::any>)
+            return crane_any_cast<B>(a0);
+          else
             return B(a0);
         }()};
       }

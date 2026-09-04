@@ -1,6 +1,7 @@
 #ifndef INCLUDED_RAM_STATE_OPS
 #define INCLUDED_RAM_STATE_OPS
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -39,37 +40,13 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{
-          [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              if (a.type() == typeid(A))
-                return std::any_cast<A>(a);
-              if constexpr (requires {
-                              typename A::first_type;
-                              typename A::second_type;
-                            }) {
-                const auto &[_k, _v] =
-                    std::any_cast<std::pair<std::any, std::any>>(a);
-                return A{[&]() -> typename A::first_type {
-                           if constexpr (std::is_same_v<typename A::first_type,
-                                                        std::any>)
-                             return _k;
-                           else
-                             return std::any_cast<typename A::first_type>(_k);
-                         }(),
-                         [&]() -> typename A::second_type {
-                           if constexpr (std::is_same_v<typename A::second_type,
-                                                        std::any>)
-                             return _v;
-                           else
-                             return std::any_cast<typename A::second_type>(_v);
-                         }()};
-              }
-              return std::any_cast<A>(a);
-            } else
-              return A(a);
-          }(),
-          l ? std::make_shared<List<A>>(*l) : nullptr};
+      this->v_ = Cons{[&]() -> A {
+                        if constexpr (std::is_same_v<_U, std::any>)
+                          return crane_any_cast<A>(a);
+                        else
+                          return A(a);
+                      }(),
+                      l ? std::make_shared<List<A>>(*l) : nullptr};
     }
   }
 

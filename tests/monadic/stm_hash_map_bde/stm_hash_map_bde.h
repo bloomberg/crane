@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STM_HASH_MAP_BDE
 #define INCLUDED_STM_HASH_MAP_BDE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -54,38 +55,13 @@ public:
       this->d_v_ = Nil{};
     } else {
       const auto &[d_a, d_l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ = Cons{
-          [&]() -> t_A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              if (d_a.type() == typeid(t_A))
-                return std::any_cast<t_A>(d_a);
-              if constexpr (requires {
-                              typename t_A::first_type;
-                              typename t_A::second_type;
-                            }) {
-                const auto &[_k, _v] =
-                    std::any_cast<std::pair<std::any, std::any>>(d_a);
-                return t_A{
-                    [&]() -> typename t_A::first_type {
-                      if constexpr (std::is_same_v<typename t_A::first_type,
-                                                   std::any>)
-                        return _k;
-                      else
-                        return std::any_cast<typename t_A::first_type>(_k);
-                    }(),
-                    [&]() -> typename t_A::second_type {
-                      if constexpr (std::is_same_v<typename t_A::second_type,
-                                                   std::any>)
-                        return _v;
-                      else
-                        return std::any_cast<typename t_A::second_type>(_v);
-                    }()};
-              }
-              return std::any_cast<t_A>(d_a);
-            } else
-              return t_A(d_a);
-          }(),
-          d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr};
+      this->d_v_ = Cons{[&]() -> t_A {
+                          if constexpr (std::is_same_v<_U, std::any>)
+                            return crane_any_cast<t_A>(d_a);
+                          else
+                            return t_A(d_a);
+                        }(),
+                        d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr};
     }
   }
   static List<t_A> nil() { return List<t_A>(Nil{}); }

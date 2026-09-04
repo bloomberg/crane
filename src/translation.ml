@@ -1335,30 +1335,20 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let a_s = render dst_ty in
       (match render_cpp_expr_simple expr with
       | Some field_s ->
-        (* Generate an IIFE that handles three cases:
-           1. Direct any_cast when the stored type matches A exactly.
-           2. Two-level cast for pair<any,any> sources when A is a std::pair:
-              each pair field is cast individually, skipping the cast when the
-              target field type is std::any (since _k/_v are already std::any
-              and any_cast<std::any>(x) is not an identity — it looks for a
-              stored std::any inside x, which fails at runtime).
-           3. Fallthrough any_cast for non-pair types. *)
-        CPPraw ("[&]() -> " ^ a_s ^ " { if constexpr (std::is_same_v<" ^ u_s
-               ^ ", std::any>) { if (" ^ field_s ^ ".type() == typeid(" ^ a_s
-               ^ ")) return std::any_cast<" ^ a_s ^ ">(" ^ field_s
-               ^ "); if constexpr (requires { typename " ^ a_s
-               ^ "::first_type; typename " ^ a_s ^ "::second_type; }) { const auto& "
-               ^ "[_k, _v] = std::any_cast<std::pair<std::any, std::any>>("
-               ^ field_s ^ "); return " ^ a_s ^ "{ [&]() -> typename " ^ a_s
-               ^ "::first_type { if constexpr (std::is_same_v<typename " ^ a_s
-               ^ "::first_type, std::any>) return _k; else return "
-               ^ "std::any_cast<typename " ^ a_s ^ "::first_type>(_k); }(), "
-               ^ "[&]() -> typename " ^ a_s ^ "::second_type { if constexpr "
-               ^ "(std::is_same_v<typename " ^ a_s ^ "::second_type, std::any>"
-               ^ ") return _v; else return std::any_cast<typename " ^ a_s
-               ^ "::second_type>(_v); }() }; } return std::any_cast<" ^ a_s
-               ^ ">(" ^ field_s ^ "); } else return " ^ a_s ^ "(" ^ field_s
-               ^ "); }()")
+        (* Recovering [A] from a box -- including the case where [A] is a pair
+           whose components were boxed one at a time -- is exactly what
+           [crane_any_cast] does, and it recurses, so nested pairs work too.
+           All that is left here is the outer question, which genuinely cannot
+           be answered until C++ substitutes [U]: is there a box at all?  If
+           [U] is not [std::any] the value is already a [U] and wants an
+           ordinary conversion.
+           Raw text because MiniCpp has no [if constexpr] node -- see item 4 of
+           docs/nanopass-plan.md. *)
+        Table.mark_needs_erase_fn ();
+        CPPraw
+          ( "[&]() -> " ^ a_s ^ " { if constexpr (std::is_same_v<" ^ u_s
+          ^ ", std::any>) return crane_any_cast<" ^ a_s ^ ">(" ^ field_s
+          ^ "); else return " ^ a_s ^ "(" ^ field_s ^ "); }()" )
       | None ->
         CPPconverting_ctor (orig_dst_ty, [expr]))
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
