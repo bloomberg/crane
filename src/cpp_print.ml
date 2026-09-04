@@ -683,10 +683,7 @@ let rec is_any_type = function
     || (try let t = Table.find_type (GlobRef.ConstRef c) in
             t = Miniml.Tunknown || t = Miniml.Taxiom
         with Not_found -> false)
-  | Tglob (GlobRef.VarRef id, [], _) ->
-    let name = Id.to_string id in
-    name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
-  | _ -> false
+  | t -> Ml_type_util.is_cpp_dummy_type t
 
 (** Whether recovering this type from a [std::any] needs [crane_any_cast]
     rather than a plain [std::any_cast]: a pair with a concrete component may

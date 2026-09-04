@@ -611,23 +611,16 @@ let rec index_erase_type (ty : cpp_type) : cpp_type =
 let has_unnamed_tvar : cpp_type -> bool =
   exists_cpp_type (function Tvar (_, None) -> true | _ -> false)
 
-(** Check if a C++ type is Tany or contains an unnamed Tvar (which becomes
-    Tany). This is used to identify methods that return std::any due to type
-    erasure in indexed inductives.  Also recognizes [Tglob(ConstRef c)] for
-    non-custom, non-promoted constants — these are dependent type families
-    (e.g. [Hom : Obj -> Obj -> Type]) whose C++ representation is [std::any].
-    The extraction inlines type aliases, so surviving ConstRef types in C++
-    types are genuinely unresolvable dependent type families. *)
+(** [type_is_erased ty] is {!is_tany_node} looked at through the type
+    modifiers that do not change a type's representation, so that
+    [M::std::any] answers the same as [std::any].  Used to identify methods
+    that return [std::any] because of type erasure in indexed inductives.
+    Unlike {!prints_as_any} it does not count the dummy globs: those are
+    proof erasure, not an unresolved type. *)
 let rec type_is_erased (ty : cpp_type) : bool =
   match ty with
-  | Tany | Topaque -> true
-  | Tvar (_, None) -> true (* Will become Tany after tvar_erase_type *)
-  | Tvar (_, Some _) -> false (* Named Tvar - not erased *)
-  | Tglob (_, _, _) -> false
-  | Tfun (_, _) -> false (* Functions aren't erased *)
-  | Tmod (_, inner) -> type_is_erased inner
-  | Tnamespace (_, inner) -> type_is_erased inner
-  | _ -> false
+  | Tmod (_, inner) | Tnamespace (_, inner) -> type_is_erased inner
+  | t -> is_tany_node t
 
 (** Extract return type from a function type, stripping all Tarr layers. *)
 let rec ml_return_type = function
