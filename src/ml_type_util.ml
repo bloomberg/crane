@@ -389,12 +389,7 @@ let has_tany_in_type = exists_cpp_type is_tany_node
     is the right fallback — but NOT for the Tfun+lambda case where we want to
     preserve the lambda's concrete return type. *)
 let has_erased_type_in_type =
-  exists_cpp_type (fun t ->
-    is_tany_node t
-    ||
-    match t with
-    | Tglob (GlobRef.VarRef id, [], []) -> Id.to_string id = "dummy_type"
-    | _ -> false )
+  exists_cpp_type (fun t -> is_tany_node t || is_cpp_dummy_type t)
 
 (** Check if a C++ type is the [dummy_prop] marker from proof erasure.
 

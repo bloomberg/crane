@@ -9530,7 +9530,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       pair_g_opt <> None &&
       ( scrut_is_cpp_erased || scrut_is_mlmagic || scrut_callee_ret_erased
         || (scrut_is_magic && prints_as_any typ)
-        || (prints_as_any typ || is_all_erased typ || resolves_to_any_type typ) &&
+        || (is_all_erased typ || resolves_to_any_type typ) &&
            ( Ml_type_util.has_tany_in_type concrete_match_type
              || (match concrete_match_type with
                  | Tglob (_, args, _) -> List.exists resolves_to_any_type args
@@ -10511,12 +10511,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
           outer_args @ extra_args
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
-      (* Phase 2: shift owned vars for the single let binding *)
-      let saved_owned_lifted = tctx.move_owned_vars in
-      tctx.move_owned_vars <-
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-      let result = gen_stmts env_with_fix k b in
-      tctx.move_owned_vars <- saved_owned_lifted;
+      (* Phase 2: shift move tracking for the single let binding *)
+      let result =
+        with_shifted_move_tracking 1 (fun () -> gen_stmts env_with_fix k b)
+      in
       List.map (local_var_subst_stmt fix_name lifted_call) result )
     else
       (* No extra Tvars — proceed with local fixpoint approach.
@@ -11046,12 +11044,10 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
         let lifted_ids, env' = push_vars' [(x', t)] env in
         let x_lifted = fst (List.hd lifted_ids) in
         push_env_types [(x_lifted, t)];
-        (* Phase 2: shift owned vars for lifted lambda binding *)
-        let saved_owned_lifted2 = tctx.move_owned_vars in
-        tctx.move_owned_vars <-
-          Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars;
-        let cont = gen_stmts env' k b in
-        tctx.move_owned_vars <- saved_owned_lifted2;
+        (* Phase 2: shift move tracking for lifted lambda binding *)
+        let cont =
+          with_shifted_move_tracking 1 (fun () -> gen_stmts env' k b)
+        in
         (* Build the free variable argument expressions *)
         let free_var_cpps =
           List.map (fun (name, _, _) -> CPPvar name) free_vars
