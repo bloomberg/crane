@@ -7842,3 +7842,38 @@
   (alias runtest)
   (deps hkt_curried_pure_arity.t.exe)
   (action (run ./hkt_curried_pure_arity.t.exe))))
+
+
+
+(subdir ctor_case_collision
+ (rule
+  (targets ctor_case_collision.t.exe)
+  (deps CtorCaseCollision.vo ctor_case_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ctor_case_collision.t.exe ctor_case_collision.cpp ctor_case_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ctor_case_collision.t.exe)
+  (action (run ./ctor_case_collision.t.exe))))
+
+(subdir sibling_module_same_inductive
+ (rule
+  (targets sibling_module_same_inductive.t.exe)
+  (deps SiblingModuleSameInductive.vo sibling_module_same_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sibling_module_same_inductive.t.exe sibling_module_same_inductive.cpp sibling_module_same_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sibling_module_same_inductive.t.exe)
+  (action (run ./sibling_module_same_inductive.t.exe))))
+
+(subdir submodule_named_nat
+ (rule
+  (targets submodule_named_nat.t.exe)
+  (deps SubmoduleNamedNat.vo submodule_named_nat.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} submodule_named_nat.t.exe submodule_named_nat.cpp submodule_named_nat.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps submodule_named_nat.t.exe)
+  (action (run ./submodule_named_nat.t.exe))))

@@ -1,7 +1,10 @@
 (** Test discovery: scans the [tests/] directory tree to find runnable tests.
 
     A directory [tests/<category>/<name>/] is considered a test if it contains
-    at least one [*.t.cpp] file.  The four recognized categories are
+    at least one [*.t.cpp] file and one [*.v] file.  Both are required: the
+    dune rule that builds the test executable depends on the [.vo] the [.v]
+    compiles to, so a directory carrying only a [.v.in] template is a
+    generator, not a test.  The four recognized categories are
     ["basics"], ["monadic"], ["regression"], and ["wip"]. *)
 
 open Types
@@ -9,12 +12,13 @@ open Types
 (** The fixed list of category subdirectories under [tests/]. *)
 let categories = ["basics"; "monadic"; "regression"; "wip"]
 
-(** [has_test_file dir] returns [true] if [dir] contains a file ending
-    in [.t.cpp]. *)
+(** [has_test_file dir] returns [true] if [dir] holds both a [.t.cpp] driver
+    and the [.v] source it exercises. *)
 let has_test_file dir =
   try
     let entries = Sys.readdir dir in
     Array.exists (fun f -> Filename.check_suffix f ".t.cpp") entries
+    && Array.exists (fun f -> Filename.check_suffix f ".v") entries
   with Sys_error _ -> false
 
 (** [find_tests_in_category root category] returns all test ids found under
