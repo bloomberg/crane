@@ -727,8 +727,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPuint _
    |CPPfloat _
    |CPPrequires _
-   |CPPmk_reuse _
-   |CPPpair _ -> []
+   |CPPmk_reuse _ -> []
 
 (** Collect recursive call sites from a list of statements.
     Delegates to {!collect_stmt} for each statement. *)
@@ -2684,7 +2683,13 @@ and decompose_double_call check expr =
     | None -> decompose_single_call check e
   in
   (* Try to decompose two subexpressions each with 1 recursive call. *)
-  let try_pair e1 e2 mk_combine =
+  (* Decompose two subexpressions that each contain one recursive call,
+     keeping the two rebuilt halves apart.  Returns the two call argument
+     lists, the expressions to save for the combine, and a rebuild function
+     handing back the halves as a pair.  Most callers immediately join them
+     with {!try_pair}; the one that places them at two different argument
+     positions of a call needs them separately. *)
+  let try_pair_parts e1 e2 =
     let c1 = count_calls_expr check e1 in
     let c2 = count_calls_expr check e2 in
     if c1 = 1 && c2 = 1 then
@@ -2692,23 +2697,34 @@ and decompose_double_call check expr =
         (get_decomp e1, get_decomp e2)
       with
       | Some dec1, Some dec2 ->
+        let rebuild saved left right =
+          let n1 = List.length dec1.d_saved in
+          ( dec1.d_rebuild (list_take n1 saved) left,
+            dec2.d_rebuild (list_drop n1 saved) right )
+        in
         Some
-          {
-            dd_first_args = dec1.d_rec_args;
-            dd_second_args = dec2.d_rec_args;
-            dd_saved = dec1.d_saved @ dec2.d_saved;
-            dd_combine =
-              (fun saved left right ->
-                let n1 = List.length dec1.d_saved in
-                let saved1 = list_take n1 saved in
-                let saved2 = list_drop n1 saved in
-                let rebuilt_left = dec1.d_rebuild saved1 left in
-                let rebuilt_right = dec2.d_rebuild saved2 right in
-                mk_combine rebuilt_left rebuilt_right );
-          }
+          ( dec1.d_rec_args,
+            dec2.d_rec_args,
+            dec1.d_saved @ dec2.d_saved,
+            rebuild )
       | _ -> None
     else
       None
+  in
+  let try_pair e1 e2 mk_combine =
+    match try_pair_parts e1 e2 with
+    | Some (first_args, second_args, saved, rebuild) ->
+      Some
+        {
+          dd_first_args = first_args;
+          dd_second_args = second_args;
+          dd_saved = saved;
+          dd_combine =
+            (fun saved left right ->
+              let left, right = rebuild saved left right in
+              mk_combine left right );
+        }
+    | None -> None
   in
   match expr with
   | CPPbinop (op, e1, e2) ->
@@ -2763,24 +2779,16 @@ and decompose_double_call check expr =
         left
         right =
       (* Reconstruct f(args) with rec results at positions i1, i2 *)
-      let inner =
+      let inner_left, inner_right =
         dd_inner (list_take saved_offset saved) left right
       in
       let outer_saved = list_drop saved_offset saved in
       let new_args =
         List.init (List.length args) (fun i ->
           if i = i1 then
-            match
-              inner
-            with
-            | CPPpair (l, _) -> l
-            | x -> x
+            inner_left
           else if i = i2 then
-            match
-              inner
-            with
-            | CPPpair (_, r) -> r
-            | x -> x
+            inner_right
           else
             let pos =
               List.filter (fun (j, _) -> j < i) non_rec_indexed |> List.length
@@ -2800,15 +2808,14 @@ and decompose_double_call check expr =
       let non_rec_args =
         List.map (fun (i, _) -> List.nth args i) non_rec_indexed
       in
-      ( match
-          try_pair e1 e2 (fun left right -> CPPpair (left, right))
-        with
-      | Some dd ->
-        let saved_offset = List.length dd.dd_saved in
+      ( match try_pair_parts e1 e2 with
+      | Some (first_args, second_args, saved, rebuild) ->
+        let saved_offset = List.length saved in
         Some
           {
-            dd with
-            dd_saved = dd.dd_saved @ non_rec_args;
+            dd_first_args = first_args;
+            dd_second_args = second_args;
+            dd_saved = saved @ non_rec_args;
             dd_combine =
               (fun saved left right ->
                 rebuild_funcall
@@ -2816,7 +2823,7 @@ and decompose_double_call check expr =
                   i2
                   non_rec_indexed
                   saved_offset
-                  dd.dd_combine
+                  rebuild
                   saved
                   left
                   right );

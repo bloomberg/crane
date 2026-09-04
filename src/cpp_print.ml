@@ -2107,8 +2107,6 @@ and pp_cpp_expr env args t =
     ++ str op
     ++ str " "
     ++ paren_child rhs
-  | CPPpair _ ->
-    CErrors.anomaly (Pp.str "CPPpair reached the printer; this is a loopify-internal node")
   | CPPcond (cond, then_expr, else_expr) ->
     (* Wrap the whole ternary in parentheses like the other ternary sites, so a
        conditional used as a subexpression cannot bind incorrectly against a
