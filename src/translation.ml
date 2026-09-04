@@ -5100,12 +5100,6 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     (* A value built directly into an erased ([std::any]) slot -- the
        enclosing function's C++ return type is opaque, as for a definition
        whose return type is value-dependent -- must use the canonical erased
-       shape, with every type argument boxed.  A consumer of such a slot
-       recovers it with a fixed [any_cast] and cannot know the concrete type
-       arguments; storing them concretely makes that cast throw. *)
-    (* A value built directly into an erased ([std::any]) slot -- the
-       enclosing function's C++ return type is opaque, as for a definition
-       whose return type is value-dependent -- must use the canonical erased
        shape: a consumer of such a slot recovers it with a fixed [any_cast]
        and cannot know the concrete type arguments.  That is the same
        requirement [wrap_for_any_param] expresses for a value flowing into an
