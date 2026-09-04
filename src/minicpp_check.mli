@@ -14,6 +14,17 @@
 
     See [docs/nanopass-plan.md]. *)
 
+(** [violation where what] reports a broken invariant, deduplicated so that a
+    disagreement replicated across every instantiation of a template is
+    printed once.  A no-op unless [CRANE_CHECK_IR] is set.  Exposed for checks
+    that cannot run at a declaration boundary because the state they compare
+    exists only during translation. *)
+val violation : string -> string -> unit
+
+(** A short structural rendering of a type, for diagnostics.  The real
+    pretty-printer ({!Cpp_print}) sits above this module. *)
+val show_ty : Minicpp.cpp_type -> string
+
 (** [check ~where decl] validates [decl].  A no-op unless [CRANE_CHECK_IR] is
     set.  [where] names the pass that last touched the declaration and appears
     in the diagnostic, so a report points at the pass to look in. *)

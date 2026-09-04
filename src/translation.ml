@@ -2922,7 +2922,34 @@ and binder_cpp_type i = IntMap.find_opt i tctx.cpp_binder_types
     binder is boxed exactly when the scrutinee's instantiation erased its
     field. *)
 and binder_is_boxed i =
-  match binder_cpp_type i with Some t -> resolves_to_any_type t | None -> false
+  let recorded = binder_cpp_type i in
+  let answer = match recorded with Some t -> resolves_to_any_type t | None -> false in
+  report_binder_disagreement i recorded answer;
+  answer
+
+(** Compare the answer {!binder_is_boxed} gives today against the one the
+    total assignment ({!Translation_state.cpp_binder_types_all}) would give,
+    and report where they differ.
+
+    This measures the risk in migrating readers onto the assignment: today an
+    unassigned binder answers [false] by default, and after the migration it
+    answers from its binding site instead.  Every difference is either a bug
+    being fixed or a behaviour change to justify, and the sweep is what tells
+    the two apart.  Temporary: it goes when the readers move over. *)
+and report_binder_disagreement i recorded answer =
+  match Sys.getenv_opt "CRANE_CHECK_IR" with
+  | None | Some "" | Some "0" -> ()
+  | Some _ ->
+    ( match IntMap.find_opt i tctx.cpp_binder_types_all with
+    | Some shadow when resolves_to_any_type shadow <> answer ->
+      Minicpp_check.violation "binder assignment"
+        (Printf.sprintf "boxed=%b from %s, but the binding site assigned %s"
+           answer
+           ( match recorded with
+           | Some t -> Minicpp_check.show_ty t
+           | None -> "no recorded type" )
+           (Minicpp_check.show_ty shadow))
+    | _ -> () )
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -2951,9 +2978,14 @@ and record_binder_type i t =
     definition-site type, that fixes those.  A [None] entry (or a short list)
     falls back to converting the ML type.
 
-    Conversion failures are skipped rather than propagated: nothing reads this
-    map yet, and a binder Crane cannot currently type must not become a new
-    way for extraction to fail. *)
+    The assignment records only types it actually knows.  A conversion that
+    yields [Topaque] means the scope could not resolve the binder at all, and
+    a dummy stands for a value that is not there; recording either would turn
+    ignorance into the assertion "this binder holds a box", which is the one
+    thing {!Minicpp.Topaque} exists to refuse.  Such binders keep no entry, so
+    a reader still falls through to whatever it does today.  Conversion
+    failures are skipped for the same reason, and so that a binder Crane
+    cannot currently type does not become a new way for extraction to fail. *)
 and push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
   push_env_types ids;
   List.iteri
@@ -2964,9 +2996,9 @@ and push_binders ?(cpp = []) env (ids : (Id.t * ml_type) list) =
         | _ -> (try Some (cpp_of_ml env ml_ty) with _ -> None)
       in
       match assigned with
-      | Some t ->
+      | Some t when t <> Topaque && not (is_cpp_dummy_type t) ->
         tctx.cpp_binder_types_all <- IntMap.add (j + 1) t tctx.cpp_binder_types_all
-      | None -> ())
+      | _ -> ())
     ids
 
 (** Save the current binder-type state for later restoration. *)
