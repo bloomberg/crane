@@ -98,7 +98,7 @@ Dim10TowerProofChainCase::make_graded_goodwillie_tower(uint64_t base_dim) {
 SigT<uint64_t, std::any>
 Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     uint64_t base_dim) {
-  SigT<uint64_t, std::any> e = D_n_measure_eventually_zero(base_dim);
+  auto e = D_n_measure_eventually_zero(base_dim);
   auto &[x0, a1] = e;
   return SigT<uint64_t, std::any>::existt(std::move(x0), std::any());
 }
