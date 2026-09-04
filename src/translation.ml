@@ -3801,13 +3801,30 @@ and is_boxed_source t =
     band: the emitted expression is the evidence, so no flag has to be
     threaded from producer to consumer. *)
 and yields_boxed_component = function
-  | CPPfun_call (CPPglob (_, _, Some ci), [CPPany_cast (Tglob (g, args, _), _)])
-    when is_prod_global g && args <> [] && List.for_all prints_as_any args ->
+  | CPPfun_call (CPPglob (_, _, Some ci), [arg]) when reads_recovered_pair arg ->
     ( match ci.ci_inline with
     | Some s ->
       Common.contains_substring s ".first" || Common.contains_substring s ".second"
     | None -> false )
+  (* The accessor is not always a custom-inline call: a projection out of a
+     [std::pair] is a plain member read, and that is the same evidence. *)
+  | CPPmember (arg, _) -> reads_recovered_pair arg
   | _ -> false
+
+(** Whether [expr] is a pair recovered from a box, i.e. one whose [any_cast]
+    named the erased shape [pair<any, any>] and whose components are therefore
+    boxes in their own right. *)
+and reads_recovered_pair = function
+  | CPPany_cast (Tglob (g, args, _), _) ->
+    is_prod_global g && args <> [] && List.for_all prints_as_any args
+  | _ -> false
+
+(** [recover_boxed_component into e] opens the box when [e] is evidently a
+    component read out of a pair that was recovered from one.  The context's
+    type [into] is what the value is declared to be; the emitted expression is
+    the evidence that it is physically a [std::any]. *)
+and recover_boxed_component into e =
+  if yields_boxed_component e then coerce ~from:Tany ~into e else e
 
 (** Whether the statements a let-binding's right-hand side generated assign a
     value that is really a box.  The right-hand side is generated as an
@@ -6529,7 +6546,22 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
     let def = gen_expr env def in
     CPPparray (elems, def)
   | MLmagic (m, t) ->
-    let inner = gen_expr env t in
+    (* A value crossing into a slot that is really [std::any] has to be built
+       at the canonical erased shape -- every component boxed -- because the
+       consumer recovers it with a fixed [any_cast] and cannot know the
+       concrete component types.  Extraction recorded both sides of this
+       boundary, so ask for that shape whenever [into] is the erased one and
+       [from] is not.  See {!with_deep_erasure}. *)
+    let into_is_erased_only =
+      match m with
+      | Mcoerce (from, into) ->
+        prints_as_any (cpp_of_ml env into)
+        && not (prints_as_any (cpp_of_ml env from))
+      | Mboxed | Mbarrier -> false
+    in
+    let inner =
+      with_deep_erasure into_is_erased_only (fun () -> gen_expr env t)
+    in
     (* What extraction recorded about the term's own side of the boundary.
        Not materialised: this is an inferred type, so a [Topaque] here stays
        [Topaque] and licenses nothing. *)
@@ -6581,11 +6613,20 @@ and gen_expr ?(expected_ty : cpp_type option) env (ml_e : ml_ast) : cpp_expr =
                dimensions at this boundary have already been settled by the
                sub-expression that produced [inner]. *)
             (* Unless the value is a component just read out of an erased
-               pair.  That read already handed back the component's own box,
-               and the type the context has in mind describes the pair, not
-               the component -- recovering here would name the wrong one. *)
+               pair and the type the context has in mind is itself a pair:
+               that read already handed back the component's own box, so the
+               context's type describes the enclosing pair, not the component,
+               and recovering here would name the wrong one.  When the context
+               wants a non-pair, it is talking about the component, and the
+               box does have to be opened. *)
             | Some from
-              when prints_as_any from && not (is_erased_pair_component inner) ->
+              when prints_as_any from
+                   && not
+                        ( is_erased_pair_component inner
+                        &&
+                        match ty with
+                        | Tglob (g, _, _) -> is_prod_global g
+                        | _ -> false ) ->
               coerce ~from ~into:(boxed_shape_of ty) inner
             | _ -> inner )
       | _ -> inner )
@@ -11969,7 +12010,7 @@ and gen_stmts env (k : cpp_expr -> cpp_stmt) ast =
          erased. *)
       let e =
         match tctx.current_cpp_return_type with
-        | Some rt when k_returns && yields_boxed_component e -> coerce ~from:Tany ~into:rt e
+        | Some rt when k_returns -> recover_boxed_component rt e
         | _ -> e
       in
       let result = inline_iife k e in

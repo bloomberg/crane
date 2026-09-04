@@ -3326,7 +3326,13 @@ let gen_spec__inner n b ty =
         && (has_magic || ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then CPPany_cast (ty, b_expr) else b_expr
+        if needs_any_cast then CPPany_cast (ty, b_expr)
+        else
+          (* (c) The emitted expression is itself the evidence: a projection
+             out of a pair that was recovered from a box hands back a
+             [std::any] whatever its ML type says, and neither (a) nor (b)
+             sees that. *)
+          recover_boxed_component ty b_expr
       in
       (* When a unit-typed constant's body may call a void-ified function,
          wrap in an IIFE that executes the body for side effects and

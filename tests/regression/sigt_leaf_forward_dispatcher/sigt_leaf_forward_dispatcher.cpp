@@ -35,17 +35,22 @@ bool mk_action(uint64_t n, std::any tup) {
 domty garg(uint64_t n) {
   if (n <= 0) {
     return std::make_pair(
-        std::any(std::string(1, (static_cast<char>(
-                                    (false ? 1 : 0) | (false ? 2 : 0) |
-                                    (false ? 4 : 0) | (true ? 8 : 0) |
-                                    (false ? 16 : 0) | (true ? 32 : 0) |
-                                    (true ? 64 : 0) | (false ? 128 : 0)))) +
-                 std::string(1, (static_cast<char>(
-                                    (true ? 1 : 0) | (false ? 2 : 0) |
-                                    (false ? 4 : 0) | (true ? 8 : 0) |
-                                    (false ? 16 : 0) | (true ? 32 : 0) |
-                                    (true ? 64 : 0) | (false ? 128 : 0)))) +
-                 std::string()),
+        std::any(
+            std::string(
+                1, std::any((static_cast<char>(
+                       (std::any(false) ? 1 : 0) | (std::any(false) ? 2 : 0) |
+                       (std::any(false) ? 4 : 0) | (std::any(true) ? 8 : 0) |
+                       (std::any(false) ? 16 : 0) | (std::any(true) ? 32 : 0) |
+                       (std::any(true) ? 64 : 0) |
+                       (std::any(false) ? 128 : 0))))) +
+            std::string(
+                1, std::any((static_cast<char>(
+                       (std::any(true) ? 1 : 0) | (std::any(false) ? 2 : 0) |
+                       (std::any(false) ? 4 : 0) | (std::any(true) ? 8 : 0) |
+                       (std::any(false) ? 16 : 0) | (std::any(true) ? 32 : 0) |
+                       (std::any(true) ? 64 : 0) |
+                       (std::any(false) ? 128 : 0))))) +
+            std::string()),
         std::any(std::monostate{}));
   } else {
     uint64_t _x = n - 1;

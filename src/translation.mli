@@ -89,6 +89,11 @@ val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
 (** Generate a C++ expression from an ML AST. *)
 val gen_expr : ?expected_ty:cpp_type -> env -> ml_ast -> cpp_expr
 
+(** [recover_boxed_component into e] opens the box when [e] is evidently a
+    component read out of a pair that was itself recovered from a box, and so
+    hands back a [std::any] however concrete its ML type looks. *)
+val recover_boxed_component : cpp_type -> cpp_expr -> cpp_expr
+
 (** Generate pattern matching as a C++ expression using std::visit. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
 
