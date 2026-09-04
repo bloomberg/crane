@@ -3820,13 +3820,14 @@ and stmts_yield_boxed = function
     boundary: it is the single place that decides between boxing, [any_cast],
     [crane_erase_fn] and doing nothing.
 
-    The decision rests on {!Ml_type_util.is_boxed_type}, not on
-    {!Ml_type_util.prints_as_any}: {!Minicpp.Topaque} also prints as
-    [std::any], but it is an admission that the representation is unknown, and
-    nothing may be boxed or cast on the strength of it.  A boundary with a
-    [Topaque] on either side is therefore left alone, for the
-    representation-tolerant helpers in [crane_fn.h] to sort out at
-    instantiation time.  The pointer dimension (bare value versus
+    It first classifies the source side as boxed, opaque, concrete or unknown,
+    and then reads the answer off that.  The classification rests on
+    {!Ml_type_util.is_boxed_type}, not on {!Ml_type_util.prints_as_any}:
+    {!Minicpp.Topaque} also prints as [std::any], but it is an admission that
+    the representation is unknown, and nothing may be boxed or cast on the
+    strength of it.  A boundary with a [Topaque] on either side is therefore
+    left alone, for the representation-tolerant helpers in [crane_fn.h] to
+    sort out at instantiation time.  The pointer dimension (bare value versus
     [shared_ptr]) is delegated to {!gen_type_conversion_expr}, which already
     handles it.
 
@@ -3841,11 +3842,15 @@ and stmts_yield_boxed = function
     is a function, and so has to be adapted by [crane_erase_fn] before it is
     boxed. *)
 and coerce ?term ?from ~into expr =
-  let boxed_source = match from with Some f -> is_boxed_source f | None -> false in
-  (* An unknown source is not an opaque one: [None] says we did not track the
-     type, [Topaque] says the type itself is unknowable here. *)
-  let opaque_source =
-    match from with Some f -> prints_as_any f && not (is_boxed_source f) | None -> false
+  (* What the source side of the boundary tells us.  An unknown source is not
+     an opaque one: [None] says we did not track the type, [Topaque] says the
+     type itself is unknowable here. *)
+  let source =
+    match from with
+    | None -> `Unknown
+    | Some f when is_boxed_source f -> `Boxed
+    | Some f when prints_as_any f -> `Opaque
+    | Some f -> `Concrete f
   in
   (* Unboxing is the one direction in which [Topaque] must act.  The value
      reached this boundary out of a declared slot, and materialising the
@@ -3853,56 +3858,61 @@ and coerce ?term ?from ~into expr =
      inferred type stops short of saying so.  A function target is still left
      alone: there the representation-tolerant helpers in [crane_fn.h] decide at
      instantiation time, which is the whole reason [Topaque] exists. *)
-  let boxed_source =
-    boxed_source
-    || opaque_source
-       && (not (prints_as_any into))
-       && (match into with Tfun _ -> false | _ -> true)
+  let source =
+    match source with
+    | `Opaque
+      when (not (prints_as_any into))
+           && (match into with Tfun _ -> false | _ -> true) -> `Boxed
+    | s -> s
   in
   let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
-  (* Boxing is not idempotent: [std::any] holding a [std::any] is a box no
-     consumer opens twice. *)
-  let already_boxed =
-    match expr with
-    | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> true
-    | _ -> false
-  in
   if same_type || into = Tvoid then expr
-  else if is_boxed_type into && not boxed_source then
-    if opaque_source || already_boxed then expr
-    else
-      let is_function_value =
-        match from with
-        | Some (Tfun _) -> true
-        | Some _ -> false
-        | None -> ( match term with Some t -> ml_expr_is_function_value t | None -> false )
-      in
-      (* A closure does not survive as itself: the consumer recovers it with
-         [any_cast<std::function<std::any(std::any...)>>], so it is adapted to
-         that canonical shape first.  It is then boxed like any other value --
-         a custom constructor template such as [std::make_pair] deduces its
-         field type from the argument, and an unboxed [std::function] would
-         store [pair<any, function<any(any)>>] where the consumer expects
-         [pair<any,any>]. *)
-      let adapted =
-        if is_function_value then wrap_crane_erase_fn expr else expr
-      in
-      CPPconverting_ctor (Tany, [adapted])
-  (* [prints_as_any] is structural, so it misses a named alias for the box --
-     a type-level [Fixpoint] emitted as [using sem = std::any].  Casting a box
-     to such a name is not a recovery but an [any_cast<std::any>], which only
-     succeeds on a doubly-boxed value and otherwise throws. *)
-  else if boxed_source && not (prints_as_any into || resolves_to_any_type into)
-  then
-    match expr with
-    (* Already recovered; a second cast would be reading the same box twice. *)
-    | CPPany_cast _ -> expr
-    | _ -> CPPany_cast (into, expr)
   else
-    match from with
-    | Some f when not (prints_as_any f || prints_as_any into) ->
-      gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
-    | _ -> expr
+    match source with
+    (* [prints_as_any] is structural, so it misses a named alias for the box --
+       a type-level [Fixpoint] emitted as [using sem = std::any].  Casting a box
+       to such a name is not a recovery but an [any_cast<std::any>], which only
+       succeeds on a doubly-boxed value and otherwise throws. *)
+    | `Boxed when prints_as_any into || resolves_to_any_type into -> expr
+    (* Already recovered; a second cast would be reading the same box twice. *)
+    | `Boxed -> ( match expr with
+      | CPPany_cast _ -> expr
+      | _ -> CPPany_cast (into, expr) )
+    (* Nothing may be boxed or cast on the strength of an admission that the
+       representation is unknown. *)
+    | `Opaque -> expr
+    | (`Unknown | `Concrete _) as concrete_source ->
+      if is_boxed_type into then
+        (* Boxing is not idempotent: [std::any] holding a [std::any] is a box
+           no consumer opens twice. *)
+        match expr with
+        | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> expr
+        | _ ->
+          let is_function_value =
+            match concrete_source with
+            | `Concrete (Tfun _) -> true
+            | `Concrete _ -> false
+            | `Unknown -> (
+              match term with
+              | Some t -> ml_expr_is_function_value t
+              | None -> false )
+          in
+          (* A closure does not survive as itself: the consumer recovers it with
+             [any_cast<std::function<std::any(std::any...)>>], so it is adapted
+             to that canonical shape first.  It is then boxed like any other
+             value -- a custom constructor template such as [std::make_pair]
+             deduces its field type from the argument, and an unboxed
+             [std::function] would store [pair<any, function<any(any)>>] where
+             the consumer expects [pair<any,any>]. *)
+          let adapted =
+            if is_function_value then wrap_crane_erase_fn expr else expr
+          in
+          CPPconverting_ctor (Tany, [adapted])
+      else
+        match concrete_source with
+        | `Concrete f when not (prints_as_any into) ->
+          gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
+        | _ -> expr
 
 (** [recover_boxed_result ~boxed expr] casts the result of a call back into
     the type the enclosing context expects, when [boxed] says the callee hands
