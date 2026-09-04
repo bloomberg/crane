@@ -105,28 +105,14 @@ and resolve_stmt s =
   | _ -> () );
   map_stmt resolve_expr resolve_stmt (fun t -> t) s
 
-let rec resolve_field (f, vis, tag) =
-  let f' =
-    match f with
-    | Ffundef (id, ret, params, body) ->
-      Ffundef (id, ret, params, List.map resolve_stmt body)
-    | Fmethod m -> Fmethod {m with mf_body = List.map resolve_stmt m.mf_body}
-    | Fconstructor (params, inits, expl, noexc) ->
-      Fconstructor
-        (params, List.map (fun (i, e) -> (i, resolve_expr e)) inits, expl, noexc)
-    | Ftemplate_ctor (tps, expl, params, body) ->
-      Ftemplate_ctor (tps, expl, params, List.map resolve_stmt body)
-    | Fdestructor body -> Fdestructor (List.map resolve_stmt body)
-    | Fnested_struct (id, fields) ->
-      Fnested_struct (id, List.map resolve_field fields)
-    | Fnested_using (tparams, id, ty) ->
-      if tparams = [] then note_alias id ty;
-      f
-    | Fvar _ | Fvar' _ | Ffundecl _ | Fdeleted_ctor
-    | Fdefaulted_special_members ->
-      f
-  in
-  (f', vis, tag)
+let rec resolve_field ((f, vis, tag) as field) =
+  match f with
+  | Fnested_using ([], id, ty) ->
+    note_alias id ty;
+    field
+  | Fnested_struct (id, fields) ->
+    (Fnested_struct (id, List.map resolve_field fields), vis, tag)
+  | _ -> map_field resolve_expr resolve_stmt (fun t -> t) field
 
 (** [resolve_casts decl] rewrites every [CPPany_cast] in [decl] to say which
     caster the printer should emit: dropped where the cast is the identity,
@@ -137,13 +123,31 @@ let rec resolve_field (f, vis, tag) =
     they are met, mirroring where C++ would have them in scope. *)
 let rec resolve_casts (d : cpp_decl) : cpp_decl =
   match d with
+  (* Spelled out rather than left to [map_decl] only where the alias registry
+     has to see a field, or where the recursion must be into [resolve_casts]
+     itself so that it does. *)
   | Dtemplate (tps, constr, inner) ->
     Dtemplate (tps, Option.map resolve_expr constr, resolve_casts inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map resolve_casts decls)
-  | Dfundef (names, ret, params, body, no_pure) ->
-    Dfundef (names, ret, params, List.map resolve_stmt body, no_pure)
   | Dstruct s -> Dstruct {s with ds_fields = List.map resolve_field s.ds_fields}
-  | Dasgn (g, ty, e) -> Dasgn (g, ty, resolve_expr e)
-  | Dconcept (g, e) -> Dconcept (g, resolve_expr e)
-  | Dstatic_assert (e, msg) -> Dstatic_assert (resolve_expr e, msg)
-  | Dfundecl _ | Denum _ -> d
+  | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
+
+(** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
+    {!Minicpp.Tany}.
+
+    [Topaque] means "the representation is unknown here"; it prints as
+    [std::any] but licenses nothing, so a site that meets one must fall back to
+    the tolerant helper rather than assume a box.  That is the honest answer
+    while a type is still being inferred — but writing [std::any] down in a
+    header is precisely the act that decides the representation, and from then
+    on the value {e is} boxed.
+
+    Rather than ask each of the many declaration emitters to remember
+    {!Ml_type_util.materialise_opaque}, apply it once to the whole declaration
+    on the way out of translation.  Print-neutral by construction: [Topaque] and
+    [Tany] have the same C++ spelling. *)
+let materialise (d : cpp_decl) : cpp_decl =
+  let ft = Ml_type_util.materialise_opaque in
+  let rec fe e = map_expr fe fs ft e
+  and fs s = map_stmt fe fs ft s in
+  map_decl fe fs ft d

@@ -541,8 +541,10 @@ let pp_cpp_ind_header kn ind =
               else
                 decl
             in
-            (* Also validate here: this branch renders fields directly and so
-               never reaches {!pp_cpp_decl}, where the other paths are checked. *)
+            (* Also run the seam here: this branch renders fields directly and
+               so never reaches {!pp_cpp_decl}, where the other paths go
+               through it. *)
+            let decl = Cpp_erasure.materialise decl in
             Minicpp_check.check ~where:"promoted inductive" decl;
             let decl = Cpp_erasure.resolve_casts decl in
             match decl with

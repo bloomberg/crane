@@ -42,3 +42,15 @@ val is_any_shaped : cpp_type -> bool
     Call it on declarations in emission order: [using] aliases are recorded as
     they are met, mirroring where C++ would have them in scope. *)
 val resolve_casts : cpp_decl -> cpp_decl
+
+(** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
+    {!Minicpp.Tany}.
+
+    [Topaque] means "the representation is unknown here" — it prints as
+    [std::any] but licenses no box and no cast.  That is the honest answer
+    while a type is still being inferred, but writing [std::any] down in a
+    header is the act that decides the representation, and from then on the
+    value {e is} boxed.  Running this once on the way out of translation saves
+    every declaration emitter from having to remember
+    {!Ml_type_util.materialise_opaque}, and is print-neutral by construction. *)
+val materialise : cpp_decl -> cpp_decl

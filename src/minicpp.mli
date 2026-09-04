@@ -659,3 +659,22 @@ type cpp_decl =
           (** Original Rocq constructor names for doc comment lookup *)
       de_tparams : (template_type * Id.t) list;  (** Template parameters *)
     }
+
+(** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a visibility-annotated field,
+    performing one level of structural descent.  Nested structs recurse. *)
+val map_field :
+  (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
+  cpp_field * cpp_visibility * section_tag ->
+  cpp_field * cpp_visibility * section_tag
+
+(** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a declaration, including every
+    position a type is {e written down} in the generated header.  Nested
+    declarations ({!Dtemplate}, {!Dnspace}) recurse.
+
+    This is the rung that lets a whole-declaration pass be written as its three
+    leaf functions rather than as a fresh traversal of all nine constructors. *)
+val map_decl :
+  (cpp_expr -> cpp_expr) -> (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
+  cpp_decl -> cpp_decl

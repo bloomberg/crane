@@ -2,7 +2,7 @@
 
 (env
  (_
-  (env-vars (INSIDE_DUNE "1"))
+  (env-vars (INSIDE_DUNE "1") (CRANE_CHECK_IR "1"))
   (binaries (benchmark_matrix/bin/hyperfine as hyperfine))))
 
 (coq.theory

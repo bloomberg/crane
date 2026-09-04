@@ -938,3 +938,75 @@ type cpp_decl =
       de_ctor_rocq_names : string list;
       de_tparams : (template_type * Id.t) list;
     }
+
+(** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a visibility-annotated field,
+    performing one level of structural descent.  Nested structs recurse, so
+    that a caller need only supply the three leaf functions. *)
+let rec map_field
+    (fe : cpp_expr -> cpp_expr)
+    (fs : cpp_stmt -> cpp_stmt)
+    (ft : cpp_type -> cpp_type)
+    ((f, vis, tag) : cpp_field * cpp_visibility * section_tag) :
+    cpp_field * cpp_visibility * section_tag =
+  let params ps = List.map (fun (id, ty) -> (id, ft ty)) ps in
+  let f' =
+    match f with
+    | Fvar (id, ty) -> Fvar (id, ft ty)
+    | Fvar' (r, ty) -> Fvar' (r, ft ty)
+    | Ffundef (id, ret, ps, body) ->
+      Ffundef (id, ft ret, params ps, List.map fs body)
+    | Ffundecl (id, ret, ps) -> Ffundecl (id, ft ret, params ps)
+    | Fmethod m ->
+      Fmethod
+        { m with
+          mf_ret_type = ft m.mf_ret_type;
+          mf_params = params m.mf_params;
+          mf_body = List.map fs m.mf_body }
+    | Fconstructor (ps, inits, expl, noexc) ->
+      Fconstructor
+        (params ps, List.map (fun (id, e) -> (id, fe e)) inits, expl, noexc)
+    | Fdestructor body -> Fdestructor (List.map fs body)
+    | Fnested_struct (id, fields) ->
+      Fnested_struct (id, List.map (map_field fe fs ft) fields)
+    | Fnested_using (tps, id, ty) -> Fnested_using (tps, id, ft ty)
+    | Ftemplate_ctor (tps, expl, ps, body) ->
+      Ftemplate_ctor (tps, expl, params ps, List.map fs body)
+    | Fdeleted_ctor | Fdefaulted_special_members -> f
+  in
+  (f', vis, tag)
+
+(** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a declaration.  Nested
+    declarations ({!Dtemplate}, {!Dnspace}) recurse. *)
+let rec map_decl
+    (fe : cpp_expr -> cpp_expr)
+    (fs : cpp_stmt -> cpp_stmt)
+    (ft : cpp_type -> cpp_type)
+    (d : cpp_decl) : cpp_decl =
+  match d with
+  | Dtemplate (tps, constr, inner) ->
+    Dtemplate (tps, Option.map fe constr, map_decl fe fs ft inner)
+  | Dnspace (r, decls) -> Dnspace (r, List.map (map_decl fe fs ft) decls)
+  | Dfundef (names, ret, ps, body, no_pure) ->
+    Dfundef
+      ( List.map (fun (r, tys) -> (r, List.map ft tys)) names,
+        ft ret,
+        List.map (fun (id, ty) -> (id, ft ty)) ps,
+        List.map fs body,
+        no_pure )
+  | Dfundecl (names, ret, ps, no_pure) ->
+    Dfundecl
+      ( List.map (fun (r, tys) -> (r, List.map ft tys)) names,
+        ft ret,
+        List.map (fun (id, ty) -> (id, ft ty)) ps,
+        no_pure )
+  | Dstruct s ->
+    Dstruct
+      { s with
+        ds_fields = List.map (map_field fe fs ft) s.ds_fields;
+        ds_constraint = Option.map fe s.ds_constraint }
+  | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
+  | Dconcept (r, e) -> Dconcept (r, fe e)
+  | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
+  | Denum _ -> d

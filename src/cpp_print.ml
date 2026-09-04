@@ -3862,6 +3862,9 @@ let maybe_loopify decl =
     @param env   name environment for sub-expression and sub-type printers
     @param decl  the MiniCpp declaration to render *)
 let rec pp_cpp_decl env decl =
+  (* Writing a type down is what decides its representation, so settle the
+     [Topaque] slots before anything reads the declaration as final. *)
+  let decl = Cpp_erasure.materialise decl in
   (* Validate at both pass boundaries, so a report names the pass that
      introduced the violation rather than merely the last one to run. *)
   Minicpp_check.check ~where:"translation" decl;
