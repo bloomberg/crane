@@ -177,10 +177,14 @@ val isMLdummy : ml_ast -> bool
 val isKill : sign -> bool
 
 (** Expunge dummy arguments from a case expression, eta-expanding as needed.
+    @param types
+      one type per signature element, used to type the binders introduced when
+      eta-expanding; binders past the end of the list get [Tunknown]
     @param s the signature indicating which leading arguments are [Kill]ed
     @param e the ML expression (typically a match branch body) to process
     @return [(ids, body)] with the surviving binders and the stripped body *)
-val case_expunge : signature -> ml_ast -> (ml_ident * ml_type) list * ml_ast
+val case_expunge :
+  ?types:ml_type list -> signature -> ml_ast -> (ml_ident * ml_type) list * ml_ast
 
 (** Expunge dummy leading lambdas from a term according to a signature.
     Leaves one dummy lambda when all arguments are logical and the target

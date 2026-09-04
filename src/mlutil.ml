@@ -1533,7 +1533,25 @@ let expand_linear_let o id e =
    of one specific boundary (see {!Miniml.ml_magic}), so relocating the node
    leaves it describing a gap it is no longer at, and the backend's [coerce]
    reads those types as authoritative.  The rewrites are therefore deleted
-   rather than repaired; what they bought was a slightly smaller AST. *)
+   rather than repaired; what they bought was a slightly smaller AST.
+
+   The one case that had to be kept is a coercion wrapping a lambda that is
+   then applied ([simpl_app] below), because leaving that beta-redex standing
+   reaches the backend as an immediately-invoked lambda.  It is handled by
+   {!split_arrow_coercion}, which does not move the coercion but splits it
+   along the arrow it already describes. *)
+
+(** Split a coercion between two function types into the coercion on the
+    domain and the coercion on the codomain.  A value flows into the domain
+    against the arrow, so that half is reversed.  Returns [None] unless both
+    sides are arrows, in which case the coercion describes something other
+    than a function boundary and must be left where it is. *)
+let split_arrow_coercion = function
+  | Mcoerce (Tarr (d, c), Tarr (d', c')) ->
+    Some
+      ( put_magic_if ~from:d' ~into:d (needs_magic (d', d)),
+        put_magic_if ~from:c ~into:c' (needs_magic (c, c')) )
+  | Mcoerce _ | Mboxed | Mbarrier -> None
 
 (** Core ML simplification: beta-reduction, iota-reduction, let-inlining, and
     other optimizations. *)
@@ -1586,6 +1604,15 @@ and simpl_app o a = function
     | _ ->
       let a' = List.map (ast_lift 1) (List.tl a) in
       simpl o (MLletin (id, ty, List.hd a, MLapp (t, a'))) )
+  | MLmagic (m, (MLlam _ as lam)) as f -> (
+    (* [(coerce (fun x => t)) a] -- reduce the redex without relocating the
+       coercion: it is split along its own arrow, the domain half landing on
+       the argument and the codomain half on the result. *)
+    match split_arrow_coercion m with
+    | Some (on_dom, on_cod) ->
+      let arg = on_dom (List.hd a) in
+      simpl o (on_cod (MLapp (lam, [arg])) |> fun r -> MLapp (r, List.tl a))
+    | None -> MLapp (f, a) )
   | MLletin (id, t, e1, e2) when o.opt_let_app ->
     (* Application of a letin: we push arguments inside *)
     MLletin (id, t, e1, simpl o (MLapp (e2, List.map (ast_lift 1) a)))
@@ -1728,8 +1755,8 @@ let kill_dummy_lams sign c =
 
 (** Eta-expands a function to match a given signature, adding lambdas as needed.
 *)
-let eta_expansion_sign s (ids, c) =
-  let rec abs ids rels i = function
+let eta_expansion_sign ?(types = []) s (ids, c) =
+  let rec abs ids rels i types = function
     | [] ->
       let a =
         List.rev_map
@@ -1740,29 +1767,33 @@ let eta_expansion_sign s (ids, c) =
       in
       (ids, MLapp (ast_lift (i - 1) c, a))
     | Keep :: l ->
-      abs
-        ((anonymous, Taxiom) :: ids)
-        (MLrel i :: rels)
-        (i + 1)
-        l (* Unreachable for well-formed Rocq: match branches are already
-             lambda-abstracted over constructor args, so case_expunge never
-             needs to eta-expand. If reached, Taxiom → `axiom` C++ type,
-             which is not filtered by is_cpp_dummy_type → compile error. *)
+      (* [types] carries one entry per signature element, so a [Keep] binder
+         gets the argument's real type.  Falling back to [Taxiom] when the
+         lists go out of sync would print as the undeclared C++ type [axiom];
+         [Tunknown] at least erases to [std::any]. *)
+      let ty, rest =
+        match types with
+        | t :: ts -> (t, ts)
+        | [] -> (Tunknown, [])
+      in
+      abs ((anonymous, ty) :: ids) (MLrel i :: rels) (i + 1) rest l
     | Kill k :: l ->
-      abs ((Dummy, Tdummy k) :: ids) (MLdummy k :: rels) (i + 1) l
+      let rest = match types with _ :: ts -> ts | [] -> [] in
+      abs ((Dummy, Tdummy k) :: ids) (MLdummy k :: rels) (i + 1) rest l
   in
-  abs ids [] 1 s
+  abs ids [] 1 types s
 
 (** Removes erased arguments from match branches by eta-expanding and
     eliminating Kill'd lambdas. *)
-let case_expunge s e =
+let case_expunge ?(types = []) s e =
   let m = List.length s in
   let n = nb_lams e in
   let p =
     if m <= n then
       collect_n_lams m e
     else
-      eta_expansion_sign (List.skipn n s) (collect_lams e)
+      let types = if List.length types > n then List.skipn n types else [] in
+      eta_expansion_sign ~types (List.skipn n s) (collect_lams e)
   in
   kill_some_lams (List.rev s) p
 
