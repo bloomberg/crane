@@ -101,6 +101,38 @@ let needs_deep_recovery = function
     [crane_any_cast]. *)
 let tolerant ty = instance_dependent ty <> None || needs_deep_recovery ty
 
+(** The two method-registry queries the boxed-result test needs.  The registry
+    sits above this module in the dependency order, so {!Cpp_print} installs
+    them at load time. *)
+type method_queries = {
+  mq_returns_any : GlobRef.t -> bool;  (** is the result declared [std::any]? *)
+  mq_is_method : GlobRef.t -> bool;  (** is this global called as a method? *)
+}
+
+let method_queries =
+  ref {mq_returns_any = (fun _ -> false); mq_is_method = (fun _ -> false)}
+
+(** [returns_a_box e] -- [e] is a call whose result is declared [std::any], so
+    reading it at a concrete type needs a cast.  Method results are the only
+    boxed-return positions the registry tracks; a nested [any_cast] counts too,
+    because the tolerant caster hands back a box. *)
+let returns_a_box = function
+  | CPPmethod_call (CPPglob (n, _, _), _, _) -> !method_queries.mq_returns_any n
+  | CPPfun_call (CPPglob (n, _, _), _) when !method_queries.mq_is_method n ->
+    !method_queries.mq_returns_any n
+  | CPPfun_call (CPPget' (_, n), _) -> !method_queries.mq_returns_any n
+  | CPPfun_call (CPPany_cast _, _) -> true
+  | _ -> false
+
+(** [castable_to ty] -- [ty] names something [any_cast] can ask for.  A type
+    variable or an unresolved type does not. *)
+let rec castable_to = function
+  | Tvar _ -> false
+  | Tunknown | Ttodo | Tany | Topaque | Tauto -> false
+  | Tmod (_, inner) -> castable_to inner
+  | Tglob (GlobRef.ConstRef _, _, _) -> false
+  | _ -> true
+
 (** {2 The pass} *)
 
 (** Record any [std::any] alias a declaration introduces, so that later casts
@@ -157,6 +189,13 @@ let rec resolve_casts (d : settled) : settled =
     Dtemplate (tps, Option.map resolve_expr constr, resolve_casts inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map resolve_casts decls)
   | Dstruct s -> Dstruct {s with ds_fields = List.map resolve_field s.ds_fields}
+  (* A constant initialised from a boxed call has to unbox to reach its own
+     declared type.  The printer used to decide this while rendering; saying it
+     in the IR means the cast goes through the normalisation above like every
+     other one, and [Minicpp_check] can see it. *)
+  | Dasgn (id, ty, e) when returns_a_box e && castable_to ty ->
+    Dasgn (id, ty,
+      resolve_expr (CPPany_cast (Ml_type_util.resolve_tvars_to_any ty, e)))
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with

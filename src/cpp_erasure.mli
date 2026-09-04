@@ -44,6 +44,18 @@ val is_any_shaped : cpp_type -> bool
     erased already. *)
 val erased_list_shape : cpp_type -> (Names.GlobRef.t * cpp_type) option
 
+(** The two method-registry queries {!resolve_casts} needs to tell whether an
+    initialiser hands back a box.  The registry sits above this module in the
+    dependency order, so {!Cpp_print} installs them at load time. *)
+type method_queries = {
+  mq_returns_any : Names.GlobRef.t -> bool;
+      (** is the global's result declared [std::any]? *)
+  mq_is_method : Names.GlobRef.t -> bool;
+      (** is the global called as a method? *)
+}
+
+val method_queries : method_queries ref
+
 (** {2 The pass} *)
 
 (** A declaration whose types are all spelled the way they will be written

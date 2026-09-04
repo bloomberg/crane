@@ -3896,7 +3896,7 @@ let rec pp_cpp_decl env decl =
 and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
-    let expr_pp = wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty [] in
+    let expr_pp = pp_cpp_expr env [] e in
     let req = pp_requires_of_tparams ~body:[Sreturn (Some e)] temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
@@ -4266,7 +4266,7 @@ and pp_cpp_decl_raw env = function
         ++ str "(\""
         ++ str (escape_cpp_string msg)
         ++ str "\"); })()"
-      | _ -> wrap_any_cast_if_needed e (pp_cpp_expr env [] e) ty []
+      | _ -> pp_cpp_expr env [] e
     in
     if render_ctx.rc_in_template
        || (render_ctx.rc_in_struct
@@ -4394,3 +4394,8 @@ let () =
       (with_render_ctx
          ~setup:(fun () -> render_ctx.rc_in_template <- true)
          (fun () -> pp_cpp_type false [] ty)))
+
+let () =
+  Cpp_erasure.method_queries :=
+    { Cpp_erasure.mq_returns_any = method_returns_any;
+      mq_is_method = (fun n -> lookup_method_this_pos n <> None) }
