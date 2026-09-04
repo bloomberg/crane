@@ -1525,37 +1525,22 @@ let expand_linear_let o id e =
 
 (* Some beta-iota reductions + simplifications. *)
 
-let rec unmagic = function
-  | MLmagic (_, e) -> unmagic e
-  | e -> e
-
-let is_magic = function
-  | MLmagic _ -> true
-  | _ -> false
-
-(* [magic_hd] and the [MLmagic] cases of [simpl] below move a coercion away
-   from the boundary it was inserted at, which is sound only while the node
-   carries no types.  Now that it carries both, the relocated coercion
-   describes the wrong gap.  Crane never runs [simpl], so none of this is
-   reachable; were it ever enabled, these rewrites must be deleted rather than
-   repaired.  The [Mcoerce] values below are preserved verbatim only so the
-   code continues to type-check. *)
-
-let magic_hd a =
-  match a with
-  | MLmagic _ :: _ -> a
-  | e :: a -> MLmagic (Mbarrier, e) :: a
-  | [] -> assert false
+(* Rocq's own [simpl] additionally moved an [MLmagic] away from the node it
+   was inserted at -- out of an application's result onto its head, into each
+   branch of a match, under a lambda, off an argument altogether -- and
+   collapsed the [MLmagic] on nested ones.  That is sound only while the node
+   carries no types, as it did upstream.  Here [Mcoerce] names the two types
+   of one specific boundary (see {!Miniml.ml_magic}), so relocating the node
+   leaves it describing a gap it is no longer at, and the backend's [coerce]
+   reads those types as authoritative.  The rewrites are therefore deleted
+   rather than repaired; what they bought was a slightly smaller AST. *)
 
 (** Core ML simplification: beta-reduction, iota-reduction, let-inlining, and
     other optimizations. *)
 let rec simpl o = function
   | MLapp (f, []) -> simpl o f
   | MLapp (MLapp (f, a), a') -> simpl o (MLapp (f, a @ a'))
-  | MLapp (f, a) ->
-    (* When the head of the application is magic, no need for magic on args *)
-    let a = if is_magic f then List.map unmagic a else a in
-    simpl_app o (List.map (simpl o) a) (simpl o f)
+  | MLapp (f, a) -> simpl_app o (List.map (simpl o) a) (simpl o f)
   | MLcase (typ, e, br) ->
     let br = Array.map (fun (l, r, p, t) -> (l, r, p, simpl o t)) br in
     simpl_case o typ br (simpl o e)
@@ -1579,13 +1564,8 @@ let rec simpl o = function
     else
       simpl o (ast_lift (-n) c.(i))
     (* Dummy fixpoint *)
-  | MLmagic (_, (MLmagic _ as e)) -> simpl o e
-  | MLmagic (m, MLapp (f, l)) -> simpl o (MLapp (MLmagic (m, f), l))
-  | MLmagic (m, MLletin (id, t, c, e)) ->
-    simpl o (MLletin (id, t, c, MLmagic (m, e)))
-  | MLmagic (m, MLcase (typ, e, br)) ->
-    let br' = Array.map (fun (ids, r, p, c) -> (ids, r, p, MLmagic (m, c))) br in
-    simpl o (MLcase (typ, e, br'))
+  (* An exception never yields a value, so there is no representation gap for
+     a coercion around it to describe. *)
   | MLmagic (_, (MLexn _ as e)) -> e
   | MLlam _ as e ->
     ( match atomic_eta_red e with
@@ -1606,11 +1586,6 @@ and simpl_app o a = function
     | _ ->
       let a' = List.map (ast_lift 1) (List.tl a) in
       simpl o (MLletin (id, ty, List.hd a, MLapp (t, a'))) )
-  | MLmagic (m, MLlam (id, ty, t)) ->
-    (* When we've at least one argument, we permute the magic and the lambda, to
-       simplify things a bit (see #2795). Alas, the 1st argument must also be
-       magic then. *)
-    simpl_app o (magic_hd a) (MLlam (id, ty, MLmagic (m, t)))
   | MLletin (id, t, e1, e2) when o.opt_let_app ->
     (* Application of a letin: we push arguments inside *)
     MLletin (id, t, e1, simpl o (MLapp (e2, List.map (ast_lift 1) a)))
