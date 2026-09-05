@@ -4,12 +4,14 @@ Require Import Crane.Mapping.NatIntStd.
 Require Import List.
 Import ListNotations.
 
+Set Crane Loopify.
 
 Module DeepTailRecursionOverflow.
 
-(** A plainly tail-recursive builder over a deep value-type inductive still
-    recurses in the generated C++ (and so does the resulting move-constructor
-    chain) unless [Set Crane Loopify] is in effect. *)
+(** A three-million-link value-type chain, built by a tail recursion and
+    consumed by a non-tail one.  Both recursions have to become loops, and the
+    chain's destructor has to drain its own spine, or the C++ stack overflows
+    on any one of the three. *)
 Inductive chain : Type := End_ : nat -> chain | Link : chain -> nat -> chain.
 
 Fixpoint build (n : nat) (acc : chain) : chain :=

@@ -120,17 +120,6 @@
   (action (run ./coinductive_take_overflow.t.exe))))
 
 
-(subdir deep_tail_recursion_overflow
- (rule
-  (targets deep_tail_recursion_overflow.t.exe)
-  (deps DeepTailRecursionOverflow.vo deep_tail_recursion_overflow.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_tail_recursion_overflow.t.exe deep_tail_recursion_overflow.cpp deep_tail_recursion_overflow.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deep_tail_recursion_overflow.t.exe)
-  (action (run ./deep_tail_recursion_overflow.t.exe))))
-
 
 
 
