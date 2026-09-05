@@ -4681,9 +4681,23 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLrel i -> get_env_type_opt i
       | _ -> None
     in
+    (* A callee typed by a function alias ([church]) hands back whatever the
+       alias's codomain erased to; the alias is the only place that says so,
+       since the term itself carries no arrows. *)
+    let alias_result_is_boxed ty =
+      match ty with
+      | Miniml.Tglob (GlobRef.ConstRef _, _, _) ->
+        ( match expand_ml_fun_alias ty with
+        | Miniml.Tarr _ as expanded ->
+          ( match ml_codomain expanded with
+          | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+          | _ -> false )
+        | _ -> false )
+      | _ -> false
+    in
     ( match (callee_ty, expected_ty) with
     | Some ty, Some into
-      when result_is_index_only_tvar ty
+      when (result_is_index_only_tvar ty || alias_result_is_boxed ty)
            && not (prints_as_any into || contains_tvar into) ->
       coerce ~from:Tany ~into result
     | _ -> result )
@@ -7310,7 +7324,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     ();
     let fn_ml_ty_subst = try type_subst_list tys fn_ml_ty with _ -> fn_ml_ty in
     let fn_param_ml_tys =
-      let rec collect = function
+      let rec collect ty =
+        match expand_ml_fun_alias ty with
         | Miniml.Tarr (t, rest) ->
           (match resolve_tmeta t with Miniml.Tdummy _ -> collect rest | t -> t :: collect rest)
         | _ -> []
@@ -7321,7 +7336,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        codomain is a type variable (needs adapter wrapping) vs concrete unit
        (C++ definition already uses void in the is_invocable_v requires clause). *)
     let fn_param_ml_tys_orig =
-      let rec collect = function
+      let rec collect ty =
+        match expand_ml_fun_alias ty with
         | Miniml.Tarr (t, rest) ->
           (match resolve_tmeta t with Miniml.Tdummy _ -> collect rest | t -> t :: collect rest)
         | _ -> []
@@ -8430,7 +8446,25 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           (match find_type_opt r with
            | Some ty -> Some (ml_subst_tvars (Array.of_list tys) ty)
            | None -> infer_ml_body_type f)
-        | _ -> infer_ml_body_type f
+        | _ ->
+          ( match infer_ml_body_type f with
+          | Some ty -> Some ty
+          | None ->
+            (* A local binder typed by name ([c : church]) shows no arrows in
+               the term, so its parameter types can only come from the type the
+               environment recorded at the binding site.  Only an alias is
+               taken: any other binder either carries its arrows in the term or
+               is generalised into a deduced callable, which takes each
+               argument at the type the argument already has. *)
+            ( match f with
+            | MLrel i | MLmagic (_, MLrel i) -> (
+              match get_env_type_opt i with
+              | Some (Miniml.Tglob (GlobRef.ConstRef _, _, _) as ty) -> (
+                match expand_ml_fun_alias ty with
+                | Miniml.Tarr _ as expanded -> Some expanded
+                | _ -> None )
+              | _ -> None )
+            | _ -> None ) )
       in
       match fty_opt with Some fty -> extract_params fty | None -> []
     in

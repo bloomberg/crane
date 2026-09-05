@@ -24,6 +24,10 @@ val ctor_struct_id_of_ref :
 (** Resolve a MiniML type through any metavariable indirection. *)
 val resolve_tmeta : Miniml.ml_type -> Miniml.ml_type
 
+(** Unfold a type alias whose body is a function type, substituting the
+    alias's own type arguments; any other type is returned unchanged. *)
+val expand_ml_fun_alias : Miniml.ml_type -> Miniml.ml_type
+
 (** Build the substitution mapping type variables of one C++ type to the
     corresponding sub-types of another. *)
 val extract_tvar_map :
@@ -124,6 +128,9 @@ val is_cpp_dummy_type : Minicpp.cpp_type -> bool
     question about syntax only — it says nothing about whether a value of the
     type may be boxed or cast, for which see {!is_boxed_type}. *)
 val prints_as_any : Minicpp.cpp_type -> bool
+
+(** True of a function type whose whole signature erased to [std::any]. *)
+val is_fully_erased_fun_ty : Minicpp.cpp_type -> bool
 
 (** Whether a value of this type is known to live inside a [std::any], and so
     may be boxed into and [any_cast] out of.  Narrower than {!prints_as_any}:

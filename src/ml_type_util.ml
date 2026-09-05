@@ -34,6 +34,29 @@ let rec resolve_tmeta = function
   | Miniml.Tmeta {contents = Some t} -> resolve_tmeta t
   | t -> t
 
+(** Unfold a type alias standing for a function type.
+
+    A definition may be typed by name -- [Definition to_nat (c : church)] --
+    and everything that reads a callee's parameter types off arrows has to see
+    the arrows the name stands for.  Only function bodies are unfolded: any
+    other alias is a type in its own right and its spelling is worth keeping.
+
+    Note the caller may need the fully applied form, so the alias's own type
+    arguments are substituted for the body's variables. *)
+let rec expand_ml_fun_alias ty =
+  match resolve_tmeta ty with
+  | Miniml.Tglob (GlobRef.ConstRef kn, args, _) as t ->
+    ( match Table.lookup_typedef_unchecked kn with
+    | Some body ->
+      let body =
+        if args = [] then body else Mlutil.type_subst_list args body
+      in
+      ( match resolve_tmeta body with
+      | Miniml.Tarr _ -> expand_ml_fun_alias body
+      | _ -> t )
+    | None -> t )
+  | t -> t
+
 (** Unify a template [cpp_type] with a concrete [cpp_type] to extract type
     variable bindings. Recursively walks matching type constructors ([Tglob],
     [Tfun], [Tref], [Tmod], [Tnamespace]) and collects [(id, concrete_ty)]
@@ -290,6 +313,18 @@ let is_cpp_dummy_type = function
     {!is_boxed_type}. *)
 let prints_as_any t =
   t = Minicpp.Tany || t = Minicpp.Topaque || is_cpp_dummy_type t
+
+(** [is_fully_erased_fun_ty t] -- true if [t] is a function type whose whole
+    signature has erased to [std::any], as [std::function<std::any(std::any)>]
+    has.  Such a signature pins nothing down, so a parameter at that type has
+    nothing to gain from being generalised into a deduced callable -- and a
+    definition that keeps it stays an ordinary function, usable as a value of
+    the very type its Rocq signature names. *)
+let is_fully_erased_fun_ty t =
+  match t with
+  | Minicpp.Tfun (dom, cod) ->
+    dom <> [] && List.for_all prints_as_any dom && prints_as_any cod
+  | _ -> false
 
 (** [is_boxed_type t] — true if a value of type [t] is known to be physically
     inside a [std::any], and may therefore be boxed into and [any_cast] out of.

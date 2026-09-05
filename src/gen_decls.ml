@@ -2412,11 +2412,25 @@ let gen_dfun n b cty ty temps =
     | Tfun _ as f -> Some f
     | _ -> None
   in
+  (* A parameter whose function type erased to [std::any] throughout, in a
+     signature that deduces no type variable at all, is not worth generalising:
+     the deduced callable pins nothing down, and the template it forces costs
+     the definition its usability as a value of the type its Rocq signature
+     names ([church]). *)
+  let is_erased_fun_param ty =
+    IntSet.is_empty primary
+    &&
+    match unwrap_fun_ty2 ty with
+    | Some f -> Ml_type_util.is_fully_erased_fun_ty f
+    | None -> false
+  in
   let fun_tys =
     List.filter_map
       (fun (x, ty, i) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun (fdom, fcod)) when not (is_non_fwd_param_source i) ->
+        | Some (Tfun (fdom, fcod))
+          when (not (is_non_fwd_param_source i)) && not (is_erased_fun_param ty)
+          ->
           let fun_idx = get_tvar_indices (Tfun (fdom, fcod)) in
           let has_undeclared =
             List.exists (fun idx -> not (IntSet.mem idx primary)) fun_idx
@@ -2438,7 +2452,8 @@ let gen_dfun n b cty ty temps =
     List.mapi
       (fun i (x, ty) ->
         match unwrap_fun_ty2 ty with
-        | Some (Tfun _) when not (is_non_fwd_param_db i) ->
+        | Some (Tfun _)
+          when (not (is_non_fwd_param_db i)) && not (is_erased_fun_param ty) ->
           ( x,
             Tref
               (Tref (Tvar (0, Some (fun_tparam_id (List.length ids - i - 1)))))
@@ -3167,7 +3182,8 @@ let gen_decl_for_pp__inner n b ty =
       List.filter_map
         (fun (ty, i) ->
           match ty with
-          | Tfun _ -> Some (fun_tparam_id i)
+          | Tfun _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
+            Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
@@ -3237,7 +3253,8 @@ let gen_dfun_def__inner n b ty =
       List.filter_map
         (fun (ty, i) ->
           match ty with
-          | Tfun _ -> Some (fun_tparam_id i)
+          | Tfun _ when not (Ml_type_util.is_fully_erased_fun_ty ty) ->
+            Some (fun_tparam_id i)
           | _ -> None )
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
