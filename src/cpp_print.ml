@@ -1219,10 +1219,10 @@ and pp_cpp_expr env args t =
        a hard error rather than a substitution failure. *)
     let receiver_param name =
       match method_receiver_cpp_type x _tys with
-      (* A receiver type mentioning a template parameter cannot be spelled at
-         this lambda: the enclosing template's parameters are not in scope in
-         its body.  Fall back to the generic form, which is what this always
-         used to emit. *)
+      (* A receiver type mentioning a template parameter can only be spelled
+         where that parameter is in scope.  Outside a template -- a lambda in
+         a static data member's initialiser, say -- fall back to the generic
+         form, which is what this always used to emit. *)
       | Some ty when Ml_type_util.contains_tvar ty -> "const auto &" ^ name
       | Some ty ->
         Pp.string_of_ppcmds

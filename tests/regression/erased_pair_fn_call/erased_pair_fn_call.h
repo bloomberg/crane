@@ -166,8 +166,11 @@ struct ErasedPairFnCall {
 
   template <typename T1> static boxed mk(List<T1> l) {
     return SigT<std::any, std::pair<List<std::any>, std::any>>::existt(
-        std::any(), std::make_pair(std::move(l),
-                                   [](const auto &_x) { return _x.length(); }));
+        std::any(),
+        std::make_pair(std::move(l),
+                       std::any(crane_erase_fn([](const List<std::any> &_x) {
+                         return _x.length();
+                       }))));
   }
 
   static uint64_t

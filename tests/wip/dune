@@ -161,16 +161,6 @@
   (deps deep_tail_recursion_overflow.t.exe)
   (action (run ./deep_tail_recursion_overflow.t.exe))))
 
-(subdir erased_pair_fn_call
- (rule
-  (targets erased_pair_fn_call.t.exe)
-  (deps ErasedPairFnCall.vo erased_pair_fn_call.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_pair_fn_call.t.exe erased_pair_fn_call.cpp erased_pair_fn_call.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_pair_fn_call.t.exe)
-  (action (run ./erased_pair_fn_call.t.exe))))
 
 
 (subdir map_returns_closure

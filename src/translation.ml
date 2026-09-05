@@ -2894,7 +2894,14 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
        free (existential) type variable.  Without it a payload
        [pair<any, function<nat(any)>>] would be read back component-wise at
        two different erasures from the [pair<any, any>] its producer stored. *)
-    if List.exists resolves_to_any_type args then List.map index_erase_type args
+    if List.exists resolves_to_any_type args then
+      (* An argument that already carries an erased component is at the shape
+         its producer stored it in -- a [pair<List<any>, any>] payload is
+         written down that way in the field, and reading it back as a flat
+         [any] would lose the components the producer boxed individually. *)
+      List.map
+        (fun a -> if has_tany_in_type a then a else index_erase_type a)
+        args
     else args
   in
   let num_pv = Table.get_ctor_num_param_vars cname in
@@ -2934,6 +2941,31 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
     | Some t -> record_binder_type db_idx t
     | None -> ()
   ) (List.init n_fields Fun.id)
+
+(** The binder a match scrutinee names, seen through the wrappers that leave
+    the value alone: a magic cast, and a dependent instantiation.  A payload
+    whose type is written [P x] appears applied to its witness, but a binder
+    of non-function type is no callable: the application names the binder
+    itself, and that is where the value's C++ type was pinned down. *)
+and scrutinee_binder = function
+  | MLrel i -> Some i
+  | MLmagic (_, e) -> scrutinee_binder e
+  | MLapp (h, _) when not (scrutinee_head_is_callable h) ->
+    scrutinee_binder h
+  | _ -> None
+
+(** Whether a term in head position really is a function being applied, as
+    opposed to a binder that a dependent type spells applied to its index. *)
+and scrutinee_head_is_callable h =
+  match scrutinee_binder h with
+  | Some i ->
+    let rec is_arrow = function
+      | Miniml.Tmeta {contents = Some t} -> is_arrow t
+      | Miniml.Tarr _ -> true
+      | _ -> false
+    in
+    (match get_env_type_opt i with Some t -> is_arrow t | None -> true)
+  | None -> true
 
 (** The C++ type recorded for the pattern variable at de Bruijn index [i], if
     this branch pinned one down. *)
@@ -3446,6 +3478,28 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
   let draft_ctor_temps_for_wrap =
     List.map materialise_opaque draft_ctor_temps_for_wrap
   in
+  (* The same slots, read off the destination instead of off this
+     constructor's own annotation.  A locally concrete value can be built into
+     a slot that names a more erased instantiation of the same type -- a
+     [pair<List<std::any>, std::any>] field of a [sigT] receiving a
+     [(l, @length A)] whose components are concrete here -- and it is the
+     destination's shape that every consumer reads back, so a component
+     landing in one of its erased positions has to be boxed.  Only those
+     positions are taken over: elsewhere the local instantiation is the more
+     precise one. *)
+  let ctor_temps_at_slot =
+    match (expected_ty, r) with
+    | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
+      match unfold_cpp_typedef env exp with
+      | Tglob (en, eargs, _)
+        when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i))
+             && List.length eargs = List.length draft_ctor_temps_for_wrap ->
+        List.map2
+          (fun local slot -> if slot = Tany then Tany else local)
+          draft_ctor_temps_for_wrap eargs
+      | _ -> draft_ctor_temps_for_wrap )
+    | _ -> draft_ctor_temps_for_wrap
+  in
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_ret = tctx.current_cpp_return_type in
@@ -3507,7 +3561,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       let will_erase_fn_wrap =
         match List.nth_opt field_types_for_wrap i with
         | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
-          (match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+          (match List.nth_opt ctor_temps_at_slot (j - 1) with
           | _ when is_passthrough_ctor_arg i -> false
           | Some Tany -> ml_expr_is_function_value e
           | _ -> false)
@@ -3585,7 +3639,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         else
           match List.nth_opt field_types_for_wrap i with
           | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
-            ( match List.nth_opt draft_ctor_temps_for_wrap (j - 1) with
+            ( match List.nth_opt ctor_temps_at_slot (j - 1) with
               | Some Tany ->
                 ( match result with
                   (* A lambda that is not a function value is a generated IIFE,
@@ -4020,7 +4074,9 @@ and coerce ?term ?from ~into expr =
              [std::function] would store [pair<any, function<any(any)>>] where
              the consumer expects [pair<any,any>]. *)
           let adapted =
-            if is_function_value then wrap_crane_erase_fn expr else expr
+            if is_function_value then
+              wrap_crane_erase_fn (erased_fn_instantiation expr)
+            else expr
           in
           CPPconverting_ctor (Tany, [adapted])
       else
@@ -4094,6 +4150,16 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
 
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
     that the helper is needed. *)
+(** Re-instantiate a function value that is being adapted for an erased slot:
+    the values it will be applied to reached that slot erased too -- a
+    [list nat] argument is stored as [List<std::any>], not [List<uint64_t>] --
+    so the function has to be taken at the erased instantiation, or the
+    adapter would unbox to a shape nothing ever boxed. *)
+and erased_fn_instantiation = function
+  | CPPglob (g, (_ :: _ as tys), xs) ->
+    CPPglob (g, List.map (fun _ -> Tany) tys, xs)
+  | e -> e
+
 and wrap_crane_erase_fn ?ret_ty expr =
   Table.mark_needs_erase_fn ();
   CPPerase_fn (ret_ty, expr)
@@ -6152,17 +6218,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | t -> t
             in
             let ret_ty = cpp_of_ml env (codomain ft) in
-            (* The value this function will be applied to went into a sibling
-               erased field, so it was erased there too -- a [list nat] argument
-               is stored as [List<std::any>], not [List<uint64_t>].  Instantiate
-               the function at that same erased type, or the adapter would
-               unbox to a shape nothing ever boxed. *)
-            let expr =
-              match expr with
-              | CPPglob (g, (_ :: _ as tys), xs) ->
-                CPPglob (g, List.map (fun _ -> Tany) tys, xs)
-              | e -> e
-            in
+            let expr = erased_fn_instantiation expr in
             wrap_crane_erase_fn
               ?ret_ty:(if prints_as_any ret_ty then None else Some ret_ty)
               expr
@@ -9172,12 +9228,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
        and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
-    let scrut_db =
-      match t with
-      | MLrel i -> Some i
-      | MLmagic (_, MLrel i) -> Some i
-      | _ -> None
-    in
+    let scrut_db = scrutinee_binder t in
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
        its own scope); nested matches get the next name ([_m0], [_m1]). *)
@@ -9892,6 +9943,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
+      (* Resolve the scrutinee's binder before the pattern variables are
+         pushed: both the index and the types it is read against belong to
+         the enclosing scope. *)
+      let scrut_db = scrutinee_binder t in
       push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
@@ -9914,9 +9969,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       in
       populate_erased_field_env
         ?scrut_db:
-          ( match t with
-          | MLrel i | MLmagic (_, MLrel i) -> Some (i + n_pat_vars)
-          | _ -> None )
+          (Option.map (fun i -> i + n_pat_vars) scrut_db)
         ~cname:r ~typ:ml_typ ~env ~n_pat_vars
         ~n_fields:(List.length ids)
         ~non_erased_def_site_field_tys:non_erased_def_tys ();
