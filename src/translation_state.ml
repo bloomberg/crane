@@ -125,11 +125,6 @@ type translation_ctx = {
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
   mutable method_self_ns : Refset'.t;
-  (* When generating a custom constructor arg, holds the expected ML type
-     for the argument (from the enclosing constructor's type params). Used
-     by gen_ctor_call to recover concrete element types for nil lists when
-     the ML type annotation has unresolved metas. *)
-  mutable expected_ml_type_for_arg : ml_type option;
   (* Tracks which lifted function refs have already been emitted so that
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
      Reset per-file via clear_seen_lifted_refs. *)
@@ -188,7 +183,6 @@ let tctx =
     cs_counter = 0;
     pending_reuse_token = None;
     method_self_ns = Refset'.empty;
-    expected_ml_type_for_arg = None;
     seen_lifted_refs = [];
     cpp_binder_types = IntMap.empty;
     cpp_binder_types_all = IntMap.empty;

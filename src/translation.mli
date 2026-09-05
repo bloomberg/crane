@@ -110,9 +110,16 @@ val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
     [std::any], so a constructor it builds must use the canonical erased
     shape every other producer of the same Coq type agrees on.  Internal to
     the generator, which carries it down every position whose value reaches
-    that slot; callers outside translation have no erased slot to describe. *)
+    that slot; callers outside translation have no erased slot to describe.
+
+    [expected_ml_ty] is the ML type of the slot the expression flows into,
+    when the caller knows it more precisely than the expression's own
+    annotation does.  It lets a constructor whose annotation carries
+    unresolved metas (a [nil] whose element type extraction left open, say)
+    recover the concrete type arguments from the position it occupies. *)
 val gen_expr :
-  ?expected_ty:cpp_type -> ?deep_erase:bool -> env -> ml_ast -> cpp_expr
+  ?expected_ty:cpp_type -> ?expected_ml_ty:ml_type -> ?deep_erase:bool ->
+  env -> ml_ast -> cpp_expr
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
@@ -126,16 +133,20 @@ val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations.
 
-    [deep_erase] is {!gen_expr}'s, carried into the tail positions of these
-    statements. *)
+    [deep_erase] and [expected_ml_ty] are {!gen_expr}'s, carried into the tail
+    positions of these statements. *)
 val gen_stmts :
-  ?deep_erase:bool -> env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
+  ?expected_ml_ty:ml_type -> ?deep_erase:bool -> env ->
+  (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
 
 (** Try eta-expanding/applying [f] to [args] when a call is under-applied or
     involves a type-erased higher-order callback. Falls back to a plain
     application. *)
-val eta_fun : ?deep_erase:bool -> env -> ml_ast -> ml_ast list -> cpp_expr
-(** [deep_erase] is {!gen_expr}'s, carried into the argument expressions. *)
+val eta_fun :
+  ?expected_ml_ty:ml_type -> ?deep_erase:bool -> env -> ml_ast -> ml_ast list ->
+  cpp_expr
+(** [deep_erase] and [expected_ml_ty] are {!gen_expr}'s, carried into the
+    argument expressions. *)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
     in the ML AST and should be ignored by numeral-folding traversals. *)
