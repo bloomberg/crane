@@ -119,6 +119,9 @@ type slot = {
   in_ctor_arg : bool;
       (** The slot is an argument of a constructor, so a nested constructor
           filling it cannot name a template parameter of its own. *)
+  eta_keep_moves : bool;
+      (** The slot holds a single-use partial application whose closure may
+          capture by reference and keep its [CPPmove] wrappers. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)

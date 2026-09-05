@@ -73,7 +73,11 @@ type translation_ctx = {
   mutable move_owned_vars : Escape.IntSet.t;
   (* Variables that are dead after this point (last use was in a move). *)
   mutable move_dead_after : Escape.IntSet.t;
-  (* When true, suppress tail-position moves (the caller handles them). *)
+  (* True while generating a let-bound right-hand side: nothing nested in it
+     is in the enclosing function's tail position, so tail-position moves must
+     not fire.  Monotone within a function body -- inherited even by nested
+     scopes that start a fresh {!Translation.slot} -- which is why it is
+     context state rather than a slot property. *)
   mutable move_suppress_tail : bool;
   (* Number of function parameters (offset for de Bruijn indices). *)
   mutable move_n_params : int;
@@ -95,10 +99,6 @@ type translation_ctx = {
   (* ITree extraction mode: controls whether itree types are erased
      (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
   mutable itree_mode : itree_extraction_mode;
-  (* When true, eta_fun keeps CPPmove wrappers on captured args and uses
-     [&] capture instead of [=]. Set by the MLletin handler when the bound
-     variable is used at most once and does not escape. *)
-  mutable eta_keep_moves : bool;
   (* Counter for generating unique _cs / _cs1 / _cs2 cache variable names
      for Scustom_case scrutinee caching. Reset at function boundaries. *)
   mutable cs_counter : int;
@@ -167,7 +167,6 @@ let tctx =
     promoted_var_map = [];
     in_constructor_expr = false;
     itree_mode = Sequential;
-    eta_keep_moves = false;
     cs_counter = 0;
     pending_reuse_token = None;
     method_self_ns = Refset'.empty;

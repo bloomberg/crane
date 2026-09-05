@@ -2395,10 +2395,18 @@ type slot = {
       (** The slot is an argument of a constructor, so a nested constructor
           filling it cannot name a template parameter of its own: an
           out-of-range [Tvar] here is an erased field, which is [std::any]. *)
+  eta_keep_moves : bool;
+      (** The slot holds a single-use partial application whose closure may
+          capture by reference and keep its [CPPmove] wrappers.  Read once, by
+          the {!eta_fun} that builds that closure. *)
 }
 
 (** The slot properties of a position that constrains nothing. *)
-let empty_slot = {deep_erase = false; expected_ml_ty = None; in_ctor_arg = false}
+let empty_slot =
+  { deep_erase = false;
+    expected_ml_ty = None;
+    in_ctor_arg = false;
+    eta_keep_moves = false }
 
 let rec convert_ml_type_to_cpp_type
     env
@@ -6903,8 +6911,9 @@ and eta_fun ?(slot = empty_slot) env f args =
   (* Save and clear the single-use closure flag so that nested eta_fun calls
      (from processing args) do not inherit it. The saved value is used when
      this eta_fun constructs a partial-application lambda. *)
-  let eta_keep_moves = tctx.eta_keep_moves in
-  tctx.eta_keep_moves <- false;
+  let eta_keep_moves = slot.eta_keep_moves in
+  (* Read once: the flag describes this closure, not anything built inside it. *)
+  let slot = {slot with eta_keep_moves = false} in
   match f with
   | MLglob (id, tys) ->
     (* When the call has more args than the function's ML value-domain, the
@@ -11322,8 +11331,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            | None -> false)
         | _ -> false
       in
-      let saved_eta_keep = tctx.eta_keep_moves in
-      if is_single_use_partial_app then tctx.eta_keep_moves <- true;
       let afun v = Sasgn (x_renamed, None, v) in
       (* Thread the let-binding's type annotation as the expected ML type
          so that gen_ctor_call can recover the concrete element type for
@@ -11449,16 +11456,19 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let asgn =
         gen_stmts
-          ~slot:{slot with deep_erase = false; expected_ml_ty = Some t_effective}
+          ~slot:
+            { slot with
+              deep_erase = false;
+              expected_ml_ty = Some t_effective;
+              eta_keep_moves = is_single_use_partial_app }
           env afun a
       in
-      tctx.eta_keep_moves <- saved_eta_keep;
+      tctx.move_suppress_tail <- saved_suppress;
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
       let t_for_env = if stmts_yield_boxed asgn then Miniml.Tdummy Ktype else t in
       push_binders env [(x_renamed, t_for_env)];
-      tctx.move_suppress_tail <- saved_suppress;
       (* Shift saved_dead +1 for the body [b]: the new let binding adds one
          de Bruijn level, so all parent-scope indices must be shifted to stay
          in sync with the body's coordinate system. *)
