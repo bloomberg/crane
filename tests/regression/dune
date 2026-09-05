@@ -8042,3 +8042,14 @@
   (alias runtest)
   (deps coinductive_take_overflow.t.exe)
   (action (run ./coinductive_take_overflow.t.exe))))
+
+(subdir nat_literal_overflow
+ (rule
+  (targets nat_literal_overflow.t.exe)
+  (deps NatLiteralOverflow.vo nat_literal_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_literal_overflow.t.exe nat_literal_overflow.cpp nat_literal_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_literal_overflow.t.exe)
+  (action (run ./nat_literal_overflow.t.exe))))
