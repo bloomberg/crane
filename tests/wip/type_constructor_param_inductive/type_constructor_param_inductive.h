@@ -157,7 +157,7 @@ struct TypeConstructorParamInductive {
 
     explicit wrapped(Pair2 _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
+    template <template <typename> class _U0, typename _U1>
     wrapped(const wrapped<_U0, _U1> &_other) {
       if (std::holds_alternative<typename wrapped<_U0, _U1>::Wrap>(
               _other.v())) {
@@ -191,14 +191,11 @@ struct TypeConstructorParamInductive {
     requires std::is_invocable_r_v<T3, F0 &, T1<T2> &> &&
              std::is_invocable_r_v<T3, F1 &, T1<T2> &, T1<T2> &>
   static T3 wrapped_rect(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
-    if (std::holds_alternative<typename wrapped<T1<std::any>, T2>::Wrap>(
-            w.v())) {
-      const auto &[a0] =
-          std::get<typename wrapped<T1<std::any>, T2>::Wrap>(w.v());
+    if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
+      const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
       return f(a0);
     } else {
-      const auto &[a0, a1] =
-          std::get<typename wrapped<T1<std::any>, T2>::Pair2>(w.v());
+      const auto &[a0, a1] = std::get<typename wrapped<T1, T2>::Pair2>(w.v());
       return f0(a0, a1);
     }
   }
@@ -210,14 +207,11 @@ struct TypeConstructorParamInductive {
   static T3 wrapped_rec(F0 &&_x0, F1 &&_x1, const wrapped<T1, T2> &_x2) {
     return [](std::function<T3(T1<T2>)> f, std::function<T3(T1<T2>, T1<T2>)> f0,
               const wrapped<T1, T2> &w) {
-      if (std::holds_alternative<typename wrapped<T1<std::any>, T2>::Wrap>(
-              w.v())) {
-        const auto &[a0] =
-            std::get<typename wrapped<T1<std::any>, T2>::Wrap>(w.v());
+      if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
+        const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
         return f(a0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename wrapped<T1<std::any>, T2>::Pair2>(w.v());
+        const auto &[a0, a1] = std::get<typename wrapped<T1, T2>::Pair2>(w.v());
         return f0(a0, a1);
       }
     }(_x0, _x1, _x2);
@@ -240,7 +234,7 @@ struct TypeConstructorParamInductive {
             std::make_optional<uint64_t>(UINT64_C(1))))) +
        size_opt(wrapped<std::optional, uint64_t>::pair2(
            std::make_optional<uint64_t>(UINT64_C(1)),
-           std::optional<std::any>())));
+           std::optional<uint64_t>())));
 };
 
 #endif // INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE

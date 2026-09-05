@@ -6089,9 +6089,19 @@ let gen_ind_header_v2
                   in
                   build_if_chain branches
               in
+              (* The source instantiation is the same template as the
+                 destination, so its arguments have the same kinds: a
+                 [template <typename> class] parameter cannot be stood in for
+                 by a plain [typename]. *)
               let tparams =
-                List.map
-                  (fun u -> (TTtypename, u))
+                List.mapi
+                  (fun i u ->
+                    let tt =
+                      match List.nth_opt templates i with
+                      | Some (tt, _) -> tt
+                      | None -> TTtypename
+                    in
+                    (tt, u) )
                   u_var_names
               in
               let ctor_params =

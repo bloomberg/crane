@@ -2406,6 +2406,14 @@ let empty_slot =
     in_ctor_arg = false;
     eta_keep_moves = false }
 
+(** Mark the template arguments of [g] that its declaration spells
+    [template <typename> class].  Such a position takes a bare template name
+    ([wrapped<List, uint64_t>]), never an instantiation, so every site that
+    spells an instantiation of [g] -- its type, its factory calls, and the
+    constructor structs a match qualifies -- has to agree on this. *)
+let apply_hkt_tyctors g temps =
+  List.mapi (fun i t -> if Table.is_hkt_ind_param g i then Ttyctor t else t) temps
+
 let rec convert_ml_type_to_cpp_type
     env
     ?(ns : Refset'.t = Refset'.empty)
@@ -2567,13 +2575,7 @@ let rec convert_ml_type_to_cpp_type
           converted_ts
       | _ -> converted_ts
     in
-    (* A parameter the inductive declared [template <typename> class] takes a
-       bare template name, not an instantiation: [holder<std::optional>]. *)
-    let converted_ts =
-      List.mapi
-        (fun i t -> if Table.is_hkt_ind_param g i then Ttyctor t else t)
-        converted_ts
-    in
+    let converted_ts = apply_hkt_tyctors g converted_ts in
     let core = Tglob (g, converted_ts, []) in
     ( match g with
     | GlobRef.IndRef _ ->
@@ -3327,6 +3329,35 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
             | None -> () )
           | _ -> () )
         field_tys;
+      (* A nullary constructor ([None]) carries no argument to read the type
+         off, so the only remaining witness is the slot it is being built
+         into -- the field type of an enclosing constructor, instantiated. *)
+      ( match Option.map resolve_tmeta slot.expected_ml_ty with
+      | Some (Miniml.Tglob (exp_n, exp_tys, _))
+        when GlobRef.CanOrd.equal n exp_n
+             && List.length exp_tys >= Array.length recovered ->
+        (* Aligned at the right: a type constructor that reached the slot
+           partially applied ([F] at [F A]) keeps the placeholder arguments it
+           was carrying in front of the ones applied to it. *)
+        (* Only a ground type is worth taking: a slot that is itself abstract
+           ([m_carrier M]) names a type variable that does not exist in this
+           scope, and spelling it here would not even compile. *)
+        let rec is_ground = function
+          | Miniml.Tglob (_, args, _) -> List.for_all is_ground args
+          | Miniml.Tarr (a, b) -> is_ground a && is_ground b
+          | Miniml.Tmeta {contents = Some t} -> is_ground t
+          | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tapp _ | Miniml.Tunknown
+          | Miniml.Tmeta {contents = None} -> false
+          | _ -> true
+        in
+        let m = Array.length recovered in
+        List.iteri
+          (fun i t ->
+            let i = i - (List.length exp_tys - m) in
+            if i >= 0 && recovered.(i) = Miniml.Tunknown && is_ground t then
+              recovered.(i) <- t )
+          exp_tys
+      | _ -> () );
       Miniml.Tglob (n, Array.to_list recovered, sc)
     | _ -> ty
   in
@@ -5673,14 +5704,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               List.map index_erase_type temps
             else temps
           in
-          (* The same bare-template-name rule the type side applies in
-             {!convert_ml_type_to_cpp_type}: the factory has to be qualified by
-             the very instantiation the declaration spells. *)
-          let temps =
-            List.mapi
-              (fun i t -> if Table.is_hkt_ind_param n i then Ttyctor t else t)
-              temps
-          in
+          (* The factory has to be qualified by the very instantiation the
+             declaration spells. *)
+          let temps = apply_hkt_tyctors n temps in
           let ctor_struct = ctor_struct_name_of_ref r in
           let ind_type_name = Common.pp_global_name Type n in
           let fname =
@@ -6335,6 +6361,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  produces does not convert into the container holding it. *)
               Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
             | Miniml.Tvar _ | Miniml.Tvar' _ -> None
+            | Miniml.Tapp _ ->
+              (* A field that applies one of the inductive's [template
+                 <typename> class] parameters ([F A]).  Nothing in the
+                 argument names the instantiation -- a [None] has no value to
+                 read it off -- so it can only come from this call's own type
+                 arguments.  The substitution is done on the ML type: only
+                 there does applying [option] to [nat] reduce, since the C++
+                 side of a custom-extracted [option] is a template string. *)
+              let ct = cpp_of_ml env (Mlutil.type_subst_list ty_ml_tparams ft) in
+              if prints_as_any ct || has_tany_in_type ct then None else Some ct
             | _ when is_erased_rel ->
               let ct = cpp_of_ml env ft in
               if prints_as_any ct then None else Some ct
@@ -6364,10 +6400,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            [std::bad_any_cast] at the consumer.  Generate the body with
            [deep_erase] so cons productions deep-erase their element
            type to match nil.  See the mirror in the record-constructor path. *)
+        (* The same field type on the ML side, for the argument that can only
+           learn its instantiation from the slot: an applied parameter
+           ([F A]) says nothing on its own, and substituting this call's type
+           arguments turns it into the [option nat] the argument is built at. *)
+        let expected_ml_for_arg =
+          match ft_opt with
+          | Some (Miniml.Tapp _ as ft) ->
+            Some (Mlutil.type_subst_list ty_ml_tparams ft)
+          | _ -> slot.expected_ml_ty
+        in
         let expr =
           gen_ctor_arg
             ~slot:
               { slot with
+                expected_ml_ty = expected_ml_for_arg;
                 deep_erase =
                   slot.deep_erase
                   || field_stores_erased_fn_value
@@ -8670,7 +8717,9 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
         | None -> tys )
       | _ -> tys
     in
-    let temps = template_params_of_ml env tys in
+    (* The constructor struct is nested in the instantiation, so it has to be
+       qualified by the same one the declaration spells. *)
+    let temps = apply_hkt_tyctors r (template_params_of_ml env tys) in
     let is_local_ind =
       List.exists
         (globref_equal r)
