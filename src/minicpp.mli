@@ -519,6 +519,11 @@ val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
     template argument position. *)
 val curry_fun_type : cpp_type -> cpp_type
 
+(** [recurry_to n ty] respells the function type [ty] as one taking [n]
+    parameters and returning a curried function of the rest; [n = 0] curries
+    throughout. *)
+val recurry_to : int -> cpp_type -> cpp_type
+
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by [sub i].
 
     Unlike {!map_cpp_type}, the replacement is not traversed again, so a

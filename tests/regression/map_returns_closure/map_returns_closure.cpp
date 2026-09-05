@@ -6,8 +6,9 @@
 /// lambda rather than the declared element type.
 List<std::function<uint64_t(uint64_t)>>
 MapReturnsClosure::make_adders(const List<uint64_t> &xs) {
-  return xs.template map<std::function<uint64_t(uint64_t)>>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
+  return xs.template map<std::function<uint64_t(uint64_t)>>([](uint64_t _x0) {
+    return [=](uint64_t _x1) mutable -> uint64_t { return (_x0 + _x1); };
+  });
 }
 
 uint64_t

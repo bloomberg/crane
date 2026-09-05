@@ -547,6 +547,23 @@ let curry_fun_type ty =
       | t -> t )
     ty
 
+(** [recurry_to n ty] respells the function type [ty] as one taking [n]
+    parameters and returning a curried function of whatever is left, using
+    {!curry_fun_type} for the remainder.  [n = 0] curries throughout, which is
+    what a position declared as a bare type variable asks for.
+
+    Substituting a concrete function type into a codomain that was a type
+    variable flattens arrows belonging to the {e element} type into the
+    callable's own parameter list.  [n] is the arity the declaration was
+    written at, so this restores the shape the signature actually has. *)
+let recurry_to n ty =
+  match ty with
+  | Tfun (dom, cod) when n > 0 && List.length dom > n ->
+    let outer = List.filteri (fun i _ -> i < n) dom in
+    let inner = List.filteri (fun i _ -> i >= n) dom in
+    Tfun (outer, curry_fun_type (Tfun (inner, cod)))
+  | _ -> if n = 0 then curry_fun_type ty else ty
+
 (** [subst_cpp_tvars sub ty] replaces every [Tvar (i, _)] in [ty] by
     [sub i], leaving the substituted type alone.
 

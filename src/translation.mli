@@ -150,7 +150,10 @@ val gen_stmts :
 (** Try eta-expanding/applying [f] to [args] when a call is under-applied or
     involves a type-erased higher-order callback. Falls back to a plain
     application. *)
-val eta_fun : ?slot:slot -> env -> ml_ast -> ml_ast list -> cpp_expr
+val eta_fun :
+  ?slot:slot ->
+  ?expected_ty:Minicpp.cpp_type ->
+  env -> ml_ast -> ml_ast list -> cpp_expr
 (** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion

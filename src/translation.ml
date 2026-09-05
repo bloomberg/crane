@@ -5187,7 +5187,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let ty = cpp_of_ml env ty in
     ( match ty with
     | Tfun (dom, cod) ->
-      eta_fun env (MLglob (x, tys)) []
+      eta_fun ?expected_ty env (MLglob (x, tys)) []
     | _ -> mk_cppglob x (template_params_of_ml env tys) )
   | MLglob (x, tys) ->
     let tvars = get_current_type_vars () in
@@ -6938,7 +6938,7 @@ and curry_to_expected env ?expected_ty x cglob =
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
-and eta_fun ?(slot = empty_slot) env f args =
+and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
 
   let rec get_eta_args dom args =
     match (dom, args) with
@@ -7333,21 +7333,35 @@ and eta_fun ?(slot = empty_slot) env f args =
       let param_expected_cpp_ty ?(at = i) param_tys =
         param_expected_cpp_ty env param_tys at
       in
-      (* A parameter declared as one of the callee's type variables holds
-         whatever the template argument at that position says, and a template
-         argument keeps its currying (see {!template_arg_of_ml_type}).  So the
-         value has to be curried too, however many arrows its own type has.
-         The callee's parameters are indexed from its class-dictionary
-         arguments, which [regular_ml_args] does not include. *)
-      let tvar_param_expected_cpp_ty () =
+      (* The concrete types come from the substituted parameter type, but its
+         {e arity} must come from the unsubstituted one: substituting a
+         function type into a codomain that was a type variable flattens the
+         element's arrows into the callable's own parameter list, and a
+         template argument keeps its currying (see
+         {!template_arg_of_ml_type}).  A parameter declared as a bare type
+         variable has arity zero, so its value is curried throughout.  The
+         callee's parameters are indexed from its class-dictionary arguments,
+         which [regular_ml_args] does not include. *)
+      let param_expected_at_declared_arity () =
         let j = i + List.length typeclass_ml_args in
         match List.nth_opt fn_param_ml_tys_orig j with
-        | Some (Miniml.Tvar _ | Miniml.Tvar' _) ->
-          Option.map curry_fun_type (param_expected_cpp_ty ~at:j fn_param_ml_tys)
-        | _ -> None
+        | Some orig ->
+          Option.map
+            (recurry_to (count_ml_value_arrows orig))
+            (param_expected_cpp_ty ~at:j fn_param_ml_tys)
+        | None -> None
       in
       let arg_expected_ty =
-        match tvar_param_expected_cpp_ty () with
+        match ml_arg with
+        | MLlam _ -> param_expected_at_declared_arity ()
+        | _ ->
+        ( match
+            match List.nth_opt fn_param_ml_tys_orig
+                    (i + List.length typeclass_ml_args) with
+            | Some (Miniml.Tvar _ | Miniml.Tvar' _) ->
+              param_expected_at_declared_arity ()
+            | _ -> None
+          with
         | Some _ as t -> t
         | None ->
         ( match ml_arg with
@@ -7358,7 +7372,7 @@ and eta_fun ?(slot = empty_slot) env f args =
            type variable belong to the element type the callee is generic in,
            not to the callable it expects. *)
         | MLglob _ -> param_expected_cpp_ty fn_param_ml_tys_orig
-        | _ -> None )
+        | _ -> None ) )
       in
       let arg_expected_ml_ty =
         match List.nth_opt fn_param_ml_tys i with
@@ -8117,7 +8131,22 @@ and eta_fun ?(slot = empty_slot) env f args =
             else
               (Some cod, [Sreturn (Some call)])
           in
-          CPPlambda (List.rev eta_args, ret_ty, body, not eta_keep_moves)
+          (* A use site expecting fewer parameters than the callee takes wants
+             a curried closure: the arrows past its arity belong to the
+             element type it is generic in, not to the callable itself. *)
+          ( match expected_ty with
+          | Some (Tfun (exp_dom, _))
+            when exp_dom <> [] && List.length exp_dom < List.length eta_args ->
+            let n = List.length exp_dom in
+            let outer = List.filteri (fun i _ -> i < n) eta_args in
+            let inner = List.filteri (fun i _ -> i >= n) eta_args in
+            CPPlambda
+              ( List.rev outer,
+                None,
+                [ Sreturn
+                    (Some (CPPlambda (List.rev inner, ret_ty, body, true))) ],
+                true )
+          | _ -> CPPlambda (List.rev eta_args, ret_ty, body, not eta_keep_moves) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob

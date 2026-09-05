@@ -7965,3 +7965,14 @@
   (alias runtest)
   (deps unit_returning_callback_map.t.exe)
   (action (run ./unit_returning_callback_map.t.exe))))
+
+(subdir map_returns_closure
+ (rule
+  (targets map_returns_closure.t.exe)
+  (deps MapReturnsClosure.vo map_returns_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} map_returns_closure.t.exe map_returns_closure.cpp map_returns_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps map_returns_closure.t.exe)
+  (action (run ./map_returns_closure.t.exe))))
