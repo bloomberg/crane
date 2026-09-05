@@ -106,7 +106,12 @@ type translation_ctx = {
      uniquely-owned matched recursive child) is available for the next
      [MLcons] of constructor [ctor]; that MLcons emits [<ctor>__reuse(tok, ...)]
      instead of the normal factory, then clears this. Set only inside a
-     use_count()==1-guarded reuse arm in gen_cpp_case. *)
+     use_count()==1-guarded reuse arm in gen_cpp_case.
+
+     The token is a linear resource -- exactly one MLcons may consume it, or
+     two constructions would rebuild into the same storage -- so this is
+     genuinely stateful and cannot become a {!Translation.slot} property: a
+     threaded value would be visible to every sibling constructor at once. *)
   mutable pending_reuse_token : (cpp_expr * Names.GlobRef.t) option;
   (* When generating a method body, holds the set of self-references
      (the inductive type(s) this method belongs to). Merged into the ns

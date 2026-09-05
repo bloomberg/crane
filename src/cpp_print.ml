@@ -646,10 +646,6 @@ let is_prod_cpp_type = function
   | Tglob (g, [_; _], _) -> Ml_type_util.is_prod_global g
   | _ -> false
 
-(** Cached prod (pair) global reference, used to construct [pair<any,any>] casts
-    when the CCscrut expected_type is not itself a pair type (e.g. Tany). *)
-let known_prod_g : GlobRef.t option ref = ref None
-
 (** Names introduced by [using X = std::any;], and the question "is this type
     spelled [std::any]" — both owned by {!Cpp_erasure}, so that the pass that
     decides how to cross an erasure boundary and the printer that renders the
@@ -2862,6 +2858,12 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
      for that variable also fires the override, enabling recursive propagation
      through the full pair chain. *)
   let outer_any_pair_overrode = ref false in
+  (* The prod (pair) global seen so far in THIS invocation, used to construct a
+     [pair<any,any>] cast when the [CCscrut] expected type is not itself a pair
+     type (e.g. [Tany]).  Which global that is depends on the active mapping --
+     Coq's [prod] and the BDE flavour's [Prod] are different references -- so it
+     is read off the types at hand rather than looked up. *)
+  let known_prod_g = ref None in
   (* Pre-set outer_any_pair_overrode before any token processing so that
      %t0, which appears before %scrut in the pair-match template, also
      prints as std::any when the runtime pair is pair<any,any>.  We have
@@ -2874,9 +2876,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
      again; the pre-set here just makes it visible to CCty_arg earlier. *)
   let () =
     match t with
-    | Some (CPPany_cast (Tglob (g, _, _), _))
-      when (let n = Common.pp_global_name Type g in
-            String.equal n "prod" || String.equal n "Prod") ->
+    | Some (CPPany_cast (Tglob (g, _, _), _)) when Ml_type_util.is_prod_global g ->
       outer_any_pair_overrode := true;
       known_prod_g := Some g
     | Some (CPPvar id)
@@ -2884,9 +2884,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
       (* Only pre-set for pair templates: check that the scrutinee type is
          prod/Prod so we don't corrupt %t0 in non-pair custom templates. *)
       ( match typ with
-        | Some (Tglob (g, _ :: _, _))
-          when (let n = Common.pp_global_name Type g in
-                String.equal n "prod" || String.equal n "Prod") ->
+        | Some (Tglob (g, _ :: _, _)) when Ml_type_util.is_prod_global g ->
           outer_any_pair_overrode := true;
           known_prod_g := Some g
         | _ -> () )
@@ -2936,9 +2934,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
              here (expected_ty or CPPany_cast scrutinee), so that nested pair
              matches can fall back to it when their own expected_ty is Tany. *)
           let store_if_prod = function
-            | Tglob (g, _, _)
-              when (let n = Common.pp_global_name Type g in
-                    String.equal n "prod" || String.equal n "Prod") ->
+            | Tglob (g, _, _) when Ml_type_util.is_prod_global g ->
               known_prod_g := Some g
             | _ -> ()
           in
@@ -2947,8 +2943,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
           let effective_ty = match t_expr, expected_ty with
             | CPPvar id, Tglob (g, (_ :: _), _)
               when Id.Set.mem id !current_any_typed_params
-                && (let n = Common.pp_global_name Type g in
-                    String.equal n "prod" || String.equal n "Prod") ->
+                   && Ml_type_util.is_prod_global g ->
               (* id is std::any at runtime (invariant of current_any_typed_params),
                  so always cast to pair<any,any> regardless of declared arg types. *)
               known_prod_g := Some g;
@@ -2976,9 +2971,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
                 | None -> expected_ty (* should not happen in practice *)
               end else
                 expected_ty
-            | CPPany_cast (Tglob (g, _, _), _), _
-              when (let n = Common.pp_global_name Type g in
-                    String.equal n "prod" || String.equal n "Prod") ->
+            | CPPany_cast (Tglob (g, _, _), _), _ when Ml_type_util.is_prod_global g ->
               (* The translation layer already wrapped the scrutinee with
                  any_cast<pair<any,any>>(…).  The printed %scrut is already
                  correct; just override effective_ty so %t0/%t1 print as
