@@ -6780,7 +6780,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let into_is_erased_only =
       match m with
       | Mcoerce (from, into) ->
-        prints_as_any (cpp_of_ml env into)
+        (* The destination this value is actually being built into outranks
+           the coercion's inferred target: a call site that names a concrete
+           parameter type -- an instance's associated type, say -- has pinned
+           the slot down, while the recorded [into] is a type variable this
+           scope cannot resolve and so reads as erased. *)
+        (match expected_ty with
+            | Some t -> prints_as_any t
+            | None -> true)
+        && prints_as_any (cpp_of_ml env into)
         && not (prints_as_any (cpp_of_ml env from))
       | Mboxed | Mbarrier -> false
     in

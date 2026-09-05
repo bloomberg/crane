@@ -7910,3 +7910,14 @@
   (alias runtest)
   (deps erased_pair_fn_call.t.exe)
   (action (run ./erased_pair_fn_call.t.exe))))
+
+(subdir assoc_type_field_argument
+ (rule
+  (targets assoc_type_field_argument.t.exe)
+  (deps AssocTypeFieldArgument.vo assoc_type_field_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_field_argument.t.exe assoc_type_field_argument.cpp assoc_type_field_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_field_argument.t.exe)
+  (action (run ./assoc_type_field_argument.t.exe))))

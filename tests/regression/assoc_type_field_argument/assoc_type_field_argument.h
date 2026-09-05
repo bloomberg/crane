@@ -189,9 +189,9 @@ struct AssocTypeFieldArgument {
       (CNat::size(build3<CNat, List<uint64_t>>(UINT64_C(1), UINT64_C(2),
                                                UINT64_C(3))) +
        CPair::size(build3<CPair, List<std::pair<uint64_t, uint64_t>>>(
-           std::make_pair(std::any(UINT64_C(1)), std::any(UINT64_C(1))),
-           std::make_pair(std::any(UINT64_C(2)), std::any(UINT64_C(2))),
-           std::make_pair(std::any(UINT64_C(3)), std::any(UINT64_C(3))))));
+           std::make_pair(UINT64_C(1), UINT64_C(1)),
+           std::make_pair(UINT64_C(2), UINT64_C(2)),
+           std::make_pair(UINT64_C(3), UINT64_C(3)))));
 };
 
 #endif // INCLUDED_ASSOC_TYPE_FIELD_ARGUMENT
