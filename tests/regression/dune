@@ -7987,3 +7987,14 @@
   (alias runtest)
   (deps nested_concat_map.t.exe)
   (action (run ./nested_concat_map.t.exe))))
+
+(subdir curried_value_in_container
+ (rule
+  (targets curried_value_in_container.t.exe)
+  (deps CurriedValueInContainer.vo curried_value_in_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} curried_value_in_container.t.exe curried_value_in_container.cpp curried_value_in_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps curried_value_in_container.t.exe)
+  (action (run ./curried_value_in_container.t.exe))))

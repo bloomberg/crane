@@ -2809,8 +2809,8 @@ and cpp_of_ml env t =
 
 (** [template_params_of_ml env tys] is {!build_template_params} against the
     type variables the enclosing scope has in hand; see {!cpp_of_ml}. *)
-and template_params_of_ml env tys =
-  build_template_params env (get_current_type_vars ()) tys
+and template_params_of_ml ?curry env tys =
+  build_template_params ?curry env (get_current_type_vars ()) tys
 
 (** [param_expected_cpp_ty env param_tys i] is the C++ type the callee declares
     for its [i]th parameter, and so the type an argument generated for that
@@ -3182,18 +3182,29 @@ and phantom_prefix_args id =
 
 (** [template_arg_of_ml_type env tvars ty] converts [ty] for a template
     argument position, where a function type has to keep the currying the
-    Rocq arrows had; see {!Minicpp.curry_fun_type}. *)
-and template_arg_of_ml_type env tvars ty =
+    Rocq arrows had; see {!Minicpp.curry_fun_type}.
+
+    [~curry:false] for an argument that instantiates an {e inductive}'s
+    parameter.  Such a parameter only names the type of a stored value, and the
+    value is spelled at the flat arity {!convert_ml_type_to_cpp_type} gives the
+    declaration; currying it would make the instantiation disagree with the
+    type the declaration writes.  A {e function}'s parameter is different: the
+    signature may mention it inside an arrow it writes out itself (as [ap : F
+    (A -> B) -> ...] does), and there the currying is what makes the argument
+    match. *)
+and template_arg_of_ml_type ?(curry = true) env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  curry_fun_type
-    (convert_ml_type_to_cpp_type env ~ns:Refset'.empty tvars (type_simpl ty))
+  let t =
+    convert_ml_type_to_cpp_type env ~ns:Refset'.empty tvars (type_simpl ty)
+  in
+  if curry then curry_fun_type t else t
 
-and build_template_params env tvars tys =
+and build_template_params ?curry env tvars tys =
   List.map
     (fun ty ->
-      let t = template_arg_of_ml_type env tvars ty in
+      let t = template_arg_of_ml_type ?curry env tvars ty in
       (* Check for unbound type variables *)
       match t with
       | Tvar (_, None) when tvars <> [] ->
@@ -5478,7 +5489,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             else
               tys
           in
-          let temps = template_params_of_ml env tys in
+          let temps = template_params_of_ml ~curry:false env tys in
           (* Normalize out-of-range [Tvar(_, None)] type args to [std::any] when
              this constructor is nested as an argument of another constructor.
              Such a Tvar prints as a bogus, undeclared template parameter name
@@ -5558,7 +5569,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    to std::any by the constructor-expression shortcut. *)
                 let saved_ctor = tctx.in_constructor_expr in
                 tctx.in_constructor_expr <- false;
-                let recovered = template_params_of_ml env exp_tys in
+                let recovered = template_params_of_ml ~curry:false env exp_tys in
                 tctx.in_constructor_expr <- saved_ctor;
                 if List.for_all (fun t -> not (prints_as_any t)) recovered
                 then recovered
