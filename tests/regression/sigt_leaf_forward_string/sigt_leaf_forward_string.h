@@ -152,8 +152,8 @@ template <SEM S> struct Make {
             std::any(crane_erase_fn([=](const auto &tup) mutable {
               const auto &[v, _x] =
                   std::any_cast<std::pair<std::any, std::any>>(tup);
-              return std::any_cast<std::function<std::any(std::any, std::any)>>(
-                  eq)(v, v);
+              return std::any_cast<std::function<std::any(std::any)>>(
+                  std::any_cast<std::function<std::any(std::any)>>(eq)(v))(v);
             }))));
   }
 

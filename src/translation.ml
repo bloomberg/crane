@@ -4155,10 +4155,21 @@ and recover_boxed_result ~boxed expr =
     adapter the producer stored via {!erase_fn_for_any_slot} is recovered with
     an [any_cast] and each argument is boxed.  The result is a [std::any]. *)
 and apply_erased_callee callee arg_exprs =
-  let arg_tys = List.map (fun _ -> Tany) arg_exprs in
-  CPPfun_call
-    ( CPPany_cast (Tfun (arg_tys, Tany), callee),
-      List.rev_map (fun a -> CPPconverting_ctor (Tany, [a])) arg_exprs )
+  apply_erased_curried ~box:true callee arg_exprs
+
+(** Apply a callee recovered from a bare [std::any], one argument at a time.
+
+    Nothing about a boxed callable says how many arguments it takes: the
+    producer's lambda stops at the first codomain that erases, so a value of an
+    opaque function type ([nfun 2], a type-level [Fixpoint]) is a chain of unary
+    [std::function<std::any(std::any)>]s.  Handing it every argument at once
+    would cast it to a signature it was never stored at. *)
+and apply_erased_curried ?(box = false) callee arg_exprs =
+  List.fold_left
+    (fun f a ->
+      let a = if box then CPPconverting_ctor (Tany, [a]) else a in
+      CPPfun_call (CPPany_cast (Tfun ([Tany], Tany), f), [a]) )
+    callee arg_exprs
 
 (** Adapt a function value being stored into a slot whose C++ type is the
     erased [std::any].  The application side reads such a callable back with
@@ -8676,13 +8687,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
          The MLmagic wrapper is transparent — peel it to find the MLrel. *)
-      let callee_expr =
-        if callee_is_bare_any then
-          let arg_tys = List.init n_args (fun _ -> Tany) in
-          CPPany_cast (Tfun (arg_tys, Tany), gen_expr env f)
-        else
-          gen_expr env f
-      in
+      let callee_expr = gen_expr env f in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
          [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
@@ -8698,6 +8703,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           CPPfun_call
             (CPPvar (Id.of_string "crane_call_erased"), List.rev args @ [callee_expr])
         end
+        else if callee_is_bare_any then
+          apply_erased_curried callee_expr args
         else CPPfun_call (callee_expr, List.rev args)
       in
       let n = n_args in
