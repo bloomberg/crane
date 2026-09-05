@@ -8075,3 +8075,14 @@
   (alias runtest)
   (deps rank1_polymorphic_definition.t.exe)
   (action (run ./rank1_polymorphic_definition.t.exe))))
+
+(subdir type_level_fixpoint_arity
+ (rule
+  (targets type_level_fixpoint_arity.t.exe)
+  (deps TypeLevelFixpointArity.vo type_level_fixpoint_arity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_arity.t.exe type_level_fixpoint_arity.cpp type_level_fixpoint_arity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fixpoint_arity.t.exe)
+  (action (run ./type_level_fixpoint_arity.t.exe))))
