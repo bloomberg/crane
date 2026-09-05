@@ -21,8 +21,6 @@ void EffectHofVoid::concrete_set() {
     set_wrapper("myval", _x0);
     return;
   };
-  {
-    f("mykey");
-    return;
-  }
+  f("mykey");
+  return;
 }

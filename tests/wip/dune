@@ -245,13 +245,3 @@
   (deps type_level_fixpoint_arity.t.exe)
   (action (run ./type_level_fixpoint_arity.t.exe))))
 
-(subdir unit_returning_callback_map
- (rule
-  (targets unit_returning_callback_map.t.exe)
-  (deps UnitReturningCallbackMap.vo unit_returning_callback_map.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_returning_callback_map.t.exe unit_returning_callback_map.cpp unit_returning_callback_map.t.cpp)))
- (rule
-  (alias runtest)
-  (deps unit_returning_callback_map.t.exe)
-  (action (run ./unit_returning_callback_map.t.exe))))

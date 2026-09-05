@@ -175,8 +175,10 @@ struct UnitReturningCallbackMap {
   static inline const uint64_t run =
       (units.length() +
        callbacks
-           .template map<std::monostate>(
-               [](std::function<void(uint64_t)> f) { return f(UINT64_C(0)); })
+           .template map<std::monostate>([](std::function<void(uint64_t)> f) {
+             f(UINT64_C(0));
+             return std::monostate{};
+           })
            .length());
 
   struct sink {

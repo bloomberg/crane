@@ -324,17 +324,21 @@ let mk_tt_expr () =
   | None ->
     CErrors.anomaly (Pp.str "mk_tt_expr: could not resolve core.unit.tt")
 
-(** Check whether a global reference [r] has been void-ified: its ML type
-    is a function (or monad) whose result type is [unit].  When such a
-    function is called in expression context, the C++ call returns [void]
-    and cannot be used as a value — we must wrap it in an IIFE that
-    executes the call for side effects and returns [std::monostate{}]. *)
+(** Whether [ty] is the type of something whose C++ call returns [void]: a
+    function (or monad) whose result type is [unit].  Such a call cannot be
+    used as a value — it must be wrapped in an IIFE that executes it for its
+    side effect and returns [std::monostate{}]. *)
+let ml_type_is_void_call (ty : Miniml.ml_type) : bool =
+  (match Ml_type_util.resolve_tmeta ty with
+  | Miniml.Tarr _ -> true
+  | Miniml.Tglob (r, _, _) -> Table.is_monad r
+  | _ -> false)
+  && ml_type_is_unit (ml_result_type ty)
+
+(** Whether a global reference [r] has been void-ified. *)
 let is_void_ified_ref (r : GlobRef.t) : bool =
   match find_type_opt r with
-  | Some ty ->
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty)
+  | Some ty -> ml_type_is_void_call ty
   | None -> false
 
 (** Wrap a void-returning function call expression in an IIFE so it can
@@ -356,13 +360,7 @@ let wrap_void_call_as_value (call_expr : cpp_expr) : cpp_expr =
 let rec ml_callee_is_void = function
   | MLglob (r, _) -> is_void_ified_ref r
   | MLmagic (_, inner) -> ml_callee_is_void inner
-  | MLrel i ->
-    ( try
-        let ty = get_env_type i in
-        (match ty with Miniml.Tarr _ -> true
-         | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-        && ml_type_is_unit (ml_result_type ty)
-      with _ -> false )
+  | MLrel i -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
 
 (** {3 Reified ITree helpers}

@@ -7954,3 +7954,14 @@
   (alias runtest)
   (deps record_field_named_list.t.exe)
   (action (run ./record_field_named_list.t.exe))))
+
+(subdir unit_returning_callback_map
+ (rule
+  (targets unit_returning_callback_map.t.exe)
+  (deps UnitReturningCallbackMap.vo unit_returning_callback_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_returning_callback_map.t.exe unit_returning_callback_map.cpp unit_returning_callback_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_returning_callback_map.t.exe)
+  (action (run ./unit_returning_callback_map.t.exe))))
