@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD
 #define INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD
 
+#include "crane_fn.h"
 #include <any>
 #include <utility>
 
@@ -15,15 +16,16 @@ struct TypeLevelFixpointRecordField {
     ty val;
   };
 
-  static inline const uint64_t go = std::any_cast<uint64_t>(
-      std::any_cast<std::pair<std::any, std::any>>(
-          std::any_cast<std::pair<std::any, std::any>>(
+  static inline const uint64_t go =
+      crane_any_cast<std::pair<uint64_t, uint64_t>>(
+          crane_any_cast<std::pair<std::pair<uint64_t, uint64_t>,
+                                   std::pair<uint64_t, uint64_t>>>(
               std::make_pair(std::any(std::make_pair(std::any(UINT64_C(1)),
                                                      std::any(UINT64_C(2)))),
                              std::any(std::make_pair(std::any(UINT64_C(3)),
                                                      std::any(UINT64_C(4))))))
               .first)
-          .first);
+          .first;
 };
 
 #endif // INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD

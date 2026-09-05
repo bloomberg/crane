@@ -5,7 +5,7 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <concepts>
+#include <functional>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -145,45 +145,36 @@ public:
   }
 };
 
-/// A record with a Type-valued field is emitted as a C++ concept, yet it
-/// is also used as a value type and as a list element.
-template <typename
-I>concept dyn = requires {
-  typename I::dty;
-  { I::dshow(std::declval<typename I::dty>()) } -> std::convertible_to<uint64_t>;
-} && (requires {
-  { I::dval() } -> std::convertible_to<typename I::dty>;
-} || requires {
-  { I::dval } -> std::convertible_to<typename I::dty>;
-});
-
 struct RecordTypeFieldConcept {
+  /// A record with a Type-valued field is emitted as a C++ concept, yet it
+  /// is also used as a value type and as a list element.
+  struct dyn {
+    std::any dval;
+    std::function<uint64_t(std::any)> dshow;
+  };
+
   using dty = std::any;
-
-  template <dyn _tcI0> static uint64_t read() {
-    return _tcI0::dshow(_tcI0::dval());
-  }
-
-  static inline const List<dyn> ds =
+  static uint64_t read(const dyn &d);
+  static inline const List<dyn> ds = List<dyn>::cons(
+      dyn{UINT64_C(7),
+          crane_erase_fn<uint64_t>([](const auto &n) { return n; })},
       List<dyn>::cons(
-          dyn{UINT64_C(7), [](const auto &n) { return n; }},
+          dyn{List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(
+                      UINT64_C(2), List<uint64_t>::cons(
+                                       UINT64_C(3), List<uint64_t>::nil()))),
+              crane_erase_fn<uint64_t>(
+                  [](const List<uint64_t> &_x) { return _x.length(); })},
           List<dyn>::cons(
-              dyn{List<uint64_t>::cons(
-                      UINT64_C(1),
-                      List<uint64_t>::cons(
-                          UINT64_C(2),
-                          List<uint64_t>::cons(UINT64_C(3),
-                                               List<uint64_t>::nil()))),
-                  [](const List<uint64_t> &_x) { return _x.length(); }},
-              List<dyn>::cons(
-                  dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
-                      [](const auto &p) {
-                        return (std::any_cast<std::pair<std::any, std::any>>(p)
-                                    .first *
-                                std::any_cast<std::pair<std::any, std::any>>(p)
-                                    .second);
-                      }},
-                  List<dyn>::nil())));
+              dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
+                  crane_erase_fn<uint64_t>([](const auto &p) {
+                    return (
+                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p).first *
+                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p)
+                            .second);
+                  })},
+              List<dyn>::nil())));
   static inline const uint64_t total = ds.template fold_left<uint64_t>(
       [](uint64_t acc, const dyn &d) { return (acc + read(d)); }, UINT64_C(0));
 };

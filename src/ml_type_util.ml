@@ -326,6 +326,17 @@ let is_fully_erased_fun_ty t =
     dom <> [] && List.for_all prints_as_any dom && prints_as_any cod
   | _ -> false
 
+(** [partially_erased_fun_ty t] -- true of a function type that erased only its
+    arguments and kept a concrete result, as
+    [std::function<uint64_t(std::any)>] has.  A closure landing in such a slot
+    was written at the concrete domain, so it reaches the slot through the
+    [crane_erase_fn] adapter -- taken at the slot's own result type, since
+    erasing that too would box the result twice. *)
+let partially_erased_fun_ty = function
+  | Minicpp.Tfun (dom, cod) ->
+    (not (prints_as_any cod)) && List.exists prints_as_any dom
+  | _ -> false
+
 (** [is_boxed_type t] — true if a value of type [t] is known to be physically
     inside a [std::any], and may therefore be boxed into and [any_cast] out of.
     Deliberately narrower than {!prints_as_any}: {!Minicpp.Topaque} spells

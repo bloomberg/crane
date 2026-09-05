@@ -4106,21 +4106,19 @@ and coerce ?term ?from ~into expr =
        representation is unknown. *)
     | `Opaque -> expr
     | (`Unknown | `Concrete _) as concrete_source ->
+      let is_function_value =
+        match concrete_source with
+        | `Concrete (Tfun _) -> true
+        | `Concrete _ -> false
+        | `Unknown -> (
+          match term with Some t -> ml_expr_is_function_value t | None -> false )
+      in
       if is_boxed_type into then
         (* Boxing is not idempotent: [std::any] holding a [std::any] is a box
            no consumer opens twice. *)
         match expr with
         | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> expr
         | _ ->
-          let is_function_value =
-            match concrete_source with
-            | `Concrete (Tfun _) -> true
-            | `Concrete _ -> false
-            | `Unknown -> (
-              match term with
-              | Some t -> ml_expr_is_function_value t
-              | None -> false )
-          in
           (* A closure does not survive as itself: the consumer recovers it with
              [any_cast<std::function<std::any(std::any...)>>], so it is adapted
              to that canonical shape first.  It is then boxed like any other
@@ -4135,10 +4133,21 @@ and coerce ?term ?from ~into expr =
           in
           CPPconverting_ctor (Tany, [adapted])
       else
-        match concrete_source with
-        | `Concrete f when not (prints_as_any into) ->
-          gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
-        | _ -> expr
+        match into with
+        (* A slot that erased only its domain -- a record field whose Rocq type
+           is [dty -> nat] at a value-dependent [dty], so
+           [std::function<uint64_t(std::any)>] -- does not accept a closure
+           written at the concrete domain, nor a generic lambda (which has no
+           signature to convert from).  It takes one through the same
+           [crane_erase_fn] adapter an erased parameter uses. *)
+        | Tfun (_, cod) when is_function_value && partially_erased_fun_ty into
+          ->
+          wrap_crane_erase_fn ~ret_ty:cod expr
+        | _ -> (
+          match concrete_source with
+          | `Concrete f when not (prints_as_any into) ->
+            gen_type_conversion_expr ~src_ty:f ~dst_ty:into expr
+          | _ -> expr )
 
 (** [recover_boxed_result ~boxed expr] casts the result of a call back into
     the type the enclosing context expects, when [boxed] says the callee hands
@@ -4199,7 +4208,7 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
        e.g. [std::function<typename I::M(std::any)>] for a higher-kinded class
        method) keeps that result type: erasing it too would box the result
        twice. *)
-    | Tfun (dom, cod) when cod <> Tany && List.mem Tany dom -> Some (Some cod)
+    | Tfun (_, cod) as t when partially_erased_fun_ty t -> Some (Some cod)
     | Tfun (dom, cod) when cod = Tany || List.mem Tany dom -> Some None
     (* The whole parameter is boxed -- a type-level [Fixpoint] landing on
        [using sem = std::any], say.  A callee that applies such a value goes
@@ -6494,9 +6503,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let saved_dead = tctx.move_dead_after in
       tctx.move_dead_after <- Escape.IntSet.empty;
       let record_arg_exprs =
+        (* A record's erased fields (a promoted [Type] field such as [dyn]'s
+           [dty]) carry no argument, so the declared field types are aligned
+           with the arguments only once the [Tdummy] entries are dropped --
+           otherwise every field from the first erased one on is read off by
+           the type of its predecessor. *)
         let field_types_rec =
           match Table.get_ctor_ip_types_opt r with
-          | Some ft -> ft
+          | Some ft -> List.filter (fun t -> not (Mlutil.isTdummy t)) ft
           | None -> []
         in
         let tvars = get_current_type_vars () in
@@ -6524,6 +6538,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               if prints_as_any ct then None else Some ct
             | _ -> None )
           | None -> None
+        in
+        (* The type the struct declares a field at: a record that renders no
+           template parameter erases every type variable left in its field
+           types (see [gen_ind_header_v2]), so that -- not the conversion that
+           keeps the variable -- is the type an argument reaches the field
+           at. *)
+        let declared_field_cpp_ty ft =
+          match ty with
+          | Tglob ((GlobRef.IndRef (kn, _) as n), _, _) ->
+            let t =
+              convert_ml_type_to_cpp_type env ~ns:(Refset'.singleton n) tvars ft
+            in
+            if Table.get_ind_num_param_vars_opt kn = Some 0 then
+              Ml_type_util.tvar_erase_type t
+            else t
+          | _ -> cpp_of_ml env ft
         in
         let arg_slot = {slot with in_ctor_arg = true} in
         let base_args =
@@ -6563,6 +6593,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 in
                 let api_ty =
                   cpp_of_ml env ft
+                in
+                (* A closure written at the concrete domain does not convert
+                   to the erased signature the field is declared at; [coerce]
+                   supplies the [crane_erase_fn] adapter. *)
+                let declared_ty = declared_field_cpp_ty ft in
+                let expr =
+                  if partially_erased_fun_ty declared_ty then
+                    coerce ?term:(List.nth_opt ts i) ~into:declared_ty expr
+                  else expr
                 in
                 wrap_storage_expr ~storage_ty ~api_ty expr
               | None -> expr)
@@ -7626,7 +7665,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       in
       match List.nth_opt fn_param_ml_tys i with
       | Some param_ty
-        when (ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel)
+        when ( ml_body_returns_erased_field ml_arg || ml_arg_is_erased_rel
+             (* A component read out of a pair that was itself recovered from
+                a box is a [std::any] whatever its ML type says, and the
+                emitted expression is the evidence -- see
+                {!yields_boxed_component}. *)
+             || yields_boxed_component (as_value ()) )
              && not (match param_ty with
                      | Miniml.Tglob (g, _, _) -> Table.is_promoted_type_var g
                      | _ -> false)
@@ -8346,7 +8390,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        [gen_custom_cpp_case]. *)
     let primary_result =
       match primary_result with
-      | CPPfun_call (CPPglob (n, _, Some ci) as cglob', [single_arg])
+      | CPPfun_call (CPPglob (n, glob_tys, Some ci) as cglob', [single_arg])
         when ( match ci.ci_inline with
                | Some s -> Common.contains_substring s ".first"
                         || Common.contains_substring s ".second"
@@ -8423,6 +8467,20 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                {!yields_boxed_component} recognises both shapes. *)
             primary_result
           | _, CPPany_cast _ -> primary_result
+          | Some g, _ when (match glob_tys with
+                            | [_; _] ->
+                              not (List.exists Ml_type_util.has_tany_in_type
+                                     glob_tys)
+                            | _ -> false) ->
+            (* The accessor's own type arguments name both components
+               concretely, so the box can be opened at that very shape --
+               tolerantly, because a producer that deep-erased stored
+               [pair<any,any>], which [crane_any_cast] recovers component by
+               component.  What comes out is concrete, so the accessor's
+               result needs no further recovery. *)
+            Table.mark_needs_erase_fn ();
+            CPPfun_call (cglob',
+              [CPPany_cast_tolerant (Tglob (g, glob_tys, []), single_arg)])
           | Some g, _ ->
             CPPfun_call (cglob',
               [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)])

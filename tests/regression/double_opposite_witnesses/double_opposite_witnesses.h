@@ -100,11 +100,11 @@ struct DoubleOppositeWitnessesCase {
   template <PreCategory _tcI0, PreCategory _tcI1, PreCategory _tcI2>
   static Functor compose_functor(Functor f, Functor g) {
     return Functor{[=](Obj x) mutable { return f.object_of(g.object_of(x)); },
-                   [=](Obj x, Obj y, Obj f0) mutable {
+                   crane_erase_fn<Hom>([=](Obj x, Obj y, Obj f0) mutable {
                      return f.morphism_of(
                          g.object_of(x), g.object_of(y),
                          crane_erase_fn(g.morphism_of(x, y, f0)));
-                   }};
+                   })};
   }
 
   template <PreStableCategory _tcI0> struct opposite_prestable_category {
@@ -142,11 +142,13 @@ struct DoubleOppositeWitnessesCase {
   static_assert(PreStableCategory<toy_prestable>);
 
   template <PreCategory _tcI0> static Functor into_double_opposite_functor() {
-    return Functor{[](Obj x) { return x; }, [](Obj, Obj, Obj f) { return f; }};
+    return Functor{[](Obj x) { return x; },
+                   crane_erase_fn<Hom>([](Obj, Obj, Obj f) { return f; })};
   }
 
   template <PreCategory _tcI0> static Functor out_of_double_opposite_functor() {
-    return Functor{[](Obj x) { return x; }, [](Obj, Obj, Obj f) { return f; }};
+    return Functor{[](Obj x) { return x; },
+                   crane_erase_fn<Hom>([](Obj, Obj, Obj f) { return f; })};
   }
 
   template <PreStableCategory _tcI0>

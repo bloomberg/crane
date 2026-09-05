@@ -30,6 +30,11 @@ template <typename T> T *crane_raw(const std::shared_ptr<T> &p) noexcept {
 
 template <typename T> T *crane_raw(T *p) noexcept { return p; }
 
+// Declared here, defined below: the generic-lambda branch of
+// [crane_erase_fn] needs it to recover a concrete result from a callable
+// whose own result is boxed.
+template <class T> T crane_any_cast(const std::any &a);
+
 // [crane_erase_fn] adapts an arbitrary callable to
 // [std::function<std::any(std::any...)>] and boxes the result into [std::any].
 // Two cases:
@@ -92,6 +97,13 @@ template <class Ret = std::any, class F> auto crane_erase_fn(F &&f) {
           if constexpr (std::is_void_v<decltype(f(a))>) {
             f(a);
             return Ret{};
+          } else if constexpr (std::is_same_v<std::decay_t<decltype(f(a))>,
+                                              std::any>) {
+            // A generic lambda over an erased domain hands back whatever it
+            // was given, still boxed; a slot that kept a concrete result
+            // ([std::function<uint64_t(std::any)>]) needs it unboxed, not
+            // converted.
+            return crane_any_cast<Ret>(f(a));
           } else {
             return Ret(f(a));
           }
