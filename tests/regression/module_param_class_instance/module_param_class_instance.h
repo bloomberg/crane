@@ -14,19 +14,8 @@ concept Weigh = requires {
 template <typename M>
 concept CARRIER = requires {
   typename M::t;
-  requires(
-      requires {
-        {
-          M::inst
-        }
-        -> std::convertible_to<ModuleParamClassInstance::Weigh<typename M::t>>;
-      } ||
-      requires {
-        {
-          M::inst()
-        }
-        -> std::convertible_to<ModuleParamClassInstance::Weigh<typename M::t>>;
-      });
+  typename M::inst;
+  requires Weigh<typename M::inst, typename M::t>;
   requires(
       requires {
         { M::sample } -> std::convertible_to<typename M::t>;

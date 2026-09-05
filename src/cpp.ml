@@ -270,6 +270,30 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
         ++ str ")>"
       | ty -> pp_cpp_type false [] ty
     in
+    (* A parameter whose type is a type class names an {e instance}, and Crane
+       emits an instance as a nested struct that satisfies the class's concept.
+       Ask for the member type and constrain it: a concept name is not a type,
+       so the value form below would spell [convertible_to<Weigh<...>>], which
+       does not compile. *)
+    begin match ret_ty with
+    | Tglob (cls, cls_args, _) when args = [] && Table.is_typeclass cls ->
+      str "typename M::"
+      ++ name
+      ++ str ";"
+      ++ fnl ()
+      ++ str "requires "
+      ++ str (Common.pp_global_name Type cls)
+      ++ str "<typename M::"
+      ++ name
+      ++ prlist
+           (fun a ->
+             str ", "
+             ++ qualify_type
+                  (convert_ml_type_to_cpp_type (empty_env ()) [] a) )
+           cls_args
+      ++ str ">;"
+      ++ fnl ()
+    | _ ->
     if args = [] then
       (* A nullary module value may be emitted either as a static data member
          ([M::name]) or, inside a template where it becomes a Meyers singleton,
@@ -327,6 +351,7 @@ and pp_spec_as_requirement modtype_mp modtype_refs = function
       ++ qualify_type cpp_ret
       ++ str ">;"
       ++ fnl ()
+    end
   | Stype (r, vl, ot) ->
     let name = pp_global_name Type r in
     if vl = [] then

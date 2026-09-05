@@ -7998,3 +7998,14 @@
   (alias runtest)
   (deps curried_value_in_container.t.exe)
   (action (run ./curried_value_in_container.t.exe))))
+
+(subdir module_param_class_instance
+ (rule
+  (targets module_param_class_instance.t.exe)
+  (deps ModuleParamClassInstance.vo module_param_class_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_param_class_instance.t.exe module_param_class_instance.cpp module_param_class_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_param_class_instance.t.exe)
+  (action (run ./module_param_class_instance.t.exe))))
