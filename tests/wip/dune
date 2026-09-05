@@ -140,16 +140,6 @@
   (action (run ./record_type_field_concept.t.exe))))
 
 
-(subdir type_constructor_param_inductive
- (rule
-  (targets type_constructor_param_inductive.t.exe)
-  (deps TypeConstructorParamInductive.vo type_constructor_param_inductive.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} type_constructor_param_inductive.t.exe type_constructor_param_inductive.cpp type_constructor_param_inductive.t.cpp)))
- (rule
-  (alias runtest)
-  (deps type_constructor_param_inductive.t.exe)
-  (action (run ./type_constructor_param_inductive.t.exe))))
 
 (subdir type_level_fixpoint_arity
  (rule

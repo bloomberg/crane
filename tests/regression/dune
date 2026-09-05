@@ -8053,3 +8053,14 @@
   (alias runtest)
   (deps nat_literal_overflow.t.exe)
   (action (run ./nat_literal_overflow.t.exe))))
+
+(subdir type_constructor_param_inductive
+ (rule
+  (targets type_constructor_param_inductive.t.exe)
+  (deps TypeConstructorParamInductive.vo type_constructor_param_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_constructor_param_inductive.t.exe type_constructor_param_inductive.cpp type_constructor_param_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_constructor_param_inductive.t.exe)
+  (action (run ./type_constructor_param_inductive.t.exe))))
