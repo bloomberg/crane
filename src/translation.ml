@@ -2884,6 +2884,18 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
     | _ ->
       cpp_of_ml env typ
   in
+  (* Whether a {!Minicpp.Topaque} among the scrutinee's template arguments is
+     a box.  [Topaque] only admits that the argument could not be resolved --
+     but for an inductive Crane generates, the field that names it is written
+     out, and {!Cpp_erasure.materialise} spells that declaration [std::any], so
+     the value really is boxed.  A custom-extracted scrutinee has no such
+     declaration: [std::optional<T>] is spelled by the mapping, and where the
+     scrutinee is only ever bound to [auto] nothing wrote a box at all. *)
+  let opaque_arg_is_a_box =
+    match resolve_tmeta typ with
+    | Miniml.Tglob (g, _, _) -> not (Table.is_custom g)
+    | _ -> true
+  in
   let scrut_template_args =
     let args = extract_template_args scrut_cpp_ty in
     (* One boxed argument means the whole instantiation was erased, so every
@@ -2892,13 +2904,20 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
        free (existential) type variable.  Without it a payload
        [pair<any, function<nat(any)>>] would be read back component-wise at
        two different erasures from the [pair<any, any>] its producer stored. *)
-    if List.exists resolves_to_any_type args then
+    (* An unresolved argument of a custom-extracted scrutinee does not count:
+       see [opaque_arg_is_a_box]. *)
+    if List.exists (fun t -> resolves_to_any_type t
+                             && (t <> Topaque || opaque_arg_is_a_box))
+         args
+    then
       (* An argument that already carries an erased component is at the shape
          its producer stored it in -- a [pair<List<any>, any>] payload is
          written down that way in the field, and reading it back as a flat
          [any] would lose the components the producer boxed individually. *)
       List.map
-        (fun a -> if has_tany_in_type a then a else index_erase_type a)
+        (fun a ->
+          if has_tany_in_type a || (a = Topaque && not opaque_arg_is_a_box) then a
+          else index_erase_type a)
         args
     else args
   in
@@ -2929,7 +2948,10 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
         has_unnamed_tvar cpp_ty
       | None -> false
     else
-      match field_arg field_i with Some t -> resolves_to_any_type t | None -> false
+      match field_arg field_i with
+      | Some Topaque -> opaque_arg_is_a_box
+      | Some t -> resolves_to_any_type t
+      | None -> false
   in
   List.iteri (fun field_i _ ->
     let db_idx = n_pat_vars - field_i in
@@ -2975,14 +2997,20 @@ and binder_cpp_type i = IntMap.find_opt i tctx.cpp_binder_types
     binder is boxed exactly when the scrutinee's instantiation erased its
     field. *)
 and binder_is_boxed i =
-  match binder_cpp_type i with
+  (* [Topaque] prints as [std::any] but admits only that the representation is
+     unknown here; nothing may be unboxed on the strength of it.  The
+     distinction is {!coerce}'s, and a binder's answer has to draw it too. *)
+  match binder_assigned_type i with
+  | Some Topaque | None -> false
   | Some t -> resolves_to_any_type t
-  | None ->
-    (* No pattern-match instantiation pinned this binder down, so fall back to
-       the type assigned where it was bound. *)
-    ( match IntMap.find_opt i tctx.cpp_binder_types_all with
-    | Some t -> resolves_to_any_type t
-    | None -> false )
+
+(** [binder_assigned_type i] is the C++ type the binder at de Bruijn index [i]
+    was decided to have: the instantiation a pattern match pinned down where
+    there is one, and otherwise the type assigned where the binder was bound. *)
+and binder_assigned_type i =
+  match binder_cpp_type i with
+  | Some _ as t -> t
+  | None -> IntMap.find_opt i tctx.cpp_binder_types_all
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -4018,19 +4046,6 @@ and coerce ?term ?from ~into expr =
     | Some f when is_boxed_source f -> `Boxed
     | Some f when prints_as_any f -> `Opaque
     | Some f -> `Concrete f
-  in
-  (* Unboxing is the one direction in which [Topaque] must act.  The value
-     reached this boundary out of a declared slot, and materialising the
-     declaration gave that slot [std::any], so the box is real even though the
-     inferred type stops short of saying so.  A function target is still left
-     alone: there the representation-tolerant helpers in [crane_fn.h] decide at
-     instantiation time, which is the whole reason [Topaque] exists. *)
-  let source =
-    match source with
-    | `Opaque
-      when (not (prints_as_any into))
-           && (match into with Tfun _ -> false | _ -> true) -> `Boxed
-    | s -> s
   in
   let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
   if same_type || into = Tvoid then expr
@@ -6811,7 +6826,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       match m with
       | Mcoerce (from, _) ->
         Some (cpp_of_ml env from)
-      | Mboxed -> Some Tany
+      (* [Mboxed] is extraction's reading of the Coq typing.  A binder whose
+         C++ type was decided at its binding site outranks it: a type-class
+         method returning [M A] is opaque in Coq, but Crane emits the
+         instance's [M] as a template, so the value here has the concrete type
+         the binder was assigned and there is no box to open. *)
+      | Mboxed -> (
+        match t with
+        | MLrel i -> ( match binder_assigned_type i with
+          | Some ty -> Some ty
+          | None -> Some Tany )
+        | _ -> Some Tany )
       | Mbarrier -> None
     in
     ( match expected_ty with
@@ -6843,7 +6868,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | t -> t
           in
           coerce ~from:Tany ~into:(erase_top_args ty) inner
-        else if ml_expr_is_erased env t then coerce ~from:Tany ~into:ty inner
+        else if ml_expr_is_erased env t then
+          (* Extraction's oracle reads a type-class method's [M A] as erased,
+             but the binder it is bound to was assigned {!Minicpp.Topaque} --
+             an admission that the shape could not be resolved, not a box.
+             Say so rather than assert [Tany]: {!coerce} recovers from a box
+             and must not invent one. *)
+          let rec binder_is_opaque = function
+            | MLrel i -> binder_assigned_type i = Some Topaque
+            | MLmagic (_, t') -> binder_is_opaque t'
+            | _ -> false
+          in
+          coerce ~from:(if binder_is_opaque t then Topaque else Tany)
+            ~into:ty inner
         else
           (* [ml_expr_is_erased] only recognises a handful of shapes and says
              [false] for the rest.  Extraction already unified the two sides

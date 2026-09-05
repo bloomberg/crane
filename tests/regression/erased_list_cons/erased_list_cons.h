@@ -279,8 +279,7 @@ template <SYM Ty> struct DefsFn {
     auto _cs = assemble(e.projT1().second, stk);
     if (_cs.has_value()) {
       const auto &vs = *_cs;
-      return std::make_optional<std::any>(
-          std::any(action_of(e, std::any_cast<symbols_semty>(vs))));
+      return std::make_optional<std::any>(std::any(action_of(e, vs)));
     } else {
       return std::optional<std::any>();
     }

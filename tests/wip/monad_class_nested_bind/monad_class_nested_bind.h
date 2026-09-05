@@ -276,7 +276,7 @@ struct MonadClassNestedBind {
     auto _cs = chain<MOption>(UINT64_C(1));
     if (_cs.has_value()) {
       const auto &l = *_cs;
-      return List<uint64_t>(std::any_cast<List<std::any>>(l)).length();
+      return l.length();
     } else {
       return UINT64_C(0);
     }
