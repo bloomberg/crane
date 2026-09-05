@@ -153,7 +153,7 @@ and equiv =
     [ind_packets] one {!ml_ind_packet} per mutually-defined body, and
     [ind_equiv] any sharing/redirection information. *)
 and ml_ind = {
-  ind_kind : inductive_kind;
+  mutable ind_kind : inductive_kind;
   ind_nparams : int;
   ind_packets : ml_ind_packet array;
   ind_equiv : equiv;

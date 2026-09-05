@@ -1057,6 +1057,72 @@ let mark_higher_order_projections struc =
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
+(** Demote a record classified as a type class back to a plain struct when the
+    structure uses it as a value.
+
+    A record with a [Type]-valued field models an algebraic structure -- a
+    [Monoid] whose carrier and operations are resolved statically -- and is
+    emitted as a C++ concept, which its instances satisfy as types.  But the
+    same record can also be packed as an existential and handled as data ([list
+    dyn]): a concept cannot be a list element, and the value carries its own
+    type, so it has to be a struct with the promoted field erased.
+
+    A type argument is the signal: an instance used statically appears as a
+    definition's parameter, which becomes a template parameter, and never
+    inside another type's arguments. *)
+let demote_value_typeclasses struc =
+  let demoted = ref Mindmap_env.empty in
+  let rec scan_arg t =
+    match t with
+    | Tglob ((GlobRef.IndRef (kn, _) as r), l, _) ->
+      if Table.is_typeclass r then demoted := Mindmap_env.add kn () !demoted;
+      List.iter scan_arg l
+    | Tglob (_, l, _) -> List.iter scan_arg l
+    | Tarr (a, b) ->
+      scan_arg a;
+      scan_arg b
+    | Tmeta {contents = Some t} -> scan_arg t
+    | _ -> ()
+  in
+  let rec scan_type = function
+    | Tglob (_, l, _) -> List.iter scan_arg l
+    | Tarr (a, b) ->
+      scan_type a;
+      scan_type b
+    | Tmeta {contents = Some t} -> scan_type t
+    | _ -> ()
+  in
+  let scan_ind ind =
+    Array.iter
+      (fun p -> Array.iter (List.iter scan_type) p.ip_types)
+      ind.ind_packets
+  in
+  let scan_decl = function
+    | Dind (_, ind) -> scan_ind ind
+    | Dterm (_, _, u) | Dtype (_, _, u) -> scan_type u
+    | Dfix (_, _, v) -> Array.iter scan_type v
+  in
+  let scan_spec = function
+    | Sind (_, ind) -> scan_ind ind
+    | Stype (_, _, ot) -> Option.iter scan_type ot
+    | Sval (_, _, u) -> scan_type u
+  in
+  Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
+  if not (Mindmap_env.is_empty !demoted) then begin
+    let demote_ind kn ind =
+      match ind.ind_kind with
+      | TypeClass fields when Mindmap_env.mem kn !demoted ->
+        Table.add_inductive_kind kn (Record fields);
+        ind.ind_kind <- Record fields
+      | _ -> ()
+    in
+    Modutil.struct_iter
+      (function Dind (kn, ind) -> demote_ind kn ind | _ -> ())
+      (function Sind (kn, ind) -> demote_ind kn ind | _ -> ())
+      (fun _ -> ())
+      struc
+  end
+
 (** Filter applied to [opened_libraries ()] in [print_structure_to_file] to
     prune back-edges in the inter-module include graph during separate
     extraction.  A back-edge exists when module X includes module Y but Y is
@@ -1088,6 +1154,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      that only their associated imports appear in the generated header. *)
   mark_used_customs struc;
   mark_higher_order_projections struc;
+  demote_value_typeclasses struc;
   (* Detect whether any custom inline function is applied to a string literal.
      This determines whether we need 'using namespace std::string_literals;'. *)
   let has_custom_string_arg =
