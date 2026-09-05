@@ -5825,7 +5825,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      [#include "crane_fn.h"] in the header preamble). *)
                   erase_fn_for_any_slot ml_e expr
                 end )
-            | Tfun (param_tys, _ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
+            | Tfun (param_tys, ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
               | CPPlambda (params, ret_ty_opt, body_stmts, cap) ->
                 let n_params = List.length params in
@@ -5940,6 +5940,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let new_lambda = CPPlambda (renamed_params, new_ret_ty, new_body, cap) in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
                 CPPconverting_ctor (func_ty, [new_lambda])
+              (* A function value that is not a lambda literal (a reference to a
+                 global, or a methodified one) cannot have its parameters
+                 rewritten the way the branch above rewrites a literal's, so
+                 defer the adaptation to the runtime helper, which deduces the
+                 callable's signature and unboxes each argument.  The field's
+                 own codomain stays concrete. *)
+              | _ when ml_expr_is_function_value ml_e ->
+                wrap_crane_erase_fn
+                  ?ret_ty:(if ret_ty = Tany then None else Some ret_ty)
+                  expr
               | _ -> expr )
             | _ -> expr
             with Failure _ | Invalid_argument _ ->
@@ -6131,6 +6141,31 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let new_lambda = CPPlambda (new_params, new_ret_ty, new_body, cap) in
             let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
             CPPconverting_ctor (func_ty, [new_lambda])
+          (* The same erased-argument adaptation, for a function value that is
+             not a lambda literal (a reference to a global, or to a method):
+             there are no parameters here to rewrite, so defer to the runtime
+             helper, which deduces the callable's signature and unboxes each
+             argument.  The field's codomain stays concrete. *)
+          | Miniml.Tarr _, _ when ft_has_erased_tvar ft && ml_expr_is_function_value ml_e ->
+            let rec codomain = function
+              | Miniml.Tarr (_, rest) -> codomain rest
+              | t -> t
+            in
+            let ret_ty = cpp_of_ml env (codomain ft) in
+            (* The value this function will be applied to went into a sibling
+               erased field, so it was erased there too -- a [list nat] argument
+               is stored as [List<std::any>], not [List<uint64_t>].  Instantiate
+               the function at that same erased type, or the adapter would
+               unbox to a shape nothing ever boxed. *)
+            let expr =
+              match expr with
+              | CPPglob (g, (_ :: _ as tys), xs) ->
+                CPPglob (g, List.map (fun _ -> Tany) tys, xs)
+              | e -> e
+            in
+            wrap_crane_erase_fn
+              ?ret_ty:(if prints_as_any ret_ty then None else Some ret_ty)
+              expr
           | _ -> expr )
       in
       let gen_and_wrap i e =

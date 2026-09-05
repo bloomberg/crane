@@ -1,9 +1,9 @@
 #ifndef INCLUDED_SEPEXTANYFUNCALL
 #define INCLUDED_SEPEXTANYFUNCALL
 
+#include "crane_fn.h"
 #include <any>
 #include <functional>
-#include <type_traits>
 #include <utility>
 
 #include "Datatypes.h"
@@ -25,13 +25,13 @@ template <SymTypes Ty> struct Actions {
       std::function<bool(symbols_semty)>>;
 
   template <typename F1>
-    requires std::is_invocable_r_v<bool, F1 &, symbols_semty &>
   static entry
   make_entry(typename Datatypes::template List<typename Ty::sym> gamma,
              F1 &&f) {
     return Specif::template SigT<
         typename Datatypes::template List<typename Ty::sym>,
-        std::function<bool(std::any)>>::existt(std::move(gamma), f);
+        std::function<bool(std::any)>>::existt(std::move(gamma),
+                                               crane_erase_fn<bool>(f));
   }
 
   static bool apply_entry(entry _x0, symbols_semty _x1) {

@@ -195,7 +195,7 @@ struct EtaMethodifiedBinop {
   }
 
   static inline const Nat test = count<Nat>(
-      [](const auto &_x0, const auto &_x1) { return _x0.eqb(_x1); },
+      [](const Nat &_x0, const auto &_x1) { return _x0.eqb(_x1); },
       Nat::s(Nat::o()), List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil()));
 };
 

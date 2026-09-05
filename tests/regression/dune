@@ -7877,3 +7877,25 @@
   (alias runtest)
   (deps submodule_named_nat.t.exe)
   (action (run ./submodule_named_nat.t.exe))))
+
+(subdir existential_ctor_erased_fn
+ (rule
+  (targets existential_ctor_erased_fn.t.exe)
+  (deps ExistentialCtorErasedFn.vo existential_ctor_erased_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_ctor_erased_fn.t.exe existential_ctor_erased_fn.cpp existential_ctor_erased_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_ctor_erased_fn.t.exe)
+  (action (run ./existential_ctor_erased_fn.t.exe))))
+
+(subdir sigt_erased_fn_param
+ (rule
+  (targets sigt_erased_fn_param.t.exe)
+  (deps SigtErasedFnParam.vo sigt_erased_fn_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_erased_fn_param.t.exe sigt_erased_fn_param.cpp sigt_erased_fn_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_erased_fn_param.t.exe)
+  (action (run ./sigt_erased_fn_param.t.exe))))

@@ -1208,8 +1208,29 @@ and pp_cpp_expr env args t =
     let method_name = Common.id_of_global Term x in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
     let arity = lookup_method_arity x in
+    let this_pos =
+      match lookup_method_this_pos x with Some p -> p | None -> 0
+    in
+    (* Spell the receiver parameter with its real type rather than
+       [const auto &].  A generic lambda has no deducible signature, so every
+       consumer that inspects one -- [crane_erase_fn] probing whether the
+       callable accepts [std::any], [std::function] CTAD -- must instantiate
+       its body to find out, and an instantiation that does not type-check is
+       a hard error rather than a substitution failure. *)
+    let receiver_param name =
+      match method_receiver_cpp_type x _tys with
+      (* A receiver type mentioning a template parameter cannot be spelled at
+         this lambda: the enclosing template's parameters are not in scope in
+         its body.  Fall back to the generic form, which is what this always
+         used to emit. *)
+      | Some ty when Ml_type_util.contains_tvar ty -> "const auto &" ^ name
+      | Some ty ->
+        Pp.string_of_ppcmds
+          (str "const " ++ pp_cpp_type false [] ty ++ str (" &" ^ name))
+      | None -> "const auto &" ^ name
+    in
     if arity <= 1 then
-      str "[](const auto &_x) { return _x"
+      str ("[](" ^ receiver_param "_x" ^ ") { return _x")
       ++ str accessor
       ++ Id.print method_name
       ++ str "(); }"
@@ -1217,12 +1238,13 @@ and pp_cpp_expr env args t =
       (* The method takes more than its receiver, so the forwarding lambda has
          to accept every parameter and pass the non-receiver ones on -- calling
          it with none would not even name an overload. *)
-      let this_pos =
-        match lookup_method_this_pos x with Some p -> p | None -> 0
-      in
       let names = List.init arity (fun i -> "_x" ^ string_of_int i) in
       let params =
-        String.concat ", " (List.map (fun n -> "const auto &" ^ n) names)
+        String.concat ", "
+          (List.mapi
+             (fun i n ->
+               if i = this_pos then receiver_param n else "const auto &" ^ n )
+             names )
       in
       let call_args =
         String.concat ", " (List.filteri (fun i _ -> i <> this_pos) names)

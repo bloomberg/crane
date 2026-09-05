@@ -174,7 +174,7 @@ struct RecordTypeFieldConcept {
                           UINT64_C(2),
                           List<uint64_t>::cons(UINT64_C(3),
                                                List<uint64_t>::nil()))),
-                  [](const auto &_x) { return _x.length(); }},
+                  [](const List<uint64_t> &_x) { return _x.length(); }},
               List<dyn>::cons(
                   dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
                       [](const auto &p) {

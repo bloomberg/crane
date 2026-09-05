@@ -194,13 +194,15 @@ struct ExistentialCtorErasedFn {
                                    }
                                  })),
           List<dynamic>::cons(
-              dynamic::dyn(List<std::any>::cons(
-                               UINT64_C(1),
-                               List<std::any>::cons(
-                                   UINT64_C(2),
-                                   List<std::any>::cons(
-                                       UINT64_C(3), List<std::any>::nil()))),
-                           [](const auto &_x) { return _x.length(); }),
+              dynamic::dyn(
+                  List<std::any>::cons(
+                      UINT64_C(1),
+                      List<std::any>::cons(
+                          UINT64_C(2),
+                          List<std::any>::cons(UINT64_C(3),
+                                               List<std::any>::nil()))),
+                  crane_erase_fn<uint64_t>(
+                      [](const List<std::any> &_x) { return _x.length(); })),
               List<dynamic>::nil())));
   static inline const uint64_t total = items.template fold_left<uint64_t>(
       [](uint64_t acc, const dynamic &d) { return (acc + read(d)); },

@@ -726,6 +726,24 @@ let lookup_method_arity (func_ref : GlobRef.t) : int =
 let lookup_method_ind_tvar_positions (func_ref : GlobRef.t) : int list =
   Method_registry.lookup_ind_tvar_positions (get_method_registry ()) func_ref
 
+(** The type of a registered method's receiver, given the type arguments [tys]
+    the reference was instantiated at.  The receiver's own template arguments
+    are exactly those of [tys] sitting at
+    {!lookup_method_ind_tvar_positions} — the same correspondence that lets a
+    call site drop them from the explicit template arguments, read in the
+    other direction. *)
+let method_receiver_cpp_type (func_ref : GlobRef.t)
+    (tys : Minicpp.cpp_type list) : Minicpp.cpp_type option =
+  match is_registered_method func_ref with
+  | None -> None
+  | Some (epon_ref, _) ->
+    let positions = lookup_method_ind_tvar_positions func_ref in
+    let ind_tys = List.filteri (fun i _ -> List.mem i positions) tys in
+    (* Every one of the receiver's template parameters has to be recovered:
+       an inductive spelled with too few is not a type. *)
+    if List.length ind_tys <> Table.get_ind_nb_tparams epon_ref then None
+    else Some (Minicpp.Tglob (epon_ref, ind_tys, []))
+
 (** Register that a method returns std::any or bsl::any. *)
 let register_method_returns_any (func_ref : GlobRef.t) =
   Method_registry.register_method_returns_any (get_method_registry ()) func_ref
