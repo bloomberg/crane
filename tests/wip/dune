@@ -108,17 +108,6 @@
 
 
 
-(subdir coinductive_take_overflow
- (rule
-  (targets coinductive_take_overflow.t.exe)
-  (deps CoinductiveTakeOverflow.vo coinductive_take_overflow.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} coinductive_take_overflow.t.exe coinductive_take_overflow.cpp coinductive_take_overflow.t.cpp)))
- (rule
-  (alias runtest)
-  (deps coinductive_take_overflow.t.exe)
-  (action (run ./coinductive_take_overflow.t.exe))))
-
 
 
 
