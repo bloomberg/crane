@@ -7916,10 +7916,50 @@ and eta_fun ?(slot = empty_slot) env f args =
           | Some ml_ty -> ml_erases_to_box env (ml_codomain ml_ty)
           | None -> false
         in
+        (* The codomain as this call site instantiates it: that is the type
+           the excess args are applied to. *)
+        let cod_inst =
+          match find_type_opt id with
+          | Some ml_ty ->
+            let cod = ml_codomain ml_ty in
+            Some (if tys = [] then cod else Mlutil.type_subst_list tys cod)
+          | None -> None
+        in
+        (* A codomain that is a type variable takes its C++ shape from the
+           template argument, which keeps its currying; one written in the
+           declaration is flattened there. *)
+        let cod_is_curried =
+          match find_type_opt id with
+          | Some ml_ty -> ml_codomain_is_tvar ml_ty
+          | None -> false
+        in
+        (* A codomain that stays curried in C++ -- a [std::function] whose
+           result is another [std::function] -- takes only the arguments of
+           its own arrow, so applying every excess arg in one call would
+           overrun it.  The args go in the groups the type accepts them in. *)
+        let rec chain_excess base cod excess =
+          if excess = [] then base
+          else
+            let n_here, cod' =
+              let cod_cpp c =
+                let t = cpp_of_ml env c in
+                if cod_is_curried then curry_fun_type t else t
+              in
+              match Option.map cod_cpp cod with
+              | Some (Tfun (dom, _)) when List.length dom < List.length excess
+                ->
+                let n = List.length dom in
+                (n, Option.map (ml_drop_arrows n) cod)
+              | _ -> (List.length excess, None)
+            in
+            let here = List.filteri (fun i _ -> i < n_here) excess in
+            let rest = List.filteri (fun i _ -> i >= n_here) excess in
+            chain_excess (CPPfun_call (base, List.rev here)) cod' rest
+        in
         if ret_is_chainable then
           let excess = List.map (gen_expr ~slot env) excess_args in
           if cod_is_erased then apply_erased_callee base excess
-          else CPPfun_call (base, List.rev excess)
+          else chain_excess base cod_inst excess
         else
           CPPabort "untranslatable curried proof term" )
     in
@@ -8036,15 +8076,30 @@ and eta_fun ?(slot = empty_slot) env f args =
             @ List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
           in
           let call =
-            match inline_custom_arg_arity id with
+            (* The number of arguments the callee itself takes.  An
+               inline-custom template stops at its last [%aN] placeholder:
+               arguments past it are dropped when it is rendered, and a
+               placeholder with no argument cannot be rendered at all.  A
+               function whose codomain is a type variable stops at its ML
+               arrows, because its declaration had no way to flatten a
+               codomain it could not see -- the extra arrows only appear at
+               this call site, where the variable is instantiated at a
+               function type. *)
+            let callee_arity =
+              match inline_custom_arg_arity id with
+              | Some _ as a -> a
+              | None -> (
+                match find_type_opt id with
+                | Some ml_ty when ml_codomain_is_tvar ml_ty ->
+                  Some (count_ml_value_arrows ml_ty)
+                | _ -> None )
+            in
+            match callee_arity with
             | Some arity ->
-              (* An inline-custom template has a fixed placeholder arity:
-                 arguments past the last placeholder are dropped when it is
-                 rendered, and a placeholder with no argument cannot be
-                 rendered at all.  So the eta parameters first finish filling
-                 the template, and only what is left over is applied to its
-                 result -- which is a callable, since that is why there were
-                 missing arguments to begin with. *)
+              (* The eta parameters first finish filling the callee, and only
+                 what is left over is applied to its result -- which is a
+                 callable, since that is why there were missing arguments to
+                 begin with. *)
               let eta_vars =
                 List.mapi (fun i _ -> CPPvar (eta_param_id i)) eta_args
               in

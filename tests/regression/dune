@@ -7932,3 +7932,14 @@
   (alias runtest)
   (deps class_instance_at_function_type.t.exe)
   (action (run ./class_instance_at_function_type.t.exe))))
+
+(subdir poly_id_at_function_type
+ (rule
+  (targets poly_id_at_function_type.t.exe)
+  (deps PolyIdAtFunctionType.vo poly_id_at_function_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_id_at_function_type.t.exe poly_id_at_function_type.cpp poly_id_at_function_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_id_at_function_type.t.exe)
+  (action (run ./poly_id_at_function_type.t.exe))))

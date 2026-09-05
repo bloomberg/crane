@@ -92,6 +92,19 @@ let rec ml_codomain = function
   | Miniml.Tmeta {contents = Some t} -> ml_codomain t
   | t -> t
 
+(** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
+    been applied. Erased ([Tdummy]) domains do not count, matching the value
+    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunknown], which
+    no caller can mistake for a function type. *)
+let rec ml_drop_arrows n t =
+  if n <= 0 then t
+  else
+    match t with
+    | Miniml.Tarr (t1, t2) when Mlutil.isTdummy t1 -> ml_drop_arrows n t2
+    | Miniml.Tarr (_, t2) -> ml_drop_arrows (n - 1) t2
+    | Miniml.Tmeta {contents = Some t} -> ml_drop_arrows n t
+    | _ -> Miniml.Tunknown
+
 (** Count the number of non-erased (non-[Tdummy]) arrow levels in an ML type.
     For example [Tdummy -> A -> B -> C] counts as 2 (the dummy is skipped). *)
 let rec count_ml_value_arrows = function

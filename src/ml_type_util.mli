@@ -48,6 +48,10 @@ val ml_type_contains_erased : Miniml.ml_type -> bool
 (** The codomain (final result type) of a MiniML arrow type. *)
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 
+(** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
+    arrows have been applied; [Tunknown] if it has fewer than [n]. *)
+val ml_drop_arrows : int -> Miniml.ml_type -> Miniml.ml_type
+
 (** Count the number of value-carrying arrows in a MiniML type. *)
 val count_ml_value_arrows : Miniml.ml_type -> int
 
