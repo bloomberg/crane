@@ -1048,6 +1048,31 @@ and deque_elem_extract_expr elem_ty src_expr =
     @param args  arguments accumulated by callers (already pretty-printed) to be
                  applied once the head expression is reached, via [pp_apply_cpp]
     @param t     the expression to render *)
+and pp_method_call_name n method_name tys =
+  (* The explicit template arguments a call to a method must spell.  The
+     inductive's own type parameters are carried by the receiver and phantom
+     ones are not represented in the signature at all, so neither is written;
+     what is left has to be written, because nothing in the argument list
+     deduces it. *)
+  let filtered_tys =
+    match tys with
+    | [] -> []
+    | _ ->
+      let ind_tvar_positions = lookup_method_ind_tvar_positions n in
+      let phantom_positions = Table.get_phantom_tvars n in
+      List.filteri
+        (fun i _ ->
+          (not (List.mem i ind_tvar_positions))
+          && not (List.mem i phantom_positions))
+        tys
+  in
+  match filtered_tys with
+  | [] -> Id.print method_name
+  | _ ->
+    str "template " ++ Id.print method_name ++ str "<"
+    ++ pp_list (pp_cpp_type false []) filtered_tys
+    ++ str ">"
+
 and pp_cpp_expr env args t =
   let apply st = pp_apply_cpp st args in
   (* Generate an IIFE wrapper for a block template (%result) in expression
@@ -1232,7 +1257,7 @@ and pp_cpp_expr env args t =
     if arity <= 1 then
       str ("[](" ^ receiver_param "_x" ^ ") { return _x")
       ++ str accessor
-      ++ Id.print method_name
+      ++ pp_method_call_name x method_name _tys
       ++ str "(); }"
     else
       (* The method takes more than its receiver, so the forwarding lambda has
@@ -1250,7 +1275,7 @@ and pp_cpp_expr env args t =
         String.concat ", " (List.filteri (fun i _ -> i <> this_pos) names)
       in
       str ("[](" ^ params ^ ") { return _x" ^ string_of_int this_pos ^ accessor)
-      ++ Id.print method_name
+      ++ pp_method_call_name x method_name _tys
       ++ str ("(" ^ call_args ^ "); }")
   | CPPglob (x, [], _) when Table.is_projection x ->
     let field_name = label_of_r x |> Names.Label.to_string in
@@ -1483,23 +1508,6 @@ and pp_cpp_expr env args t =
     | Some this_arg ->
       let obj_s = pp_cpp_expr env args this_arg in
       let args_s = pp_list (pp_cpp_expr env args) other_args in
-      let ind_tvar_positions = lookup_method_ind_tvar_positions n in
-      let phantom_positions = Table.get_phantom_tvars n in
-      let filtered_tys =
-        match tys with
-        | [] -> []
-        | _ ->
-          List.filteri (fun i _ty ->
-            not (List.mem i ind_tvar_positions)
-            && not (List.mem i phantom_positions)) tys
-      in
-      let template_kw, ty_args_s =
-        match filtered_tys with
-        | [] -> (mt (), mt ())
-        | _ ->
-          ( str "template ",
-            str "<" ++ pp_list (pp_cpp_type false []) filtered_tys ++ str ">" )
-      in
       (* All inductives (including coinductives) are value types, so use
          dot access.  Exceptions: [this] is a raw pointer and [CPPderef e]
          dereferences a smart pointer — both use arrow. *)
@@ -1514,9 +1522,7 @@ and pp_cpp_expr env args t =
       in
       obj_pp
       ++ str accessor
-      ++ template_kw
-      ++ Id.print method_name
-      ++ ty_args_s
+      ++ pp_method_call_name n method_name tys
       ++ str "("
       ++ args_s
       ++ str ")"

@@ -7976,3 +7976,14 @@
   (alias runtest)
   (deps map_returns_closure.t.exe)
   (action (run ./map_returns_closure.t.exe))))
+
+(subdir nested_concat_map
+ (rule
+  (targets nested_concat_map.t.exe)
+  (deps NestedConcatMap.vo nested_concat_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_concat_map.t.exe nested_concat_map.cpp nested_concat_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_concat_map.t.exe)
+  (action (run ./nested_concat_map.t.exe))))
