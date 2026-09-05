@@ -1011,6 +1011,9 @@ type numeral_info = {
     (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
         into this numeral type.  Resolved automatically from the inductive's
         module when [Crane Extract Numeral] is processed. *)
+  num_ind : GlobRef.t;
+    (** The numeral inductive itself, so a rendering site holding only the
+        info can still ask what C++ type the literal has to fit in. *)
 }
 
 (** Check if inductive is numeric. *)

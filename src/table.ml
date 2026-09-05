@@ -3141,6 +3141,9 @@ type numeral_info = {
     (* Converter functions (e.g. Nat.of_num_uint) resolved from Rocq's
        Number Notation system.  Used to recognize digit-chain applications
        and fold them into integer literals. *)
+  num_ind : GlobRef.t;
+    (* The numeral inductive itself, so a rendering site holding only the
+       info can still ask what C++ type the literal has to fit in. *)
 }
 
 let numeral_table = Summary.ref Refmap'.empty ~name:"CraneExtrNumeral"
@@ -3271,7 +3274,7 @@ let extract_numeral r fmt =
     in
     let info =
       { num_zero_ctor = !zero_idx; num_succ_ctor = !succ_idx;
-        num_fmt = fmt; num_converters = converters }
+        num_fmt = fmt; num_converters = converters; num_ind = g }
     in
     Lib.add_leaf (in_numeral (g, info))
   | _ ->

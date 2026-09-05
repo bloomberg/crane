@@ -4272,6 +4272,48 @@ and try_fold_numeral info expr =
     | _ -> None )
   | _ -> None
 
+(** The inclusive range of a fixed-width C++ integer type, or [None] when the
+    spelling is not one this compiler can bound (a user-defined bignum, say).
+    Only the spellings a numeral mapping can name are listed; anything else is
+    left unchecked rather than guessed at. *)
+and cpp_integer_range = function
+  | "bool" -> Some (Z.zero, Z.one)
+  | "uint8_t" | "unsigned char" -> Some (Z.zero, Z.of_string "255")
+  | "uint16_t" | "unsigned short" -> Some (Z.zero, Z.of_string "65535")
+  | "uint32_t" | "unsigned" | "unsigned int" ->
+    Some (Z.zero, Z.of_string "4294967295")
+  | "uint64_t" | "size_t" | "unsigned long" | "unsigned long long" ->
+    Some (Z.zero, Z.of_string "18446744073709551615")
+  | "int8_t" | "signed char" -> Some (Z.of_string "-128", Z.of_string "127")
+  | "int16_t" | "short" -> Some (Z.of_string "-32768", Z.of_string "32767")
+  | "int32_t" | "int" ->
+    Some (Z.of_string "-2147483648", Z.of_string "2147483647")
+  | "int64_t" | "long" | "long long" | "ptrdiff_t" ->
+    Some (Z.of_string "-9223372036854775808",
+          Z.of_string "9223372036854775807")
+  | _ -> None
+
+(** Render a folded literal through a numeral mapping's format string.
+
+    A numeral inductive is unbounded in Rocq but its C++ image usually is not,
+    and the format string ([UINT64_C(%n)]) carries the value without checking
+    it.  Emitting an out-of-range literal moves the failure to the C++
+    compiler at best and wraps silently at worst, so refuse it here, where the
+    Rocq definition responsible can still be named. *)
+and render_numeral info (n : Z.t) : cpp_expr =
+  let cpp_ty = Table.find_custom_opt info.Table.num_ind in
+  ( match Option.bind cpp_ty cpp_integer_range with
+  | Some (lo, hi) when Z.lt n lo || Z.gt n hi ->
+    CErrors.user_err
+      (Pp.(
+         str "Crane: the literal " ++ str (Z.to_string n)
+         ++ str " does not fit in " ++ str (Option.get cpp_ty)
+         ++ str ", the C++ type "
+         ++ Printer.pr_global info.Table.num_ind
+         ++ str " extracts to."))
+  | _ -> () );
+  CPPraw (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
+
 (** Try to fold a binary positive chain [xI(xO(...xH...))] into an [int64].
     Returns [Some n] where [n > 0] if the entire chain can be folded, or
     [None] if any node is not a recognized positive constructor.
@@ -4299,7 +4341,7 @@ and try_fold_z_binary info cidx inner : cpp_expr option =
         else if cidx = z_neg_idx then Int64.neg pos_val
         else pos_val
       in
-      CPPraw (Common.render_template [("%n", Int64.to_string z_val)] info.Table.num_fmt))
+      render_numeral info (Z.of_int64 z_val))
     (try_fold_positive inner)
 
 (** Fold a Decimal.uint digit chain into an arbitrary-precision integer.
@@ -4576,7 +4618,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       ( match folded with
       | Some n ->
-        CPPraw (Common.render_template [("%n", Z.to_string n)] info.Table.num_fmt)
+        render_numeral info n
       | None -> eta_fun env (MLglob (r, [])) [arg] )
     | None -> eta_fun env (MLglob (r, [])) [arg] )
   | MLapp (MLcase (typ, scrut, pv), outer_args)
@@ -5266,7 +5308,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     | Some info ->
       ( match try_fold_numeral info ml_e with
       | Some n ->
-        CPPraw (Common.render_template [("%n", string_of_int n)] info.Table.num_fmt)
+        render_numeral info (Z.of_int n)
       | None ->
         (* Peano folding failed.  Try binary positive folding for
            Z constructors: Zpos(xI(xO(...xH...))) / Zneg(...) chains
