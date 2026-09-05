@@ -210,16 +210,6 @@
   (deps rank1_polymorphic_definition.t.exe)
   (action (run ./rank1_polymorphic_definition.t.exe))))
 
-(subdir record_field_named_list
- (rule
-  (targets record_field_named_list.t.exe)
-  (deps RecordFieldNamedList.vo record_field_named_list.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_named_list.t.exe record_field_named_list.cpp record_field_named_list.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_field_named_list.t.exe)
-  (action (run ./record_field_named_list.t.exe))))
 
 (subdir record_type_field_concept
  (rule

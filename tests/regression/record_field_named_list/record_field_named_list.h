@@ -12,7 +12,6 @@
 
 template <typename A> struct List;
 
-namespace Coq__1 {
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -127,7 +126,6 @@ public:
     return _result;
   }
 };
-}; // namespace Coq__1
 
 struct RecordFieldNamedList {
   /// A record field named list shadows the List runtime type in the
@@ -135,19 +133,18 @@ struct RecordFieldNamedList {
   /// name.
   struct point {
     uint64_t size;
-    Coq__1::list<uint64_t> list;
+    List<uint64_t> list;
     uint64_t count;
   };
 
   static uint64_t weigh(const point &p);
   static inline const uint64_t total = weigh(
       point{UINT64_C(1),
-            Coq__1::template list<uint64_t>::cons(
+            List<uint64_t>::cons(
                 UINT64_C(1),
-                Coq__1::template list<uint64_t>::cons(
+                List<uint64_t>::cons(
                     UINT64_C(2),
-                    Coq__1::template list<uint64_t>::cons(
-                        UINT64_C(3), Coq__1::template list<uint64_t>::nil()))),
+                    List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
             UINT64_C(5)});
 };
 

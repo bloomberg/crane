@@ -3464,8 +3464,14 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     pp_doc_comment_for_name rocq_name
     ++ h (pp_type ty ++ str " " ++ Id.print id ++ str ";")
   | Fvar' (id, ty) ->
+    (* A field's name lives in its struct, not in the enclosing namespace, so
+       it must not be registered as occupying one: a field named after a type
+       the same module refers to would otherwise look like a clash and send
+       that type through a duplicate wrapper.  Reads spell the field the same
+       way (see [CPPget']). *)
     pp_doc_comment_for_name (Common.pp_global_name Type id)
-    ++ h (pp_type ty ++ str " " ++ pp_global Type id ++ str ";")
+    ++ h (pp_type ty ++ str " " ++ str (Common.pp_global_name Type id)
+          ++ str ";")
   | Ffundef (id, ret_ty, params, body) ->
     let saved_any_params = !current_any_typed_params in
     current_any_typed_params :=
