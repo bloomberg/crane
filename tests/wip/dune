@@ -117,16 +117,5 @@
 
 
 
-(subdir record_type_field_concept
- (rule
-  (targets record_type_field_concept.t.exe)
-  (deps RecordTypeFieldConcept.vo record_type_field_concept.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} record_type_field_concept.t.exe record_type_field_concept.cpp record_type_field_concept.t.cpp)))
- (rule
-  (alias runtest)
-  (deps record_type_field_concept.t.exe)
-  (action (run ./record_type_field_concept.t.exe))))
-
 
 
