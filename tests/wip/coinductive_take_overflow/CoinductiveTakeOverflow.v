@@ -8,9 +8,10 @@ Set Crane Loopify.
 
 Module CoinductiveTakeOverflow.
 
-(** Loopification does not reach a fixpoint whose scrutinee is a lazily
-    forced coinductive value, so taking a long prefix of a stream overflows
-    the stack even with [Set Crane Loopify]. *)
+(** Taking a long prefix of a lazily forced stream.  Two [Cons] constructors
+    are in play -- this stream's and [list]'s -- and the loopified [take]
+    writes into the tail field of the latter, so the constructor field names
+    have to stay told apart by their owning inductive. *)
 CoInductive stream (A : Type) : Type := Cons : A -> stream A -> stream A.
 Arguments Cons {A}.
 

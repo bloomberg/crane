@@ -126,8 +126,8 @@ let field_name_str_of_idx consarg_names k =
     @param bind_consarg_names   binding variable names (kernel only)
     @param _n_fields            total field count (unused but kept for symmetry)
     @param j                    0-based field index *)
-let compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
-    _n_fields j =
+let compute_field_name ~owner ctor_struct_name field_consarg_names
+    bind_consarg_names _n_fields j =
   let base_str = field_name_str_of_idx field_consarg_names j in
   let has_dup =
     let rec check k =
@@ -142,7 +142,7 @@ let compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
     if has_dup then base_str ^ "_" ^ string_of_int j else base_str
   in
   let field_id = Id.of_string field_str in
-  register_ctor_field_name ctor_struct_name j field_id;
+  register_ctor_field_name ~owner ctor_struct_name j field_id;
   (* Binding variable name: use indexed fallback for anonymous kernel binders
      to prevent shadowing when nested matches on the same type reuse [a0]/[l0]. *)
   let bind_id =
@@ -150,7 +150,7 @@ let compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
     | Some (Some _) -> field_id  (* kernel-named: same as field for readability *)
     | _ -> field_param_id j      (* anonymous kernel binder: safe indexed fallback *)
   in
-  register_ctor_bind_name ctor_struct_name j bind_id;
+  register_ctor_bind_name ~owner ctor_struct_name j bind_id;
   field_id
 
 (** Compute and register field names for all [n_fields] fields of a
@@ -158,11 +158,11 @@ let compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
     for struct field declarations (may include [Arguments_renaming] overrides);
     [bind_consarg_names] supplies the kernel-only names used for structured-
     binding variable generation. *)
-let compute_and_register_field_names ctor_struct_name field_consarg_names
-    bind_consarg_names n_fields =
+let compute_and_register_field_names ~owner ctor_struct_name
+    field_consarg_names bind_consarg_names n_fields =
   List.init n_fields (fun j ->
-    compute_field_name ctor_struct_name field_consarg_names bind_consarg_names
-      n_fields j)
+    compute_field_name ~owner ctor_struct_name field_consarg_names
+      bind_consarg_names n_fields j)
 
 (** Augment [kernel_arg_names] with names from an [Arguments] declaration.
     Where [kernel_arg_names] has [None] (anonymous binder), the corresponding
@@ -8805,7 +8805,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   let binding_names_arr =
     let avoid = ref outer_avoid in
     Array.init (List.length rev_ids) (fun i ->
-      let field_id = lookup_ctor_bind_name ctor_struct_name i in
+      let field_id = lookup_ctor_bind_name ~owner:ind_ref ctor_struct_name i in
       let base = Id.of_string (Id.to_string field_id ^ suffix) in
       let name =
         if Id.Set.mem base !avoid then rename_id base !avoid else base

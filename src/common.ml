@@ -1466,7 +1466,51 @@ let field_param_id i = Id.of_string (field_param_name i)
     through [Method_registry].  Cleared by {!reset_ctor_field_names}
     between extraction passes (called from {!Cpp_state.reset_cpp_state}). *)
 
-let ctor_field_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
+(** [ctor_owner_key g] is a stable string identifying the inductive that owns
+    a constructor struct.  A constructor name is only unique {i within} its
+    inductive -- [List::Cons] and [stream::Cons] are different structs with
+    differently named fields -- so every registry keyed by constructor name
+    has to carry the owner as well.  A [ConstructRef] answers for the
+    inductive it belongs to, so a registration site holding the constructor
+    and a lookup site holding the type agree. *)
+let ctor_owner_key (g : GlobRef.t) =
+  match g with
+  | GlobRef.IndRef (kn, i) | GlobRef.ConstructRef ((kn, i), _) ->
+    MutInd.to_string kn ^ "#" ^ string_of_int i
+  | GlobRef.ConstRef c -> Constant.to_string c
+  | GlobRef.VarRef v -> Id.to_string v
+
+let ctor_field_names : (string * string * int, Id.t) Hashtbl.t =
+  Hashtbl.create 64
+
+(** The owners seen for each constructor name.  The owner in a lookup key is
+    not always the globref the declaration was generated from: a match on a
+    module type's abstract inductive names the projection ([D::Defs::frame]),
+    not the concrete inductive whose fields were registered.  So a miss falls
+    back to the sole owner of that constructor name when there is exactly one
+    -- the owner is there to separate names that genuinely clash, and where
+    nothing clashes it should not cost the descriptive name. *)
+let ctor_name_owners : (string, string list) Hashtbl.t = Hashtbl.create 64
+
+let note_ctor_owner owner_key ctor_name =
+  let seen = Option.default [] (Hashtbl.find_opt ctor_name_owners ctor_name) in
+  if not (List.mem owner_key seen) then
+    Hashtbl.replace ctor_name_owners ctor_name (owner_key :: seen)
+
+(** [lookup_ctor_name tbl ~owner ctor_name field_idx] reads [tbl] at the
+    owner-qualified key, retries under the unambiguous owner of [ctor_name],
+    and otherwise falls back to the positional name. *)
+let lookup_ctor_name tbl ~owner ctor_name field_idx =
+  let owner_key = ctor_owner_key owner in
+  let at k = Hashtbl.find_opt tbl (k, ctor_name, field_idx) in
+  let sole_owner () =
+    match Hashtbl.find_opt ctor_name_owners ctor_name with
+    | Some [k] -> at k
+    | _ -> None
+  in
+  match at owner_key with
+  | Some id -> Some id
+  | None -> sole_owner ()
 
 (** [register_ctor_field_name ctor_name field_idx field_id] records that
     field [field_idx] of the C++ constructor struct [ctor_name] should be
@@ -1475,15 +1519,17 @@ let ctor_field_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
     @param ctor_name  PascalCase name of the constructor struct (e.g. ["Cons"])
     @param field_idx  0-based field position
     @param field_id   The identifier to use (e.g. [d_hd], or [d_a0] as fallback) *)
-let register_ctor_field_name ctor_name field_idx field_id =
-  Hashtbl.replace ctor_field_names (ctor_name, field_idx) field_id
+let register_ctor_field_name ~owner ctor_name field_idx field_id =
+  note_ctor_owner (ctor_owner_key owner) ctor_name;
+  Hashtbl.replace ctor_field_names
+    (ctor_owner_key owner, ctor_name, field_idx) field_id
 
 (** [lookup_ctor_field_name ctor_name field_idx] retrieves the registered
     field name, falling back to the generic positional name
     [d_a{field_idx}] when no name was registered (e.g. for custom-extracted
     inductives or when the registry hasn't been populated yet). *)
-let lookup_ctor_field_name ctor_name field_idx =
-  match Hashtbl.find_opt ctor_field_names (ctor_name, field_idx) with
+let lookup_ctor_field_name ~owner ctor_name field_idx =
+  match lookup_ctor_name ctor_field_names ~owner ctor_name field_idx with
   | Some id -> id
   | None -> field_param_id field_idx
 
@@ -1495,13 +1541,16 @@ let lookup_ctor_field_name ctor_name field_idx =
     the binding name falls back to the indexed form [a0], [a1], ... to prevent
     variable-shadowing collisions in nested matches.  Fields whose kernel
     binder is explicitly named reuse the field name for readability. *)
-let ctor_bind_names : (string * int, Id.t) Hashtbl.t = Hashtbl.create 64
+let ctor_bind_names : (string * string * int, Id.t) Hashtbl.t =
+  Hashtbl.create 64
 
-let register_ctor_bind_name ctor_name field_idx field_id =
-  Hashtbl.replace ctor_bind_names (ctor_name, field_idx) field_id
+let register_ctor_bind_name ~owner ctor_name field_idx field_id =
+  note_ctor_owner (ctor_owner_key owner) ctor_name;
+  Hashtbl.replace ctor_bind_names
+    (ctor_owner_key owner, ctor_name, field_idx) field_id
 
-let lookup_ctor_bind_name ctor_name field_idx =
-  match Hashtbl.find_opt ctor_bind_names (ctor_name, field_idx) with
+let lookup_ctor_bind_name ~owner ctor_name field_idx =
+  match lookup_ctor_name ctor_bind_names ~owner ctor_name field_idx with
   | Some id -> id
   | None -> field_param_id field_idx
 
@@ -1509,7 +1558,8 @@ let lookup_ctor_bind_name ctor_name field_idx =
     passes to avoid stale names from one module leaking into another. *)
 let reset_ctor_field_names () =
   Hashtbl.clear ctor_field_names;
-  Hashtbl.clear ctor_bind_names
+  Hashtbl.clear ctor_bind_names;
+  Hashtbl.clear ctor_name_owners
 
 (** {3 More synthetic name generators} *)
 

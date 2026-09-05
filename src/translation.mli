@@ -336,6 +336,7 @@ val augment_with_args_renaming :
     [bind_consarg_names] supplies the kernel-only names used for structured-
     binding variable generation. *)
 val compute_and_register_field_names :
+  owner:GlobRef.t ->
   string -> Id.t option list -> Id.t option list -> int -> Id.t list
 
 

@@ -109,9 +109,10 @@ public:
 };
 
 struct CoinductiveTakeOverflow {
-  /// Loopification does not reach a fixpoint whose scrutinee is a lazily
-  /// forced coinductive value, so taking a long prefix of a stream overflows
-  /// the stack even with Set Crane Loopify.
+  /// Taking a long prefix of a lazily forced stream.  Two Cons constructors
+  /// are in play -- this stream's and list's -- and the loopified take
+  /// writes into the tail field of the latter, so the constructor field names
+  /// have to stay told apart by their owning inductive.
   template <typename A> struct stream {
     // TYPES
     struct Cons {
@@ -174,7 +175,7 @@ struct CoinductiveTakeOverflow {
         auto _cell =
             std::make_shared<List<T1>>(typename List<T1>::Cons(a0, nullptr));
         *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).a1;
+        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
         _loop_s = *a1;
         _loop_n = k;
         continue;

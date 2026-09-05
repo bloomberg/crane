@@ -53,7 +53,7 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
            in
            let n_fields = List.length tys in
            let field_ids =
-             compute_and_register_field_names ctor_struct_name
+             compute_and_register_field_names ~owner:c ctor_struct_name
                (augment_with_args_renaming c ctor_consarg_names)
                ctor_consarg_names n_fields
            in
@@ -4424,7 +4424,7 @@ let gen_ind_header_v2
           if 0 < Array.length consarg_names then consarg_names.(0) else [] in
         let n_fields = List.length tys_list in
         let field_ids =
-          compute_and_register_field_names cname_str
+          compute_and_register_field_names ~owner:c cname_str
             (augment_with_args_renaming c ctor_consarg_names)
             ctor_consarg_names n_fields in
         let erase_if_needed cpp_ty =
@@ -4568,7 +4568,7 @@ let gen_ind_header_v2
                in
                let n_fields = List.length tys_list in
                let field_ids =
-                 compute_and_register_field_names ctor_struct_name
+                 compute_and_register_field_names ~owner:c ctor_struct_name
                    (augment_with_args_renaming c ctor_consarg_names)
                    ctor_consarg_names n_fields
                in
@@ -4781,7 +4781,7 @@ let gen_ind_header_v2
                        | t -> is_direct_self_ref t
                      in
                      if holds_self fty
-                     then Some (Common.lookup_ctor_field_name cname_str j)
+                     then Some (Common.lookup_ctor_field_name ~owner:ctor cname_str j)
                      else None)
                    (List.mapi (fun j t -> (j, t)) ip_types))
             | _ -> []
@@ -5185,7 +5185,8 @@ let gen_ind_header_v2
                        if not (contains_self inst) then []
                        else
                          let fe =
-                           access (Common.lookup_ctor_field_name cname_str k)
+                           access
+                             (Common.lookup_ctor_field_name ~owner:g cname_str k)
                          in
                          let is_ptr = field_is_ptr g fty in
                          match on_spine with
@@ -5358,8 +5359,12 @@ let gen_ind_header_v2
                   let ls = verbatim_ty (Tglob (list_g, [self_ty], [])) in
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
                   let cons_id = Id.of_string_soft cons_s in
-                  let elem_field = Common.lookup_ctor_field_name cons_s 0 in
-                  let tail_field = Common.lookup_ctor_field_name cons_s 1 in
+                  let elem_field =
+                    Common.lookup_ctor_field_name ~owner:list_g cons_s 0
+                  in
+                  let tail_field =
+                    Common.lookup_ctor_field_name ~owner:list_g cons_s 1
+                  in
                   let lp = Id.of_string "_lp" and lc = Id.of_string "_lc" in
                   let tail = CPPmember (CPPvar lc, tail_field) in
                   (* Walk the cons spine, moving each element onto the
@@ -5411,7 +5416,8 @@ let gen_ind_header_v2
                       ctor_struct_name_of_ref ~fallback_idx:i cnames_arr.(i)
                     in
                     let field_id =
-                      Common.lookup_ctor_field_name cname_str j
+                      Common.lookup_ctor_field_name ~owner:cnames_arr.(i)
+                        cname_str j
                     in
                     let effective_cls =
                       if is_mutual then `Direct else cls
@@ -5699,7 +5705,7 @@ let gen_ind_header_v2
            parameters, not struct members.  Falls back to the full field id
            if stripping the [d_] prefix fails. *)
         let param_name_of j =
-          let field_id = lookup_ctor_field_name cname j in
+          let field_id = lookup_ctor_field_name ~owner:name cname j in
           let s = Id.to_string field_id in
           if String.length s > 2 && s.[0] = 'd' && s.[1] = '_' then
             Id.of_string (String.sub s 2 (String.length s - 2))
@@ -5974,7 +5980,7 @@ let gen_ind_header_v2
                   List.mapi
                     (fun j ty ->
                       let field_id =
-                        lookup_ctor_field_name ctor_struct_name j
+                        lookup_ctor_field_name ~owner:c ctor_struct_name j
                       in
                       let make_field_ty var_names =
                         let bare_ty =

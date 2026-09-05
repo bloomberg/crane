@@ -302,9 +302,24 @@ let clear_mutual_table () = Hashtbl.clear mutual_fn_table
     {!try_tmc_decompose} to determine which fields need [make_shared] wrapping
     in the direct-struct-construction path.
 
-    The key is the capitalized constructor name (e.g., ["App"], ["Cons"]).
-    The value is a list of 0-based field indices. *)
-let ctor_ptr_fields : (string, int list) Hashtbl.t = Hashtbl.create 32
+    The key pairs {!Common.ctor_owner_key} of the owning inductive with the
+    capitalized constructor name (e.g., ["App"], ["Cons"]); the owner is part
+    of it because a constructor name alone does not identify a struct -- two
+    inductives may each have a [Cons], with different fields.  The value is a
+    list of 0-based field indices. *)
+let ctor_ptr_fields : (string * string, int list) Hashtbl.t = Hashtbl.create 32
+
+(** The inductive a TMC cell belongs to, read off the cell's own type.  A
+    factory call is always qualified by that type ([Type<...>::cons]), which
+    is what makes the owner recoverable from the C++ AST alone. *)
+let cell_owner = function Tglob (g, _, _) -> Some g | _ -> None
+
+(** The registered name of field [field_idx] of a cell's constructor struct,
+    or the positional fallback when the owner cannot be recovered. *)
+let cell_field_name ~cell_ty ~ctor_name field_idx =
+  match cell_owner cell_ty with
+  | Some owner -> Common.lookup_ctor_field_name ~owner ctor_name field_idx
+  | None -> Common.field_param_id field_idx
 
 (** {2 Recursion classification} *)
 
@@ -2914,8 +2929,15 @@ let is_ctor_factory_call = function
        type); TMC-decomposing it would fabricate a nonexistent variant cell with
        a [nullptr] hole.  Requiring registration rejects those. *)
     (* Skip built-in accessors and other non-factory qualified calls *)
+    let ptr_fields =
+      match cell_owner ty with
+      | Some owner ->
+        Hashtbl.find_opt ctor_ptr_fields
+          (Common.ctor_owner_key owner, struct_name)
+      | None -> None
+    in
     if factory_s = "v" || factory_s = "v_mut" || factory_s = "lazy_"
-       || not (Hashtbl.mem ctor_ptr_fields struct_name)
+       || ptr_fields = None
     then None
     else
       Some (ty, struct_name, factory_s, args)
@@ -2959,7 +2981,13 @@ let rec try_tmc_decompose check expr =
            arg-space ([n_args - 1 - j]) so [build_cell_call]'s
            [List.mem i tca_uptr_field_idxs] test aligns — otherwise a non-pointer
            field (e.g. a [cons] element) is spuriously [make_shared]-wrapped. *)
-        match Hashtbl.find_opt ctor_ptr_fields ctor_name with
+        match
+          match cell_owner cell_ty with
+          | Some owner ->
+            Hashtbl.find_opt ctor_ptr_fields
+              (Common.ctor_owner_key owner, ctor_name)
+          | None -> None
+        with
         | Some idxs -> List.map (fun j -> n_args - 1 - j) idxs
         | None -> [idx]
       in
@@ -3123,7 +3151,7 @@ let cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr =
   let field_idx = n_args - 1 - rec_field_idx in
   let v_mut = CPPmethod_call (ptr, id_v_mut, []) in
   ( CPPstd_get (cell_ty, Some (Id.of_string ctor_name), Some v_mut),
-    Common.lookup_ctor_field_name ctor_name field_idx )
+    cell_field_name ~cell_ty ~ctor_name field_idx )
 
 let patch_cell_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr val_expr =
   let obj, field_id =
@@ -9056,7 +9084,8 @@ let rec transform_decl ?(tparams = []) ~pp_expr = function
           |> List.filter_map Fun.id
         in
         if uptr_idxs <> [] then
-          Hashtbl.replace ctor_ptr_fields ctor_name uptr_idxs;
+          Hashtbl.replace ctor_ptr_fields
+            (Common.ctor_owner_key ds.ds_ref, ctor_name) uptr_idxs;
         List.iter collect_uptr_fields sub_fields
       | _ -> ()
     in

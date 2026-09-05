@@ -313,11 +313,17 @@ val field_param_id : int -> Id.t
 
     See {!Common.ctor_field_names} for design rationale. *)
 
-(** Register a named field for a constructor struct. *)
-val register_ctor_field_name : string -> int -> Id.t -> unit
+(** A stable key for the inductive owning a constructor struct.  Accepts
+    either the inductive or one of its constructors. *)
+val ctor_owner_key : Names.GlobRef.t -> string
+
+(** Register a named field for a constructor struct.  [owner] is the inductive
+    the constructor belongs to (or the constructor itself). *)
+val register_ctor_field_name :
+  owner:Names.GlobRef.t -> string -> int -> Id.t -> unit
 
 (** Look up the field name; falls back to [d_a{idx}] if unregistered. *)
-val lookup_ctor_field_name : string -> int -> Id.t
+val lookup_ctor_field_name : owner:Names.GlobRef.t -> string -> int -> Id.t
 
 (** Clear the registry between extraction passes. *)
 val reset_ctor_field_names : unit -> unit
@@ -329,10 +335,11 @@ val reset_ctor_field_names : unit -> unit
     to the indexed form (e.g. [a0]) to prevent shadowing in nested matches. *)
 
 (** Register a binding variable name for a constructor field. *)
-val register_ctor_bind_name : string -> int -> Id.t -> unit
+val register_ctor_bind_name :
+  owner:Names.GlobRef.t -> string -> int -> Id.t -> unit
 
 (** Look up the binding variable name; falls back to [a{idx}] if unregistered. *)
-val lookup_ctor_bind_name : string -> int -> Id.t
+val lookup_ctor_bind_name : owner:Names.GlobRef.t -> string -> int -> Id.t
 
 (** Name for a synthesized eta-expansion binder [i], e.g. ["_x0"].  Used when a
     let-bound lambda must be eta-expanded to match its declared arity;
