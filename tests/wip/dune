@@ -116,17 +116,6 @@
 
 
 
-(subdir rank1_polymorphic_definition
- (rule
-  (targets rank1_polymorphic_definition.t.exe)
-  (deps Rank1PolymorphicDefinition.vo rank1_polymorphic_definition.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rank1_polymorphic_definition.t.exe rank1_polymorphic_definition.cpp rank1_polymorphic_definition.t.cpp)))
- (rule
-  (alias runtest)
-  (deps rank1_polymorphic_definition.t.exe)
-  (action (run ./rank1_polymorphic_definition.t.exe))))
-
 
 (subdir record_type_field_concept
  (rule
