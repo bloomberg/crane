@@ -107,16 +107,6 @@
 
 
 
-(subdir class_instance_at_function_type
- (rule
-  (targets class_instance_at_function_type.t.exe)
-  (deps ClassInstanceAtFunctionType.vo class_instance_at_function_type.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_instance_at_function_type.t.exe class_instance_at_function_type.cpp class_instance_at_function_type.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_instance_at_function_type.t.exe)
-  (action (run ./class_instance_at_function_type.t.exe))))
 
 (subdir coinductive_take_overflow
  (rule

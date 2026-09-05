@@ -7067,11 +7067,17 @@ and eta_fun ?(slot = empty_slot) env f args =
     let typeclass_ml_args, regular_ml_args =
       List.partition is_typeclass_instance_arg args
     in
-    (* Reverse typeclass args to match template param order from gen_dfun:
-       gen_dfun iterates collect_lams output (reversed from source) so the first
-       typeclass in that order becomes 'i'. Call sites have args in source
-       order, so we reverse to match. *)
-    let typeclass_ml_args = List.rev typeclass_ml_args in
+    (* Order the instance arguments the way the callee numbered its own
+       [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
+       output, which is reversed from source order, so a plain constrained
+       function's first instance parameter is the source-last one; an instance
+       struct is stripped left to right by [Gen_decls.gen_instance_struct] and
+       keeps source order.  Call sites have the arguments in source order. *)
+    let callee_is_instance_struct = ref_returns_typeclass id in
+    let typeclass_ml_args =
+      if callee_is_instance_struct then typeclass_ml_args
+      else List.rev typeclass_ml_args
+    in
     (* Convert type class instance args to template type arguments *)
     let rec ml_arg_to_template_type ml_arg =
       match strip_magic ml_arg with
