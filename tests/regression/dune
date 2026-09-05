@@ -8009,3 +8009,14 @@
   (alias runtest)
   (deps module_param_class_instance.t.exe)
   (action (run ./module_param_class_instance.t.exe))))
+
+(subdir monad_class_nested_bind
+ (rule
+  (targets monad_class_nested_bind.t.exe)
+  (deps MonadClassNestedBind.vo monad_class_nested_bind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_class_nested_bind.t.exe monad_class_nested_bind.cpp monad_class_nested_bind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_class_nested_bind.t.exe)
+  (action (run ./monad_class_nested_bind.t.exe))))
