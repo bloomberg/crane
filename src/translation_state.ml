@@ -92,17 +92,6 @@ type translation_ctx = {
      promoted_var_map fall back to Tany (std::any) instead of keeping
      [Tpromoted] markers, because module-level aliases apply. *)
   mutable in_constructor_expr : bool;
-  (* When true, we are translating a value that is an ARGUMENT of an enclosing
-     constructor application (a nested constructor).  Out-of-range
-     [Tvar(_, None)] type args on such a nested constructor are erased to
-     [std::any]: they print as a bogus, undeclared template parameter name
-     (e.g. [List<T1>]) and arise when a value with an erased/promoted type
-     parameter (e.g. a record's [Type]-valued field used in a dependent
-     [list <that field>] field) is built at a concrete instance.  A top-level
-     (non-argument) constructor call is NOT erased, so a genuine but
-     return-only template parameter (e.g. [Trie<T1>::empty()] in a
-     [template <typename T1>] method) is preserved. *)
-  mutable in_ctor_arg : bool;
   (* ITree extraction mode: controls whether itree types are erased
      (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
   mutable itree_mode : itree_extraction_mode;
@@ -177,7 +166,6 @@ let tctx =
     match_param_counter = 0;
     promoted_var_map = [];
     in_constructor_expr = false;
-    in_ctor_arg = false;
     itree_mode = Sequential;
     eta_keep_moves = false;
     cs_counter = 0;

@@ -104,22 +104,28 @@ val restore_erased_env : binder_env -> unit
     [of_num_uint]/[Uint] machinery. *)
 val is_foldable_numeral_converter_app : Miniml.ml_ast -> bool
 
-(** Generate a C++ expression from an ML AST.
+(** What the position a subterm occupies tells the generator about how to
+    build it.  Internal to the generator, which carries these properties down
+    every position whose value ends up in the same slot; callers outside
+    translation describe no slot and leave them at {!empty_slot}. *)
+type slot = {
+  deep_erase : bool;
+      (** The slot is really [std::any], so a constructor built for it must use
+          the canonical erased shape every other producer of the same Coq type
+          agrees on. *)
+  expected_ml_ty : ml_type option;
+      (** The ML type of the slot, when the caller knows it more precisely than
+          the expression's own annotation does. *)
+  in_ctor_arg : bool;
+      (** The slot is an argument of a constructor, so a nested constructor
+          filling it cannot name a template parameter of its own. *)
+}
 
-    [deep_erase] says the expression flows into a slot that is really
-    [std::any], so a constructor it builds must use the canonical erased
-    shape every other producer of the same Coq type agrees on.  Internal to
-    the generator, which carries it down every position whose value reaches
-    that slot; callers outside translation have no erased slot to describe.
+(** The slot properties of a position that constrains nothing. *)
+val empty_slot : slot
 
-    [expected_ml_ty] is the ML type of the slot the expression flows into,
-    when the caller knows it more precisely than the expression's own
-    annotation does.  It lets a constructor whose annotation carries
-    unresolved metas (a [nil] whose element type extraction left open, say)
-    recover the concrete type arguments from the position it occupies. *)
-val gen_expr :
-  ?expected_ty:cpp_type -> ?expected_ml_ty:ml_type -> ?deep_erase:bool ->
-  env -> ml_ast -> cpp_expr
+(** Generate a C++ expression from an ML AST. *)
+val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
 
 (** [recover_boxed_component into e] opens the box when [e] is evidently a
     component read out of a pair that was itself recovered from a box, and so
@@ -133,20 +139,16 @@ val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
     final expression into a statement (e.g., return, assignment). Handles
     let-bindings, pattern matching, fix expressions, and monadic operations.
 
-    [deep_erase] and [expected_ml_ty] are {!gen_expr}'s, carried into the tail
-    positions of these statements. *)
+    [slot] is {!gen_expr}'s, carried into the tail positions of these
+    statements. *)
 val gen_stmts :
-  ?expected_ml_ty:ml_type -> ?deep_erase:bool -> env ->
-  (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
+  ?slot:slot -> env -> (cpp_expr -> cpp_stmt) -> ml_ast -> cpp_stmt list
 
 (** Try eta-expanding/applying [f] to [args] when a call is under-applied or
     involves a type-erased higher-order callback. Falls back to a plain
     application. *)
-val eta_fun :
-  ?expected_ml_ty:ml_type -> ?deep_erase:bool -> env -> ml_ast -> ml_ast list ->
-  cpp_expr
-(** [deep_erase] and [expected_ml_ty] are {!gen_expr}'s, carried into the
-    argument expressions. *)
+val eta_fun : ?slot:slot -> env -> ml_ast -> ml_ast list -> cpp_expr
+(** [slot] is {!gen_expr}'s, carried into the argument expressions. *)
 
 (** Strip [MLmagic] wrappers recursively — [MLmagic] is a transparent coercion
     in the ML AST and should be ignored by numeral-folding traversals. *)
