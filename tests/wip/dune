@@ -105,3 +105,223 @@
 
 
 
+
+(subdir assoc_type_field_argument
+ (rule
+  (targets assoc_type_field_argument.t.exe)
+  (deps AssocTypeFieldArgument.vo assoc_type_field_argument.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} assoc_type_field_argument.t.exe assoc_type_field_argument.cpp assoc_type_field_argument.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps assoc_type_field_argument.t.exe)
+  (action (run ./assoc_type_field_argument.t.exe))))
+
+(subdir class_instance_at_function_type
+ (rule
+  (targets class_instance_at_function_type.t.exe)
+  (deps ClassInstanceAtFunctionType.vo class_instance_at_function_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_instance_at_function_type.t.exe class_instance_at_function_type.cpp class_instance_at_function_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_instance_at_function_type.t.exe)
+  (action (run ./class_instance_at_function_type.t.exe))))
+
+(subdir coinductive_take_overflow
+ (rule
+  (targets coinductive_take_overflow.t.exe)
+  (deps CoinductiveTakeOverflow.vo coinductive_take_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} coinductive_take_overflow.t.exe coinductive_take_overflow.cpp coinductive_take_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps coinductive_take_overflow.t.exe)
+  (action (run ./coinductive_take_overflow.t.exe))))
+
+(subdir curried_value_in_container
+ (rule
+  (targets curried_value_in_container.t.exe)
+  (deps CurriedValueInContainer.vo curried_value_in_container.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} curried_value_in_container.t.exe curried_value_in_container.cpp curried_value_in_container.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps curried_value_in_container.t.exe)
+  (action (run ./curried_value_in_container.t.exe))))
+
+(subdir deep_tail_recursion_overflow
+ (rule
+  (targets deep_tail_recursion_overflow.t.exe)
+  (deps DeepTailRecursionOverflow.vo deep_tail_recursion_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_tail_recursion_overflow.t.exe deep_tail_recursion_overflow.cpp deep_tail_recursion_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_tail_recursion_overflow.t.exe)
+  (action (run ./deep_tail_recursion_overflow.t.exe))))
+
+(subdir erased_pair_fn_call
+ (rule
+  (targets erased_pair_fn_call.t.exe)
+  (deps ErasedPairFnCall.vo erased_pair_fn_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_pair_fn_call.t.exe erased_pair_fn_call.cpp erased_pair_fn_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_pair_fn_call.t.exe)
+  (action (run ./erased_pair_fn_call.t.exe))))
+
+(subdir existential_ctor_erased_fn
+ (rule
+  (targets existential_ctor_erased_fn.t.exe)
+  (deps ExistentialCtorErasedFn.vo existential_ctor_erased_fn.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} existential_ctor_erased_fn.t.exe existential_ctor_erased_fn.cpp existential_ctor_erased_fn.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps existential_ctor_erased_fn.t.exe)
+  (action (run ./existential_ctor_erased_fn.t.exe))))
+
+(subdir map_returns_closure
+ (rule
+  (targets map_returns_closure.t.exe)
+  (deps MapReturnsClosure.vo map_returns_closure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} map_returns_closure.t.exe map_returns_closure.cpp map_returns_closure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps map_returns_closure.t.exe)
+  (action (run ./map_returns_closure.t.exe))))
+
+(subdir module_param_class_instance
+ (rule
+  (targets module_param_class_instance.t.exe)
+  (deps ModuleParamClassInstance.vo module_param_class_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_param_class_instance.t.exe module_param_class_instance.cpp module_param_class_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_param_class_instance.t.exe)
+  (action (run ./module_param_class_instance.t.exe))))
+
+(subdir monad_class_nested_bind
+ (rule
+  (targets monad_class_nested_bind.t.exe)
+  (deps MonadClassNestedBind.vo monad_class_nested_bind.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_class_nested_bind.t.exe monad_class_nested_bind.cpp monad_class_nested_bind.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_class_nested_bind.t.exe)
+  (action (run ./monad_class_nested_bind.t.exe))))
+
+(subdir nat_literal_overflow
+ (rule
+  (targets nat_literal_overflow.t.exe)
+  (deps NatLiteralOverflow.vo nat_literal_overflow.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_literal_overflow.t.exe nat_literal_overflow.cpp nat_literal_overflow.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_literal_overflow.t.exe)
+  (action (run ./nat_literal_overflow.t.exe))))
+
+(subdir nested_concat_map
+ (rule
+  (targets nested_concat_map.t.exe)
+  (deps NestedConcatMap.vo nested_concat_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_concat_map.t.exe nested_concat_map.cpp nested_concat_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_concat_map.t.exe)
+  (action (run ./nested_concat_map.t.exe))))
+
+(subdir poly_id_at_function_type
+ (rule
+  (targets poly_id_at_function_type.t.exe)
+  (deps PolyIdAtFunctionType.vo poly_id_at_function_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_id_at_function_type.t.exe poly_id_at_function_type.cpp poly_id_at_function_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_id_at_function_type.t.exe)
+  (action (run ./poly_id_at_function_type.t.exe))))
+
+(subdir rank1_polymorphic_definition
+ (rule
+  (targets rank1_polymorphic_definition.t.exe)
+  (deps Rank1PolymorphicDefinition.vo rank1_polymorphic_definition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank1_polymorphic_definition.t.exe rank1_polymorphic_definition.cpp rank1_polymorphic_definition.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank1_polymorphic_definition.t.exe)
+  (action (run ./rank1_polymorphic_definition.t.exe))))
+
+(subdir record_field_named_list
+ (rule
+  (targets record_field_named_list.t.exe)
+  (deps RecordFieldNamedList.vo record_field_named_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_field_named_list.t.exe record_field_named_list.cpp record_field_named_list.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_field_named_list.t.exe)
+  (action (run ./record_field_named_list.t.exe))))
+
+(subdir record_type_field_concept
+ (rule
+  (targets record_type_field_concept.t.exe)
+  (deps RecordTypeFieldConcept.vo record_type_field_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} record_type_field_concept.t.exe record_type_field_concept.cpp record_type_field_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps record_type_field_concept.t.exe)
+  (action (run ./record_type_field_concept.t.exe))))
+
+(subdir sigt_erased_fn_param
+ (rule
+  (targets sigt_erased_fn_param.t.exe)
+  (deps SigtErasedFnParam.vo sigt_erased_fn_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_erased_fn_param.t.exe sigt_erased_fn_param.cpp sigt_erased_fn_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_erased_fn_param.t.exe)
+  (action (run ./sigt_erased_fn_param.t.exe))))
+
+(subdir type_constructor_param_inductive
+ (rule
+  (targets type_constructor_param_inductive.t.exe)
+  (deps TypeConstructorParamInductive.vo type_constructor_param_inductive.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_constructor_param_inductive.t.exe type_constructor_param_inductive.cpp type_constructor_param_inductive.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_constructor_param_inductive.t.exe)
+  (action (run ./type_constructor_param_inductive.t.exe))))
+
+(subdir type_level_fixpoint_arity
+ (rule
+  (targets type_level_fixpoint_arity.t.exe)
+  (deps TypeLevelFixpointArity.vo type_level_fixpoint_arity.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} type_level_fixpoint_arity.t.exe type_level_fixpoint_arity.cpp type_level_fixpoint_arity.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps type_level_fixpoint_arity.t.exe)
+  (action (run ./type_level_fixpoint_arity.t.exe))))
+
+(subdir unit_returning_callback_map
+ (rule
+  (targets unit_returning_callback_map.t.exe)
+  (deps UnitReturningCallbackMap.vo unit_returning_callback_map.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_returning_callback_map.t.exe unit_returning_callback_map.cpp unit_returning_callback_map.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_returning_callback_map.t.exe)
+  (action (run ./unit_returning_callback_map.t.exe))))
