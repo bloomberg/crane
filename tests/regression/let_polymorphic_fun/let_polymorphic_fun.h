@@ -144,7 +144,7 @@ struct LetPolymorphicFun {
                      UINT64_C(2), List<uint64_t>::cons(
                                       UINT64_C(3), List<uint64_t>::nil()))) +
          _anon_f(true, List<bool>::nil())) +
-        _anon_f([](uint64_t x) { return (x + 1); },
+        _anon_f(std::function([](uint64_t x) { return (x + 1); }),
                 List<std::function<uint64_t(uint64_t)>>::nil()));
   }();
 };

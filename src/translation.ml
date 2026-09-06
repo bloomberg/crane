@@ -4281,6 +4281,21 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
     wrap_crane_erase_fn ?ret_ty:(Option.map Fun.id ret_ty) expr
   | _ -> expr
 
+(** A callable handed to a parameter the callee declared at one of its own
+    type variables has to arrive under a name: a closure's type cannot be
+    spelled, so it can never agree with the same type variable as deduced
+    from another argument -- [f (nat -> nat) S []], where the list argument
+    settles the variable on [std::function<uint64_t(uint64_t)>].
+    {!Minicpp.CPPfn_value} gives the closure that very type, deduced from it.
+
+    The parameter type must be the callee's own, before this call site's
+    instantiation is substituted into it: it is the template parameter that
+    C++ has to deduce, not what it should deduce to. *)
+and name_fn_arg_for_tvar_param param_ml_ty expr =
+  match (resolve_tmeta param_ml_ty, expr) with
+  | (Miniml.Tvar _ | Miniml.Tvar' _), CPPlambda _ -> CPPfn_value expr
+  | _ -> expr
+
 (** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
     that the helper is needed. *)
 (** Re-instantiate a function value that is being adapted for an erased slot:
@@ -11639,6 +11654,25 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         (* 4. Substitution helper for call sites: replace CPPfun_call(CPPvar x',
            args) with CPPfun_call(CPPglob(lifted_ref, []), free_var_cpps @
            args) *)
+        (* The lifted function is a template over the binder's type
+           arguments, so a parameter declared at one of them is a template
+           parameter C++ has to deduce.  A closure has no name to deduce, and
+           so cannot agree with the same parameter as settled by another
+           argument; {!name_fn_arg_for_tvar_param} names it. *)
+        let actual_param_ml_tys =
+          List.filter_map
+            (fun (_, ty) ->
+              if isTdummy ty || ml_type_is_void ty then None else Some ty )
+            params
+        in
+        let name_lifted_args args =
+          List.mapi
+            (fun i a ->
+              match List.nth_opt actual_param_ml_tys i with
+              | Some ty -> name_fn_arg_for_tvar_param ty a
+              | None -> a )
+            args
+        in
         let rec subst_lifted_call_expr
             (target : Id.t)
             (lifted : GlobRef.t)
@@ -11647,7 +11681,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let sub = subst_lifted_call_expr target lifted free_args in
           match e with
           | CPPfun_call (CPPvar id, args) when Id.equal id target ->
-            CPPfun_call (mk_cppglob lifted [], free_args @ List.map sub args)
+            CPPfun_call
+              ( mk_cppglob lifted [],
+                free_args @ name_lifted_args (List.map sub args) )
           | CPPvar id when Id.equal id target ->
             (* Bare reference to lifted function: generate a properly-typed
                wrapper lambda with one parameter per non-erased Rocq lambda

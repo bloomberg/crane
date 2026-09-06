@@ -384,6 +384,11 @@ and cpp_expr =
           surrounding template, so the [crane_fn.h] helper decides.  Produced
           by {!Cpp_erasure.resolve_casts}, never by translation. *)
   | CPPerase_fn of cpp_type option * cpp_expr
+  | CPPfn_value of cpp_expr
+      (** [std::function(expr)] — gives a callable a nameable type, deduced
+          from it by [std::function]'s CTAD.  A closure's own type cannot be
+          spelled, so it cannot agree with any other occurrence of the same
+          template parameter. *)
   | CPPcontainer_cast of cpp_type * cpp_expr * bool
       (** crane_container_cast<Dst>(expr) — converts a type-erased sequence
           container (element type std::any) into a concrete-element container

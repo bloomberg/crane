@@ -155,17 +155,6 @@
   (deps halist_dependent_value.t.exe)
   (action (run ./halist_dependent_value.t.exe))))
 
-(subdir let_polymorphic_fun
- (rule
-  (targets let_polymorphic_fun.t.exe)
-  (deps LetPolymorphicFun.vo let_polymorphic_fun.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} let_polymorphic_fun.t.exe let_polymorphic_fun.cpp let_polymorphic_fun.t.cpp)))
- (rule
-  (alias runtest)
-  (deps let_polymorphic_fun.t.exe)
-  (action (run ./let_polymorphic_fun.t.exe))))
-
 (subdir sigt_record_field
  (rule
   (targets sigt_record_field.t.exe)

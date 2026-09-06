@@ -391,6 +391,12 @@ and cpp_expr =
        erased representation std::function<Ret(std::any...)>.  [None] means the
        result is erased too (Ret = std::any); [Some t] keeps the codomain, for
        a consumer that erases only the argument types. *)
+  | CPPfn_value of cpp_expr
+    (* std::function(expr) — gives a callable a nameable type, deduced from
+       it by std::function's CTAD.  A closure's own type cannot be spelled,
+       so it cannot agree with any other occurrence of the same template
+       parameter; wrapping it here is what lets template argument deduction
+       succeed. *)
   | CPPcontainer_cast of cpp_type * cpp_expr * bool
     (* crane_container_cast<Dst>(expr) — converts a type-erased sequence
        container (element type std::any) into a concrete-element container by
@@ -698,6 +704,7 @@ let map_expr
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
   | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ft ty, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
+  | CPPfn_value e' -> CPPfn_value (fe e')
   | CPPcontainer_cast (ty, e', sb) -> CPPcontainer_cast (ft ty, fe e', sb)
   | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
 
@@ -794,7 +801,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPqualified_tpl (e', _, _)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
-  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
+  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda (_, _, stmts, _) -> on_stmts stmts
@@ -877,7 +884,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPqualified_tpl (e', _, _)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
-  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e')
+  | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
   | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
