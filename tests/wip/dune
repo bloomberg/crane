@@ -155,13 +155,3 @@
   (deps halist_dependent_value.t.exe)
   (action (run ./halist_dependent_value.t.exe))))
 
-(subdir sigt_record_field
- (rule
-  (targets sigt_record_field.t.exe)
-  (deps SigtRecordField.vo sigt_record_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_record_field.t.exe sigt_record_field.cpp sigt_record_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sigt_record_field.t.exe)
-  (action (run ./sigt_record_field.t.exe))))

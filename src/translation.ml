@@ -5874,6 +5874,24 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               List.map index_erase_type temps
             else temps
           in
+          (* The slot has already written this constructor's type down -- a
+             record field declared at [SigT<std::any, std::any>], say.  That
+             spelling, not the one recomputed from this producer's own
+             instantiation, is what the value has to be built at: two
+             producers for one field otherwise disagree about how deeply the
+             field's type arguments are erased, and neither initialises it. *)
+          let temps =
+            match Option.map Ml_type_util.unqualify_ty expected_ty with
+            | Some (Tglob (n', args', _))
+              when globref_equal n' n
+                   && List.length args' = List.length temps
+                   && List.for_all
+                        (fun a ->
+                          prints_as_any a || Ml_type_util.is_cpp_dummy_type a )
+                        args' ->
+              args'
+            | _ -> temps
+          in
           (* The factory has to be qualified by the very instantiation the
              declaration spells. *)
           let temps = apply_hkt_tyctors n temps in
@@ -6691,6 +6709,28 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             else t
           | _ -> cpp_of_ml env ft
         in
+        (* A field the struct declares at an erased instantiation -- a
+           [sigT] whose witness type the record erased, so
+           [SigT<std::any, std::any>] -- accepts only a value built at that
+           same instantiation.  Each producer would otherwise build its own
+           ([SigT<std::any, List<std::any>>] for a list payload), which is a
+           different C++ type and does not initialise the field.  Generating
+           the argument with [deep_erase] boxes its components, so every
+           producer arrives at the one shape the field is declared at. *)
+        let field_declared_erased i =
+          match List.nth_opt field_types_rec i with
+          | Some ft -> (
+            match Ml_type_util.unqualify_ty (declared_field_cpp_ty ft) with
+            | Tglob (_, (_ :: _ as args), _) as d
+              when List.for_all
+                     (fun a ->
+                       prints_as_any a || Ml_type_util.is_cpp_dummy_type a )
+                     args
+                   && List.exists prints_as_any args ->
+              Some d
+            | _ -> None )
+          | None -> None
+        in
         let arg_slot = {slot with in_ctor_arg = true} in
         let base_args =
           List.mapi
@@ -6705,7 +6745,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                       deep_erase =
                         arg_slot.deep_erase
                         || field_stores_erased_fn_value field_types_rec i e }
-                  ?expected_ty:(expected_for_field i e) env e)
+                  ?expected_ty:
+                    ( match expected_for_field i e with
+                    | Some _ as t -> t
+                    | None -> field_declared_erased i )
+                  env e)
             ts
         in
         match ty with

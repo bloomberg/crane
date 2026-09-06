@@ -115,7 +115,7 @@ struct SigtRecordField {
   static inline const boxed b1 = boxed{
       SigT<std::any, std::any>::existt(std::any(), UINT64_C(5)), UINT64_C(1)};
   static inline const boxed b2 =
-      boxed{SigT<std::any, List<std::any>>::existt(
+      boxed{SigT<std::any, std::any>::existt(
                 std::any(),
                 List<std::any>::cons(
                     UINT64_C(1),

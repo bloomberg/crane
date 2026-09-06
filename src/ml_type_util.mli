@@ -124,6 +124,11 @@ val list_ctor_struct_names : Names.GlobRef.t -> string * string
 (** Whether a C++ type is the dummy type. *)
 val is_cpp_dummy_type : Minicpp.cpp_type -> bool
 
+(** The type under any module or namespace qualification.  Questions about
+    what a type {i is} -- which inductive, at which instantiation -- are about
+    the type inside the qualification, not the wrapper. *)
+val unqualify_ty : Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** Whether a C++ type is spelled [std::any] in the generated header.  A
     question about syntax only — it says nothing about whether a value of the
     type may be boxed or cast, for which see {!is_boxed_type}. *)
