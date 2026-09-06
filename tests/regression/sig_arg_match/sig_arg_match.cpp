@@ -1,10 +1,10 @@
 #include "sig_arg_match.h"
 
 Nat SigArgMatch::addp(const Sig<Nat> &p,
-                      const Sig<Nat> &q) { // Precondition: p >= 1
-  assert(p >= 1);
+                      const Sig<Nat> &q) { // Precondition: q >= 1
+  assert(true);
   // Precondition: p >= 1
-  assert(p >= 1);
+  assert(true);
   return [=]() mutable {
     const auto &[x] = p;
     return x;

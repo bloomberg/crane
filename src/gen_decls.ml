@@ -1866,6 +1866,30 @@ let detect_non_forwarded_params (self_ref : GlobRef.t) (n_params : int)
       | _ -> false )
     n_params body
 
+(** The C++ expression stating the witness held by a [sig]-typed parameter
+    called [name], when it can be stated at all.  A transparently extracted
+    [sig] {i is} its witness, so the parameter stands for it; one left as a
+    struct carries the witness in the field its single constructor registered.
+    Either way the predicates that reach here compare the witness numerically,
+    so a witness that is not a C++ scalar has nothing to compare and the
+    precondition can only be reported as a comment. *)
+let sig_witness_expr name (ml_ty : ml_type) =
+  match ml_ty with
+  | Miniml.Tglob (r, (Miniml.Tglob (w, _, _) :: _), _)
+    when Table.is_custom_scalar_ref w ->
+    if Table.is_custom r then Some name
+    else
+      let cname =
+        match r with
+        | GlobRef.IndRef ind ->
+          ctor_struct_name_of_ref ~fallback_idx:0
+            (GlobRef.ConstructRef (ind, 1))
+        | _ -> ""
+      in
+      Some
+        (name ^ "." ^ Id.to_string (Common.lookup_ctor_field_name ~owner:r cname 0))
+  | _ -> None
+
 (** Generate a C++ function definition from an ML function body.
 
     When the body has fewer lambda binders than the ML type's domain (i.e. it
@@ -2600,30 +2624,38 @@ let gen_dfun n b cty ty temps =
       []
     else
       let all_id_arr = Array.of_list (List.rev all_ids) in
-      (* outermost param first *)
-      (* Substitute %0, %1, ... placeholders with actual parameter names *)
-      let subst_placeholders template =
-        let result = ref template in
-        Array.iteri
-          (fun i (id, _) ->
-            let placeholder = Printf.sprintf "%%%d" i in
-            let replacement = Id.to_string id in
-            let buf = Buffer.create (String.length !result) in
-            let s = !result in
-            let len = String.length s in
-            let plen = String.length placeholder in
-            let j = ref 0 in
-            while !j < len do
-              if !j <= len - plen && String.sub s !j plen = placeholder then (
-                Buffer.add_string buf replacement;
-                j := !j + plen )
-              else (
-                Buffer.add_char buf s.[!j];
-                j := !j + 1 )
-            done;
-            result := Buffer.contents buf )
-          all_id_arr;
-        !result
+      (* outermost param first; [all_params] runs in the same order and
+         carries the ML types, which say whether a parameter is a [sig]. *)
+      let all_ml_arr = Array.of_list (List.rev all_params) in
+      (* A template's placeholders are numbered outwards from the parameter
+         the assertion was registered for: [%0] is that parameter's witness,
+         [%1] the binder before it, and so on.  Substituting the highest index
+         first keeps [%10] from being read as [%1] followed by a digit. *)
+      let render param_idx witness_of template =
+        let substs =
+          List.init (param_idx + 1) (fun k ->
+            let name = Id.to_string (fst all_id_arr.(param_idx - k)) in
+            ( Printf.sprintf "%%%d" k,
+              if k = 0 then witness_of name (snd all_ml_arr.(param_idx - k))
+              else Some name ) )
+        in
+        let substs =
+          List.filter_map
+            (fun (ph, r) -> Option.map (fun r -> (ph, r)) r)
+            substs
+        in
+        Common.render_template (List.rev substs) template
+      in
+      (* The assertion holds of the parameter's witness, so it can only be
+         made when the witness has an expression; failing that -- and failing
+         a placeholder naming a binder outside this parameter's reach -- the
+         precondition is reported rather than checked, still spelling the
+         parameters it speaks of. *)
+      let subst_placeholders param_idx template =
+        let stated = render param_idx sig_witness_expr template in
+        if String.contains stated '%' then
+          Error (render param_idx (fun name _ -> Some name) template)
+        else Ok stated
       in
       List.filter_map
         (fun (param_idx, assertion) ->
@@ -2634,8 +2666,9 @@ let gen_dfun n b cty ty temps =
               assertion
             with
             | Table.AssertExpr template ->
-              let expr_str = subst_placeholders template in
-              Some (Sassert (expr_str, Some expr_str))
+              ( match subst_placeholders param_idx template with
+              | Ok expr_str -> Some (Sassert (expr_str, Some expr_str))
+              | Error comment -> Some (Sassert ("true", Some comment)) )
             | Table.AssertComment comment ->
               Some (Sassert ("true", Some comment)) )
         assertions

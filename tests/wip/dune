@@ -188,17 +188,6 @@
   (deps monoid_class_arg.t.exe)
   (action (run ./monoid_class_arg.t.exe))))
 
-(subdir sig_arg_match
- (rule
-  (targets sig_arg_match.t.exe)
-  (deps SigArgMatch.vo sig_arg_match.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_arg_match.t.exe sig_arg_match.cpp sig_arg_match.t.cpp)))
- (rule
-  (alias runtest)
-  (deps sig_arg_match.t.exe)
-  (action (run ./sig_arg_match.t.exe))))
-
 (subdir sigt_hetero_payload
  (rule
   (targets sigt_hetero_payload.t.exe)
