@@ -8130,3 +8130,14 @@
   (alias runtest)
   (deps hof_param_as_value.t.exe)
   (action (run ./hof_param_as_value.t.exe))))
+
+(subdir eta_fold_callback
+ (rule
+  (targets eta_fold_callback.t.exe)
+  (deps EtaFoldCallback.vo eta_fold_callback.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_fold_callback.t.exe eta_fold_callback.cpp eta_fold_callback.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_fold_callback.t.exe)
+  (action (run ./eta_fold_callback.t.exe))))

@@ -5314,7 +5314,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           f
         else
           CPPfun_call (f, []) )
-    | _ -> f )
+    | _ ->
+      let ml_arity =
+        match slot.expected_ml_ty with
+        | Some ty -> count_ml_value_arrows ty
+        | None -> 0
+      in
+      eta_expand_to_expected ?expected_ty ~ml_arity
+        ~arity:(List.length filtered_args) f )
   | MLglob (x, tys) when is_inline_custom x ->
     let ty = find_type x in
     let ty = cpp_of_ml env ty in
@@ -7076,6 +7083,38 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     CPPabort msg
   | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
+
+(** Adapt a callable produced with fewer parameters than its use site expects.
+    A body like [fun f acc => f acc] is eta-reduced before it reaches here, so
+    the lambda takes one argument where the slot's type takes two; the missing
+    arguments are supplied by eta-expansion, applying what the shorter lambda
+    returns to the arguments it did not take.
+
+    [ml_arity] is how many arguments the slot's MiniML type takes: a lambda
+    that takes fewer than its C++ slot but as many as its ML type is curried
+    on purpose, not shortened, and is left alone. *)
+and eta_expand_to_expected ?expected_ty ~ml_arity ~arity f =
+  match Option.map strip_cpp_ref_const expected_ty with
+  | Some (Tfun (dom, _))
+    when arity > 0 && ml_arity > arity && List.length dom > arity ->
+    let params =
+      List.mapi
+        (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "_ee%d" i))))
+        dom
+    in
+    let arg (_, id) = CPPvar (Option.get id) in
+    let taken = List.filteri (fun i _ -> i < arity) params in
+    let rest = List.filteri (fun i _ -> i >= arity) params in
+    (* [CPPlambda] holds its parameters, and [CPPfun_call] its arguments, in
+       reverse order. *)
+    let call =
+      List.fold_left
+        (fun acc group -> CPPfun_call (acc, List.rev_map arg group))
+        f [taken; rest]
+    in
+    CPPlambda (List.rev params, None, [Sreturn (Some call)], true)
+  | _ -> f
+
 
 (** Make a global named in value position into an expression a caller can
     invoke, by eta-expanding it into a lambda that calls it.

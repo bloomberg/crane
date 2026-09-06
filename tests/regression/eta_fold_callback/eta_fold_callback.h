@@ -201,7 +201,12 @@ struct EtaFoldCallback {
                 };
               });
       return std::move(fs).template fold_right<uint64_t>(
-          [](std::function<uint64_t(uint64_t)> f) { return f; }, UINT64_C(0));
+          [](std::function<uint64_t(uint64_t)> _ee0, uint64_t _ee1) {
+            return [](std::function<uint64_t(uint64_t)> f) {
+              return f;
+            }(_ee0)(_ee1);
+          },
+          UINT64_C(0));
     }();
   }();
 };
