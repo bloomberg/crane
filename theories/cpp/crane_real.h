@@ -72,6 +72,16 @@ public:
   // Constants & conversions
   static Real pi() { return Real(std::acos(-1.0L)); }
 
+  // Reading the value back out.  Explicit, so a Real never silently decays to
+  // a builtin in arithmetic or comparison, but a static_cast to any floating
+  // type still works.  A template rather than a single operator long double:
+  // an explicit conversion function is only a candidate when its return type
+  // is the destination type itself ([over.match.conv]), so a fixed long double
+  // one would not serve a static_cast<double>.
+  template <class T>
+    requires std::is_floating_point_v<T>
+  constexpr explicit operator T() const { return static_cast<T>(v_); }
+
   // Integer -> Real coercions (INR / IZR / IPR).  Templated so the *same*
   // mapping works with whatever integer representation the user imports for
   // nat / Z / positive -- int64_t and unsigned int (the Int flavors) or GMP's

@@ -8361,3 +8361,14 @@
   (alias runtest)
   (deps class_in_nested_module.t.exe)
   (action (run ./class_in_nested_module.t.exe))))
+
+(subdir real_mapping_get_d
+ (rule
+  (targets real_mapping_get_d.t.exe)
+  (deps RealMappingGetD.vo real_mapping_get_d.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} real_mapping_get_d.t.exe real_mapping_get_d.cpp real_mapping_get_d.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps real_mapping_get_d.t.exe)
+  (action (run ./real_mapping_get_d.t.exe))))
