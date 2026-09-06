@@ -48,7 +48,7 @@ Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
 
 
 Crane Extract Inlined Constant Nat.iter =>
-  "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
+  "[&]() { auto _crane_acc = %a2; for (unsigned int _crane_i = 0; _crane_i < %a0; _crane_i++) { _crane_acc = %a1(std::move(_crane_acc)); } return _crane_acc; }()".
 
 From Stdlib Require PeanoNat.
 
@@ -66,7 +66,7 @@ Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
 
 Crane Extract Inlined Constant PeanoNat.Nat.iter =>
-  "[&]() { auto _acc = %a2; for (unsigned int _i = 0; _i < %a0; _i++) { _acc = %a1(std::move(_acc)); } return _acc; }()".
+  "[&]() { auto _crane_acc = %a2; for (unsigned int _crane_i = 0; _crane_i < %a0; _crane_i++) { _crane_acc = %a1(std::move(_crane_acc)); } return _crane_acc; }()".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.

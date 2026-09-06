@@ -99,13 +99,23 @@ and prepend_to_all sep = function
   | [] -> []
   | x :: xs -> sep :: x :: prepend_to_all sep xs
 
-(** Convert an identifier to ASCII, warning on double underscores. *)
+(** Prefix reserved for locals that Crane, or a mapping's inline C++ template,
+    introduces into a scope a Rocq term is generated into.  Such a local is
+    invisible to the renaming tables, so the guarantee that it shadows nothing
+    has to come from the spelling: {!ascii_of_id} keeps every Rocq identifier
+    out of this namespace. *)
+let crane_local_prefix = "_crane_"
+
+(** Convert an identifier to ASCII, warning on double underscores.  An
+    identifier that would land in the {!crane_local_prefix} namespace is moved
+    out of it. *)
 let ascii_of_id id =
   let s = Id.to_string id in
   for i = 0 to String.length s - 2 do
     if s.[i] == '_' && s.[i + 1] == '_' then warning_id s
   done;
-  Unicode.ascii_of_ident s
+  let s = Unicode.ascii_of_ident s in
+  if String.starts_with ~prefix:crane_local_prefix s then "u" ^ s else s
 
 (** Test if a module path is a bound module parameter. *)
 let is_mp_bound = function

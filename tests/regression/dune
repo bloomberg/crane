@@ -8108,3 +8108,14 @@
   (alias runtest)
   (deps int63_zero_div.t.exe)
   (action (run ./int63_zero_div.t.exe))))
+
+(subdir iter_capture
+ (rule
+  (targets iter_capture.t.exe)
+  (deps IterCapture.vo iter_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iter_capture.t.exe iter_capture.cpp iter_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iter_capture.t.exe)
+  (action (run ./iter_capture.t.exe))))

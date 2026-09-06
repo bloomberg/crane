@@ -29,16 +29,16 @@ void ITreeEffects::timed_greeting() {
 void ITreeEffects::echo_loop(uint64_t n) {
   {
     [&]() {
-      auto _acc = std::monostate{};
-      for (uint64_t _i = 0; _i < n; _i++) {
-        _acc = [](const auto &acc) {
+      auto _crane_acc = std::monostate{};
+      for (uint64_t _crane_i = 0; _crane_i < n; _crane_i++) {
+        _crane_acc = [](const auto &acc) {
           std::string line;
           std::getline(std::cin, line);
           std::cout << line << '\n';
           return acc;
-        }(std::move(_acc));
+        }(std::move(_crane_acc));
       }
-      return _acc;
+      return _crane_acc;
     }();
     return;
   }
