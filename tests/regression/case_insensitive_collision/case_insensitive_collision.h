@@ -38,8 +38,8 @@ struct CaseInsensitiveCollision {
     }
   }
 
-  static uint64_t Bar(Bar b);
-  static inline const uint64_t run = ((foo + Foo) + Bar(Bar::B2));
+  static uint64_t Bar0(Bar b);
+  static inline const uint64_t run = ((foo + Foo) + Bar0(Bar::B2));
 };
 
 #endif // INCLUDED_CASE_INSENSITIVE_COLLISION

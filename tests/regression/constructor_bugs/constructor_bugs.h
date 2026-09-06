@@ -281,59 +281,62 @@ struct ConstructorBugs {
   static std::pair<Inner, uint64_t> nested_extract(Inner i);
   static std::pair<Outer, uint64_t> update_test(const Outer &o);
 
-  struct State {
+  struct State0 {
     uint64_t value_inline;
     uint64_t data_inline;
     uint64_t flag;
   };
 
-  static std::pair<State, uint64_t> inline_pair(State s);
-  static std::pair<std::pair<State, uint64_t>, uint64_t> inline_triple(State s);
-  static std::pair<std::pair<State, uint64_t>, uint64_t> inline_nested(State s);
-  static State get_state_inline(uint64_t n);
-  static std::pair<State, uint64_t> inline_from_call(uint64_t n);
-  static std::pair<std::pair<State, uint64_t>, uint64_t>
+  static std::pair<State0, uint64_t> inline_pair(State0 s);
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
+  inline_triple(State0 s);
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
+  inline_nested(State0 s);
+  static State0 get_state_inline(uint64_t n);
+  static std::pair<State0, uint64_t> inline_from_call(uint64_t n);
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
   same_call_multi_proj(uint64_t n);
-  static std::optional<std::pair<State, uint64_t>>
-  inline_match(const std::optional<State> &o);
-  static std::pair<State, uint64_t> inline_if(bool b, State s);
+  static std::optional<std::pair<State0, uint64_t>>
+  inline_match(const std::optional<State0> &o);
+  static std::pair<State0, uint64_t> inline_if(bool b, State0 s);
 
   struct OuterInline {
-    State outer_state;
+    State0 outer_state;
     uint64_t outer_num;
   };
 
-  static std::pair<std::pair<OuterInline, State>, uint64_t>
+  static std::pair<std::pair<OuterInline, State0>, uint64_t>
   inline_deep(OuterInline o);
-  static std::pair<State, uint64_t> inline_double_proj(const OuterInline &o);
-  static std::pair<std::pair<State, uint64_t>, std::pair<uint64_t, uint64_t>>
-  inline_many(State s);
-  static std::pair<std::pair<uint64_t, State>, uint64_t>
-  inline_pattern(State s);
-  static List<std::pair<State, uint64_t>> inline_recursive(uint64_t n, State s);
-  static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>,
-                   std::pair<uint64_t, State>>
-  inline_complex(State s);
-  static std::pair<std::pair<State, State>, std::pair<uint64_t, uint64_t>>
-  inline_quad(State s);
-  static std::pair<State, uint64_t> inline_both_branches(bool b, State s);
+  static std::pair<State0, uint64_t> inline_double_proj(const OuterInline &o);
+  static std::pair<std::pair<State0, uint64_t>, std::pair<uint64_t, uint64_t>>
+  inline_many(State0 s);
+  static std::pair<std::pair<uint64_t, State0>, uint64_t>
+  inline_pattern(State0 s);
+  static List<std::pair<State0, uint64_t>> inline_recursive(uint64_t n,
+                                                            State0 s);
+  static std::pair<std::pair<std::pair<State0, uint64_t>, uint64_t>,
+                   std::pair<uint64_t, State0>>
+  inline_complex(State0 s);
+  static std::pair<std::pair<State0, State0>, std::pair<uint64_t, uint64_t>>
+  inline_quad(State0 s);
+  static std::pair<State0, uint64_t> inline_both_branches(bool b, State0 s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, State &>
-  static std::pair<std::pair<State, uint64_t>, uint64_t> apply_twice(F0 &&f,
-                                                                     State s) {
+    requires std::is_invocable_r_v<uint64_t, F0 &, State0 &>
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
+  apply_twice(F0 &&f, State0 s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));
   }
 
-  static std::pair<std::pair<State, uint64_t>, uint64_t>
-  test_apply(const State &s);
-  static uint64_t get_value_inline(const State &s);
-  static uint64_t get_data_inline(const State &s);
-  static std::pair<std::pair<State, uint64_t>, uint64_t>
-  inline_nested_calls(State s);
-  static std::pair<std::optional<State>, std::optional<uint64_t>>
-  inline_option(State s);
-  static std::pair<List<State>, List<uint64_t>> inline_list(State s);
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
+  test_apply(const State0 &s);
+  static uint64_t get_value_inline(const State0 &s);
+  static uint64_t get_data_inline(const State0 &s);
+  static std::pair<std::pair<State0, uint64_t>, uint64_t>
+  inline_nested_calls(State0 s);
+  static std::pair<std::optional<State0>, std::optional<uint64_t>>
+  inline_option(State0 s);
+  static std::pair<List<State0>, List<uint64_t>> inline_list(State0 s);
 };
 
 #endif // INCLUDED_CONSTRUCTOR_BUGS

@@ -44,26 +44,22 @@ Crane Extract Inlined Constant Z.mul =>
    a mod 0 = a conventions for a zero divisor (CWE-682). The [_b == -1] case is
    handled separately because INT64_MIN / -1 and INT64_MIN % -1 are UB. *)
 Crane Extract Inlined Constant Z.div =>
-"[&]() -> int64_t {
-  int64_t _a = %a0;
-  int64_t _b = %a1;
+"[](int64_t _a, int64_t _b) -> int64_t {
   if (_b == 0) return INT64_C(0);
   if (_b == -1) return static_cast<int64_t>(-static_cast<uint64_t>(_a));
   int64_t _q = _a / _b;
   int64_t _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _q - 1;
   return _q;
-}()".
+}(%a0, %a1)".
 Crane Extract Inlined Constant Z.modulo =>
-"[&]() -> int64_t {
-  int64_t _a = %a0;
-  int64_t _b = %a1;
+"[](int64_t _a, int64_t _b) -> int64_t {
   if (_b == 0) return _a;
   if (_b == -1) return INT64_C(0);
   int64_t _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _r + _b;
   return _r;
-}()".
+}(%a0, %a1)".
 Crane Extract Inlined Constant Z.opp => "static_cast<int64_t>(-static_cast<uint64_t>(%a0))".
 Crane Extract Inlined Constant Z.abs =>
   "(%a0 < 0 ? static_cast<int64_t>(-static_cast<uint64_t>(%a0)) : %a0)".

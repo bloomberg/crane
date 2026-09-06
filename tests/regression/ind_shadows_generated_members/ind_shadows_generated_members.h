@@ -46,7 +46,7 @@ struct IndShadowsGeneratedMembers {
     // MANIPULATORS
     ~variant_t() {
       crane::small_vector<std::shared_ptr<variant_t>> _stack = {};
-      auto _drain = [&](variant_t &_v) {
+      auto _drain = [&](variant_t_ &_v) {
         if (auto *_alt = std::get_if<V_>(&_v)) {
           if (_alt->a0) {
             _stack.push_back(std::move(_alt->a0));

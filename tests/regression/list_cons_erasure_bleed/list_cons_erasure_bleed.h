@@ -95,11 +95,10 @@ syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
                                F4 &&f) {
   const auto &[s, t] = std::any_cast<std::pair<std::any, std::any>>(vs);
   return concat_tuple(
-      [&]() {
-        auto _r = xs_;
+      [](auto _r) {
         std::reverse(_r.begin(), _r.end());
         return _r;
-      }(),
+      }(xs_),
       [](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;

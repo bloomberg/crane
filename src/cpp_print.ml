@@ -820,20 +820,25 @@ let rec pp_cpp_type par vl t =
             if Common.get_force_qualified_capitalization ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
-          if is_merged_inductive_cached r' then
-            let cap = dedup_qualified_tail
-              ~allow_bare:(Table.modular () && not needs_ns) cap in
-            let cap_pp =
-              if args <> [] && render_ctx.rc_in_template then
-                insert_template_keyword (str cap) cap
-              else str cap in
-            typename_prefix_for cap ++ cap_pp ++ templates
-          else
-            let cap_pp =
-              if args <> [] && render_ctx.rc_in_template then
-                insert_template_keyword (str cap) cap
-              else str cap in
-            typename_prefix_for cap ++ cap_pp ++ templates
+          let cap =
+            if is_merged_inductive_cached r' then
+              dedup_qualified_tail
+                ~allow_bare:(Table.modular () && not needs_ns) cap
+            else
+              cap
+          in
+          let cap_pp =
+            if args <> [] && render_ctx.rc_in_template then
+              insert_template_keyword (str cap) cap
+            else str cap in
+          (* The qualified name is relative to the enclosing module struct, so
+             out-of-line definitions -- whose return type precedes the qualified
+             function name, and so sits outside that struct's scope -- need the
+             struct prefix in front of it. *)
+          typename_prefix_for cap
+          ++ struct_qualifier_for r' cap
+          ++ cap_pp
+          ++ templates
         else if is_merged_inductive_cached r' then
           let cap = String.capitalize_ascii type_name_str in
           if needs_ns && Table.modular () then

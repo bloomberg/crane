@@ -48,7 +48,7 @@ Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
 
 
 Crane Extract Inlined Constant Nat.iter =>
-  "[&]() { auto _crane_acc = %a2; for (unsigned int _crane_i = 0; _crane_i < %a0; _crane_i++) { _crane_acc = %a1(std::move(_crane_acc)); } return _crane_acc; }()".
+  "[](unsigned int _crane_n, auto _crane_f, auto _crane_seed) { std::decay_t<decltype(_crane_f(std::move(_crane_seed)))> _crane_acc = std::move(_crane_seed); for (unsigned int _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%a0, %a1, %a2)" From "type_traits" "utility".
 
 From Stdlib Require PeanoNat.
 
@@ -66,7 +66,7 @@ Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
 
 Crane Extract Inlined Constant PeanoNat.Nat.iter =>
-  "[&]() { auto _crane_acc = %a2; for (unsigned int _crane_i = 0; _crane_i < %a0; _crane_i++) { _crane_acc = %a1(std::move(_crane_acc)); } return _crane_acc; }()".
+  "[](unsigned int _crane_n, auto _crane_f, auto _crane_seed) { std::decay_t<decltype(_crane_f(std::move(_crane_seed)))> _crane_acc = std::move(_crane_seed); for (unsigned int _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%a0, %a1, %a2)" From "type_traits" "utility".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.

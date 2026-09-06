@@ -13,36 +13,36 @@ std::deque<uint64_t> DequeEmptyOps::dup(uint64_t n) {
 }
 
 std::deque<uint64_t> DequeEmptyOps::run_map(const std::deque<uint64_t> &l) {
-  return [&]() {
-    std::deque<std::decay_t<decltype(double_(
-        std::declval<typename std::decay_t<decltype(l)>::value_type &>()))>>
+  return [](auto _f, const auto &_l) {
+    std::deque<std::decay_t<decltype(_f(
+        std::declval<typename std::decay_t<decltype(_l)>::value_type &>()))>>
         _r;
-    for (const auto &_x : l)
-      _r.push_back(double_(_x));
+    for (const auto &_x : _l)
+      _r.push_back(_f(_x));
     return _r;
-  }();
+  }(double_, l);
 }
 
 std::deque<uint64_t> DequeEmptyOps::run_flatmap(const std::deque<uint64_t> &l) {
-  return [&]() {
-    std::deque<typename std::decay_t<decltype(dup(
-        std::declval<typename std::decay_t<decltype(l)>::value_type &>()))>::
+  return [](auto _f, const auto &_l) {
+    std::deque<typename std::decay_t<decltype(_f(
+        std::declval<typename std::decay_t<decltype(_l)>::value_type &>()))>::
                    value_type>
         _r;
-    for (const auto &_x : l) {
-      auto _s = dup(_x);
+    for (const auto &_x : _l) {
+      auto _s = _f(_x);
       _r.insert(_r.end(), _s.begin(), _s.end());
     }
     return _r;
-  }();
+  }(dup, l);
 }
 
 std::deque<uint64_t>
 DequeEmptyOps::run_concat(const std::deque<std::deque<uint64_t>> &_x0) {
-  return [&]() {
-    std::deque<typename std::decay_t<decltype(_x0)>::value_type::value_type> _r;
-    for (const auto &_s : _x0)
+  return [](const auto &_ls) {
+    std::deque<typename std::decay_t<decltype(_ls)>::value_type::value_type> _r;
+    for (const auto &_s : _ls)
       _r.insert(_r.end(), _s.begin(), _s.end());
     return _r;
-  }();
+  }(_x0);
 }

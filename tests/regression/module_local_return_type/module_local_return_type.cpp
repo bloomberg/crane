@@ -5,4 +5,6 @@
 /// function returning a type declared in a nested module is emitted as
 /// M::t ModuleLocalReturnType::make(...), and M is undeclared at that
 /// point.  Parameter types, which come after the qualified name, are fine.
-M::t ModuleLocalReturnType::make(uint64_t n) { return M::t::c(n); }
+ModuleLocalReturnType::M::t ModuleLocalReturnType::make(uint64_t n) {
+  return M::t::c(n);
+}

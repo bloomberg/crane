@@ -28,18 +28,22 @@ void ITreeEffects::timed_greeting() {
 
 void ITreeEffects::echo_loop(uint64_t n) {
   {
-    [&]() {
-      auto _crane_acc = std::monostate{};
-      for (uint64_t _crane_i = 0; _crane_i < n; _crane_i++) {
-        _crane_acc = [](const auto &acc) {
+    [](uint64_t _crane_n, auto _crane_f, auto _crane_seed) {
+      std::decay_t<decltype(_crane_f(std::move(_crane_seed)))> _crane_acc =
+          std::move(_crane_seed);
+      for (uint64_t _crane_i = 0; _crane_i < _crane_n; _crane_i++) {
+        _crane_acc = _crane_f(std::move(_crane_acc));
+      }
+      return _crane_acc;
+    }(
+        n,
+        [](const auto &acc) {
           std::string line;
           std::getline(std::cin, line);
           std::cout << line << '\n';
           return acc;
-        }(std::move(_crane_acc));
-      }
-      return _crane_acc;
-    }();
+        },
+        std::monostate{});
     return;
   }
 }

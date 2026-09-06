@@ -947,9 +947,35 @@ let ref_renaming_fun (k, r) =
         Id.to_string id
       | _ when not is_bound ->
         let siblings = get_mp_siblings mp in
-        let id = next_ident_away (Id.of_string s) siblings in
+        (* An inductive's C++ type carries its name capitalized, so [bar]
+           occupies [Bar] as well.  Both spellings are tested and reserved, or
+           a later [Definition Bar] in the same module lands on the very name
+           the enum was given and hides it. *)
+        let is_ind = match r with GlobRef.IndRef _ -> true | _ -> false in
+        (* A member may not carry the name of the struct it is declared in, and
+           a module is emitted as exactly that struct.  The test is on the
+           unchanged spelling: an eponymous [ascii] inside module [Ascii] is
+           merged into the struct rather than nested in it, so it is not a
+           member and does not compete. *)
+        let own_struct_name =
+          match mp with
+          | ModPath.MPdot (_, l) -> Some (modular_rename Mod (Label.to_id l))
+          | _ -> None
+        in
+        let key = if is_ind then ctor_cpp_id else fun id -> id in
+        let rec fresh id =
+          if
+            Id.Set.mem (key id) siblings
+            || Option.equal String.equal (Some (Id.to_string id)) own_struct_name
+          then
+            fresh (increment_subscript id)
+          else
+            id
+        in
+        let id = fresh (Id.of_string s) in
         let s = Id.to_string id in
         add_mp_sibling mp (Id.of_string s);
+        if is_ind then add_mp_sibling mp (ctor_cpp_id id);
         s
       | _ -> s )
   in

@@ -4904,7 +4904,9 @@ let gen_ind_header_v2
           let _cur_id = Id.of_string "_cur" in
           let _sp_id = Id.of_string "_sp" in
           let _pv_id = Id.of_string "_pv" in
-          let variant_t_ty = Tid (Id.of_string "variant_t", []) in
+          (* The alias, under whatever name it was actually emitted: an
+             inductive named [variant_t] pushes it to [variant_t_]. *)
+          let variant_t_ty = variant_alias_ty in
           let self_ty = Tglob (name, ty_vars, []) in
           (* Qualify inductive references for use outside [name]'s own scope;
              [name] itself is skipped because the destructor is written inside

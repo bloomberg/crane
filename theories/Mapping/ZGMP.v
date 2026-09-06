@@ -31,24 +31,20 @@ Crane Extract Inlined Constant Z.mul => "(%a0 * %a1)".
    Rocq for negative operands, following Rocq's a/0 = 0 and a mod 0 = a
    conventions for a zero divisor (CWE-682). *)
 Crane Extract Inlined Constant Z.div =>
-"[&]() -> mpz_class {
-  mpz_class _a = %a0;
-  mpz_class _b = %a1;
+"[](mpz_class _a, mpz_class _b) -> mpz_class {
   if (_b == 0) return mpz_class(0);
   mpz_class _q = _a / _b;
   mpz_class _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _q - 1;
   return _q;
-}()".
+}(%a0, %a1)".
 Crane Extract Inlined Constant Z.modulo =>
-"[&]() -> mpz_class {
-  mpz_class _a = %a0;
-  mpz_class _b = %a1;
+"[](mpz_class _a, mpz_class _b) -> mpz_class {
   if (_b == 0) return _a;
   mpz_class _r = _a % _b;
   if (_r != 0 && ((_r < 0) != (_b < 0))) return _r + _b;
   return _r;
-}()".
+}(%a0, %a1)".
 Crane Extract Inlined Constant Z.opp => "(-%a0)".
 Crane Extract Inlined Constant Z.abs => "abs(%a0)".
 Crane Extract Inlined Constant Z.succ => "(%a0 + 1)".

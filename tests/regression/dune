@@ -8262,3 +8262,58 @@
   (alias runtest)
   (deps deep_literal_nesting.t.exe)
   (action (run ./deep_literal_nesting.t.exe))))
+
+(subdir mapping_lambda_capture_default
+ (rule
+  (targets mapping_lambda_capture_default.t.exe)
+  (deps MappingLambdaCaptureDefault.vo mapping_lambda_capture_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mapping_lambda_capture_default.t.exe mapping_lambda_capture_default.cpp mapping_lambda_capture_default.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps mapping_lambda_capture_default.t.exe)
+  (action (run ./mapping_lambda_capture_default.t.exe))))
+
+(subdir nat_iter_function_acc
+ (rule
+  (targets nat_iter_function_acc.t.exe)
+  (deps NatIterFunctionAcc.vo nat_iter_function_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nat_iter_function_acc.t.exe nat_iter_function_acc.cpp nat_iter_function_acc.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nat_iter_function_acc.t.exe)
+  (action (run ./nat_iter_function_acc.t.exe))))
+
+(subdir module_local_return_type
+ (rule
+  (targets module_local_return_type.t.exe)
+  (deps ModuleLocalReturnType.vo module_local_return_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_local_return_type.t.exe module_local_return_type.cpp module_local_return_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_local_return_type.t.exe)
+  (action (run ./module_local_return_type.t.exe))))
+
+(subdir ind_shadows_generated_members
+ (rule
+  (targets ind_shadows_generated_members.t.exe)
+  (deps IndShadowsGeneratedMembers.vo ind_shadows_generated_members.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ind_shadows_generated_members.t.exe ind_shadows_generated_members.cpp ind_shadows_generated_members.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps ind_shadows_generated_members.t.exe)
+  (action (run ./ind_shadows_generated_members.t.exe))))
+
+(subdir case_insensitive_collision
+ (rule
+  (targets case_insensitive_collision.t.exe)
+  (deps CaseInsensitiveCollision.vo case_insensitive_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_insensitive_collision.t.exe case_insensitive_collision.cpp case_insensitive_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_insensitive_collision.t.exe)
+  (action (run ./case_insensitive_collision.t.exe))))

@@ -13,11 +13,6 @@
 
 struct Nat;
 template <typename A> struct List;
-template <typename A> struct DirectedEdge;
-template <typename A> struct Directed;
-template <typename A> struct UndirectedEdge;
-template <typename A> struct Undirected;
-struct NatEq;
 
 struct Nat {
   // TYPES
@@ -196,7 +191,7 @@ concept Eq = requires {
 /// node type A. Provides operations for building and querying
 /// the graph.
 template <typename I, typename A>
-concept Graph = requires {
+concept Graph0 = requires {
   typename I::template G<std::any>;
   typename I::edge;
   { I::empty() } -> std::convertible_to<typename I::template G<A>>;
@@ -215,121 +210,124 @@ concept Graph = requires {
   } -> std::convertible_to<List<typename I::edge>>;
 };
 
-template <typename g, typename a> using edge = std::any;
+struct Graph {
+  template <typename g, typename a> using edge = std::any;
 
-/// An edge in a directed graph, from edge_from to edge_to.
-template <typename A> struct DirectedEdge {
-  A edge_from;
-  A edge_to;
+  /// An edge in a directed graph, from edge_from to edge_to.
+  template <typename A> struct DirectedEdge {
+    A edge_from;
+    A edge_to;
+  };
+
+  template <typename _tcI0, typename T1>
+    requires Eq<_tcI0, T1>
+  static bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
+    return _tcI0::eqb(e.edge_from, a);
+  }
+
+  /// A directed graph storing its directed_nodes and directed_edges.
+  template <typename A> struct Directed {
+    List<A> directed_nodes;
+    List<DirectedEdge<A>> directed_edges;
+  };
+
+  template <typename _tcI0, typename T1>
+    requires Eq<_tcI0, T1>
+  struct DirectedGraph {
+    template <typename _A0> using G = Directed<_A0>;
+    using edge = DirectedEdge<T1>;
+
+    static Directed<T1> empty() {
+      return Directed<T1>{List<std::any>::nil(),
+                          List<DirectedEdge<std::any>>::nil()};
+    }
+
+    static Directed<T1> add_node(Directed<std::any> g, T1 n) {
+      return Directed<T1>{List<std::any>::cons(n, g.directed_nodes),
+                          g.directed_edges};
+    }
+
+    static Directed<T1> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
+      return Directed<T1>{g.directed_nodes, List<DirectedEdge<std::any>>::cons(
+                                                e, g.directed_edges)};
+    }
+
+    static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
+
+    static List<edge> edges(Directed<std::any> g, T1 n) {
+      return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
+        return directed_originates<_tcI0, T1>(n, _x0);
+      });
+    }
+  };
+
+  /// An edge in an undirected graph connecting edge_first and edge_second.
+  template <typename A> struct UndirectedEdge {
+    A edge_first;
+    A edge_second;
+  };
+
+  template <typename _tcI0, typename T1>
+    requires Eq<_tcI0, T1>
+  static bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
+    return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
+  }
+
+  template <typename A> struct Undirected {
+    List<A> undirected_nodes;
+    List<UndirectedEdge<A>> undirected_edges;
+  };
+
+  template <typename _tcI0, typename T1>
+    requires Eq<_tcI0, T1>
+  struct UndirectedGraph {
+    template <typename _A0> using G = Undirected<_A0>;
+    using edge = UndirectedEdge<T1>;
+
+    static Undirected<T1> empty() {
+      return Undirected<T1>{List<std::any>::nil(),
+                            List<UndirectedEdge<std::any>>::nil()};
+    }
+
+    static Undirected<T1> add_node(Undirected<std::any> g, T1 n) {
+      return Undirected<T1>{List<std::any>::cons(n, g.undirected_nodes),
+                            g.undirected_edges};
+    }
+
+    static Undirected<T1> add_edge(Undirected<std::any> g,
+                                   UndirectedEdge<T1> e) {
+      return Undirected<T1>{
+          g.undirected_nodes,
+          List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
+    }
+
+    static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }
+
+    static List<edge> edges(Undirected<std::any> g, T1 n) {
+      return g.undirected_edges.filter(
+          [=](UndirectedEdge<T1> _x0) mutable -> bool {
+            return undirected_originates<_tcI0, T1>(n, _x0);
+          });
+    }
+  };
+
+  static bool nat_eqb(const Nat &n, const Nat &m);
+
+  struct NatEq {
+    static bool eqb(Nat a0, Nat a1) { return nat_eqb(a0, a1); }
+  };
+
+  static_assert(Eq<NatEq, Nat>);
+
+  template <typename _tcI0, typename T1>
+    requires Eq<_tcI0, T1>
+  static bool test_eq(const T1 &x, const T1 &y) {
+    return _tcI0::eqb(x, y);
+  }
+
+  static inline const bool test_int_eq =
+      test_eq<NatEq, Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
+                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-template <typename _tcI0, typename T1>
-  requires Eq<_tcI0, T1>
-bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
-  return _tcI0::eqb(e.edge_from, a);
-}
-
-/// A directed graph storing its directed_nodes and directed_edges.
-template <typename A> struct Directed {
-  List<A> directed_nodes;
-  List<DirectedEdge<A>> directed_edges;
-};
-
-template <typename _tcI0, typename T1>
-  requires Eq<_tcI0, T1>
-struct DirectedGraph {
-  template <typename _A0> using G = Directed<_A0>;
-  using edge = DirectedEdge<T1>;
-
-  static Directed<T1> empty() {
-    return Directed<T1>{List<std::any>::nil(),
-                        List<DirectedEdge<std::any>>::nil()};
-  }
-
-  static Directed<T1> add_node(Directed<std::any> g, T1 n) {
-    return Directed<T1>{List<std::any>::cons(n, g.directed_nodes),
-                        g.directed_edges};
-  }
-
-  static Directed<T1> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
-    return Directed<T1>{g.directed_nodes, List<DirectedEdge<std::any>>::cons(
-                                              e, g.directed_edges)};
-  }
-
-  static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
-
-  static List<edge> edges(Directed<std::any> g, T1 n) {
-    return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
-      return directed_originates<_tcI0, T1>(n, _x0);
-    });
-  }
-};
-
-/// An edge in an undirected graph connecting edge_first and edge_second.
-template <typename A> struct UndirectedEdge {
-  A edge_first;
-  A edge_second;
-};
-
-template <typename _tcI0, typename T1>
-  requires Eq<_tcI0, T1>
-bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
-  return (_tcI0::eqb(e.edge_first, a) || _tcI0::eqb(e.edge_second, a));
-}
-
-template <typename A> struct Undirected {
-  List<A> undirected_nodes;
-  List<UndirectedEdge<A>> undirected_edges;
-};
-
-template <typename _tcI0, typename T1>
-  requires Eq<_tcI0, T1>
-struct UndirectedGraph {
-  template <typename _A0> using G = Undirected<_A0>;
-  using edge = UndirectedEdge<T1>;
-
-  static Undirected<T1> empty() {
-    return Undirected<T1>{List<std::any>::nil(),
-                          List<UndirectedEdge<std::any>>::nil()};
-  }
-
-  static Undirected<T1> add_node(Undirected<std::any> g, T1 n) {
-    return Undirected<T1>{List<std::any>::cons(n, g.undirected_nodes),
-                          g.undirected_edges};
-  }
-
-  static Undirected<T1> add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
-    return Undirected<T1>{
-        g.undirected_nodes,
-        List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
-  }
-
-  static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }
-
-  static List<edge> edges(Undirected<std::any> g, T1 n) {
-    return g.undirected_edges.filter(
-        [=](UndirectedEdge<T1> _x0) mutable -> bool {
-          return undirected_originates<_tcI0, T1>(n, _x0);
-        });
-  }
-};
-
-bool nat_eqb(const Nat &n, const Nat &m);
-
-struct NatEq {
-  static bool eqb(Nat a0, Nat a1) { return nat_eqb(a0, a1); }
-};
-
-static_assert(Eq<NatEq, Nat>);
-
-template <typename _tcI0, typename T1>
-  requires Eq<_tcI0, T1>
-bool test_eq(const T1 &x, const T1 &y) {
-  return _tcI0::eqb(x, y);
-}
-
-const bool test_int_eq =
-    test_eq<NatEq, Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 
 #endif // INCLUDED_GRAPH

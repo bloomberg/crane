@@ -10,10 +10,10 @@ namespace SepExtDecideEquality {
 
 template <typename M>
 concept Sigma = requires {
-  typename M::Sigma;
+  typename M::Sigma0;
   {
-    M::Sigma_dec(std::declval<typename M::Sigma>(),
-                 std::declval<typename M::Sigma>())
+    M::Sigma_dec(std::declval<typename M::Sigma0>(),
+                 std::declval<typename M::Sigma0>())
   } -> std::same_as<bool>;
 };
 
