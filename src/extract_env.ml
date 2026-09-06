@@ -1092,9 +1092,16 @@ let demote_value_typeclasses struc =
     | Tmeta {contents = Some t} -> scan_type t
     | _ -> ()
   in
+  (* A record's field is data outright, so a class named as the field's own
+     type is used as data too -- not only one buried in its arguments.  A
+     class's own field is not: a superclass field is what a concept refines,
+     and demoting it would turn the refinement into a member. *)
   let scan_ind ind =
+    let scan_field =
+      match ind.ind_kind with Record _ -> scan_arg | _ -> scan_type
+    in
     Array.iter
-      (fun p -> Array.iter (List.iter scan_type) p.ip_types)
+      (fun p -> Array.iter (List.iter scan_field) p.ip_types)
       ind.ind_packets
   in
   let scan_decl = function

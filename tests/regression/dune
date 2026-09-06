@@ -8218,3 +8218,14 @@
   (alias runtest)
   (deps eq_rect_transport.t.exe)
   (action (run ./eq_rect_transport.t.exe))))
+
+(subdir instance_in_record
+ (rule
+  (targets instance_in_record.t.exe)
+  (deps InstanceInRecord.vo instance_in_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_in_record.t.exe instance_in_record.cpp instance_in_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_in_record.t.exe)
+  (action (run ./instance_in_record.t.exe))))
