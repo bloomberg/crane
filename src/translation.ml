@@ -7077,18 +7077,25 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
-(** Re-curry a global named in value position when its C++ declaration takes
-    more parameters than the use site expects.
+(** Make a global named in value position into an expression a caller can
+    invoke, by eta-expanding it into a lambda that calls it.
 
-    A definition returning a closure ([nat -> nat -> nat] read as [nat ->
-    (nat -> nat)]) is declared flat, with every arrow becoming a C++
-    parameter.  That suits a direct call, but handing the bare name to
-    something expecting a one-argument callable does not compile.  Rebuild the
-    nesting the use site asks for:
+    Two declarations need this.  A definition returning a closure ([nat -> nat
+    -> nat] read as [nat -> (nat -> nat)]) is declared flat, with every arrow
+    becoming a C++ parameter; that suits a direct call, but handing the bare
+    name to something expecting a one-argument callable does not compile, so
+    the nesting the use site asks for is rebuilt:
 
     {v [](uint64_t _ec0) { return [=](uint64_t _ec1) { return f(_ec0, _ec1); }; } v}
 
-    Returns [cglob] unchanged when the arities already agree. *)
+    A definition with a function-typed parameter is declared as a template
+    deducing that parameter ({!Common.fun_tparam_name}), and its name alone is
+    an overload set rather than a value; one flat lambda gives the call the
+    argument it deduces from:
+
+    {v [](std::function<uint64_t(uint64_t)> _ec0, uint64_t _ec1) { return f(_ec0, _ec1); } v}
+
+    Returns [cglob] unchanged when the declaration is already a value. *)
 and curry_to_expected env ?expected_ty x cglob =
   let decl_dom =
     match find_type_opt x with
@@ -7100,32 +7107,36 @@ and curry_to_expected env ?expected_ty x cglob =
       | _ -> [] )
     | None -> []
   in
-  match expected_ty with
-  | Some (Tfun (exp_dom, _))
-    when exp_dom <> [] && List.length decl_dom > List.length exp_dom ->
-    (* Only the arity comes from [exp_dom]; the types come from the
-       declaration, which is concrete where the callee's signature may still
-       be generic. *)
-    let n_outer = List.length exp_dom in
-    let exp_dom = List.filteri (fun i _ -> i < n_outer) decl_dom in
+  (* Number of parameters the outer lambda takes; the rest, if any, go into a
+     nested one.  Only the arity comes from [exp_dom]; the types come from the
+     declaration, which is concrete where the callee's signature may still be
+     generic. *)
+  let n_outer =
+    match expected_ty with
+    | Some (Tfun (exp_dom, _))
+      when exp_dom <> [] && List.length decl_dom > List.length exp_dom ->
+      Some (List.length exp_dom)
+    | _ when List.exists (function Tfun _ -> true | _ -> false) decl_dom ->
+      Some (List.length decl_dom)
+    | _ -> None
+  in
+  match n_outer with
+  | None -> cglob
+  | Some n_outer ->
+    let outer_dom = List.filteri (fun i _ -> i < n_outer) decl_dom in
     let inner_dom = List.filteri (fun i _ -> i >= n_outer) decl_dom in
     let param i ty = (ty, Some (Id.of_string (Printf.sprintf "_ec%d" i))) in
-    let outer = List.mapi param exp_dom in
+    let outer = List.mapi param outer_dom in
     let inner = List.mapi (fun i ty -> param (n_outer + i) ty) inner_dom in
     let arg (_, id_opt) = CPPvar (Option.get id_opt) in
     (* [CPPlambda] holds its parameters, and [CPPfun_call] its arguments, in
        reverse order. *)
-    let call =
-      CPPfun_call (cglob, List.rev_map arg (outer @ inner))
+    let call = CPPfun_call (cglob, List.rev_map arg (outer @ inner)) in
+    let body =
+      if inner = [] then call
+      else CPPlambda (List.rev inner, None, [Sreturn (Some call)], true)
     in
-    CPPlambda
-      ( List.rev outer,
-        None,
-        [ Sreturn
-            (Some (CPPlambda (List.rev inner, None, [Sreturn (Some call)], true)))
-        ],
-        true )
-  | _ -> cglob
+    CPPlambda (List.rev outer, None, [Sreturn (Some body)], true)
 
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't

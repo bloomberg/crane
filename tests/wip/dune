@@ -155,17 +155,6 @@
   (deps gadt_index_erasure.t.exe)
   (action (run ./gadt_index_erasure.t.exe))))
 
-(subdir hof_param_as_value
- (rule
-  (targets hof_param_as_value.t.exe)
-  (deps HofParamAsValue.vo hof_param_as_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hof_param_as_value.t.exe hof_param_as_value.cpp hof_param_as_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hof_param_as_value.t.exe)
-  (action (run ./hof_param_as_value.t.exe))))
-
 (subdir instance_as_value
  (rule
   (targets instance_as_value.t.exe)
