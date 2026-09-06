@@ -101,21 +101,167 @@
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
 
+(subdir deep_literal_nesting
+ (rule
+  (targets deep_literal_nesting.t.exe)
+  (deps DeepLiteralNesting.vo deep_literal_nesting.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_literal_nesting.t.exe deep_literal_nesting.cpp deep_literal_nesting.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_literal_nesting.t.exe)
+  (action (run ./deep_literal_nesting.t.exe))))
 
+(subdir eq_rect_transport
+ (rule
+  (targets eq_rect_transport.t.exe)
+  (deps EqRectTransport.vo eq_rect_transport.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_rect_transport.t.exe eq_rect_transport.cpp eq_rect_transport.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eq_rect_transport.t.exe)
+  (action (run ./eq_rect_transport.t.exe))))
 
+(subdir eta_fold_callback
+ (rule
+  (targets eta_fold_callback.t.exe)
+  (deps EtaFoldCallback.vo eta_fold_callback.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_fold_callback.t.exe eta_fold_callback.cpp eta_fold_callback.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_fold_callback.t.exe)
+  (action (run ./eta_fold_callback.t.exe))))
 
+(subdir fn_value_projections
+ (rule
+  (targets fn_value_projections.t.exe)
+  (deps FnValueProjections.vo fn_value_projections.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fn_value_projections.t.exe fn_value_projections.cpp fn_value_projections.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fn_value_projections.t.exe)
+  (action (run ./fn_value_projections.t.exe))))
 
+(subdir gadt_index_erasure
+ (rule
+  (targets gadt_index_erasure.t.exe)
+  (deps GadtIndexErasure.vo gadt_index_erasure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} gadt_index_erasure.t.exe gadt_index_erasure.cpp gadt_index_erasure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps gadt_index_erasure.t.exe)
+  (action (run ./gadt_index_erasure.t.exe))))
 
+(subdir hof_param_as_value
+ (rule
+  (targets hof_param_as_value.t.exe)
+  (deps HofParamAsValue.vo hof_param_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hof_param_as_value.t.exe hof_param_as_value.cpp hof_param_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hof_param_as_value.t.exe)
+  (action (run ./hof_param_as_value.t.exe))))
 
+(subdir instance_as_value
+ (rule
+  (targets instance_as_value.t.exe)
+  (deps InstanceAsValue.vo instance_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_as_value.t.exe instance_as_value.cpp instance_as_value.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_as_value.t.exe)
+  (action (run ./instance_as_value.t.exe))))
 
+(subdir instance_in_record
+ (rule
+  (targets instance_in_record.t.exe)
+  (deps InstanceInRecord.vo instance_in_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_in_record.t.exe instance_in_record.cpp instance_in_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_in_record.t.exe)
+  (action (run ./instance_in_record.t.exe))))
 
+(subdir int63_zero_div
+ (rule
+  (targets int63_zero_div.t.exe)
+  (deps Int63ZeroDiv.vo int63_zero_div.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_zero_div.t.exe int63_zero_div.cpp int63_zero_div.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps int63_zero_div.t.exe)
+  (action (run ./int63_zero_div.t.exe))))
 
+(subdir iter_capture
+ (rule
+  (targets iter_capture.t.exe)
+  (deps IterCapture.vo iter_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iter_capture.t.exe iter_capture.cpp iter_capture.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iter_capture.t.exe)
+  (action (run ./iter_capture.t.exe))))
 
+(subdir local_fix_two_inst
+ (rule
+  (targets local_fix_two_inst.t.exe)
+  (deps LocalFixTwoInst.vo local_fix_two_inst.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_two_inst.t.exe local_fix_two_inst.cpp local_fix_two_inst.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_two_inst.t.exe)
+  (action (run ./local_fix_two_inst.t.exe))))
 
+(subdir modtype_local_type_ref
+ (rule
+  (targets modtype_local_type_ref.t.exe)
+  (deps ModtypeLocalTypeRef.vo modtype_local_type_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_local_type_ref.t.exe modtype_local_type_ref.cpp modtype_local_type_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_local_type_ref.t.exe)
+  (action (run ./modtype_local_type_ref.t.exe))))
 
+(subdir monoid_class_arg
+ (rule
+  (targets monoid_class_arg.t.exe)
+  (deps MonoidClassArg.vo monoid_class_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monoid_class_arg.t.exe monoid_class_arg.cpp monoid_class_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monoid_class_arg.t.exe)
+  (action (run ./monoid_class_arg.t.exe))))
 
+(subdir sig_arg_match
+ (rule
+  (targets sig_arg_match.t.exe)
+  (deps SigArgMatch.vo sig_arg_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sig_arg_match.t.exe sig_arg_match.cpp sig_arg_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sig_arg_match.t.exe)
+  (action (run ./sig_arg_match.t.exe))))
 
-
-
-
-
+(subdir sigt_hetero_payload
+ (rule
+  (targets sigt_hetero_payload.t.exe)
+  (deps SigtHeteroPayload.vo sigt_hetero_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_hetero_payload.t.exe sigt_hetero_payload.cpp sigt_hetero_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_hetero_payload.t.exe)
+  (action (run ./sigt_hetero_payload.t.exe))))
