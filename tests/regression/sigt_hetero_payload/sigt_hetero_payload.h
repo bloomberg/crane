@@ -252,7 +252,9 @@ struct SigtHeteroPayload {
       [](const auto &i, const Nat &acc) {
         const auto &[x, a1] = i;
         const auto &[v, f] = a1;
-        return f(v).add(acc);
+        return std::any_cast<Nat>(
+                   std::any_cast<std::function<std::any(std::any)>>(f)(v))
+            .add(acc);
       },
       Nat::o());
 };

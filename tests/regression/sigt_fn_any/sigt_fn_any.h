@@ -130,14 +130,13 @@ template <SEM S> struct Make {
   /// Here the projected f has C++ static type std::any, so Crane emits
   /// any_cast<std::function<...>>(f)(...) — the failing cast.
   template <typename F1>
-    requires std::is_invocable_r_v<std::any, F1 &, typename S::idx &>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
                              std::any> &e,
                   F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
-    if (std::any_cast<bool>(
-            std::any_cast<std::function<std::any(std::any)>>(a1)(arg(a)))) {
+    if (std::any_cast<bool>(std::any_cast<std::function<std::any(std::any)>>(
+            a1)(crane_call_erased(arg, a)))) {
       return true;
     } else {
       return false;

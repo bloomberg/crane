@@ -10275,6 +10275,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
+  (* The scrutinee's binder, resolved while [t] is still the ML scrutinee:
+     below it is rebound to the generated C++ expression, and inside
+     [gen_cases] the name belongs to a branch body. *)
+  let scrut_db = scrutinee_binder t in
   let scrut_expected =
     match flatten_app t with
     | MLapp (MLglob (r, _), _)
@@ -10444,10 +10448,6 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let n_pat_vars = List.length ids in
       let saved_env_types = tctx.env_types in
       let saved_owned = tctx.move_owned_vars in
-      (* Resolve the scrutinee's binder before the pattern variables are
-         pushed: both the index and the types it is read against belong to
-         the enclosing scope. *)
-      let scrut_db = scrutinee_binder t in
       push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),

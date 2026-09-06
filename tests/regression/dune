@@ -8185,3 +8185,14 @@
   (alias runtest)
   (deps modtype_local_type_ref.t.exe)
   (action (run ./modtype_local_type_ref.t.exe))))
+
+(subdir sigt_hetero_payload
+ (rule
+  (targets sigt_hetero_payload.t.exe)
+  (deps SigtHeteroPayload.vo sigt_hetero_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sigt_hetero_payload.t.exe sigt_hetero_payload.cpp sigt_hetero_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sigt_hetero_payload.t.exe)
+  (action (run ./sigt_hetero_payload.t.exe))))
