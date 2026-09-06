@@ -100,14 +100,3 @@
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
 
-(subdir deep_literal_nesting
- (rule
-  (targets deep_literal_nesting.t.exe)
-  (deps DeepLiteralNesting.vo deep_literal_nesting.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_literal_nesting.t.exe deep_literal_nesting.cpp deep_literal_nesting.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deep_literal_nesting.t.exe)
-  (action (run ./deep_literal_nesting.t.exe))))
-

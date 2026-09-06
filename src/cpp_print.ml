@@ -3890,6 +3890,9 @@ let rec pp_cpp_decl env decl =
   Minicpp_check.check ~where:"translation" decl;
   let decl = maybe_loopify decl in
   Minicpp_check.check ~where:"loopify" decl;
+  (* An initialiser nested deeper than a compiler will parse becomes a run of
+     bindings; everything shallower is left as it stands. *)
+  let decl = Cpp_depth.flatten decl in
   (* Writing a type down is what decides its representation, so settle the
      [Topaque] slots before anything reads the declaration as final.  Crossing
      this seam is what gives {!Cpp_erasure.settled}, the printer's input
