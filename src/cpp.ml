@@ -952,14 +952,6 @@ let rec pp_structure_elem ~is_header f = function
           List.iter process_decl !current_structure_decls
         | None -> () );
         let this_eponymous_record = !eponymous_record in
-        let concept_simple_name_of ind_ref =
-          let sn = Common.pp_global_name Type ind_ref in
-          match String.rindex_opt sn ':' with
-          | Some idx
-            when idx > 0 && idx < String.length sn - 1 && sn.[idx - 1] = ':' ->
-            String.sub sn (idx + 1) (String.length sn - idx - 1)
-          | _ -> sn
-        in
         let module_name_str_raw = Common.pp_module mp in
         let has_concept_collision =
           List.exists
@@ -972,7 +964,7 @@ let rec pp_structure_elem ~is_header f = function
                     | TypeClass _ ->
                       let ind_ref = GlobRef.IndRef (kn, i) in
                       String.equal
-                        (concept_simple_name_of ind_ref)
+                        (Cpp_names.concept_name_of_ref ind_ref)
                         module_name_str_raw
                     | _ -> false )
                   (List.init (Array.length ind.ind_packets) Fun.id)
@@ -1007,14 +999,23 @@ let rec pp_structure_elem ~is_header f = function
           else
             []
         in
-        let typeclasses_pp =
-          prlist_with_sep fnl (fun x -> x) typeclass_concepts
+        (* A concept cannot be declared inside a struct, so the concepts of a
+           module nested in another module travel to file scope instead of
+           preceding their own struct. *)
+        let typeclass_concepts =
+          if old_context then (
+            file_scope_concepts := !file_scope_concepts @ typeclass_concepts;
+            [] )
+          else typeclass_concepts
         in
         let typeclasses_pp =
           if typeclass_concepts = [] then
             mt ()
           else
-            fnl () ++ typeclasses_pp ++ fnl () ++ fnl ()
+            fnl ()
+            ++ prlist_with_sep fnl (fun x -> x) typeclass_concepts
+            ++ fnl ()
+            ++ fnl ()
         in
         let modtype_concepts =
           if is_header then
@@ -2306,6 +2307,13 @@ let do_struct_with_decl_tracking ~is_header f s =
     repeat (List.length wrapper_names) pop_visible ();
   (* Pop the initial visibility entries pushed at the top of this function. *)
   List.iter (fun _ -> pop_visible ()) initial_mps;
+  let hoisted_concepts =
+    match !file_scope_concepts with
+    | [] -> mt ()
+    | l ->
+      file_scope_concepts := [];
+      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+  in
   let forward_decls =
     if is_header then
       match Cpp_print.take_forward_struct_decls () with
@@ -2315,7 +2323,13 @@ let do_struct_with_decl_tracking ~is_header f s =
       ignore (Cpp_print.take_forward_struct_decls ());
       mt () )
   in
-  v 0 (forward_decls ++ p ++ pass2_post_pp ++ deferred_lifted ++ deferred_defs)
+  v 0
+    ( forward_decls
+    ++ hoisted_concepts
+    ++ p
+    ++ pass2_post_pp
+    ++ deferred_lifted
+    ++ deferred_defs )
   ++ fnl ()
 
 (** Simple structure renderer without wrapper module handling. Used for

@@ -390,6 +390,10 @@ val enum_ctor_name_of_id : Id.t -> string
     Deterministic: same packet always produces the same names. *)
 val enum_ctor_names_of_packet : Id.t array -> string array
 
+(** The last [::]-separated component of a qualified name, e.g. [Nat::add]
+    becomes [add]. *)
+val last_component : string -> string
+
 (** Capitalize only the last [::]-separated component of a qualified name,
     e.g. [Nat::add] becomes [Nat::Add]. *)
 val capitalize_last_component : string -> string

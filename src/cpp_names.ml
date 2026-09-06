@@ -55,6 +55,16 @@ let pp_global_with_key k key r = str (str_global_with_key k key r)
 (** Pretty-print a global reference as a Pp.t. *)
 let pp_global k r = str (str_global k r)
 
+(** The name a typeclass concept is declared and referenced under.  A concept
+    may only appear at namespace scope, so it is hoisted out of every
+    enclosing struct and carries no qualifier -- neither at its declaration
+    nor at its uses. *)
+let concept_name_of_ref r =
+  Common.last_component (Common.pp_global_name Type r)
+
+(** {!concept_name_of_ref} as a [Pp.t]. *)
+let pp_concept_name_of_ref r = str (concept_name_of_ref r)
+
 (** Pretty-print a global name (without custom mapping) as a Pp.t. *)
 let pp_global_name k r = str (Common.pp_global k r)
 

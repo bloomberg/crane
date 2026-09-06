@@ -139,6 +139,11 @@ val render_ctx : render_ctx
 (** Concept definitions hoisted out of the current struct. *)
 val hoisted_concept_defs : Pp.t list ref
 
+(** Concepts from typeclasses declared inside a module.  A concept may only
+    appear at namespace scope, so one declared in a module -- emitted as a
+    struct -- is collected here and emitted at file scope instead. *)
+val file_scope_concepts : Pp.t list ref
+
 (** Immutable snapshot of a [render_ctx] for save/restore. *)
 type render_ctx_snapshot = {
   rcs_in_struct : bool;

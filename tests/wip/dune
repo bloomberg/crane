@@ -100,17 +100,6 @@
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
 
-(subdir class_in_nested_module
- (rule
-  (targets class_in_nested_module.t.exe)
-  (deps ClassInNestedModule.vo class_in_nested_module.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_in_nested_module.t.exe class_in_nested_module.cpp class_in_nested_module.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_in_nested_module.t.exe)
-  (action (run ./class_in_nested_module.t.exe))))
-
 (subdir class_method_function_payload
  (rule
   (targets class_method_function_payload.t.exe)

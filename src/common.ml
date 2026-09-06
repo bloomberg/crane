@@ -1687,14 +1687,22 @@ let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
       final)
     escaped
 
-(** Capitalize only the last [::]-separated component of a qualified name. *)
-let capitalize_last_component s =
+(** Split a qualified name at its last [::], as [(qualifier_including_colons,
+    last_component)].  The qualifier is empty when the name is unqualified. *)
+let split_last_component s =
   match String.rindex_opt s ':' with
   | Some i when i > 0 && i < String.length s - 1 && s.[i - 1] = ':' ->
-    let prefix = String.sub s 0 (i + 1) in
-    let suffix = String.sub s (i + 1) (String.length s - i - 1) in
-    prefix ^ String.capitalize_ascii suffix
-  | _ -> String.capitalize_ascii s
+    ( String.sub s 0 (i + 1),
+      String.sub s (i + 1) (String.length s - i - 1) )
+  | _ -> ("", s)
+
+(** The last [::]-separated component of a qualified name. *)
+let last_component s = snd (split_last_component s)
+
+(** Capitalize only the last [::]-separated component of a qualified name. *)
+let capitalize_last_component s =
+  let prefix, suffix = split_last_component s in
+  prefix ^ String.capitalize_ascii suffix
 
 (* ---- Needed C++ headers (demand-driven) ---- *)
 

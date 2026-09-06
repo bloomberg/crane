@@ -8350,3 +8350,14 @@
   (alias runtest)
   (deps loopify_name_hygiene.t.exe)
   (action (run ./loopify_name_hygiene.t.exe))))
+
+(subdir class_in_nested_module
+ (rule
+  (targets class_in_nested_module.t.exe)
+  (deps ClassInNestedModule.vo class_in_nested_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_in_nested_module.t.exe class_in_nested_module.cpp class_in_nested_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_in_nested_module.t.exe)
+  (action (run ./class_in_nested_module.t.exe))))

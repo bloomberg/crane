@@ -3260,7 +3260,7 @@ let pp_template_type = function
          (List.init arity Fun.id)
     ++ str "> class"
   | TTfun _ -> str "typename"
-  | TTconcept (concept, []) -> pp_global Type concept
+  | TTconcept (concept, []) -> pp_concept_name_of_ref concept
   | TTconcept (_, _ :: _) ->
     (* Multi-parameter concept: the constraint cannot be written inline
        ([C _tcI0] would apply C to only one argument), so declare the
@@ -3400,7 +3400,7 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
              what enforces the Rocq typeclass interface at the use site
              instead of an unconstrained [typename] (CWE-693 / CWE-345). *)
           Some
-            ( pp_global Type concept ++ str "<"
+            ( pp_concept_name_of_ref concept ++ str "<"
             ++ Id.print id
             ++ List.fold_left
                  (fun acc ty -> acc ++ str ", " ++ pp_type ty)
@@ -4323,22 +4323,9 @@ and pp_cpp_decl_raw env = function
         ++ wrapped_expr
         ++ str ";" )
   | Dconcept (id, cstr) ->
-    (* For hoisted concepts, use only the simple base name without module
-       qualification *)
-    let simple_name = Common.pp_global_name Type id in
-    (* Extract just the last component after :: if present *)
-    let last_component =
-      match String.rindex_opt simple_name ':' with
-      | Some idx
-        when idx > 0
-             && idx < String.length simple_name - 1
-             && simple_name.[idx - 1] = ':' ->
-        String.sub simple_name (idx + 1) (String.length simple_name - idx - 1)
-      | _ -> simple_name
-    in
     h
       ( str "concept "
-      ++ str last_component
+      ++ pp_concept_name_of_ref id
       ++ str " = "
       ++ pp_cpp_expr env [] cstr
       ++ str ";" )

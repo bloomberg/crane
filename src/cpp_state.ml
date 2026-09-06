@@ -327,6 +327,12 @@ let render_ctx =
     requires bodies *)
 let hoisted_concept_defs : Pp.t list ref = ref []
 
+(** Concepts from typeclasses declared inside a module.  A concept may only
+    appear at namespace scope, so one declared in a module -- which is emitted
+    as a struct -- cannot stay where it was written; it is collected here and
+    emitted at file scope instead. *)
+let file_scope_concepts : Pp.t list ref = ref []
+
 (** Snapshot of render context state for save/restore. Using a record prevents
     individual fields from drifting out of sync across save/restore boundaries.
 *)
@@ -847,6 +853,7 @@ let reset_cpp_state () =
   Hashtbl.clear non_accessor_labels;
   Hashtbl.clear functor_app_sources;
   hoisted_concept_defs := [];
+  file_scope_concepts := [];
   Common.reset_ctor_field_names ();
   Common.reset_needed_headers ();
   Table.reset_itree_header ();
