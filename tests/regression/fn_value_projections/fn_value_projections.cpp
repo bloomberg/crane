@@ -19,7 +19,9 @@ FnValueProjections::somes(const List<uint64_t> &l) {
 }
 
 List<uint64_t> FnValueProjections::ids(const List<uint64_t> &l) {
-  return l.template map<uint64_t>(Datatypes::template id<uint64_t>);
+  return l.template map<uint64_t>([](uint64_t _ue0) {
+    return std::any_cast<uint64_t>(Datatypes::id(std::any(_ue0)));
+  });
 }
 
 std::any Datatypes::id(std::any x) { return x; }

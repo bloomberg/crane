@@ -122,17 +122,6 @@
   (deps eq_rect_transport.t.exe)
   (action (run ./eq_rect_transport.t.exe))))
 
-(subdir fn_value_projections
- (rule
-  (targets fn_value_projections.t.exe)
-  (deps FnValueProjections.vo fn_value_projections.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} fn_value_projections.t.exe fn_value_projections.cpp fn_value_projections.t.cpp)))
- (rule
-  (alias runtest)
-  (deps fn_value_projections.t.exe)
-  (action (run ./fn_value_projections.t.exe))))
-
 (subdir gadt_index_erasure
  (rule
   (targets gadt_index_erasure.t.exe)

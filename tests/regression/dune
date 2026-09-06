@@ -8141,3 +8141,14 @@
   (alias runtest)
   (deps eta_fold_callback.t.exe)
   (action (run ./eta_fold_callback.t.exe))))
+
+(subdir fn_value_projections
+ (rule
+  (targets fn_value_projections.t.exe)
+  (deps FnValueProjections.vo fn_value_projections.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fn_value_projections.t.exe fn_value_projections.cpp fn_value_projections.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fn_value_projections.t.exe)
+  (action (run ./fn_value_projections.t.exe))))

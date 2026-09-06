@@ -4143,6 +4143,32 @@ and coerce ?term ?from ~into expr =
         | Tfun (_, cod) when is_function_value && partially_erased_fun_ty into
           ->
           wrap_crane_erase_fn ~ret_ty:cod expr
+        (* The mirror image: a callable whose own signature erased -- a
+           constant whose Rocq type hides its quantifier behind a type alias,
+           so extraction gives it no type variable at all -- reaching a slot
+           that names concrete types.  It is called through a lambda that
+           boxes what it is given and recovers what it returns. *)
+        | Tfun (dom, cod)
+          when (match concrete_source with
+                | `Concrete f -> is_fully_erased_fun_ty f
+                | `Unknown -> false)
+               && not (is_fully_erased_fun_ty into) ->
+          let params =
+            List.mapi
+              (fun i ty -> (ty, Id.of_string (Printf.sprintf "_ue%d" i)))
+              dom
+          in
+          let args =
+            List.map
+              (fun (ty, id) -> coerce ~from:ty ~into:Tany (CPPvar id))
+              params
+          in
+          (* [CPPlambda] holds its parameters, and [CPPfun_call] its
+             arguments, in reverse order. *)
+          let call = coerce ~from:Tany ~into:cod (CPPfun_call (expr, List.rev args)) in
+          CPPlambda
+            ( List.rev_map (fun (ty, id) -> (ty, Some id)) params,
+              None, [Sreturn (Some call)], true )
         | _ -> (
           match concrete_source with
           | `Concrete f when not (prints_as_any into) ->
@@ -5320,7 +5346,24 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Some ty -> count_ml_value_arrows ty
         | None -> 0
       in
-      eta_expand_to_expected ?expected_ty ~ml_arity
+      (* Whether any branch of the lambda's own body returns a closure.  Only
+         the statement structure is walked: a lambda nested inside some other
+         expression is not this lambda's result. *)
+      let returns_a_lambda =
+        match f with
+        | CPPlambda (_, _, body, _) ->
+          let found = ref false in
+          let rec walk s =
+            ( match s with
+            | Sreturn (Some (CPPlambda _)) -> found := true
+            | _ -> () );
+            ignore (map_stmt Fun.id (fun s -> walk s; s) Fun.id s)
+          in
+          List.iter walk body;
+          !found
+        | _ -> false
+      in
+      eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda
         ~arity:(List.length filtered_args) f )
   | MLglob (x, tys) when is_inline_custom x ->
     let ty = find_type x in
@@ -5364,7 +5407,37 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     if needs_call then
       CPPfun_call (cglob, [])
     else
-      curry_to_expected env ?expected_ty x cglob
+      ( match
+          Option.map
+            (fun ty ->
+              materialise_opaque (cpp_of_ml env (expand_ml_fun_alias ty)))
+            (find_type_opt x)
+        with
+      (* A declaration whose whole signature erased is not a template: it
+         takes no explicit type arguments, and a use site naming concrete
+         types reaches it through the adapter {!coerce} builds.  The type the
+         use site wants is the slot's when there is one; failing that, a
+         single type argument tells what the one quantifier every erased
+         position came from was instantiated at. *)
+      | Some from when is_fully_erased_fun_ty from ->
+        let into =
+          match (expected_ty, tys_cpp) with
+          | Some into, _ -> Some into
+          | None, [t] when not (prints_as_any t) ->
+            let rec instantiate = function
+              | Tany -> t
+              | Tfun (dom, cod) ->
+                Tfun (List.map instantiate dom, instantiate cod)
+              | ty -> ty
+            in
+            Some (instantiate from)
+          | None, _ -> None
+        in
+        let cglob = mk_cppglob x [] in
+        ( match into with
+        | Some into -> coerce ~from ~into cglob
+        | None -> cglob )
+      | _ -> curry_to_expected env ?expected_ty x cglob )
   | MLcons (_ty, r, _ts)
     when match r with
          | GlobRef.ConstructRef ((kn, i), _) ->
@@ -7092,11 +7165,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
 
     [ml_arity] is how many arguments the slot's MiniML type takes: a lambda
     that takes fewer than its C++ slot but as many as its ML type is curried
-    on purpose, not shortened, and is left alone. *)
-and eta_expand_to_expected ?expected_ty ~ml_arity ~arity f =
+    on purpose, not shortened, and is left alone -- as is one whose body
+    [returns_a_lambda], having spelled the remaining arguments out itself. *)
+and eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
   match Option.map strip_cpp_ref_const expected_ty with
   | Some (Tfun (dom, _))
-    when arity > 0 && ml_arity > arity && List.length dom > arity ->
+    when arity > 0 && ml_arity > arity && List.length dom > arity
+         && not returns_a_lambda ->
     let params =
       List.mapi
         (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "_ee%d" i))))
