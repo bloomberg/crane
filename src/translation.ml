@@ -3738,8 +3738,31 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           | _ -> e
         else e
       in
-      let result = gen_ctor_arg ?expected_ty:expected_cpp_ty
-          ~slot:{slot with expected_ml_ty = new_expected} e in
+      (* The slot's own signature, when it erased only its domain: a callable
+         reaching it is written against that signature (its parameters arrive
+         boxed), and {!coerce} adapts it with [crane_erase_fn]. *)
+      let erased_fn_slot =
+        if is_passthrough_ctor_arg i || not (ml_expr_is_function_value e) then
+          None
+        else
+          match List.nth_opt field_types_for_wrap i with
+          | Some (Miniml.Tvar j | Miniml.Tvar' j) -> (
+            match
+              Option.map Ml_type_util.tvar_erase_type
+                (List.nth_opt ctor_temps_at_slot (j - 1))
+            with
+            | Some t when partially_erased_fun_ty t -> Some t
+            | _ -> None )
+          | _ -> None
+      in
+      let result =
+        gen_ctor_arg
+          ?expected_ty:
+            ( match erased_fn_slot with
+            | Some _ as t -> t
+            | None -> expected_cpp_ty )
+          ~slot:{slot with expected_ml_ty = new_expected} e
+      in
       tctx.current_cpp_return_type <- saved_ret;
       (* Whether this constructor's value lands in a DEEPLY erased slot: one
          whose consumer does not merely read a [std::any] back, but
@@ -3792,6 +3815,13 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
                      not a callable being stored. *)
                   | CPPlambda _ when not (ml_expr_is_function_value e) -> None
                   | _ -> Some Tany )
+              (* A slot that kept a concrete result but erased its domain
+                 ([std::function<uint64_t(std::any)>], a pair component whose
+                 Rocq type is [sty -> nat] at an erased [sty]) is not a box:
+                 a callable reaches it through the [crane_erase_fn] adapter,
+                 which {!coerce} supplies once it is told the slot's own
+                 signature. *)
+              | Some _ when erased_fn_slot <> None -> erased_fn_slot
               | Some _ when slot_is_deeply_erased -> Some Tany
               | _ -> None )
           | _ -> None
@@ -4964,10 +4994,34 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            parameter dropped by [filtered_args_with_owned] keeps its
            conversion-derived assignment. *)
         let () =
+          (* What the slot this lambda flows into declares its parameters to
+             be, when it declares a signature at all. *)
+          let expected_param_cpp_tys =
+            match Option.map (unfold_cpp_typedef env) expected_ty with
+            | Some (Tfun (doms, _)) -> Some doms
+            | _ -> None
+          in
           let declared =
-            List.map2
-              (fun (id, _, _) (ty, _, _) -> (id, ty))
-              filtered_args_with_owned cpp_arg_info
+            List.combine
+              (List.mapi (fun j (id, _, _) -> (j, id)) filtered_args_with_owned)
+              cpp_arg_info
+            |> List.map (fun ((j, id), (ty, _, _)) ->
+                 (* A parameter the slot declares erased arrives as a box, even
+                    though it is declared [const auto&] so the deduction can
+                    also land on a concrete type.  Assign it [std::any] so uses
+                    inside the body recover their own type from it; the
+                    [Tauto] the declaration strips to would say, wrongly, that
+                    the value is already what the body wants. *)
+                 let assigned =
+                   match (ty, expected_param_cpp_tys) with
+                   | Tref (Tmod (TMconst, Tauto)), Some doms
+                     when ( match List.nth_opt doms j with
+                          | Some d -> prints_as_any d
+                          | None -> false ) ->
+                     Tany
+                   | _ -> ty
+                 in
+                 (id, assigned))
           in
           assign_binder_types env
             ~cpp:(List.map (fun (id, _) -> List.assoc_opt id declared) args)

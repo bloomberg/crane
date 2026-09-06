@@ -159,10 +159,13 @@ struct ErasedTypeFieldLambda {
   static uint64_t weigh(const slot &s);
   static inline const List<slot> slots = List<slot>::cons(
       slot{List<std::pair<std::any, std::function<uint64_t(std::any)>>>::cons(
-          std::make_pair(UINT64_C(1), [](const auto &x) { return x; }),
+          std::make_pair(UINT64_C(1), crane_erase_fn<uint64_t>(
+                                          [](const auto &x) { return x; })),
           List<std::pair<std::any, std::function<uint64_t(std::any)>>>::cons(
-              std::make_pair(UINT64_C(2),
-                             [](const auto &x) { return (x * UINT64_C(10)); }),
+              std::make_pair(
+                  UINT64_C(2), crane_erase_fn<uint64_t>([](const auto &x) {
+                    return (std::any_cast<uint64_t>(x) * UINT64_C(10));
+                  })),
               List<std::pair<std::any,
                              std::function<uint64_t(std::any)>>>::nil()))},
       List<slot>::cons(
@@ -174,9 +177,10 @@ struct ErasedTypeFieldLambda {
                                     UINT64_C(2),
                                     List<uint64_t>::cons(
                                         UINT64_C(3), List<uint64_t>::nil()))),
-                            [](const List<uint64_t> &_x) {
-                              return _x.length();
-                            }),
+                            crane_erase_fn<uint64_t>(
+                                [](const List<uint64_t> &_x) {
+                                  return _x.length();
+                                })),
                         List<std::pair<std::any, std::function<uint64_t(
                                                      std::any)>>>::nil())},
           List<slot>::nil()));

@@ -8405,3 +8405,14 @@
   (alias runtest)
   (deps dependent_vector_nth.t.exe)
   (action (run ./dependent_vector_nth.t.exe))))
+
+(subdir erased_type_field_lambda
+ (rule
+  (targets erased_type_field_lambda.t.exe)
+  (deps ErasedTypeFieldLambda.vo erased_type_field_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_type_field_lambda.t.exe erased_type_field_lambda.cpp erased_type_field_lambda.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_type_field_lambda.t.exe)
+  (action (run ./erased_type_field_lambda.t.exe))))
