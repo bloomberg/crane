@@ -8163,3 +8163,14 @@
   (alias runtest)
   (deps sig_arg_match.t.exe)
   (action (run ./sig_arg_match.t.exe))))
+
+(subdir gadt_index_erasure
+ (rule
+  (targets gadt_index_erasure.t.exe)
+  (deps GadtIndexErasure.vo gadt_index_erasure.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} gadt_index_erasure.t.exe gadt_index_erasure.cpp gadt_index_erasure.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps gadt_index_erasure.t.exe)
+  (action (run ./gadt_index_erasure.t.exe))))

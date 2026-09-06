@@ -239,10 +239,11 @@ struct GadtIndexErasure {
 
   /// The result is read out of the box at a pair type.
   static inline const uint64_t direct =
-      eval<std::pair<uint64_t, bool>>(
-          expr::pair(expr::ite(expr::bl(true), expr::lit(UINT64_C(3)),
-                               expr::lit(UINT64_C(4))),
-                     expr::bl(false)))
+      crane_any_cast<std::pair<uint64_t, bool>>(
+          eval<std::pair<uint64_t, bool>>(
+              expr::pair(expr::ite(expr::bl(true), expr::lit(UINT64_C(3)),
+                                   expr::lit(UINT64_C(4))),
+                         expr::bl(false))))
           .first;
   /// The evaluator is passed as a function value to map, which instantiates
   /// it at nat while its signature still returns std::any.

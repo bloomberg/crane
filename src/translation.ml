@@ -2857,6 +2857,28 @@ and erase_type_args_to_any = function
     behind a [using] alias that {!resolves_to_any_type} follows. *)
 and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
 
+(** [names_only_scoped_tvars ty] -- whether every type variable [ty] spells is
+    one this scope declares.  A slot type read off a callee's signature is
+    written in the callee's type variables, which name nothing here, so such a
+    type cannot be used as the type a use site wants. *)
+and names_only_scoped_tvars ty =
+  let scope = get_current_type_vars () in
+  List.for_all (fun id -> List.exists (Id.equal id) scope) (get_tvars ty)
+
+(** [glob_declared_cod_erases r] -- whether the declaration of [r] returns a
+    box.  A declaration is converted from the global's own ML type with no
+    type variables in scope, and that conversion erases a result no parameter
+    pins down -- a type index, say -- however concrete the type is at a given
+    call site.  So the question can only be asked of the whole type: the
+    codomain alone converts to the type variable and reveals nothing. *)
+and glob_declared_cod_erases r =
+  match find_type_opt r with
+  | Some ty -> (
+    match convert_ml_type_to_cpp_type (empty_env ()) [] (type_simpl ty) with
+    | Tfun (_, cod) -> prints_as_any cod
+    | _ -> false )
+  | None -> false
+
 (** [populate_erased_field_env ~cname ~typ ~env ~n_pat_vars ~n_fields
     ~non_erased_def_site_field_tys] populates {!cpp_binder_types} for a
     pattern-match branch.  For each
@@ -4143,29 +4165,39 @@ and coerce ?term ?from ~into expr =
         | Tfun (_, cod) when is_function_value && partially_erased_fun_ty into
           ->
           wrap_crane_erase_fn ~ret_ty:cod expr
-        (* The mirror image: a callable whose own signature erased -- a
-           constant whose Rocq type hides its quantifier behind a type alias,
-           so extraction gives it no type variable at all -- reaching a slot
-           that names concrete types.  It is called through a lambda that
-           boxes what it is given and recovers what it returns. *)
+        (* The mirror image: a callable whose result erased -- a constant
+           whose Rocq type hides its quantifier behind a type alias, or whose
+           result a type index alone pins down -- reaching a slot that names
+           that result concretely.  It is called through a lambda that gives
+           each argument the shape the callable declares and recovers what it
+           returns. *)
         | Tfun (dom, cod)
-          when (match concrete_source with
-                | `Concrete f -> is_fully_erased_fun_ty f
-                | `Unknown -> false)
-               && not (is_fully_erased_fun_ty into) ->
+          when (not (prints_as_any cod))
+               && ( match concrete_source with
+                  | `Concrete (Tfun (_, scod)) -> prints_as_any scod
+                  | _ -> false ) ->
+          let sdom, scod =
+            match concrete_source with
+            | `Concrete (Tfun (d, c)) -> (d, c)
+            | _ -> ([], Tany)
+          in
           let params =
             List.mapi
               (fun i ty -> (ty, Id.of_string (Printf.sprintf "_ue%d" i)))
               dom
           in
           let args =
-            List.map
-              (fun (ty, id) -> coerce ~from:ty ~into:Tany (CPPvar id))
+            List.mapi
+              (fun i (ty, id) ->
+                let into = Option.default Tany (List.nth_opt sdom i) in
+                coerce ~from:ty ~into (CPPvar id) )
               params
           in
           (* [CPPlambda] holds its parameters, and [CPPfun_call] its
              arguments, in reverse order. *)
-          let call = coerce ~from:Tany ~into:cod (CPPfun_call (expr, List.rev args)) in
+          let call =
+            coerce ~from:scod ~into:cod (CPPfun_call (expr, List.rev args))
+          in
           CPPlambda
             ( List.rev_map (fun (ty, id) -> (ty, Some id)) params,
               None, [Sreturn (Some call)], true )
@@ -5413,17 +5445,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               materialise_opaque (cpp_of_ml env (expand_ml_fun_alias ty)))
             (find_type_opt x)
         with
-      (* A declaration whose whole signature erased is not a template: it
-         takes no explicit type arguments, and a use site naming concrete
-         types reaches it through the adapter {!coerce} builds.  The type the
-         use site wants is the slot's when there is one; failing that, a
-         single type argument tells what the one quantifier every erased
-         position came from was instantiated at. *)
-      | Some from when is_fully_erased_fun_ty from ->
+      (* A declaration whose result erased -- because its Rocq type hides
+         the quantifier behind a type alias, or because a type index alone
+         pins the result down -- hands back a box whatever the use site's
+         instantiation says, so a use site naming concrete types reaches it
+         through the adapter {!coerce} builds.  The type the use site wants
+         is the slot's when there is one; failing that, a single type
+         argument tells what the one quantifier every erased position came
+         from was instantiated at. *)
+      | Some from
+        when (match from with Tfun (_, cod) -> prints_as_any cod | _ -> false)
+        ->
         let into =
           match (expected_ty, tys_cpp) with
-          | Some into, _ -> Some into
-          | None, [t] when not (prints_as_any t) ->
+          | Some into, _ when names_only_scoped_tvars into -> Some into
+          | _, [t] when not (prints_as_any t) ->
             let rec instantiate = function
               | Tany -> t
               | Tfun (dom, cod) ->
@@ -5431,9 +5467,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | ty -> ty
             in
             Some (instantiate from)
-          | None, _ -> None
+          | _, _ -> None
         in
-        let cglob = mk_cppglob x [] in
+        (* A signature that erased entirely is not a template and takes no
+           explicit type arguments; one that kept some is still called with
+           the ones the use site supplied. *)
+        let cglob =
+          if is_fully_erased_fun_ty from then mk_cppglob x [] else cglob
+        in
         ( match into with
         | Some into -> coerce ~from ~into cglob
         | None -> cglob )
@@ -8554,7 +8595,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                   List.filter (fun x -> match x with MLdummy _ -> false | _ -> true) args
                 in
                 List.exists has_magic inner_args
-              else false
+              else glob_declared_cod_erases r
+            | MLglob (r, _) -> glob_declared_cod_erases r
             | MLapp (MLmagic (_, _), _) -> true
             | MLrel i -> (
               match get_env_type_opt i with
