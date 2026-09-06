@@ -144,17 +144,6 @@
   (deps instance_in_record.t.exe)
   (action (run ./instance_in_record.t.exe))))
 
-(subdir local_fix_two_inst
- (rule
-  (targets local_fix_two_inst.t.exe)
-  (deps LocalFixTwoInst.vo local_fix_two_inst.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_two_inst.t.exe local_fix_two_inst.cpp local_fix_two_inst.t.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_two_inst.t.exe)
-  (action (run ./local_fix_two_inst.t.exe))))
-
 (subdir monoid_class_arg
  (rule
   (targets monoid_class_arg.t.exe)

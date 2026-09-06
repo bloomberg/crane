@@ -181,14 +181,13 @@ struct LocalFixTwoInst {
   }
 
   static inline const Nat run = []() {
-    return _anon_len<Nat>(
-               List<Nat>::cons(
-                   Nat::s(Nat::o()),
-                   List<Nat>::cons(
-                       Nat::s(Nat::s(Nat::o())),
-                       List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                       List<Nat>::nil()))))
-        .add(_anon_len<Nat>(List<bool>::cons(
+    return _anon_len(List<Nat>::cons(
+                         Nat::s(Nat::o()),
+                         List<Nat>::cons(
+                             Nat::s(Nat::s(Nat::o())),
+                             List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                             List<Nat>::nil()))))
+        .add(_anon_len(List<bool>::cons(
             true, List<bool>::cons(false, List<bool>::nil()))));
   }();
 };

@@ -11286,7 +11286,33 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                   | None -> Tvar (0, Some tvar_name) )
               extra_tvar_names
           in
-          outer_args @ extra_args
+          let args = outer_args @ extra_args in
+          (* An argument the parameter types already spell is deduced at the
+             call, and must be left to be: one explicit argument list stands
+             for every reference to the fix, while the instantiations need
+             not agree -- a polymorphic local fix may well be used at two
+             types in the same body.  Only a trailing run can be dropped,
+             explicit arguments being positional. *)
+          let deducible =
+            match List.nth_opt funs_compiled x with
+            | Some (_, params, _) ->
+              List.concat_map
+                (fun (_, ml_ty) ->
+                  get_tvars
+                    (convert_ml_type_to_cpp_type env all_tvar_names ml_ty) )
+                params
+            | None -> []
+          in
+          if List.length all_tvar_names <> List.length args then args
+          else
+            let rec strip = function
+              | [] -> []
+              | (id, ty) :: rest ->
+                ( match strip rest with
+                | [] when List.exists (Id.equal id) deducible -> []
+                | rest -> (id, ty) :: rest )
+            in
+            List.map snd (strip (List.combine all_tvar_names args))
       in
       let lifted_call = mk_cppglob lifted_ref call_type_args in
       (* Phase 2: shift move tracking for the single let binding *)
