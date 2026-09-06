@@ -550,6 +550,35 @@ let rec get_concept_name_from_mt = function
   | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
   | MTsig _ -> None
 
+(** Concept names whose definition the struct being rendered has to hold back,
+    because their [requires] clause spells the struct's own types.  A nested
+    module constrained by one of these cannot assert its conformance from
+    inside the struct. *)
+let held_back_concepts : string list ref = ref []
+
+(** Assertions deferred out of the struct being rendered.  Each entry is the
+    concept's name and the asserted struct's, the latter qualified as far as
+    the frames it has passed through; the frame that held the concept back
+    emits it. *)
+let deferred_concept_asserts : (string * Pp.t * Pp.t) list ref = ref []
+
+(** The assertion that the module rendered as [name] satisfies the concept of
+    its module type [mty].  When that concept is one the enclosing struct holds
+    back, so is the assertion: the concept is not declared yet. *)
+let concept_assert_pp name mty =
+  match get_concept_name_from_mt mty with
+  | None -> mt ()
+  | Some concept_name ->
+    let cn = Pp.string_of_ppcmds concept_name in
+    if render_ctx.rc_in_struct && List.exists (String.equal cn) !held_back_concepts
+    then (
+      deferred_concept_asserts :=
+        (cn, concept_name, name) :: !deferred_concept_asserts;
+      mt () )
+    else
+      fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name
+      ++ str ">);"
+
 (** Like {!get_concept_name_from_mt}, but returns the base module type's raw
     kernel name (for callers that emit [Name<M>] directly rather than a
     pretty-printed concept reference). *)
@@ -824,18 +853,7 @@ let rec pp_structure_elem ~is_header f = function
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
           in
-          let static_assert =
-            match get_concept_name_from_mt m.ml_mod_type with
-            | Some concept_name ->
-              fnl ()
-              ++ str "static_assert("
-              ++ concept_name
-              ++ str "<"
-              ++ name
-              ++ str ">);"
-            | None -> mt ()
-          in
-          using_decl ++ static_assert
+          using_decl ++ concept_assert_pp name m.ml_mod_type
       | MEstruct (_mp, sel) ->
         let old_context = render_ctx.rc_in_struct in
         let old_struct_name = render_ctx.rc_struct_name in
@@ -1053,18 +1071,44 @@ let rec pp_structure_elem ~is_header f = function
                       let all = List.append hoisted [main_concept] in
                       prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
                   in
-                  Some concept_pp
+                  Some (modtype_name, concept_pp)
                 | _ -> None )
               sel
           else
             []
         in
-        let modtypes_pp = prlist_with_sep fnl (fun x -> x) modtype_concepts in
-        let modtypes_pp =
-          if modtype_concepts = [] then
+        (* A concept whose [requires] clause names one of the enclosing
+           struct's own types cannot be emitted before that struct.  Such a
+           concept is held back and emitted after it instead; the others keep
+           their place, since the struct's body may constrain a functor with
+           them. *)
+        let self_qualifier = Pp.string_of_ppcmds name ^ "::" in
+        let modtype_concepts, modtype_concepts_after =
+          List.partition
+            (fun (_, c) ->
+              not
+                (Common.contains_substring
+                   (Pp.string_of_ppcmds c)
+                   self_qualifier ) )
+            modtype_concepts
+        in
+        let this_held_back =
+          List.map
+            (fun (n, _) -> Pp.string_of_ppcmds n)
+            modtype_concepts_after
+        in
+        let concepts_group_pp concepts =
+          if concepts = [] then
             mt ()
           else
-            modtypes_pp ++ fnl () ++ fnl ()
+            prlist_with_sep fnl (fun (_, c) -> c) concepts ++ fnl () ++ fnl ()
+        in
+        let modtypes_pp = concepts_group_pp modtype_concepts in
+        let modtypes_after_pp =
+          if modtype_concepts_after = [] then
+            mt ()
+          else
+            fnl () ++ fnl () ++ concepts_group_pp modtype_concepts_after
         in
         (* Determine if this module should be promoted: eponymous inductive
            (not record) where the module struct IS the type directly. *)
@@ -1168,7 +1212,34 @@ let rec pp_structure_elem ~is_header f = function
           render_ctx.rc_struct_mp <- Some mp );
         if is_header && typeclass_concepts <> [] then
           render_ctx.rc_concepts_hoisted <- true;
+        let outer_deferred_asserts = !deferred_concept_asserts in
+        let outer_held_back = !held_back_concepts in
+        deferred_concept_asserts := [];
+        held_back_concepts := this_held_back @ outer_held_back;
         let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+        held_back_concepts := outer_held_back;
+        (* The assertions this struct held back: those naming a concept it
+           declares are emitted after it, now that both are in scope; the rest
+           travel further out, qualified by this struct on the way. *)
+        let mine, passed_out =
+          List.partition
+            (fun (cn, _, _) -> List.exists (String.equal cn) this_held_back)
+            (List.rev !deferred_concept_asserts)
+        in
+        let deferred_asserts_pp =
+          prlist
+            (fun (_, concept, sub) ->
+              fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ name
+              ++ str "::" ++ sub ++ str ">);" )
+            mine
+        in
+        deferred_concept_asserts :=
+          List.rev_append
+            (List.map
+               (fun (cn, concept, sub) ->
+                 (cn, concept, name ++ str "::" ++ sub) )
+               passed_out )
+            outer_deferred_asserts;
         let this_method_candidates = !method_candidates in
         render_ctx.rc_in_struct <- old_context;
         render_ctx.rc_in_template <- old_in_template;
@@ -1240,7 +1311,9 @@ let rec pp_structure_elem ~is_header f = function
               ++ body
               ++ str "};"
             in
-            typeclasses_pp ++ modtypes_pp ++ struct_def ++ this_deferred
+            typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
+            ++ deferred_asserts_pp
+            ++ this_deferred
           else
             let template_decl, record_fields_pp, record_methods_pp =
               match this_eponymous_record with
@@ -1353,18 +1426,9 @@ let rec pp_structure_elem ~is_header f = function
                 ++ body
                 ++ str "};"
               in
-              let static_assert =
-                match get_concept_name_from_mt m.ml_mod_type with
-                | Some concept_name ->
-                  fnl ()
-                  ++ str "static_assert("
-                  ++ concept_name
-                  ++ str "<"
-                  ++ name
-                  ++ str ">);"
-                | None -> mt ()
-              in
-              typeclasses_pp ++ modtypes_pp ++ struct_def ++ static_assert
+              typeclasses_pp ++ modtypes_pp ++ struct_def ++ modtypes_after_pp
+              ++ deferred_asserts_pp
+              ++ concept_assert_pp name m.ml_mod_type
         else if this_promoted then
           (* Promoted template: all defs are inline in header, skip .cpp *)
           mt ()

@@ -8174,3 +8174,14 @@
   (alias runtest)
   (deps gadt_index_erasure.t.exe)
   (action (run ./gadt_index_erasure.t.exe))))
+
+(subdir modtype_local_type_ref
+ (rule
+  (targets modtype_local_type_ref.t.exe)
+  (deps ModtypeLocalTypeRef.vo modtype_local_type_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_local_type_ref.t.exe modtype_local_type_ref.cpp modtype_local_type_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_local_type_ref.t.exe)
+  (action (run ./modtype_local_type_ref.t.exe))))
