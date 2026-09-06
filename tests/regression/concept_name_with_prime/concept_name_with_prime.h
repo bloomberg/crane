@@ -105,12 +105,12 @@ concept Ord_ = requires {
 struct ConceptNameWithPrime {
   struct NatOrd_ {
     using t = Nat;
-    static Bool0 cmp(const Nat &_x0, const Nat &_x1);
+    static Bool0 cmp(const Nat &x0_, const Nat &x1_);
   };
 
   template <Ord_ O> struct Use {
-    static Bool0 same(typename O::t _x0, typename O::t _x1) {
-      return O::cmp(_x0, _x1);
+    static Bool0 same(typename O::t x0_, typename O::t x1_) {
+      return O::cmp(x0_, x1_);
     }
   };
 

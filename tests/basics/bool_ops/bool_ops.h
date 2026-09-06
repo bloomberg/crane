@@ -10,9 +10,9 @@ struct BoolOps {
   static bool my_xorb(bool a, bool b);
   static uint64_t if_nat(bool b, uint64_t t, uint64_t f);
   static bool complex_bool(bool a, bool b, bool c);
-  static bool nat_eq(uint64_t _x0, uint64_t _x1);
-  static bool nat_lt(uint64_t _x0, uint64_t _x1);
-  static bool nat_le(uint64_t _x0, uint64_t _x1);
+  static bool nat_eq(uint64_t x0_, uint64_t x1_);
+  static bool nat_lt(uint64_t x0_, uint64_t x1_);
+  static bool nat_le(uint64_t x0_, uint64_t x1_);
   static inline const bool test_neg_t = my_negb(true);
   static inline const bool test_neg_f = my_negb(false);
   static inline const bool test_and_tt = my_andb(true, true);

@@ -43,8 +43,8 @@ struct NatAsIntLike {
     return v;
   }
 
-  static uint64_t add(uint64_t _x0, uint64_t _x1);
-  static bool eqb(uint64_t _x0, uint64_t _x1);
+  static uint64_t add(uint64_t x0_, uint64_t x1_);
+  static bool eqb(uint64_t x0_, uint64_t x1_);
 };
 
 template <IntLike I> struct Counter {

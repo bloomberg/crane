@@ -9,8 +9,8 @@ List<uint64_t> WellFoundedRec::countdown_acc(uint64_t n) {
   }
 }
 
-List<uint64_t> WellFoundedRec::countdown(uint64_t _x0) {
-  return countdown_acc(_x0);
+List<uint64_t> WellFoundedRec::countdown(uint64_t x0_) {
+  return countdown_acc(x0_);
 }
 
 uint64_t WellFoundedRec::div2_wf(uint64_t x) {

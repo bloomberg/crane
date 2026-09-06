@@ -27,8 +27,8 @@ std::optional<std::monostate> UnitVoidStress::some_void_call(uint64_t n) {
   }());
 }
 
-void UnitVoidStress::id_void_call(uint64_t _x0) {
-  consume(_x0);
+void UnitVoidStress::id_void_call(uint64_t x0_) {
+  consume(x0_);
   return;
 }
 
@@ -40,8 +40,8 @@ UnitVoidStress::pair_with_discard(uint64_t n) {
   }());
 }
 
-void UnitVoidStress::store_and_call(uint64_t _x0) {
-  consume(_x0);
+void UnitVoidStress::store_and_call(uint64_t x0_) {
+  consume(x0_);
   return;
 }
 

@@ -1,7 +1,7 @@
 #include "dim10_tower_proof_chain.h"
 
 Dim10TowerProofChainCase::nat_le
-Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any _H) {
+Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any h_) {
   if (n <= 0) {
     if (m <= 0) {
       throw std::logic_error("unreachable: impossible dependent match branch");
@@ -15,7 +15,7 @@ Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m, std::any _H) {
       throw std::logic_error("absurd case");
     } else {
       uint64_t n1 = m - 1;
-      return nat_le_of_lt(n0, n1, _H);
+      return nat_le_of_lt(n0, n1, h_);
     }
   }
 }
@@ -44,8 +44,8 @@ uint64_t Dim10TowerProofChainCase::nat_sub(uint64_t n, uint64_t m) {
   }
 }
 
-uint64_t Dim10TowerProofChainCase::poly_approx_dim(uint64_t _x0, uint64_t _x1) {
-  return nat_sub(_x0, _x1);
+uint64_t Dim10TowerProofChainCase::poly_approx_dim(uint64_t x0_, uint64_t x1_) {
+  return nat_sub(x0_, x1_);
 }
 
 uint64_t Dim10TowerProofChainCase::layer_dim(uint64_t base_dim, uint64_t n) {
@@ -74,18 +74,18 @@ Dim10TowerProofChainCase::GradedObj Dim10TowerProofChainCase::P_n_obj(
 }
 
 Dim10TowerProofChainCase::GradedObj
-Dim10TowerProofChainCase::D_n_obj(uint64_t _x0, uint64_t _x1) {
-  return layer_obj(_x0, _x1);
+Dim10TowerProofChainCase::D_n_obj(uint64_t x0_, uint64_t x1_) {
+  return layer_obj(x0_, x1_);
 }
 
 Dim10TowerProofChainCase::QPos
-Dim10TowerProofChainCase::D_n_measure(uint64_t _x0, uint64_t _x1) {
-  return layer_measure(_x0, _x1);
+Dim10TowerProofChainCase::D_n_measure(uint64_t x0_, uint64_t x1_) {
+  return layer_measure(x0_, x1_);
 }
 
 Dim10TowerProofChainCase::EventuallyZero
-Dim10TowerProofChainCase::D_n_measure_eventually_zero(uint64_t _x0) {
-  return layer_measure_eventually_zero(_x0);
+Dim10TowerProofChainCase::D_n_measure_eventually_zero(uint64_t x0_) {
+  return layer_measure_eventually_zero(x0_);
 }
 
 Dim10TowerProofChainCase::GradedGoodwillieTower

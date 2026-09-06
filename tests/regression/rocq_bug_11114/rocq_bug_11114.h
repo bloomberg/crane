@@ -116,15 +116,15 @@ struct RocqBug11114 {
   }
 
   struct pkg {
-    List<uint64_t> _sig;
-    t _t;
+    List<uint64_t> sig_;
+    t t_;
   };
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static pkg map(F0 &&f, const pkg &p) {
-    return pkg{p._sig, [=]() mutable {
-                 const auto &_sv = p._t;
+    return pkg{p.sig_, [=]() mutable {
+                 const auto &_sv = p.t_;
                  const auto &[k0] = _sv;
                  return t::t0(f(k0));
                }()};

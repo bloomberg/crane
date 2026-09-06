@@ -123,7 +123,7 @@ struct FimOperatesOnPairs {
   static state set_reg(const state &s, uint64_t r, uint64_t v);
   static uint64_t get_reg_pair(const state &s, uint64_t r);
   static state set_reg_pair(const state &s, uint64_t r, uint64_t v);
-  static state execute_fim(const state &_x0, uint64_t _x1, uint64_t _x2);
+  static state execute_fim(const state &x0_, uint64_t x1_, uint64_t x2_);
   static inline const state sample = state{List<uint64_t>::cons(
       UINT64_C(0),
       List<uint64_t>::cons(

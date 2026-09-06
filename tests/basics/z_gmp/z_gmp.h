@@ -4,14 +4,14 @@
 #include <gmpxx.h>
 
 struct ZGMPTest {
-  static mpz_class add_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class mul_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class sub_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class abs_test(const mpz_class &_x0);
-  static mpz_class opp_test(const mpz_class &_x0);
-  static bool eqb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool ltb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool leb_test(const mpz_class &_x0, const mpz_class &_x1);
+  static mpz_class add_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class mul_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class sub_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class abs_test(const mpz_class &x0_);
+  static mpz_class opp_test(const mpz_class &x0_);
+  static bool eqb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool ltb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool leb_test(const mpz_class &x0_, const mpz_class &x1_);
   static inline const mpz_class zero_val = mpz_class(0);
   static inline const mpz_class pos_val = mpz_class(42);
   static inline const mpz_class neg_val = mpz_class(-7);

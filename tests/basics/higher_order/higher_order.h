@@ -171,7 +171,7 @@ struct HigherOrder {
   }
 
   /// adder n returns a function that adds n to its argument.
-  static uint64_t adder(uint64_t _x0, uint64_t _x1);
+  static uint64_t adder(uint64_t x0_, uint64_t x1_);
 
   /// twice f returns a function that applies f two times.
   template <typename T1, typename F0>

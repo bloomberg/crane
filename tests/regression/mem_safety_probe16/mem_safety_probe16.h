@@ -614,10 +614,11 @@ struct MemSafetyProbe16 {
   static uint64_t
   compose_summers(const mylist<tree> &trees,
                   std::function<uint64_t(uint64_t)> acc,
-                  uint64_t _x0) { /// _Enter: captures varying parameters for
+                  uint64_t x0_) { /// _Enter: captures varying parameters for
                                   /// each recursive call.
 
     struct _Enter {
+      uint64_t x0_;
       std::function<uint64_t(uint64_t)> acc;
       mylist<tree> trees;
     };
@@ -625,12 +626,13 @@ struct MemSafetyProbe16 {
     using _Frame = std::variant<_Enter>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(acc), trees});
+    _stack.emplace_back(_Enter{x0_, std::move(acc), trees});
     /// Loopified compose_summers: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t x0_ = _f.x0_;
       std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
       const mylist<tree> &trees = std::move(_f.trees);
       _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
@@ -647,7 +649,7 @@ struct MemSafetyProbe16 {
                 _x0);
           };
         }
-      }()(_x0);
+      }()(x0_);
     }
     return _result;
   }

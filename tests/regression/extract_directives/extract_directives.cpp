@@ -21,12 +21,12 @@ uint64_t ExtractDirectives::safe_pred(uint64_t n) {
   }
 }
 
-uint64_t ExtractDirectives::inner_add(uint64_t _x0, uint64_t _x1) {
-  return (_x0 + _x1);
+uint64_t ExtractDirectives::inner_add(uint64_t x0_, uint64_t x1_) {
+  return (x0_ + x1_);
 }
 
-uint64_t ExtractDirectives::inner_mul(uint64_t _x0, uint64_t _x1) {
-  return (_x0 * _x1);
+uint64_t ExtractDirectives::inner_mul(uint64_t x0_, uint64_t x1_) {
+  return (x0_ * x1_);
 }
 
 uint64_t ExtractDirectives::outer_use(uint64_t a, uint64_t b) {

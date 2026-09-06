@@ -42,7 +42,7 @@ struct SectionsModules {
 
   struct NatMonoid {
     using T = uint64_t;
-    static uint64_t op(uint64_t _x0, uint64_t _x1);
+    static uint64_t op(uint64_t x0_, uint64_t x1_);
     static inline const uint64_t id = UINT64_C(0);
   };
 
@@ -66,7 +66,7 @@ struct SectionsModules {
   };
 
   static uint64_t use_both(uint64_t a, uint64_t b, uint64_t c);
-  static uint64_t use_outer(uint64_t _x0, uint64_t _x1);
+  static uint64_t use_outer(uint64_t x0_, uint64_t x1_);
 
   struct Base {
     static inline const uint64_t base_val = UINT64_C(42);

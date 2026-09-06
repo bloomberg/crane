@@ -14,7 +14,7 @@
 struct AxiomTypes {
   using MysteryType = std::any /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
-  static MysteryType mystery_function(MysteryType _x0);
+  static MysteryType mystery_function(MysteryType x0_);
   static MysteryType use_axiom(std::monostate _x);
 
   struct AxiomRecord {

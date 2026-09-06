@@ -705,11 +705,14 @@ let reset_renaming_tables flag =
     keyword escaping or prime replacement modified the identifier. *)
 let modular_rename_ex _k id =
   let s = ascii_of_id id in
-  let is_kw = Id.Set.mem id (get_keywords ()) in
+  let s' = Mlutil.unreserve_leading_underscore s in
+  let was_underscored = not (String.equal s s') in
+  let s = s' in
+  let is_kw = Id.Set.mem (Id.of_string s) (get_keywords ()) in
   let s = if is_kw then s ^ "_" else s in
   let has_prime = String.contains s '\'' in
   let s = String.map (fun c -> if c = '\'' then '_' else c) s in
-  (s, is_kw || has_prime)
+  (s, is_kw || has_prime || was_underscored)
 
 (** Rename an identifier for modular extraction (keyword escaping, prime
     replacement). *)

@@ -141,8 +141,8 @@ Comparison Pos::compare_cont(Comparison r, const Positive &x,
   }
 }
 
-Comparison Pos::compare(const Positive &_x0, const Positive &_x1) {
-  return compare_cont(Comparison::EQ, _x0, _x1);
+Comparison Pos::compare(const Positive &x0_, const Positive &x1_) {
+  return compare_cont(Comparison::EQ, x0_, x1_);
 }
 
 bool Pos::eqb(const Positive &p, const Positive &q) {

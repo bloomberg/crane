@@ -9,6 +9,6 @@ uint64_t SPropTest::guarded_pred(uint64_t n) {
   }
 }
 
-uint64_t SPropTest::safe_div(uint64_t _x0, uint64_t _x1) {
-  return (_x1 ? _x0 / _x1 : 0);
+uint64_t SPropTest::safe_div(uint64_t x0_, uint64_t x1_) {
+  return (x1_ ? x0_ / x1_ : 0);
 }

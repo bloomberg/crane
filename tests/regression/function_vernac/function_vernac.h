@@ -210,10 +210,10 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_div2_2: saves [_res0, a2, p0, n0], resumes after recursive
+      /// _Resume_R_div2_2: saves [_res, a2, p0, n0], resumes after recursive
       /// call with _result.
       struct _Resume_R_div2_2 {
-        R_div2 _res0;
+        R_div2 _res;
         uint64_t a2;
         uint64_t p0;
         uint64_t n0;
@@ -241,15 +241,15 @@ struct FunctionVernac {
             const auto &[n0] = std::get<typename R_div2::R_div2_1>(_sv.v());
             _result = f0(n0);
           } else {
-            const auto &[n0, p0, a2, _res0] =
+            const auto &[n0, p0, a2, _res] =
                 std::get<typename R_div2::R_div2_2>(_sv.v());
-            _stack.emplace_back(_Resume_R_div2_2{*_res0, a2, p0, n0});
-            _stack.emplace_back(_Enter{crane_raw(_res0), p0, a2});
+            _stack.emplace_back(_Resume_R_div2_2{*_res, a2, p0, n0});
+            _stack.emplace_back(_Enter{crane_raw(_res), p0, a2});
           }
         } else {
           auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
           _result =
-              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res0), std::move(_result));
+              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res), std::move(_result));
         }
       }
       return _result;
@@ -270,10 +270,10 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_div2_2: saves [_res0, a2, p0, n0], resumes after recursive
+      /// _Resume_R_div2_2: saves [_res, a2, p0, n0], resumes after recursive
       /// call with _result.
       struct _Resume_R_div2_2 {
-        R_div2 _res0;
+        R_div2 _res;
         uint64_t a2;
         uint64_t p0;
         uint64_t n0;
@@ -301,15 +301,15 @@ struct FunctionVernac {
             const auto &[n0] = std::get<typename R_div2::R_div2_1>(_sv.v());
             _result = f0(n0);
           } else {
-            const auto &[n0, p0, a2, _res0] =
+            const auto &[n0, p0, a2, _res] =
                 std::get<typename R_div2::R_div2_2>(_sv.v());
-            _stack.emplace_back(_Resume_R_div2_2{*_res0, a2, p0, n0});
-            _stack.emplace_back(_Enter{crane_raw(_res0), p0, a2});
+            _stack.emplace_back(_Resume_R_div2_2{*_res, a2, p0, n0});
+            _stack.emplace_back(_Enter{crane_raw(_res), p0, a2});
           }
         } else {
           auto _f = std::move(std::get<_Resume_R_div2_2>(_frame));
           _result =
-              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res0), std::move(_result));
+              f1(_f.n0, _f.p0, _f.a2, std::move(_f._res), std::move(_result));
         }
       }
       return _result;
@@ -347,11 +347,11 @@ struct FunctionVernac {
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
              std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &, T1 &>
-  static T1 div2_rec(F0 &&_x0, F1 &&_x1, F2 &&_x2, uint64_t _x3) {
-    return div2_rect<T1>(_x0, _x1, _x2, _x3);
+  static T1 div2_rec(F0 &&x0_, F1 &&x1_, F2 &&x2_, uint64_t x3_) {
+    return div2_rect<T1>(x0_, x1_, x2_, x3_);
   }
 
-  static R_div2 R_div2_correct(uint64_t n, uint64_t _res);
+  static R_div2 R_div2_correct(uint64_t n, uint64_t res_);
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, List<uint64_t> &>
@@ -454,10 +454,10 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_list_sum_1: saves [_res0, a3, xs0, x0, l0], resumes after
+      /// _Resume_R_list_sum_1: saves [_res, a3, xs0, x0, l0], resumes after
       /// recursive call with _result.
       struct _Resume_R_list_sum_1 {
-        R_list_sum _res0;
+        R_list_sum _res;
         uint64_t a3;
         List<uint64_t> xs0;
         uint64_t x0;
@@ -484,15 +484,15 @@ struct FunctionVernac {
                 std::get<typename R_list_sum::R_list_sum_0>(_sv.v());
             _result = f(l0);
           } else {
-            const auto &[l0, x0, xs0, a3, _res0] =
+            const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-            _stack.emplace_back(_Resume_R_list_sum_1{*_res0, a3, xs0, x0, l0});
-            _stack.emplace_back(_Enter{crane_raw(_res0), xs0, a3});
+            _stack.emplace_back(_Resume_R_list_sum_1{*_res, a3, xs0, x0, l0});
+            _stack.emplace_back(_Enter{crane_raw(_res), xs0, a3});
           }
         } else {
           auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
           _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
-                       std::move(_f._res0), std::move(_result));
+                       std::move(_f._res), std::move(_result));
         }
       }
       return _result;
@@ -514,10 +514,10 @@ struct FunctionVernac {
         uint64_t _x0;
       };
 
-      /// _Resume_R_list_sum_1: saves [_res0, a3, xs0, x0, l0], resumes after
+      /// _Resume_R_list_sum_1: saves [_res, a3, xs0, x0, l0], resumes after
       /// recursive call with _result.
       struct _Resume_R_list_sum_1 {
-        R_list_sum _res0;
+        R_list_sum _res;
         uint64_t a3;
         List<uint64_t> xs0;
         uint64_t x0;
@@ -544,15 +544,15 @@ struct FunctionVernac {
                 std::get<typename R_list_sum::R_list_sum_0>(_sv.v());
             _result = f(l0);
           } else {
-            const auto &[l0, x0, xs0, a3, _res0] =
+            const auto &[l0, x0, xs0, a3, _res] =
                 std::get<typename R_list_sum::R_list_sum_1>(_sv.v());
-            _stack.emplace_back(_Resume_R_list_sum_1{*_res0, a3, xs0, x0, l0});
-            _stack.emplace_back(_Enter{crane_raw(_res0), xs0, a3});
+            _stack.emplace_back(_Resume_R_list_sum_1{*_res, a3, xs0, x0, l0});
+            _stack.emplace_back(_Enter{crane_raw(_res), xs0, a3});
           }
         } else {
           auto _f = std::move(std::get<_Resume_R_list_sum_1>(_frame));
           _result = f0(std::move(_f.l0), _f.x0, std::move(_f.xs0), _f.a3,
-                       std::move(_f._res0), std::move(_result));
+                       std::move(_f._res), std::move(_result));
         }
       }
       return _result;
@@ -586,11 +586,11 @@ struct FunctionVernac {
     requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &> &&
              std::is_invocable_r_v<T1, F1 &, List<uint64_t> &, uint64_t &,
                                    List<uint64_t> &, T1 &>
-  static T1 list_sum_rec(F0 &&_x0, F1 &&_x1, const List<uint64_t> &_x2) {
-    return list_sum_rect<T1>(_x0, _x1, _x2);
+  static T1 list_sum_rec(F0 &&x0_, F1 &&x1_, const List<uint64_t> &x2_) {
+    return list_sum_rect<T1>(x0_, x1_, x2_);
   }
 
-  static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t _res);
+  static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t res_);
   static inline const uint64_t test_div2 = div2(UINT64_C(10));
   static inline const uint64_t test_sum = list_sum(List<uint64_t>::cons(
       UINT64_C(1),

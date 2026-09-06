@@ -108,24 +108,26 @@ struct MemSafetyProbe10 {
     /// Each level composes the closure from recursive results.
     /// After loopification, these closures are assigned to _result,
     /// not returned via Sreturn.
-    uint64_t tree_to_adder(uint64_t _x0) const {
+    uint64_t tree_to_adder(uint64_t x0_) const {
       const tree *_self = this;
 
       /// _Enter: captures varying parameters for each recursive call.
       struct _Enter {
         const tree *_self;
+        uint64_t x0_;
       };
 
       using _Frame = std::variant<_Enter>;
       uint64_t _result{};
       crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
+      _stack.emplace_back(_Enter{_self, x0_});
       /// Loopified tree_to_adder: _Enter.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
         auto _f = std::move(std::get<_Enter>(_frame));
         const tree *_self = _f._self;
+        uint64_t x0_ = _f.x0_;
         tree _self_val = *_self;
         _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
           if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
@@ -145,7 +147,7 @@ struct MemSafetyProbe10 {
             };
             return [=](uint64_t n) mutable { return fl((a1 + fr(n))); };
           }
-        }()(_x0);
+        }()(x0_);
       }
       return _result;
     }
@@ -509,10 +511,11 @@ struct MemSafetyProbe10 {
   /// and the closure from the previous step.
   static uint64_t
   chain_adders(const mylist<uint64_t> &l, std::function<uint64_t(uint64_t)> acc,
-               uint64_t _x0) { /// _Enter: captures varying parameters for each
+               uint64_t x0_) { /// _Enter: captures varying parameters for each
                                /// recursive call.
 
     struct _Enter {
+      uint64_t x0_;
       std::function<uint64_t(uint64_t)> acc;
       mylist<uint64_t> l;
     };
@@ -520,12 +523,13 @@ struct MemSafetyProbe10 {
     using _Frame = std::variant<_Enter>;
     uint64_t _result{};
     crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(acc), l});
+    _stack.emplace_back(_Enter{x0_, std::move(acc), l});
     /// Loopified chain_adders: _Enter.
     while (!_stack.empty()) {
       _Frame _frame = std::move(_stack.back());
       _stack.pop_back();
       auto _f = std::move(std::get<_Enter>(_frame));
+      uint64_t x0_ = _f.x0_;
       std::function<uint64_t(uint64_t)> acc = std::move(_f.acc);
       const mylist<uint64_t> &l = std::move(_f.l);
       _result = [=]() mutable -> std::function<uint64_t(uint64_t)> {
@@ -541,7 +545,7 @@ struct MemSafetyProbe10 {
                 _x0);
           };
         }
-      }()(_x0);
+      }()(x0_);
     }
     return _result;
   }

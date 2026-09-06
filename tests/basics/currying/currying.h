@@ -7,8 +7,8 @@
 
 struct Currying {
   static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);
-  static uint64_t add3_partial1(uint64_t _x0, uint64_t _x1);
-  static uint64_t add3_partial2(uint64_t _x0);
+  static uint64_t add3_partial1(uint64_t x0_, uint64_t x1_);
+  static uint64_t add3_partial2(uint64_t x0_);
 
   template <typename A, typename B> struct pair {
     // DATA
@@ -52,7 +52,7 @@ struct Currying {
   }
 
   static uint64_t pair_add(const pair<uint64_t, uint64_t> &p);
-  static uint64_t curried_add(uint64_t _x0, uint64_t _x1);
+  static uint64_t curried_add(uint64_t x0_, uint64_t x1_);
   static uint64_t
   uncurried_add3(const pair<uint64_t, pair<uint64_t, uint64_t>> &p);
 
@@ -62,10 +62,10 @@ struct Currying {
     return f(a, b);
   }
 
-  static uint64_t sub(uint64_t _x0, uint64_t _x1);
-  static uint64_t flipped_sub(uint64_t _x0, uint64_t _x1);
-  static uint64_t add_base(uint64_t _x0, uint64_t _x1);
-  static uint64_t add_ten(uint64_t _x0);
+  static uint64_t sub(uint64_t x0_, uint64_t x1_);
+  static uint64_t flipped_sub(uint64_t x0_, uint64_t x1_);
+  static uint64_t add_base(uint64_t x0_, uint64_t x1_);
+  static uint64_t add_ten(uint64_t x0_);
   static inline const uint64_t test_add3 =
       add3(UINT64_C(1), UINT64_C(2), UINT64_C(3));
   static inline const uint64_t test_partial1 =

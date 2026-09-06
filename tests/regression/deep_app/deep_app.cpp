@@ -24,9 +24,9 @@ DeepApp::mylist<uint64_t> DeepApp::map_id(const DeepApp::mylist<uint64_t> &l) {
 
 /// Append two lists.
 DeepApp::mylist<uint64_t>
-DeepApp::append_lists(const DeepApp::mylist<uint64_t> &_x0,
-                      const DeepApp::mylist<uint64_t> &_x1) {
-  return app<uint64_t>(_x0, _x1);
+DeepApp::append_lists(const DeepApp::mylist<uint64_t> &x0_,
+                      const DeepApp::mylist<uint64_t> &x1_) {
+  return app<uint64_t>(x0_, x1_);
 }
 
 uint64_t DeepApp::head_or_zero(const DeepApp::mylist<uint64_t> &l) {

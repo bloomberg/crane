@@ -10,8 +10,8 @@ uint64_t UnitVoidEdge2::let_use_as_arg(uint64_t n) {
   return take_unit(x);
 }
 
-void UnitVoidEdge2::let_return_unit(uint64_t _x0) {
-  opaque_unit(_x0);
+void UnitVoidEdge2::let_return_unit(uint64_t x0_) {
+  opaque_unit(x0_);
   return;
 }
 

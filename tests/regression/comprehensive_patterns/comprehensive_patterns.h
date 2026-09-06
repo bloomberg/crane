@@ -339,7 +339,7 @@ struct ComprehensivePatterns {
 
   static uint64_t use_proj(uint64_t n);
   static uint64_t proj_as_arg(const NC &r);
-  static uint64_t use_two(uint64_t _x0, uint64_t _x1);
+  static uint64_t use_two(uint64_t x0_, uint64_t x1_);
   static uint64_t multi_proj_args(const NC &r);
   static uint64_t let_proj_then_base(const NC &r);
   static uint64_t base_then_multi_proj(const NC &r);
@@ -368,8 +368,8 @@ struct ComprehensivePatterns {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, NC &>
-  static uint64_t apply(F0 &&f, NC _x0) {
-    return f(std::move(_x0));
+  static uint64_t apply(F0 &&f, NC x0_) {
+    return f(std::move(x0_));
   }
 
   static uint64_t hof_test(const NC &r);
@@ -379,7 +379,7 @@ struct ComprehensivePatterns {
     uint64_t state_data;
   };
 
-  static uint64_t use_two_fc(uint64_t _x0, uint64_t _x1);
+  static uint64_t use_two_fc(uint64_t x0_, uint64_t x1_);
   static uint64_t bug_two_args(const State &s);
   static uint64_t use_three(uint64_t x, uint64_t y, uint64_t z);
   static uint64_t bug_three_args(const State &s);

@@ -96,7 +96,7 @@ struct LoopifyNontailPair {
   static std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
   countdown(List<uint64_t> l);
   static std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
-  countdown_top(const List<uint64_t> &_x0);
+  countdown_top(const List<uint64_t> &x0_);
   static uint64_t run_count(const List<uint64_t> &l);
 };
 

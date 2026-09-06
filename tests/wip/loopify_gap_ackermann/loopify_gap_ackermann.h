@@ -7,7 +7,7 @@
 #include <variant>
 
 struct LoopifyGapAckermann {
-  static uint64_t ack(uint64_t m, uint64_t _x0);
+  static uint64_t ack(uint64_t m, uint64_t x0_);
 };
 
 #endif // INCLUDED_LOOPIFY_GAP_ACKERMANN

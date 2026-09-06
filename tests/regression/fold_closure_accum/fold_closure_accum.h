@@ -236,7 +236,7 @@ struct FoldClosureAccum {
   /// captures the previous closure (acc) and the current tree (t).
   /// If captures are by reference, the previous closure is stack-local
   /// and dies when the fold step returns, creating a dangling chain.
-  static uint64_t compose_adders(const List<tree> &trees, uint64_t _x0);
+  static uint64_t compose_adders(const List<tree> &trees, uint64_t x0_);
   /// Test: compose adders from 3 trees.
   /// t1 sums to 10, t2 sums to 20, t3 sums to 30.
   /// compose_adders t1; t2; t3 x = x + 30 + 20 + 10 = x + 60

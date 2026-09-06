@@ -91,7 +91,7 @@ public:
 
 struct WellFoundedRec {
   static List<uint64_t> countdown_acc(uint64_t n);
-  static List<uint64_t> countdown(uint64_t _x0);
+  static List<uint64_t> countdown(uint64_t x0_);
   static uint64_t div2_wf(uint64_t x);
   static uint64_t gcd_wf(uint64_t x, uint64_t b);
   static inline const uint64_t test_div2_0 = div2_wf(UINT64_C(0));

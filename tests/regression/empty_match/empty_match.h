@@ -25,7 +25,7 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 
-  static uint64_t from_empty(const empty &_x0);
+  static uint64_t from_empty(const empty &x0_);
 
   template <typename A, typename B> struct either {
     // TYPES

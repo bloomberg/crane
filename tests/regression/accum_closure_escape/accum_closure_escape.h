@@ -559,7 +559,7 @@ struct AccumClosureEscape {
   /// This creates closures that capture OTHER closures.
   static uint64_t compose_from_list(const mylist<uint64_t> &l,
                                     std::function<uint64_t(uint64_t)> acc,
-                                    uint64_t _x0) {
+                                    uint64_t x0_) {
     return [=]() mutable -> std::function<uint64_t(uint64_t)> {
       if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
         return acc;
@@ -572,7 +572,7 @@ struct AccumClosureEscape {
               a1_value, [=](uint64_t x) mutable { return acc((a0 + x)); }, _x0);
         };
       }
-    }()(_x0);
+    }()(x0_);
   }
 
   /// test3: compose_from_list 10, 20, 30 id

@@ -18,7 +18,7 @@ struct UnitVoidEdge2 {
   static uint64_t take_unit(std::monostate _x);
   static void opaque_unit(uint64_t _x);
   static uint64_t let_use_as_arg(uint64_t n);
-  static void let_return_unit(uint64_t _x0);
+  static void let_return_unit(uint64_t x0_);
   static uint64_t let_match_unit(uint64_t n);
   static uint64_t let_chain_use(uint64_t n);
   static uint64_t let_use_in_if(uint64_t n, bool flag);
@@ -51,8 +51,8 @@ struct UnitVoidEdge2 {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply(F0 &&f, T1 _x0) {
-    return f(_x0);
+  static T2 apply(F0 &&f, T1 x0_) {
+    return f(x0_);
   }
 
   static inline const uint64_t apply_take_unit =

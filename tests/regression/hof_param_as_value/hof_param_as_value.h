@@ -135,8 +135,8 @@ public:
 struct HofParamAsValue {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t ap(F0 &&f, uint64_t _x0) {
-    return f(_x0);
+  static uint64_t ap(F0 &&f, uint64_t x0_) {
+    return f(x0_);
   }
 
   static inline const List<std::function<uint64_t(uint64_t)>> fs =

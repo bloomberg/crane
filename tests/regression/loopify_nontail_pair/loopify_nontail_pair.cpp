@@ -64,8 +64,8 @@ LoopifyNontailPair::countdown(
 }
 
 std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
-LoopifyNontailPair::countdown_top(const List<uint64_t> &_x0) {
-  return countdown(_x0);
+LoopifyNontailPair::countdown_top(const List<uint64_t> &x0_) {
+  return countdown(x0_);
 }
 
 uint64_t LoopifyNontailPair::run_count(const List<uint64_t> &l) {

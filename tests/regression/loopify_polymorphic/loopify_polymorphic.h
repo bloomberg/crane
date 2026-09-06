@@ -536,39 +536,39 @@ struct LoopifyPolymorphic {
     return std::move(*_head);
   }
 
-  static uint64_t nat_length(const List<uint64_t> &_x0);
-  static List<uint64_t> nat_reverse(const List<uint64_t> &_x0);
-  static List<uint64_t> nat_append(const List<uint64_t> &_x0,
-                                   const List<uint64_t> &_x1);
-  static std::optional<uint64_t> nat_last(const List<uint64_t> &_x0);
-  static List<uint64_t> nat_take(uint64_t _x0, const List<uint64_t> &_x1);
-  static List<uint64_t> nat_drop(uint64_t _x0, const List<uint64_t> &_x1);
-  static std::optional<uint64_t> nat_nth(uint64_t _x0,
-                                         const List<uint64_t> &_x1);
-  static bool nat_eq(uint64_t _x0, uint64_t _x1);
+  static uint64_t nat_length(const List<uint64_t> &x0_);
+  static List<uint64_t> nat_reverse(const List<uint64_t> &x0_);
+  static List<uint64_t> nat_append(const List<uint64_t> &x0_,
+                                   const List<uint64_t> &x1_);
+  static std::optional<uint64_t> nat_last(const List<uint64_t> &x0_);
+  static List<uint64_t> nat_take(uint64_t x0_, const List<uint64_t> &x1_);
+  static List<uint64_t> nat_drop(uint64_t x0_, const List<uint64_t> &x1_);
+  static std::optional<uint64_t> nat_nth(uint64_t x0_,
+                                         const List<uint64_t> &x1_);
+  static bool nat_eq(uint64_t x0_, uint64_t x1_);
   static bool is_even(uint64_t x);
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
-  static List<uint64_t> nat_filter(F0 &&_x0, const List<uint64_t> &_x1) {
-    return poly_filter<uint64_t>(_x0, _x1);
+  static List<uint64_t> nat_filter(F0 &&x0_, const List<uint64_t> &x1_) {
+    return poly_filter<uint64_t>(x0_, x1_);
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static List<uint64_t> nat_map(F0 &&_x0, const List<uint64_t> &_x1) {
-    return poly_map<uint64_t, uint64_t>(_x0, _x1);
+  static List<uint64_t> nat_map(F0 &&x0_, const List<uint64_t> &x1_) {
+    return poly_map<uint64_t, uint64_t>(x0_, x1_);
   }
 
   template <typename F0>
     requires std::is_invocable_r_v<bool, F0 &, uint64_t &>
   static std::pair<List<uint64_t>, List<uint64_t>>
-  nat_partition(F0 &&_x0, const List<uint64_t> &_x1) {
-    return poly_partition<uint64_t>(_x0, _x1);
+  nat_partition(F0 &&x0_, const List<uint64_t> &x1_) {
+    return poly_partition<uint64_t>(x0_, x1_);
   }
 
-  static bool nat_member(uint64_t _x0, const List<uint64_t> &_x1);
-  static List<uint64_t> nat_replicate(uint64_t _x0, uint64_t _x1);
+  static bool nat_member(uint64_t x0_, const List<uint64_t> &x1_);
+  static List<uint64_t> nat_replicate(uint64_t x0_, uint64_t x1_);
 };
 
 #endif // INCLUDED_LOOPIFY_POLYMORPHIC

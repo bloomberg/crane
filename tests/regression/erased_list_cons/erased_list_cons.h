@@ -263,13 +263,13 @@ template <SYM Ty> struct DefsFn {
   static std::any
   action_of(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
                        std::pair<std::any, std::any>> &e,
-            symbols_semty _x0) {
+            symbols_semty x0_) {
     return [=]() mutable -> std::function<std::any(std::any)> {
       const auto &[x0, a1] = e;
-      const auto &[_x, _x1] = x0;
-      const auto &[_x2, a] = std::any_cast<std::pair<std::any, std::any>>(a1);
+      const auto &[_x, _x0] = x0;
+      const auto &[_x1, a] = std::any_cast<std::pair<std::any, std::any>>(a1);
       return std::any_cast<std::function<std::any(std::any)>>(a);
-    }()(_x0);
+    }()(x0_);
   }
 
   static std::optional<std::any>

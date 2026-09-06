@@ -52,8 +52,8 @@ bool BoolOps::complex_bool(bool a, bool b, bool c) {
   return my_orb(my_andb(a, b), my_andb(my_negb(a), c));
 }
 
-bool BoolOps::nat_eq(uint64_t _x0, uint64_t _x1) { return _x0 == _x1; }
+bool BoolOps::nat_eq(uint64_t x0_, uint64_t x1_) { return x0_ == x1_; }
 
-bool BoolOps::nat_lt(uint64_t _x0, uint64_t _x1) { return _x0 < _x1; }
+bool BoolOps::nat_lt(uint64_t x0_, uint64_t x1_) { return x0_ < x1_; }
 
-bool BoolOps::nat_le(uint64_t _x0, uint64_t _x1) { return _x0 <= _x1; }
+bool BoolOps::nat_le(uint64_t x0_, uint64_t x1_) { return x0_ <= x1_; }

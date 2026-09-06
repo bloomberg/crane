@@ -177,17 +177,6 @@
   (deps let_polymorphic_fun.t.exe)
   (action (run ./let_polymorphic_fun.t.exe))))
 
-(subdir loopify_name_hygiene
- (rule
-  (targets loopify_name_hygiene.t.exe)
-  (deps LoopifyNameHygiene.vo loopify_name_hygiene.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_name_hygiene.t.exe loopify_name_hygiene.cpp loopify_name_hygiene.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_name_hygiene.t.exe)
-  (action (run ./loopify_name_hygiene.t.exe))))
-
 (subdir real_mapping_get_d
  (rule
   (targets real_mapping_get_d.t.exe)

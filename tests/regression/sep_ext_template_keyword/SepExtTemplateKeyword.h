@@ -26,8 +26,8 @@ concept RawSig = requires {
 
 template <RawSig Raw> struct MakeOps {
   static typename Datatypes::template List<typename Raw::elt>
-  to_list(typename Raw::tree _x0) {
-    return Raw::elements(_x0);
+  to_list(typename Raw::tree x0_) {
+    return Raw::elements(x0_);
   }
 
   static bool is_empty(typename Raw::tree t) {

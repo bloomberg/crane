@@ -198,7 +198,7 @@ struct SigtListHeterogeneousBox {
       List<SigT<std::any, std::any>>::cons(
           SigT<std::any, std::any>::existt(std::any(), true),
           List<SigT<std::any, std::any>>::nil()));
-  static Nat count(const List<anyv> &_x0);
+  static Nat count(const List<anyv> &x0_);
   static inline const Nat run = count(items);
 };
 

@@ -34,8 +34,8 @@ template <SymTypes Ty> struct Actions {
                                                crane_erase_fn<bool>(f));
   }
 
-  static bool apply_entry(entry _x0, symbols_semty _x1) {
-    return _x0.projT2()(_x1);
+  static bool apply_entry(entry x0_, symbols_semty x1_) {
+    return x0_.projT2()(x1_);
   }
 };
 

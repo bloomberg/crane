@@ -4,7 +4,7 @@
 /// expressions.  Crane generates an inner lambda with no explicit return type,
 /// causing C++ to fail to deduce a common return type across the two distinct
 /// closure types.
-Nat FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
+Nat FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &x0_) {
   return [=]() mutable -> std::function<Nat(Nat)> {
     if (std::holds_alternative<typename Nat::O>(n.v())) {
       return [](Nat x) { return x; };
@@ -16,5 +16,5 @@ Nat FunctionReturnBranchProbe::make_adder(const Nat &n, const Nat &_x0) {
       };
       return [=](const Nat &x) mutable { return Nat::s(f(x)); };
     }
-  }()(_x0);
+  }()(x0_);
 }

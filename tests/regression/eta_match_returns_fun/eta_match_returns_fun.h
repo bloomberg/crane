@@ -101,7 +101,7 @@ struct EtaMatchReturnsFun {
                              std::function<uint64_t(uint64_t)>>>::nil()));
   static uint64_t
   lookup(const List<std::pair<uint64_t, std::function<uint64_t(uint64_t)>>> &l,
-         uint64_t k, uint64_t _x0);
+         uint64_t k, uint64_t x0_);
   static inline const uint64_t test = lookup(tbl, UINT64_C(1), UINT64_C(5));
 };
 

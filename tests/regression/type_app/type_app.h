@@ -161,7 +161,7 @@ struct TypeApp {
           list<uint64_t>::cons(
               UINT64_C(2),
               list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
-  static list<uint64_t> map_succ(const list<uint64_t> &_x0);
+  static list<uint64_t> map_succ(const list<uint64_t> &x0_);
   static inline const list<uint64_t> test_map_succ =
       map_succ(list<uint64_t>::cons(
           UINT64_C(5),
@@ -179,7 +179,7 @@ struct TypeApp {
   struct NatMonoid {
     using T = uint64_t;
     static inline const uint64_t empty = UINT64_C(0);
-    static uint64_t append(uint64_t _x0, uint64_t _x1);
+    static uint64_t append(uint64_t x0_, uint64_t x1_);
   };
 
   template <Monoid M> struct UseMonoid {

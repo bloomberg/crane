@@ -9,22 +9,22 @@ struct Pos {
 };
 
 struct NGMPTest {
-  static mpz_class add_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class mul_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class sub_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class div_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool eqb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool ltb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool leb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class succ_test(const mpz_class &_x0);
-  static mpz_class pred_test(const mpz_class &_x0);
-  static mpz_class double_test(const mpz_class &_x0);
+  static mpz_class add_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class mul_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class sub_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class div_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool eqb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool ltb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool leb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class succ_test(const mpz_class &x0_);
+  static mpz_class pred_test(const mpz_class &x0_);
+  static mpz_class double_test(const mpz_class &x0_);
   static inline const mpz_class zero_val = mpz_class(0);
   static inline const mpz_class five_val = mpz_class(5);
   static inline const mpz_class big_val = mpz_class(1000);
   static bool is_zero(const mpz_class &n);
-  static mpz_class pos_add(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class pos_succ(const mpz_class &_x0);
+  static mpz_class pos_add(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class pos_succ(const mpz_class &x0_);
 };
 
 #endif // INCLUDED_N_GMP

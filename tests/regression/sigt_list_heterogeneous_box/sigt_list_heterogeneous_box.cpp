@@ -1,6 +1,6 @@
 #include "sigt_list_heterogeneous_box.h"
 
 Nat SigtListHeterogeneousBox::count(
-    const List<SigtListHeterogeneousBox::anyv> &_x0) {
-  return _x0.length();
+    const List<SigtListHeterogeneousBox::anyv> &x0_) {
+  return x0_.length();
 }

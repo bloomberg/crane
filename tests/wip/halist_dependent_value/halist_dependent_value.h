@@ -210,7 +210,7 @@ struct HAList {
 
 struct EquivDec {
   template <typename T1>
-  static bool equiv_dec(EqDec<T1> eqDec, const T1 &_x0, T1 _x1);
+  static bool equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_);
 };
 
 /// halist K V is indexed by a value family V : K -> Type.  Crane gives
@@ -311,8 +311,8 @@ struct HalistDependentValue {
 };
 
 template <typename T1>
-bool EquivDec::equiv_dec(EqDec<T1> eqDec, const T1 &_x0, T1 _x1) {
-  return eqDec(_x0, _x1);
+bool EquivDec::equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_) {
+  return eqDec(x0_, x1_);
 }
 
 template <typename T1, typename T2>

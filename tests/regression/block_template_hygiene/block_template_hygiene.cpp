@@ -111,9 +111,9 @@ std::string BlockTemplateHygiene::bind_named_result() {
 /// fallback variable name. Ensures no collision with the expression-
 /// position IIFE wrapper's internal variable.
 std::string BlockTemplateHygiene::bind_named_underscore_r() {
-  std::string _r;
-  std::getline(std::cin, _r);
-  return _r + "!"s;
+  std::string r_;
+  std::getline(std::cin, r_);
+  return r_ + "!"s;
 }
 
 /// Test 11: Block template in pure expression position (not in bind).

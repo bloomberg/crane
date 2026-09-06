@@ -1131,8 +1131,8 @@ template <typename K, typename V> struct SkipList {
 };
 
 struct skiplist_test {
-  static bool nat_lt(uint64_t _x0, uint64_t _x1);
-  static bool nat_eq(uint64_t _x0, uint64_t _x1);
+  static bool nat_lt(uint64_t x0_, uint64_t x1_);
+  static bool nat_eq(uint64_t x0_, uint64_t x1_);
   static bool stm_test_insert_lookup();
   static bool stm_test_delete();
   static bool stm_test_update();

@@ -150,7 +150,7 @@ struct InstanceAsValue {
     return l.template fold_right<T1>(m.op, m.unit_);
   }
 
-  static uint64_t method(uint64_t _x0, uint64_t _x1);
+  static uint64_t method(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t run =
       ((mconcat<uint64_t>(
             dict, List<uint64_t>::cons(

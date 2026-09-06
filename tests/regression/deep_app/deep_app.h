@@ -236,8 +236,8 @@ struct DeepApp {
   /// Identity map to force traversal.
   static mylist<uint64_t> map_id(const mylist<uint64_t> &l);
   /// Append two lists.
-  static mylist<uint64_t> append_lists(const mylist<uint64_t> &_x0,
-                                       const mylist<uint64_t> &_x1);
+  static mylist<uint64_t> append_lists(const mylist<uint64_t> &x0_,
+                                       const mylist<uint64_t> &x1_);
   static uint64_t head_or_zero(const mylist<uint64_t> &l);
 
   template <typename T1>

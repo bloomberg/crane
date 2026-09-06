@@ -69,7 +69,7 @@ public:
 };
 
 struct PartialLocalFix {
-  static Nat run(Bool0 _x0);
+  static Nat run(Bool0 x0_);
   static inline const Nat test = run(Bool0::TRUE_);
 };
 

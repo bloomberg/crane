@@ -47,7 +47,7 @@ struct ParserAnyCast {
     return v;
   }
 
-  static Tag get_tag(entry _x0);
+  static Tag get_tag(entry x0_);
   static Datatypes::List<Tag>
   process_entries(const Datatypes::List<Specif::SigT<Tag, std::any>> &es);
 
@@ -96,7 +96,7 @@ struct ParserAnyCast {
     return v;
   }
 
-  static Label get_entry_label(labeled_entry _x0);
+  static Label get_entry_label(labeled_entry x0_);
 
   static const Label &test_default_label() {
     static const Label v = get_entry_label(make_default_entry());

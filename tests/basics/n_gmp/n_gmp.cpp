@@ -36,41 +36,41 @@ mpz_class Pos::add_carry(const mpz_class &x, const mpz_class &y) {
   }
 }
 
-mpz_class NGMPTest::add_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 + _x1);
+mpz_class NGMPTest::add_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ + x1_);
 }
 
-mpz_class NGMPTest::mul_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 * _x1);
+mpz_class NGMPTest::mul_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ * x1_);
 }
 
-mpz_class NGMPTest::sub_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 >= _x1 ? _x0 - _x1 : mpz_class(0));
+mpz_class NGMPTest::sub_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ >= x1_ ? x0_ - x1_ : mpz_class(0));
 }
 
-mpz_class NGMPTest::div_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x1 == 0 ? mpz_class(0) : _x0 / _x1);
+mpz_class NGMPTest::div_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x1_ == 0 ? mpz_class(0) : x0_ / x1_);
 }
 
-bool NGMPTest::eqb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 == _x1;
+bool NGMPTest::eqb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ == x1_;
 }
 
-bool NGMPTest::ltb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 < _x1;
+bool NGMPTest::ltb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ < x1_;
 }
 
-bool NGMPTest::leb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 <= _x1;
+bool NGMPTest::leb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ <= x1_;
 }
 
-mpz_class NGMPTest::succ_test(const mpz_class &_x0) { return (_x0 + 1); }
+mpz_class NGMPTest::succ_test(const mpz_class &x0_) { return (x0_ + 1); }
 
-mpz_class NGMPTest::pred_test(const mpz_class &_x0) {
-  return (_x0 == 0 ? mpz_class(0) : _x0 - 1);
+mpz_class NGMPTest::pred_test(const mpz_class &x0_) {
+  return (x0_ == 0 ? mpz_class(0) : x0_ - 1);
 }
 
-mpz_class NGMPTest::double_test(const mpz_class &_x0) { return (_x0 * 2); }
+mpz_class NGMPTest::double_test(const mpz_class &x0_) { return (x0_ * 2); }
 
 bool NGMPTest::is_zero(const mpz_class &n) {
   if (n == 0) {
@@ -81,8 +81,8 @@ bool NGMPTest::is_zero(const mpz_class &n) {
   }
 }
 
-mpz_class NGMPTest::pos_add(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 + _x1);
+mpz_class NGMPTest::pos_add(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ + x1_);
 }
 
-mpz_class NGMPTest::pos_succ(const mpz_class &_x0) { return (_x0 + 1); }
+mpz_class NGMPTest::pos_succ(const mpz_class &x0_) { return (x0_ + 1); }

@@ -2,7 +2,7 @@
 
 uint64_t EtaMatchReturnsFun::lookup(
     const List<std::pair<uint64_t, std::function<uint64_t(uint64_t)>>> &l,
-    uint64_t k, uint64_t _x0) {
+    uint64_t k, uint64_t x0_) {
   return [=]() mutable -> std::function<uint64_t(uint64_t)> {
     if (std::holds_alternative<typename List<
             std::pair<uint64_t, std::function<uint64_t(uint64_t)>>>::Nil>(
@@ -21,5 +21,5 @@ uint64_t EtaMatchReturnsFun::lookup(
         };
       }
     }
-  }()(_x0);
+  }()(x0_);
 }

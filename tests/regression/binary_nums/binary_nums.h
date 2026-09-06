@@ -216,7 +216,7 @@ struct Pos {
   static Positive mul(const Positive &x, Positive y);
   static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
-  static Comparison compare(const Positive &_x0, const Positive &_x1);
+  static Comparison compare(const Positive &x0_, const Positive &x1_);
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>

@@ -75,7 +75,7 @@ concept M_ = requires {
 
 struct ConceptNameShadowsParam {
   template <M_ X> struct Use {
-    static Nat g(const Nat &_x0) { return X::f(_x0); }
+    static Nat g(const Nat &x0_) { return X::f(x0_); }
   };
 
   struct Id {

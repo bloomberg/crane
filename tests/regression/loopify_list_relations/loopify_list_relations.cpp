@@ -146,9 +146,9 @@ bool LoopifyListRelations::is_infix_of_aux(const List<uint64_t> &needle,
   }
 }
 
-bool LoopifyListRelations::is_infix_of(const List<uint64_t> &_x0,
-                                       const List<uint64_t> &_x1) {
-  return is_infix_of_aux(_x0, _x1);
+bool LoopifyListRelations::is_infix_of(const List<uint64_t> &x0_,
+                                       const List<uint64_t> &x1_) {
+  return is_infix_of_aux(x0_, x1_);
 }
 
 List<uint64_t>

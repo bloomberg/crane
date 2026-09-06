@@ -8,9 +8,9 @@ ExistentialClosureProbe::wrap ExistentialClosureProbe::pack_fn(uint64_t base) {
 
 /// Unpack and apply.
 uint64_t
-ExistentialClosureProbe::apply_packed(const ExistentialClosureProbe::wrap &_x0,
-                                      uint64_t _x1) {
-  return unwrap<std::function<uint64_t(uint64_t)>>(_x0)(_x1);
+ExistentialClosureProbe::apply_packed(const ExistentialClosureProbe::wrap &x0_,
+                                      uint64_t x1_) {
+  return unwrap<std::function<uint64_t(uint64_t)>>(x0_)(x1_);
 }
 
 /// Store a closure that captures another closure.

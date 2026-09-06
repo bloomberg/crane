@@ -106,7 +106,7 @@ Coq_Pos::mask Coq_Pos::sub_mask_carry(const Positive &x, const Positive &y) {
   }
 }
 
-Coq_Pos::mask MissingInductivePosMask::f(const Positive &_x0,
-                                         const Positive &_x1) {
-  return Coq_Pos::sub_mask(_x0, _x1);
+Coq_Pos::mask MissingInductivePosMask::f(const Positive &x0_,
+                                         const Positive &x1_) {
+  return Coq_Pos::sub_mask(x0_, x1_);
 }

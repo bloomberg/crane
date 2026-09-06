@@ -6,7 +6,7 @@
 struct RecordApply {
   struct R {
     std::function<uint64_t(uint64_t, uint64_t)> f;
-    uint64_t _tag;
+    uint64_t tag_;
   };
 
   static uint64_t apply_record(const R &r0, uint64_t a, uint64_t b);

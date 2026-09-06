@@ -1,7 +1,7 @@
 #include "decl_order_forward_use.h"
 
-Nat::nat DeclOrderForwardUse::d(const Nat::nat &_x0, const Nat::nat &_x1) {
-  return _x0.div(_x1);
+Nat::nat DeclOrderForwardUse::d(const Nat::nat &x0_, const Nat::nat &x1_) {
+  return x0_.div(x1_);
 }
 
 Prod<Nat::nat, Nat::nat> Nat::divmod(const Nat::nat &x, const Nat::nat &y,

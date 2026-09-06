@@ -1,6 +1,6 @@
 #include "partial_local_fix.h"
 
-Nat PartialLocalFix::run(Bool0 _x0) {
+Nat PartialLocalFix::run(Bool0 x0_) {
   return []() {
     auto loop_impl = [](auto &_self_loop, Nat n, Bool0 b) -> Nat {
       if (std::holds_alternative<typename Nat::O>(n.v())) {
@@ -27,5 +27,5 @@ Nat PartialLocalFix::run(Bool0 _x0) {
                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
                   _pa0);
     };
-  }()(_x0);
+  }()(x0_);
 }

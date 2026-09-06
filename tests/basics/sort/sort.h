@@ -140,7 +140,7 @@ template <typename A> struct Sig {
 };
 
 struct Compare_dec {
-  static bool le_gt_dec(uint64_t _x0, uint64_t _x1);
+  static bool le_gt_dec(uint64_t x0_, uint64_t x1_);
   static bool le_dec(uint64_t n, uint64_t m);
 };
 
@@ -187,8 +187,8 @@ struct Sort {
   template <typename T1, typename T2, typename F1, typename F2>
     requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
              std::is_invocable_r_v<T2, F2 &, List<T1> &, T2 &, T2 &>
-  static T2 div_conq_split(const T2 &x, F1 &&_x0, F2 &&_x1, List<T1> _x2) {
-    return div_conq<T1, T2>(split<T1>, x, _x0, _x1, std::move(_x2));
+  static T2 div_conq_split(const T2 &x, F1 &&x0_, F2 &&x1_, List<T1> x2_) {
+    return div_conq<T1, T2>(split<T1>, x, x0_, x1_, std::move(x2_));
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
@@ -252,13 +252,13 @@ struct Sort {
   static Sig<List<uint64_t>> merge_prog(const List<uint64_t> &_x,
                                         const List<uint64_t> &l1,
                                         const List<uint64_t> &l2);
-  static Sig<List<uint64_t>> msort(const List<uint64_t> &_x0);
+  static Sig<List<uint64_t>> msort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> pair_merge_prog(uint64_t _x, uint64_t _x0,
                                              const List<uint64_t> &_x1,
                                              const List<uint64_t> &l_,
                                              const List<uint64_t> &l_0);
-  static Sig<List<uint64_t>> psort(const List<uint64_t> &_x0);
-  static Sig<List<uint64_t>> qsort(const List<uint64_t> &_x0);
+  static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
+  static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
 };
 
 #endif // INCLUDED_SORT

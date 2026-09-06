@@ -1,8 +1,8 @@
 #include "skiplist.h"
 
-bool skiplist_test::nat_lt(uint64_t _x0, uint64_t _x1) { return _x0 < _x1; }
+bool skiplist_test::nat_lt(uint64_t x0_, uint64_t x1_) { return x0_ < x1_; }
 
-bool skiplist_test::nat_eq(uint64_t _x0, uint64_t _x1) { return _x0 == _x1; }
+bool skiplist_test::nat_eq(uint64_t x0_, uint64_t x1_) { return x0_ == x1_; }
 
 bool skiplist_test::stm_test_insert_lookup() {
   SkipList<uint64_t, uint64_t> sl =

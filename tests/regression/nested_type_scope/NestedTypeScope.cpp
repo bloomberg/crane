@@ -4,6 +4,6 @@
 
 namespace NestedTypeScope {
 
-Tags::Tag get_tag(RM::Rule _x0) { return _x0.fst(); }
+Tags::Tag get_tag(RM::Rule x0_) { return x0_.fst(); }
 
 } // namespace NestedTypeScope

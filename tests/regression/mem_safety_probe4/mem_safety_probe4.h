@@ -504,8 +504,8 @@ struct MemSafetyProbe4 {
   /// to a higher-order function alongside the recursive call.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t apply_to(F0 &&f, uint64_t _x0) {
-    return f(_x0);
+  static uint64_t apply_to(F0 &&f, uint64_t x0_) {
+    return f(x0_);
   }
 
   static uint64_t process_list(const mylist<tree> &l);

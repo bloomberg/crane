@@ -13,13 +13,13 @@
 /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
 uint64_t
 FoldClosureBuild::compose_adders(const FoldClosureBuild::mylist<uint64_t> &l,
-                                 uint64_t _x0) {
+                                 uint64_t x0_) {
   return fold_left<std::function<uint64_t(uint64_t)>, uint64_t>(
       [](std::function<uint64_t(uint64_t)> acc,
          uint64_t h) -> std::function<uint64_t(uint64_t)> {
         return [=](uint64_t x) mutable { return acc((h + x)); };
       },
-      [](uint64_t x) { return x; }, l)(_x0);
+      [](uint64_t x) { return x; }, l)(x0_);
 }
 
 /// Pattern 3: Fold producing a list of closures (not composing them).
@@ -60,7 +60,7 @@ uint64_t FoldClosureBuild::apply_all(
 /// final fixpoint (stored in the accumulator) still references them.
 uint64_t
 FoldClosureBuild::compose_with_fix(const FoldClosureBuild::mylist<uint64_t> &l,
-                                   uint64_t _x0) {
+                                   uint64_t x0_) {
   return fold_left<std::function<uint64_t(uint64_t)>, uint64_t>(
       [](std::function<uint64_t(uint64_t)> acc, uint64_t h) {
         auto go_impl = [=](auto &_self_go, uint64_t x) mutable -> uint64_t {
@@ -76,5 +76,5 @@ FoldClosureBuild::compose_with_fix(const FoldClosureBuild::mylist<uint64_t> &l,
         };
         return go;
       },
-      [](uint64_t x) { return x; }, l)(_x0);
+      [](uint64_t x) { return x; }, l)(x0_);
 }

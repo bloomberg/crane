@@ -132,6 +132,6 @@ HistoricalEventSafetyTraceCase::hoover_controller_sample(uint64_t level) {
                            UINT64_C(0));
 }
 
-uint64_t HistoricalEventSafetyTraceCase::hoover_stage_sample(uint64_t _x0) {
-  return hoover_stage_from_rating(_x0);
+uint64_t HistoricalEventSafetyTraceCase::hoover_stage_sample(uint64_t x0_) {
+  return hoover_stage_from_rating(x0_);
 }

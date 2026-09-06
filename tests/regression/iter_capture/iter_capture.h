@@ -7,7 +7,7 @@
 struct IterCapture {
   static inline const uint64_t run = []() {
     return []() {
-      uint64_t _acc = UINT64_C(100);
+      uint64_t acc_ = UINT64_C(100);
       return [](uint64_t _crane_n, auto _crane_f, auto _crane_seed) {
         std::decay_t<decltype(_crane_f(std::move(_crane_seed)))> _crane_acc =
             std::move(_crane_seed);
@@ -16,7 +16,7 @@ struct IterCapture {
         }
         return _crane_acc;
       }(
-                 UINT64_C(3), [=](uint64_t x) mutable { return (x + _acc); },
+                 UINT64_C(3), [=](uint64_t x) mutable { return (x + acc_); },
                  UINT64_C(0));
     }();
   }();

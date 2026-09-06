@@ -175,7 +175,7 @@ struct Coq_Pos {
 };
 
 struct MissingInductivePosMask {
-  static Coq_Pos::mask f(const Positive &_x0, const Positive &_x1);
+  static Coq_Pos::mask f(const Positive &x0_, const Positive &x1_);
 };
 
 #endif // INCLUDED_MISSING_INDUCTIVE_POS_MASK

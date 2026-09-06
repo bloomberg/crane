@@ -4,7 +4,7 @@
 /// into a two-argument C++ function.  Passing it first-class to map then
 /// fails, because a uint64_t(uint64_t, uint64_t) is not convertible to
 /// std::function<uint64_t(uint64_t)>.
-uint64_t EtaClosureFirstClass::mkclosure(uint64_t n, uint64_t _x0) {
+uint64_t EtaClosureFirstClass::mkclosure(uint64_t n, uint64_t x0_) {
   return [=]() mutable {
     List<uint64_t> big = ListDef::template repeat<uint64_t>(n, UINT64_C(100));
     return [=](uint64_t k) mutable {
@@ -14,7 +14,7 @@ uint64_t EtaClosureFirstClass::mkclosure(uint64_t n, uint64_t _x0) {
                       },
                       UINT64_C(0)));
     };
-  }()(_x0);
+  }()(x0_);
 }
 
 uint64_t EtaClosureFirstClass::run(uint64_t k) {

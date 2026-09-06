@@ -1,31 +1,31 @@
 #include "z_gmp.h"
 
-mpz_class ZGMPTest::add_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 + _x1);
+mpz_class ZGMPTest::add_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ + x1_);
 }
 
-mpz_class ZGMPTest::mul_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 * _x1);
+mpz_class ZGMPTest::mul_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ * x1_);
 }
 
-mpz_class ZGMPTest::sub_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return (_x0 - _x1);
+mpz_class ZGMPTest::sub_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return (x0_ - x1_);
 }
 
-mpz_class ZGMPTest::abs_test(const mpz_class &_x0) { return abs(_x0); }
+mpz_class ZGMPTest::abs_test(const mpz_class &x0_) { return abs(x0_); }
 
-mpz_class ZGMPTest::opp_test(const mpz_class &_x0) { return (-_x0); }
+mpz_class ZGMPTest::opp_test(const mpz_class &x0_) { return (-x0_); }
 
-bool ZGMPTest::eqb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 == _x1;
+bool ZGMPTest::eqb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ == x1_;
 }
 
-bool ZGMPTest::ltb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 < _x1;
+bool ZGMPTest::ltb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ < x1_;
 }
 
-bool ZGMPTest::leb_test(const mpz_class &_x0, const mpz_class &_x1) {
-  return _x0 <= _x1;
+bool ZGMPTest::leb_test(const mpz_class &x0_, const mpz_class &x1_) {
+  return x0_ <= x1_;
 }
 
 mpz_class ZGMPTest::z_sign(const mpz_class &z) {

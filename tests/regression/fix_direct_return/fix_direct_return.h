@@ -15,7 +15,7 @@ struct FixDirectReturn {
   /// still holds & references to the destroyed stack variables.
   template <typename F1>
     requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
-  static uint64_t make_callback(uint64_t base, F1 &&_x0) {
+  static uint64_t make_callback(uint64_t base, F1 &&x0_) {
     return [=]() mutable {
       auto add_impl = [=](auto &_self_add, uint64_t x) mutable -> uint64_t {
         if (x <= 0) {
@@ -31,7 +31,7 @@ struct FixDirectReturn {
       return [=](std::function<uint64_t(uint64_t)> g) mutable {
         return (g(add(UINT64_C(0))) + add(UINT64_C(1)));
       };
-    }()(_x0);
+    }()(x0_);
   }
 
   /// test1: make_callback(42)(fun x => x) = id(42) + 43 = 85.

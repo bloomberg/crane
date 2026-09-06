@@ -132,7 +132,7 @@ struct LoopifyListRelations {
   static bool is_suffix_of(const List<uint64_t> &l1, const List<uint64_t> &l2);
   static bool is_infix_of_aux(const List<uint64_t> &needle,
                               const List<uint64_t> &haystack);
-  static bool is_infix_of(const List<uint64_t> &_x0, const List<uint64_t> &_x1);
+  static bool is_infix_of(const List<uint64_t> &x0_, const List<uint64_t> &x1_);
   static List<uint64_t> find_sublists_aux(const List<uint64_t> &needle,
                                           const List<uint64_t> &haystack,
                                           uint64_t idx);

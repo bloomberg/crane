@@ -176,7 +176,7 @@ static_assert(BaseType<NatBase>);
 
 struct NatOrdered {
   using t = uint64_t;
-  static Comparison compare(uint64_t _x0, uint64_t _x1);
+  static Comparison compare(uint64_t x0_, uint64_t x1_);
 };
 
 static_assert(OrderedType<NatOrdered>);

@@ -154,13 +154,13 @@ struct RecordFieldPatterns {
 
   /// Apply a polymorphic function to a record — the record type flows
   /// through a type variable.
-  static Point id_point(const Point &_x0);
+  static Point id_point(const Point &x0_);
 
   /// Polymorphic projection: the match happens inside a polymorphic context
   /// where the scrutinee's type might not be Tglob.
   template <typename T1, typename T2>
-  static T1 generic_first(const std::pair<T1, T2> &_x0) {
-    return _x0.first;
+  static T1 generic_first(const std::pair<T1, T2> &x0_) {
+    return x0_.first;
   }
 
   static std::pair<uint64_t, uint64_t> point_pair(const Point &p);

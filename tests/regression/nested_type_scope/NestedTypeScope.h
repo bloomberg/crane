@@ -96,7 +96,7 @@ const RM::Rule my_rule2 =
         Datatypes::Nat::s(Datatypes::Nat::s(
             Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
                 Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o()))))))));
-Tags::Tag get_tag(RM::Rule _x0);
+Tags::Tag get_tag(RM::Rule x0_);
 const Tags::Tag test_tag = get_tag(my_rule);
 
 } // namespace NestedTypeScope

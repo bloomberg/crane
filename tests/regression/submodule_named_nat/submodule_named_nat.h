@@ -82,7 +82,7 @@ struct SubmoduleNamedNat {
     static ::Nat succ(::Nat n);
   };
 
-  static ::Nat run(const ::Nat &_x0);
+  static ::Nat run(const ::Nat &x0_);
 };
 
 #endif // INCLUDED_SUBMODULE_NAMED_NAT

@@ -217,7 +217,7 @@ struct Pos {
   static Positive mul(const Positive &x, Positive y);
   static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
-  static Comparison compare(const Positive &_x0, const Positive &_x1);
+  static Comparison compare(const Positive &x0_, const Positive &x1_);
   static bool eqb(const Positive &p, const Positive &q);
 
   template <typename T1, typename F0>

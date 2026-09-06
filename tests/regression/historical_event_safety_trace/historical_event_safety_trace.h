@@ -376,7 +376,7 @@ return UINT64_C(1000); },
   static bool witness_test_initial_safe_at(uint64_t h);
   static uint64_t witness_test_peak_level_at(uint64_t h);
   static uint64_t hoover_controller_sample(uint64_t level);
-  static uint64_t hoover_stage_sample(uint64_t _x0);
+  static uint64_t hoover_stage_sample(uint64_t x0_);
   static inline const uint64_t sample_bundle_test_count =
       List<TestResult>::cons(
           historical_bundle.hsb_test_1983,

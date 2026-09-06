@@ -8,7 +8,7 @@ struct ZAbsMin {
   /// ZInt maps Z.abs to std::abs(%a0) (from <cstdlib>).
   /// But std::abs(INT64_MIN) is undefined behavior in C++
   /// because -INT64_MIN cannot be represented as int64_t.
-  static int64_t my_abs(int64_t _x0);
+  static int64_t my_abs(int64_t x0_);
   /// Construct INT64_MIN = -2^63 via INT64_MAX + 1 negated.
   static inline const int64_t neg_max = static_cast<int64_t>(
       -static_cast<uint64_t>(INT64_C(9223372036854775807)));

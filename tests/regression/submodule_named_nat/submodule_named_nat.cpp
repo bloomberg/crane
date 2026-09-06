@@ -10,4 +10,4 @@
 /// carries no GlobRef.t of its own.
 ::Nat SubmoduleNamedNat::Nat::succ(::Nat n) { return ::Nat::s(std::move(n)); }
 
-::Nat SubmoduleNamedNat::run(const ::Nat &_x0) { return Nat::succ(_x0); }
+::Nat SubmoduleNamedNat::run(const ::Nat &x0_) { return Nat::succ(x0_); }

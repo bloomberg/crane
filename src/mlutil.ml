@@ -38,11 +38,29 @@ let id_of_name = function
   | Name.Name id when Id.equal id dummy_name -> anonymous_name
   | Name.Name id -> id
 
-(** Converts an [ml_ident] to an [Id.t]. *)
-let id_of_mlid = function
-  | Dummy -> dummy_name
-  | Id id -> id
-  | Tmp id -> id
+(** Move a name out of the space Crane reserves for the names it invents
+    itself -- the loopified frames ([_Frame], [_Enter], [_stack], [_result])
+    and the generated members -- by carrying its leading underscores to the
+    end.  C++ reserves [_X] at global scope to the implementation anyway.
+    Returns the name unchanged when it does not start with an underscore, or
+    when it is nothing but underscores. *)
+let unreserve_leading_underscore s =
+  let n = String.length s in
+  let i = ref 0 in
+  while !i < n && s.[!i] = '_' do
+    incr i
+  done;
+  if !i = 0 || !i = n then s else String.sub s !i (n - !i) ^ "_"
+
+(** Converts an [ml_ident] to an [Id.t].  The binder comes from the Rocq
+    source, so a leading underscore is moved to the end: that spelling belongs
+    to the names Crane invents for itself (see
+    {!unreserve_leading_underscore}). *)
+let id_of_mlid =
+  let unreserve id =
+    Id.of_string (unreserve_leading_underscore (Id.to_string id))
+  in
+  function Dummy -> dummy_name | Id id -> unreserve id | Tmp id -> unreserve id
 
 let tmp_id = function
   | Id id -> Tmp id

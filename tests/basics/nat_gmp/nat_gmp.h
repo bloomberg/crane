@@ -4,13 +4,13 @@
 #include <gmpxx.h>
 
 struct NatGMPTest {
-  static mpz_class add_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class mul_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class sub_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool eqb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool ltb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static bool leb_test(const mpz_class &_x0, const mpz_class &_x1);
-  static mpz_class pred_test(const mpz_class &_x0);
+  static mpz_class add_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class mul_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class sub_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool eqb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool ltb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static bool leb_test(const mpz_class &x0_, const mpz_class &x1_);
+  static mpz_class pred_test(const mpz_class &x0_);
   static mpz_class match_test(const mpz_class &n);
   static inline const mpz_class big_num = mpz_class(200);
   static inline const mpz_class another_big = mpz_class(1000);

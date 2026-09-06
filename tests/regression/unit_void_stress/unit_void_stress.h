@@ -107,9 +107,9 @@ struct UnitVoidStress {
                 return std::monostate{};
               }(),
               List<std::monostate>::nil()));
-  static void id_void_call(uint64_t _x0);
+  static void id_void_call(uint64_t x0_);
   static std::pair<uint64_t, std::monostate> pair_with_discard(uint64_t n);
-  static void store_and_call(uint64_t _x0);
+  static void store_and_call(uint64_t x0_);
   static std::pair<uint64_t, std::monostate> pair_via_let(uint64_t n);
   static void cond_void(bool b, uint64_t n);
   static void match_nat_void(uint64_t n);
@@ -165,8 +165,8 @@ struct UnitVoidStress {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
-  static T1 apply_result(F0 &&f, uint64_t _x0) {
-    return f(_x0);
+  static T1 apply_result(F0 &&f, uint64_t x0_) {
+    return f(x0_);
   }
 
   static inline const std::monostate test_apply_result_void = []() {

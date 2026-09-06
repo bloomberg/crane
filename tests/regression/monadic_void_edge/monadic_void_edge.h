@@ -116,8 +116,8 @@ struct MonadicVoidEdge {
   /// 8. Higher-order: pass a monadic void function as callback
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_effect(F0 &&f, uint64_t _x0) {
-    f(_x0);
+  static void apply_effect(F0 &&f, uint64_t x0_) {
+    f(x0_);
     return;
   }
 

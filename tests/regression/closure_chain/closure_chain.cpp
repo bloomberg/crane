@@ -21,7 +21,7 @@ uint64_t ClosureChain::tree_sum(const ClosureChain::tree &t) {
 /// f := make_chain n' t, then returns fun x => f (x + 1).
 /// If f is captured by &, it dies when make_chain returns.
 uint64_t ClosureChain::make_chain(uint64_t n, const ClosureChain::tree &t,
-                                  uint64_t _x0) {
+                                  uint64_t x0_) {
   return [=]() mutable -> std::function<uint64_t(uint64_t)> {
     if (n <= 0) {
       return [=](uint64_t x) mutable { return (tree_sum(t) + x); };
@@ -33,5 +33,5 @@ uint64_t ClosureChain::make_chain(uint64_t n, const ClosureChain::tree &t,
       };
       return [=](uint64_t x) mutable { return f((x + UINT64_C(1))); };
     }
-  }()(_x0);
+  }()(x0_);
 }

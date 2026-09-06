@@ -275,8 +275,8 @@ struct Equations {
              std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
                                    gcd_graph &, T1 &>
   static T1 gcd_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                          std::pair<uint64_t, uint64_t> _x0, uint64_t _x1,
-                          gcd_graph _x2) {
+                          std::pair<uint64_t, uint64_t> x0_, uint64_t x1_,
+                          gcd_graph x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -334,15 +334,15 @@ struct Equations {
                      *hind0));
       }
     };
-    auto f4 = [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x3,
+    auto f4 = [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x0,
                   const gcd_graph &g) -> T1 {
-      return f4_impl(f4_impl, f5_impl, _x, _x3, g);
+      return f4_impl(f4_impl, f5_impl, _x, _x0, g);
     };
-    auto f5 = [&](uint64_t _x, uint64_t _x3, bool _x4, uint64_t _x5,
+    auto f5 = [&](uint64_t _x, uint64_t _x0, bool _x1, uint64_t _x2,
                   const gcd_clause_3_graph &g) -> T2 {
-      return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, _x5, g);
+      return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f4(_x0, _x1, _x2);
+    return f4(x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -356,8 +356,8 @@ struct Equations {
              std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
                                    gcd_graph &, T1 &>
   static T2 gcd_clause_3_graph_mut(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
-                                   uint64_t _x0, uint64_t _x1, bool _x2,
-                                   uint64_t _x3, gcd_clause_3_graph _x4) {
+                                   uint64_t x0_, uint64_t x1_, bool x2_,
+                                   uint64_t x3_, gcd_clause_3_graph x4_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5,
                        const std::pair<uint64_t, uint64_t> &, uint64_t,
                        const gcd_graph &g) -> T1 {
@@ -415,15 +415,15 @@ struct Equations {
                      *hind0));
       }
     };
-    auto f4 = [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x5,
+    auto f4 = [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x0,
                   const gcd_graph &g) -> T1 {
-      return f4_impl(f4_impl, f5_impl, _x, _x5, g);
+      return f4_impl(f4_impl, f5_impl, _x, _x0, g);
     };
-    auto f5 = [&](uint64_t _x, uint64_t _x5, bool _x6, uint64_t _x7,
+    auto f5 = [&](uint64_t _x, uint64_t _x0, bool _x1, uint64_t _x2,
                   const gcd_clause_3_graph &g) -> T2 {
-      return f5_impl(f4_impl, f5_impl, _x, _x5, _x6, _x7, g);
+      return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f5(_x0, _x1, _x2, _x3, _x4);
+    return f5(x0_, x1_, x2_, x3_, x4_);
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -436,10 +436,10 @@ struct Equations {
                                    gcd_graph &, T1 &> &&
              std::is_invocable_r_v<T2, F4 &, uint64_t &, uint64_t &,
                                    gcd_graph &, T1 &>
-  static T1 gcd_graph_rect(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3, F4 &&_x4,
-                           const std::pair<uint64_t, uint64_t> &_x5,
-                           uint64_t _x6, const gcd_graph &_x7) {
-    return gcd_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6, _x7);
+  static T1 gcd_graph_rect(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_, F4 &&x4_,
+                           const std::pair<uint64_t, uint64_t> &x5_,
+                           uint64_t x6_, const gcd_graph &x7_) {
+    return gcd_graph_mut<T1, T2>(x0_, x1_, x2_, x3_, x4_, x5_, x6_, x7_);
   }
 
   static gcd_graph gcd_graph_correct(std::pair<uint64_t, uint64_t> x);
@@ -477,9 +477,9 @@ struct Equations {
              std::is_invocable_r_v<std::any, F3 &, uint64_t &, uint64_t &,
                                    std::any &>
   static std::any
-  FunctionalElimination_gcd(F0 &&_x0, F1 &&_x1, F2 &&_x2, F3 &&_x3,
-                            const std::pair<uint64_t, uint64_t> &_x4) {
-    return gcd_elim(_x0, _x1, _x2, _x3, _x4);
+  FunctionalElimination_gcd(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_,
+                            const std::pair<uint64_t, uint64_t> &x4_) {
+    return gcd_elim(x0_, x1_, x2_, x3_, x4_);
   }
 
   struct FunctionalInduction_gcd {
@@ -749,8 +749,8 @@ struct Equations {
              std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
                                    T1 &>
   static T1 collatz_steps_graph_mut(const T1 &f, const T1 &f0, F2 &&f1, F3 &&f2,
-                                    F4 &&f3, uint64_t _x0, uint64_t _x1,
-                                    collatz_steps_graph _x2) {
+                                    F4 &&f3, uint64_t x0_, uint64_t x1_,
+                                    collatz_steps_graph x2_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -795,15 +795,15 @@ struct Equations {
                            *hind0));
       }
     };
-    auto f4 = [&](uint64_t _x, uint64_t _x3,
+    auto f4 = [&](uint64_t _x, uint64_t _x0,
                   const collatz_steps_graph &c) -> T1 {
-      return f4_impl(f4_impl, f5_impl, _x, _x3, c);
+      return f4_impl(f4_impl, f5_impl, _x, _x0, c);
     };
-    auto f5 = [&](uint64_t _x, bool _x3, uint64_t _x4,
+    auto f5 = [&](uint64_t _x, bool _x0, uint64_t _x1,
                   const collatz_steps_clause_3_graph &c) -> T2 {
-      return f5_impl(f4_impl, f5_impl, _x, _x3, _x4, c);
+      return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c);
     };
-    return f4(_x0, _x1, _x2);
+    return f4(x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
@@ -814,9 +814,9 @@ struct Equations {
              std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
                                    T1 &>
   static T2 collatz_steps_clause_3_graph_mut(const T1 &f, const T1 &f0, F2 &&f1,
-                                             F3 &&f2, F4 &&f3, uint64_t _x0,
-                                             bool _x1, uint64_t _x2,
-                                             collatz_steps_clause_3_graph _x3) {
+                                             F3 &&f2, F4 &&f3, uint64_t x0_,
+                                             bool x1_, uint64_t x2_,
+                                             collatz_steps_clause_3_graph x3_) {
     auto f4_impl = [&](auto &_self_f4, auto &_self_f5, uint64_t, uint64_t,
                        const collatz_steps_graph &c) -> T1 {
       if (std::holds_alternative<
@@ -861,15 +861,15 @@ struct Equations {
                            *hind0));
       }
     };
-    auto f4 = [&](uint64_t _x, uint64_t _x4,
+    auto f4 = [&](uint64_t _x, uint64_t _x0,
                   const collatz_steps_graph &c) -> T1 {
-      return f4_impl(f4_impl, f5_impl, _x, _x4, c);
+      return f4_impl(f4_impl, f5_impl, _x, _x0, c);
     };
-    auto f5 = [&](uint64_t _x, bool _x4, uint64_t _x5,
+    auto f5 = [&](uint64_t _x, bool _x0, uint64_t _x1,
                   const collatz_steps_clause_3_graph &c) -> T2 {
-      return f5_impl(f4_impl, f5_impl, _x, _x4, _x5, c);
+      return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c);
     };
-    return f5(_x0, _x1, _x2, _x3);
+    return f5(x0_, x1_, x2_, x3_);
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
@@ -879,12 +879,12 @@ struct Equations {
                                    T1 &> &&
              std::is_invocable_r_v<T2, F4 &, uint64_t &, collatz_steps_graph &,
                                    T1 &>
-  static T1 collatz_steps_graph_rect(const T1 &_x0, const T1 &_x1, F2 &&_x2,
-                                     F3 &&_x3, F4 &&_x4, uint64_t _x5,
-                                     uint64_t _x6,
-                                     const collatz_steps_graph &_x7) {
-    return collatz_steps_graph_mut<T1, T2>(_x0, _x1, _x2, _x3, _x4, _x5, _x6,
-                                           _x7);
+  static T1 collatz_steps_graph_rect(const T1 &x0_, const T1 &x1_, F2 &&x2_,
+                                     F3 &&x3_, F4 &&x4_, uint64_t x5_,
+                                     uint64_t x6_,
+                                     const collatz_steps_graph &x7_) {
+    return collatz_steps_graph_mut<T1, T2>(x0_, x1_, x2_, x3_, x4_, x5_, x6_,
+                                           x7_);
   }
 
   static collatz_steps_graph collatz_steps_graph_correct(uint64_t x);
@@ -911,10 +911,10 @@ struct Equations {
   template <typename F2, typename F3>
     requires std::is_invocable_r_v<std::any, F2 &, uint64_t &, std::any &> &&
              std::is_invocable_r_v<std::any, F3 &, uint64_t &, std::any &>
-  static std::any FunctionalElimination_collatz_steps(std::any _x0,
-                                                      std::any _x1, F2 &&_x2,
-                                                      F3 &&_x3, uint64_t _x4) {
-    return collatz_steps_elim(_x0, _x1, _x2, _x3, _x4);
+  static std::any FunctionalElimination_collatz_steps(std::any x0_,
+                                                      std::any x1_, F2 &&x2_,
+                                                      F3 &&x3_, uint64_t x4_) {
+    return collatz_steps_elim(x0_, x1_, x2_, x3_, x4_);
   }
 
   struct FunctionalInduction_collatz_steps {

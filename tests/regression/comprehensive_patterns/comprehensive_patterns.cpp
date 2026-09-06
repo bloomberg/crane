@@ -542,8 +542,8 @@ ComprehensivePatterns::proj_as_arg(const ComprehensivePatterns::NC &r) {
   return use_proj(r.nc_a);
 }
 
-uint64_t ComprehensivePatterns::use_two(uint64_t _x0, uint64_t _x1) {
-  return (_x0 + _x1);
+uint64_t ComprehensivePatterns::use_two(uint64_t x0_, uint64_t x1_) {
+  return (x0_ + x1_);
 }
 
 uint64_t
@@ -739,8 +739,8 @@ uint64_t ComprehensivePatterns::hof_test(const ComprehensivePatterns::NC &r) {
       [](const ComprehensivePatterns::NC &x) { return (x.nc_a + x.nc_b); }, r);
 }
 
-uint64_t ComprehensivePatterns::use_two_fc(uint64_t _x0, uint64_t _x1) {
-  return (_x0 + _x1);
+uint64_t ComprehensivePatterns::use_two_fc(uint64_t x0_, uint64_t x1_) {
+  return (x0_ + x1_);
 }
 
 uint64_t

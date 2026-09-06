@@ -1,7 +1,7 @@
 #include "module.h"
 
-Comparison NatOrdered::compare(uint64_t _x0, uint64_t _x1) {
-  return Nat::compare(_x0, _x1);
+Comparison NatOrdered::compare(uint64_t x0_, uint64_t x1_) {
+  return Nat::compare(x0_, x1_);
 }
 
 Comparison Nat::compare(uint64_t n, uint64_t m) {

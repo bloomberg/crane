@@ -1,6 +1,6 @@
 #include "fix_partial_app_escape.h"
 
-uint64_t FixPartialAppEscape::count_bits(uint64_t _x0) {
+uint64_t FixPartialAppEscape::count_bits(uint64_t x0_) {
   return []() {
     auto go_impl = [](auto &_self_go, uint64_t depth, uint64_t n) -> uint64_t {
       if (depth <= 0) {
@@ -20,5 +20,5 @@ uint64_t FixPartialAppEscape::count_bits(uint64_t _x0) {
       return go_impl(go_impl, depth, n);
     };
     return [=](uint64_t _pa0) mutable { return go(UINT64_C(32), _pa0); };
-  }()(_x0);
+  }()(x0_);
 }

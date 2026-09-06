@@ -20,7 +20,7 @@ struct SPropTest {
   };
 
   static uint64_t guarded_pred(uint64_t n);
-  static uint64_t safe_div(uint64_t _x0, uint64_t _x1);
+  static uint64_t safe_div(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t test_guarded = guarded_pred(UINT64_C(5));
   static inline const uint64_t test_box = UINT64_C(42);
   static inline const uint64_t test_div = safe_div(UINT64_C(10), UINT64_C(3));

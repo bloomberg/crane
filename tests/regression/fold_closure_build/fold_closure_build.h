@@ -151,7 +151,7 @@ struct FoldClosureBuild {
   ///
   /// The inner closure fun x => acc(h+x) captures acc (std::function)
   /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
-  static uint64_t compose_adders(const mylist<uint64_t> &l, uint64_t _x0);
+  static uint64_t compose_adders(const mylist<uint64_t> &l, uint64_t x0_);
   /// test1: compose_adders 10,20,30 7 = 67
   static inline const uint64_t test1 = compose_adders(
       mylist<uint64_t>::mycons(
@@ -198,7 +198,7 @@ struct FoldClosureBuild {
   /// Both are locals in the fold callback's scope.
   /// When fold returns, these scopes are destroyed, but the
   /// final fixpoint (stored in the accumulator) still references them.
-  static uint64_t compose_with_fix(const mylist<uint64_t> &l, uint64_t _x0);
+  static uint64_t compose_with_fix(const mylist<uint64_t> &l, uint64_t x0_);
   /// test4: compose_with_fix 10
   /// first iteration: acc=id, h=10
   /// go(x) = x + acc(h) = x + id(10) = x + 10

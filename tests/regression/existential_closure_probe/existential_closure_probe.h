@@ -42,7 +42,7 @@ struct ExistentialClosureProbe {
   /// Pack a closure into a type-erased wrapper.
   static wrap pack_fn(uint64_t base);
   /// Unpack and apply.
-  static uint64_t apply_packed(const wrap &_x0, uint64_t _x1);
+  static uint64_t apply_packed(const wrap &x0_, uint64_t x1_);
   /// test1: pack base=10, apply to 5. Expected: 15.
   static inline const uint64_t test1 =
       apply_packed(pack_fn(UINT64_C(10)), UINT64_C(5));

@@ -8,4 +8,4 @@ SigT<Tag, tag_type> Packer::pack_c(bool b) {
   return SigT<Tag, std::any>::existt(Tag::TAGC, b);
 }
 
-Tag Packer::get_tag(const SigT<Tag, tag_type> &_x0) { return _x0.projT1(); }
+Tag Packer::get_tag(const SigT<Tag, tag_type> &x0_) { return x0_.projT1(); }

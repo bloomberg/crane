@@ -36,41 +36,41 @@ unsigned int Pos::add_carry(unsigned int x, unsigned int y) {
   }
 }
 
-unsigned int NIntTest::add_test(unsigned int _x0, unsigned int _x1) {
-  return (_x0 + _x1);
+unsigned int NIntTest::add_test(unsigned int x0_, unsigned int x1_) {
+  return (x0_ + x1_);
 }
 
-unsigned int NIntTest::mul_test(unsigned int _x0, unsigned int _x1) {
-  return (_x0 * _x1);
+unsigned int NIntTest::mul_test(unsigned int x0_, unsigned int x1_) {
+  return (x0_ * x1_);
 }
 
-unsigned int NIntTest::sub_test(unsigned int _x0, unsigned int _x1) {
-  return (_x0 >= _x1 ? _x0 - _x1 : 0u);
+unsigned int NIntTest::sub_test(unsigned int x0_, unsigned int x1_) {
+  return (x0_ >= x1_ ? x0_ - x1_ : 0u);
 }
 
-unsigned int NIntTest::div_test(unsigned int _x0, unsigned int _x1) {
-  return (_x1 == 0u ? 0u : _x0 / _x1);
+unsigned int NIntTest::div_test(unsigned int x0_, unsigned int x1_) {
+  return (x1_ == 0u ? 0u : x0_ / x1_);
 }
 
-bool NIntTest::eqb_test(unsigned int _x0, unsigned int _x1) {
-  return _x0 == _x1;
+bool NIntTest::eqb_test(unsigned int x0_, unsigned int x1_) {
+  return x0_ == x1_;
 }
 
-bool NIntTest::ltb_test(unsigned int _x0, unsigned int _x1) {
-  return _x0 < _x1;
+bool NIntTest::ltb_test(unsigned int x0_, unsigned int x1_) {
+  return x0_ < x1_;
 }
 
-bool NIntTest::leb_test(unsigned int _x0, unsigned int _x1) {
-  return _x0 <= _x1;
+bool NIntTest::leb_test(unsigned int x0_, unsigned int x1_) {
+  return x0_ <= x1_;
 }
 
-unsigned int NIntTest::succ_test(unsigned int _x0) { return (_x0 + 1u); }
+unsigned int NIntTest::succ_test(unsigned int x0_) { return (x0_ + 1u); }
 
-unsigned int NIntTest::pred_test(unsigned int _x0) {
-  return (_x0 == 0u ? 0u : _x0 - 1u);
+unsigned int NIntTest::pred_test(unsigned int x0_) {
+  return (x0_ == 0u ? 0u : x0_ - 1u);
 }
 
-unsigned int NIntTest::double_test(unsigned int _x0) { return (_x0 * 2u); }
+unsigned int NIntTest::double_test(unsigned int x0_) { return (x0_ * 2u); }
 
 bool NIntTest::is_zero(unsigned int n) {
   if (n == 0u) {
@@ -81,8 +81,8 @@ bool NIntTest::is_zero(unsigned int n) {
   }
 }
 
-unsigned int NIntTest::pos_add(unsigned int _x0, unsigned int _x1) {
-  return (_x0 + _x1);
+unsigned int NIntTest::pos_add(unsigned int x0_, unsigned int x1_) {
+  return (x0_ + x1_);
 }
 
-unsigned int NIntTest::pos_succ(unsigned int _x0) { return (_x0 + 1u); }
+unsigned int NIntTest::pos_succ(unsigned int x0_) { return (x0_ + 1u); }

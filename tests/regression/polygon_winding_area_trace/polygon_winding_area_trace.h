@@ -147,7 +147,7 @@ struct Pos {
 };
 
 struct BinInt {
-  static int64_t pow_pos(int64_t z, unsigned int _x0);
+  static int64_t pow_pos(int64_t z, unsigned int x0_);
 };
 
 struct ListDef {

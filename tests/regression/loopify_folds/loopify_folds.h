@@ -453,8 +453,8 @@ struct LoopifyFolds {
   template <typename F1>
     requires std::is_invocable_r_v<std::pair<uint64_t, uint64_t>, F1 &,
                                    uint64_t &>
-  static List<uint64_t> unfold(uint64_t _x0, F1 &&_x1, uint64_t _x2) {
-    return unfold_fuel(_x0, _x1, _x2);
+  static List<uint64_t> unfold(uint64_t x0_, F1 &&x1_, uint64_t x2_) {
+    return unfold_fuel(x0_, x1_, x2_);
   }
 };
 

@@ -33,7 +33,7 @@ uint64_t MemSafetyProbe19::choice_fn(const MemSafetyProbe19::tree &t,
 /// TEST 4: Closure returned from if, capturing a locally-built tree.
 /// The let-bound tree is on the stack. If the returned lambda
 /// captures by &, it holds a reference to the dead stack frame.
-uint64_t MemSafetyProbe19::make_adder(uint64_t n, bool b, uint64_t _x0) {
+uint64_t MemSafetyProbe19::make_adder(uint64_t n, bool b, uint64_t x0_) {
   return [=]() mutable {
     MemSafetyProbe19::tree t = tree::node(tree::leaf(), n, tree::leaf());
     return [=](uint64_t m) mutable {
@@ -43,5 +43,5 @@ uint64_t MemSafetyProbe19::make_adder(uint64_t n, bool b, uint64_t _x0) {
         return m;
       }
     };
-  }()(_x0);
+  }()(x0_);
 }

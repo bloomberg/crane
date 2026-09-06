@@ -162,8 +162,8 @@ struct VoidCallback {
   /// 5. Nested void callbacks
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_twice(F0 &&f, uint64_t _x0) {
-    f(_x0);
+  static void apply_twice(F0 &&f, uint64_t x0_) {
+    f(x0_);
     return;
   }
 
@@ -175,8 +175,8 @@ struct VoidCallback {
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply_to(F0 &&f, T1 _x0) {
-    return f(_x0);
+  static T2 apply_to(F0 &&f, T1 x0_) {
+    return f(x0_);
   }
 
   static inline const std::monostate test_apply_to_void = []() {

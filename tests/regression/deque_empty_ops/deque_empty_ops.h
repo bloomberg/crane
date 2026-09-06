@@ -11,7 +11,7 @@ struct DequeEmptyOps {
   static std::deque<uint64_t> run_map(const std::deque<uint64_t> &l);
   static std::deque<uint64_t> run_flatmap(const std::deque<uint64_t> &l);
   static std::deque<uint64_t>
-  run_concat(const std::deque<std::deque<uint64_t>> &_x0);
+  run_concat(const std::deque<std::deque<uint64_t>> &x0_);
 };
 
 #endif // INCLUDED_DEQUE_EMPTY_OPS

@@ -38,11 +38,11 @@ std::deque<uint64_t> DequeEmptyOps::run_flatmap(const std::deque<uint64_t> &l) {
 }
 
 std::deque<uint64_t>
-DequeEmptyOps::run_concat(const std::deque<std::deque<uint64_t>> &_x0) {
+DequeEmptyOps::run_concat(const std::deque<std::deque<uint64_t>> &x0_) {
   return [](const auto &_ls) {
     std::deque<typename std::decay_t<decltype(_ls)>::value_type::value_type> _r;
     for (const auto &_s : _ls)
       _r.insert(_r.end(), _s.begin(), _s.end());
     return _r;
-  }(_x0);
+  }(x0_);
 }

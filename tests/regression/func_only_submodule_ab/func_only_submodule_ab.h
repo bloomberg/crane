@@ -8,7 +8,7 @@ struct FuncOnlySubmoduleAb {
     };
 
     struct B {
-      static uint64_t dec(uint64_t _x0);
+      static uint64_t dec(uint64_t x0_);
     };
   };
 

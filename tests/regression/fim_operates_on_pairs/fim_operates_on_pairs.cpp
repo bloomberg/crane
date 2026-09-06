@@ -33,7 +33,7 @@ FimOperatesOnPairs::set_reg_pair(const FimOperatesOnPairs::state &s, uint64_t r,
 }
 
 FimOperatesOnPairs::state
-FimOperatesOnPairs::execute_fim(const FimOperatesOnPairs::state &_x0,
-                                uint64_t _x1, uint64_t _x2) {
-  return set_reg_pair(_x0, _x1, _x2);
+FimOperatesOnPairs::execute_fim(const FimOperatesOnPairs::state &x0_,
+                                uint64_t x1_, uint64_t x2_) {
+  return set_reg_pair(x0_, x1_, x2_);
 }

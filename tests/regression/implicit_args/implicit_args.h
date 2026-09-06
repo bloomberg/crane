@@ -19,8 +19,8 @@ struct ImplicitArgs {
 
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply(F0 &&f, T1 _x0) {
-    return f(_x0);
+  static T2 apply(F0 &&f, T1 x0_) {
+    return f(x0_);
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
@@ -143,12 +143,12 @@ struct ImplicitArgs {
   static inline const uint64_t explicit_id = id<uint64_t>(UINT64_C(5));
   static inline const uint64_t explicit_fst =
       fst_of<uint64_t, bool>(UINT64_C(3), true);
-  static uint64_t add_one(uint64_t _x0);
+  static uint64_t add_one(uint64_t x0_);
   static uint64_t double_nat(uint64_t n);
-  static uint64_t add_implicit(uint64_t _x0, uint64_t _x1);
+  static uint64_t add_implicit(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t use_add_implicit =
       add_implicit(UINT64_C(5), UINT64_C(3));
-  static uint64_t scale(uint64_t _x0, uint64_t _x1);
+  static uint64_t scale(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t use_scale = scale(UINT64_C(3), UINT64_C(7));
   static uint64_t combine(uint64_t a, uint64_t b, uint64_t x);
   static inline const uint64_t use_combine =
@@ -156,16 +156,16 @@ struct ImplicitArgs {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t apply_implicit(F0 &&f, uint64_t _x0) {
-    return f(_x0);
+  static uint64_t apply_implicit(F0 &&f, uint64_t x0_) {
+    return f(x0_);
   }
 
   static inline const uint64_t use_apply_implicit = apply_implicit(
       [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
       UINT64_C(5));
-  static uint64_t with_base(uint64_t _x0, uint64_t _x1);
-  static uint64_t from_zero(uint64_t _x0);
-  static uint64_t from_ten(uint64_t _x0);
+  static uint64_t with_base(uint64_t x0_, uint64_t x1_);
+  static uint64_t from_zero(uint64_t x0_);
+  static uint64_t from_ten(uint64_t x0_);
   static inline const uint64_t use_from_zero = from_zero(UINT64_C(5));
   static inline const uint64_t use_from_ten = from_ten(UINT64_C(5));
 

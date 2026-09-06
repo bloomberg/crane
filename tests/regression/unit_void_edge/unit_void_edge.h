@@ -103,8 +103,8 @@ struct UnitVoidEdge {
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_unit_fn(F0 &&f, uint64_t _x0) {
-    f(_x0);
+  static void apply_unit_fn(F0 &&f, uint64_t x0_) {
+    f(x0_);
     return;
   }
 
@@ -150,8 +150,8 @@ struct UnitVoidEdge {
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_and_discard(F0 &&f, uint64_t _x0) {
-    f(_x0);
+  static void apply_and_discard(F0 &&f, uint64_t x0_) {
+    f(x0_);
     return;
   }
 

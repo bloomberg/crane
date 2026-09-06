@@ -31,7 +31,7 @@ struct Packer {
       SigT<Tag, std::any>::existt(Tag::TAGA, std::monostate{});
   static SigT<Tag, tag_type> pack_b(uint64_t n);
   static SigT<Tag, tag_type> pack_c(bool b);
-  static Tag get_tag(const SigT<Tag, tag_type> &_x0);
+  static Tag get_tag(const SigT<Tag, tag_type> &x0_);
 };
 
 #endif // INCLUDED_SEP_EXT_SIGT_DEPENDENT

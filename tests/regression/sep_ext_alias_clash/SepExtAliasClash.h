@@ -13,7 +13,7 @@ template <Sig S> struct ImplFn {
 template <Sig ST> struct LemmasFn {
   using Impl = ImplFn<ST>;
 
-  static typename ST::t bar(typename ST::t _x0) { return Impl::foo(_x0); }
+  static typename ST::t bar(typename ST::t x0_) { return Impl::foo(x0_); }
 };
 
 struct MySig {

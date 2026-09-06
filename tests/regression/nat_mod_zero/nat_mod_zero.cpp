@@ -4,8 +4,8 @@
 /// But NatIntStd maps Nat.modulo to (%a0 % %a1) with
 /// no zero guard — unlike Nat.div which has one.
 /// So my_mod n 0 produces n % 0u in C++ — UB (SIGFPE).
-uint64_t NatModZero::my_mod(uint64_t _x0, uint64_t _x1) {
-  return (_x1 ? _x0 % _x1 : _x0);
+uint64_t NatModZero::my_mod(uint64_t x0_, uint64_t x1_) {
+  return (x1_ ? x0_ % x1_ : x0_);
 }
 
 /// A "safe" divmod that a Rocq programmer would reasonably write,

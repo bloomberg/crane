@@ -109,7 +109,7 @@ struct EffectPoly {
   static uint64_t test_map_result();
 
   /// 2. Polymorphic bind-and-return
-  template <typename T1> static T1 lift_pure(const T1 &_x0) { return _x0; }
+  template <typename T1> static T1 lift_pure(const T1 &x0_) { return x0_; }
 
   static uint64_t test_lift_nat();
   static std::string test_lift_string();

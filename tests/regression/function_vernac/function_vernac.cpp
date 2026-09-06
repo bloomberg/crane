@@ -23,7 +23,7 @@ uint64_t FunctionVernac::div2(uint64_t n) {
 }
 
 FunctionVernac::R_div2 FunctionVernac::R_div2_correct(uint64_t n,
-                                                      uint64_t _res) {
+                                                      uint64_t res_) {
   return div2_rect<std::function<FunctionVernac::R_div2(uint64_t)>>(
       [](uint64_t y) -> std::function<FunctionVernac::R_div2(uint64_t)> {
         return [=](uint64_t) mutable { return R_div2::r_div2_0(y); };
@@ -38,7 +38,7 @@ FunctionVernac::R_div2 FunctionVernac::R_div2_correct(uint64_t n,
           return R_div2::r_div2_2(y, y0, div2(y0), y2(div2(y0)));
         };
       },
-      n)(_res);
+      n)(res_);
 }
 
 Sig<uint64_t> FunctionVernac::list_sum_terminate(const List<uint64_t> &l) {
@@ -59,7 +59,7 @@ uint64_t FunctionVernac::list_sum(const List<uint64_t> &l) {
 }
 
 FunctionVernac::R_list_sum
-FunctionVernac::R_list_sum_correct(const List<uint64_t> &l, uint64_t _res) {
+FunctionVernac::R_list_sum_correct(const List<uint64_t> &l, uint64_t res_) {
   return list_sum_rect<std::function<FunctionVernac::R_list_sum(uint64_t)>>(
       [](List<uint64_t> y)
           -> std::function<FunctionVernac::R_list_sum(uint64_t)> {
@@ -73,5 +73,5 @@ FunctionVernac::R_list_sum_correct(const List<uint64_t> &l, uint64_t _res) {
                                           y3(list_sum(y1)));
         };
       },
-      l)(_res);
+      l)(res_);
 }

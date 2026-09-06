@@ -415,7 +415,7 @@ struct MemSafetyProbe19 {
   /// TEST 4: Closure returned from if, capturing a locally-built tree.
   /// The let-bound tree is on the stack. If the returned lambda
   /// captures by &, it holds a reference to the dead stack frame.
-  static uint64_t make_adder(uint64_t n, bool b, uint64_t _x0);
+  static uint64_t make_adder(uint64_t n, bool b, uint64_t x0_);
   static inline const uint64_t test_make_adder =
       make_adder(UINT64_C(20), true, UINT64_C(5));
   /// TEST 5: Double use of returned closure.
@@ -431,8 +431,8 @@ struct MemSafetyProbe19 {
   /// TEST 6: Pass returned closure to a higher-order function.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
-  static uint64_t apply_to(F0 &&f, uint64_t _x0) {
-    return f(_x0);
+  static uint64_t apply_to(F0 &&f, uint64_t x0_) {
+    return f(x0_);
   }
 
   static inline const uint64_t test_pass_closure = []() {

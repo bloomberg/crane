@@ -9,8 +9,8 @@
 
 namespace ParserAnyCast {
 
-ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry _x0) {
-  return _x0.projT1();
+ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry x0_) {
+  return x0_.projT1();
 }
 
 Datatypes::List<ParserAnyCast::Tag> ParserAnyCast::process_entries(
@@ -41,8 +41,8 @@ uint64_t ParserAnyCast::sum_a_entries(
 }
 
 ParserAnyCast::Label
-ParserAnyCast::get_entry_label(ParserAnyCast::labeled_entry _x0) {
-  return _x0.projT1();
+ParserAnyCast::get_entry_label(ParserAnyCast::labeled_entry x0_) {
+  return x0_.projT1();
 }
 
 } // namespace ParserAnyCast

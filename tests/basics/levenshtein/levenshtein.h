@@ -762,9 +762,9 @@ struct Levenshtein {
     }
   }
 
-  static SigT<Nat, chain> levenshtein_chain(const String &s, String _x0);
+  static SigT<Nat, chain> levenshtein_chain(const String &s, String x0_);
   static Nat levenshtein_computed(const String &s, const String &t);
-  static Nat levenshtein(const String &_x0, const String &_x1);
+  static Nat levenshtein(const String &x0_, const String &x1_);
 };
 
 #endif // INCLUDED_LEVENSHTEIN

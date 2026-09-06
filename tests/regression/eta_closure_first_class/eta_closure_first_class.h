@@ -140,7 +140,7 @@ struct EtaClosureFirstClass {
   /// into a two-argument C++ function.  Passing it first-class to map then
   /// fails, because a uint64_t(uint64_t, uint64_t) is not convertible to
   /// std::function<uint64_t(uint64_t)>.
-  static uint64_t mkclosure(uint64_t n, uint64_t _x0);
+  static uint64_t mkclosure(uint64_t n, uint64_t x0_);
   static uint64_t run(uint64_t k);
 };
 

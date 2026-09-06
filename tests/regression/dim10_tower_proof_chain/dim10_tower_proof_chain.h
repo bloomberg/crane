@@ -24,7 +24,7 @@ template <typename A, typename P> struct SigT {
 struct Dim10TowerProofChainCase {
   using nat_lt = std::any;
   using nat_le = std::any;
-  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, std::any _H);
+  static nat_le nat_le_of_lt(uint64_t n, uint64_t m, std::any h_);
 
   struct QPos {
     uint64_t qpos_num;
@@ -42,15 +42,15 @@ struct Dim10TowerProofChainCase {
 
   static inline const GradedObj go_zero = GradedObj{UINT64_C(0)};
   static uint64_t nat_sub(uint64_t n, uint64_t m);
-  static uint64_t poly_approx_dim(uint64_t _x0, uint64_t _x1);
+  static uint64_t poly_approx_dim(uint64_t x0_, uint64_t x1_);
   static uint64_t layer_dim(uint64_t base_dim, uint64_t n);
   static GradedObj layer_obj(uint64_t base_dim, uint64_t n);
   static QPos layer_measure(uint64_t base_dim, uint64_t n);
   static EventuallyZero layer_measure_eventually_zero(uint64_t base_dim);
   static GradedObj P_n_obj(uint64_t n, const GradedObj &x);
-  static GradedObj D_n_obj(uint64_t _x0, uint64_t _x1);
-  static QPos D_n_measure(uint64_t _x0, uint64_t _x1);
-  static EventuallyZero D_n_measure_eventually_zero(uint64_t _x0);
+  static GradedObj D_n_obj(uint64_t x0_, uint64_t x1_);
+  static QPos D_n_measure(uint64_t x0_, uint64_t x1_);
+  static EventuallyZero D_n_measure_eventually_zero(uint64_t x0_);
 
   struct GradedGoodwillieTower {
     std::function<GradedObj(uint64_t)> ggt_P;
