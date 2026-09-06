@@ -8097,3 +8097,14 @@
   (alias runtest)
   (deps record_type_field_concept.t.exe)
   (action (run ./record_type_field_concept.t.exe))))
+
+(subdir int63_zero_div
+ (rule
+  (targets int63_zero_div.t.exe)
+  (deps Int63ZeroDiv.vo int63_zero_div.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_zero_div.t.exe int63_zero_div.cpp int63_zero_div.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps int63_zero_div.t.exe)
+  (action (run ./int63_zero_div.t.exe))))

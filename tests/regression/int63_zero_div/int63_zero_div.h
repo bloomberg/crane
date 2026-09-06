@@ -7,7 +7,7 @@ struct Int63ZeroDiv {
   static inline const int64_t d =
       (INT64_C(0) == 0 ? 0 : INT64_C(7) / INT64_C(0));
   static inline const int64_t m =
-      (INT64_C(0) == 0 ? 0 : INT64_C(7) % INT64_C(0));
+      (INT64_C(0) == 0 ? INT64_C(7) : INT64_C(7) % INT64_C(0));
   static inline const int64_t s =
       (INT64_C(70) >= 63
            ? 0

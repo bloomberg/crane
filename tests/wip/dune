@@ -89,7 +89,6 @@
   (deps loopify_gap_ackermann.t.exe)
   (action (run ./loopify_gap_ackermann.t.exe))))
 
-
 (subdir mutual_tmc_loopify
  (rule
   (targets mutual_tmc_loopify.t.exe)
@@ -188,17 +187,6 @@
   (alias runtest)
   (deps instance_in_record.t.exe)
   (action (run ./instance_in_record.t.exe))))
-
-(subdir int63_zero_div
- (rule
-  (targets int63_zero_div.t.exe)
-  (deps Int63ZeroDiv.vo int63_zero_div.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} int63_zero_div.t.exe int63_zero_div.cpp int63_zero_div.t.cpp)))
- (rule
-  (alias runtest)
-  (deps int63_zero_div.t.exe)
-  (action (run ./int63_zero_div.t.exe))))
 
 (subdir iter_capture
  (rule
