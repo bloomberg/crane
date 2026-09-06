@@ -135,7 +135,18 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
     else (
     ast_iter iter a;
     match a with
-    | MLglob (r, _) -> do_term r
+    (* A global instantiated at a type-level definition spells that
+       definition in the generated code, so its declaration has to be emitted
+       alongside.  Only definitions: an inductive reached through a type
+       argument alone is not named there, and visiting it would emit a
+       declaration nothing refers to -- a [Prop] one at that. *)
+    | MLglob (r, tys) ->
+      do_term r;
+      let do_const = function
+        | GlobRef.ConstRef _ as r -> do_type r
+        | _ -> ()
+      in
+      List.iter (type_iter_references do_const) tys
     | MLcons (_, r, _) -> do_cons r
     | MLcase (ty, _, v) ->
       type_iter_references do_type ty;

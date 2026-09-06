@@ -5,6 +5,7 @@ struct EqRectTransport {
   template <typename T1, typename T2> static T2 cast(T1 a) { return a; }
 
   static inline const uint64_t run = cast<uint64_t, uint64_t>(UINT64_C(5));
+  using idty = uint64_t;
   static inline const uint64_t run2 = cast<idty, uint64_t>(UINT64_C(7));
 };
 

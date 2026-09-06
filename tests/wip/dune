@@ -111,17 +111,6 @@
   (deps deep_literal_nesting.t.exe)
   (action (run ./deep_literal_nesting.t.exe))))
 
-(subdir eq_rect_transport
- (rule
-  (targets eq_rect_transport.t.exe)
-  (deps EqRectTransport.vo eq_rect_transport.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eq_rect_transport.t.exe eq_rect_transport.cpp eq_rect_transport.t.cpp)))
- (rule
-  (alias runtest)
-  (deps eq_rect_transport.t.exe)
-  (action (run ./eq_rect_transport.t.exe))))
-
 (subdir instance_as_value
  (rule
   (targets instance_as_value.t.exe)
