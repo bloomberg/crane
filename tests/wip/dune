@@ -122,17 +122,6 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
-(subdir dependent_vector_nth
- (rule
-  (targets dependent_vector_nth.t.exe)
-  (deps DependentVectorNth.vo dependent_vector_nth.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_vector_nth.t.exe dependent_vector_nth.cpp dependent_vector_nth.t.cpp)))
- (rule
-  (alias runtest)
-  (deps dependent_vector_nth.t.exe)
-  (action (run ./dependent_vector_nth.t.exe))))
-
 (subdir erased_type_field_lambda
  (rule
   (targets erased_type_field_lambda.t.exe)

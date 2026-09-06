@@ -8394,3 +8394,14 @@
   (alias runtest)
   (deps sigt_record_field.t.exe)
   (action (run ./sigt_record_field.t.exe))))
+
+(subdir dependent_vector_nth
+ (rule
+  (targets dependent_vector_nth.t.exe)
+  (deps DependentVectorNth.vo dependent_vector_nth.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dependent_vector_nth.t.exe dependent_vector_nth.cpp dependent_vector_nth.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dependent_vector_nth.t.exe)
+  (action (run ./dependent_vector_nth.t.exe))))

@@ -6,7 +6,6 @@
 #include <any>
 #include <atomic>
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -264,11 +263,11 @@ template <SYM Ty> struct DefsFn {
   action_of(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
                        std::pair<std::any, std::any>> &e,
             symbols_semty x0_) {
-    return [=]() mutable -> std::function<std::any(std::any)> {
+    return [=]() mutable {
       const auto &[x0, a1] = e;
       const auto &[_x, _x0] = x0;
       const auto &[_x1, a] = std::any_cast<std::pair<std::any, std::any>>(a1);
-      return std::any_cast<std::function<std::any(std::any)>>(a);
+      return a;
     }()(x0_);
   }
 

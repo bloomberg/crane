@@ -2857,6 +2857,62 @@ and erase_type_args_to_any = function
     behind a [using] alias that {!resolves_to_any_type} follows. *)
 and ml_erases_to_box env t = resolves_to_any_type (cpp_of_ml env t)
 
+(** [iife_void_return env typ pv] is [Some Tvoid] when the match's branches
+    produce nothing: a lambda that may fall off its end has to say [-> void]
+    explicitly. *)
+and iife_void_return env typ pv =
+  let branch_rty =
+    match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
+  in
+  let r = cpp_of_ml env branch_rty in
+  if is_cpp_unit_type r || ml_type_is_unit (ml_result_type branch_rty) then
+    Some Tvoid
+  else None
+
+(** [iife_closure_return env typ pv stmts] is the return type to annotate the
+    IIFE wrapping a match with, given the branches already generated.
+
+    Distinct closures have no common type, so a match that returns one from
+    some branch needs the [std::function] they all convert to.  Otherwise
+    [None]: deducing beats annotating, because the branch's recorded ML type
+    can outlive the term it described -- a motive's arrow surviving the
+    application that consumed it -- and because it may still mention type
+    variables that mean nothing in a non-template context.
+
+    A [tt] returned from a branch that a dependent match makes unreachable
+    counts too: it has no common type with the live branches either, and the
+    annotation is what lets {!Gen_decls.dead_unit_returns_to_abort} recognise
+    the branch as dead.
+
+    The question is asked of the generated statements, not of the ML terms: a
+    branch spells a closure whether it was written as a lambda or arose from a
+    partial application, and only the C++ says which. *)
+and iife_closure_return env typ pv stmts =
+  let found = ref false in
+  let scan_expr e =
+    match e with
+    | CPPlambda _ -> found := true
+    | CPPglob (r, _, _) when Table.is_tt_constructor r -> found := true
+    | _ -> ()
+  in
+  let rec scan_stmt s =
+    match s with
+    | Sreturn (Some e) -> scan_expr e
+    | _ ->
+      Minicpp.iter_stmt_children
+        ~on_expr:(fun _ -> ())
+        ~on_stmts:(List.iter scan_stmt) s
+  in
+  List.iter scan_stmt stmts;
+  if not !found then None
+  else
+    let branch_rty =
+      match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
+    in
+    match cpp_of_ml env branch_rty with Tfun _ as r -> Some r | _ -> None
+
+
+
 (** [names_only_scoped_tvars ty] -- whether every type variable [ty] spells is
     one this scope declares.  A slot type read off a callee's signature is
     written in the callee's type variables, which name nothing here, so such a
@@ -9757,36 +9813,19 @@ and gen_cpp_case (typ : ml_type) t env pv =
       in
       Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
     in
-    (* Compute IIFE return type.  Void: [-> void] is required when the lambda
-       may have no return statement.  Function-typed ([Tfun _]): emit the
-       explicit [std::function<R(A...)>] type so that branches returning
-       distinct lambda closure types can all be implicitly converted via
-       [std::function]'s converting constructor; without it, C++ cannot deduce
-       a common return type from distinct closures.  Other non-void: [None]
-       lets C++ deduce, which avoids leaking unresolved Tvars (e.g. [T1])
-       from the ML type annotation into non-template contexts. *)
-    let iife_ret_opt =
-      let branch_rty =
-        match Array.to_list pv with
-        | (_, rty, _, _) :: _ -> rty
-        | [] -> typ
-      in
-      let r = cpp_of_ml env branch_rty in
-      if is_cpp_unit_type r
-         || ml_type_is_unit (ml_result_type branch_rty)
-      then Some Tvoid
-      else match r with
-        | Tfun _ -> Some r
-        | _ -> None
-    in
+    let void_ret = iife_void_return env typ pv in
     let saved_ret = tctx.current_cpp_return_type in
-    if iife_ret_opt = Some Tvoid then
-      tctx.current_cpp_return_type <- Some Tvoid;
+    if void_ret = Some Tvoid then tctx.current_cpp_return_type <- Some Tvoid;
     let branches = gen_enum_branches (Array.to_list pv) in
     let default = gen_default_stmts () in
     tctx.current_cpp_return_type <- saved_ret;
-    CPPfun_call
-      (CPPlambda ([], iife_ret_opt, [Sswitch (scrutinee, ind_ref, branches, default)], false), [])
+    let body = [Sswitch (scrutinee, ind_ref, branches, default)] in
+    let iife_ret_opt =
+      match void_ret with
+      | Some _ as v -> v
+      | None -> iife_closure_return env typ pv body
+    in
+    CPPfun_call (CPPlambda ([], iife_ret_opt, body, false), [])
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
        and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
@@ -9887,27 +9926,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | Ptuple _ -> gen_branches cs
     in
     let branches, wildcard = gen_branches (Array.to_list pv) in
-    (* Compute IIFE return type.  Void: [-> void] is required when the lambda
-       may have no return statement.  Function-typed ([Tfun _]): emit the
-       explicit [std::function<R(A...)>] type so that branches returning
-       distinct lambda closure types can all be implicitly converted via
-       [std::function]'s converting constructor; without it, C++ cannot deduce
-       a common return type from distinct closures.  Other non-void: [None]
-       lets C++ deduce, which avoids leaking unresolved Tvars (e.g. [T1])
-       from the ML type annotation into non-template contexts. *)
     let iife_ret_opt =
-      let branch_rty =
-        match Array.to_list pv with
-        | (_, rty, _, _) :: _ -> rty
-        | [] -> typ
-      in
-      let r = cpp_of_ml env branch_rty in
-      if is_cpp_unit_type r
-         || ml_type_is_unit (ml_result_type branch_rty)
-      then Some Tvoid
-      else match r with
-        | Tfun _ -> Some r
-        | _ -> None
+      match iife_void_return env typ pv with
+      | Some _ as v -> v
+      | None ->
+        iife_closure_return env typ pv [Smatch (branches, wildcard)]
     in
     (* Perceus reuse (Crane Reuse): when the matched constructor's single
        recursive child is uniquely owned at runtime, rebuild a same-inductive

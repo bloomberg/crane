@@ -5,7 +5,6 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -159,7 +158,7 @@ struct DependentVectorNth {
 };
 
 template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
-  return [=]() mutable -> std::function<T1(T)> {
+  return [=]() mutable {
     if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
       throw std::logic_error("absurd case");
     } else {
