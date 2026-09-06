@@ -5,26 +5,18 @@ bool skiplist_test::nat_lt(uint64_t _x0, uint64_t _x1) { return _x0 < _x1; }
 bool skiplist_test::nat_eq(uint64_t _x0, uint64_t _x1) { return _x0 == _x1; }
 
 bool skiplist_test::stm_test_insert_lookup() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(2));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(1));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(1),
-                                                UINT64_C(10), sl, UINT64_C(1));
-  std::optional<uint64_t> v5 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), sl);
-  std::optional<uint64_t> v3 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(3), sl);
-  std::optional<uint64_t> v7 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(7), sl);
-  std::optional<uint64_t> v1 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(1), sl);
-  std::optional<uint64_t> v9 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(9), sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(2));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(1));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(1), UINT64_C(10), UINT64_C(1));
+  std::optional<uint64_t> v5 = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
+  std::optional<uint64_t> v3 = sl.lookup(nat_lt, nat_eq, UINT64_C(3));
+  std::optional<uint64_t> v7 = sl.lookup(nat_lt, nat_eq, UINT64_C(7));
+  std::optional<uint64_t> v1 = sl.lookup(nat_lt, nat_eq, UINT64_C(1));
+  std::optional<uint64_t> v9 = sl.lookup(nat_lt, nat_eq, UINT64_C(9));
   bool c1;
   if (v5.has_value()) {
     const uint64_t &n = *v5;
@@ -64,22 +56,16 @@ bool skiplist_test::stm_test_insert_lookup() {
 }
 
 bool skiplist_test::stm_test_delete() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(2));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(1));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
-  SkipList::template remove<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                sl);
-  std::optional<uint64_t> v5 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), sl);
-  std::optional<uint64_t> v3 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(3), sl);
-  std::optional<uint64_t> v7 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(7), sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(2));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(1));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
+  sl.remove(nat_lt, nat_eq, UINT64_C(5));
+  std::optional<uint64_t> v5 = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
+  std::optional<uint64_t> v3 = sl.lookup(nat_lt, nat_eq, UINT64_C(3));
+  std::optional<uint64_t> v7 = sl.lookup(nat_lt, nat_eq, UINT64_C(7));
   bool c1;
   if (v5.has_value()) {
     const uint64_t &_x3 = *v5;
@@ -105,14 +91,12 @@ bool skiplist_test::stm_test_delete() {
 }
 
 bool skiplist_test::stm_test_update() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                500u, sl, UINT64_C(0));
-  std::optional<uint64_t> v = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
+  std::optional<uint64_t> v = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
   return [=]() mutable -> bool {
     if (v.has_value()) {
       const uint64_t &n = *v;
@@ -124,16 +108,13 @@ bool skiplist_test::stm_test_update() {
 }
 
 bool skiplist_test::stm_test_minimum() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
-  std::optional<std::pair<uint64_t, uint64_t>> minOpt =
-      SkipList::template minimum<uint64_t, uint64_t>(sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
+  std::optional<std::pair<uint64_t, uint64_t>> minOpt = sl.minimum();
   return [=]() mutable -> bool {
     if (minOpt.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *minOpt;
@@ -146,16 +127,15 @@ bool skiplist_test::stm_test_minimum() {
 }
 
 bool skiplist_test::stm_test_length_isEmpty() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  bool empty1 = SkipList::template isEmpty<uint64_t, uint64_t>(sl);
-  uint64_t len1 = SkipList::template length<uint64_t, uint64_t>(sl);
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  bool empty2 = SkipList::template isEmpty<uint64_t, uint64_t>(sl);
-  uint64_t len2 = SkipList::template length<uint64_t, uint64_t>(sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  bool empty1 = sl.isEmpty();
+  uint64_t len1 = sl.length();
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  bool empty2 = sl.isEmpty();
+  uint64_t len2 = sl.length();
   bool c2 = len1 == UINT64_C(0);
   bool c3 = !(empty2);
   bool c4 = len2 == UINT64_C(2);
@@ -163,29 +143,27 @@ bool skiplist_test::stm_test_length_isEmpty() {
 }
 
 bool skiplist_test::stm_test_front_back() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> frontOpt =
-      SkipList::template front<uint64_t, uint64_t>(sl);
+      sl.front();
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> backOpt =
-      SkipList::template back<uint64_t, uint64_t>(sl);
+      sl.back();
   bool c1;
   if (frontOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *frontOpt;
-    c1 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(3);
+    c1 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) == UINT64_C(3);
   } else {
     c1 = false;
   }
   bool c2;
   if (backOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *backOpt;
-    c2 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(7);
+    c2 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) == UINT64_C(7);
   } else {
     c2 = false;
   }
@@ -193,19 +171,15 @@ bool skiplist_test::stm_test_front_back() {
 }
 
 bool skiplist_test::stm_test_popFront() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
-  std::optional<std::pair<uint64_t, uint64_t>> pop1 =
-      SkipList::template popFront<uint64_t, uint64_t>(sl);
-  std::optional<std::pair<uint64_t, uint64_t>> pop2 =
-      SkipList::template popFront<uint64_t, uint64_t>(sl);
-  uint64_t len = SkipList::template length<uint64_t, uint64_t>(sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
+  std::optional<std::pair<uint64_t, uint64_t>> pop1 = sl.popFront();
+  std::optional<std::pair<uint64_t, uint64_t>> pop2 = sl.popFront();
+  uint64_t len = sl.length();
   bool c1;
   if (pop1.has_value()) {
     const std::pair<uint64_t, uint64_t> &p = *pop1;
@@ -227,17 +201,16 @@ bool skiplist_test::stm_test_popFront() {
 }
 
 bool skiplist_test::stm_test_addUnique() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  bool r1 = SkipList::template addUnique<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), sl, UINT64_C(0));
-  bool r2 = SkipList::template addUnique<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), 500u, sl, UINT64_C(0));
-  bool r3 = SkipList::template addUnique<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), sl, UINT64_C(0));
-  std::optional<uint64_t> v5 = SkipList::template lookup<uint64_t, uint64_t>(
-      nat_lt, nat_eq, UINT64_C(5), sl);
-  uint64_t len = SkipList::template length<uint64_t, uint64_t>(sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  bool r1 =
+      sl.addUnique(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  bool r2 = sl.addUnique(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
+  bool r3 =
+      sl.addUnique(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  std::optional<uint64_t> v5 = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
+  uint64_t len = sl.length();
   bool c2 = !(r2);
   bool c4;
   if (v5.has_value()) {
@@ -251,22 +224,19 @@ bool skiplist_test::stm_test_addUnique() {
 }
 
 bool skiplist_test::stm_test_find() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> pairOpt =
-      SkipList::template find<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                  sl);
+      sl.find(nat_lt, nat_eq, UINT64_C(5));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> noneOpt =
-      SkipList::template find<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(9),
-                                                  sl);
+      sl.find(nat_lt, nat_eq, UINT64_C(9));
   bool c1;
   if (pairOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *pairOpt;
-    uint64_t k = SkipList::template key<uint64_t, uint64_t>(p);
+    uint64_t k = SkipList<int, int>::template key<uint64_t, uint64_t>(p);
     c1 = k == UINT64_C(5);
   } else {
     c1 = false;
@@ -282,33 +252,31 @@ bool skiplist_test::stm_test_find() {
 }
 
 bool skiplist_test::stm_test_navigation() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(1),
-                                                UINT64_C(10), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(1), UINT64_C(10), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> frontOpt =
-      SkipList::template front<uint64_t, uint64_t>(sl);
+      sl.front();
   if (frontOpt.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &first = *frontOpt;
     std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> nextOpt =
-        SkipList::template next<uint64_t, uint64_t>(first);
+        SkipList<int, int>::template next<uint64_t, uint64_t>(first);
     if (nextOpt.has_value()) {
       const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &second = *nextOpt;
       std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> prevOpt =
-          SkipList::template previous<uint64_t, uint64_t>(nat_eq, second,
-                                                          std::move(sl));
-      bool c1 =
-          SkipList::template key<uint64_t, uint64_t>(first) == UINT64_C(1);
-      bool c2 =
-          SkipList::template key<uint64_t, uint64_t>(second) == UINT64_C(3);
+          std::move(sl).previous(nat_eq, second);
+      bool c1 = SkipList<int, int>::template key<uint64_t, uint64_t>(first) ==
+                UINT64_C(1);
+      bool c2 = SkipList<int, int>::template key<uint64_t, uint64_t>(second) ==
+                UINT64_C(3);
       bool c3;
       if (prevOpt.has_value()) {
         const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *prevOpt;
-        c3 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(1);
+        c3 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) ==
+             UINT64_C(1);
       } else {
         c3 = false;
       }
@@ -322,41 +290,36 @@ bool skiplist_test::stm_test_navigation() {
 }
 
 bool skiplist_test::stm_test_bounds() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(2),
-                                                UINT64_C(20), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(4),
-                                                UINT64_C(40), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(6),
-                                                UINT64_C(60), sl, UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(2), UINT64_C(20), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(4), UINT64_C(40), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(6), UINT64_C(60), UINT64_C(0));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> lb3 =
-      SkipList::template findLowerBound<uint64_t, uint64_t>(nat_lt, UINT64_C(3),
-                                                            sl);
+      sl.findLowerBound(nat_lt, UINT64_C(3));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> lb4 =
-      SkipList::template findLowerBound<uint64_t, uint64_t>(nat_lt, UINT64_C(4),
-                                                            sl);
+      sl.findLowerBound(nat_lt, UINT64_C(4));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> ub4 =
-      SkipList::template findUpperBound<uint64_t, uint64_t>(nat_lt, nat_eq,
-                                                            UINT64_C(4), sl);
+      sl.findUpperBound(nat_lt, nat_eq, UINT64_C(4));
   bool c1;
   if (lb3.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *lb3;
-    c1 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(4);
+    c1 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) == UINT64_C(4);
   } else {
     c1 = false;
   }
   bool c2;
   if (lb4.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *lb4;
-    c2 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(4);
+    c2 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) == UINT64_C(4);
   } else {
     c2 = false;
   }
   bool c3;
   if (ub4.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p = *ub4;
-    c3 = SkipList::template key<uint64_t, uint64_t>(p) == UINT64_C(6);
+    c3 = SkipList<int, int>::template key<uint64_t, uint64_t>(p) == UINT64_C(6);
   } else {
     c3 = false;
   }
@@ -364,81 +327,76 @@ bool skiplist_test::stm_test_bounds() {
 }
 
 bool skiplist_test::stm_test_removeAll() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(5),
-                                                UINT64_C(50), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(3),
-                                                UINT64_C(30), sl, UINT64_C(0));
-  SkipList::template insert<uint64_t, uint64_t>(nat_lt, nat_eq, UINT64_C(7),
-                                                UINT64_C(70), sl, UINT64_C(0));
-  uint64_t count = SkipList::template removeAll<uint64_t, uint64_t>(sl);
-  bool empty = SkipList::template isEmpty<uint64_t, uint64_t>(sl);
-  uint64_t len = SkipList::template length<uint64_t, uint64_t>(sl);
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
+  sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
+  uint64_t count = sl.removeAll();
+  bool empty = sl.isEmpty();
+  uint64_t len = sl.length();
   bool c1 = count == UINT64_C(3);
   bool c3 = len == UINT64_C(0);
   return (c1 && (empty && c3));
 }
 
 bool skiplist_test::stm_test_bde_api() {
-  SkipList::template SkipList0<uint64_t, uint64_t> sl =
-      SkipList::template create<uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result1 =
-      SkipList::template bde_add<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), sl, UINT64_C(0));
+      sl.bde_add(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   auto [_x, front1] = std::move(result1);
   std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result2 =
-      SkipList::template bde_add<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), sl, UINT64_C(0));
+      sl.bde_add(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   auto [_x0, front2] = std::move(result2);
   std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result3 =
-      SkipList::template bde_add<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), sl, UINT64_C(0));
+      sl.bde_add(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
   auto [_x1, front3] = std::move(result3);
   bool c3 = !(front3);
   std::pair<uint64_t,
             std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>
-      findResult = SkipList::template bde_find<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(5), sl);
+      findResult = sl.bde_find(nat_lt, nat_eq, UINT64_C(5));
   auto [status1, _x2] = std::move(findResult);
-  bool c4 = status1 == SkipList::e_SUCCESS;
+  bool c4 = status1 == SkipList<int, int>::e_SUCCESS;
   std::pair<uint64_t,
             std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>
-      findResult2 = SkipList::template bde_find<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(9), sl);
+      findResult2 = sl.bde_find(nat_lt, nat_eq, UINT64_C(9));
   auto [status2, _x3] = std::move(findResult2);
-  bool c5 = status2 == SkipList::e_NOT_FOUND;
+  bool c5 = status2 == SkipList<int, int>::e_NOT_FOUND;
   std::pair<
       std::pair<uint64_t,
                 std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>,
       bool>
-      uniqueResult = SkipList::template bde_addUnique<uint64_t, uint64_t>(
-          nat_lt, nat_eq, UINT64_C(5), 500u, sl, UINT64_C(0));
+      uniqueResult =
+          sl.bde_addUnique(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
   auto [p, _x4] = std::move(uniqueResult);
   auto [status3, _x5] = std::move(p);
-  bool c6 = status3 == SkipList::e_DUPLICATE;
+  bool c6 = status3 == SkipList<int, int>::e_DUPLICATE;
   std::pair<uint64_t,
             std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>
-      frontResult = SkipList::template bde_front<uint64_t, uint64_t>(sl);
+      frontResult = sl.bde_front();
   auto [status4, frontItem] = std::move(frontResult);
-  bool c7 = status4 == SkipList::e_SUCCESS;
+  bool c7 = status4 == SkipList<int, int>::e_SUCCESS;
   bool c8;
   if (frontItem.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p0 = *frontItem;
-    c8 = SkipList::template key<uint64_t, uint64_t>(p0) == UINT64_C(3);
+    c8 =
+        SkipList<int, int>::template key<uint64_t, uint64_t>(p0) == UINT64_C(3);
   } else {
     c8 = false;
   }
   std::pair<uint64_t,
             std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>
-      backResult =
-          SkipList::template bde_back<uint64_t, uint64_t>(std::move(sl));
+      backResult = std::move(sl).bde_back();
   auto [status5, backItem] = std::move(backResult);
-  bool c9 = status5 == SkipList::e_SUCCESS;
+  bool c9 = status5 == SkipList<int, int>::e_SUCCESS;
   bool c10;
   if (backItem.has_value()) {
     const std::shared_ptr<SkipNode<uint64_t, uint64_t>> &p0 = *backItem;
-    c10 = SkipList::template key<uint64_t, uint64_t>(p0) == UINT64_C(7);
+    c10 =
+        SkipList<int, int>::template key<uint64_t, uint64_t>(p0) == UINT64_C(7);
   } else {
     c10 = false;
   }

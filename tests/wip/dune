@@ -188,28 +188,6 @@
   (deps loopify_name_hygiene.t.exe)
   (action (run ./loopify_name_hygiene.t.exe))))
 
-(subdir name_matches_module
- (rule
-  (targets name_matches_module.t.exe)
-  (deps NameMatchesModule.vo name_matches_module.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} name_matches_module.t.exe name_matches_module.cpp name_matches_module.t.cpp)))
- (rule
-  (alias runtest)
-  (deps name_matches_module.t.exe)
-  (action (run ./name_matches_module.t.exe))))
-
-(subdir numeral_conv_unmapped_nat
- (rule
-  (targets numeral_conv_unmapped_nat.t.exe)
-  (deps NumeralConvUnmappedNat.vo numeral_conv_unmapped_nat.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} numeral_conv_unmapped_nat.t.exe numeral_conv_unmapped_nat.cpp numeral_conv_unmapped_nat.t.cpp)))
- (rule
-  (alias runtest)
-  (deps numeral_conv_unmapped_nat.t.exe)
-  (action (run ./numeral_conv_unmapped_nat.t.exe))))
-
 (subdir real_mapping_get_d
  (rule
   (targets real_mapping_get_d.t.exe)

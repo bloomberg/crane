@@ -476,6 +476,14 @@ let add_mp_sibling, get_mp_siblings =
    in the same enclosing scope, the module is renamed with a "_Mod" suffix.
    Maps the module's ModPath.t to the renamed C++ name.  Populated by
    detect_sibling_module_inductive_collisions, consulted by mp_renaming_fun. *)
+(** The module paths that are emitted as a C++ struct, i.e. the [SEmodule]s of
+    the extracted structure.  A module type is {e not} one of these: it becomes
+    a concept, whose associated types are not struct members.  Populated by
+    {!detect_sibling_module_inductive_collisions}. *)
+let struct_module_paths : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 17
+
+let () = register_cleanup (fun () -> Hashtbl.clear struct_module_paths)
+
 let sibling_collision_renames : (ModPath.t, string) Hashtbl.t =
   Hashtbl.create 8
 
@@ -723,19 +731,17 @@ let inductive_names_of_sel sel =
 
 (** C++ names of the inductives declared directly in [sel] that cannot absorb
     an enclosing module of the same name.  The eponymous merge folds the
-    module's members into the type's struct body; an [enum class] has no such
-    body, so a module eponymous with one has to be renamed instead. *)
+    module's members into the type's own declaration, which only a record or a
+    class has room for: a [Standard] inductive nests its constructor structs
+    there instead, and an [enum class] or a coinductive has no such body at
+    all, so a module eponymous with one of those has to be renamed. *)
 let unmergeable_inductive_names_of_sel sel =
   List.concat_map
     (fun (_l, se) ->
       match se with
-      | SEdecl (Dind (_kn, ({ind_kind = Standard; _} as ind))) ->
-        List.filter_map
-          (fun i ->
-            if Table.is_enum_inductive_packet ind i then
-              Some (modular_rename Type ind.ind_packets.(i).ip_typename)
-            else None )
-          (List.init (Array.length ind.ind_packets) Fun.id)
+      | SEdecl (Dind (_kn, ({ind_kind = Standard | Coinductive; _} as ind))) ->
+        Array.to_list
+          (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
       | _ -> [] )
     sel
 
@@ -759,18 +765,20 @@ let mod_struct_body m =
     @param s The full [ml_structure] to scan (typically the whole extraction result) *)
 let detect_sibling_module_inductive_collisions (s : ml_structure) =
   Hashtbl.clear sibling_collision_renames;
+  Hashtbl.clear struct_module_paths;
   let rec scan_sel ?enclosing parent_mp sel =
     let inductive_names = inductive_names_of_sel sel in
     List.iter
       (fun (l, se) ->
         match se with
         | SEmodule m ->
+          Hashtbl.replace struct_module_paths (MPdot (parent_mp, l)) ();
           let mod_name = modular_rename Mod (Label.to_id l) in
           let clashes names = List.exists (String.equal mod_name) names in
           (* An inductive declared {e inside} the module and sharing its name
              is the eponymous case: the backend merges the type into the module
              struct instead of nesting it, so there is no collision to rename
-             away — and renaming would in fact defeat the merge (the two names
+             away -- and renaming would in fact defeat the merge (the two names
              would no longer match).  Only a {e sibling} collision needs the
              suffix -- unless the eponymous type is one the merge cannot
              apply to, in which case the two names really would collide. *)
@@ -953,13 +961,17 @@ let ref_renaming_fun (k, r) =
            the enum was given and hides it. *)
         let is_ind = match r with GlobRef.IndRef _ -> true | _ -> false in
         (* A member may not carry the name of the struct it is declared in, and
-           a module is emitted as exactly that struct.  The test is on the
-           unchanged spelling: an eponymous [ascii] inside module [Ascii] is
-           merged into the struct rather than nested in it, so it is not a
-           member and does not compete. *)
+           a module is emitted as exactly that struct.  Only constants are held
+           to this: an inductive eponymous with its module is merged *into* the
+           struct -- a record becomes it, a class becomes a concept beside it
+           -- so it is not a member and does not compete.  Nor is a module
+           type's parameter, which is a concept's associated type; hence the
+           {!struct_module_paths} test rather than one on [mp]'s shape. *)
         let own_struct_name =
-          match mp with
-          | ModPath.MPdot (_, l) -> Some (modular_rename Mod (Label.to_id l))
+          match (r, mp) with
+          | GlobRef.ConstRef _, ModPath.MPdot (_, l)
+            when Hashtbl.mem struct_module_paths mp ->
+            Some (modular_rename Mod (Label.to_id l))
           | _ -> None
         in
         let key = if is_ind then ctor_cpp_id else fun id -> id in

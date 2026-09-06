@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Crane Require Extraction.
-From Crane Require Export Mapping.NGMP.
+From Crane Require Export Mapping.NGMP Mapping.NatGMP.
 From Stdlib Require Import BinInt.
 
 (** Extraction of [Z] (binary integers) to GMP [mpz_class].

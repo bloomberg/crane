@@ -1,12 +1,14 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 From Crane Require Extraction.
-From Crane Require Export Mapping.NInt.
+From Crane Require Export Mapping.NInt Mapping.NatIntStd.
 From Stdlib Require Import BinInt.
 
 (** Extraction of [Z] (binary integers) to [int64_t].
 
-    Builds on [NInt.v] which already extracts [positive] and [N].
+    Builds on [NInt.v], which already extracts [positive] and [N], and on
+    [NatIntStd.v]: [Z.of_nat] and [Z.to_nat] are casts between machine
+    integers, so this flavour only holds together if [nat] is one too.
     Maps [Z] to [int64_t] with native C++ arithmetic.
 *)
 
