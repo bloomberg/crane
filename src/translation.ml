@@ -7322,10 +7322,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let is_typeclass_instance_arg ml_arg =
     match strip_magic ml_arg with
     | MLglob (r, _) ->
-      ( match find_type_opt r with
-      | Some arg_ty -> Table.is_typeclass_type arg_ty
-      | None -> false )
-      || ref_returns_skipped r
+      (* An instance parameterised over types alone carries its parameters in
+         the [MLglob]'s type arguments, so its ML type is still an arrow --
+         [MList : forall A, Monoid (list A)].  Read the codomain, as the
+         application case below does, or such an instance is left in value
+         position and the call names the instance struct as if it were one. *)
+      ref_returns_typeclass r || ref_returns_skipped r
     | MLrel i ->
       (* Check if the referenced parameter is a type class instance *)
       ( try

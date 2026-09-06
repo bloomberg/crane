@@ -122,14 +122,3 @@
   (deps instance_as_value.t.exe)
   (action (run ./instance_as_value.t.exe))))
 
-(subdir monoid_class_arg
- (rule
-  (targets monoid_class_arg.t.exe)
-  (deps MonoidClassArg.vo monoid_class_arg.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} monoid_class_arg.t.exe monoid_class_arg.cpp monoid_class_arg.t.cpp)))
- (rule
-  (alias runtest)
-  (deps monoid_class_arg.t.exe)
-  (action (run ./monoid_class_arg.t.exe))))
-

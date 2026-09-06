@@ -239,8 +239,7 @@ struct MonoidClassArg {
             List<uint64_t>::cons(
                 UINT64_C(2),
                 List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))) +
-        mconcat<List<uint64_t>>(
-            MList<uint64_t>,
+        mconcat<MList<uint64_t>, List<uint64_t>>(
             List<List<uint64_t>>::cons(
                 List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
                 List<List<uint64_t>>::cons(
