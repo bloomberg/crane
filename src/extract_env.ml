@@ -1104,15 +1104,42 @@ let demote_value_typeclasses struc =
       (fun p -> Array.iter (List.iter scan_field) p.ip_types)
       ind.ind_packets
   in
+  (* A class value a definition computes from data is data: the struct an
+     instance is otherwise emitted as is fixed at compile time, so it cannot
+     stand for [mkDict base], whose fields depend on an argument.  Type and
+     instance arguments do not count -- those an instance struct takes as
+     template parameters. *)
+  let scan_computed_class ty =
+    let rec walk had_value = function
+      | Tarr (a, b) ->
+        let is_erased =
+          match a with
+          | Tdummy _ -> true
+          | Tglob (r, _, _) -> Table.is_typeclass r
+          | _ -> false
+        in
+        walk (had_value || not is_erased) b
+      | Tmeta {contents = Some t} -> walk had_value t
+      | Tglob ((GlobRef.IndRef (kn, _) as r), _, _) when had_value ->
+        if Table.is_typeclass r then demoted := Mindmap_env.add kn () !demoted
+      | _ -> ()
+    in
+    walk false ty
+  in
+  let scan_term_type u =
+    scan_type u;
+    scan_computed_class u
+  in
   let scan_decl = function
     | Dind (_, ind) -> scan_ind ind
-    | Dterm (_, _, u) | Dtype (_, _, u) -> scan_type u
-    | Dfix (_, _, v) -> Array.iter scan_type v
+    | Dterm (_, _, u) -> scan_term_type u
+    | Dtype (_, _, u) -> scan_type u
+    | Dfix (_, _, v) -> Array.iter scan_term_type v
   in
   let scan_spec = function
     | Sind (_, ind) -> scan_ind ind
     | Stype (_, _, ot) -> Option.iter scan_type ot
-    | Sval (_, _, u) -> scan_type u
+    | Sval (_, _, u) -> scan_term_type u
   in
   Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
   if not (Mindmap_env.is_empty !demoted) then begin

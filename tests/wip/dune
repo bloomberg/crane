@@ -111,14 +111,3 @@
   (deps deep_literal_nesting.t.exe)
   (action (run ./deep_literal_nesting.t.exe))))
 
-(subdir instance_as_value
- (rule
-  (targets instance_as_value.t.exe)
-  (deps InstanceAsValue.vo instance_as_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_as_value.t.exe instance_as_value.cpp instance_as_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_as_value.t.exe)
-  (action (run ./instance_as_value.t.exe))))
-
