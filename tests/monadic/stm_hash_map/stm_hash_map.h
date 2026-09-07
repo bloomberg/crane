@@ -106,9 +106,10 @@ template <typename K, typename V> struct CHT {
   stm::TVar<List<std::pair<K, V>>> cht_fallback;
 
   stm::TVar<List<std::pair<K, V>>> bucket_of(const K &k) const {
-    int64_t i =
-        (this->cht_nbuckets == 0 ? this->cht_hash(k)
-                                 : this->cht_hash(k) % this->cht_nbuckets);
+    int64_t i = (this->cht_nbuckets == 0
+                     ? this->cht_hash(k)
+                     : this->cht_hash(k) %
+                           (this->cht_nbuckets | (this->cht_nbuckets == 0)));
     return this->cht_buckets.at(i);
   }
 

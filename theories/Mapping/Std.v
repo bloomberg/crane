@@ -58,22 +58,30 @@ Crane Extract Inlined Constant PrimString.length => "static_cast<int64_t>(%a0.le
    masked. Bitwise ops preserve the invariant (inputs have bit 63 = 0).
    Shifts guard against UB when shift amount >= 63 and shift in the unsigned
    domain. Division and modulo by zero follow Rocq rather than C++: [x / 0]
-   is 0, and [x mod 0] is [x]. *)
+   is 0, and [x mod 0] is [x].
+
+   The guarded branch also has to be well-defined on its own, not merely
+   unreachable: with constant arguments the compiler folds both arms of the
+   conditional and diagnoses a literal division or over-wide shift even in the
+   arm the guard excludes. Hence the redundant-looking [| (%a1 == 0)] on the
+   divisor, which is the divisor itself whenever it is nonzero and 1
+   otherwise, and the [& 63] on the shift count, which is the identity
+   whenever the guard admits it. *)
 From Corelib Require Import PrimInt63.
 Crane Extract Inlined Constant PrimInt63.int => "int64_t" From "cstdint".
 Crane Extract Inlined Constant PrimInt63.add => "static_cast<int64_t>((static_cast<uint64_t>(%a0) + static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
 Crane Extract Inlined Constant PrimInt63.sub => "static_cast<int64_t>((static_cast<uint64_t>(%a0) - static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
 Crane Extract Inlined Constant PrimInt63.mul => "static_cast<int64_t>((static_cast<uint64_t>(%a0) * static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
-Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / %a1)".
-Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? %a0 : %a0 % %a1)".
+Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / (%a1 | (%a1 == 0)))".
+Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? %a0 : %a0 % (%a1 | (%a1 == 0)))".
 Crane Extract Inlined Constant PrimInt63.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PrimInt63.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PrimInt63.leb => "%a0 <= %a1".
 Crane Extract Inlined Constant PrimInt63.land => "(%a0 & %a1)".
 Crane Extract Inlined Constant PrimInt63.lor => "(%a0 | %a1)".
 Crane Extract Inlined Constant PrimInt63.lxor => "(%a0 ^ %a1)".
-Crane Extract Inlined Constant PrimInt63.lsl => "(%a1 >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%a0) << %a1) & 0x7FFFFFFFFFFFFFFFULL))".
-Crane Extract Inlined Constant PrimInt63.lsr => "(%a1 >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%a0) >> %a1))".
+Crane Extract Inlined Constant PrimInt63.lsl => "(%a1 >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%a0) << (%a1 & 63)) & 0x7FFFFFFFFFFFFFFFULL))".
+Crane Extract Inlined Constant PrimInt63.lsr => "(%a1 >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%a0) >> (%a1 & 63)))".
 
 (* PrimFloat - IEEE 754 binary64 (C++ double).
    Import PrimFloat AFTER PrimInt63 so the qualified names below resolve
