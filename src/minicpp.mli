@@ -27,6 +27,16 @@ open Names
     Computed during translation so the pretty-printer doesn't need
     name-resolution logic. *)
 
+(** A list held in reverse of the order it is written in.
+
+    [CPPlambda] stores its parameters, and [CPPfun_call] its arguments, this
+    way.  The type is private, so a plain list cannot be passed off as one:
+    build with {!mk_lambda} or {!mk_call} from a list in source order, or,
+    where a reversed list is genuinely what is in hand, say so with
+    {!of_reversed}.  Reading is unrestricted -- a [revd] pattern-matches and
+    iterates as the list it is. *)
+type 'a revd = private {rev : 'a list}
+
 (** Pre-resolved C++ identifier with qualification information. *)
 type cpp_name = {
   cn_base : string;  (** Base identifier, e.g., "add", "list", "Nat" *)
@@ -289,8 +299,9 @@ and cpp_expr =
   | CPPforward of cpp_type * cpp_expr
       (** std::forward<T> for perfect forwarding *)
   | CPPlambda of
-      (cpp_type * Id.t option) list * cpp_type option * cpp_stmt list * bool
-      (** Lambda: params, optional return type, body, capture_by_value flag *)
+      (cpp_type * Id.t option) revd * cpp_type option * cpp_stmt list * bool
+      (** Lambda: params (in reverse order, see {!revd}), optional return
+          type, body, capture_by_value flag *)
   | CPPvisit  (** std::visit for variant pattern matching *)
   | CPPmk_shared of cpp_type  (** std::make_shared<T> factory function *)
   | CPParena_alloc of cpp_type
@@ -563,10 +574,22 @@ val contains_shared_ptr : cpp_type -> bool
     [CPPfun_call] stores its arguments, and [CPPlambda] its parameters, in
     reverse order.  That is a property of the representation, not of the
     language being generated, and every site that spells the constructor
-    directly has to remember it unaided.  The four functions below are the
-    only place the reversal should appear: build with {!mk_call} and
-    {!mk_lambda}, read with {!call_args} and {!lambda_params}, and the lists
-    are in source order throughout. *)
+    directly has to remember it unaided.  The functions below are the only
+    place the reversal should appear: build with {!mk_call} and {!mk_lambda},
+    read with {!call_args} and {!lambda_params}, and the lists are in source
+    order throughout.  A lambda's parameters carry the {!revd} type, so a
+    plain list cannot reach that field except through {!mk_lambda} or the
+    explicit {!of_reversed}. *)
+
+(** The underlying list of a {!revd}, still in reverse order.  For
+    folds and membership tests where the order does not matter; use
+    {!call_args} or {!lambda_params} when it does. *)
+val to_reversed : 'a revd -> 'a list
+
+(** A list that is already in reverse order, admitted as one.  Use where the
+    reversal is genuinely already done -- threading a sublist of an existing
+    call's arguments, say -- and {!mk_call} or {!mk_lambda} everywhere else. *)
+val of_reversed : 'a list -> 'a revd
 
 (** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
 val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
@@ -584,7 +607,8 @@ val mk_lambda :
 val call_args : cpp_expr list -> cpp_expr list
 
 (** The parameters of a {!CPPlambda}, in source order. *)
-val lambda_params : (cpp_type * Id.t option) list -> (cpp_type * Id.t option) list
+val lambda_params :
+  (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural

@@ -3763,7 +3763,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
       match s with
       | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
         let param_types =
-          List.map (fun (t, _) -> strip_ref_and_const_type t) params
+          List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Tvoid -> t
@@ -4009,7 +4009,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPfun_call _ -> Tunknown
     | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
-      let param_types = List.map fst params in
+      let param_types = List.map fst (to_reversed params) in
       let ret_ty =
         match ret_ty_opt with
         | Some ty when ty <> Tvoid -> ty
@@ -4021,7 +4021,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
                 match id_opt with
                 | Some id -> (id, ty) :: acc
                 | None -> acc)
-              env params
+              env (to_reversed params)
           in
           let rec find_return_type = function
             | [] -> Tunknown
@@ -4070,7 +4070,7 @@ let rec free_vars_expr = function
   | CPPshared_ptr_ctor (_, e) -> free_vars_expr e
   | CPPoverloaded es -> List.concat_map free_vars_expr es
   | CPPlambda (params, _, body, _) ->
-    let bound = List.filter_map (fun (_, id_opt) -> id_opt) params in
+    let bound = List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed params) in
     let body_fv = free_vars_body body in
     List.filter (fun v -> not (List.exists (Id.equal v) bound)) body_fv
   | _ -> []
@@ -4202,7 +4202,9 @@ let collect_visit_free_vars lambdas =
     (fun lambda ->
       match lambda with
       | CPPlambda (lparams, _, body, _) ->
-        let pat_bound = List.filter_map (fun (_, id_opt) -> id_opt) lparams in
+        let pat_bound =
+          List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed lparams)
+        in
         let body_fvs = free_vars_body body in
         List.filter
           (fun id -> not (List.exists (Id.equal id) pat_bound))
@@ -4693,7 +4695,7 @@ let rec find_inner_visit check = function
     calls. Returns [(body, ret_ty, rebuild)] where [rebuild] wraps a result
     expression back into the surrounding context. *)
 let rec find_inner_iife check = function
-  | CPPfun_call (CPPlambda ([], ret_ty, body, _cap), [])
+  | CPPfun_call (CPPlambda ({rev = []}, ret_ty, body, _cap), [])
     when collect_stmts check ~in_visitor:false body <> [] ->
     Some (body, ret_ty, Fun.id)
   | CPPfun_call (f, args) ->
@@ -5405,7 +5407,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
         let new_lambdas =
           map_visit_lambdas ~ret_ty:(Some Tvoid)
             ~rewrite:(fun lparams body ->
-              let lenv = build_lambda_env lparams body env in
+              let lenv = build_lambda_env (to_reversed lparams) body env in
               rewrite_enter_stmts { ctx with er_env = lenv } body)
             lambdas
         in
@@ -5435,7 +5437,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     let new_lambdas =
       map_visit_lambdas ~ret_ty:(Some Tvoid)
         ~rewrite:(fun lparams body ->
-          let lenv = build_lambda_env lparams body env in
+          let lenv = build_lambda_env (to_reversed lparams) body env in
           rewrite_enter_stmts { ctx with er_env = lenv } body)
         lambdas
     in
@@ -5445,7 +5447,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     if n_calls = 0 then
       rewrite_base_with_inner_calls check e
         ~rewrite_visit_body:(fun lparams extended_body ->
-          let lenv = build_lambda_env lparams extended_body env in
+          let lenv = build_lambda_env (to_reversed lparams) extended_body env in
           rewrite_enter_stmts { ctx with er_env = lenv } extended_body)
         ~rewrite_iife_body:(fun extended_body ->
           let lenv = collect_type_env extended_body @ env in
@@ -6145,7 +6147,7 @@ and rewrite_enter_stmts ctx stmts =
       match stmt with
       | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
         let param_types =
-          List.map (fun (t, _) -> strip_ref_and_const_type t) params
+          List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
         let ret_ty = match ret_ty_opt with
           | Some t when t <> Tvoid -> t
@@ -6871,7 +6873,7 @@ let rec rewrite_field_access_for_decltype env expr =
        each list -- and in the same orientation, so the two line up. *)
     let extra_args = List.map (fun (ty, _) -> CPPdeclval ty) extra in
     CPPfun_call
-      ( CPPlambda (extra @ params, rt, body, false),
+      ( CPPlambda (of_reversed (extra @ to_reversed params), rt, body, false),
         extra_args
         @ List.map (rewrite_field_access_for_decltype env) args )
   | CPPvar id ->
@@ -7187,7 +7189,8 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
               (match base_expr with
                | CPPlambda (params, _, body, _) ->
                  let param_types =
-                   List.map (fun (ty, _) -> strip_ref_and_const_type ty) params
+                   List.map (fun (ty, _) -> strip_ref_and_const_type ty)
+                     (to_reversed params)
                  in
                  (match extract_lambda_return_expr body with
                   | Some ret_expr ->
@@ -7464,7 +7467,8 @@ and generic_inline_expr spec expr =
     let lparams =
       List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
     in
-    CPPfun_call (CPPlambda (lparams, None, spec.body, true), spec.get_args expr)
+    CPPfun_call
+      (CPPlambda (of_reversed lparams, None, spec.body, true), spec.get_args expr)
   else
     map_expr
       (generic_inline_expr spec)
@@ -7759,6 +7763,7 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     @return The statement list with all self-recursive inner lambdas loopified *)
 let loopify_inner_lambdas ~pp_expr ~tparams body =
   let try_loopify_lambda id lparams ret_ty_opt lbody cap =
+    let lparams = to_reversed lparams in
     let check = lambda_checker id in
     match classify check lbody with
     | No_recursion -> None
@@ -7880,7 +7885,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
         (* Drop names of params (including the self-param) that no longer
            appear in the printed loop body, so unused ones become unnamed
            rather than triggering [-Wunused-parameter]. *)
-        let rendered = pp_expr (CPPlambda ([], None, body', false)) in
+        let rendered = pp_expr (mk_lambda [] None body' ~by_value:false) in
         let lparams' =
           List.map
             (fun (ty, id_opt) ->
@@ -7967,10 +7972,11 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
           (Some Tauto as ty_opt),
           CPPlambda (lparams, ret_ty_opt, lbody, cap) )
       :: rest
-      when Option.has_some (ycomb_self_id lparams) ->
-      ( match try_loopify_ycomb lparams ret_ty_opt lbody with
+      when Option.has_some (ycomb_self_id (to_reversed lparams)) ->
+      ( match try_loopify_ycomb (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') ->
-        Sasgn (id, ty_opt, CPPlambda (lparams', ret_ty_opt, lbody', cap))
+        Sasgn
+          (id, ty_opt, CPPlambda (of_reversed lparams', ret_ty_opt, lbody', cap))
         :: process_stmts rest
       | None ->
         let lbody' = process_stmts lbody in
@@ -8104,7 +8110,7 @@ let has_lazy_body body =
   match last_stmt body with
   | Some (Sreturn (Some (CPPfun_call (
       CPPqualified (_, lazy_id),
-      [CPPlambda ([], Some _, _, _)]))))
+      [CPPlambda ({rev = []}, Some _, _, _)]))))
     when Id.to_string lazy_id = "lazy_" -> true
   | _ -> false
 
@@ -8229,7 +8235,10 @@ let try_inline_functional_into names body =
      be reused when rewriting the functional's recursive parameter. *)
   let eta_self_head = function
     | CPPlambda
-        ([(_, Some y)], _, [Sreturn (Some (CPPfun_call (head, [CPPvar y'])))], _)
+        ( {rev = [(_, Some y)]},
+          _,
+          [Sreturn (Some (CPPfun_call (head, [CPPvar y'])))],
+          _ )
       when Id.equal y y'
            && (match callee_name head with
               | Some n -> is_self_name n
@@ -8326,7 +8335,7 @@ let try_inline_functional_into names body =
         let rec cb_expr e =
           ( match e with
           | CPPlambda (ps, _, _, _) ->
-            List.iter (fun (_, ido) -> Option.iter add ido) ps
+            List.iter (fun (_, ido) -> Option.iter add ido) (to_reversed ps)
           | _ -> () );
           ignore (map_expr (fun e' -> cb_expr e'; e') (fun s -> cb_stmt s; s) Fun.id e)
         and cb_stmt s =
@@ -8358,7 +8367,10 @@ let try_inline_functional_into names body =
           | CPPvar id -> CPPvar (rename_var id)
           | CPPlambda (ps, rty, stmts, cap) ->
             CPPlambda
-              ( List.map (fun (ty, ido) -> (ty, Option.map rename_var ido)) ps,
+              ( of_reversed
+                  (List.map
+                     (fun (ty, ido) -> (ty, Option.map rename_var ido))
+                     (to_reversed ps)),
                 rty,
                 List.map ren_stmt stmts,
                 cap )

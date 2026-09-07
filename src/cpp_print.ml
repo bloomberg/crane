@@ -195,7 +195,7 @@ let lambda_needs_capture
         List.fold_left
           (fun acc (_, id_opt) ->
             match id_opt with Some id -> IdSet.add id acc | None -> acc)
-          IdSet.empty inner_params
+          IdSet.empty (to_reversed inner_params)
       in
       let inner_refs, inner_decls =
         List.fold_left collect_from_stmt (IdSet.empty, IdSet.empty) inner_body
@@ -286,7 +286,7 @@ let lambda_needs_capture
 let rec expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   match e with
   | CPPlambda (params, _, body, _) ->
-    fst (lambda_needs_capture params body)
+    fst (lambda_needs_capture (to_reversed params) body)
     || List.exists stmt_contains_capturing_lambda body
   | _ ->
     let exception Found in
@@ -1539,7 +1539,7 @@ and pp_cpp_expr env args t =
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call
-      ( CPPlambda ([], _, [Smatch (branches, wildcard)], false),
+      ( CPPlambda ({rev = []}, _, [Smatch (branches, wildcard)], false),
         [] )
     when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
             Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
@@ -1586,7 +1586,7 @@ and pp_cpp_expr env args t =
     in
     str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
   | CPPfun_call
-      ( CPPlambda ([], _, [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])], _),
+      ( CPPlambda ({rev = []}, _, [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])], _),
         [] )
     when not (expr_contains_string e1 || expr_contains_string e2) ->
     (* IIFE wrapping a simple if/else with single-expression returns in both
@@ -1595,7 +1595,7 @@ and pp_cpp_expr env args t =
     let pp = pp_cpp_expr env args in
     str "(" ++ pp cond ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call
-      ( CPPlambda ([], _, [Scustom_case (_, scrut, _, branches, cmatch)], _),
+      ( CPPlambda ({rev = []}, _, [Scustom_case (_, scrut, _, branches, cmatch)], _),
         [] )
     when (* Custom case with exactly 2 return-only branches and the standard
             bool-like if/else template → emit ternary.  Skip when branches
@@ -1770,6 +1770,7 @@ and pp_cpp_expr env args t =
     ++ pp_cpp_expr env args e
     ++ str ")"
   | CPPlambda (params, ret_ty, body, capture_by_value) ->
+    let params = to_reversed params in
     let needs_capture, uses_this = lambda_needs_capture params body in
     let body_derefs_var =
       let found = ref false in

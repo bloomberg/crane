@@ -2601,7 +2601,7 @@ let gen_dfun n b cty ty temps =
         CPPqualified
           (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
-      let thunk = CPPlambda ([], Some ret_cpp, [Sreturn (Some x)], true) in
+      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
       Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
     else if cod = Tvoid then
       (* void function: execute expression for side effects, then return.
@@ -3146,9 +3146,9 @@ let gen_decl__inner n b ty =
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
           | _ ->
             CPPfun_call (
-              CPPlambda ([], None,
-                [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))],
-                false),
+              mk_lambda [] None
+                [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))]
+                ~by_value:false,
               [])
         else body_expr
       in
@@ -3392,9 +3392,9 @@ let gen_spec__inner n b ty =
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
           | _ ->
             CPPfun_call (
-              CPPlambda ([], None,
-                [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))],
-                false),
+              mk_lambda [] None
+                [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))]
+                ~by_value:false,
               [])
         else b_expr
       in
@@ -4061,7 +4061,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         CPPqualified
           (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
-      let thunk = CPPlambda ([], Some ret_cpp, [Sreturn (Some x)], true) in
+      let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
       Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
     else
       Sreturn (Some x)
@@ -5522,9 +5522,9 @@ let gen_ind_header_v2
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
-              CPPlambda (
-                [(Tref variant_t_ty, Some _v_id)],
-                None, drain_stmts, false)
+              mk_lambda
+                [(Tref variant_t_ty, Some _v_id)]
+                None drain_stmts ~by_value:false
             in
             let body =
               [ Sasgn (_stack_id, Some stack_ty,
@@ -5569,9 +5569,9 @@ let gen_ind_header_v2
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
-              CPPlambda (
-                [(Tref variant_t_ty, Some _v_id)],
-                None, drain_stmts, false)
+              mk_lambda
+                [(Tref variant_t_ty, Some _v_id)]
+                None drain_stmts ~by_value:false
             in
             (* Build the per-partner drain logic used inside the while loop.
                For each partner type, generates an [Sif_decl] that casts the
@@ -5818,11 +5818,8 @@ let gen_ind_header_v2
                         ~src_ty:api_ret ~dst_ty:storage_ret
                         call
                   in
-                  CPPlambda
-                    ( List.rev lambda_params,
-                      None,
-                      [Sreturn (Some ret)],
-                      true )
+                  mk_lambda lambda_params None [Sreturn (Some ret)]
+                    ~by_value:true
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
                   gen_type_conversion_expr
@@ -5950,10 +5947,9 @@ let gen_ind_header_v2
           let thunk_param_ty = Tfun ([], self_ty) in
           let params = [(Id.of_string "thunk", thunk_param_ty)] in
           let adapter_lambda =
-            CPPlambda
-              ( [],
-                Some variant_alias_ty,
-                [
+            mk_lambda []
+              (Some variant_alias_ty)
+              [
                   Sasgn
                     ( Id.of_string "_tmp",
                       Some self_ty,
@@ -5965,8 +5961,8 @@ let gen_ind_header_v2
                               ( CPPvar (Id.of_string "_tmp"),
                                 Id.of_string "v" ),
                             [] ) ) );
-                ],
-                true )
+              ]
+              ~by_value:true
           in
           let thunk_arg =
             CPPfun_call

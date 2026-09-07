@@ -173,7 +173,7 @@ let rec resolve_expr boxed e =
           match id_opt with
           | Some id when is_any_shaped ty -> Id.Set.add id acc
           | _ -> acc)
-        boxed params
+        boxed (to_reversed params)
     in
     CPPlambda (params, ret_ty,
       List.map (resolve_stmt ~ret:ret_ty boxed) body, by_value)

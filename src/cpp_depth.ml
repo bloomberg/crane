@@ -80,8 +80,7 @@ let rec flatten decl =
     Dasgn
       ( r,
         ty,
-        CPPfun_call
-          (CPPlambda ([], Some ty, stmts @ [Sreturn (Some e)], false), []) )
+        mk_call (mk_lambda [] (Some ty) (stmts @ [Sreturn (Some e)]) ~by_value:false) [] )
   | Dtemplate (tps, c, inner) -> Dtemplate (tps, c, flatten inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map flatten decls)
   | _ -> decl
