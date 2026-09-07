@@ -4103,6 +4103,24 @@ and ml_expr_is_function_value e =
     parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
     excluded -- it prints as [std::any] without promising one, so nothing may
     be cast out of it. *)
+(** [param_states_type_args x orig] -- whether the parameter whose Rocq type
+    is [orig] constrains the type variables of the global [x] in a way that
+    another argument's deduction can conflict with.
+
+    This is a question about the {e declaration} Crane emits for [x], not
+    about this call.  Two kinds of parameter say nothing.  A custom-extracted
+    callee's C++ is spelled by its mapping, so it has no template parameters
+    at all.  And a function-typed parameter is declared as a deduced template
+    parameter of its own ({!Common.fun_tparam_name}), so whatever type
+    variables its Rocq type mentions, the signature does not state them. *)
+and param_states_type_args x orig =
+  let rec is_arrow = function
+    | Miniml.Tarr _ -> true
+    | Miniml.Tmeta {contents = Some t} -> is_arrow t
+    | _ -> false
+  in
+  (not (Table.is_custom x)) && not (is_arrow orig)
+
 (** [adapter_params ~prefix dom] -- fresh parameters for an adapter lambda,
     one per domain type, in source order.
 
@@ -7937,20 +7955,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | None -> false
         in
         match List.nth_opt fn_param_ml_tys_orig this with
-        (* A custom-extracted callee's C++ is spelled by its mapping, so there
-           is no template parameter for the argument to agree with. *)
-        | Some (Miniml.Tvar j | Miniml.Tvar' j)
-          when (not (Table.is_custom id)) && tvar_arg_erased j ->
-          let rec is_arrow = function
-            | Miniml.Tarr _ -> true
-            | Miniml.Tmeta {contents = Some t} -> is_arrow t
-            | _ -> false
-          in
+        | Some (Miniml.Tvar j | Miniml.Tvar' j) when tvar_arg_erased j ->
           List.exists
             (fun (k, orig) ->
-              (* A function-typed parameter is rendered as a deduced template
-                 parameter of its own, so it states nothing about [j]. *)
-              k <> this && (not (is_arrow orig)) && mentions j orig
+              k <> this
+              && param_states_type_args id orig
+              && mentions j orig
               && Ml_type_util.has_erased_type_in_type
                    (unfold_cpp_typedef env (cpp_of_ml env (type_subst_list tys orig))))
             (List.mapi (fun k t -> (k, t)) fn_param_ml_tys_orig)
