@@ -8416,3 +8416,14 @@
   (alias runtest)
   (deps erased_type_field_lambda.t.exe)
   (action (run ./erased_type_field_lambda.t.exe))))
+
+(subdir class_method_function_payload
+ (rule
+  (targets class_method_function_payload.t.exe)
+  (deps ClassMethodFunctionPayload.vo class_method_function_payload.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_function_payload.t.exe class_method_function_payload.cpp class_method_function_payload.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_method_function_payload.t.exe)
+  (action (run ./class_method_function_payload.t.exe))))

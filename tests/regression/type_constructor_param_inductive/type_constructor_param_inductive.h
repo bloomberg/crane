@@ -5,7 +5,6 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <type_traits>
@@ -204,17 +203,14 @@ struct TypeConstructorParamInductive {
             typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T1<T2> &> &&
              std::is_invocable_r_v<T3, F1 &, T1<T2> &, T1<T2> &>
-  static T3 wrapped_rec(F0 &&x0_, F1 &&x1_, const wrapped<T1, T2> &x2_) {
-    return [](std::function<T3(T1<T2>)> f, std::function<T3(T1<T2>, T1<T2>)> f0,
-              const wrapped<T1, T2> &w) {
-      if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
-        const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
-        return f(a0);
-      } else {
-        const auto &[a0, a1] = std::get<typename wrapped<T1, T2>::Pair2>(w.v());
-        return f0(a0, a1);
-      }
-    }(x0_, x1_, x2_);
+  static T3 wrapped_rec(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
+    if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
+      const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
+      return f(a0);
+    } else {
+      const auto &[a0, a1] = std::get<typename wrapped<T1, T2>::Pair2>(w.v());
+      return f0(a0, a1);
+    }
   }
 
   static uint64_t size_list(const wrapped<List, uint64_t> &w);

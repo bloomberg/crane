@@ -74,35 +74,19 @@ let is_tmp = function
 
 let meta_count = ref 0
 
-let reset_meta_count () = meta_count := 0
+(** Metavariables standing for an application whose head is itself an
+    unresolved metavariable, keyed by that head's id and the arguments.  See
+    {!apply_ml_type}. *)
+let pending_applications : (int * ml_type list * ml_type) list ref = ref []
+
+let reset_meta_count () =
+  meta_count := 0;
+  pending_applications := []
 
 (** Creates a fresh type metavariable for unification. *)
 let new_meta _ =
   incr meta_count;
   Tmeta {id = !meta_count; contents = None}
-
-(** Apply a type to [args], contracting the application when the head is
-    known.  [Tapp] is a redex: its head is a type variable, so substituting
-    that variable with a concrete type constructor reduces it.
-
-    A head that carries no arguments of its own ([Tdummy], [Tunknown]) absorbs
-    them, which is what a carrier erased by extraction must do. *)
-let rec apply_ml_type head args =
-  match args with
-  | [] -> head
-  | _ -> (
-    match head with
-    | Tvar j | Tvar' j -> Tapp (j, args)
-    | Tapp (j, pre) -> Tapp (j, pre @ args)
-    | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
-    | Tmeta {contents = Some u} -> apply_ml_type u args
-    | Tunknown -> (
-      (* The only heads extraction leaves unknown here are type constructors it
-         could not name, and the one such constructor a class can be
-         instantiated at is the identity ([fun A => A]): it reduces to its
-         argument. *)
-      match args with [a] -> a | _ -> Tunknown )
-    | _ -> head )
 
 (** Structural equality on ML types. *)
 let rec eq_ml_type t1 t2 =
@@ -133,6 +117,49 @@ let rec eq_ml_type t1 t2 =
 
 and eq_ml_meta m1 m2 =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
+
+(** Apply a type to [args], contracting the application when the head is
+    known.  [Tapp] is a redex: its head is a type variable, so substituting
+    that variable with a concrete type constructor reduces it.
+
+    A head that carries no arguments of its own ([Tdummy], [Tunknown]) absorbs
+    them, which is what a carrier erased by extraction must do. *)
+let rec apply_ml_type head args =
+  match args with
+  | [] -> head
+  | _ -> (
+    match head with
+    | Tvar j | Tvar' j -> Tapp (j, args)
+    | Tapp (j, pre) -> Tapp (j, pre @ args)
+    | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
+    | Tmeta {contents = Some u} -> apply_ml_type u args
+    | Tmeta ({contents = None; _} as m) -> (
+      (* The head is not known yet, and a pending application of a
+         metavariable is not representable.  Dropping the arguments would make
+         [M nat] and [M (nat -> nat)] the very same metavariable, so that
+         unifying one of them against a concrete carrier resolves the other at
+         the wrong instantiation.  Stand for the application by an unknown of
+         its own -- but the same one for the same head and arguments, so that
+         the two occurrences of [M B] in [bind]'s type still unify with each
+         other. *)
+      match
+        List.find_opt
+          (fun (id, a, _) -> Int.equal id m.id && List.equal eq_ml_type a args)
+          !pending_applications
+      with
+      | Some (_, _, u) -> u
+      | None ->
+        let u = new_meta () in
+        pending_applications := (m.id, args, u) :: !pending_applications;
+        u )
+    | Tunknown -> (
+      (* The only heads extraction leaves unknown here are type constructors it
+         could not name, and the one such constructor a class can be
+         instantiated at is the identity ([fun A => A]): it reduces to its
+         argument. *)
+      match args with [a] -> a | _ -> Tunknown )
+    | _ -> head )
+
 
 (** Simultaneously substitutes [[Tvar 1; ...; Tvar n]] by the types in [l]
     within ML type [t]. *)

@@ -256,7 +256,7 @@ struct ClassMethodFunctionPayload {
       ([]() -> uint64_t {
         auto _cs = adders<MOpt>(std::make_optional<uint64_t>(UINT64_C(3)));
         if (_cs.has_value()) {
-          const uint64_t &f = *_cs;
+          const std::function<uint64_t(uint64_t)> &f = *_cs;
           return f(UINT64_C(1));
         } else {
           return UINT64_C(0);
@@ -266,7 +266,7 @@ struct ClassMethodFunctionPayload {
                                                    UINT64_C(2),
                                                    List<uint64_t>::nil())))
                        .template fold_left<uint64_t>(
-                           [](uint64_t a, uint64_t f) {
+                           [](uint64_t a, std::function<uint64_t(uint64_t)> f) {
                              return (a + f(UINT64_C(1)));
                            },
                            UINT64_C(0)));

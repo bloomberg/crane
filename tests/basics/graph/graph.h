@@ -242,23 +242,21 @@ struct DirectedGraph {
   using edge = DirectedEdge<T1>;
 
   static Directed<T1> empty() {
-    return Directed<T1>{List<std::any>::nil(),
-                        List<DirectedEdge<std::any>>::nil()};
+    return Directed<T1>{List<T1>::nil(), List<DirectedEdge<T1>>::nil()};
   }
 
-  static Directed<T1> add_node(Directed<std::any> g, T1 n) {
-    return Directed<T1>{List<std::any>::cons(n, g.directed_nodes),
-                        g.directed_edges};
+  static Directed<T1> add_node(Directed<T1> g, T1 n) {
+    return Directed<T1>{List<T1>::cons(n, g.directed_nodes), g.directed_edges};
   }
 
-  static Directed<T1> add_edge(Directed<std::any> g, DirectedEdge<T1> e) {
-    return Directed<T1>{g.directed_nodes, List<DirectedEdge<std::any>>::cons(
-                                              e, g.directed_edges)};
+  static Directed<T1> add_edge(Directed<T1> g, DirectedEdge<T1> e) {
+    return Directed<T1>{g.directed_nodes,
+                        List<DirectedEdge<T1>>::cons(e, g.directed_edges)};
   }
 
-  static List<T1> nodes(Directed<std::any> g) { return g.directed_nodes; }
+  static List<T1> nodes(Directed<T1> g) { return g.directed_nodes; }
 
-  static List<edge> edges(Directed<std::any> g, T1 n) {
+  static List<edge> edges(Directed<T1> g, T1 n) {
     return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
       return directed_originates<_tcI0, T1>(n, _x0);
     });
@@ -289,24 +287,22 @@ struct UndirectedGraph {
   using edge = UndirectedEdge<T1>;
 
   static Undirected<T1> empty() {
-    return Undirected<T1>{List<std::any>::nil(),
-                          List<UndirectedEdge<std::any>>::nil()};
+    return Undirected<T1>{List<T1>::nil(), List<UndirectedEdge<T1>>::nil()};
   }
 
-  static Undirected<T1> add_node(Undirected<std::any> g, T1 n) {
-    return Undirected<T1>{List<std::any>::cons(n, g.undirected_nodes),
+  static Undirected<T1> add_node(Undirected<T1> g, T1 n) {
+    return Undirected<T1>{List<T1>::cons(n, g.undirected_nodes),
                           g.undirected_edges};
   }
 
-  static Undirected<T1> add_edge(Undirected<std::any> g, UndirectedEdge<T1> e) {
-    return Undirected<T1>{
-        g.undirected_nodes,
-        List<UndirectedEdge<std::any>>::cons(e, g.undirected_edges)};
+  static Undirected<T1> add_edge(Undirected<T1> g, UndirectedEdge<T1> e) {
+    return Undirected<T1>{g.undirected_nodes, List<UndirectedEdge<T1>>::cons(
+                                                  e, g.undirected_edges)};
   }
 
-  static List<T1> nodes(Undirected<std::any> g) { return g.undirected_nodes; }
+  static List<T1> nodes(Undirected<T1> g) { return g.undirected_nodes; }
 
-  static List<edge> edges(Undirected<std::any> g, T1 n) {
+  static List<edge> edges(Undirected<T1> g, T1 n) {
     return g.undirected_edges.filter(
         [=](UndirectedEdge<T1> _x0) mutable -> bool {
           return undirected_originates<_tcI0, T1>(n, _x0);

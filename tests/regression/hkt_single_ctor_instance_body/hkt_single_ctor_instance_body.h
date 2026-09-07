@@ -132,8 +132,8 @@ struct HktSingleCtorInstanceBody {
   static_assert(Pointed<PB>);
 
   template <Pointed _tcI0, Ftor _tcI1>
-  static typename _tcI1::template F<Nat> liftme(const Nat &n) {
-    return pnt<_tcI0, _tcI1, Nat>(n);
+  static typename _tcI1::template F<Nat> liftme(const Nat &x2_) {
+    return pnt<_tcI0, _tcI1, Nat>(x2_);
   }
 
   static box<Nat> run(const Nat &n);
