@@ -558,6 +558,34 @@ val exists_cpp_type : (cpp_type -> bool) -> cpp_type -> bool
     @return whether a [Tshared_ptr] node occurs in [ty] *)
 val contains_shared_ptr : cpp_type -> bool
 
+(** {1 The reversal convention}
+
+    [CPPfun_call] stores its arguments, and [CPPlambda] its parameters, in
+    reverse order.  That is a property of the representation, not of the
+    language being generated, and every site that spells the constructor
+    directly has to remember it unaided.  The four functions below are the
+    only place the reversal should appear: build with {!mk_call} and
+    {!mk_lambda}, read with {!call_args} and {!lambda_params}, and the lists
+    are in source order throughout. *)
+
+(** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
+val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
+
+(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]]. *)
+val mk_lambda :
+  (cpp_type * Id.t option) list ->
+  cpp_type option ->
+  cpp_stmt list ->
+  by_value:bool ->
+  cpp_expr
+
+(** The arguments of a {!CPPfun_call}, in source order. *)
+val call_args : cpp_expr list -> cpp_expr list
+
+(** The parameters of a {!CPPlambda}, in source order. *)
+val lambda_params : (cpp_type * Id.t option) list -> (cpp_type * Id.t option) list
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent.

@@ -5809,7 +5809,7 @@ let gen_ind_header_v2
                             arg_var )
                       (List.combine storage_args api_args)
                   in
-                  let call = CPPfun_call (var, List.rev call_args) in
+                  let call = mk_call var call_args in
                   let ret =
                     if storage_ret = api_ret then
                       call

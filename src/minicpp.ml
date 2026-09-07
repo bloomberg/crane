@@ -626,6 +626,30 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
 let contains_shared_ptr ty =
   exists_cpp_type (function Tshared_ptr _ -> true | _ -> false) ty
 
+(* {1 The reversal convention}
+
+   [CPPfun_call] stores its arguments, and [CPPlambda] its parameters, in
+   reverse order.  That is a property of the representation, not of the
+   language being generated, and every site that spells the constructor
+   directly has to remember it unaided.  The four functions below are the
+   only place the reversal should appear: build with {!mk_call} and
+   {!mk_lambda}, read with {!call_args} and {!lambda_params}, and the lists
+   are in source order throughout. *)
+
+(** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
+let mk_call fn args = CPPfun_call (fn, List.rev args)
+
+(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]]. *)
+let mk_lambda params ret body ~by_value =
+  CPPlambda (List.rev params, ret, body, by_value)
+
+(** The arguments of a {!CPPfun_call}, in source order. *)
+let call_args args = List.rev args
+
+(** The parameters of a {!CPPlambda}, in source order. *)
+let lambda_params params = List.rev params
+
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
     descent. *)

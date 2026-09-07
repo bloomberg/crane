@@ -4282,11 +4282,7 @@ and coerce ?term ?from ~into expr =
                 coerce ~from:ty ~into (CPPvar id) )
               params
           in
-          (* [CPPlambda] holds its parameters, and [CPPfun_call] its
-             arguments, in reverse order. *)
-          let call =
-            coerce ~from:scod ~into:cod (CPPfun_call (expr, List.rev args))
-          in
+          let call = coerce ~from:scod ~into:cod (mk_call expr args) in
           CPPlambda
             ( List.rev_map (fun (ty, id) -> (ty, Some id)) params,
               None, [Sreturn (Some call)], true )
@@ -5123,7 +5119,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let rec modify_last_return = function
                   | [] -> []
                   | [Sreturn (Some e)] ->
-                    [Sreturn (Some (CPPfun_call (e, List.rev extra_args)))]
+                    [Sreturn (Some (mk_call e extra_args))]
                   | stmt :: rest -> stmt :: modify_last_return rest
                 in
                 (* The printer does List.rev on params, so put extra params
@@ -7393,14 +7389,12 @@ and eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
     let arg (_, id) = CPPvar (Option.get id) in
     let taken = List.filteri (fun i _ -> i < arity) params in
     let rest = List.filteri (fun i _ -> i >= arity) params in
-    (* [CPPlambda] holds its parameters, and [CPPfun_call] its arguments, in
-       reverse order. *)
     let call =
       List.fold_left
-        (fun acc group -> CPPfun_call (acc, List.rev_map arg group))
+        (fun acc group -> mk_call acc (List.map arg group))
         f [taken; rest]
     in
-    CPPlambda (List.rev params, None, [Sreturn (Some call)], true)
+    mk_lambda params None [Sreturn (Some call)] ~by_value:true
   | _ -> f
 
 (** Make a global named in value position into an expression a caller can
@@ -7455,14 +7449,12 @@ and curry_to_expected env ?expected_ty x cglob =
     let outer = List.mapi param outer_dom in
     let inner = List.mapi (fun i ty -> param (n_outer + i) ty) inner_dom in
     let arg (_, id_opt) = CPPvar (Option.get id_opt) in
-    (* [CPPlambda] holds its parameters, and [CPPfun_call] its arguments, in
-       reverse order. *)
-    let call = CPPfun_call (cglob, List.rev_map arg (outer @ inner)) in
+    let call = mk_call cglob (List.map arg (outer @ inner)) in
     let body =
       if inner = [] then call
-      else CPPlambda (List.rev inner, None, [Sreturn (Some call)], true)
+      else mk_lambda inner None [Sreturn (Some call)] ~by_value:true
     in
-    CPPlambda (List.rev outer, None, [Sreturn (Some body)], true)
+    mk_lambda outer None [Sreturn (Some body)] ~by_value:true
 
 (** Handle eta expansion, curried function application, and promoted type arg
     resolution. Recovers erased template type args at call sites where C++ can't
@@ -8256,7 +8248,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           [ Sexpr (CPPfun_call (expr, args));
             Sreturn (Some (mk_tt_expr ())) ]
         in
-        CPPlambda (List.rev params, None, body, false)
+        mk_lambda params None body ~by_value:false
       | _ -> as_value ()
     ) regular_ml_args in
     tctx.promoted_var_map <- saved_promoted_map;
@@ -8572,7 +8564,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             in
             let here = List.filteri (fun i _ -> i < n_here) excess in
             let rest = List.filteri (fun i _ -> i >= n_here) excess in
-            chain_excess (CPPfun_call (base, List.rev here)) cod' rest
+            chain_excess (mk_call base here) cod' rest
         in
         if ret_is_chainable then
           let excess = List.map (gen_expr ~slot env) excess_args in
@@ -8613,7 +8605,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                the glob directly so the template renders as-is. *)
             cglob
           else
-            CPPfun_call (cglob, List.rev args)
+            mk_call cglob args
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -8724,10 +8716,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               let k = max 0 (arity - List.length captured_args) in
               let fill = List.filteri (fun i _ -> i < k) eta_vars in
               let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
-              let base = CPPfun_call (cglob, List.rev (captured_args @ fill)) in
+              let base = mk_call cglob (captured_args @ fill) in
               if surplus = [] then base
-              else CPPfun_call (base, List.rev surplus)
-            | None -> CPPfun_call (cglob, List.rev call_args)
+              else mk_call base surplus
+            | None -> mk_call cglob call_args
           in
           let ret_ty, body =
             if cod = Tvoid then
@@ -8750,9 +8742,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               ( List.rev outer,
                 None,
                 [ Sreturn
-                    (Some (CPPlambda (List.rev inner, ret_ty, body, true))) ],
+                    (Some (mk_lambda inner ret_ty body ~by_value:true)) ],
                 true )
-          | _ -> CPPlambda (List.rev eta_args, ret_ty, body, not eta_keep_moves) )
+          | _ -> mk_lambda eta_args ret_ty body ~by_value:(not eta_keep_moves) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob
@@ -9124,15 +9116,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         let pa_exprs = List.map (fun (_, id_opt) ->
           CPPvar (Option.get id_opt)) pa_params in
-        (* CPPlambda stores params in reverse (de Bruijn) order;
-           the printer reverses them for display.  Reverse pa_params
-           so the printed output matches source order. *)
-        CPPlambda (List.rev pa_params, None,
-          [Sreturn (Some (CPPfun_call (callee,
-              List.rev (args @ pa_exprs))))],
-          true)
+        mk_lambda pa_params None
+          [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
+          ~by_value:true
       else
-        CPPfun_call (gen_expr env f, List.rev args)
+        mk_call (gen_expr env f) args
     else if n_args > n_value_dom && n_value_dom > 0 then
       let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
@@ -9162,7 +9150,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         end
         else if callee_is_bare_any then
           apply_erased_curried callee_expr args
-        else CPPfun_call (callee_expr, List.rev args)
+        else mk_call callee_expr args
       in
       let n = n_args in
       let erased_cod =
@@ -12588,9 +12576,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           List.map (fun (_, id_opt) -> CPPvar (Option.get id_opt)) pa_params
         in
         let fix_id = fst (List.nth renamed_ids x) in
-        let full_call = CPPfun_call (CPPvar fix_id, List.rev (args @ pa_exprs)) in
+        let full_call = mk_call (CPPvar fix_id) (args @ pa_exprs) in
         decls @ defs
-        @ deref_subst [k (CPPlambda (List.rev pa_params, None, [Sreturn (Some full_call)], true))]
+        @ deref_subst [k (mk_lambda pa_params None [Sreturn (Some full_call)] ~by_value:true)]
       end else begin
         let owned_flags_per_fun =
           Array.to_list (Array.map (fun f ->
