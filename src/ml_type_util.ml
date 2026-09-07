@@ -305,12 +305,6 @@ let is_cpp_dummy_type = function
     name = "dummy_type" || name = "dummy_prop" || name = "dummy_implicit"
   | _ -> false
 
-(** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
-    header: either of the two erased type nodes, or a dummy glob left behind by
-    proof/type erasure.  This is a question about {e syntax}, not about
-    representation: use it to decide how to render a type, never to decide
-    whether a value may be boxed or [any_cast] out.  For that, see
-    {!is_boxed_type}. *)
 (** The type under any module or namespace qualification.  Questions about
     what a type {i is} -- which inductive, at which instantiation -- are about
     the type inside the qualification, not the wrapper. *)
@@ -318,6 +312,12 @@ let rec unqualify_ty = function
   | Minicpp.Tmod (_, t) | Minicpp.Tnamespace (_, t) -> unqualify_ty t
   | t -> t
 
+(** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
+    header: either of the two erased type nodes, or a dummy glob left behind by
+    proof/type erasure.  This is a question about {e syntax}, not about
+    representation: use it to decide how to render a type, never to decide
+    whether a value may be boxed or [any_cast] out.  For that, see
+    {!is_boxed_type}. *)
 let prints_as_any t =
   t = Minicpp.Tany || t = Minicpp.Topaque || is_cpp_dummy_type t
 

@@ -2911,8 +2911,6 @@ and iife_closure_return env typ pv stmts =
     in
     match cpp_of_ml env branch_rty with Tfun _ as r -> Some r | _ -> None
 
-
-
 (** [names_only_scoped_tvars ty] -- whether every type variable [ty] spells is
     one this scope declares.  A slot type read off a callee's signature is
     written in the callee's type variables, which name nothing here, so such a
@@ -4387,8 +4385,6 @@ and name_fn_arg_for_tvar_param param_ml_ty expr =
   | (Miniml.Tvar _ | Miniml.Tvar' _), CPPlambda _ -> CPPfn_value expr
   | _ -> expr
 
-(** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
-    that the helper is needed. *)
 (** Re-instantiate a function value that is being adapted for an erased slot:
     the values it will be applied to reached that slot erased too -- a
     [list nat] argument is stored as [List<std::any>], not [List<uint64_t>] --
@@ -4399,6 +4395,8 @@ and erased_fn_instantiation = function
     CPPglob (g, List.map (fun _ -> Tany) tys, xs)
   | e -> e
 
+(** Wrap [expr] in the [crane_erase_fn] runtime helper, flagging the header
+    that the helper is needed. *)
 and wrap_crane_erase_fn ?ret_ty expr =
   Table.mark_needs_erase_fn ();
   CPPerase_fn (ret_ty, expr)
@@ -7404,7 +7402,6 @@ and eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
     in
     CPPlambda (List.rev params, None, [Sreturn (Some call)], true)
   | _ -> f
-
 
 (** Make a global named in value position into an expression a caller can
     invoke, by eta-expanding it into a lambda that calls it.

@@ -208,13 +208,13 @@ val dummy_name : Id.t
 (** Convert a Name.t to an Id.t, using anonymous_name for anonymous names. *)
 val id_of_name : Name.t -> Id.t
 
-(** Extract the Id.t from an ml_ident. *)
 (** Move a name out of the space Crane reserves for the names it invents
     itself ([_Frame], [_stack], ...) by carrying its leading underscores to
     the end.  Unchanged when there are none, or when the name is all
     underscores. *)
 val unreserve_leading_underscore : string -> string
 
+(** Extract the Id.t from an ml_ident. *)
 val id_of_mlid : ml_ident -> Id.t
 
 (** Generate a temporary identifier from an ml_ident. *)

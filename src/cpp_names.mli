@@ -26,7 +26,6 @@ val pp_global_with_key :
 (** Pretty-print a global. *)
 val pp_global : Common.kind -> Names.GlobRef.t -> Pp.t
 
-(** Pretty-print just the (unqualified) name of a global. *)
 (** The name a typeclass concept is declared and referenced under: the last
     component of its C++ name, since a concept may only appear at namespace
     scope and so carries no qualifier. *)
@@ -35,6 +34,7 @@ val concept_name_of_ref : Names.GlobRef.t -> string
 (** {!concept_name_of_ref} as a [Pp.t]. *)
 val pp_concept_name_of_ref : Names.GlobRef.t -> Pp.t
 
+(** Pretty-print just the (unqualified) name of a global. *)
 val pp_global_name : Common.kind -> Names.GlobRef.t -> Pp.t
 
 (** {2 Full paths and module names} *)
