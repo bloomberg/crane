@@ -111,3 +111,146 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
+
+(subdir class_method_partial_app
+ (rule
+  (targets class_method_partial_app.t.exe)
+  (deps ClassMethodPartialApp.vo class_method_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_partial_app.t.exe class_method_partial_app.cpp class_method_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_method_partial_app.t.exe)
+  (action (run ./class_method_partial_app.t.exe))))
+
+(subdir deep_expr_const_return
+ (rule
+  (targets deep_expr_const_return.t.exe)
+  (deps DeepExprConstReturn.vo deep_expr_const_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_expr_const_return.t.exe deep_expr_const_return.cpp deep_expr_const_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps deep_expr_const_return.t.exe)
+  (action (run ./deep_expr_const_return.t.exe))))
+
+(subdir dict_ctor_field
+ (rule
+  (targets dict_ctor_field.t.exe)
+  (deps DictCtorField.vo dict_ctor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dict_ctor_field.t.exe dict_ctor_field.cpp dict_ctor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dict_ctor_field.t.exe)
+  (action (run ./dict_ctor_field.t.exe))))
+
+(subdir drain_option_pair_field
+ (rule
+  (targets drain_option_pair_field.t.exe)
+  (deps DrainOptionPairField.vo drain_option_pair_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} drain_option_pair_field.t.exe drain_option_pair_field.cpp drain_option_pair_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps drain_option_pair_field.t.exe)
+  (action (run ./drain_option_pair_field.t.exe))))
+
+(subdir empty_inductive_elim
+ (rule
+  (targets empty_inductive_elim.t.exe)
+  (deps EmptyInductiveElim.vo empty_inductive_elim.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_inductive_elim.t.exe empty_inductive_elim.cpp empty_inductive_elim.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps empty_inductive_elim.t.exe)
+  (action (run ./empty_inductive_elim.t.exe))))
+
+(subdir factory_field_name_clash
+ (rule
+  (targets factory_field_name_clash.t.exe)
+  (deps FactoryFieldNameClash.vo factory_field_name_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} factory_field_name_clash.t.exe factory_field_name_clash.cpp factory_field_name_clash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps factory_field_name_clash.t.exe)
+  (action (run ./factory_field_name_clash.t.exe))))
+
+(subdir imported_module_type_prime
+ (rule
+  (targets imported_module_type_prime.t.exe)
+  (deps ImportedModuleTypePrime.vo imported_module_type_prime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} imported_module_type_prime.t.exe imported_module_type_prime.cpp imported_module_type_prime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps imported_module_type_prime.t.exe)
+  (action (run ./imported_module_type_prime.t.exe))))
+
+(subdir instance_alias
+ (rule
+  (targets instance_alias.t.exe)
+  (deps InstanceAlias.vo instance_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_alias.t.exe instance_alias.cpp instance_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_alias.t.exe)
+  (action (run ./instance_alias.t.exe))))
+
+(subdir let_poly_fn_instance
+ (rule
+  (targets let_poly_fn_instance.t.exe)
+  (deps LetPolyFnInstance.vo let_poly_fn_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_poly_fn_instance.t.exe let_poly_fn_instance.cpp let_poly_fn_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_poly_fn_instance.t.exe)
+  (action (run ./let_poly_fn_instance.t.exe))))
+
+(subdir nested_class_concept_scope
+ (rule
+  (targets nested_class_concept_scope.t.exe)
+  (deps NestedClassConceptScope.vo nested_class_concept_scope.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_class_concept_scope.t.exe nested_class_concept_scope.cpp nested_class_concept_scope.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_class_concept_scope.t.exe)
+  (action (run ./nested_class_concept_scope.t.exe))))
+
+(subdir nested_module_type_concept
+ (rule
+  (targets nested_module_type_concept.t.exe)
+  (deps NestedModuleTypeConcept.vo nested_module_type_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_module_type_concept.t.exe nested_module_type_concept.cpp nested_module_type_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_module_type_concept.t.exe)
+  (action (run ./nested_module_type_concept.t.exe))))
+
+(subdir shared_dep_two_targets
+ (rule
+  (targets shared_dep_two_targets.t.exe)
+  (deps SharedDepTwoTargets.vo shared_dep_two_targets.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_dep_two_targets.t.exe shared_dep_two_targets.cpp shared_dep_two_targets.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_dep_two_targets.t.exe)
+  (action (run ./shared_dep_two_targets.t.exe))))
+
+(subdir stdlib_byte
+ (rule
+  (targets stdlib_byte.t.exe)
+  (deps StdlibByte.vo stdlib_byte.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stdlib_byte.t.exe stdlib_byte.cpp stdlib_byte.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stdlib_byte.t.exe)
+  (action (run ./stdlib_byte.t.exe))))
