@@ -4103,6 +4103,39 @@ and ml_expr_is_function_value e =
     parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
     excluded -- it prints as [std::any] without promising one, so nothing may
     be cast out of it. *)
+(** [classify_erasure ty] -- the erasure status of one side of a value
+    boundary, as the single question worth asking about it.
+
+    Three answers are easy to confuse, and the difference decides whether a
+    value may be boxed, [any_cast] out of, or left alone:
+
+    - [`Unknown] -- the type was not tracked. Boxing into such a slot is
+      allowed; casting {e out} of it never is, since nothing says a box is
+      there.
+    - [`Boxed] -- the value really is inside a [std::any], so an [any_cast]
+      recovers it.  Follows alias chains: a [Type]-valued definition emitted
+      as [using sel = std::any] is a box under a name.
+    - [`Opaque] -- spelled [std::any] but promising nothing about the
+      representation ({!Minicpp.Topaque}).  Distinct from [`Unknown]: there
+      the type is untracked, here it is untrackable.  Nothing may be boxed or
+      cast on the strength of it.
+    - [`Concrete t] -- an ordinary type.
+
+    Prefer this to assembling an answer out of {!Ml_type_util.prints_as_any},
+    {!Ml_type_util.is_boxed_type} and {!resolves_to_any_type} at each site:
+    those sit at different layers (see [ml_type_util.mli]) and a site that
+    picks the wrong one silently gets [false]. *)
+and classify_erasure = function
+  | None -> `Unknown
+  | Some f when is_boxed_source f -> `Boxed
+  | Some f when prints_as_any f -> `Opaque
+  | Some f -> `Concrete f
+
+(** [spells_as_any t] -- whether [t] is written [std::any] in the generated
+    code, following the alias chains that {!Ml_type_util.prints_as_any}, being
+    structural, cannot see through. *)
+and spells_as_any t = prints_as_any t || resolves_to_any_type t
+
 and is_boxed_source t =
   is_boxed_type t
   || (match t with
@@ -4179,25 +4212,15 @@ and stmts_yield_boxed = function
     is a function, and so has to be adapted by [crane_erase_fn] before it is
     boxed. *)
 and coerce ?term ?from ~into expr =
-  (* What the source side of the boundary tells us.  An unknown source is not
-     an opaque one: [None] says we did not track the type, [Topaque] says the
-     type itself is unknowable here. *)
-  let source =
-    match from with
-    | None -> `Unknown
-    | Some f when is_boxed_source f -> `Boxed
-    | Some f when prints_as_any f -> `Opaque
-    | Some f -> `Concrete f
-  in
+  let source = classify_erasure from in
   let same_type = match from with Some f -> cpp_ty_eq f into | None -> false in
   if same_type || into = Tvoid then expr
   else
     match source with
-    (* [prints_as_any] is structural, so it misses a named alias for the box --
-       a type-level [Fixpoint] emitted as [using sem = std::any].  Casting a box
-       to such a name is not a recovery but an [any_cast<std::any>], which only
-       succeeds on a doubly-boxed value and otherwise throws. *)
-    | `Boxed when prints_as_any into || resolves_to_any_type into -> expr
+    (* Casting a box to a name that is itself the box is not a recovery but
+       an [any_cast<std::any>], which only succeeds on a doubly-boxed value
+       and otherwise throws. *)
+    | `Boxed when spells_as_any into -> expr
     (* Already recovered; a second cast would be reading the same box twice. *)
     | `Boxed -> (
       match expr with
@@ -10368,7 +10391,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
              type argument, which converts to a dummy glob rather than to
              [Tany]. *)
           let rty_cpp = cpp_of_ml env rty in
-          resolves_to_any_type rty_cpp || prints_as_any rty_cpp
+          spells_as_any rty_cpp
         | None -> false )
       | None -> false )
     | _ -> false
@@ -10379,7 +10402,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      its field types.  Used for non-pair matches (e.g. option, variant) where
      we need to emit [any_cast<ConcreteType>(scrut)]. *)
   let concrete_match_type =
-    if prints_as_any typ || resolves_to_any_type typ || scrut_callee_ret_erased then
+    if spells_as_any typ || scrut_callee_ret_erased then
       try
         let _, _, pat0, _ = pv.(0) in
         let ind_ref = match pat0 with

@@ -281,6 +281,21 @@ val wrap_param_by_ownership : ?is_owned:bool -> cpp_type -> cpp_type
     [std::any], following erased-type constants and alias chains. *)
 val resolves_to_any_type : cpp_type -> bool
 
+(** [spells_as_any t] — whether [t] is written [std::any] in the generated
+    code, following the alias chains that {!Ml_type_util.prints_as_any}, being
+    structural, cannot see through. *)
+val spells_as_any : cpp_type -> bool
+
+(** [classify_erasure ty] — the erasure status of one side of a value
+    boundary; see the layering note at the top of [ml_type_util.mli].  Prefer
+    this to assembling an answer out of the structural predicates: [`Unknown]
+    (untracked — may be boxed into, never cast out of), [`Boxed] (really
+    inside a [std::any]), [`Opaque] (spelled [std::any], promising nothing)
+    and [`Concrete] are each easy to reach for by mistake. *)
+val classify_erasure :
+  cpp_type option ->
+  [`Unknown | `Boxed | `Opaque | `Concrete of cpp_type]
+
 (** [erase_returned_fn_values ret_ty body] wraps closures returned directly
     from a function whose return type erases to [std::any] in the
     [crane_erase_fn] adapter, so the application site's [any_cast] finds the

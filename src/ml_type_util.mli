@@ -10,6 +10,28 @@
    well-known Coq constructor indices (positive, Z, decimal, hex, signed,
    etc.) so that numeric-literal encodings can be recognised by tag. *)
 
+(** {2 Asking whether a type is erased}
+
+    Several predicates here answer some version of "is this [std::any]", and
+    picking the wrong one silently yields [false] rather than an error.  They
+    sit at three layers, and the layer is the thing to choose by:
+
+    - {b Structural} (this module): {!prints_as_any}, {!is_boxed_type},
+      {!is_cpp_dummy_type}, {!has_tany_in_type}, {!has_erased_type_in_type}.
+      These look only at the type node in front of them.  They cannot see
+      through a [using] alias, so a caller holding a type that {e might} be
+      an alias must run [Translation.unfold_cpp_typedef] first.  Note also
+      that a [Tdummy] converts to a [dummy_type] marker, not to [Tany]:
+      {!has_tany_in_type} misses it and {!has_erased_type_in_type} does not.
+    - {b Environment-aware} ([translation.ml]): [resolves_to_any_type],
+      [spells_as_any], [is_boxed_source], and above all [classify_erasure],
+      which is the one to reach for when the question is whether a {e value}
+      may be boxed or cast.  These follow the ML type table and the typedef
+      chain.
+    - {b Printer} ([cpp_erasure.ml]): [is_any_shaped], which consults the
+      alias set accumulated while emitting declarations, and so is only
+      meaningful during printing. *)
+
 (** {2 Constructor name resolution} *)
 
 (** Struct name for the C++ representation of a constructor global reference. *)
