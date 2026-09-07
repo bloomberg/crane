@@ -2973,7 +2973,12 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
      scrutinee is only ever bound to [auto] nothing wrote a box at all. *)
   let opaque_arg_is_a_box =
     match resolve_tmeta typ with
-    | Miniml.Tglob (g, _, _) -> not (Table.is_custom g)
+    (* ... unless the mapping's own type argument is one that erases: a family
+       indexed by a value is spelled [std::any] in the instantiation, so the
+       [std::optional<std::any>] the mapping produced really does hold a
+       box. *)
+    | Miniml.Tglob (g, args, _) ->
+      not (Table.is_custom g) || List.exists (ml_erases_to_box env) args
     | _ -> true
   in
   let scrut_template_args =
@@ -7891,6 +7896,51 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             (param_expected_cpp_ty ~at:j fn_param_ml_tys)
         | None -> None
       in
+      (* The callee declares this parameter as one of its own template
+         parameters [Tvar j], and some {e other} parameter carries that same
+         [j] in a position the instantiation erased -- so that parameter's
+         argument deduces [j] as [std::any].  This one has to arrive boxed for
+         the two deductions to agree.  Erasure of the type argument alone is
+         not enough of a reason: unless another position states it as
+         [std::any], boxing here would be the only thing making the deduction
+         disagree. *)
+      let param_tvar_erased =
+        let this = i + List.length typeclass_ml_args in
+        let rec mentions j = function
+          | Miniml.Tvar j' | Miniml.Tvar' j' -> j = j'
+          | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
+          | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
+          | Miniml.Tarr (a, b) -> mentions j a || mentions j b
+          | Miniml.Tmeta {contents = Some t} -> mentions j t
+          | _ -> false
+        in
+        let tvar_arg_erased j =
+          match List.nth_opt tys (j - 1) with
+          | Some t ->
+            Ml_type_util.has_erased_type_in_type
+              (unfold_cpp_typedef env (cpp_of_ml env t))
+          | None -> false
+        in
+        match List.nth_opt fn_param_ml_tys_orig this with
+        (* A custom-extracted callee's C++ is spelled by its mapping, so there
+           is no template parameter for the argument to agree with. *)
+        | Some (Miniml.Tvar j | Miniml.Tvar' j)
+          when (not (Table.is_custom id)) && tvar_arg_erased j ->
+          let rec is_arrow = function
+            | Miniml.Tarr _ -> true
+            | Miniml.Tmeta {contents = Some t} -> is_arrow t
+            | _ -> false
+          in
+          List.exists
+            (fun (k, orig) ->
+              (* A function-typed parameter is rendered as a deduced template
+                 parameter of its own, so it states nothing about [j]. *)
+              k <> this && (not (is_arrow orig)) && mentions j orig
+              && Ml_type_util.has_erased_type_in_type
+                   (unfold_cpp_typedef env (cpp_of_ml env (type_subst_list tys orig))))
+            (List.mapi (fun k t -> (k, t)) fn_param_ml_tys_orig)
+        | _ -> false
+      in
       let arg_expected_ty =
         match ml_arg with
         | MLlam _ -> param_expected_at_declared_arity ()
@@ -7930,6 +7980,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          treating this call argument as if it were itself in erased "return"
          position for the duration of its generation. *)
       let param_resolves_to_any =
+        param_tvar_erased
+        ||
         match List.nth_opt fn_param_ml_tys i with
         | Some ml_ty -> ml_erases_to_box env ml_ty
         | None -> false
@@ -7972,6 +8024,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         match List.nth_opt fn_param_ml_tys i with
         | Some param_ty -> erase_fn_arg_for_param env param_ty ml_arg expr
         | None -> expr
+      in
+      let expr =
+        if param_tvar_erased then
+          (* Say where the value is coming from where the binder's own type
+             says: an argument that is already a box is left alone. *)
+          let from =
+            match ml_arg with
+            | MLrel j -> Option.map (cpp_of_ml env) (get_env_type_opt j)
+            | _ -> None
+          in
+          coerce ~term:ml_arg ?from ~into:Tany expr
+        else expr
       in
       (* Wrap void calls as values only when the expression will be used
          as a value (not in monadic parameter handler which places it in

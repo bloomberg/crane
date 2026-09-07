@@ -282,14 +282,14 @@ struct HalistDependentValue {
   };
   static inline const halist<Key, vty> m0 = List<SigT<Key, std::any>>::nil();
   static inline const halist<Key, vty> m1 =
-      HAList::halist_add(keyEq, Key::KNAT, UINT64_C(7), m0);
+      HAList::halist_add(keyEq, Key::KNAT, std::any(UINT64_C(7)), m0);
   static inline const halist<Key, vty> m2 = HAList::halist_add(
       keyEq, Key::KLIST,
-      List<uint64_t>::cons(
+      std::any(List<std::any>::cons(
           UINT64_C(1),
-          List<uint64_t>::cons(
+          List<std::any>::cons(
               UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+              List<std::any>::cons(UINT64_C(3), List<std::any>::nil())))),
       m1);
   static inline const uint64_t run = ([]() -> uint64_t {
     auto _cs = HAList::halist_lookup(keyEq, Key::KNAT, m2);
@@ -303,7 +303,7 @@ struct HalistDependentValue {
     auto _cs1 = HAList::halist_lookup(keyEq, Key::KLIST, m2);
     if (_cs1.has_value()) {
       const auto &l = *_cs1;
-      return l.length();
+      return List<uint64_t>(std::any_cast<List<std::any>>(l)).length();
     } else {
       return UINT64_C(0);
     }

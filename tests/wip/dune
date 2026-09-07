@@ -111,14 +111,3 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
-(subdir halist_dependent_value
- (rule
-  (targets halist_dependent_value.t.exe)
-  (deps HalistDependentValue.vo halist_dependent_value.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} halist_dependent_value.t.exe halist_dependent_value.cpp halist_dependent_value.t.cpp)))
- (rule
-  (alias runtest)
-  (deps halist_dependent_value.t.exe)
-  (action (run ./halist_dependent_value.t.exe))))
-
