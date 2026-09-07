@@ -2979,6 +2979,14 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
       not (Table.is_custom g) || List.exists (ml_erases_to_box env) args
     | _ -> true
   in
+  (* Whether one of the scrutinee's template arguments holds a boxed value.
+     This is the only question asked about an argument's erasure here, so it
+     is settled once: [Topaque] is the sole case where being spelled
+     [std::any] does not settle it, and it is decided above rather than
+     re-decided at each site. *)
+  let arg_is_a_box t =
+    if t = Topaque then opaque_arg_is_a_box else resolves_to_any_type t
+  in
   let scrut_template_args =
     let args = extract_template_args scrut_cpp_ty in
     (* One boxed argument means the whole instantiation was erased, so every
@@ -2989,18 +2997,13 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
        two different erasures from the [pair<any, any>] its producer stored. *)
     (* An unresolved argument of a custom-extracted scrutinee does not count:
        see [opaque_arg_is_a_box]. *)
-    if List.exists (fun t -> resolves_to_any_type t
-                             && (t <> Topaque || opaque_arg_is_a_box))
-         args
-    then
+    if List.exists arg_is_a_box args then
       (* An argument that already carries an erased component is at the shape
          its producer stored it in -- a [pair<List<any>, any>] payload is
          written down that way in the field, and reading it back as a flat
          [any] would lose the components the producer boxed individually. *)
       List.map
-        (fun a ->
-          if has_tany_in_type a || (a = Topaque && not opaque_arg_is_a_box) then a
-          else index_erase_type a)
+        (fun a -> if has_tany_in_type a then a else index_erase_type a)
         args
     else args
   in
@@ -3032,8 +3035,7 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
       | None -> false
     else
       match field_arg field_i with
-      | Some Topaque -> opaque_arg_is_a_box
-      | Some t -> resolves_to_any_type t
+      | Some t -> arg_is_a_box t
       | None -> false
   in
   List.iteri (fun field_i _ ->
