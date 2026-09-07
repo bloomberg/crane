@@ -4103,6 +4103,21 @@ and ml_expr_is_function_value e =
     parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
     excluded -- it prints as [std::any] without promising one, so nothing may
     be cast out of it. *)
+(** [adapter_params ~prefix dom] -- fresh parameters for an adapter lambda,
+    one per domain type, in source order.
+
+    An adapter is a lambda whose only job is to call something else with its
+    own arguments passed along, so its parameters exist only to be named.
+    [prefix] distinguishes the adapters from one another in the generated
+    code, and is the caller's to choose. *)
+and adapter_params ~prefix dom =
+  List.mapi
+    (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "%s%d" prefix i))))
+    dom
+
+(** An {!adapter_params} parameter read back as the argument to pass along. *)
+and adapter_arg (_, id) = CPPvar (Option.get id)
+
 (** [classify_erasure ty] -- the erasure status of one side of a value
     boundary, as the single question worth asking about it.
 
@@ -4293,22 +4308,16 @@ and coerce ?term ?from ~into expr =
             | `Concrete (Tfun (d, c)) -> (d, c)
             | _ -> ([], Tany)
           in
-          let params =
-            List.mapi
-              (fun i ty -> (ty, Id.of_string (Printf.sprintf "_ue%d" i)))
-              dom
-          in
+          let params = adapter_params ~prefix:"_ue" dom in
           let args =
             List.mapi
-              (fun i (ty, id) ->
+              (fun i ((ty, _) as p) ->
                 let into = Option.default Tany (List.nth_opt sdom i) in
-                coerce ~from:ty ~into (CPPvar id) )
+                coerce ~from:ty ~into (adapter_arg p) )
               params
           in
           let call = coerce ~from:scod ~into:cod (mk_call expr args) in
-          CPPlambda
-            ( List.rev_map (fun (ty, id) -> (ty, Some id)) params,
-              None, [Sreturn (Some call)], true )
+          mk_lambda params None [Sreturn (Some call)] ~by_value:true
         | _ -> (
           match concrete_source with
           | `Concrete f when not (prints_as_any into) ->
@@ -7404,17 +7413,12 @@ and eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda ~arity f =
   | Some (Tfun (dom, _))
     when arity > 0 && ml_arity > arity && List.length dom > arity
          && not returns_a_lambda ->
-    let params =
-      List.mapi
-        (fun i ty -> (ty, Some (Id.of_string (Printf.sprintf "_ee%d" i))))
-        dom
-    in
-    let arg (_, id) = CPPvar (Option.get id) in
+    let params = adapter_params ~prefix:"_ee" dom in
     let taken = List.filteri (fun i _ -> i < arity) params in
     let rest = List.filteri (fun i _ -> i >= arity) params in
     let call =
       List.fold_left
-        (fun acc group -> mk_call acc (List.map arg group))
+        (fun acc group -> mk_call acc (List.map adapter_arg group))
         f [taken; rest]
     in
     mk_lambda params None [Sreturn (Some call)] ~by_value:true
@@ -7466,13 +7470,12 @@ and curry_to_expected env ?expected_ty x cglob =
   match n_outer with
   | None -> cglob
   | Some n_outer ->
-    let outer_dom = List.filteri (fun i _ -> i < n_outer) decl_dom in
-    let inner_dom = List.filteri (fun i _ -> i >= n_outer) decl_dom in
-    let param i ty = (ty, Some (Id.of_string (Printf.sprintf "_ec%d" i))) in
-    let outer = List.mapi param outer_dom in
-    let inner = List.mapi (fun i ty -> param (n_outer + i) ty) inner_dom in
-    let arg (_, id_opt) = CPPvar (Option.get id_opt) in
-    let call = mk_call cglob (List.map arg (outer @ inner)) in
+    (* The two groups share one numbering, so they are named together and
+       then split. *)
+    let params = adapter_params ~prefix:"_ec" decl_dom in
+    let outer = List.filteri (fun i _ -> i < n_outer) params in
+    let inner = List.filteri (fun i _ -> i >= n_outer) params in
+    let call = mk_call cglob (List.map adapter_arg params) in
     let body =
       if inner = [] then call
       else mk_lambda inner None [Sreturn (Some call)] ~by_value:true
