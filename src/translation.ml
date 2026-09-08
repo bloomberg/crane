@@ -41,6 +41,14 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   if collides then ctor_struct_name ^ "_"
   else lc
 
+(** The type a never-returning expression is spelled with, given whatever type
+    the slot it sits in called for.  {!Tany} is what an erased slot asks for,
+    and the only thing left to say when the slot named no type; nothing here
+    guesses past that. *)
+let abort_ty : cpp_type option -> cpp_type = function
+  | Some ty -> ty
+  | None -> Tany
+
 (** The C++ name of the inductive that [cref] constructs, or [""] when [cref]
     is not a constructor reference.  {!factory_name_of_ctor} needs it, and a
     caller holding only the constructor should not have to take the inductive
@@ -7428,11 +7436,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        [MLcons] case and in {!gen_expr_custom_cons}, which produce
        [std::any{}] instead.  The reuse optimization in {!gen_cpp_case}
        skips [MLdummy] fields entirely. *)
-    CPPabort "unreachable"
+    CPPabort ("unreachable", abort_ty expected_ty)
   | MLexn msg ->
     (* Unreachable/absurd case - e.g., match on empty type *)
-    CPPabort msg
-  | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s)
+    CPPabort (msg, abort_ty expected_ty)
+  | MLaxiom s -> CPPabort ("unrealized axiom: " ^ s, abort_ty expected_ty)
   | _ -> CErrors.anomaly (Pp.str "gen_expr: unhandled ML AST node")
 
 (** Adapt a callable produced with fewer parameters than its use site expects.
@@ -8626,7 +8634,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           if cod_is_erased then apply_erased_callee base excess
           else chain_excess base cod_inst excess
         else
-          CPPabort "untranslatable curried proof term" )
+          CPPabort ("untranslatable curried proof term", abort_ty expected_ty) )
     in
     let primary_result =
       match ty with

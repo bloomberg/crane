@@ -361,7 +361,11 @@ and cpp_expr =
       (** Member template of a dependent base: [expr::template id<tys...>] *)
   | CPPqualified_t of cpp_type * Id.t  (** Type-qualified member: Type::id *)
   | CPPconvertible_to of cpp_type  (** std::convertible_to<T> type trait *)
-  | CPPabort of string  (** Unreachable code marker, calls std::abort() *)
+  | CPPabort of string * cpp_type
+      (** A never-returning expression: throws the given message.  The
+          {!cpp_type} is what the expression yields, so a printer is never left
+          to guess one; an erased slot states {!Tany} rather than defaulting to
+          it. *)
   | CPPenum_val of GlobRef.t * Id.t
       (** Enum class value: EnumType::Constructor *)
   | CPPnullptr  (** nullptr literal *)
@@ -597,8 +601,8 @@ val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
-    A nullary, un-annotated lambda whose body only throws reduces to
-    {!CPPabort}, which the printer types from its context. *)
+    A nullary lambda whose body only throws reduces to {!CPPabort}, carrying
+    [ret] -- or {!Tany} when [ret] is absent -- as the type it yields. *)
 val mk_lambda :
   (cpp_type * Id.t option) list ->
   cpp_type option ->
@@ -608,8 +612,8 @@ val mk_lambda :
 
 (** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
     immediately, capturing by reference.  A body that only throws reduces to
-    {!CPPabort}, which the printer types from its context; a lambda around it
-    would deduce [void] and could not stand where a value is expected. *)
+    {!CPPabort} carrying [ret]; a lambda around it would deduce [void] and
+    could not stand where a value is expected. *)
 val mk_iife : cpp_type option -> cpp_stmt list -> cpp_expr
 
 (** The arguments of a {!CPPfun_call}, in source order. *)

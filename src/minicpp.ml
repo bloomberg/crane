@@ -360,7 +360,9 @@ and cpp_expr =
   | CPPqualified_t of
       cpp_type * Id.t (* Type::id - for type-qualified member access *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
-  | CPPabort of string (* unreachable code / absurd case - calls std::abort() *)
+  | CPPabort of string * cpp_type
+      (* never returns: throws [string].  The type is what the expression
+         yields, so a printer never has to guess one *)
   | CPPenum_val of
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
   | CPPnullptr (* nullptr *)
@@ -660,9 +662,8 @@ let of_reversed (l : 'a list) : 'a revd = {rev = l}
 (** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
 let mk_call fn args =
   match (fn, args) with
-  (* [fn] never returns, so the call never happens: it is that same abort,
-     and unlike a call it carries no return type of its own for the printer
-     to have to reconcile. *)
+  (* [fn] never returns, so the call never happens: it is that same
+     abort, which already carries the type the call would have had. *)
   | CPPabort _, [] -> fn
   | _ -> CPPfun_call (fn, List.rev args)
 
@@ -676,26 +677,26 @@ let mk_call fn args =
     than at each of them.  A [const] under a reference is a different claim
     and is left alone.
 
-    A nullary, un-annotated lambda whose body only throws produces no value
-    and would deduce [void], so it is {!CPPabort} instead -- the same
-    never-returning expression, spelled with whatever return type the
-    printing context calls for. *)
+    A nullary lambda whose body only throws produces no value, so it is
+    {!CPPabort} instead: the same never-returning expression, and the one
+    spelling of it.  An un-annotated such lambda would otherwise deduce
+    [void] and could not stand where a value is expected; [Tany] is what an
+    erased slot asks for, and is the only thing left to say when the caller
+    named no type. *)
 let mk_lambda params ret body ~by_value =
   let ret =
     match ret with Some (Tmod (TMconst, t)) -> Some t | r -> r
   in
-  match (params, ret, body) with
-  | [], None, [Sthrow msg] -> CPPabort msg
+  match (params, body) with
+  | [], [Sthrow msg] -> CPPabort (msg, (match ret with Some t -> t | None -> Tany))
   | _ -> CPPlambda ({rev = List.rev params}, ret, body, by_value)
 
 (** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
     immediately, capturing by reference.
 
-    A body that does nothing but throw yields no value, so a lambda around it
-    deduces [void] and cannot stand where a value is expected.  {!CPPabort} is
-    that same never-returning expression, and every printer position gives it
-    the return type the context calls for, so the throwing case reduces to
-    it. *)
+    A body that does nothing but throw yields no value, so the lambda would
+    deduce [void] and could not stand where a value is expected; it reduces to
+    {!CPPabort}, which carries [ret] as the type it yields. *)
 let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
@@ -763,7 +764,7 @@ let map_expr
     CPPqualified_tpl (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
-  | CPPabort _ -> e
+  | CPPabort (msg, ty) -> CPPabort (msg, ft ty)
   | CPPenum_val _ -> e
   | CPPnullptr -> e
   | CPPbraced args -> CPPbraced (List.map fe args)

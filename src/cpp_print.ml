@@ -2056,14 +2056,15 @@ and pp_cpp_expr env args t =
   | CPPconvertible_to ty ->
     require_header "concepts";
     str "std::convertible_to<" ++ pp_cpp_type false [] ty ++ str ">"
-  | CPPabort msg ->
-    require_header "any";
+  | CPPabort (msg, ty) ->
     require_header "stdexcept";
-    str "([]() -> std::any { throw "
+    str "([]() -> "
+    ++ pp_cpp_type false [] ty
+    ++ str " { throw "
     ++ str (sn ()).logic_error
     ++ str "(\""
     ++ str (escape_cpp_string msg)
-    ++ str "\"); return std::any{}; })()"
+    ++ str "\"); })()"
   | CPPenum_val (ind, ctor) ->
     (* Generate EnumType::Constructor for enum class values. Use str_global for
        proper module qualification, with collision-aware capitalization. *)
@@ -2230,7 +2231,7 @@ and pp_object env args e =
 
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
-  | Sreturn (Some (CPPabort msg)) ->
+  | Sreturn (Some (CPPabort (msg, _))) ->
     require_header "stdexcept";
     str "throw "
     ++ str (sn ()).logic_error
@@ -3929,7 +3930,7 @@ let rec pp_cpp_decl env decl =
     expression printer already knows enough. *)
 and pp_initialiser env ty e =
   match e with
-  | CPPabort msg ->
+  | CPPabort (msg, _) ->
     require_header "stdexcept";
     (* The lambda returns by value, so a top-level [const] on [ty] says
        nothing and [-Wignored-qualifiers] rejects it. *)

@@ -147,10 +147,8 @@ template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, T1 &, Nat &, T<T1> &>
 T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
   if (std::holds_alternative<typename T<T1>::Nil>(v.v())) {
-    return std::any_cast<T2>(([]() -> std::any {
-      throw std::logic_error("unreachable");
-      return std::any{};
-    })());
+    return std::any_cast<T2>(
+        ([]() -> std::any { throw std::logic_error("unreachable"); })());
   } else {
     const auto &[h1, n, a2] = std::get<typename T<T1>::Cons>(v.v());
     return h(h1, n, *a2);
