@@ -1075,12 +1075,12 @@ let lift_iife_assignment target_var target_ty expr =
     let actual_ty = match target_ty with Ttodo -> ret_ty | t -> t in
     let tv_s = Id.to_string target_var in
     let lifted_body = List.map (function
-      | Sreturn (Some e) -> Sasgn (target_var, None, e)
+      | Sreturn (Some e) -> Sasgn (target_var, Existing, e)
       | Sraw s -> Sraw (replace_return_with_assign s tv_s)
       | s -> s
     ) body in
     Some (Sdecl_init (target_var, actual_ty)
-          :: Sasgn (param_id, Some param_ty, arg)
+          :: Sasgn (param_id, Declare param_ty, arg)
           :: lifted_body)
   | _ -> None
 
@@ -6330,7 +6330,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ) (List.mapi (fun idx p -> (idx, p)) new_params) in
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                    let cast_stmt = Sasgn (orig_id, Some concrete_ty,
+                    let cast_stmt = Sasgn (orig_id, Declare concrete_ty,
                       Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
@@ -6484,7 +6484,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ) (List.mapi (fun idx p -> (idx, p)) new_params) in
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
-                    let cast_stmt = Sasgn (orig_id, Some concrete_ty,
+                    let cast_stmt = Sasgn (orig_id, Declare concrete_ty,
                       Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
@@ -6708,7 +6708,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | None -> (ty, id)
             ) new_params in
             let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
-              Sasgn (orig_id, Some concrete_ty,
+              Sasgn (orig_id, Declare concrete_ty,
                 Cpp_erasure.unbox concrete_ty (CPPvar any_id))
             ) cast_bindings in
             let new_body = cast_stmts @ body_stmts in
@@ -7328,7 +7328,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             in
             match lift_iife_assignment renamed_name decl_ty e with
             | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Some decl_ty, e)])
+            | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       mk_iife None
@@ -9830,7 +9830,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
             Some
               (Sasgn
                  ( value_id,
-                   Some (Tref (Tmod (TMconst, bare_ty))),
+                   Declare (Tref (Tmod (TMconst, bare_ty))),
                    rhs ))
           else None
         else None)
@@ -10252,11 +10252,16 @@ and gen_cpp_case (typ : ml_type) t env pv =
                             *value* (owned, so the recursion propagates reuse), and
                             keep the rc field access itself as the reuse token. *)
                          token_expr := Some (rf i);
-                         [ Sasgn (var_name, Some cpp_ty, CPPmove (CPPderef (rf i))) ]
+                         [
+                           Sasgn
+                             ( var_name,
+                               Declare cpp_ty,
+                               CPPmove (CPPderef (rf i)) );
+                         ]
                        end
                        else
                          (* Non-recursive field: stored by value; move it out. *)
-                         [ Sasgn (var_name, Some cpp_ty, CPPmove (rf i)) ]
+                         [ Sasgn (var_name, Declare cpp_ty, CPPmove (rf i)) ]
                      end
                      else [])
                    rev_ids')
@@ -10677,7 +10682,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       in
       match lift_iife_assignment cache_id Ttodo t with
       | Some stmts -> (CPPvar cache_id, stmts)
-      | None -> (CPPvar cache_id, [Sasgn (cache_id, Some Ttodo, t)])
+      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare Ttodo, t)])
     end else begin
       (t, [])
     end
@@ -11195,7 +11200,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
         in
         Sasgn
           ( impl_id,
-            Some Tauto,
+            Declare Tauto,
             CPPlambda
               ( of_reversed (orig_params @ self_params),
                 ret_ty fty,
@@ -11230,7 +11235,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
         in
         Sasgn
           ( fix_id,
-            Some Tauto,
+            Declare Tauto,
             CPPlambda (of_reversed orig_params, rty, wrapper_body, false) ))
       (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
       funs_with_params
@@ -11290,7 +11295,7 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
       (fun (id, ty) ->
         Sasgn
           ( id,
-            Some Tauto,
+            Declare Tauto,
             mk_call
               (CPPalloc (Alloc_heap, fix_func_type (cpp_of_ml env ty)))
               [] ) )
@@ -11403,7 +11408,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
         in
         Sasgn
           ( impl_id,
-            Some Tauto,
+            Declare Tauto,
             CPPlambda
               ( of_reversed (orig_params @ self_params),
                 ret_ty fty,
@@ -11435,7 +11440,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
         in
         Sasgn
           ( fix_id,
-            Some Tauto,
+            Declare Tauto,
             CPPlambda (of_reversed orig_params, rty, wrapper_body, true) ))
       (List.combine renamed_ids impl_ids)
       funs_with_params
@@ -11833,9 +11838,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
         in
         (* Generate the assignment with reified type *)
-        [Sasgn (x_renamed, Some reified_ty, iife)] @ cont
+        [Sasgn (x_renamed, Declare reified_ty, iife)] @ cont
       end else
-        let afun v = Sasgn (x_renamed, None, v) in
+        let afun v = Sasgn (x_renamed, Existing, v) in
         let asgn = gen_stmts env afun a in
         (* When the RHS was a pair accessor on an erased argument (e.g.
            snd vs where vs : std::any), the result is std::any at runtime
@@ -11851,10 +11856,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)
         in
         match asgn with
-        | [Sasgn (_, None, e)] ->
+        | [Sasgn (_, Existing, e)] ->
           Sasgn
             ( x_renamed,
-              Some (cpp_of_ml env t),
+              Declare (cpp_of_ml env t),
               e )
           :: gen_cont ()
         | _ ->
@@ -12215,7 +12220,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let decl =
         if stmts_reference_var x_renamed body then
           let cpp_ty = cpp_of_ml env t in
-          [Sasgn (x_renamed, Some cpp_ty, mk_tt_expr ())]
+          [Sasgn (x_renamed, Declare cpp_ty, mk_tt_expr ())]
         else []
       in
       rhs @ decl @ body )
@@ -12273,7 +12278,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            | None -> false)
         | _ -> false
       in
-      let afun v = Sasgn (x_renamed, None, v) in
+      let afun v = Sasgn (x_renamed, Existing, v) in
       (* Thread the let-binding's type annotation as the expected ML type
          so that gen_ctor_call can recover the concrete element type for
          constructors (like nil) whose ML annotation has unresolved metas or
@@ -12460,7 +12465,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       tctx := { !tctx with move_owned_vars = owned_for_b };
       let result =
         match asgn with
-          | [Sasgn (_, None, e)] ->
+          | [Sasgn (_, Existing, e)] ->
             let cpp_ty = cpp_of_ml env t in
             (* When the type contains Tany (from erased carrier projections) but
                the generated expression is a lambda with concrete types, derive
@@ -12501,7 +12506,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               Sblock_custom (ref, tmpl, x_renamed, cpp_ty, args, tys)
               :: gen_stmts ~slot env' k b
             | None ->
-              Sasgn (x_renamed, Some cpp_ty, e) :: gen_stmts ~slot env' k b
+              Sasgn (x_renamed, Declare cpp_ty, e) :: gen_stmts ~slot env' k b
             end
           | _ ->
             let cpp_ty = cpp_of_ml env t in
@@ -12825,7 +12830,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           else if ml_type_is_unit ml_ty && not (is_cpp_unit_type cpp_ty) then
             []
           else if ml_type_is_unit ml_ty then
-            [Sasgn (x, Some cpp_ty, mk_tt_expr ())]
+            [Sasgn (x, Declare cpp_ty, mk_tt_expr ())]
           else
             []
         in
@@ -12836,7 +12841,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           Sblock_custom (ref, tmpl, x, ty, args, tys)
           :: gen_stmts ~slot env k f
         | None ->
-          Sasgn (x, Some ty, a) :: gen_stmts ~slot env k f
+          Sasgn (x, Declare ty, a) :: gen_stmts ~slot env k f
       end
     | _ ->
       (* No lambda parameters (eta-reduced continuation like bare Ret).
@@ -12873,7 +12878,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let temp_id = Id.of_string "_bind_result" in
           let f_expr = gen_expr env f in
           let app = mk_call f_expr [CPPvar temp_id] in
-          [Sasgn (temp_id, Some cpp_ty, a); k app]
+          [Sasgn (temp_id, Declare cpp_ty, a); k app]
         | None ->
           side_effect @ gen_stmts ~slot env k f ) ) )
     end
@@ -13042,7 +13047,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             in
             match lift_iife_assignment renamed_name decl_ty e with
             | Some stmts -> stmts
-            | None -> [Sasgn (renamed_name, Some decl_ty, e)])
+            | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
       let env_ids =

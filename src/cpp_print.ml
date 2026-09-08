@@ -219,8 +219,8 @@ let lambda_needs_capture
     | Sasgn (id, ty, e) ->
       let refs', decls' = collect_from_expr (refs, decls) e in
       ( match ty with
-      | Some _ -> (refs', IdSet.add id decls')
-      | None -> (IdSet.add id refs', decls') )
+      | Declare _ -> (refs', IdSet.add id decls')
+      | Existing -> (IdSet.add id refs', decls') )
     | Sderef_asgn (lhs, e) ->
       (* [*lhs = e]: the lhs is scanned for captures (referenced, not
          declared); the RHS is also scanned. *)
@@ -2256,14 +2256,14 @@ and pp_cpp_stmt env args = function
     str "return " ++ pp_cpp_expr env args e ++ str ";"
   | Sdecl (id, ty) ->
     pp_cpp_type false [] ty ++ str " " ++ Id.print id ++ str ";"
-  | Sasgn (id, Some ty, e) ->
+  | Sasgn (id, Declare ty, e) ->
     pp_cpp_type false [] ty
     ++ str " "
     ++ Id.print id
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
-  | Sasgn (id, None, e) ->
+  | Sasgn (id, Existing, e) ->
     Id.print id ++ str " = " ++ pp_cpp_expr env args e ++ str ";"
   | Sexpr e -> pp_cpp_expr env args e ++ str ";"
   | Sthrow msg ->

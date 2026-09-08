@@ -1140,7 +1140,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   List.fold_left (fun acc (name, _body_ty, body_cpp) ->
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
-                    Sasgn (name, Some body_cpp,
+                    Sasgn (name, Declare body_cpp,
                            Cpp_erasure.unbox body_cpp (CPPvar param_name))
                     :: acc
                   ) stmts (List.rev cast_info)
@@ -3740,9 +3740,9 @@ let replace_this_in_lambdas self_type stmts =
     in
     let self_expr, self_ty =
       if is_value_self then
-        (CPPderef CPPthis, Some self_type)
+        (CPPderef CPPthis, Declare self_type)
       else
-        (CPPshared_from_this self_type, Some (Tshared_ptr self_type))
+        (CPPshared_from_this self_type, Declare (Tshared_ptr self_type))
     in
     let self_binding = Sasgn (self_id, self_ty, self_expr) in
     self_binding :: List.map walk_stmt stmts
@@ -5343,7 +5343,7 @@ let gen_ind_header_v2
               @ body_for on_spine e
               @ [Swhile (
                    CPPunop ("!", dot0 (CPPvar wl_id) "empty"),
-                   [ Sasgn (pv, Some Tauto,
+                   [ Sasgn (pv, Declare Tauto,
                        CPPmove (dot0 (CPPvar wl_id) "back"));
                      Sexpr (dot0 (CPPvar wl_id) "pop_back");
                      Sif_then (
@@ -5352,7 +5352,7 @@ let gen_ind_header_v2
                            CPPint 1)),
                        [Scontinue]) ]
                    @ unique_fence
-                   @ [Sasgn (ev, Some (Tref Tauto), CPPderef (CPPvar pv))]
+                   @ [Sasgn (ev, Declare (Tref Tauto), CPPderef (CPPvar pv))]
                    @ body_for on_spine (CPPvar ev))]
             end
           in
@@ -5439,12 +5439,12 @@ let gen_ind_header_v2
                      a tail is not uniquely owned -- the remaining cells then
                      die with their real owner. *)
                   sole_owner fe
-                    [ Sasgn (lp, Some Tauto, dot0 fe "get");
+                    [ Sasgn (lp, Declare Tauto, dot0 fe "get");
                       Swhile (
                         mk_call
                           (CPPstd_holds_alternative (ls, Some cons_id))
                           [arrow0 (CPPvar lp) "v"],
-                        [ Sasgn (lc, Some (Tref Tauto),
+                        [ Sasgn (lc, Declare (Tref Tauto),
                             CPPstd_get (ls, Some cons_id,
                               Some (arrow0 (CPPvar lp) "v_mut")));
                           push_self_stmt (CPPmember (CPPvar lc, elem_field));
@@ -5454,7 +5454,7 @@ let gen_ind_header_v2
                             (* The fence follows the [use_count] test rather
                                than preceding it -- see [unique_fence]. *)
                             unique_fence
-                            @ [Sasgn (lp, None, dot0 tail "get")],
+                            @ [Sasgn (lp, Existing, dot0 tail "get")],
                             [Sbreak]) ]);
                       Sexpr (dot0 fe "reset") ]
               | _ -> []) classified_fields
@@ -5538,7 +5538,7 @@ let gen_ind_header_v2
                 None drain_stmts ~by_value:false
             in
             let body =
-              [ Sasgn (_stack_id, Some stack_ty,
+              [ Sasgn (_stack_id, Declare stack_ty,
                   CPPbraced []);
                 (* Most drains only ever hold a handful of pending nodes at
                    once (worklist depth tracks tree height, not size), so
@@ -5546,14 +5546,14 @@ let gen_ind_header_v2
                    with no heap allocation at all, spilling to a heap
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
-                Sasgn (_drain_id, Some Tauto, drain_lambda);
+                Sasgn (_drain_id, Declare Tauto, drain_lambda);
                 Sexpr (mk_call (CPPvar _drain_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
                     CPPdot_method_call (CPPvar _stack_id,
                       Id.of_string "empty", [])),
-                  [ Sasgn (_cur_id, Some Tauto,
+                  [ Sasgn (_cur_id, Declare Tauto,
                       CPPmove (CPPdot_method_call (CPPvar _stack_id,
                         Id.of_string "back", [])));
                     Sexpr (CPPdot_method_call (CPPvar _stack_id,
@@ -5629,7 +5629,7 @@ let gen_ind_header_v2
                 let inner = build_if_chain rest in
                 let partner_body =
                   [Sif_then (sp_alive_and_unique,
-                    Sasgn (_pv_id, Some (Tref Tauto),
+                    Sasgn (_pv_id, Declare (Tref Tauto),
                       CPPmethod_call (deref_sp,
                         Id.of_string "v_mut", []))
                     :: partner_drains)]
@@ -5647,15 +5647,15 @@ let gen_ind_header_v2
                 build_if_chain partner_branches)]
             in
             let body =
-              [ Sasgn (_stack_id, Some stack_ty, CPPbraced []);
-                Sasgn (_drain_self_id, Some Tauto, drain_self_lambda);
+              [ Sasgn (_stack_id, Declare stack_ty, CPPbraced []);
+                Sasgn (_drain_self_id, Declare Tauto, drain_self_lambda);
                 Sexpr (mk_call (CPPvar _drain_self_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
                     CPPdot_method_call (CPPvar _stack_id,
                       Id.of_string "empty", [])),
-                  Sasgn (_cur_id, Some Tauto,
+                  Sasgn (_cur_id, Declare Tauto,
                     CPPmove (CPPdot_method_call (CPPvar _stack_id,
                       Id.of_string "back", [])))
                   :: Sexpr (CPPdot_method_call (CPPvar _stack_id,
@@ -5964,7 +5964,7 @@ let gen_ind_header_v2
               [
                   Sasgn
                     ( Id.of_string "_tmp",
-                      Some self_ty,
+                      Declare self_ty,
                       mk_call (CPPvar (Id.of_string "thunk")) [] );
                   Sreturn
                     (Some

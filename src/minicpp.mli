@@ -166,12 +166,23 @@ and cpp_meta = {
 
 (** {2 C++ statements} *)
 
+(** Whether an assignment also declares its target.  This used to be a
+    [cpp_type option], where [None] read as "no type annotation" but in fact
+    meant "not a declaration at all" -- an unannotated declaration is
+    [Declare Tauto]. *)
+and asgn_target =
+  | Declare of cpp_type
+      (** [ty x = e;] -- a declaration with an initialiser; [Tauto] gives
+          [auto x = e;]. *)
+  | Existing  (** [x = e;] -- [x] is already in scope. *)
+
 (** C++ statement representation. *)
 and cpp_stmt =
   | Sreturn of cpp_expr option  (** Return statement with optional expression *)
   | Sdecl of Id.t * cpp_type  (** Variable declaration *)
-  | Sasgn of Id.t * cpp_type option * cpp_expr
-      (** Variable assignment with optional type annotation *)
+  | Sasgn of Id.t * asgn_target * cpp_expr
+      (** Assignment to a variable, declaring it or not: see
+          {!asgn_target}. *)
   | Sexpr of cpp_expr  (** Expression statement *)
   | Scustom_case of
       cpp_type

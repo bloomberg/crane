@@ -535,7 +535,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     ( match e with
     | CPPmethod_call _ | CPPdot_method_call _ | CPPfun_call _ -> true
     | _ -> false )
-    && match ty with Some t -> not (is_alias_ty t) | None -> true
+    && match ty with Declare t -> not (is_alias_ty t) | Existing -> true
   in
   let classify ok id =
     if ok then stable := Id.Set.add id !stable
@@ -1589,7 +1589,7 @@ let make_shadow_updates shadow_params args =
     List.filter_map
       (fun ((shadow_id, ty), arg) ->
         if is_self_assign shadow_id arg then None
-        else Some (Sasgn (shadow_id, None, make_rhs ty arg)) )
+        else Some (Sasgn (shadow_id, Existing, make_rhs ty arg)) )
       pairs
   else (* 2+ assignments — use temporaries only where needed *)
     (* Check if expression [e] references variable [id]. *)
@@ -1635,8 +1635,11 @@ let make_shadow_updates shadow_params args =
       List.filter_map
         (fun ((shadow_id, ty), arg) ->
           if needs_temp shadow_id then
-            Some (Sasgn (temp_name shadow_id, Some (strip_ref_and_const_type ty),
-                         make_rhs ty arg))
+            Some
+              (Sasgn
+                 ( temp_name shadow_id,
+                   Declare (strip_ref_and_const_type ty),
+                   make_rhs ty arg ))
           else
             None)
         non_trivial
@@ -1647,7 +1650,7 @@ let make_shadow_updates shadow_params args =
           if needs_temp shadow_id then
             None
           else
-            Some (Sasgn (shadow_id, None, make_rhs ty arg)))
+            Some (Sasgn (shadow_id, Existing, make_rhs ty arg)))
         non_trivial
     in
     (* Phase 2: copy from temps back to loop variables. *)
@@ -1914,13 +1917,13 @@ let rewrite_visit_stmts check varying shadow_params =
 (** Returns true if the statement declares a new variable or type binding. *)
 let declares_variable = function
   | Sdecl _ | Sdecl_init _ | Sstruct_def _ | Susing _ -> true
-  | Sasgn (_, Some _, _) -> true (* typed assignment = declaration *)
+  | Sasgn (_, Declare _, _) -> true (* typed assignment = declaration *)
   | _ -> false
 
 (** Names declared directly by a statement (not recursing into sub-statements). *)
 let direct_decl_ids = function
   | Sdecl (id, _) | Sdecl_init (id, _) -> [ id ]
-  | Sasgn (id, Some _, _) -> [ id ]
+  | Sasgn (id, Declare _, _) -> [ id ]
   | Susing (id, _) -> [ id ]
   | _ -> []
 
@@ -2314,7 +2317,10 @@ let transform_tail ?(param_inits = []) check params ret_ty body =
           | Some custom -> custom
           | None -> tail_shadow_init orig_id shadow_ty ty
         in
-        Sasgn (shadow_id, Some (strip_ref_and_const_type shadow_ty), init_expr) )
+        Sasgn
+          ( shadow_id,
+            Declare (strip_ref_and_const_type shadow_ty),
+            init_expr ) )
       varying_params
       shadow_params
   in
@@ -3316,7 +3322,7 @@ let borrow_frame_bound_matches stmts =
   let ids = ref [] in
   let rec scan s =
     ( match s with
-    | Sasgn (id, Some (Tref (Tmod (TMconst, _)) | Tptr _), _) ->
+    | Sasgn (id, Declare (Tref (Tmod (TMconst, _)) | Tptr _), _) ->
       ids := id :: !ids
     | _ -> () );
     ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
@@ -3435,7 +3441,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
     | Some (_, rec_field) ->
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
-      [ Sasgn (id_rstep, Some Tauto,
+      [ Sasgn (id_rstep, Declare Tauto,
                CPPfun_call (CPPrt Crane_rt.Reuse_step,
                             of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
     | None -> []
@@ -3459,7 +3465,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
     List.mapi
       (fun i (cell_id, cell) ->
         let token = if i = 0 then token else None in
-        Sasgn (cell_id, Some Tauto, build_cell_call ?token ~vt_ret cell))
+        Sasgn (cell_id, Declare Tauto, build_cell_call ?token ~vt_ret cell))
       (List.combine cell_names br.tmc_cells)
   in
   (* 2. Link consecutive cells: outer.rec_field = inner.
@@ -3528,7 +3534,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
     | None -> shadow_updates
     | Some (cursor_id, _) ->
       let is_cursor_update = function
-        | Sasgn (id, None, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) ->
+        | Sasgn (id, Existing, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) ->
           Id.equal id cursor_id
         | _ -> false
       in
@@ -3615,7 +3621,7 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
   in
   let head_decl = Sdecl_init (id_head, head_ty) in
   let write_decl =
-    Sasgn (id_write, Some (Tptr head_ty),
+    Sasgn (id_write, Declare (Tptr head_ty),
            CPPunop ("&", CPPvar (id_head)))
   in
   (* Shadow variable declarations.
@@ -3638,7 +3644,7 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
             if has_custom_init then strip_ref_type ty
             else strip_ref_and_const_type ty
         in
-        Sasgn (shadow_id, Some decl_ty, init_expr) )
+        Sasgn (shadow_id, Declare decl_ty, init_expr) )
       varying_params
       shadow_params
   in
@@ -3670,12 +3676,14 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
   let cursor_decls =
     if not !cursor_used then []
     else
-      [ Sasgn (id_own, Some head_ty, Cpp_erasure.converting_ctor head_ty []);
+      [ Sasgn (id_own, Declare head_ty, Cpp_erasure.converting_ctor head_ty []);
         (* [Tid] is the *user-defined* type constructor, so the printer
            namespace-qualifies it ("Mod::bool").  This is the builtin, which
            must never be qualified. *)
         Sasgn
-          (id_uniq, Some (Tid_external (Id.of_string "bool", [])), CPPbool true)
+          ( id_uniq,
+            Declare (Tid_external (Id.of_string "bool", [])),
+            CPPbool true )
       ]
   in
   (* For value-type returns, dereference _head (shared_ptr → value) *)
@@ -3750,13 +3758,14 @@ type call_frame_info = {
 (** Type environment for inferring saved expression types. *)
 
 (** Collect type bindings from a list of statements. Handles
-    [Sasgn(id, Some ty, _)] and [Sdecl(id, ty)]. Also recurses into Scustom_case
+    [Sasgn(id, Declare ty, _)] and [Sdecl(id, ty)]. Also recurses into
+    Scustom_case
     branches to pick up pattern-bound variables. *)
 let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
   List.concat_map
     (fun s ->
       match s with
-      | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
+      | Sasgn (id, Declare Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
         let param_types =
           List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
@@ -3765,7 +3774,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
           | _ -> Tvoid
         in
         [(id, Tfun (param_types, ret_ty))]
-      | Sasgn (id, Some ty, _) -> [(id, ty)]
+      | Sasgn (id, Declare ty, _) -> [(id, ty)]
       | Sdecl (id, ty) -> [(id, ty)]
       | Scustom_case (_, _, _, branches, _) ->
         List.concat_map
@@ -4123,7 +4132,7 @@ and free_vars_body (stmts : cpp_stmt list) : Id.t list =
     | stmt :: rest ->
       let newly_defined =
         match stmt with
-        | Sasgn (id, Some _, _) -> [id]
+        | Sasgn (id, Declare _, _) -> [id]
         | Sdecl (id, _) -> [id]
         | _ -> []
       in
@@ -4309,23 +4318,23 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
                    List.nth field_names (offset + i))
       in
       match ty with
-      | Tshared_ptr _ -> Sasgn (id, Some ty, CPPmove field_expr)
-      | Tunknown -> Sasgn (id, None, field_expr)
+      | Tshared_ptr _ -> Sasgn (id, Declare ty, CPPmove field_expr)
+      | Tunknown -> Sasgn (id, Existing, field_expr)
       | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
-        Sasgn (id, Some (Tref (Tmod (TMconst, inner))), field_expr)
+        Sasgn (id, Declare (Tref (Tmod (TMconst, inner))), field_expr)
       | t when not (is_trivially_copyable_type t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
            [std::move(std::get<...>(_frame))] and this field is not used again. *)
-        Sasgn (id, Some ty, CPPmove field_expr)
+        Sasgn (id, Declare ty, CPPmove field_expr)
       | Tvar _ ->
         (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
            deduced as a reference type, [F0 f = std::move(_f.f)] would be
            ill-formed — a non-const lvalue reference cannot bind to an rvalue.
            Use [auto] so the declared type is always deduced as a value type,
            regardless of whether [F0] was a reference or function type. *)
-        Sasgn (id, Some Tauto, CPPmove field_expr)
-      | _ -> Sasgn (id, Some ty, field_expr))
+        Sasgn (id, Declare Tauto, CPPmove field_expr)
+      | _ -> Sasgn (id, Declare ty, field_expr))
     cont_vars
 
 (** Build a type environment from continuation variables and their types,
@@ -4605,7 +4614,7 @@ let build_scrutinee_handler
     List.mapi
       (fun i id ->
         let ty = List.nth saved_types i in
-        let ty_opt = if ty = Tunknown then None else Some ty in
+        let tgt = if ty = Tunknown then Existing else Declare ty in
         let field_expr =
           frame_field_named field_names i
         in
@@ -4615,7 +4624,7 @@ let build_scrutinee_handler
           | t when not (is_trivially_copyable_type t) -> CPPmove field_expr
           | _ -> field_expr
         in
-        Sasgn (id, ty_opt, rhs))
+        Sasgn (id, tgt, rhs))
       unique_vars
   in
   (* Rewrite branch bodies *)
@@ -5165,7 +5174,7 @@ let gen_chained_call_frames ctx (acd : all_calls_decomp) =
 
 (** Lift recursive calls out of an expression into temporary variable
     assignments. Each recursive call [f(args)] is replaced by a fresh variable
-    [_condN] and a corresponding [Sasgn(_condN, Some ret_ty, f(args))] is
+    [_condN] and a corresponding [Sasgn(_condN, Declare ret_ty, f(args))] is
     prepended before the rewritten statement.
 
     Returns [(new_expr, lifted_stmts, lifted_env)] where:
@@ -5187,7 +5196,9 @@ let lift_recursive_calls check ret_ty env expr =
   in
   let new_expr = replace expr in
   let lifted_stmts =
-    List.map (fun (cid, orig_e) -> Sasgn (cid, Some ret_ty, orig_e)) !bindings
+    List.map
+      (fun (cid, orig_e) -> Sasgn (cid, Declare ret_ty, orig_e))
+      !bindings
   in
   let lifted_env = List.map (fun (cid, _) -> (cid, ret_ty)) !bindings @ env in
   (new_expr, lifted_stmts, lifted_env)
@@ -5394,8 +5405,8 @@ let rec rewrite_enter_lambda_return ctx stmt =
           List.mapi
             (fun i id ->
               let ty = List.nth lambda_types i in
-              let ty_opt = if ty = Tunknown then None else Some ty in
-              Sasgn (id, ty_opt,
+              let tgt = if ty = Tunknown then Existing else Declare ty in
+              Sasgn (id, tgt,
                      frame_field_named all_field_names (n_d + i)))
             lambda_fvs
         in
@@ -5789,7 +5800,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     [Smatch (List.map rw_branch branches, Option.map rw_default default)]
   | Sblock stmts ->
     [Sblock (rewrite_enter_stmts ctx stmts)]
-  | Sasgn (id, ty_opt, e) when count_calls_expr check e >= 1 ->
+  | Sasgn (id, tgt, e) when count_calls_expr check e >= 1 ->
     (* Assignment with recursive RHS.  This handles standalone assignments that
        appear as direct children of rewrite_enter_lambda_return (not in a
        statement sequence with continuation).  When the same assignment appears
@@ -5806,7 +5817,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       | Some cs ->
         (* Direct call: id = f(args) *)
         let call_name = make_call_frame_name "_Cont" call_counter seen ?branch_ctx () in
-        let handler = [Sasgn (id, ty_opt, CPPmove (CPPvar (id_result)))] in
+        let handler = [Sasgn (id, tgt, CPPmove (CPPvar (id_result)))] in
         register_frame frames_ref ~name:call_name ~saved_types:[]
           ~saved_exprs:[] ~env ~handler;
         let push_call =
@@ -5822,10 +5833,10 @@ let rec rewrite_enter_lambda_return ctx stmt =
       match decompose_single_call check e with
       | Some d ->
         emit_single_call_frame ctx d
-          ~make_handler:(fun svs r -> [Sasgn (id, ty_opt, d.d_rebuild svs r)])
+          ~make_handler:(fun svs r -> [Sasgn (id, tgt, d.d_rebuild svs r)])
       | None ->
         (* Cannot decompose — execute inline *)
-        [Sasgn (id, ty_opt, e)]
+        [Sasgn (id, tgt, e)]
     else (
       (* Multiple recursive calls in Sasgn — try double decomposition *)
         match decompose_double_call check e with
@@ -5833,7 +5844,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
         emit_double_call_frames ctx dd
           ~extra_saved:[] ~extra_types:[]
           ~make_final_handler:(fun ~field_names:_ svs l r ->
-            [Sasgn (id, ty_opt, dd.dd_combine svs l r)])
+            [Sasgn (id, tgt, dd.dd_combine svs l r)])
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
@@ -5854,14 +5865,14 @@ let rec rewrite_enter_lambda_return ctx stmt =
           let saved_vars = frame_fields_named ~offset:n_partials fnames n_saved in
           let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
-          [Sasgn (id, ty_opt, combined)]
+          [Sasgn (id, tgt, combined)]
         in
         frames_ref :=
           other_frames @ [{last_frame with cf_handler = patched_handler}];
         stmts
       | _ ->
         (* Cannot decompose — execute inline *)
-        [Sasgn (id, ty_opt, e)] )
+        [Sasgn (id, tgt, e)] )
   | Sswitch (scrut, r, branches, default) ->
     let rw_branches =
       List.map
@@ -5925,7 +5936,7 @@ and rewrite_enter_stmts ctx stmts =
   in
   match stmts with
   | [] -> []
-  | Sasgn (id, ty_opt, e) :: rest when count_calls_expr check e >= 1 ->
+  | Sasgn (id, tgt, e) :: rest when count_calls_expr check e >= 1 ->
     let n_calls = count_calls_expr check e in
     let rest_free = compute_rest_free_vars rest in
     (* Helper: build continuation handler and register the call frame.
@@ -5947,10 +5958,10 @@ and rewrite_enter_stmts ctx stmts =
       let rest_processed =
         rewrite_enter_stmts { ctx with er_env = rest_env } rest
       in
-      (* When ty_opt is None (bare assignment to existing var), the variable
-         was declared in the _Enter handler scope and does not exist in the
-         _Cont handler scope.  Promote to [auto] so the handler declares it. *)
-      let handler_ty = match ty_opt with None -> Some Tauto | t -> t in
+      (* When tgt is Existing (a bare assignment), the variable was declared
+         in the _Enter handler scope and does not exist in the _Cont handler
+         scope.  Promote to [auto] so the handler declares it. *)
+      let handler_ty = match tgt with Existing -> Declare Tauto | t -> t in
       let handler =
         match assign_expr with
         | CPPvar v when String.length (Id.to_string id) >= 3
@@ -5994,7 +6005,7 @@ and rewrite_enter_stmts ctx stmts =
           ~saved:d.d_saved ~types:d_types
           ~enter_args:(filter_by_mask varying d.d_rec_args)
       | None ->
-        [Sasgn (id, ty_opt, e)] @ rewrite_enter_stmts ctx rest
+        [Sasgn (id, tgt, e)] @ rewrite_enter_stmts ctx rest
     else (
       (* Multiple recursive calls in Sasgn *)
         match decompose_double_call check e with
@@ -6019,7 +6030,7 @@ and rewrite_enter_stmts ctx stmts =
             let rest_processed =
               rewrite_enter_stmts { ctx with er_env = rest_env } rest
             in
-            bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed)
+            bindings @ [Sasgn (id, tgt, combined)] @ rest_processed)
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
@@ -6057,7 +6068,7 @@ and rewrite_enter_stmts ctx stmts =
           let saved_vars = frame_fields_named ~offset:n_partials patched_field_names n_orig_saved in
           let all_results = partials @ [CPPmove (CPPvar (id_result))] in
           let combined = acd.acd_combine saved_vars all_results in
-          bindings @ [Sasgn (id, ty_opt, combined)] @ rest_processed
+          bindings @ [Sasgn (id, tgt, combined)] @ rest_processed
         in
         let patched_last =
           { last_frame with
@@ -6084,7 +6095,7 @@ and rewrite_enter_stmts ctx stmts =
           make_stack_push (make_enter_frame first_args);
         ]
       | _ ->
-        [Sasgn (id, ty_opt, e)] @ rewrite_enter_stmts ctx rest )
+        [Sasgn (id, tgt, e)] @ rewrite_enter_stmts ctx rest )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
      so the recursive branch captures it via the Sasgn::rest _Cont pattern while
@@ -6140,7 +6151,7 @@ and rewrite_enter_stmts ctx stmts =
        is defined here and then used as the callee in a continuation. *)
     let updated_env =
       match stmt with
-      | Sasgn (id, Some Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
+      | Sasgn (id, Declare Tauto, CPPlambda (params, ret_ty_opt, _, _)) ->
         let param_types =
           List.map (fun (t, _) -> strip_ref_and_const_type t) (to_reversed params)
         in
@@ -6149,7 +6160,7 @@ and rewrite_enter_stmts ctx stmts =
           | _ -> Tvoid
         in
         (id, Tfun (param_types, ret_ty)) :: ctx.er_env
-      | Sasgn (id, Some ty, _) -> (id, ty) :: ctx.er_env
+      | Sasgn (id, Declare ty, _) -> (id, ty) :: ctx.er_env
       | Sdecl (id, ty) -> (id, ty) :: ctx.er_env
       | _ -> ctx.er_env
     in
@@ -6221,22 +6232,22 @@ let make_param_copies ?(pointer_safe = []) varying_params =
     | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
-      Sasgn (id, Some (Tref (Tmod (TMconst, inner))), f)
+      Sasgn (id, Declare (Tref (Tmod (TMconst, inner))), f)
     | t when not (is_trivially_copyable_type t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
          so the field is safe to consume. *)
-      Sasgn (id, Some t, CPPmove f)
+      Sasgn (id, Declare t, CPPmove f)
     | Tvar _ ->
       (* Template type parameter (e.g. [F0] from [F0 &&f]).  When [F0] is
          deduced as a reference type, [F0 f = std::move(_f.f)] would be
          ill-formed — a non-const lvalue reference cannot bind to an rvalue.
          Use [auto] so the declared type is always deduced as a value type,
          regardless of whether [F0] was a reference or function type. *)
-      Sasgn (id, Some Tauto, CPPmove f)
+      Sasgn (id, Declare Tauto, CPPmove f)
     | _ ->
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
-      Sasgn (id, Some stripped, f)
+      Sasgn (id, Declare stripped, f)
   in
   if pointer_safe = [] then
     List.map (fun (id, ty) -> bind_field id ty) varying_params
@@ -6246,11 +6257,11 @@ let make_param_copies ?(pointer_safe = []) varying_params =
         if safe then
           match borrowed_value_param_pointee ty with
           | Some t ->
-            Sasgn (id, Some (Tref (Tmod (TMconst, t))),
+            Sasgn (id, Declare (Tref (Tmod (TMconst, t))),
                    CPPderef (CPPmember (CPPvar (id_f), id)))
           | None ->
             let stripped = strip_ref_type ty in
-            Sasgn (id, Some stripped,
+            Sasgn (id, Declare stripped,
                    CPPmember (CPPvar (id_f), id))
         else
           bind_field id ty)
@@ -6661,7 +6672,7 @@ let optimize_frame_push_args frame_field_types stmts =
     in
     let rec on_stmts ~decl_owned match_owned = function
       | [] -> []
-      | (Sasgn (id, (Some ty), _) as s) :: rest
+      | (Sasgn (id, (Declare ty), _) as s) :: rest
         when is_owned_decl_type ty ->
         on_stmt ~decl_owned match_owned s
         :: on_stmts ~decl_owned:(id :: decl_owned) match_owned rest
@@ -6770,7 +6781,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   let dispatch_stmt = Smatch (branches, None) in
   let loop_body =
     [
-      Sasgn (id_frame, Some frame_ty,
+      Sasgn (id_frame, Declare frame_ty,
              CPPmove
                (CPPfun_call
                   (CPPmember (CPPvar (id_stack),
@@ -6974,20 +6985,20 @@ let fix_handler_bindings field_names cf_ps handler =
       List.map
         (fun stmt ->
           match stmt with
-          | Sasgn (id, Some orig_ty, CPPmove e) when is_ps_field_access e ->
+          | Sasgn (id, Declare orig_ty, CPPmove e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
-          | Sasgn (id, Some orig_ty, e) when is_ps_field_access e ->
+            Sasgn (id, Declare (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+          | Sasgn (id, Declare orig_ty, e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Some (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+            Sasgn (id, Declare (Tref (Tmod (TMconst, base_ty))), CPPderef e)
           | s -> s)
         handler
     in
@@ -7428,7 +7439,7 @@ and generic_inline_stmt spec = function
     (* Tail call — substitute parameters and splice body inline *)
     let bindings =
       List.map2
-        (fun (pid, ty) arg -> Sasgn (pid, Some ty, arg))
+        (fun (pid, ty) arg -> Sasgn (pid, Declare ty, arg))
         spec.params (spec.get_args e)
     in
     bindings @ spec.body
@@ -7612,7 +7623,7 @@ let try_inline_mutual_into names body =
       List.concat_map collect_local_ids_stmt stmts
     and collect_local_ids_stmt = function
       | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
-      | Sasgn (id, Some _, _) -> [id]
+      | Sasgn (id, Declare _, _) -> [id]
       | Smatch (branches, default) ->
         List.concat_map (fun br ->
           let var_ids = match br.smb_var with Some id -> [id] | None -> [] in
@@ -7741,7 +7752,7 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     lambda assignments.
 
     Recognises two patterns for self-recursive lambdas:
-    + [Sdecl(id, Tfun _); Sasgn(id, None, CPPlambda(...))] -- declaration
+    + [Sdecl(id, Tfun _); Sasgn(id, Existing, CPPlambda(...))] -- declaration
       followed by assignment (common when Coq's [let fix] is extracted).
     + [Sasgn(id, Some(Tfun _), CPPlambda(...))] -- combined declaration and
       assignment.
@@ -7899,36 +7910,36 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
   let rec process_stmts stmts =
     match stmts with
     | [] -> []
-    (* Pattern 1: Sdecl(id, Tfun _) followed by Sasgn(id, None,
+    (* Pattern 1: Sdecl(id, Tfun _) followed by Sasgn(id, Existing,
        CPPlambda(...)) *)
     | Sdecl (id, (Tfun _ as decl_ty))
-      :: Sasgn (id2, None, CPPlambda (lparams, ret_ty_opt, lbody, cap))
+      :: Sasgn (id2, Existing, CPPlambda (lparams, ret_ty_opt, lbody, cap))
       :: rest
       when Id.equal id id2 ->
       ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
       | Some lbody' ->
         Sdecl (id, decl_ty)
-        :: Sasgn (id, None, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        :: Sasgn (id, Existing, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest
       | None ->
         let lbody' = process_stmts lbody in
         Sdecl (id, decl_ty)
-        :: Sasgn (id, None, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        :: Sasgn (id, Existing, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     (* Pattern 2: Sasgn(id, Some(Tfun _), CPPlambda(...)) — combined
        decl+assign *)
     | Sasgn
         ( id,
-          (Some (Tfun _) as ty_opt),
+          (Declare (Tfun _) as tgt),
           CPPlambda (lparams, ret_ty_opt, lbody, cap) )
       :: rest ->
       ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
       | Some lbody' ->
-        Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        Sasgn (id, tgt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest
       | None ->
         let lbody' = process_stmts lbody in
-        Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        Sasgn (id, tgt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     (* Pattern 3: shared_ptr fixpoint.
 
@@ -7946,7 +7957,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
 
        If loopification fails (recursion cannot be converted), the original
        shared_ptr pattern is preserved with its body recursively processed. *)
-    | Sasgn (id, (Some Tauto as _ty_opt),
+    | Sasgn (id, (Declare Tauto as _ty_opt),
              ( CPPfun_call (CPPalloc (Alloc_heap, func_ty), {rev = []}) as
                init_expr ))
       :: Sderef_asgn (CPPvar id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
@@ -7955,7 +7966,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
       ( match try_loopify_lambda id lparams ret_ty_opt lbody cap with
       | Some lbody' ->
         Sdecl (id, func_ty)
-        :: Sasgn (id, None, CPPlambda (lparams, ret_ty_opt, lbody', false))
+        :: Sasgn (id, Existing, CPPlambda (lparams, ret_ty_opt, lbody', false))
         :: process_stmts (un_deref_var_stmts id rest)
       | None ->
         let lbody' = process_stmts lbody in
@@ -7963,23 +7974,23 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
         :: Sderef_asgn (CPPvar id, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     (* Pattern 4: Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
-       [Sasgn(id, Some Tauto, CPPlambda(...))] whose last param is a single
+       [Sasgn(id, Declare Tauto, CPPlambda(...))] whose last param is a single
        self-reference [_self_*].  Distinct from Pattern 2 ([Some (Tfun _)]) and
        Pattern 3 (a heap-allocating init). *)
     | Sasgn
         ( id,
-          (Some Tauto as ty_opt),
+          (Declare Tauto as tgt),
           CPPlambda (lparams, ret_ty_opt, lbody, cap) )
       :: rest
       when Option.has_some (ycomb_self_id (to_reversed lparams)) ->
       ( match try_loopify_ycomb (to_reversed lparams) ret_ty_opt lbody with
       | Some (lparams', lbody') ->
         Sasgn
-          (id, ty_opt, CPPlambda (of_reversed lparams', ret_ty_opt, lbody', cap))
+          (id, tgt, CPPlambda (of_reversed lparams', ret_ty_opt, lbody', cap))
         :: process_stmts rest
       | None ->
         let lbody' = process_stmts lbody in
-        Sasgn (id, ty_opt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
+        Sasgn (id, tgt, CPPlambda (lparams, ret_ty_opt, lbody', cap))
         :: process_stmts rest )
     | stmt :: rest -> process_stmt stmt :: process_stmts rest
   and process_expr expr =
@@ -8339,7 +8350,8 @@ let try_inline_functional_into names body =
           ignore (map_expr (fun e' -> cb_expr e'; e') (fun s -> cb_stmt s; s) Fun.id e)
         and cb_stmt s =
           ( match s with
-          | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Some _, _) -> add id
+          | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Declare _, _) ->
+            add id
           | Smatch (branches, _) ->
             List.iter
               (fun br ->
@@ -8516,7 +8528,7 @@ let hoist_rec_conditions (check : call_checker)
       (List.rev !bindings, e')
     in
     let binds_to_stmts binds =
-      List.map (fun (f, c) -> Sasgn (f, Some ret_ty, c)) binds
+      List.map (fun (f, c) -> Sasgn (f, Declare ret_ty, c)) binds
     in
     let rec hs stmts = List.concat_map hstmt stmts
     and hstmt s =
@@ -8848,7 +8860,7 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
           | Sreturn (Some e) when park e <> None ->
             let (recv, call) = Option.get (park e) in
             changed := true;
-            Sblock [Sasgn (id_self_store, None, recv); Sreturn (Some call)]
+            Sblock [Sasgn (id_self_store, Existing, recv); Sreturn (Some call)]
           | _ -> map_stmt (fun e -> e) go_stmt Fun.id s
         in
         let body' = List.map go_stmt body in
@@ -8920,7 +8932,7 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
         | None -> body'
       in
       if needs_init_self then
-        let init_self = Sasgn (self_id, Some self_ty, CPPthis) in
+        let init_self = Sasgn (self_id, Declare self_ty, CPPthis) in
         Fmethod {mf with mf_body = init_self :: body'}
       else
         Fmethod {mf with mf_body = body'} )

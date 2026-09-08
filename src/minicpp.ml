@@ -163,11 +163,18 @@ and cpp_meta = {
   mutable contents : cpp_type option;
 }
 
+(* Whether an assignment also declares its target: [Declare ty] prints
+   [ty x = e;] (Tauto for [auto]), [Existing] prints [x = e;] for a variable
+   already in scope. *)
+and asgn_target =
+  | Declare of cpp_type
+  | Existing
+
 (** C++ statements. *)
 and cpp_stmt =
   | Sreturn of cpp_expr option
   | Sdecl of Id.t * cpp_type
-  | Sasgn of Id.t * cpp_type option * cpp_expr
+  | Sasgn of Id.t * asgn_target * cpp_expr
   | Sexpr of cpp_expr
   | Scustom_case of
       cpp_type
@@ -804,7 +811,9 @@ let map_stmt
   | Sreturn None -> s
   | Sreturn (Some e) -> Sreturn (Some (fe e))
   | Sdecl (id, ty) -> Sdecl (id, ft ty)
-  | Sasgn (id, ty_opt, e) -> Sasgn (id, Option.map ft ty_opt, fe e)
+  | Sasgn (id, tgt, e) ->
+    let tgt = match tgt with Declare ty -> Declare (ft ty) | Existing -> tgt in
+    Sasgn (id, tgt, fe e)
   | Sexpr e -> Sexpr (fe e)
   | Scustom_case (ty, scrut, tyargs, branches, err) ->
     Scustom_case
