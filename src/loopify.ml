@@ -163,6 +163,11 @@ let map2_exn ~what f l1 l2 =
             what n1 n2));
   List.map2 f l1 l2
 
+(** [map3_exn ~what f l1 l2 l3] is [map2_exn] at three lists. *)
+let map3_exn ~what f l1 l2 l3 =
+  let pairs = map2_exn ~what (fun x y -> (x, y)) l1 l2 in
+  map2_exn ~what (fun (x, y) z -> f x y z) pairs l3
+
 (** {2 Generic AST predicate search}
 
     A single pair of mutually recursive functions that answer the question
@@ -2578,7 +2583,8 @@ let rec decompose_single_call check expr =
         {
           d with
           d_saved = d.d_saved @ margs;
-          d_saved_types = d.d_saved_types @ List.map (fun _ -> Tunknown) margs;
+          d_saved_types =
+            d.d_saved_types @ List.map (fun _ -> Tunknown) margs;
           d_rebuild =
             (fun saved result ->
               let d_saved = list_take n_d saved in
@@ -3741,19 +3747,48 @@ let derive_field_names (exprs : cpp_expr list) : Id.t list =
     end)
     raw_names
 
-(** A collected call frame — saved expression info + handler body. *)
+(** One value a frame saves across the recursive call.
+
+    The three facts about a saved value — what it is called in the frame
+    struct, what its type is, and which expression produced it — used to be
+    three lists that every reader indexed in parallel with [List.nth].  They
+    are one record per value now, so a frame whose names and types have
+    drifted out of step is not a thing that can be built. *)
+type saved_slot = {
+  ss_field : Id.t;
+      (** field name in the frame struct (see {!derive_field_names}) *)
+  ss_ty : cpp_type;
+      (** the declared type, or [Tunknown] when the frame was built before
+          the type was known, in which case {!ss_expr} recovers it *)
+  ss_expr : cpp_expr;  (** the saved expression *)
+}
+
+(** A collected call frame — saved values + handler body. *)
 type call_frame_info = {
   cf_name : string;
       (** e.g. "_Resume0" — assigned when the push statement is generated *)
-  cf_saved_types : cpp_type list;
-  cf_saved_exprs : cpp_expr list;
-      (** for decltype fallback when type is Tunknown *)
-  cf_field_names : Id.t list;
-      (** field names derived from saved expressions (see {!derive_field_names}) *)
+  cf_slots : saved_slot list;
   cf_env : (Id.t * cpp_type) list;
       (** type env at frame creation, for decltype resolution *)
   cf_handler : cpp_stmt list;
 }
+
+(** [make_slots ~types ~exprs] pairs a frame's saved types with the
+    expressions that produced them and names each one.
+
+    Naming is {!derive_field_names} over the whole list, so it has to happen
+    here rather than per slot: the names are deduplicated against each other.
+    This is the only way to build a slot list, which is what makes the three
+    lists impossible to desynchronise. *)
+let make_slots ~types ~exprs =
+  let names = derive_field_names exprs in
+  map3_exn ~what:"make_slots"
+    (fun ss_field ss_ty ss_expr -> {ss_field; ss_ty; ss_expr})
+    names types exprs
+
+let cf_field_names cf = List.map (fun s -> s.ss_field) cf.cf_slots
+let cf_saved_types cf = List.map (fun s -> s.ss_ty) cf.cf_slots
+let cf_saved_exprs cf = List.map (fun s -> s.ss_expr) cf.cf_slots
 
 (** Type environment for inferring saved expression types. *)
 
@@ -4356,11 +4391,10 @@ let make_cont_env cont_vars cont_types env =
     @param env Type environment at frame creation point
     @param handler The handler body statements *)
 let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
-  let field_names = derive_field_names saved_exprs in
   frames_ref :=
     !frames_ref
-    @ [{cf_name = name; cf_saved_types = saved_types;
-        cf_saved_exprs = saved_exprs; cf_field_names = field_names;
+    @ [{cf_name = name;
+        cf_slots = make_slots ~types:saved_types ~exprs:saved_exprs;
         cf_env = env; cf_handler = handler}]
 
 (** {3 Frame-based non-tail rewrite}
@@ -5860,7 +5894,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
         let n_partials = List.length acd.acd_calls - 1 in
         let n_saved = List.length acd.acd_saved in
         let patched_handler =
-          let fnames = last_frame.cf_field_names in
+          let fnames = (cf_field_names last_frame) in
           let partials = frame_fields_named fnames n_partials in
           let saved_vars = frame_fields_named ~offset:n_partials fnames n_saved in
           let all_results = partials @ [CPPmove (CPPvar (id_result))] in
@@ -6051,8 +6085,12 @@ and rewrite_enter_stmts ctx stmts =
           list_take (List.length frames - 1) frames
         in
         let n_partials = n_orig_calls - 1 in
-        let patched_saved_exprs = last_frame.cf_saved_exprs @ cont_saved in
-        let patched_field_names = derive_field_names patched_saved_exprs in
+        let patched_slots =
+          make_slots
+            ~types:(cf_saved_types last_frame @ cont_types)
+            ~exprs:(cf_saved_exprs last_frame @ cont_saved)
+        in
+        let patched_field_names = List.map (fun s -> s.ss_field) patched_slots in
         let bindings =
           make_cont_bindings ~offset:(n_partials + n_orig_saved)
             ~field_names:patched_field_names cont_vars cont_types
@@ -6072,9 +6110,7 @@ and rewrite_enter_stmts ctx stmts =
         in
         let patched_last =
           { last_frame with
-            cf_saved_types = last_frame.cf_saved_types @ cont_types;
-            cf_saved_exprs = patched_saved_exprs;
-            cf_field_names = patched_field_names;
+            cf_slots = patched_slots;
             cf_handler = patched_handler }
         in
         frames_ref := other_frames @ [patched_last];
@@ -6278,7 +6314,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   if not (List.exists Fun.id pointer_safe_varying) then []
   else
   let n_enter = List.length pointer_safe_varying in
-  (* Build a map from local variable id to field index in [cf.cf_field_names].
+  (* Build a map from local variable id to field index in [(cf_field_names cf)].
      Scans top-level [Sasgn(id, _, _f.field)] and [Sasgn(id, _, move(_f.field))]
      statements so that [_Enter{local_var}] pushes can be traced back to the
      frame field that [local_var] was loaded from. *)
@@ -6344,7 +6380,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   let flag_arrays =
     List.map
       (fun cf ->
-        (cf.cf_name, Array.make (List.length cf.cf_saved_types) false))
+        (cf.cf_name, Array.make (List.length (cf_saved_types cf)) false))
       frames
   in
   let get_flags name =
@@ -6355,7 +6391,8 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   (* Step 1: seed from _Enter push args, looking through local variable bindings *)
   List.iter
     (fun cf ->
-      let local_map = build_local_to_field_map cf.cf_field_names cf.cf_handler in
+      let fnames = cf_field_names cf in
+      let local_map = build_local_to_field_map fnames cf.cf_handler in
       let pushes = find_struct_pushes cf.cf_handler in
       List.iter
         (fun (push_name, args) ->
@@ -6367,7 +6404,8 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                   let is_used =
                     List.exists2
                       (fun safe arg ->
-                        safe && is_field_access_or_alias local_map cf.cf_field_names j arg)
+                        safe
+                        && is_field_access_or_alias local_map fnames j arg)
                       pointer_safe_varying args
                   in
                   if is_used then arr.(j) <- true
@@ -6388,7 +6426,8 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     changed := false;
     List.iter
       (fun cf ->
-        let local_map = build_local_to_field_map cf.cf_field_names cf.cf_handler in
+        let fnames = cf_field_names cf in
+      let local_map = build_local_to_field_map fnames cf.cf_handler in
         let pushes = find_struct_pushes cf.cf_handler in
         List.iter
           (fun (push_name, args) ->
@@ -6402,7 +6441,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                     | Some src_arr ->
                       for j = 0 to Array.length src_arr - 1 do
                         if (not src_arr.(j))
-                           && is_field_access_or_alias local_map cf.cf_field_names j arg
+                           && is_field_access_or_alias local_map fnames j arg
                         then (
                           src_arr.(j) <- true;
                           changed := true)
@@ -6418,7 +6457,9 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
                       let src_is_safe =
                         Array.exists Fun.id
                           (Array.mapi (fun j flag ->
-                            flag && is_field_access_or_alias local_map cf.cf_field_names j arg)
+                            flag
+                            && is_field_access_or_alias local_map fnames j
+                                 arg)
                           src_arr)
                       in
                       if src_is_safe then (
@@ -7114,7 +7155,7 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
   in
   let frame_sptr =
     List.filter_map (fun cf ->
-      let flags = List.map contains_shared_ptr cf.cf_saved_types in
+      let flags = List.map contains_shared_ptr (cf_saved_types cf) in
       if List.exists Fun.id flags then Some (cf.cf_name, flags) else None)
       frames
   in
@@ -7133,9 +7174,9 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
   in
   let frame_description cf =
     let field_names_str =
-      if cf.cf_field_names = [] then ""
+      if (cf_field_names cf) = [] then ""
       else
-        let names = List.map Id.to_string cf.cf_field_names in
+        let names = List.map Id.to_string (cf_field_names cf) in
         " saves [" ^ String.concat ", " names ^ "],"
     in
     let name = cf.cf_name in
@@ -7172,16 +7213,15 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
     | _ :: rest -> extract_lambda_return_expr rest
   in
   let compute_frame_field_types cf cf_ps =
-    List.mapi
-      (fun j ty ->
-        if List.nth cf_ps j then
+    map2_exn ~what:"compute_frame_field_types"
+      (fun ps {ss_ty = ty; ss_expr = expr; _} ->
+        if ps then
           match ty with
           | Tshared_ptr inner -> Tptr (Tmod (TMconst, inner))
           | _ -> Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
         else
           match ty with
           | Tunknown | Tauto ->
-            let expr = List.nth cf.cf_saved_exprs j in
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
             | Tunknown | Tauto ->
@@ -7212,12 +7252,12 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
             (match stripped with
              | Tvar _ -> Tdecay stripped
              | _ -> stripped))
-      cf.cf_saved_types
+      cf_ps cf.cf_slots
   in
   let frame_ps_for cf =
     match List.assoc_opt cf.cf_name frame_ps_map with
     | Some flags -> flags
-    | None -> List.map (fun _ -> false) cf.cf_saved_types
+    | None -> List.map (fun _ -> false) (cf_saved_types cf)
   in
   let call_structs =
     List.concat_map
@@ -7225,9 +7265,9 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
         let cf_ps = frame_ps_for cf in
         let field_tys = compute_frame_field_types cf cf_ps in
         let fields =
-          List.mapi
-            (fun j ty -> (List.nth cf.cf_field_names j, ty))
-            field_tys
+          map2_exn ~what:"call_struct_fields"
+            (fun s ty -> (s.ss_field, ty))
+            cf.cf_slots field_tys
         in
         [Scomment (frame_description cf);
          Sstruct_def (Id.of_string cf.cf_name, fields)])
@@ -7315,7 +7355,7 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
            calls still work on value-typed [id]. *)
         let handler =
           if List.exists Fun.id cf_ps then
-            fix_handler_bindings cf.cf_field_names cf_ps cf.cf_handler
+            fix_handler_bindings (cf_field_names cf) cf_ps cf.cf_handler
           else cf.cf_handler
         in
         (* Step 2: adjust push arguments at pointer-safe positions.  After
@@ -7336,7 +7376,7 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
           List.filter_map (fun (id, ty) ->
             if worthwhile_move_type (strip_ref_and_const_type ty)
             then Some ("_f." ^ Id.to_string id) else None)
-          (List.combine cf.cf_field_names cf_types)
+          (List.combine (cf_field_names cf) cf_types)
         in
         let is_cf_cand key =
           key = "_result" || List.mem key cf_field_keys
