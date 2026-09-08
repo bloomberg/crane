@@ -1104,6 +1104,17 @@ let rec pp_structure_elem ~is_header f = function
           else
             prlist_with_sep fnl (fun (_, c) -> c) concepts ++ fnl () ++ fnl ()
         in
+        (* A concept cannot be declared inside a struct, so a module type
+           belonging to a module that is itself nested travels to file scope,
+           just as a typeclass concept does. *)
+        let modtype_concepts, modtype_concepts_after =
+          if old_context then (
+            file_scope_concepts :=
+              !file_scope_concepts
+              @ List.map snd (modtype_concepts @ modtype_concepts_after);
+            ([], []) )
+          else (modtype_concepts, modtype_concepts_after)
+        in
         let modtypes_pp = concepts_group_pp modtype_concepts in
         let modtypes_after_pp =
           if modtype_concepts_after = [] then
@@ -1529,7 +1540,10 @@ let rec pp_structure_elem ~is_header f = function
     if (not is_header) || render_ctx.rc_in_struct then
       mt ()
     else
-      let name = pp_modname (MPdot (top_visible_mp (), l)) in
+      (* Every site naming a module-type concept goes through
+         {!concept_name_of_label}, the declaration included: a label reaches
+         the output verbatim otherwise, primes and all. *)
+      let name = pp_concept_name l in
       let concept_pp =
         match get_base_concept m with
         | Some base_kn ->

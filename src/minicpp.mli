@@ -732,6 +732,9 @@ type cpp_decl =
       (** Concept definition (template params from outer Dtemplate) *)
   | Dstatic_assert of cpp_expr * string option
       (** Static assertion with optional message *)
+  | Dusing of GlobRef.t * cpp_type
+      (** [using name = ty;]: a second spelling of a type that already exists,
+          as when a definition is nothing but another instance's name. *)
   | Denum of {
       de_ref : GlobRef.t;  (** Enum reference *)
       de_ctors : Id.t list;  (** Constructor names *)

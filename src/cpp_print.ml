@@ -2030,27 +2030,21 @@ and pp_cpp_expr env args t =
     | CPPmove inner ->
       str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "." ++ Id.print id ++ str ")"
     | CPPderef inner ->
-      pp_cpp_expr env args inner ++ str "->" ++ Id.print id
-    | CPPraw s when String.length s > 0 && s.[0] = '*' ->
-      str "(" ++ pp_cpp_expr env args e ++ str ")." ++ Id.print id
+      pp_object env args inner ++ str "->" ++ Id.print id
     | _ ->
-      pp_cpp_expr env args e ++ str "." ++ Id.print id )
+      pp_object env args e ++ str "." ++ Id.print id )
   | CPParrow (e, id) ->
     ( match e with
     | CPPmove inner ->
       (* std::move(ptr)->field → std::move(ptr->field) *)
-      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "->" ++ Id.print id ++ str ")"
+      str (sn ()).move ++ str "(" ++ pp_object env args inner ++ str "->" ++ Id.print id ++ str ")"
     | _ ->
-      pp_cpp_expr env args e ++ str "->" ++ Id.print id )
+      pp_object env args e ++ str "->" ++ Id.print id )
   | CPPmethod_call (obj, method_name, call_args)
   | CPPdot_method_call (obj, method_name, call_args) ->
     let sep = match t with CPPmethod_call _ -> "->" | _ -> "." in
     let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    let obj_s = match obj with
-      | CPPderef _ -> str "(" ++ pp_cpp_expr env args obj ++ str ")"
-      | _ -> pp_cpp_expr env args obj
-    in
-    obj_s ++ str sep ++ Id.print method_name
+    pp_object env args obj ++ str sep ++ Id.print method_name
     ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
   | CPPqualified (e, id) ->
     pp_cpp_expr env args e ++ str "::" ++ Id.print id
@@ -2221,6 +2215,19 @@ and pp_cpp_expr env args t =
 
     @param env   name environment (see {!pp_cpp_expr})
     @param args  accumulated argument list forwarded to sub-expression printers *)
+(** [pp_object env args e] prints [e] in the position a [.], [->] or member
+    call is about to be applied to.
+
+    Postfix operators bind tighter than the prefix ones, so an [e] that prints
+    with a leading [*] has to be parenthesised for the access to apply to [e]
+    as a whole rather than to its operand. *)
+and pp_object env args e =
+  match e with
+  | CPPderef _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
+  | CPPraw s when String.length s > 0 && s.[0] = '*' ->
+    str "(" ++ pp_cpp_expr env args e ++ str ")"
+  | _ -> pp_cpp_expr env args e
+
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort msg)) ->
@@ -4341,6 +4348,8 @@ and pp_cpp_decl_raw env = function
       ++ str " = "
       ++ pp_cpp_expr env [] cstr
       ++ str ";" )
+  | Dusing (r, ty) ->
+    h (str "using " ++ pp_global Type r ++ str " = " ++ pp_type ty ++ str ";")
   | Dstatic_assert (e, so) ->
     ( match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")

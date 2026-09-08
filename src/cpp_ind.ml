@@ -668,7 +668,9 @@ let pp_hdecl d =
       match class_ref_opt with
       | Some class_ref when not is_template ->
         let instance_name = pp_global Type r in
-        let class_name = pp_global Type class_ref in
+        (* A concept is hoisted out of every enclosing struct, so it is
+           named unqualified here too. *)
+        let class_name = pp_concept_name_of_ref class_ref in
         let type_args_pp =
           match type_args with
           | [] -> mt ()

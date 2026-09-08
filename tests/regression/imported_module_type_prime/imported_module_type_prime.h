@@ -4,11 +4,12 @@
 #include <concepts>
 
 template <typename M>
-concept TotalLeBool' = requires { typename M::t;
-{M::leb(std::declval<typename M::t>(), std::declval<typename M::t>())}
-    ->std::same_as<bool>;
-}
-;
+concept TotalLeBool_ = requires {
+  typename M::t;
+  {
+    M::leb(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+};
 
 /// A module type declared in another library is re-emitted as a concept, but
 /// its name is copied verbatim instead of being sanitised, so the apostrophe in

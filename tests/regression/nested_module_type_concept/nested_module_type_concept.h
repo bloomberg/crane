@@ -3,6 +3,18 @@
 
 #include <concepts>
 
+template <typename M>
+concept S = requires {
+  typename M::t;
+  requires(
+      requires {
+        { M::d } -> std::convertible_to<typename M::t>;
+      } ||
+      requires {
+        { M::d() } -> std::convertible_to<typename M::t>;
+      });
+};
+
 /// A module type declared inside another module yields no concept at all: the
 /// enclosing module is emitted as an empty struct Defs, and the functor
 /// constrained by it names a concept that was never declared.

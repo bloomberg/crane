@@ -1532,6 +1532,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             }
         in
         (Some decl, Some class_ref, non_promoted_type_args)
+    | MLglob (other, _) ->
+      (* The instance is nothing but another instance's name.  C++ has a
+         spelling for exactly that, and without it the name is never
+         declared at all. *)
+      (Some (Dusing (name, Tglob (other, [], []))), Some class_ref, type_args)
     | _ -> (None, Some class_ref, type_args) )
   | _ -> (None, None, [])
 

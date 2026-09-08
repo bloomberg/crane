@@ -1045,6 +1045,8 @@ type cpp_decl =
       GlobRef.t
       * cpp_expr (* template params are provided by an outer Dtemplate *)
   | Dstatic_assert of cpp_expr * string option
+  | Dusing of GlobRef.t * cpp_type
+      (* [using name = ty;] -- a second spelling of an existing type *)
   | Denum of {
       de_ref : GlobRef.t;
       de_ctors : Id.t list;
@@ -1122,4 +1124,5 @@ let rec map_decl
   | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
+  | Dusing (r, ty) -> Dusing (r, ft ty)
   | Denum _ -> d

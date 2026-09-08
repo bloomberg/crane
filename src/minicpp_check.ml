@@ -152,6 +152,7 @@ let rec walk_decl where d =
   | Dasgn (_, _, e) -> walk_expr where e
   | Dconcept (_, e) -> walk_expr where e
   | Dstatic_assert (e, _) -> walk_expr where e
+  | Dusing _ -> ()
   | Denum _ -> ()
 
 (** [check ~where decl] validates [decl] against the invariants above.  A no-op

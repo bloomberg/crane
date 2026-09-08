@@ -8471,3 +8471,62 @@
   (alias runtest)
   (deps factory_field_name_clash.t.exe)
   (action (run ./factory_field_name_clash.t.exe))))
+
+
+
+(subdir imported_module_type_prime
+ (rule
+  (targets imported_module_type_prime.t.exe)
+  (deps ImportedModuleTypePrime.vo imported_module_type_prime.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} imported_module_type_prime.t.exe imported_module_type_prime.cpp imported_module_type_prime.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps imported_module_type_prime.t.exe)
+  (action (run ./imported_module_type_prime.t.exe))))
+
+(subdir instance_alias
+ (rule
+  (targets instance_alias.t.exe)
+  (deps InstanceAlias.vo instance_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_alias.t.exe instance_alias.cpp instance_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_alias.t.exe)
+  (action (run ./instance_alias.t.exe))))
+
+(subdir nested_class_concept_scope
+ (rule
+  (targets nested_class_concept_scope.t.exe)
+  (deps NestedClassConceptScope.vo nested_class_concept_scope.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_class_concept_scope.t.exe nested_class_concept_scope.cpp nested_class_concept_scope.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_class_concept_scope.t.exe)
+  (action (run ./nested_class_concept_scope.t.exe))))
+
+(subdir nested_module_type_concept
+ (rule
+  (targets nested_module_type_concept.t.exe)
+  (deps NestedModuleTypeConcept.vo nested_module_type_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_module_type_concept.t.exe nested_module_type_concept.cpp nested_module_type_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_module_type_concept.t.exe)
+  (action (run ./nested_module_type_concept.t.exe))))
+
+
+
+(subdir drain_option_pair_field
+ (rule
+  (targets drain_option_pair_field.t.exe)
+  (deps DrainOptionPairField.vo drain_option_pair_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} drain_option_pair_field.t.exe drain_option_pair_field.cpp drain_option_pair_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps drain_option_pair_field.t.exe)
+  (action (run ./drain_option_pair_field.t.exe))))
