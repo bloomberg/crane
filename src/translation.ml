@@ -1542,27 +1542,31 @@ let with_escape_analysis body f =
      lambda that merely happens to be one -- the lambda has its own binders
      and its own slots. *)
   let saved_in_ctor = (!tctx).in_constructor_expr in
-  tctx := { !tctx with in_constructor_expr = false };
-  tctx := { !tctx with current_letin_depth = 0 };
-  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
-  tctx := { !tctx with move_owned_vars = Escape.IntSet.empty };
-  tctx := { !tctx with move_n_params = 0 };
-  tctx := { !tctx with match_param_counter = 0 };
-  tctx := { !tctx with cs_counter = 0 };
+  tctx :=
+    { !tctx with
+      in_constructor_expr = false;
+      current_letin_depth = 0;
+      move_dead_after = Escape.IntSet.empty;
+      move_owned_vars = Escape.IntSet.empty;
+      move_n_params = 0;
+      match_param_counter = 0;
+      cs_counter = 0 };
   (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
   ( if (!tctx).current_cpp_return_type = Some Tvoid then
       tctx := { !tctx with current_cpp_return_type = None } );
   let result = f () in
-  tctx := { !tctx with current_letin_depth = saved_depth };
-  tctx := { !tctx with move_dead_after = saved_dead };
-  tctx := { !tctx with move_owned_vars = saved_owned };
-  tctx := { !tctx with move_n_params = saved_nparams };
-  tctx := { !tctx with match_param_counter = saved_match_counter };
-  tctx := { !tctx with cs_counter = saved_cs_counter };
-  tctx := { !tctx with current_cpp_return_type = saved_return_type };
-  tctx := { !tctx with in_constructor_expr = saved_in_ctor };
+  tctx :=
+    { !tctx with
+      current_letin_depth = saved_depth;
+      move_dead_after = saved_dead;
+      move_owned_vars = saved_owned;
+      move_n_params = saved_nparams;
+      match_param_counter = saved_match_counter;
+      cs_counter = saved_cs_counter;
+      current_cpp_return_type = saved_return_type;
+      in_constructor_expr = saved_in_ctor };
   result
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
