@@ -94,8 +94,8 @@ let rec eq_ml_type t1 t2 =
   | Tarr (tl1, tr1), Tarr (tl2, tr2) -> eq_ml_type tl1 tl2 && eq_ml_type tr1 tr2
   | Tglob (gr1, t1, _), Tglob (gr2, t2, _) ->
     GlobRef.CanOrd.equal gr1 gr2 && List.equal eq_ml_type t1 t2
-  | Tvar i1, Tvar i2 -> Int.equal i1 i2
-  | Tvar' i1, Tvar' i2 -> Int.equal i1 i2
+  | Tvar (Schematic, i1), Tvar (Schematic, i2) -> Int.equal i1 i2
+  | Tvar (Rigid, i1), Tvar (Rigid, i2) -> Int.equal i1 i2
   | Tapp (i1, l1), Tapp (i2, l2) ->
     Int.equal i1 i2 && List.equal eq_ml_type l1 l2
   | Tmeta m1, Tmeta m2 -> eq_ml_meta m1 m2
@@ -105,8 +105,7 @@ let rec eq_ml_type t1 t2 =
   | Tstring, Tstring -> true
   | ( ( Tarr _
       | Tglob _
-      | Tvar _
-      | Tvar' _
+      | Tvar (_, _)
       | Tapp _
       | Tmeta _
       | Tdummy _
@@ -129,7 +128,7 @@ let rec apply_ml_type head args =
   | [] -> head
   | _ -> (
     match head with
-    | Tvar j | Tvar' j -> Tapp (j, args)
+    | Tvar (_, j) -> Tapp (j, args)
     | Tapp (j, pre) -> Tapp (j, pre @ args)
     | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
@@ -167,11 +166,12 @@ let type_subst_list l t =
   let n = List.length l in
   let rec subst t =
     match t with
-    | Tvar j when j >= 1 && j <= n -> List.nth l (j - 1)
-    | Tvar _ -> t (* Out-of-range: leave unchanged (promoted dep record vars) *)
-    | Tvar' j when j >= 1 && j <= n -> List.nth l (j - 1)
-    | Tvar' _ -> t (* Out-of-range: leave unchanged *)
-    | Tapp (j, args) -> apply_ml_type (subst (Tvar j)) (List.map subst args)
+    | Tvar (Schematic, j) when j >= 1 && j <= n -> List.nth l (j - 1)
+    | Tvar (Schematic, _) -> t (* Out-of-range: leave unchanged (promoted dep record vars) *)
+    | Tvar (Rigid, j) when j >= 1 && j <= n -> List.nth l (j - 1)
+    | Tvar (Rigid, _) -> t (* Out-of-range: leave unchanged *)
+    | Tapp (j, args) ->
+      apply_ml_type (subst (Tvar (Schematic, j))) (List.map subst args)
     | Tmeta {contents = None} -> t
     | Tmeta {contents = Some u} -> subst u
     | Tarr (a, b) -> Tarr (subst a, subst b)
@@ -187,12 +187,13 @@ let type_subst_vect v t =
   let n = Array.length v in
   let rec subst t =
     match t with
-    | Tvar j when j >= 1 && j <= n -> v.(j - 1)
-    | Tvar _ -> t (* Per-constructor type var, leave unchanged *)
-    | Tvar' j when j >= 1 && j <= n ->
-      v.(j - 1) (* Tvar' is also a type variable *)
-    | Tvar' _ -> t (* Per-constructor type var, leave unchanged *)
-    | Tapp (j, args) -> apply_ml_type (subst (Tvar j)) (List.map subst args)
+    | Tvar (Schematic, j) when j >= 1 && j <= n -> v.(j - 1)
+    | Tvar (Schematic, _) -> t (* Per-constructor type var, leave unchanged *)
+    | Tvar (Rigid, j) when j >= 1 && j <= n ->
+      v.(j - 1) (* Rigidity constrains unification, not substitution *)
+    | Tvar (Rigid, _) -> t (* Per-constructor type var, leave unchanged *)
+    | Tapp (j, args) ->
+      apply_ml_type (subst (Tvar (Schematic, j))) (List.map subst args)
     | Tmeta {contents = None} -> t
     | Tmeta {contents = Some u} -> subst u
     | Tarr (a, b) -> Tarr (subst a, subst b)
@@ -230,7 +231,7 @@ let rec type_occurs alpha t =
   | Tarr (t1, t2) -> type_occurs alpha t1 || type_occurs alpha t2
   | Tglob (r, l, a) -> List.exists (type_occurs alpha) l
   | Tapp (_, l) -> List.exists (type_occurs alpha) l
-  | Tdummy _ | Tvar _ | Tvar' _ | Taxiom | Tunknown | Tstring -> false
+  | Tdummy _ | Tvar (_, _) | Taxiom | Tunknown | Tstring -> false
 
 (** {2 Most General Unificator} *)
 
@@ -259,8 +260,8 @@ let rec mgu = function
       raise Impossible );
     List.iter mgu (List.combine l l')
   | Tdummy _, Tdummy _ -> ()
-  | Tvar i, Tvar j when Int.equal i j -> ()
-  | Tvar' i, Tvar' j when Int.equal i j -> ()
+  | Tvar (Schematic, i), Tvar (Schematic, j) when Int.equal i j -> ()
+  | Tvar (Rigid, i), Tvar (Rigid, j) when Int.equal i j -> ()
   | Tapp (i, l), Tapp (j, l') when Int.equal i j ->
     if List.length l <> List.length l' then raise Impossible;
     List.iter mgu (List.combine l l')
@@ -380,12 +381,12 @@ module Mlenv = struct
       match t with
       | Tmeta {contents = Some u} -> meta2var u
       | Tmeta ({id = i} as m) ->
-        ( try Tvar (Int.Map.find i !map)
+        ( try Tvar (Schematic, (Int.Map.find i !map))
           with Not_found ->
             if Metaset.mem m mle.free then
               t
             else
-              Tvar (add_new i) )
+              Tvar (Schematic, (add_new i)) )
       | Tarr (t1, t2) -> Tarr (meta2var t1, meta2var t2)
       | Tglob (r, l, a) -> Tglob (r, List.map meta2var l, a)
       | Tapp (i, l) -> Tapp (i, List.map meta2var l)
@@ -424,7 +425,7 @@ let rec type_mem_kn kn = function
 let type_maxvar t =
   let rec parse n = function
     | Tmeta {contents = Some t} -> parse n t
-    | Tvar i -> max i n
+    | Tvar (Schematic, i) -> max i n
     | Tapp (i, l) -> List.fold_left parse (max i n) l
     | Tarr (a, b) -> parse (parse n a) b
     | Tglob (_, l, _) -> List.fold_left parse n l
@@ -448,17 +449,16 @@ let rec type_recomp (l, t) =
   | [] -> t
   | a :: l -> Tarr (a, type_recomp (l, t))
 
-(** {2 Translating [Tvar] to [Tvar'] to avoid clash} *)
+(** {2 Making a definition's own type variables rigid} *)
 
-let rec var2var' = function
-  | Tmeta {contents = Some t} -> var2var' t
-  | Tvar i -> Tvar' i
-  (* The head of an application is an index, not a [Tvar] node, so there is no
-     [Tvar']-flavoured application to switch to; only the arguments carry the
-     distinction. *)
-  | Tapp (i, l) -> Tapp (i, List.map var2var' l)
-  | Tarr (a, b) -> Tarr (var2var' a, var2var' b)
-  | Tglob (r, l, a) -> Tglob (r, List.map var2var' l, a)
+let rec rigidify = function
+  | Tmeta {contents = Some t} -> rigidify t
+  | Tvar (Schematic, i) -> Tvar (Rigid, i)
+  (* The head of an application is an index, not a [Tvar] node, so there is
+     no rigidity to switch on it; only the arguments carry the distinction. *)
+  | Tapp (i, l) -> Tapp (i, List.map rigidify l)
+  | Tarr (a, b) -> Tarr (rigidify a, rigidify b)
+  | Tglob (r, l, a) -> Tglob (r, List.map rigidify l, a)
   | a -> a
 
 type abbrev_map = GlobRef.t -> ml_type option
@@ -2174,8 +2174,8 @@ let manual_inline = function
     cross-module type variable renumbering. *)
 let remap_tvars f =
   let rec remap_type = function
-    | Tvar i -> Tvar (f i)
-    | Tvar' i -> Tvar' (f i)
+    | Tvar (Schematic, i) -> Tvar (Schematic, (f i))
+    | Tvar (Rigid, i) -> Tvar (Rigid, (f i))
     | Tapp (i, args) -> Tapp (f i, List.map remap_type args)
     | Tarr (t1, t2) -> Tarr (remap_type t1, remap_type t2)
     | Tglob (r, args, e) ->

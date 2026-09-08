@@ -111,8 +111,8 @@ end
 val type_mem_kn : MutInd.t -> ml_type -> bool
 
 (** Return the maximum type variable index in a type.
-    @return the largest [i] such that [Tvar i] occurs in [t], or [0] if none
-            does. [Tvar'] (generalizable) nodes are not considered. *)
+    @return the largest [i] such that [Tvar (Schematic, i)] occurs in [t], or
+            [0] if none does.  [Rigid] nodes are not considered. *)
 val type_maxvar : ml_type -> int
 
 (** Decompose an ML type into a list of argument types and a result type.
@@ -125,8 +125,10 @@ val type_decomp : ml_type -> ml_type list * ml_type
     @param result the final return type *)
 val type_recomp : ml_type list * ml_type -> ml_type
 
-(** Convert type variables to primed type variables. *)
-val var2var' : ml_type -> ml_type
+(** Make every [Schematic] type variable [Rigid], so that it no longer
+    unifies with the schematic variables of any other type scheme.  Applied to
+    a constant's own type before its body is reconstructed. *)
+val rigidify : ml_type -> ml_type
 
 (** Abbreviation map type for looking up type aliases. *)
 type abbrev_map = GlobRef.t -> ml_type option
@@ -397,6 +399,6 @@ val sign_no_final_keeps : signature -> signature
 
 (** Remap type variable indices in a term using the given function.
     @param f   a function from old type variable index to new index; applied to
-               every [Tvar] and [Tvar'] annotation occurring in the term
+               every [Tvar] annotation occurring in the term
     @param t   the ML AST in which to remap type variable indices *)
 val remap_tvars : (int -> int) -> ml_ast -> ml_ast

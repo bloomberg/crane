@@ -67,13 +67,18 @@ type ml_ident =
 
 (** {2 ML type expressions} *)
 
+(** Whether a type variable can be instantiated by unification.  See
+    {!Tvar}. *)
+type tvar_rigidity =
+  | Schematic
+  | Rigid
+
 (** An erased ML type expression, the residue of a CIC type after logical and
     type-only content is removed. Key constructors: [Tarr] is a (non-dependent)
     function arrow; [Tglob (r, tys, args)] applies the named inductive/type
     constant [r] to type arguments [tys] (Crane additionally carries value
-    [args] for indexed/dependent positions); [Tvar]/[Tvar'] are De Bruijn type
-    variables, [Tvar'] being an alias generation used to avoid capture clashes;
-    [Tmeta] is a mutable unification variable used only during ML type
+    [args] for indexed/dependent positions); [Tvar] is a De Bruijn type
+    variable, carrying whether it is rigid; [Tmeta] is a mutable unification variable used only during ML type
     reconstruction; [Tdummy] stands for a type slot that was erased (its
     {!kill_reason} records why); [Tunknown] marks a type inference gave up on;
     [Taxiom] a type left abstract by an axiom; and [Tstring] the primitive
@@ -81,8 +86,20 @@ type ml_ident =
 type ml_type =
   | Tarr of ml_type * ml_type
   | Tglob of GlobRef.t * ml_type list * ml_ast list
-  | Tvar of int
-  | Tvar' of int  (** same as Tvar, used to avoid clash *)
+  | Tvar of tvar_rigidity * int
+      (** A De Bruijn type variable.  [Schematic] is a variable of some other
+          constant's type scheme, standing to be instantiated when that scheme
+          is instantiated; [Rigid] is one of the definition currently being
+          reconstructed, made rigid by {!Mlutil.rigidify}.
+
+          The two do not unify with each other even at the same index, which
+          is the whole point: it is that failure that makes {!Mlutil.needs_magic}
+          insert an [MLmagic] where a definition's own variable meets a
+          schematic one.  Note that {!Mlutil.type_subst_list} substitutes both
+          flavours -- rigidity constrains unification, not substitution.
+
+          Almost every reader outside {!Mlutil} and {!Extraction} matches
+          [Tvar (_, i)]: the back end does not care which flavour it has. *)
   | Tapp of int * ml_type list
       (** A type variable of arrow kind applied to arguments: the [M A] of
           [mret : forall A, A -> M A], where [M : Type -> Type] is a

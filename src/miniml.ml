@@ -44,12 +44,16 @@ type ml_ident =
 
 (** {2 ML type expressions} *)
 
+(** Whether a type variable can be instantiated by unification. *)
+type tvar_rigidity =
+  | Schematic
+  | Rigid
+
 (** ML type expressions. *)
 type ml_type =
   | Tarr of ml_type * ml_type
   | Tglob of GlobRef.t * ml_type list * ml_ast list
-  | Tvar of int
-  | Tvar' of int  (** same as Tvar, used to avoid clash *)
+  | Tvar of tvar_rigidity * int
   | Tapp of int * ml_type list
       (** A type variable of arrow kind applied to arguments: the [M A] of
           [mret : forall A, A -> M A], where [M : Type -> Type] is a

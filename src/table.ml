@@ -247,7 +247,7 @@ let packet_is_non_uniform p =
     && List.for_all2
          (fun k a ->
            match a with
-           | Miniml.Tvar j | Miniml.Tvar' j -> j = k
+           | Miniml.Tvar (_, j) -> j = k
            | _ -> false )
          (List.init nvars (fun k -> k + 1))
          args
@@ -543,7 +543,7 @@ let is_non_uniform_inductive r =
           && List.for_all2
                (fun k a ->
                  match a with
-                 | Miniml.Tvar j | Miniml.Tvar' j -> j = k
+                 | Miniml.Tvar (_, j) -> j = k
                  | _ -> false )
                (List.init nvars (fun k -> k + 1))
                args

@@ -156,10 +156,10 @@ let hkt_carrier_alias base arity ml_ty =
     let arity = max arity (max (List.length args) (Table.get_type_scheme_arity r)) in
     ( List.init arity hkt_alias_param_name,
       Miniml.Tglob
-        (r, List.init arity (fun i -> Miniml.Tvar (base + 1 + i)), es) )
+        (r, List.init arity (fun i -> Miniml.Tvar (Schematic, (base + 1 + i))), es) )
   | _ when arity = 1 ->
     (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
-    ([hkt_alias_param_name 0], Miniml.Tvar (base + 1))
+    ([hkt_alias_param_name 0], Miniml.Tvar (Schematic, (base + 1)))
   | _ -> ([], ml_ty)
 
 (** The concrete types a class's associated types take in an instance, read off
@@ -433,7 +433,7 @@ let gen_typeclass_cpp name fields ind =
      function). *)
   let is_bare_promoted_tvar ty =
     match ty with
-    | Miniml.Tvar n -> not (is_tparam (n - 1))
+    | Miniml.Tvar (Schematic, n) -> not (is_tparam (n - 1))
     | _ -> false
   in
   (* Check if a field type is a typeclass-typed promoted field.  Such
@@ -685,7 +685,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
      type is Tglob(Numeric, [option A], []) which contains Tvar for A. These
      need to become template typename parameters (T1, T2, etc.). *)
   let rec collect_ml_tvars acc = function
-    | Miniml.Tvar i ->
+    | Miniml.Tvar (Schematic, i) ->
       if List.mem i acc then
         acc
       else
@@ -859,7 +859,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               let base = List.length tv_temps in
               let subst =
                 List.init n_method_tvars (fun k ->
-                    (base + k + 1, Miniml.Tvar (base + k + 1 + shift)))
+                    (base + k + 1, Miniml.Tvar (Schematic, (base + k + 1 + shift))))
               in
               Mlutil.ast_map_types (subst_tvars_type subst) field_body
           in
@@ -921,7 +921,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let subst_promoted_tvars ty =
             if List.length type_args > nb_sign_keeps then
               let rec subst = function
-                | Miniml.Tvar j
+                | Miniml.Tvar (Schematic, j)
                   when j > nb_sign_keeps && j <= List.length type_args ->
                   List.nth type_args (j - 1)
                 | Miniml.Tarr (a, b) -> Miniml.Tarr (subst a, subst b)
@@ -991,12 +991,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let method_ret_ty =
             let ret = ml_return_type subst_ty in
             match ret with
-            | (Tvar _ | Tvar' _) when method_tvars <> [] ->
+            | (Miniml.Tvar (_, _)) when method_tvars <> [] ->
               (* The method is a member template, so a bare type variable in
                  the return type is one of its own parameters and is already
                  meaningful -- no need to guess it from the last binder. *)
               convert_ml_type_to_cpp_type base_env type_var_names ret
-            | (Tvar _ | Tvar' _) when ml_params <> [] ->
+            | (Miniml.Tvar (_, _)) when ml_params <> [] ->
               (* Unsubstituted Tvar — infer from the last lambda binder's type.
                  For op : A -> A -> A with body MLlam(x, nat, MLlam(y, nat,
                  ...)), the return type is the same as the parameter type
@@ -1006,7 +1006,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 base_env
                 type_var_names
                 last_param_ty
-            | Tvar _ | Tvar' _ ->
+            | Miniml.Tvar (_, _) ->
               (* No lambda binders to infer from — try to use the field type's
                  arg types. For a non-function field like m_id : carrier, the
                  whole type is Tvar, so look at the body's type. *)
@@ -2091,7 +2091,7 @@ let gen_dfun n b cty ty temps =
         let body_ty = chase body_ty in
         let sig_ty = chase sig_ty in
         match (body_ty, sig_ty) with
-        | (Miniml.Tvar i | Miniml.Tvar' i), _
+        | (Miniml.Tvar (_, i)), _
           when not (has_tvar sig_ty) ->
           if List.mem_assoc i acc then acc else (i, sig_ty) :: acc
         | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
@@ -2111,7 +2111,7 @@ let gen_dfun n b cty ty temps =
           let t1 = chase t1 in
           let t2 = chase t2 in
           match (t1, t2) with
-          | (Miniml.Tvar i | Miniml.Tvar' i), _
+          | (Miniml.Tvar (_, i)), _
             when not (has_tvar t2) ->
             if List.mem_assoc i acc then acc else (i, t2) :: acc
           | Miniml.Tglob (r1, ts1, _), Miniml.Tglob (r2, ts2, _)
@@ -2159,7 +2159,7 @@ let gen_dfun n b cty ty temps =
           match dom with
           | Miniml.Tdummy Miniml.Ktype ->
             let acc =
-              if pos = rank then acc else (pos, Miniml.Tvar rank) :: acc
+              if pos = rank then acc else (pos, Miniml.Tvar (Schematic, rank)) :: acc
             in
             (pos + 1, rank + 1, acc)
           | _ -> (pos + 1, rank, acc) )
@@ -3044,7 +3044,8 @@ let rec expand_tc_typed_carriers
        because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
     List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
 
-(** Replace Tglob references to erased projections with Tvar' in an ML type. *)
+(** Replace Tglob references to erased projections with a rigid type variable
+    in an ML type. *)
 let rec replace_erased_proj_refs
     (proj_map : (GlobRef.t * int) list)
     (t : ml_type) : ml_type =
@@ -3056,7 +3057,7 @@ let rec replace_erased_proj_refs
   match t with
   | Miniml.Tglob (r, ts, args) ->
     ( match find_in_map r with
-    | Some idx -> Miniml.Tvar' idx
+    | Some idx -> Miniml.Tvar (Rigid, idx)
     | None ->
       let ts' = List.map (replace_erased_proj_refs proj_map) ts in
       if ts == ts' then t else Miniml.Tglob (r, ts', args) )
@@ -3064,7 +3065,7 @@ let rec replace_erased_proj_refs
     let t1' = replace_erased_proj_refs proj_map t1 in
     let t2' = replace_erased_proj_refs proj_map t2 in
     if t1 == t1' && t2 == t2' then t else Miniml.Tarr (t1', t2')
-  | Miniml.Tunknown -> Miniml.Tvar' 1
+  | Miniml.Tunknown -> Miniml.Tvar (Rigid, 1)
   | _ -> t
 
 (** Replace Tunresolved in all type annotations within an ML AST body with the
@@ -3817,7 +3818,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
           (List.mapi
              (fun pos t ->
                match t with
-               | Miniml.Tvar i | Miniml.Tvar' i -> [(i, pos + 1)]
+               | Miniml.Tvar (_, i) -> [(i, pos + 1)]
                | _ -> [] )
              tvar_args ))
     | _ ->
@@ -3852,8 +3853,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | None -> i
   in
   let rec remap_ml_type = function
-    | Miniml.Tvar i -> Miniml.Tvar (remap_ml_tvar i)
-    | Miniml.Tvar' i -> Miniml.Tvar' (remap_ml_tvar i)
+    | Miniml.Tvar (rigid, i) -> Miniml.Tvar (rigid, remap_ml_tvar i)
     | Miniml.Tarr (t1, t2) -> Miniml.Tarr (remap_ml_type t1, remap_ml_type t2)
     | Miniml.Tglob (r, args, e) ->
       Miniml.Tglob (r, List.map remap_ml_type args, e)
@@ -4778,9 +4778,9 @@ let gen_ind_header_v2
               && List.for_all
                    (fun (j, arg) ->
                      match arg with
-                     | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-                     | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} ->
+                     | Miniml.Tvar (_, k) -> k = j + 1
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar (Schematic, k))}
+                     | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} ->
                        k = j + 1
                      | _ -> false)
                    (List.mapi (fun j a -> (j, a)) args)
@@ -4833,7 +4833,7 @@ let gen_ind_header_v2
                  List.filter_map
                    (fun (j, fty) ->
                      let rec holds_self = function
-                       | Miniml.Tvar k | Miniml.Tvar' k ->
+                       | Miniml.Tvar (_, k) ->
                          k >= 1 && k <= nargs
                          && is_direct_self_ref (List.nth args (k - 1))
                        | Miniml.Tmeta {contents = Some t} -> holds_self t
@@ -4868,7 +4868,7 @@ let gen_ind_header_v2
                   | Some [], Some [elem; tail] ->
                     let is_first_tvar t =
                       match Ml_type_util.resolve_tmeta t with
-                      | Miniml.Tvar 1 | Miniml.Tvar' 1 -> true
+                      | Miniml.Tvar (_, 1) -> true
                       | _ -> false
                     in
                     let is_self t =
@@ -5123,7 +5123,7 @@ let gen_ind_header_v2
           let rec subst_targs args t =
             match t with
             | Miniml.Tmeta {contents = Some t'} -> subst_targs args t'
-            | Miniml.Tvar k | Miniml.Tvar' k ->
+            | Miniml.Tvar (_, k) ->
               if k >= 1 && k <= List.length args then List.nth args (k - 1)
               else t
             | Miniml.Tglob (g, ts, l) ->

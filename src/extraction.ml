@@ -518,7 +518,7 @@ let rec extract_type env sg db j c args =
         then
           (* No arguments, or arguments that are values: nothing a type-level
              application can hold, so the variable stands alone as before. *)
-          Tvar n'
+          Tvar (Schematic, n')
         else
           (* A type variable of arrow kind applied to arguments — the [M A] of
              a class parameterised by a type constructor.  Keeping the
@@ -1619,7 +1619,7 @@ and make_tyargs env sg mle args typs ~orig_typs =
                   if n <= List.length db then List.nth db (n - 1) else 0
                 in
                 (* If mapping succeeded (n' > 0), emit Tvar; else erase *)
-                if n' > 0 then Tvar n' else Tdummy Ktype
+                if n' > 0 then Tvar (Schematic, n') else Tdummy Ktype
               else
                 (* Not a type parameter - erase *)
                 Tdummy Ktype
@@ -1664,7 +1664,7 @@ and extract_cst_app env sg mle mlt kn args =
       lang () == Cpp
       && List.exists (fun c -> QConstant.equal env kn c) !current_fixpoints
     then
-      var2var' (snd schema)
+      rigidify (snd schema)
     else
       instantiation schema
   in
@@ -1755,7 +1755,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
      list, preventing mgu mismatches. *)
   let nb_tvars = List.length (List.filter (fun x -> x == Keep) oi.ip_sign)
   and types = List.map (expand env) oi.ip_types.(j - 1) in
-  let list_tvar = List.map (fun i -> Tvar i) (List.interval 1 nb_tvars) in
+  let list_tvar = List.map (fun i -> Tvar (Schematic, i)) (List.interval 1 nb_tvars) in
   let type_cons =
     type_recomp (types, Tglob (GlobRef.IndRef ip, list_tvar, []))
   in
@@ -2371,8 +2371,8 @@ let extract_std_constant env sg kn body typ =
   (* Detect sigma type preconditions and register assertions *)
   (try detect_sigma_assertions env sg kn typ with _ -> ());
   (* The real type [t']: without head products, expanded, *)
-  (* and with [Tvar] translated to [Tvar'] (not instantiable). *)
-  let l, t' = type_decomp (expand env (var2var' t)) in
+  (* and with its own type variables made rigid (not instantiable). *)
+  let l, t' = type_decomp (expand env (rigidify t)) in
   let s = List.map (type2sign env) l in
   (* Check for user-declared implicit information *)
   let s = sign_with_implicits (GlobRef.ConstRef kn) s 0 in
@@ -2447,8 +2447,8 @@ let extract_axiom env sg kn typ =
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let t = snd (record_constant_type env sg kn (Some typ)) in
   (* The real type [t']: without head products, expanded, *)
-  (* and with [Tvar] translated to [Tvar'] (not instantiable). *)
-  let l, _ = type_decomp (expand env (var2var' t)) in
+  (* and with its own type variables made rigid (not instantiable). *)
+  let l, _ = type_decomp (expand env (rigidify t)) in
   let s = List.map (type2sign env) l in
   (* Check for user-declared implicit information *)
   let s = sign_with_implicits (GlobRef.ConstRef kn) s 0 in

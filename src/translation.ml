@@ -304,7 +304,7 @@ let hkt_tvar_positions_of_type ty =
         List.fold_left
           (fun acc pos ->
             match (List.nth_opt type_args pos, List.nth_opt ip_vars pos) with
-            | ( Some (Miniml.Tvar j | Miniml.Tvar' j | Miniml.Tapp (j, _)),
+            | ( Some (Miniml.Tvar (_, j) | Miniml.Tapp (j, _)),
                 Some var_name ) ->
               { htp_tvar = j;
                 htp_instance = Minicpp.Tinstance (tc_instance_id i, class_ref);
@@ -1085,7 +1085,7 @@ let lift_iife_assignment target_var target_ty expr =
   | _ -> None
 
 (** For inductives with dependent parameters (e.g. [sigT]), unresolved
-    meta-type variables ([Tvar']) correspond to fields whose C++ type
+    rigid type variables correspond to fields whose C++ type
     collapses to [std::any].  Retyping them as [Tdummy Ktype] marks them
     as erased, triggering [any_cast<T>] wrapping when returned as a
     template parameter. *)
@@ -1096,7 +1096,7 @@ let retype_dependent_params (typ : ml_type) ids =
   in
   if is_dep_ind then
     List.map (fun (n, ml_ty) ->
-      match ml_ty with Tvar' _ -> (n, Tdummy Ktype) | _ -> (n, ml_ty)) ids
+      match ml_ty with Miniml.Tvar (Rigid, _) -> (n, Tdummy Ktype) | _ -> (n, ml_ty)) ids
   else ids
 
 (** Recover a pattern variable's type from the scrutinee's own type structure
@@ -1659,7 +1659,7 @@ module IntSet = Escape.IntSet
 (** Collect all Tvar indices from an ml_type. Used to find type variables beyond
     those of the containing inductive/record. *)
 let rec collect_tvars_set acc = function
-  | Miniml.Tvar i | Miniml.Tvar' i -> IntSet.add i acc
+  | Miniml.Tvar (_, i) -> IntSet.add i acc
   | Miniml.Tarr (t1, t2) -> collect_tvars_set (collect_tvars_set acc t1) t2
   | Miniml.Tglob (_, args, _) -> List.fold_left collect_tvars_set acc args
   | Miniml.Tapp (i, args) ->
@@ -1738,12 +1738,12 @@ let build_tvar_subst_from_unify ty_with_tvars ty_concrete =
   let seen = Hashtbl.create 8 in
   let rec unify t1 t2 =
     match (t1, t2) with
-    | (Miniml.Tvar i | Miniml.Tvar' i), _ when not (has_tvar t2) ->
+    | (Miniml.Tvar (_, i)), _ when not (has_tvar t2) ->
       ( match Hashtbl.find_opt seen i with
       | None -> Hashtbl.replace seen i (Some t2)
       | Some (Some _) -> Hashtbl.replace seen i None
       | Some None -> () )
-    | _, (Miniml.Tvar i | Miniml.Tvar' i) when not (has_tvar t1) ->
+    | _, (Miniml.Tvar (_, i)) when not (has_tvar t1) ->
       ( match Hashtbl.find_opt seen i with
       | None -> Hashtbl.replace seen i (Some t1)
       | Some (Some _) -> Hashtbl.replace seen i None
@@ -1815,7 +1815,7 @@ let rec resolve_type_metas ~next_tvar = function
   | Miniml.Tmeta ({contents = None} as m) ->
     let idx = !next_tvar in
     next_tvar := idx + 1;
-    try_mgu (Miniml.Tmeta m) (Miniml.Tvar idx)
+    try_mgu (Miniml.Tmeta m) (Miniml.Tvar (Schematic, idx))
   | Miniml.Tmeta {contents = Some t} -> resolve_type_metas ~next_tvar t
   | Miniml.Tarr (t1, t2) ->
     resolve_type_metas ~next_tvar t1;
@@ -2092,7 +2092,7 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
     global reference with its actual type arguments from [MLglob(r, tys)]. *)
 let rec ml_subst_tvars (subst : ml_type array) (ty : ml_type) : ml_type =
   match ty with
-  | Tvar i | Tvar' i when i >= 1 && i <= Array.length subst -> subst.(i - 1)
+  | Miniml.Tvar (_, i) when i >= 1 && i <= Array.length subst -> subst.(i - 1)
   | Tarr (t1, t2) -> Tarr (ml_subst_tvars subst t1, ml_subst_tvars subst t2)
   | Tglob (g, ts, args) ->
     Tglob (g, List.map (ml_subst_tvars subst) ts, args)
@@ -2698,7 +2698,7 @@ let rec convert_ml_type_to_cpp_type
           (* External inductive: value type, namespace-qualified *)
           Tnamespace (g, core)
     | _ -> core )
-  | Tvar i | Tvar' i ->
+  | Miniml.Tvar (_, i) ->
     ( try Tvar (i, Some (List.nth tvars (pred i)))
       with Failure _ -> Tvar (i, None) )
   (* A higher-kinded variable applied to arguments.  The head stays a type
@@ -3049,7 +3049,7 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
      parameter applied to the witness, and it is [P] that the instantiation
      pins down. *)
   let rec field_template_arg = function
-    | Miniml.Tvar k | Miniml.Tvar' k | Miniml.Tapp (k, _) ->
+    | Miniml.Tvar (_, k) | Miniml.Tapp (k, _) ->
       List.nth_opt scrut_template_args (k - 1)
     | Miniml.Tmeta {contents = Some t} -> field_template_arg t
     | _ -> None
@@ -3445,7 +3445,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       List.iteri
         (fun i ft ->
           match (ft, List.nth_opt ts i) with
-          | (Miniml.Tvar k | Miniml.Tvar' k), Some arg
+          | (Miniml.Tvar (_, k)), Some arg
             when k >= 1
                  && k <= Array.length recovered
                  && recovered.(k - 1) = Miniml.Tunknown ->
@@ -3471,7 +3471,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           | Miniml.Tglob (_, args, _) -> List.for_all is_ground args
           | Miniml.Tarr (a, b) -> is_ground a && is_ground b
           | Miniml.Tmeta {contents = Some t} -> is_ground t
-          | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tapp _ | Miniml.Tunknown
+          | Miniml.Tvar (_, _) | Miniml.Tapp _ | Miniml.Tunknown
           | Miniml.Tmeta {contents = None} -> false
           | _ -> true
         in
@@ -3755,7 +3755,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       in
       let will_erase_fn_wrap =
         match List.nth_opt field_types_for_wrap i with
-        | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
+        | Some (Miniml.Tvar (_, j)) ->
           (match List.nth_opt ctor_temps_at_slot (j - 1) with
           | _ when is_passthrough_ctor_arg i -> false
           | Some Tany -> ml_expr_is_function_value e
@@ -3795,7 +3795,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           None
         else
           match List.nth_opt field_types_for_wrap i with
-          | Some (Miniml.Tvar j | Miniml.Tvar' j) -> (
+          | Some (Miniml.Tvar (_, j)) -> (
             match
               Option.map Ml_type_util.tvar_erase_type
                 (List.nth_opt ctor_temps_at_slot (j - 1))
@@ -3856,7 +3856,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         if is_passthrough_ctor_arg i then None
         else
           match List.nth_opt field_types_for_wrap i with
-          | Some (Miniml.Tvar j | Miniml.Tvar' j) ->
+          | Some (Miniml.Tvar (_, j)) ->
             ( match List.nth_opt ctor_temps_at_slot (j - 1) with
               | Some Tany ->
                 ( match result with
@@ -4503,7 +4503,7 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
     C++ has to deduce, not what it should deduce to. *)
 and name_fn_arg_for_tvar_param param_ml_ty expr =
   match (resolve_tmeta param_ml_ty, expr) with
-  | (Miniml.Tvar _ | Miniml.Tvar' _), CPPlambda _ -> CPPfn_value expr
+  | (Miniml.Tvar (_, _)), CPPlambda _ -> CPPfn_value expr
   | _ -> expr
 
 (** Re-instantiate a function value that is being adapted for an erased slot:
@@ -4553,7 +4553,7 @@ and field_stores_erased_fn_value ?field_cpp_ty field_types i e =
        ([deque<Prod<Nat,Nat>>]) and the erased "nil" production
        ([deque<Prod<any,any>>]) disagree and [std::any_cast] throws. *)
     let field_is_abstract_var =
-      match ft with Miniml.Tvar _ | Miniml.Tvar' _ -> true | _ -> false
+      match ft with Miniml.Tvar (_, _) -> true | _ -> false
     in
     (* A non-function value needs the same canonical erasure whenever the
        slot it lands in is REALLY [std::any] here — e.g. the [list nat]
@@ -4777,7 +4777,7 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
   | MLmagic (_, inner) -> ml_expr_is_erased env inner
   | MLcase (case_ty, _, _) ->
     ( match case_ty with
-      | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+      | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
       | _ -> false )
   | _ -> false
 
@@ -4987,7 +4987,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         ( match expand_ml_fun_alias ty with
         | Miniml.Tarr _ as expanded ->
           ( match ml_codomain expanded with
-          | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+          | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
           | _ -> false )
         | _ -> false )
       | _ -> false
@@ -5388,7 +5388,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              names. Inductives must stay bare values here; recursive ownership
              is represented only inside constructor fields. *)
           let rec render_ml_ty = function
-            | Miniml.Tvar i | Miniml.Tvar' i -> tvar_name i
+            | Miniml.Tvar (_, i) -> tvar_name i
             | Miniml.Tarr (t1, t2) ->
               "std::function<" ^ render_ml_ty t2 ^ "(" ^ render_ml_ty t1 ^ ")>"
             | Miniml.Tglob (g, ts, _) when is_custom g ->
@@ -6225,7 +6225,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         List.filter (fun t -> not (Mlutil.isTdummy t)) field_types_raw in
       let wrap_if_needed_for_field ft ml_e expr =
         match ft with
-        | Miniml.Tvar i | Miniml.Tvar' i ->
+        | Miniml.Tvar (_, i) ->
           ( try
             let ct = List.nth ctor_temps (i - 1) in
             match ct with
@@ -6615,7 +6615,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             with Failure _ | Invalid_argument _ -> true
           in
           let rec ft_has_erased_tvar = function
-            | Miniml.Tvar i | Miniml.Tvar' i -> tvar_is_erased i
+            | Miniml.Tvar (_, i) -> tvar_is_erased i
             | Miniml.Tunknown -> true
             | Miniml.Tarr (a, b) -> ft_has_erased_tvar a || ft_has_erased_tvar b
             | _ -> false
@@ -6632,7 +6632,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let (ml_param_tys, ml_ret_ty) = collect_tarr ft in
             let erase_ml_ty t =
               match t with
-              | Miniml.Tvar i | Miniml.Tvar' i when tvar_is_erased i -> Tany
+              | Miniml.Tvar (_, i) when tvar_is_erased i -> Tany
               | Miniml.Tunknown -> Tany
               | _ -> cpp_of_ml env t
             in
@@ -6754,7 +6754,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            straight into a concrete-typed factory parameter and fails to
            compile.  Thread the field's concrete C++ type as the expected type
            so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
-           the cast.  [Tvar]/[Tvar'] fields are left to
+           the cast.  [Tvar] fields are left to
            [wrap_if_needed_for_field], which handles the erased-field cases. *)
         (* The field's declared type with this constructor call's own type
            arguments substituted in — the [P] of [sigT A P] becomes the
@@ -6774,7 +6774,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | _ -> false
             in
             ( match ft with
-            | (Miniml.Tvar _ | Miniml.Tvar' _)
+            | (Miniml.Tvar (_, _))
               when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
                     | Tglob (_, args, _) ->
                       args <> [] && List.exists has_tany_in_type args
@@ -6784,7 +6784,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
                  produces does not convert into the container holding it. *)
               Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
-            | Miniml.Tvar _ | Miniml.Tvar' _ -> None
+            | Miniml.Tvar (_, _) -> None
             | Miniml.Tapp _ ->
               (* A field that applies one of the inductive's [template
                  <typename> class] parameters ([F A]).  Nothing in the
@@ -6923,7 +6923,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | _ -> false
             in
             ( match ft with
-            | Miniml.Tvar _ | Miniml.Tvar' _ -> None
+            | Miniml.Tvar (_, _) -> None
             | _ when is_erased_rel ->
               let ct = cpp_of_ml env ft in
               if prints_as_any ct then None else Some ct
@@ -7200,7 +7200,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let rec erase_field_tvars ty =
             match resolve_tmeta ty with
             | _ when hkt_class -> ty
-            | Miniml.Tvar j | Miniml.Tvar' j when j > n_class_params ->
+            | Miniml.Tvar (_, j) when j > n_class_params ->
               Miniml.Tunknown
             | Miniml.Tarr (a, b) ->
               Miniml.Tarr (erase_field_tvars a, erase_field_tvars b)
@@ -7259,7 +7259,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let targs =
                   List.init (nmax - ipv) (fun k ->
                       convert_ml_type_to_cpp_type env tvars
-                        (Miniml.Tvar (ipv + 1 + k)) )
+                        (Miniml.Tvar (Schematic, (ipv + 1 + k))) )
                 in
                 CPPqualified_tpl
                   ( gen_expr env t,
@@ -7869,7 +7869,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Some ml_ty_orig ->
             let ret = resolve_tmeta_local (ml_return_type ml_ty_orig) in
             ( match ret with
-            | Miniml.Tvar _ | Miniml.Tvar' _ ->
+            | Miniml.Tvar (_, _) ->
               (* Compute excess arg C++ types from de Bruijn lookup. *)
               let excess_cpp_tys =
                 List.filter_map
@@ -7971,7 +7971,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                   in
                   let ret_ml = codomain_after expected subst_pt in
                   ( match resolve_tmeta ret_ml with
-                  | Miniml.Tvar _ | Miniml.Tvar' _ -> concrete_tvar_type
+                  | Miniml.Tvar (_, _) -> concrete_tvar_type
                   | _ ->
                     Some (cpp_of_ml env ret_ml) )
                 | None -> None
@@ -8014,7 +8014,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       let param_tvar_erased =
         let this = i + List.length typeclass_ml_args in
         let rec mentions j = function
-          | Miniml.Tvar j' | Miniml.Tvar' j' -> j = j'
+          | Miniml.Tvar (_, j') -> j = j'
           | Miniml.Tglob (_, ts, _) -> List.exists (mentions j) ts
           | Miniml.Tapp (h, ts) -> h = j || List.exists (mentions j) ts
           | Miniml.Tarr (a, b) -> mentions j a || mentions j b
@@ -8029,7 +8029,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | None -> false
         in
         match List.nth_opt fn_param_ml_tys_orig this with
-        | Some (Miniml.Tvar j | Miniml.Tvar' j) when tvar_arg_erased j ->
+        | Some (Miniml.Tvar (_, j)) when tvar_arg_erased j ->
           List.exists
             (fun (k, orig) ->
               k <> this
@@ -8047,7 +8047,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         ( match
             match List.nth_opt fn_param_ml_tys_orig
                     (i + List.length typeclass_ml_args) with
-            | Some (Miniml.Tvar _ | Miniml.Tvar' _) ->
+            | Some (Miniml.Tvar (_, _)) ->
               param_expected_at_declared_arity ()
             | _ -> None
           with
@@ -8275,7 +8275,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                generic declaration and breaking template argument deduction.
                Suppress boxing here to match the declaration. *)
             let rec ml_type_contains_tvar = function
-              | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+              | Miniml.Tvar (_, _) -> true
               | Miniml.Tarr (a, b) ->
                 ml_type_contains_tvar a || ml_type_contains_tvar b
               | Miniml.Tglob (_, ts, _) -> List.exists ml_type_contains_tvar ts
@@ -8444,7 +8444,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | Some ml_ty_orig ->
           let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
           ( match ret with
-          | Miniml.Tvar i | Miniml.Tvar' i ->
+          | Miniml.Tvar (_, i) ->
             let rec collect_dom acc = function
               | Miniml.Tarr (t1, t2) -> collect_dom (resolve_tmeta t1 :: acc) t2
               | _ -> List.rev acc
@@ -8473,9 +8473,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | None -> false
         | Some ml_ty_orig -> (
           match resolve_tmeta (ml_return_type ml_ty_orig) with
-          | Miniml.Tvar i | Miniml.Tvar' i ->
+          | Miniml.Tvar (_, i) ->
             let rec mentions = function
-              | Miniml.Tvar j | Miniml.Tvar' j -> i = j
+              | Miniml.Tvar (_, j) -> i = j
               | Miniml.Tarr (a, b) -> mentions a || mentions b
               | Miniml.Tglob (_, l, _) -> List.exists mentions l
               | Miniml.Tmeta { contents = Some t } -> mentions t
@@ -8605,7 +8605,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             | Miniml.Tglob _ -> true
             | Miniml.Tarr _ -> true
             | Miniml.Tunknown -> true
-            | Miniml.Tvar _ ->
+            | Miniml.Tvar (Schematic, _) ->
               (* Type variable: instantiate with the call-site type args to
                  determine if the return type is actually a function.
                  [cod] is already the function's codomain (all arrows
@@ -9237,7 +9237,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         (CPPfun_call (gen_expr env f, of_reversed primary), of_reversed excess)
     else
       (* When the callee is a local variable whose ML type is a bare type
-         variable (Tvar/Tvar'/Tunresolved), its C++ type is std::any.  std::any
+         variable (Tvar/Tunresolved), its C++ type is std::any.  std::any
          is not callable, so we must wrap it with std::any_cast to recover the
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
@@ -9571,9 +9571,9 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               List.length args = n_params
               && List.for_all (fun (j, arg) ->
                 match arg with
-                | Miniml.Tvar k | Miniml.Tvar' k -> k = j + 1
-                | Miniml.Tmeta {contents = Some (Miniml.Tvar k)}
-                | Miniml.Tmeta {contents = Some (Miniml.Tvar' k)} -> k = j + 1
+                | Miniml.Tvar (_, k) -> k = j + 1
+                | Miniml.Tmeta {contents = Some (Miniml.Tvar (Schematic, k))}
+                | Miniml.Tmeta {contents = Some (Miniml.Tvar (Rigid, k))} -> k = j + 1
                 | _ -> false
               ) (List.mapi (fun j a -> (j, a)) args)
             | None -> true  (* no self-ref found: treat as uniform *)
@@ -9722,7 +9722,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
               convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton ind_ref) [] def_ty
             in
             has_unnamed_tvar cpp_ty
-          | Some (Miniml.Tvar k | Miniml.Tvar' k) ->
+          | Some (Miniml.Tvar (_, k)) ->
             let scrut_targs = Lazy.force scrut_template_args_lazy in
             (match List.nth_opt scrut_targs (k - 1) with
              | Some t -> resolves_to_any_type t

@@ -261,7 +261,7 @@ let find_epon_arg_pos epon_ref ty =
         List.filter_map
           (fun t ->
             match t with
-            | Miniml.Tvar i | Miniml.Tvar' i -> Some (i - 1)
+            | Miniml.Tvar (_, i) -> Some (i - 1)
             | _ -> None )
           param_tvar_args
       in
@@ -593,10 +593,10 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     let rec find_arg pos = function
       | Miniml.Tarr (Miniml.Tglob (r, tvar_args, _), _rest)
         when globref_equal r best_ref ->
-        (* Check if any type arg is concrete (not Tvar/Tvar') *)
+        (* Check if any type arg is concrete (not a type variable) *)
         tvar_args <> [] &&
         List.exists (fun t ->
-          match t with Miniml.Tvar _ | Miniml.Tvar' _ -> false | _ -> true
+          match t with Miniml.Tvar (_, _) -> false | _ -> true
         ) tvar_args
       | Miniml.Tarr (_, rest) -> find_arg (pos + 1) rest
       | _ -> false

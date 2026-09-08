@@ -97,14 +97,14 @@ let rec find_self_ref_args ~is_self_or_mutual = function
 (** Check if an ML type is directly erased (non-recursive, top-level only).
     Matches unresolved [Tmeta], [Tdummy], and [Tvar]. *)
 let is_erased_ml_type = function
-  | Miniml.Tmeta {contents = None} | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | Miniml.Tmeta {contents = None} | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
   | _ -> false
 
 (** Recursive check for erased sub-types inside an ML type.  Resolves [Tmeta]
     chains before checking, then recurses into [Tglob] type arguments. *)
 let rec ml_type_contains_erased ty =
   match resolve_tmeta ty with
-  | Miniml.Tmeta _ | Miniml.Tdummy _ | Miniml.Tvar _ -> true
+  | Miniml.Tmeta _ | Miniml.Tdummy _ | Miniml.Tvar (Schematic, _) -> true
   | Miniml.Tglob (_, tys, _) -> List.exists ml_type_contains_erased tys
   | _ -> false
 
@@ -143,7 +143,7 @@ let rec count_ml_value_arrows = function
 let rec ml_codomain_is_tvar = function
   | Miniml.Tarr (_, t2) -> ml_codomain_is_tvar t2
   | Miniml.Tmeta {contents = Some t} -> ml_codomain_is_tvar t
-  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+  | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
   | _ -> false
 
 (** Count the total number of arrow levels in an ML type (including erased). *)
@@ -201,7 +201,7 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
 (** Test whether the codomain of an ML function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
 
-    A [Tvar], [Tvar'], or [Tunresolved] codomain erases to [std::any] only when
+    A [Tvar] or [Tunresolved] codomain erases to [std::any] only when
     at least one [Tdummy Ktype] was encountered while traversing the domain.
     That marker identifies a higher-rank, universally-quantified function (e.g.
     [forall A : Type, A -> A]) whose C++ encoding stores arguments and results
@@ -227,7 +227,7 @@ let rec ml_codomain_erases_to_any ?(has_dummy = false) n = function
     | _ ->
       if n > 0 then ml_codomain_erases_to_any ~has_dummy (n - 1) rest
       else false )
-  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> n = 0 && has_dummy
+  | Miniml.Tvar (_, _) | Miniml.Tunknown -> n = 0 && has_dummy
   | Miniml.Tmeta {contents = Some t} -> ml_codomain_erases_to_any ~has_dummy n t
   | _ -> false
 
@@ -416,7 +416,7 @@ and resolve_tvars_to_any ty =
     arise from type-level parameters that were erased during extraction
     and correspond to [std::any] in the C++ representation. *)
 and is_ml_erased_ty = function
-  | Miniml.Tvar _ | Miniml.Tvar' _ | Miniml.Tunknown -> true
+  | Miniml.Tvar (_, _) | Miniml.Tunknown -> true
   | Miniml.Tmeta {contents = None} -> true
   | Miniml.Tmeta {contents = Some t} -> is_ml_erased_ty t
   | _ -> false
@@ -545,10 +545,10 @@ let filter_erased_type_args ?(preserve_positions = false) tys =
   else if List.exists prints_as_any tys then [] else tys
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
-    Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to
+    Returns true for Tvar, unresolved Tmeta, and Tunknown. Used to
     guard Tvar substitution: we only substitute with fully concrete types. *)
 let rec has_tvar = function
-  | Miniml.Tvar _ | Miniml.Tvar' _ -> true
+  | Miniml.Tvar (_, _) -> true
   | Miniml.Tunknown -> true
   | Miniml.Tarr (t1, t2) -> has_tvar t1 || has_tvar t2
   | Miniml.Tglob (_, args, _) -> List.exists has_tvar args
@@ -596,10 +596,10 @@ let rec map_types_in_ast (f : ml_type -> ml_type) = function
 
 (** Apply a Tvar substitution to an ML type. *)
 let rec subst_tvars_type subst = function
-  | Miniml.Tvar i | Miniml.Tvar' i ->
+  | Miniml.Tvar (_, i) ->
     ( match List.assoc_opt i subst with
     | Some t -> t
-    | None -> Miniml.Tvar i )
+    | None -> Miniml.Tvar (Schematic, i) )
   | Miniml.Tarr (a, b) ->
     Miniml.Tarr (subst_tvars_type subst a, subst_tvars_type subst b)
   | Miniml.Tglob (r, args, a) ->
@@ -611,7 +611,7 @@ let rec subst_tvars_type subst = function
        leaves it alone. *)
     let i =
       match List.assoc_opt i subst with
-      | Some (Miniml.Tvar j | Miniml.Tvar' j) -> j
+      | Some (Miniml.Tvar (_, j)) -> j
       | _ -> i
     in
     Miniml.Tapp (i, List.map (subst_tvars_type subst) args)
@@ -943,7 +943,7 @@ let primary_tvar_indices dom cod =
 let collect_ml_type_index_tvars ml_ty =
   let result = ref IntSet.empty in
   let rec collect_tvars = function
-    | Miniml.Tvar i | Miniml.Tvar' i ->
+    | Miniml.Tvar (_, i) ->
       result := IntSet.add i !result
     | Miniml.Tarr (t1, t2) ->
       collect_tvars t1; collect_tvars t2
@@ -993,13 +993,13 @@ let result_is_index_only_tvar ml_ty =
   in
   let doms, res = split [] ml_ty in
   match res with
-  | (Miniml.Tvar n | Miniml.Tvar' n) when doms <> [] ->
+  | (Miniml.Tvar (_, n)) when doms <> [] ->
     (* [as_index]: variables an argument carries only as an index of a
        many-constructor inductive.  [elsewhere]: everything it carries in any
        other position, which is deducible and so disqualifies. *)
     let as_index = ref IntSet.empty and elsewhere = ref IntSet.empty in
     let rec tvars_of into = function
-      | Miniml.Tvar i | Miniml.Tvar' i -> into := IntSet.add i !into
+      | Miniml.Tvar (_, i) -> into := IntSet.add i !into
       | Miniml.Tarr (t1, t2) -> tvars_of into t1; tvars_of into t2
       | Miniml.Tglob (_, ts, _) -> List.iter (tvars_of into) ts
       | Miniml.Tmeta {contents = Some t} -> tvars_of into t

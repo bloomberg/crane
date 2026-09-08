@@ -370,5 +370,5 @@ val clear_seen_lifted_refs : unit -> unit
 val is_list_global : GlobRef.t -> bool
 
 (** [has_tvar ty] returns true iff [ty] contains any type variable
-    ([Tvar], [Tvar'], [Tunknown], or unresolved [Tmeta]). *)
+    ([Tvar], [Tunknown], or unresolved [Tmeta]). *)
 val has_tvar : Miniml.ml_type -> bool
