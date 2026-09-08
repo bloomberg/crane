@@ -112,17 +112,6 @@
   (action (run ./cps_continuation_copy.t.exe))))
 
 
-(subdir dict_ctor_field
- (rule
-  (targets dict_ctor_field.t.exe)
-  (deps DictCtorField.vo dict_ctor_field.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} dict_ctor_field.t.exe dict_ctor_field.cpp dict_ctor_field.t.cpp)))
- (rule
-  (alias runtest)
-  (deps dict_ctor_field.t.exe)
-  (action (run ./dict_ctor_field.t.exe))))
-
 (subdir shared_dep_two_targets
  (rule
   (targets shared_dep_two_targets.t.exe)

@@ -6,5 +6,5 @@
 /// Sz a0; as a data member and passing the instance SzNat as a value.
 uint64_t DictCtorField::run(const DictCtorField::box &b) {
   const auto &[a0, a1] = b;
-  return a0::sz(a1);
+  return a0.sz(a1);
 }

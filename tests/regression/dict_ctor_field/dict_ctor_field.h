@@ -1,7 +1,7 @@
 #ifndef INCLUDED_DICT_CTOR_FIELD
 #define INCLUDED_DICT_CTOR_FIELD
 
-#include <concepts>
+#include <functional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -10,18 +10,13 @@
 /// is a class applied to a concrete type has no C++ type to be given.  Crane
 /// writes the concept's name where a type belongs, producing
 /// Sz a0; as a data member and passing the instance SzNat as a value.
-
-template <typename I, typename A>
-concept Sz = requires {
-  { I::sz(std::declval<A>()) } -> std::convertible_to<uint64_t>;
-};
-
 struct DictCtorField {
-  struct SzNat {
-    static uint64_t sz(uint64_t n) { return n; }
+  template <typename A> struct Sz {
+    std::function<uint64_t(A)> sz;
   };
 
-  static_assert(Sz<SzNat, uint64_t>);
+  static inline const Sz<uint64_t> SzNat =
+      Sz<uint64_t>{[](uint64_t n) { return n; }};
 
   struct box {
     // DATA

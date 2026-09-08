@@ -8565,3 +8565,16 @@
   (alias runtest)
   (deps stdlib_byte.t.exe)
   (action (run ./stdlib_byte.t.exe))))
+
+
+
+(subdir dict_ctor_field
+ (rule
+  (targets dict_ctor_field.t.exe)
+  (deps DictCtorField.vo dict_ctor_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dict_ctor_field.t.exe dict_ctor_field.cpp dict_ctor_field.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dict_ctor_field.t.exe)
+  (action (run ./dict_ctor_field.t.exe))))
