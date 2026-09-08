@@ -270,3 +270,7 @@ let materialise (d : cpp_decl) : settled =
   let rec fe e = map_expr fe fs ft e
   and fs s = map_stmt fe fs ft s in
   map_decl fe fs ft d
+
+(** [settled_child ~parent d] -- see [cpp_erasure.mli].  [parent] is evidence,
+    not data: a declaration nested inside a settled one is settled. *)
+let settled_child ~parent:_ (d : cpp_decl) : settled = d

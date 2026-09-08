@@ -527,25 +527,20 @@ let pp_cpp_ind_header kn ind =
             | None -> false
           in
           if is_promoted then
-            (* Apply loopification to the promoted inductive declaration.
-               Promoted structs render fields directly via
-               pp_cpp_fields_with_vis, bypassing pp_cpp_decl's maybe_loopify
-               wrapper, so we must loopify here. *)
+            (* A promoted struct renders its fields directly via
+               [pp_cpp_fields_with_vis] and so never reaches
+               {!Cpp_print.pp_cpp_decl}, where the other paths cross the
+               passes between translation and printing.  Run them here
+               instead, from the same place, rather than a second spelling of
+               the sequence that can drift from the first. *)
             let decl =
-              if Table.loopify () then
-                let pp_expr e =
-                  Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e)
-                in
-                Loopify.transform_decl ~pp_expr decl
-              else
-                decl
-            in
-            (* Also run the seam here: this branch renders fields directly and
-               so never reaches {!pp_cpp_decl}, where the other paths go
-               through it. *)
-            Minicpp_check.check ~where:"promoted inductive" decl;
-            let decl =
-              ( Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl)
+              (* [Table.loopify ()], not {!Cpp_pipeline.should_loopify}: a
+                 promoted inductive's methods have never been loopified by
+                 default the way the same methods are on an unpromoted one,
+                 and turning that on here is a change to what Crane emits
+                 rather than to how it is organised. *)
+              ( Cpp_pipeline.finish ~pp_expr:pp_expr_string
+                  ~loopify:(Table.loopify ()) decl
                 :> cpp_decl )
             in
             match decl with

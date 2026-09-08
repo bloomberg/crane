@@ -3855,13 +3855,9 @@ let pp_meyers_singleton env id ty expr_pp =
   ++ fnl ()
   ++ str "}"
 
-(** Extract the primary GlobRef from a declaration, if any. *)
-let rec decl_globref = function
-  | Dtemplate (_, _, inner) -> decl_globref inner
-  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
-  | Dstruct ds -> Some ds.ds_ref
-  | Dnspace (Some r, _) -> Some r
-  | _ -> None
+(** An expression as a bare string, for the diagnostics the later passes emit
+    about declarations they declined to transform. *)
+let pp_expr_string e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e)
 
 (** The parameters and statements of a declaration, for the traversals that
     need to see what a signature's body actually does with its parameters (see
@@ -3873,50 +3869,19 @@ let rec decl_body = function
   | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
 
-(** Apply loopify transformation to a declaration before rendering. *)
-let maybe_loopify decl =
-  let should =
-    match decl_globref decl with
-    (* The methods generated on an inductive are structural recursion over
-       that inductive, one C++ frame per cell, and the user has no name to
-       hang [Crane Loopify] on.  Loopify them by default.
-
-       A coinductive is exempt: its recursion sits under a lazy thunk, so it
-       never builds a deep C++ stack in the first place. *)
-    | Some (GlobRef.IndRef _ as r) ->
-      Table.should_loopify ~default:(not (Table.is_coinductive r)) r
-    | Some r -> Table.should_loopify r
-    | None -> Table.loopify ()
-  in
-  if should then
-    let pp_expr e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e) in
-    Loopify.transform_decl ~pp_expr decl
-  else
-    decl
-
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.
 
-    Applies {!maybe_loopify} and the {!Cpp_erasure.materialise} seam before
-    rendering; use {!pp_cpp_decl_raw} directly to skip those steps.
+    Runs {!Cpp_pipeline.finish} -- loopification, depth flattening and the
+    {!Cpp_erasure} seam -- before rendering; use {!pp_cpp_decl_raw} directly
+    on an already-finished declaration to skip those passes.
 
     @param env   name environment for sub-expression and sub-type printers
     @param decl  the MiniCpp declaration to render *)
 let rec pp_cpp_decl env decl =
-  (* Validate at both pass boundaries, so a report names the pass that
-     introduced the violation rather than merely the last one to run. *)
-  Minicpp_check.check ~where:"translation" decl;
-  let decl = maybe_loopify decl in
-  Minicpp_check.check ~where:"loopify" decl;
-  (* An initialiser nested deeper than a compiler will parse becomes a run of
-     bindings; everything shallower is left as it stands. *)
-  let decl = Cpp_depth.flatten decl in
-  (* Writing a type down is what decides its representation, so settle the
-     [Topaque] slots before anything reads the declaration as final.  Crossing
-     this seam is what gives {!Cpp_erasure.settled}, the printer's input
-     type. *)
   pp_cpp_decl_raw env
-    (Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl) :> cpp_decl)
+    (Cpp_pipeline.finish ~pp_expr:pp_expr_string
+       ~loopify:(Cpp_pipeline.should_loopify decl) decl )
 
 (** Inner declaration printer, called after loopification and after the
     {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
@@ -3945,7 +3910,9 @@ and pp_initialiser env ty e =
     ++ str "\"); })()"
   | _ -> pp_cpp_expr env [] e
 
-and pp_cpp_decl_raw env = function
+and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
+  let sub d = Cpp_erasure.settled_child ~parent:settled d in
+  match (settled :> cpp_decl) with
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = pp_initialiser env ty e in
@@ -3971,9 +3938,9 @@ and pp_cpp_decl_raw env = function
     in
     h (str "template <" ++ args ++ str ">")
     ++ cstr_pp
-    ++ pp_cpp_decl_raw env decl
+    ++ pp_cpp_decl_raw env (sub decl)
   | Dnspace (None, decls) ->
-    let ds = pp_list_stmt (pp_cpp_decl_raw env) decls in
+    let ds = pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
     let struct_name_str =
@@ -4079,7 +4046,7 @@ and pp_cpp_decl_raw env = function
       let ds =
         with_render_ctx
           ~setup:(fun () -> render_ctx.rc_in_struct <- true)
-          (fun () -> pp_list_stmt (pp_cpp_decl_raw env) decls)
+          (fun () -> pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls)
       in
       let pending_fwd =
         match Hashtbl.find_opt pending_wrapper_decls struct_name_str with

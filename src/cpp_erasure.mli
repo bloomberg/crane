@@ -67,6 +67,13 @@ val method_queries : method_queries ref
     rather than re-checked. *)
 type settled = private Minicpp.cpp_decl
 
+(** [settled_child ~parent d] is the sub-declaration [d] of [parent], at
+    [parent]'s phase.  The seam is hereditary -- {!materialise} rewrites a
+    declaration together with everything nested inside it -- so descending
+    into a settled declaration does not cross it again.  Holding [parent] is
+    the evidence for that, which is why it is an argument. *)
+val settled_child : parent:settled -> Minicpp.cpp_decl -> settled
+
 (** [resolve_casts decl] rewrites every {!Minicpp.CPPany_cast} in [decl] to say
     which caster the printer should emit: dropped where the cast is the
     identity, {!Minicpp.CPPany_cast_tolerant} where the shape is only knowable
