@@ -78,9 +78,9 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
                  [
                    Sreturn
                      (Some
-                        (CPPfun_call
-                           ( CPPmk_shared (Tglob (name, ty_vars, [])),
-                             [CPPstruct (c, ty_vars, make_args)] ) ) );
+                        (mk_call
+                           (CPPmk_shared (Tglob (name, ty_vars, [])))
+                           [CPPstruct (c, ty_vars, make_args)] ) );
                  ],
                  false )
            in
@@ -484,7 +484,7 @@ let gen_typeclass_cpp name fields ind =
           CPPqualified (CPPvar inst_id, Id.of_string method_name)
         in
         let call_form =
-          CPPrequires ([], [(CPPfun_call (qualified, []), constraint_expr)], [])
+          CPPrequires ([], [(mk_call qualified [], constraint_expr)], [])
         in
         let value_form = CPPrequires ([], [(qualified, constraint_expr)], []) in
         Some (`Disjunctive (CPPbinop ("||", call_form, value_form)))
@@ -524,11 +524,7 @@ let gen_typeclass_cpp name fields ind =
               CPPdeclval (subst_promoted_in_cpp_type arg_cpp) )
             args
         in
-        (* Method call: I::method_name(std::declval<...>(), ...).
-           CPPfun_call stores args reversed (the printer applies List.rev
-           when rendering), so we pre-reverse to get the correct printed
-           order. *)
-        let call_args = List.rev arg_declvals in
+        (* Method call: I::method_name(std::declval<...>(), ...). *)
         (* A method of a higher-kinded class is a member template, and the
            probe states its requirement at the erased element type, so the
            arguments are spelled out rather than deduced: a nullary method
@@ -550,7 +546,7 @@ let gen_typeclass_cpp name fields ind =
                 Id.of_string method_name,
                 List.init ntv (fun _ -> Tany) )
         in
-        let call = CPPfun_call (callee, call_args) in
+        let call = mk_call callee arg_declvals in
         (* Constraint: use the cpp_type directly - cpp.ml will render it *)
         let constraint_expr = CPPconvertible_to ret_cpp in
         Some (`Normal ([], (call, constraint_expr)))
@@ -2611,7 +2607,7 @@ let gen_dfun n b cty ty temps =
           (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
-      Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
+      Sreturn (Some (mk_call lazy_factory [thunk]))
     else if cod = Tvoid then
       (* void function: execute expression for side effects, then return.
          Some tail expressions (like writeTVar) have side effects that must
@@ -2713,8 +2709,8 @@ let gen_dfun n b cty ty temps =
     match b with
     | MLaxiom _ when is_custom n && not (to_inline n) ->
       let custom_name = find_custom n in
-      let param_vars = List.rev_map (fun (id, _) -> CPPvar id) ids in
-      Some [Sreturn (Some (CPPfun_call (CPPraw custom_name, param_vars)))]
+      let param_vars = List.map (fun (id, _) -> CPPvar id) ids in
+      Some [Sreturn (Some (mk_call (CPPraw custom_name) param_vars))]
     | _ -> None
   in
   (* method_self_ns is set by the caller (gen_decl/gen_dfun_def) before
@@ -3154,11 +3150,7 @@ let gen_decl__inner n b ty =
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None ->
             body_expr  (* inline custom literal (e.g. std::monostate{}) *)
           | _ ->
-            CPPfun_call (
-              mk_lambda [] None
-                [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))]
-                ~by_value:false,
-              [])
+            mk_iife None [Sexpr body_expr; Sreturn (Some (mk_tt_expr ()))]
         else body_expr
       in
       let body_expr =
@@ -3400,11 +3392,7 @@ let gen_spec__inner n b ty =
           | CPPenum_val _ -> b_expr
           | CPPglob (_, _, Some ci) when ci.ci_inline <> None -> b_expr
           | _ ->
-            CPPfun_call (
-              mk_lambda [] None
-                [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))]
-                ~by_value:false,
-              [])
+            mk_iife None [Sexpr b_expr; Sreturn (Some (mk_tt_expr ()))]
         else b_expr
       in
       let b_expr =
@@ -3561,10 +3549,10 @@ let rec replace_return_this_expr inner_ty = function
   | CPPlambda (params, ret, body, cap) ->
     CPPlambda
       (params, ret, List.map (replace_return_this_stmt inner_ty) body, cap)
-  | CPPfun_call (f, args) ->
+  | CPPfun_call (f, {rev = args}) ->
     CPPfun_call
       ( replace_return_this_expr inner_ty f,
-        List.map (replace_return_this_expr inner_ty) args )
+        of_reversed (List.map (replace_return_this_expr inner_ty) args) )
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
   | e -> e
@@ -3617,9 +3605,9 @@ let rec deref_return_this_expr = function
   | CPPthis -> CPPderef CPPthis
   | CPPlambda (params, ret, body, cap) ->
     CPPlambda (params, ret, List.map deref_return_this_stmt body, cap)
-  | CPPfun_call (f, args) ->
+  | CPPfun_call (f, {rev = args}) ->
     CPPfun_call (deref_return_this_expr f,
-                 List.map deref_return_this_expr args)
+                 of_reversed (List.map deref_return_this_expr args))
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map deref_return_this_expr exprs)
   | e -> e
@@ -3752,7 +3740,7 @@ let replace_this_in_lambdas self_type stmts =
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true
   | CPPlambda (_, _, body, _) -> List.exists stmt_has_shared_from_this body
-  | CPPfun_call (f, args) ->
+  | CPPfun_call (f, {rev = args}) ->
     expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
   | CPPoverloaded exprs -> List.exists expr_has_shared_from_this exprs
   | _ -> false
@@ -4071,7 +4059,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
           (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
       in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
-      Sreturn (Some (CPPfun_call (lazy_factory, [thunk])))
+      Sreturn (Some (mk_call lazy_factory [thunk]))
     else
       Sreturn (Some x)
   in
@@ -4707,13 +4695,12 @@ let gen_ind_header_v2
                  (* For coinductive:
                     d_lazyV_(crane::lazy<variant_t>(variant_t(std::move(_v)))) *)
                  let init_expr =
-                   CPPfun_call
-                     ( CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
-                       [
-                         CPPfun_call
-                           ( CPPvar variant_alias_id,
-                             [CPPmove (CPPvar param_name)] );
-                       ] )
+                   mk_call
+                     (CPPvar
+                        (Id.of_string_soft
+                           (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
+                     [ mk_call (CPPvar variant_alias_id)
+                         [CPPmove (CPPvar param_name)] ]
                  in
                  let init_list = [(vmn_id, init_expr)] in
                  ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
@@ -5114,7 +5101,7 @@ let gen_ind_header_v2
             Sexpr (CPPdot_method_call (
               CPPvar _stack_id,
               Id.of_string "push_back",
-              [CPPfun_call (CPPmk_shared (verbatim_ty self_ty), [CPPmove e])]))
+              [mk_call (CPPmk_shared (verbatim_ty self_ty)) [CPPmove e]]))
           in
           (* Substitute a mediator's actual type arguments into one of its
              declared constructor field types. *)
@@ -5439,9 +5426,9 @@ let gen_ind_header_v2
                   sole_owner fe
                     [ Sasgn (lp, Some Tauto, dot0 fe "get");
                       Swhile (
-                        CPPfun_call (
-                          CPPstd_holds_alternative (ls, Some cons_id),
-                          [arrow0 (CPPvar lp) "v"]),
+                        mk_call
+                          (CPPstd_holds_alternative (ls, Some cons_id))
+                          [arrow0 (CPPvar lp) "v"],
                         [ Sasgn (lc, Some (Tref Tauto),
                             CPPstd_get (ls, Some cons_id,
                               Some (arrow0 (CPPvar lp) "v_mut")));
@@ -5545,8 +5532,8 @@ let gen_ind_header_v2
                    std::vector only if a destructor happens to drain a
                    worklist deeper than that. *)
                 Sasgn (_drain_id, Some Tauto, drain_lambda);
-                Sexpr (CPPfun_call (CPPvar _drain_id,
-                  [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
+                Sexpr (mk_call (CPPvar _drain_id)
+                  [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
                     CPPdot_method_call (CPPvar _stack_id,
@@ -5562,9 +5549,9 @@ let gen_ind_header_v2
                           Id.of_string "use_count", []),
                         CPPint 1),
                       unique_fence
-                      @ [Sexpr (CPPfun_call (CPPvar _drain_id,
+                      @ [Sexpr (mk_call (CPPvar _drain_id)
                         [CPPmethod_call (CPPvar _cur_id,
-                          Id.of_string "v_mut", [])]))])
+                          Id.of_string "v_mut", [])])])
                   ])
               ]
             in
@@ -5616,9 +5603,9 @@ let gen_ind_header_v2
             let self_branch_body =
               [Sif_then (sp_alive_and_unique,
                 unique_fence
-                @ [Sexpr (CPPfun_call (CPPvar _drain_self_id,
+                @ [Sexpr (mk_call (CPPvar _drain_self_id)
                   [CPPmethod_call (deref_sp,
-                    Id.of_string "v_mut", [])]))])]
+                    Id.of_string "v_mut", [])])])]
             in
             let rec build_if_chain branches =
               match branches with
@@ -5647,8 +5634,8 @@ let gen_ind_header_v2
             let body =
               [ Sasgn (_stack_id, Some stack_ty, CPPbraced []);
                 Sasgn (_drain_self_id, Some Tauto, drain_self_lambda);
-                Sexpr (CPPfun_call (CPPvar _drain_self_id,
-                  [CPPfun_call (CPPvar (Id.of_string "v_mut"), [])]));
+                Sexpr (mk_call (CPPvar _drain_self_id)
+                  [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
                     CPPdot_method_call (CPPvar _stack_id,
@@ -5671,9 +5658,11 @@ let gen_ind_header_v2
           let param_name = Id.of_string "_thunk" in
           let param_ty = Tfun ([], variant_alias_ty) in
           let init_expr =
-            CPPfun_call
-              ( CPPvar (Id.of_string_soft (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">")),
-                [CPPmove (CPPvar param_name)] )
+            mk_call
+              (CPPvar
+                 (Id.of_string_soft
+                    (Crane_rt.lazy_ ^ "<" ^ variant_alias_name ^ ">") ))
+              [CPPmove (CPPvar param_name)]
           in
           let init_list = [(vmn_id, init_expr)] in
           [
@@ -5847,9 +5836,9 @@ let gen_ind_header_v2
                    is exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
-                  CPPfun_call (CPParena_make inner, [converted])
+                  mk_call (CPParena_make inner) [converted]
                 else
-                  CPPfun_call (CPPmk_shared inner, [converted])
+                  mk_call (CPPmk_shared inner) [converted]
               | _ when storage_ty = api_ty ->
                 if is_trivially_copyable_type api_ty then var
                 else CPPmove var
@@ -5905,11 +5894,9 @@ let gen_ind_header_v2
                     match a with
                     | CPPfun_call (CPPmk_shared inner, cargs)
                     | CPPfun_call (CPParena_make inner, cargs) ->
-                      (* CPPfun_call args print reversed (List.rev), and
-                         make_rc_reusing takes the token FIRST — so the token
-                         must be the LAST list element to print first. *)
-                      CPPfun_call
-                        (CPPmk_reuse inner, cargs @ [CPPmove (CPPvar tok_id)])
+                      (* make_rc_reusing takes the token first. *)
+                      mk_call (CPPmk_reuse inner)
+                        (CPPmove (CPPvar tok_id) :: call_args cargs)
                     | other -> other )
                   ctor_args
               in
@@ -5943,7 +5930,7 @@ let gen_ind_header_v2
                       through the wrapper ([List::list]) is no longer the
                       injected-class-name, so class template argument
                       deduction is not available. *)
-                   (fun s -> CPPfun_call (mk_cppglob name ty_vars, [s])) )
+                   (fun s -> mk_call (mk_cppglob name ty_vars) [s]) )
                 tys ) )
       in
 
@@ -5962,24 +5949,25 @@ let gen_ind_header_v2
                   Sasgn
                     ( Id.of_string "_tmp",
                       Some self_ty,
-                      CPPfun_call (CPPvar (Id.of_string "thunk"), []) );
+                      mk_call (CPPvar (Id.of_string "thunk")) [] );
                   Sreturn
                     (Some
-                       (CPPfun_call
-                          ( CPPmember
-                              ( CPPvar (Id.of_string "_tmp"),
-                                Id.of_string "v" ),
-                            [] ) ) );
+                       (mk_call
+                          (CPPmember
+                             (CPPvar (Id.of_string "_tmp"), Id.of_string "v"))
+                          [] ) );
               ]
               ~by_value:true
           in
           let thunk_arg =
-            CPPfun_call
-              ( CPPvar (Id.of_string_soft ("std::function<" ^ variant_alias_name ^ "()>")),
-                [adapter_lambda] )
+            mk_call
+              (CPPvar
+                 (Id.of_string_soft
+                    ("std::function<" ^ variant_alias_name ^ "()>") ))
+              [adapter_lambda]
           in
           let ctor_expr =
-            CPPfun_call (mk_cppglob name ty_vars, [thunk_arg])
+            mk_call (mk_cppglob name ty_vars) [thunk_arg]
           in
           let body = [Sreturn (Some ctor_expr)] in
           [
@@ -6134,10 +6122,9 @@ let gen_ind_header_v2
                     | (_source_ctor_ty, cname_id, field_info, converted)
                       :: rest ->
                       let guard =
-                        CPPfun_call
-                          ( CPPstd_holds_alternative
-                              (source_ty, Some cname_id),
-                            [other_v] )
+                        mk_call
+                          (CPPstd_holds_alternative (source_ty, Some cname_id))
+                          [other_v]
                       in
                       let body =
                         make_branch_body cname_id field_info converted
@@ -6194,11 +6181,9 @@ let gen_ind_header_v2
                   [
                     Sreturn
                       (Some
-                         (CPPfun_call
-                            ( CPPmember
-                                ( CPPvar vmn_id,
-                                  Id.of_string "force" ),
-                              [] ) ) );
+                         (mk_call
+                            (CPPmember (CPPvar vmn_id, Id.of_string "force"))
+                            [] ) );
                   ];
                 mf_is_const = true;
                 mf_is_static = false;

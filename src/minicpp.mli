@@ -290,8 +290,8 @@ and cpp_expr =
       (** Global reference with type arguments and optional custom extraction
           info *)
   | CPPnamespace of GlobRef.t * cpp_expr  (** Namespace-qualified expression *)
-  | CPPfun_call of cpp_expr * cpp_expr list
-      (** Function call with arguments (stored in reverse order) *)
+  | CPPfun_call of cpp_expr * cpp_expr revd
+      (** Function call with its arguments (in reverse order, see {!revd}) *)
   | CPPconverting_ctor of cpp_type * cpp_expr list
       (** Converting constructor call: [Type(args)] *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
@@ -622,7 +622,7 @@ val mk_lambda :
 val mk_iife : cpp_type option -> cpp_stmt list -> cpp_expr
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
-val call_args : cpp_expr list -> cpp_expr list
+val call_args : cpp_expr revd -> cpp_expr list
 
 (** The parameters of a {!CPPlambda}, in source order. *)
 val lambda_params :

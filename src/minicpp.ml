@@ -282,7 +282,7 @@ and cpp_expr =
   | CPPvar of Id.t
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
   | CPPnamespace of GlobRef.t * cpp_expr
-  | CPPfun_call of cpp_expr * cpp_expr list
+  | CPPfun_call of cpp_expr * cpp_expr revd
   | CPPconverting_ctor of cpp_type * cpp_expr list
     (** Converting constructor call: [Type(args)]. Used in clone-field
         conversions where the destination type differs from the source. *)
@@ -665,7 +665,7 @@ let mk_call fn args =
   (* [fn] never returns, so the call never happens: it is that same
      abort, which already carries the type the call would have had. *)
   | CPPabort _, [] -> fn
-  | _ -> CPPfun_call (fn, List.rev args)
+  | _ -> CPPfun_call (fn, {rev = List.rev args})
 
 (** [mk_apply fn args] applies [fn] to [args], given in {e source} order.
 
@@ -707,7 +707,7 @@ let mk_lambda params ret body ~by_value =
 let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
-let call_args args = List.rev args
+let call_args (args : 'a revd) = List.rev args.rev
 
 (** The parameters of a {!CPPlambda}, in source order. *)
 let lambda_params (params : 'a revd) = List.rev params.rev
@@ -724,7 +724,8 @@ let map_expr
   | CPPvar _ -> e
   | CPPglob (r, tys, ci) -> CPPglob (r, List.map ft tys, ci)
   | CPPnamespace (r, e') -> CPPnamespace (r, fe e')
-  | CPPfun_call (f, args) -> CPPfun_call (fe f, List.map fe args)
+  | CPPfun_call (f, args) ->
+    CPPfun_call (fe f, {rev = List.map fe args.rev})
   | CPPconverting_ctor (ty, args) -> CPPconverting_ctor (ft ty, List.map fe args)
   | CPPderef e' -> CPPderef (fe e')
   | CPPmove e' -> CPPmove (fe e')
@@ -879,7 +880,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
-  | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args
+  | CPPfun_call (f, args) -> on_expr f; List.iter on_expr args.rev
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
@@ -962,7 +963,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
   | CPPlambda (_, _, stmts, _) -> on_stmts acc stmts
-  | CPPfun_call (fn, args) -> List.fold_left fe (fe acc fn) args
+  | CPPfun_call (fn, args) -> List.fold_left fe (fe acc fn) args.rev
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)

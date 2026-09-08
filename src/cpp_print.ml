@@ -1446,7 +1446,7 @@ and pp_cpp_expr env args t =
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in
     h (name ++ str "::" ++ pp_cpp_expr env args t)
-  | CPPfun_call (CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
+  | CPPfun_call (CPPglob (n, tys, Some ci), {rev = ts}) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
     if Common.contains_substring s "%result" then
       gen_block_iife n s tys (List.rev ts)
@@ -1499,7 +1499,8 @@ and pp_cpp_expr env args t =
         arg_types
         []
         cmds
-  | CPPfun_call (CPPglob (n, tys, _), ts) when lookup_method_this_pos n <> None
+  | CPPfun_call (CPPglob (n, tys, _), {rev = ts})
+    when lookup_method_this_pos n <> None
     ->
     let method_name = Common.id_of_global Term n in
     let this_pos =
@@ -1532,7 +1533,7 @@ and pp_cpp_expr env args t =
       ++ args_s
       ++ str ")"
     | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
-  | CPPfun_call (CPPderef e, ts) ->
+  | CPPfun_call (CPPderef e, {rev = ts}) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
        Arises from the shared_ptr fixpoint pattern where recursive calls
        dereference the function pointer before invoking. *)
@@ -1540,7 +1541,7 @@ and pp_cpp_expr env args t =
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call
       ( CPPlambda ({rev = []}, _, [Smatch (branches, wildcard)], false),
-        [] )
+        {rev = []} )
     when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
             Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
             + a return-only wildcard; no structured bindings, no extra conditions. *)
@@ -1587,7 +1588,7 @@ and pp_cpp_expr env args t =
     str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
   | CPPfun_call
       ( CPPlambda ({rev = []}, _, [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])], _),
-        [] )
+        {rev = []} )
     when not (expr_contains_string e1 || expr_contains_string e2) ->
     (* IIFE wrapping a simple if/else with single-expression returns in both
        branches → emit as ternary.  Skip when branches contain string literals
@@ -1596,7 +1597,7 @@ and pp_cpp_expr env args t =
     str "(" ++ pp cond ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call
       ( CPPlambda ({rev = []}, _, [Scustom_case (_, scrut, _, branches, cmatch)], _),
-        [] )
+        {rev = []} )
     when (* Custom case with exactly 2 return-only branches and the standard
             bool-like if/else template → emit ternary.  Skip when branches
             contain string literals (const char* → std::string coercion). *)
@@ -1618,10 +1619,10 @@ and pp_cpp_expr env args t =
       | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
-  | CPPfun_call (CPPglob (r, [], _), [arg]) when Table.is_projection r ->
+  | CPPfun_call (CPPglob (r, [], _), {rev = [arg]}) when Table.is_projection r ->
     let field_name = label_of_r r |> Names.Label.to_string in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
-  | CPPfun_call (f, ts) ->
+  | CPPfun_call (f, {rev = ts}) ->
     (* For constructor calls, compute the expected C++ element type for each
        field that is a custom list.  When an argument is a grammar-stack
        variable (id ∈ concrete_typed_any_params), use the callee-dictated
@@ -2212,10 +2213,6 @@ and pp_cpp_expr env args t =
     str ((sn ()).get_if ^ "<") ++ targ ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
 
-(** Pretty-print a MiniCpp statement as C++ source.
-
-    @param env   name environment (see {!pp_cpp_expr})
-    @param args  accumulated argument list forwarded to sub-expression printers *)
 (** [pp_object env args e] prints [e] in the position a [.], [->] or member
     call is about to be applied to.
 
@@ -2229,6 +2226,10 @@ and pp_object env args e =
     str "(" ++ pp_cpp_expr env args e ++ str ")"
   | _ -> pp_cpp_expr env args e
 
+(** Pretty-print a MiniCpp statement as C++ source.
+
+    @param env   name environment (see {!pp_cpp_expr})
+    @param args  accumulated argument list forwarded to sub-expression printers *)
 and pp_cpp_stmt env args = function
   | Sreturn None -> str "return;"
   | Sreturn (Some (CPPabort (msg, _))) ->
@@ -2628,7 +2629,7 @@ and pp_cpp_stmt env args = function
       match first_scrut with
       | CPPmethod_call (obj, v_id, []) when Id.to_string v_id = "v" ->
         Some obj
-      | CPPfun_call (CPPmember (obj, v_id), []) when Id.to_string v_id = "v" ->
+      | CPPfun_call (CPPmember (obj, v_id), {rev = []}) when Id.to_string v_id = "v" ->
         Some obj
       | _ -> None
     in
@@ -3336,7 +3337,7 @@ let erased_into_storage_ids body =
     | CPPerase_fn (_, inner) -> add ids inner
     (* [crane_call_erased] takes the callee first, and every [CPPfun_call]
        stores its arguments reversed, so the callee ends the list. *)
-    | CPPfun_call (CPPvar f, (_ :: _ as args))
+    | CPPfun_call (CPPvar f, {rev = (_ :: _ as args)})
       when String.equal (Id.to_string f) "crane_call_erased" ->
       add ids (List.nth args (List.length args - 1))
     (* Applied here, so the signature does have something to claim -- even if
