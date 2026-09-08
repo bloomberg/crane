@@ -1293,7 +1293,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       naming_expr ~lambda_ty:dst_ty ~body:(fun x ->
         CPPcond
           ( x,
-            mk_call (CPPmk_shared dst_inner) [CPPderef x],
+            mk_call (CPPalloc (Alloc_heap, dst_inner)) [CPPderef x],
             CPPnullptr ))
     | Tshared_ptr inner, _ ->
       (* shared_ptr<T> → T: dereference.  Also strip Tnamespace from inner
@@ -1308,7 +1308,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       if inner = dst_ty then derefed
       else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
     | _, Tshared_ptr inner ->
-      mk_call (CPPmk_shared inner) [expr]
+      mk_call (CPPalloc (Alloc_heap, inner)) [expr]
     | Tglob (g1, src_ts, _), Tglob (g2, dst_ts, _)
       when GlobRef.CanOrd.equal g1 g2
            && Table.is_custom g1
@@ -6208,7 +6208,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | Tglob (g, _, _) -> Some g | _ -> None in
               ( match inner_g with
               | Some g when Refset'.mem g tctx.method_self_ns ->
-                mk_call (CPPmk_shared inner) [expr]
+                mk_call (CPPalloc (Alloc_heap, inner)) [expr]
               | _ -> expr )
             | ct when prints_as_any ct
                       || (match ct with
@@ -6854,7 +6854,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           let temps = build_template_params env [] tys in
           if Table.is_coinductive n then
             mk_call
-              (CPPmk_shared (Tglob (n, temps, [])))
+              (CPPalloc (Alloc_heap, Tglob (n, temps, [])))
               [CPPstruct (n, temps, args)]
           else
             (* Value-type records: direct construction, no make_shared *)
@@ -8083,7 +8083,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Tfun (_, Tshared_ptr inner) ->
             let rec wrap_stmt = function
               | Sreturn (Some e) ->
-                Sreturn (Some (mk_call (CPPmk_shared inner) [e]))
+                Sreturn (Some (mk_call (CPPalloc (Alloc_heap, inner)) [e]))
               | s -> map_stmt Fun.id wrap_stmt Fun.id s
             in
             CPPlambda
@@ -11262,7 +11262,7 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
           ( id,
             Some Tauto,
             mk_call
-              (CPPmk_shared (fix_func_type (cpp_of_ml env ty)))
+              (CPPalloc (Alloc_heap, fix_func_type (cpp_of_ml env ty)))
               [] ) )
       renamed_ids
   in

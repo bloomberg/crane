@@ -1871,7 +1871,7 @@ let {Goptions.get = non_atomic_rc} =
      smart-pointer C++.  This keeps the Crane runtime minimal for programs that
      never use an arena.
    - on: the runtime-arena-aware factory ([crane::arena_make_shared] /
-     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     [crane::rc<T>::make], see [Alloc_arena_scoped]), which bump-allocates from the
      ambient [crane::arena_scope] when one is open and is otherwise exactly
      make_shared/make_rc.  Copying is O(1) either way, so there is still no
      deep-copy path -- the flag only gates the factory, never the layout.

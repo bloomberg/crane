@@ -284,6 +284,28 @@ and smatch_branch = {
 (** {2 C++ expressions} *)
 
 (** C++ expression representation. *)
+(** Where an allocation's storage comes from.  These differ only in where the
+    cell is taken from and what smart pointer comes back; every one of them is
+    the callee of a {!CPPfun_call}. *)
+and alloc_kind =
+  | Alloc_heap  (** [std::make_shared<T>] / [crane::make_rc<T>] *)
+  | Alloc_arena
+      (** [crane::arena_alloc<T>]: allocates in the ambient arena and returns
+          a raw [T*]. *)
+  | Alloc_arena_shared
+      (** [crane::arena_shared_alloc<T>]: allocates into [T]'s single
+          thread-local shared capsule and returns a [crane::capsule<T>]. *)
+  | Alloc_arena_scoped
+      (** The arena-aware form of the ordinary factory ([crane::rc<T>::make],
+          [crane::arena_make_shared<T>], or plain [make_shared] under BDE).
+          Returns the field's own smart-pointer type, and is exactly the plain
+          factory when no arena scope is open at the call site. *)
+  | Alloc_reusing
+      (** [crane::make_rc_reusing<T>] (Perceus reuse): the first argument is a
+          reuse token moved from a matched, uniquely-owned recursive child;
+          the rest construct the new [T].  Only emitted under
+          [Crane NonAtomicRc]. *)
+
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -303,26 +325,9 @@ and cpp_expr =
       (** Lambda: params (in reverse order, see {!revd}), optional return
           type, body, capture_by_value flag *)
   | CPPvisit  (** std::visit for variant pattern matching *)
-  | CPPmk_shared of cpp_type  (** std::make_shared<T> factory function *)
-  | CPParena_alloc of cpp_type
-      (** crane::arena_alloc<T> factory: allocates a T in the ambient arena,
-          returns raw T*.  Used like [CPPmk_shared] for arena-mode fields. *)
-  | CPParena_shared_alloc of cpp_type
-      (** crane::arena_shared_alloc<T> factory: allocates a T into T's single
-          thread-local shared capsule, returns a crane::capsule<T>. Used for
-          `Crane Arena Shared`-mode recursive-field allocation. *)
-  | CPParena_make of cpp_type
-      (** Runtime scoped-arena factory for a recursive field: renders to the
-          arena-aware make_shared/make_rc for the current pointer flavor
-          (crane::rc<T>::make / crane::arena_make_shared<T>), returning the same
-          smart-pointer type as the field.  Falls back to a plain heap
-          allocation at runtime when no arena scope is open. *)
-  | CPPmk_reuse of cpp_type
-      (** crane::make_rc_reusing<T> factory (Perceus reuse): first argument is a
-          reuse token (an rc<T> moved from a matched, uniquely-owned recursive
-          child); the rest construct the new T.  Recycles the token's cell in
-          place when it is the sole owner, else allocates.  Only emitted under
-          [Crane NonAtomicRc]. *)
+  | CPPalloc of alloc_kind * cpp_type
+      (** An allocation: see {!alloc_kind}.  Used as the callee of a
+          {!CPPfun_call} whose arguments are the constructor arguments. *)
   | CPPoverloaded of cpp_expr list
       (** Overloaded visitor set for variant matching *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list

@@ -713,10 +713,7 @@ let rec collect_expr (check : call_checker) expr =
   | CPPvar _
    |CPPglob _
    |CPPvisit
-   |CPPmk_shared _
-   |CPParena_alloc _
-   |CPParena_shared_alloc _
-   |CPParena_make _
+   |CPPalloc _
    |CPPthis
    |CPPshared_from_this _
    |CPPconvertible_to _
@@ -743,9 +740,8 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstring _
    |CPPuint _
    |CPPfloat _
-   |CPPrequires _
    |CPPis_same _
-   |CPPmk_reuse _ -> []
+   |CPPrequires _ -> []
 
 (** Collect recursive call sites from a list of statements.
     Delegates to {!collect_stmt} for each statement. *)
@@ -3190,7 +3186,7 @@ let patch_tmc_dest ~vt_ret _ti val_expr =
 let wrap_base_for_vt vt_ret val_expr =
   match vt_ret with
   | Some ret_ty ->
-    CPPfun_call (CPPmk_shared ret_ty, of_reversed ([val_expr]))
+    CPPfun_call (CPPalloc (Alloc_heap, ret_ty), of_reversed ([val_expr]))
   | None -> val_expr
 
 (** Build a constructor call with [nullptr] at the recursive argument position.
@@ -3210,7 +3206,7 @@ let build_cell_call ?token ~vt_ret cell =
      constructor may nest one of a DIFFERENT inductive ([rnode (cons r nil)]
      wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
      type, which [tca_type] carries. *)
-  let mk_shared_cell = CPPmk_shared cell.tca_type in
+  let mk_shared_cell = CPPalloc (Alloc_heap, cell.tca_type) in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
     | Some (ty, _, _, _) -> ty = cell.tca_type
@@ -7951,7 +7947,8 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
        If loopification fails (recursion cannot be converted), the original
        shared_ptr pattern is preserved with its body recursively processed. *)
     | Sasgn (id, (Some Tauto as _ty_opt),
-             (CPPfun_call (CPPmk_shared func_ty, {rev = []}) as init_expr))
+             ( CPPfun_call (CPPalloc (Alloc_heap, func_ty), {rev = []}) as
+               init_expr ))
       :: Sderef_asgn (CPPvar id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
       :: rest
       when Id.equal id id2 ->
@@ -7968,7 +7965,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
     (* Pattern 4: Y-combinator local fixpoint from {!gen_local_fix_by_ref}:
        [Sasgn(id, Some Tauto, CPPlambda(...))] whose last param is a single
        self-reference [_self_*].  Distinct from Pattern 2 ([Some (Tfun _)]) and
-       Pattern 3 ([CPPmk_shared] init). *)
+       Pattern 3 (a heap-allocating init). *)
     | Sasgn
         ( id,
           (Some Tauto as ty_opt),

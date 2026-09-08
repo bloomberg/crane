@@ -277,6 +277,32 @@ and smatch_branch = {
         field accesses use direct [CPPvar binding_name] references. *)
 }
 
+(* Where an allocation's storage comes from.  Each kind is used the same way:
+   as the callee of a CPPfun_call whose arguments are the constructor's. *)
+and alloc_kind =
+  | Alloc_heap
+    (* std::make_shared<T> / crane::make_rc<T>. *)
+  | Alloc_arena
+    (* crane::arena_alloc<T>: allocates a T in the ambient arena and returns a
+       raw T*, for arena-mode recursive-field allocation. *)
+  | Alloc_arena_shared
+    (* crane::arena_shared_alloc<T>: allocates a T into T's single
+       thread-local shared capsule and returns a crane::capsule<T> (not a raw
+       pointer), for `Crane Arena Shared`-mode recursive-field allocation.
+       See theories/cpp/arena.h. *)
+  | Alloc_arena_scoped
+    (* The ordinary-smart-pointer factory that is *arena-aware at runtime* --
+       [crane::rc<T>::make] under NonAtomicRc, [crane::arena_make_shared<T>]
+       under std, or plain [make_shared] under BDE (no runtime arena there).
+       Returns the same smart-pointer type as the field; when no arena scope
+       is open at the call site it is exactly the plain make_shared/make_rc. *)
+  | Alloc_reusing
+    (* crane::make_rc_reusing<T> (Perceus reuse): the first argument is a
+       reuse token (a [crane::rc<T>] moved from a matched, uniquely-owned
+       recursive child), the rest construct the new T.  Recycles the token's
+       cell in place when it is the sole owner, else allocates.  Only emitted
+       under [Crane NonAtomicRc] (needs crane::rc's control block). *)
+
 (** C++ expressions. *)
 and cpp_expr =
   | CPPvar of Id.t
@@ -295,33 +321,7 @@ and cpp_expr =
       * cpp_stmt list
       * bool (* capture_by_value *)
   | CPPvisit
-  | CPPmk_shared of cpp_type
-  | CPParena_alloc of cpp_type
-    (* crane::arena_alloc<T> factory: allocates a T in the ambient arena and
-       returns a raw T*.  Used (like CPPmk_shared) as the callee of a
-       CPPfun_call for arena-mode recursive-field allocation. *)
-  | CPParena_shared_alloc of cpp_type
-    (* crane::arena_shared_alloc<T> factory: allocates a T into T's single
-       thread-local shared capsule and returns a crane::capsule<T> (not a
-       raw pointer). Used (like CPParena_alloc) as the callee of a
-       CPPfun_call for `Crane Arena Shared`-mode recursive-field
-       allocation; see theories/cpp/arena.h. *)
-  | CPParena_make of cpp_type
-    (* Runtime scoped-arena factory for a recursive field (scoped-arena
-       redesign): renders to the ordinary-smart-pointer factory that is
-       *arena-aware at runtime* -- [crane::rc<T>::make] under NonAtomicRc,
-       [crane::arena_make_shared<T>] under std, or plain [make_shared] under
-       BDE (no runtime arena there).  Returns the same smart-pointer type as
-       the field ([crane::rc<T>] / [std::shared_ptr<T>]); when no arena scope
-       is open at the call site it is exactly the plain make_shared/make_rc.
-       Used (like CPPmk_shared) as the callee of a CPPfun_call. *)
-  | CPPmk_reuse of cpp_type
-    (* crane::make_rc_reusing<T> factory (Perceus reuse): first argument is a
-       reuse token (a [crane::rc<T>] moved from a matched, uniquely-owned
-       recursive child); remaining arguments construct the new T. Recycles the
-       token's cell in place when it is the sole owner, else allocates. Used
-       (like CPPmk_shared) as the callee of a CPPfun_call; only emitted under
-       [Crane NonAtomicRc] (needs crane::rc's control block). *)
+  | CPPalloc of alloc_kind * cpp_type
   | CPPoverloaded of cpp_expr list
     (* Invariant: all elements must be CPPlambda. Enforced at construction
        in make_visit_expr (loopify.ml). *)
@@ -738,11 +738,7 @@ let map_expr
         List.map fs stmts,
         capture )
   | CPPvisit -> e
-  | CPPmk_shared ty -> CPPmk_shared (ft ty)
-  | CPParena_alloc ty -> CPParena_alloc (ft ty)
-  | CPParena_shared_alloc ty -> CPParena_shared_alloc (ft ty)
-  | CPParena_make ty -> CPParena_make (ft ty)
-  | CPPmk_reuse ty -> CPPmk_reuse (ft ty)
+  | CPPalloc (k, ty) -> CPPalloc (k, ft ty)
   | CPPoverloaded exprs -> CPPoverloaded (List.map fe exprs)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
@@ -873,8 +869,7 @@ let map_stmt
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
@@ -955,8 +950,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     ~(on_stmts : 'a -> cpp_stmt list -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = on_expr acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPmk_shared _ | CPParena_alloc _
-  | CPParena_shared_alloc _ | CPParena_make _ | CPPmk_reuse _
+  | CPPvar _ | CPPglob _ | CPPvisit | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _

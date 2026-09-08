@@ -1870,19 +1870,19 @@ and pp_cpp_expr env args t =
   | CPPvisit ->
     require_header "variant";
     str (sn ()).visit
-  | CPPmk_shared t ->
+  | CPPalloc (Alloc_heap, t) ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
-  | CPPmk_reuse t ->
+  | CPPalloc (Alloc_reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
     cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type false [] t)
-  | CPParena_alloc t ->
+  | CPPalloc (Alloc_arena, t) ->
     Table.mark_needs_arena ();
     cpp_angle Crane_rt.arena_alloc (pp_cpp_type false [] t)
-  | CPParena_shared_alloc t ->
+  | CPPalloc (Alloc_arena_shared, t) ->
     Table.mark_needs_arena ();
     cpp_angle Crane_rt.arena_shared_alloc (pp_cpp_type false [] t)
-  | CPParena_make t ->
+  | CPPalloc (Alloc_arena_scoped, t) ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
        runtime whenever no arena scope is open at the call site. *)

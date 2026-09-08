@@ -79,7 +79,7 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
                    Sreturn
                      (Some
                         (mk_call
-                           (CPPmk_shared (Tglob (name, ty_vars, [])))
+                           (CPPalloc (Alloc_heap, Tglob (name, ty_vars, [])))
                            [CPPstruct (c, ty_vars, make_args)] ) );
                  ],
                  false )
@@ -4372,7 +4372,7 @@ let gen_ind_header_v2
      compile-time property of the type.  Every recursive field is the ordinary
      smart pointer ([std::shared_ptr] / [crane::rc]); the recursive-field factory
      is the *runtime-arena-aware* one ([crane::arena_make_shared] /
-     [crane::rc<T>::make], see [CPParena_make]), which bump-allocates from the
+     [crane::rc<T>::make], see [Alloc_arena_scoped]), which bump-allocates from the
      current arena only when a [crane::arena_scope] is open at the call site and
      otherwise falls back to a plain heap allocation.  [arena_runtime_ok] just
      decides whether the generated factory contains that runtime branch at all:
@@ -5102,7 +5102,9 @@ let gen_ind_header_v2
             Sexpr (CPPdot_method_call (
               CPPvar _stack_id,
               Id.of_string "push_back",
-              [mk_call (CPPmk_shared (verbatim_ty self_ty)) [CPPmove e]]))
+              [ mk_call
+                  (CPPalloc (Alloc_heap, verbatim_ty self_ty))
+                  [CPPmove e] ]))
           in
           (* Substitute a mediator's actual type arguments into one of its
              declared constructor field types. *)
@@ -5832,14 +5834,14 @@ let gen_ind_header_v2
                 in
                 (* Scoped-arena redesign: a single unified factory call.  For
                    arena-eligible types this is the runtime-arena-aware factory
-                   ([CPParena_make]: crane::rc<T>::make / crane::arena_make_shared)
+                   ([Alloc_arena_scoped]: crane::rc<T>::make / crane::arena_make_shared)
                    which bump-allocates only when a scope is open and otherwise
                    is exactly make_shared/make_rc; NoArena / coinductive / mutual
                    types keep the plain factory. *)
                 if arena_runtime_ok then
-                  mk_call (CPParena_make inner) [converted]
+                  mk_call (CPPalloc (Alloc_arena_scoped, inner)) [converted]
                 else
-                  mk_call (CPPmk_shared inner) [converted]
+                  mk_call (CPPalloc (Alloc_heap, inner)) [converted]
               | _ when storage_ty = api_ty ->
                 if is_trivially_copyable_type api_ty then var
                 else CPPmove var
@@ -5893,10 +5895,11 @@ let gen_ind_header_v2
                 List.map
                   (fun a ->
                     match a with
-                    | CPPfun_call (CPPmk_shared inner, cargs)
-                    | CPPfun_call (CPParena_make inner, cargs) ->
+                    | CPPfun_call (CPPalloc (Alloc_heap, inner), cargs)
+                    | CPPfun_call
+                        (CPPalloc (Alloc_arena_scoped, inner), cargs) ->
                       (* make_rc_reusing takes the token first. *)
-                      mk_call (CPPmk_reuse inner)
+                      mk_call (CPPalloc (Alloc_reusing, inner))
                         (CPPmove (CPPvar tok_id) :: call_args cargs)
                     | other -> other )
                   ctor_args
