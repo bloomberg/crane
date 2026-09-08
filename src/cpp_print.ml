@@ -2103,6 +2103,7 @@ and pp_cpp_expr env args t =
   | CPPtypename_qualified (ty, id) ->
     pp_typename_member ty id
   (* Low-level constructs for reuse optimization *)
+  | CPPrt h -> str (Crane_rt.name h)
   | CPPraw code ->
     str
       (Str.global_replace

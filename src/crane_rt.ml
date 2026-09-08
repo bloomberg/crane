@@ -14,3 +14,11 @@ let any_cast = "crane_any_cast"
 let erase_fn = "crane_erase_fn"
 let small_vector = "crane::small_vector"
 let lazy_ = "crane::lazy"
+
+type helper =
+  | Make_rc_reusing_unchecked
+  | Reuse_step
+
+let name = function
+  | Make_rc_reusing_unchecked -> make_rc_reusing_unchecked
+  | Reuse_step -> reuse_step

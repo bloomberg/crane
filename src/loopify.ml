@@ -728,6 +728,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPdeclval _
    |CPPtypename_qualified _
    |CPPraw _
+   |CPPrt _
    |CPPbool _
    |CPPint _
    |CPPbrace_init
@@ -1371,9 +1372,6 @@ let compute_binder_provenance params body =
     | CPPfun_call (CPPvar f, {rev = [e]}) when Id.equal f id_crane_raw -> prov_of e
     (* [x.v()] / [std::get<K>(e)]: projections that stay inside [e]'s storage. *)
     | CPPfun_call (CPPmember (e, _), {rev = []}) | CPPmethod_call (e, _, []) -> prov_of e
-    | CPPfun_call (CPPraw s, {rev = [e]})
-      when String.length s >= 8 && String.sub s 0 8 = "std::get" ->
-      prov_of e
     | CPPstd_get (_, _, Some e) -> prov_of e
     | _ -> None
   in
@@ -3249,7 +3247,7 @@ let build_cell_call ?token ~vt_ret cell =
      | Some tok ->
        (* T is deduced from the token's [rc<T>]; the cell value is built from
           the constructor struct exactly as [make_rc] would build it. *)
-       CPPfun_call (CPPraw Crane_rt.make_rc_reusing_unchecked,
+       CPPfun_call (CPPrt Crane_rt.Make_rc_reusing_unchecked,
                     of_reversed ([cell_expr; tok]))   (* reversed: (token, cell) *)
      | None -> CPPfun_call (mk_shared_cell, of_reversed ([cell_expr])))
   | None ->
@@ -3442,7 +3440,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
       [ Sasgn (id_rstep, Some Tauto,
-               CPPfun_call (CPPraw Crane_rt.reuse_step,
+               CPPfun_call (CPPrt Crane_rt.Reuse_step,
                             of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
     | None -> []
   in

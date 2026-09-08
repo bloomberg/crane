@@ -381,7 +381,12 @@ and cpp_expr =
           only be asked inside an {!Sif_constexpr}. *)
   | CPPtypename_qualified of cpp_type * Id.t
       (** typename T::Nested *)
-  | CPPraw of string  (** Raw C++ expression code *)
+  | CPPraw of string
+      (** Raw C++ expression code, from a user-supplied extraction template or
+          a snippet Crane assembles as text.  A reference to the Crane runtime
+          is a {!CPPrt}, not one of these. *)
+  | CPPrt of Crane_rt.helper
+      (** A Crane runtime helper, named rather than spelled. *)
   | CPPbinop of string * cpp_expr * cpp_expr
       (** Binary operator for reuse optimization conditions *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr

@@ -53,3 +53,16 @@ val erase_fn : string
 val small_vector : string  (** [crane::small_vector<T>] *)
 
 val lazy_ : string  (** [crane::lazy<T>] *)
+
+(** {2 Helpers a MiniCpp expression may name} *)
+
+(** The runtime helpers that appear in the IR rather than only in the
+    printer.  A {!Minicpp.CPPrt} carries one of these instead of the helper's
+    spelling, so a call into the runtime cannot be built out of a string that
+    no runtime header defines. *)
+type helper =
+  | Make_rc_reusing_unchecked
+  | Reuse_step
+
+val name : helper -> string
+(** [name h] -- the C++ spelling of [h]. *)
