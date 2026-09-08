@@ -3120,10 +3120,10 @@ let gen_decl__inner n b ty =
       (f, env, tvars)
     | _ ->
     match b with
-    | MLaxiom _ ->
-      (* Axiom values become zero-arg functions that throw std::logic_error when
-         called. This avoids throwing during static initialization (which
-         terminates the program before main). *)
+    | _ when only_throws b ->
+      (* A body that only throws becomes a zero-arg function, so the throw
+         happens when the value is asked for rather than during static
+         initialisation (which terminates the program before main). *)
       let body_expr = gen_expr (empty_env ()) b in
       let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
       ( match temps with
@@ -3224,9 +3224,9 @@ let gen_decl_for_pp__inner n b ty =
     (Some f, e, tvars)
   | _ ->
   match b with
-  | MLaxiom _ ->
-    (* Axiom values: generate as zero-arg function so they throw when called,
-       not at static init time *)
+  | _ when only_throws b ->
+    (* A body that only throws: a zero-arg function, so it throws when called
+       and not at static init time. *)
     let body_expr = gen_expr (empty_env ()) b in
     let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
     let ds =
@@ -3324,8 +3324,8 @@ let gen_spec__inner n b ty =
       gen_sfun n b dom cod temps
     | _ ->
     match b with
-    | MLaxiom _ ->
-      (* Axiom values: generate as zero-arg function declaration *)
+    | _ when only_throws b ->
+      (* Throws when called, so: a zero-arg function declaration. *)
       let inner = Dfundef ([(n, [])], ty, [], [], false) in
       ( match temps with
       | [] -> (inner, empty_env ())

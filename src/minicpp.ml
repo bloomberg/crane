@@ -658,12 +658,45 @@ let to_reversed (l : 'a revd) : 'a list = l.rev
 let of_reversed (l : 'a list) : 'a revd = {rev = l}
 
 (** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
-let mk_call fn args = CPPfun_call (fn, List.rev args)
+let mk_call fn args =
+  match (fn, args) with
+  (* [fn] never returns, so the call never happens: it is that same abort,
+     and unlike a call it carries no return type of its own for the printer
+     to have to reconcile. *)
+  | CPPabort _, [] -> fn
+  | _ -> CPPfun_call (fn, List.rev args)
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
-    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]]. *)
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
+
+    A trailing return type is a by-value return, so a top-level [const] on it
+    says nothing and [-Wignored-qualifiers] rejects it.  Callers routinely
+    reach for the type of whatever the lambda stands in for -- a [const]
+    initialiser's own type, say -- so the qualifier is dropped here rather
+    than at each of them.  A [const] under a reference is a different claim
+    and is left alone.
+
+    A nullary, un-annotated lambda whose body only throws produces no value
+    and would deduce [void], so it is {!CPPabort} instead -- the same
+    never-returning expression, spelled with whatever return type the
+    printing context calls for. *)
 let mk_lambda params ret body ~by_value =
-  CPPlambda ({rev = List.rev params}, ret, body, by_value)
+  let ret =
+    match ret with Some (Tmod (TMconst, t)) -> Some t | r -> r
+  in
+  match (params, ret, body) with
+  | [], None, [Sthrow msg] -> CPPabort msg
+  | _ -> CPPlambda ({rev = List.rev params}, ret, body, by_value)
+
+(** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
+    immediately, capturing by reference.
+
+    A body that does nothing but throw yields no value, so a lambda around it
+    deduces [void] and cannot stand where a value is expected.  {!CPPabort} is
+    that same never-returning expression, and every printer position gives it
+    the return type the context calls for, so the throwing case reduces to
+    it. *)
+let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
 let call_args args = List.rev args

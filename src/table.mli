@@ -541,11 +541,13 @@ val add_cofixpoint : GlobRef.t -> unit
 (** Check if a definition is a cofixpoint. *)
 val is_cofixpoint : GlobRef.t -> bool
 
-(** Add axiom value (non-function axiom generated as zero-arg function). *)
-val add_axiom_value : GlobRef.t -> unit
+(** Record that a definition's body only throws, so it is spelled as a
+    zero-argument function: it must raise when called, not while the program
+    is still loading its statics. *)
+val add_throwing_value : GlobRef.t -> unit
 
-(** Check if a definition is an axiom value. *)
-val is_axiom_value : GlobRef.t -> bool
+(** Check whether a definition is one of {!add_throwing_value}'s. *)
+val is_throwing_value : GlobRef.t -> bool
 
 (** Add symbol. *)
 val add_symbol : GlobRef.t -> unit

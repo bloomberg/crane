@@ -220,6 +220,12 @@ val id_of_mlid : ml_ident -> Id.t
 (** Generate a temporary identifier from an ml_ident. *)
 val tmp_id : ml_ident -> ml_ident
 
+(** Whether a term does nothing but raise -- an unrealised axiom counts.  Binders in front of the raise do
+    not change that: nothing gets to be bound, because the raise comes first.
+    Such a definition is spelled as a zero-argument function, so that it
+    throws when called rather than at static initialisation. *)
+val only_throws : ml_ast -> bool
+
 (** {2 Lambda collection}
 
     [collect_lams MLlam(id1,...MLlam(idn,t)...)] returns the list [idn;...;id1]

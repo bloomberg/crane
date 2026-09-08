@@ -192,7 +192,7 @@ public:
 };
 
 struct DeepLiteralNesting {
-  static inline const List<Nat> big = []() -> const List<Nat> {
+  static inline const List<Nat> big = []() -> List<Nat> {
     auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
@@ -14011,7 +14011,7 @@ struct DeepLiteralNesting {
                                                                 std::move(
                                                                     _lit2521))))))))))))))));
   }();
-  static inline const Nat n = []() -> const Nat {
+  static inline const Nat n = []() -> Nat {
     auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(

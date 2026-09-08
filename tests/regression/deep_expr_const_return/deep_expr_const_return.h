@@ -10,7 +10,7 @@
 /// rejects under -Werror.
 struct DeepExprConstReturn {
   static uint64_t f(uint64_t n);
-  static inline const uint64_t test = []() -> const uint64_t {
+  static inline const uint64_t test = []() -> uint64_t {
     auto _lit0 = f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(
         f(f(f(f(f(f(f(f(f(f(f(f(f(f(UINT64_C(0))))))))))))))))))))))))))))))));
     auto _lit1 = f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(

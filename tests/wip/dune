@@ -123,17 +123,6 @@
   (deps class_method_partial_app.t.exe)
   (action (run ./class_method_partial_app.t.exe))))
 
-(subdir deep_expr_const_return
- (rule
-  (targets deep_expr_const_return.t.exe)
-  (deps DeepExprConstReturn.vo deep_expr_const_return.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} deep_expr_const_return.t.exe deep_expr_const_return.cpp deep_expr_const_return.t.cpp)))
- (rule
-  (alias runtest)
-  (deps deep_expr_const_return.t.exe)
-  (action (run ./deep_expr_const_return.t.exe))))
-
 (subdir dict_ctor_field
  (rule
   (targets dict_ctor_field.t.exe)
@@ -155,28 +144,6 @@
   (alias runtest)
   (deps drain_option_pair_field.t.exe)
   (action (run ./drain_option_pair_field.t.exe))))
-
-(subdir empty_inductive_elim
- (rule
-  (targets empty_inductive_elim.t.exe)
-  (deps EmptyInductiveElim.vo empty_inductive_elim.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} empty_inductive_elim.t.exe empty_inductive_elim.cpp empty_inductive_elim.t.cpp)))
- (rule
-  (alias runtest)
-  (deps empty_inductive_elim.t.exe)
-  (action (run ./empty_inductive_elim.t.exe))))
-
-(subdir factory_field_name_clash
- (rule
-  (targets factory_field_name_clash.t.exe)
-  (deps FactoryFieldNameClash.vo factory_field_name_clash.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} factory_field_name_clash.t.exe factory_field_name_clash.cpp factory_field_name_clash.t.cpp)))
- (rule
-  (alias runtest)
-  (deps factory_field_name_clash.t.exe)
-  (action (run ./factory_field_name_clash.t.exe))))
 
 (subdir imported_module_type_prime
  (rule

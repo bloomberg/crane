@@ -734,14 +734,12 @@ struct RocqBug14174 {
       return v;
     }
 
-    template <typename T1> static const T1 &except() {
-      static const T1 v = []() { throw std::logic_error("absurd case"); }();
-      return v;
+    template <typename T1> static T1 except() {
+      throw std::logic_error("absurd case");
     }
 
-    template <typename T1> static const T1 &absurd_set() {
-      static const T1 v = []() { throw std::logic_error("absurd case"); }();
-      return v;
+    template <typename T1> static T1 absurd_set() {
+      throw std::logic_error("absurd case");
     }
   };
 };

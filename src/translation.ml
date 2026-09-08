@@ -41,6 +41,16 @@ let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   if collides then ctor_struct_name ^ "_"
   else lc
 
+(** The C++ name of the inductive that [cref] constructs, or [""] when [cref]
+    is not a constructor reference.  {!factory_name_of_ctor} needs it, and a
+    caller holding only the constructor should not have to take the inductive
+    apart to supply it. *)
+let owning_type_name cref =
+  match cref with
+  | GlobRef.ConstructRef ((kn, i), _) ->
+    Common.pp_global_name Type (GlobRef.IndRef (kn, i))
+  | _ -> ""
+
 (** {2 Named Constructor Fields}
 
     Constructor struct fields in C++ are named using Rocq binder names when
@@ -129,17 +139,23 @@ let field_name_str_of_idx consarg_names k =
 let compute_field_name ~owner ctor_struct_name field_consarg_names
     bind_consarg_names _n_fields j =
   let base_str = field_name_str_of_idx field_consarg_names j in
-  let has_dup =
-    let rec check k =
+  (* A field shares its scope with the earlier fields and with the factory
+     method, which C++ will not let it have the same name as.  Both are
+     resolved the same way, by falling back to the indexed form. *)
+  let needs_index =
+    let rec dups_earlier k =
       if k >= j then false
       else if String.equal (field_name_str_of_idx field_consarg_names k) base_str
       then true
-      else check (k + 1)
+      else dups_earlier (k + 1)
     in
-    check 0
+    dups_earlier 0
+    || String.equal base_str
+         (factory_name_of_ctor ~type_name:(owning_type_name owner)
+            ctor_struct_name)
   in
   let field_str =
-    if has_dup then base_str ^ "_" ^ string_of_int j else base_str
+    if needs_index then base_str ^ "_" ^ string_of_int j else base_str
   in
   let field_id = Id.of_string field_str in
   register_ctor_field_name ~owner ctor_struct_name j field_id;
@@ -346,11 +362,7 @@ let is_void_ified_ref (r : GlobRef.t) : bool =
       [&]() { void_call(); return std::monostate{}; }()
     The call is executed for side effects; the IIFE returns the unit value. *)
 let wrap_void_call_as_value (call_expr : cpp_expr) : cpp_expr =
-  mk_call
-    (mk_lambda [] None
-       [Sexpr call_expr; Sreturn (Some (mk_tt_expr ()))]
-       ~by_value:false)
-    []
+  mk_iife None [Sexpr call_expr; Sreturn (Some (mk_tt_expr ()))]
 
 (** Check whether an ML function expression [f] in [MLapp(f, args)] would
     produce a void-returning call in C++.  Handles:
@@ -1681,7 +1693,7 @@ let rec collect_tvars_ast acc = function
     exception handlers or discard them when their result is unused. *)
 let rec ast_may_throw = function
   | MLaxiom _ | MLexn _ -> true
-  | MLglob (r, _) -> Table.is_axiom_value r
+  | MLglob (r, _) -> Table.is_throwing_value r
   | MLlam (_, _, body) -> ast_may_throw body
   | MLletin (_, _, a, b) -> ast_may_throw a || ast_may_throw b
   | MLcons (_, _, args) -> List.exists ast_may_throw args
@@ -2760,7 +2772,7 @@ and glob_is_nullary_function x =
   | Some ml_ty ->
     is_monadic_ml_type ml_ty
     || Table.is_cofixpoint x
-    || Table.is_axiom_value x
+    || Table.is_throwing_value x
     || ( match convert_ml_type_to_cpp_type (empty_env ()) [] ml_ty with
        | Tfun _ -> true
        | _ -> false )
@@ -4845,19 +4857,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
     with_escape_analysis a (fun () ->
-      CPPfun_call
-        ( mk_lambda [] None
-            (gen_stmts env (fun x -> Sreturn (Some x)) a) ~by_value:false,
-          [] ) )
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
        ...). *)
     with_escape_analysis a (fun () ->
-      CPPfun_call
-        ( mk_lambda [] None
-            (gen_stmts env (fun x -> Sreturn (Some x)) a) ~by_value:false,
-          [] ) )
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLapp (MLapp ((MLglob _ as g), inner_args), outer_args) ->
     (* Flatten nested MLapp when inner callee is a global reference. This arises
        from Rocq partial applications like: div_conq_split x f1 f2 l which
@@ -5186,7 +5192,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            struct field types.  Annotating here caused regressions for inner
            lambdas whose bodies return further closures (the inferred type
            became [std::function<...>] instead of the plain return type). *)
-        CPPlambda (of_reversed cpp_args, None, body_stmts, true) )
+        mk_lambda (List.rev cpp_args) None body_stmts ~by_value:true )
     in
     tctx.env_types <- saved_env_types;
     ( match filtered_args with
@@ -5546,7 +5552,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
           f
         else
-          CPPfun_call (f, []) )
+          mk_call f [] )
     | _ ->
       let ml_arity =
         match slot.expected_ml_ty with
@@ -5602,10 +5608,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       match find_type_opt x with
       | Some ml_ty when is_monadic_ml_type ml_ty -> true
       | Some _ when Table.is_cofixpoint x -> true
-      (* An axiom is emitted as a zero-parameter function unless it has C++
-         parameters of its own, in which case naming it is naming a
-         function. *)
-      | Some ml_ty when Table.is_axiom_value x ->
+      (* A definition that only throws is emitted as a zero-parameter function
+         unless it has C++ parameters of its own, in which case naming it is
+         naming a function. *)
+      | Some ml_ty when Table.is_throwing_value x ->
         ( match cpp_of_ml env ml_ty with
         | Tfun _ -> false
         | _ -> true )
@@ -6976,7 +6982,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       tctx.current_cpp_return_type <- Some Tvoid;
     let stmts = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
     tctx.current_cpp_return_type <- saved_ret;
-    CPPfun_call (mk_lambda [] (Some iife_ret) stmts ~by_value:false, [])
+    mk_iife (Some iife_ret) stmts
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
     let ids, r, pat, body = pv.(0) in
@@ -7257,31 +7263,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | None -> [Sasgn (renamed_name, Some decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
       in
-      CPPfun_call
-        ( mk_lambda [] None
-            (asgns
-             @ with_iife_return_type expected_ty (fun () ->
-                   gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body))
-            ~by_value:false,
-          [] ) )
+      mk_iife None
+        (asgns
+         @ with_iife_return_type expected_ty (fun () ->
+               gen_stmts ~slot env' (fun x -> Sreturn (Some x)) body)) )
     (* Known limitation: simultaneous pattern matching on record fields is not
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp -> gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _) as a ->
     with_escape_analysis a (fun () ->
       with_iife_return_type expected_ty (fun () ->
-        CPPfun_call
-          ( mk_lambda [] None
-              (gen_stmts env (fun x -> Sreturn (Some x)) a) ~by_value:false,
-            [] ) ) )
+        mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLfix _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)
     with_escape_analysis a (fun () ->
-      CPPfun_call
-        ( mk_lambda [] None
-            (gen_stmts env (fun x -> Sreturn (Some x)) a) ~by_value:false,
-          [] ) )
+      mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
   | MLfloat f -> CPPfloat f
@@ -8241,7 +8238,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           else
             [Sreturn (Some ret_expr)]
         in
-        CPPfun_call (mk_lambda [] (Some itree_ty) body ~by_value:false, [])
+        mk_iife (Some itree_ty) body
       (* Void-ified function reference passed as callback to polymorphic
          HOF where the ORIGINAL (non-substituted) parameter codomain is a
          type variable (not concrete unit).  The C++ definition uses a
@@ -9964,7 +9961,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | Some _ as v -> v
       | None -> iife_closure_return env typ pv body
     in
-    CPPfun_call (mk_lambda [] iife_ret_opt body ~by_value:false, [])
+    mk_iife iife_ret_opt body
   else
     (* Generate if/else-if pattern matching using [std::holds_alternative]
        and [std::get].  Produces an {!Smatch} node wrapped in an IIFE. *)
@@ -10225,15 +10222,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
             CPPint branch_idx )
       in
       let normal = [Smatch (branches, wildcard)] in
-      CPPfun_call
-        ( mk_lambda [] iife_ret_opt
-            [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)]
-            ~by_value:false,
-          [] )
+      mk_iife iife_ret_opt
+        [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)]
     | None ->
-      CPPfun_call
-        ( mk_lambda [] iife_ret_opt [Smatch (branches, wildcard)] ~by_value:false,
-          [] ) )
+      mk_iife iife_ret_opt [Smatch (branches, wildcard)] )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables for std::visit. *)
@@ -10902,7 +10894,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
       (* Non-return continuations (e.g. Sasgn for let-bindings) keep the
          IIFE to prevent name clashes between variables from separately
          inlined IIFEs in the same block scope. *)
-      [k (CPPfun_call (mk_lambda [] ret_ty body ~by_value:false, []))]
+      [k (mk_iife ret_ty body)]
     else
     (* Replace each [Sreturn(Some v)] in the IIFE body with [k(v)] and
        emit the body statements directly, eliminating the lambda wrapper.
@@ -10964,7 +10956,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
     in
     ( match replace_last_return body with
     | Some stmts -> stmts
-    | None -> [k (CPPfun_call (mk_lambda [] ret_ty body ~by_value:false, []))] )
+    | None -> [k (mk_iife ret_ty body)] )
   | expr -> [k expr]
 
 (** Escape analysis for local fixpoint variables.
@@ -11751,8 +11743,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         let reified_ty = mk_itree_type r_cpp in
         let ret_k v = Sreturn (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
         let body_stmts = gen_stmts env ret_k a in
-        let iife = CPPfun_call (
-          mk_lambda [] (Some reified_ty) body_stmts ~by_value:false, []) in
+        let iife = mk_iife (Some reified_ty) body_stmts in
         (* Shift owned vars and dead-after for the continuation *)
         let cont =
           with_shifted_move_tracking 1 (fun () -> gen_stmts ~slot env' k b)

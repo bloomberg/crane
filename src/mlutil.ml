@@ -1472,6 +1472,13 @@ let is_exn = function
   | MLexn _ -> true
   | _ -> false
 
+(** Whether [a] does nothing but raise.  Binders in front of the raise do not
+    change that: nothing gets to be bound, because the raise comes first. *)
+let rec only_throws = function
+  | MLexn _ | MLaxiom _ -> true
+  | MLlam (_, _, a) | MLmagic (_, a) -> only_throws a
+  | _ -> false
+
 (** Permutes a case expression with surrounding function applications when all
     branches are functions. *)
 let permut_case_fun br acc =

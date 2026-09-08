@@ -5,14 +5,12 @@
 #include <utility>
 
 struct SPropTest {
-  template <typename T1> static const T1 &sFalse_rect() {
-    static const T1 v = []() { throw std::logic_error("absurd case"); }();
-    return v;
+  template <typename T1> static T1 sFalse_rect() {
+    throw std::logic_error("absurd case");
   }
 
-  template <typename T1> static const T1 &sFalse_rec() {
-    static const T1 v = []() { throw std::logic_error("absurd case"); }();
-    return v;
+  template <typename T1> static T1 sFalse_rec() {
+    throw std::logic_error("absurd case");
   }
 
   template <typename A> struct Box {

@@ -11,19 +11,15 @@
 /// lambda's deduced return type is void, so it cannot initialise the value
 /// the elimination is supposed to produce.
 struct EmptyInductiveElim {
-  template <typename T1> static const T1 &void_rect() {
-    static const T1 v = []() { throw std::logic_error("absurd case"); }();
-    return v;
-  }
-
-  template <typename T1> static const T1 &void_rec() {
-    static const T1 v = []() { throw std::logic_error("absurd case"); }();
-    return v;
-  }
-
-  static inline const uint64_t absurd = []() {
+  template <typename T1> static T1 void_rect() {
     throw std::logic_error("absurd case");
-  }();
+  }
+
+  template <typename T1> static T1 void_rec() {
+    throw std::logic_error("absurd case");
+  }
+
+  static uint64_t absurd();
   static uint64_t g(const std::optional<std::any> &o);
   static inline const uint64_t test = g(std::optional<std::any>());
 };

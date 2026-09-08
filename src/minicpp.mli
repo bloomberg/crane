@@ -591,17 +591,26 @@ val to_reversed : 'a revd -> 'a list
     call's arguments, say -- and {!mk_call} or {!mk_lambda} everywhere else. *)
 val of_reversed : 'a list -> 'a revd
 
-(** [mk_call fn args] is a call of [fn] on [args] given in {e source} order. *)
+(** [mk_call fn args] is a call of [fn] on [args] given in {e source} order.
+    Calling a {!CPPabort} with no arguments is that same abort. *)
 val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
-    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]]. *)
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
+    A nullary, un-annotated lambda whose body only throws reduces to
+    {!CPPabort}, which the printer types from its context. *)
 val mk_lambda :
   (cpp_type * Id.t option) list ->
   cpp_type option ->
   cpp_stmt list ->
   by_value:bool ->
   cpp_expr
+
+(** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
+    immediately, capturing by reference.  A body that only throws reduces to
+    {!CPPabort}, which the printer types from its context; a lambda around it
+    would deduce [void] and could not stand where a value is expected. *)
+val mk_iife : cpp_type option -> cpp_stmt list -> cpp_expr
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
 val call_args : cpp_expr list -> cpp_expr list

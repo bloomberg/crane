@@ -3914,10 +3914,32 @@ let rec pp_cpp_decl env decl =
     written out.
 
     @param env  name environment for sub-expression and sub-type printers *)
+(** [pp_initialiser env ty e] prints [e] as the initialiser of something
+    declared with type [ty].
+
+    A {!CPPabort} never returns, so the type it should be spelled with comes
+    entirely from where it sits; here that is [ty].  Everywhere else the
+    expression printer already knows enough. *)
+and pp_initialiser env ty e =
+  match e with
+  | CPPabort msg ->
+    require_header "stdexcept";
+    (* The lambda returns by value, so a top-level [const] on [ty] says
+       nothing and [-Wignored-qualifiers] rejects it. *)
+    let ret_ty = match ty with Tmod (TMconst, t) -> t | t -> t in
+    str "([]() -> "
+    ++ pp_type ret_ty
+    ++ str " { throw "
+    ++ str (sn ()).logic_error
+    ++ str "(\""
+    ++ str (escape_cpp_string msg)
+    ++ str "\"); })()"
+  | _ -> pp_cpp_expr env [] e
+
 and pp_cpp_decl_raw env = function
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
     let args = pp_list pp_template_param temps in
-    let expr_pp = pp_cpp_expr env [] e in
+    let expr_pp = pp_initialiser env ty e in
     let req = pp_requires_of_tparams ~body:[Sreturn (Some e)] temps in
     let cstr_pp = match (req, cstr) with
       | None, None -> mt ()
@@ -4274,21 +4296,7 @@ and pp_cpp_decl_raw env = function
     ++ fnl ()
     ++ str "};"
   | Dasgn (id, ty, e) ->
-    (* Special handling for CPPabort: generate lambda with correct return
-       type *)
-    let expr_pp =
-      match e with
-      | CPPabort msg ->
-        require_header "stdexcept";
-        str "([]() -> "
-        ++ pp_type ty
-        ++ str " { throw "
-        ++ str (sn ()).logic_error
-        ++ str "(\""
-        ++ str (escape_cpp_string msg)
-        ++ str "\"); })()"
-      | _ -> pp_cpp_expr env [] e
-    in
+    let expr_pp = pp_initialiser env ty e in
     if render_ctx.rc_in_template
        || (render_ctx.rc_in_struct
            && Common.get_force_qualified_capitalization ()) then

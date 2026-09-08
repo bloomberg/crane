@@ -11,13 +11,13 @@
 struct FactoryFieldNameClash {
   struct a {
     // DATA
-    uint64_t a0;
+    uint64_t a0_0;
 
     // ACCESSORS
-    a clone() const { return {a0}; }
+    a clone() const { return {a0_0}; }
 
     // CREATORS
-    static a a0(uint64_t a0) { return {a0}; }
+    static a a0(uint64_t a0_0) { return {a0_0}; }
   };
 
   template <typename T1, typename F0>

@@ -2554,11 +2554,16 @@ let extract_constant access env kn cb =
          [forall (P : Prop), P -> nat] takes no C++ parameter -- and there is
          no harm in registering the rest: an axiom reference may throw
          whatever its arity. *)
-      add_axiom_value r;
+      add_throwing_value r;
       Dterm (r, MLaxiom (Constant.to_string kn), t) )
   in
   let mk_def c =
     let e, t = extract_std_constant env sg kn c typ in
+    (* A body that only raises returns no value, so it gets an axiom's
+       treatment for an axiom's reason: a zero-argument function that throws
+       when called, rather than a constant that throws at static
+       initialisation. *)
+    if Mlutil.only_throws e then add_throwing_value r;
     Dterm (r, e, t)
   in
   try
