@@ -137,7 +137,7 @@ type cpp_type =
   | Tshared_ptr of cpp_type
   | Tvoid
   | Ttodo (* placeholder for types inferred later by C++ (e.g. cache var decls) *)
-  | Tunknown (* unresolved type from ML AST — should not reach the printer *)
+  | Tunresolved (* no C++ type determined; should not reach the printer *)
   | Tany (* std::any - for type-erased storage of existential types *)
   | Ttyctor of cpp_type
     (* A type constructor named but not applied, as required at a template
@@ -552,7 +552,8 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   (* [Ttyctor] is a leaf: only its head is printed, so rewriting inside it
      (erasing an argument to [std::any], say) could only make it unprintable. *)
   | Ttyctor _
-  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown | Tany | Topaque
+  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunresolved | Tany
+  | Topaque
   | Tauto -> ty
 
 (** [curry_fun_type ty] respells every multi-parameter function type inside
@@ -613,7 +614,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tapply (t, ts) -> Tapply (go t, List.map go ts)
   | Tdecay t -> Tdecay (go t)
   | Ttyctor _ | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo
-  | Tunknown | Tany | Topaque | Tauto -> ty
+  | Tunresolved | Tany | Topaque | Tauto -> ty
 
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
@@ -635,7 +636,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
     exists_cpp_type p t
   | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
   | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
-  | Ttyctor _ | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunknown
+  | Ttyctor _ | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Ttodo | Tunresolved
   | Tany | Topaque | Tauto ->
     false
 

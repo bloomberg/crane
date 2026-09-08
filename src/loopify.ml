@@ -236,7 +236,7 @@ let rec is_value_type_ret = function
     For these types, copying is cheaper than indirecting through a reference,
     so frame-field bindings should remain copies rather than [const T&]. *)
 let rec is_trivially_copyable_type = function
-  | Tvoid | Tauto | Tunknown | Ttodo | Tany -> true
+  | Tvoid | Tauto | Tunresolved | Ttodo | Tany -> true
   | Tptr _ | Tref _ -> true
   | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) ->
     is_trivially_copyable_type t
@@ -270,7 +270,7 @@ let rec worthwhile_move_type = function
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t
-  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunknown | Ttodo | Tany | Topaque
+  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Ttodo | Tany | Topaque
   | Tdecltype _ ->
     false
 
@@ -2516,7 +2516,7 @@ let rec decompose_single_call check expr =
           {
             d with
             d_saved = e1 :: d.d_saved;
-            d_saved_types = Tunknown :: d.d_saved_types;
+            d_saved_types = Tunresolved :: d.d_saved_types;
             d_rebuild =
               (fun saved result ->
                 let e1' = List.hd saved in
@@ -2530,7 +2530,7 @@ let rec decompose_single_call check expr =
         Some
           {
             d_saved = [e1];
-            d_saved_types = [Tunknown];
+            d_saved_types = [Tunresolved];
             d_rec_args = cs.cs_args;
             d_rebuild =
               (fun saved result -> CPPbinop (op, List.hd saved, result));
@@ -2546,7 +2546,7 @@ let rec decompose_single_call check expr =
           {
             d with
             d_saved = d.d_saved @ [e2];
-            d_saved_types = d.d_saved_types @ [Tunknown];
+            d_saved_types = d.d_saved_types @ [Tunresolved];
             d_rebuild =
               (fun saved result ->
                 let n = List.length d.d_saved in
@@ -2561,7 +2561,7 @@ let rec decompose_single_call check expr =
         Some
           {
             d_saved = [e2];
-            d_saved_types = [Tunknown];
+            d_saved_types = [Tunresolved];
             d_rec_args = cs.cs_args;
             d_rebuild =
               (fun saved result -> CPPbinop (op, result, List.hd saved));
@@ -2584,7 +2584,7 @@ let rec decompose_single_call check expr =
           d with
           d_saved = d.d_saved @ margs;
           d_saved_types =
-            d.d_saved_types @ List.map (fun _ -> Tunknown) margs;
+            d.d_saved_types @ List.map (fun _ -> Tunresolved) margs;
           d_rebuild =
             (fun saved result ->
               let d_saved = list_take n_d saved in
@@ -2597,7 +2597,7 @@ let rec decompose_single_call check expr =
       Some
         {
           d_saved = margs;
-          d_saved_types = List.map (fun _ -> Tunknown) margs;
+          d_saved_types = List.map (fun _ -> Tunresolved) margs;
           d_rec_args = cs.cs_args;
           d_rebuild =
             (fun saved result -> CPPmethod_call (result, method_id, saved));
@@ -2646,7 +2646,7 @@ and decompose_funcall check f args =
           d with
           d_saved = f_extra @ non_rec_args @ d.d_saved;
           d_saved_types =
-            List.map (fun _ -> Tunknown) (f_extra @ non_rec_args)
+            List.map (fun _ -> Tunresolved) (f_extra @ non_rec_args)
             @ d.d_saved_types;
           d_rebuild =
             (fun saved result ->
@@ -2674,7 +2674,7 @@ and decompose_funcall check f args =
         {
           d_saved = f_extra @ non_rec_args;
           d_saved_types =
-            List.map (fun _ -> Tunknown) (f_extra @ non_rec_args);
+            List.map (fun _ -> Tunresolved) (f_extra @ non_rec_args);
           d_rec_args = cs.cs_args;
           d_rebuild =
             (fun saved result ->
@@ -3758,7 +3758,7 @@ type saved_slot = {
   ss_field : Id.t;
       (** field name in the frame struct (see {!derive_field_names}) *)
   ss_ty : cpp_type;
-      (** the declared type, or [Tunknown] when the frame was built before
+      (** the declared type, or [Tunresolved] when the frame was built before
           the type was known, in which case {!ss_expr} recovers it *)
   ss_expr : cpp_expr;  (** the saved expression *)
 }
@@ -3904,7 +3904,7 @@ let rec extract_fwd_ref_tvar = function
   | _ -> None
 
 (** Infer the C++ type of a saved CPP expression bottom-up.
-    Returns [Tunknown] when the type cannot be determined.
+    Returns [Tunresolved] when the type cannot be determined.
     Handles the common cases: variable lookups, smart-pointer derefs,
     arithmetic inlined operators (detected by their format-string pattern),
     and lambdas (return type inferred from body [Sreturn] statements).
@@ -3917,7 +3917,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPvar id ->
       ( match lookup_var_type env id with
       | Some ty -> strip_ref_type ty
-      | None -> Tunknown )
+      | None -> Tunresolved )
     | CPPmove inner -> infer_saved_type tparams env inner
     | CPPderef inner ->
       (* Peel the qualifiers off the pointer before taking its pointee: the
@@ -3937,7 +3937,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
          pattern [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda
          param) is, and the result type matches the param type. *)
       let tl = infer_saved_type tparams env lhs in
-      if tl <> Tunknown then tl
+      if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
     | CPPfun_call (CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
       (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
@@ -3946,7 +3946,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       ( match inner_ty with
       | Tptr t -> Tptr t
       | Tshared_ptr t -> Tptr t
-      | _ -> Tunknown )
+      | _ -> Tunresolved )
     | CPPfun_call (CPPvar f, {rev = _}) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
@@ -3956,19 +3956,19 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
         | Some tvar_id ->
           ( match lookup_tparam_return_type tparams tvar_id with
           | Some cod -> cod
-          | None -> Tunknown )
-        | None -> Tunknown )
-      | None -> Tunknown )
+          | None -> Tunresolved )
+        | None -> Tunresolved )
+      | None -> Tunresolved )
     | CPPfun_call (CPPnamespace (_, CPPvar f), {rev = _}) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
-      | _ -> Tunknown )
+      | _ -> Tunresolved )
     | CPPfun_call (CPPlambda (_, Some ret_ty, _, _), {rev = _}) -> ret_ty
     | CPPfun_call (CPPglob (_, _, Some ci), {rev = args}) when ci.ci_inline <> None ->
       (* Inlined custom constant (e.g. Nat.add, Nat.mul).  Only apply the
          "same-type-as-arg" heuristic for simple arithmetic binary operators
          of the form "(%a0 OP %a1)".  Other inline functions (e.g. make_pair)
-         change the type and must fall through to Tunknown. *)
+         change the type and must fall through to Tunresolved. *)
       let fmt = match ci.ci_inline with Some s -> s | None -> "" in
       let is_arithmetic_binop =
         (* Match patterns like "(%a0 + %a1)", "(%a0 * %a1)", etc.
@@ -3987,14 +3987,14 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
           List.filter_map
             (fun arg ->
               let t = strip_ref_and_const_type (infer_saved_type tparams env arg) in
-              if t = Tunknown then None else Some t)
+              if t = Tunresolved then None else Some t)
             args
         in
         ( match known_types with
-        | [] -> Tunknown
+        | [] -> Tunresolved
         | first :: rest when List.for_all (( = ) first) rest -> first
-        | _ -> Tunknown )
-      else Tunknown
+        | _ -> Tunresolved )
+      else Tunresolved
     | CPPfun_call (CPPglob (r, _, _), {rev = args})
       when List.mem
              (Id.to_string (Label.to_id (Common.label_of_r r)))
@@ -4009,11 +4009,11 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
         List.find_map
           (fun a ->
             match strip_ref_and_const_type (infer_saved_type tparams env a) with
-            | Tunknown | Tauto | Tfun _ -> None
+            | Tunresolved | Tauto | Tfun _ -> None
             | t -> Some t )
           args
       in
-      (match concrete_arg with Some t -> t | None -> Tunknown)
+      (match concrete_arg with Some t -> t | None -> Tunresolved)
     | CPPfun_call (CPPglob (r, tys, _), {rev = args})
       when String.equal
              (Id.to_string (Label.to_id (Common.label_of_r r)))
@@ -4034,8 +4034,8 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       in
       ( match receiver with
       | Some (cr, vs) -> Tglob (cr, [List.nth tys (List.length tys - 1)], vs)
-      | None -> Tunknown )
-    | CPPfun_call (CPPglob _, {rev = _}) -> Tunknown
+      | None -> Tunresolved )
+    | CPPfun_call (CPPglob _, {rev = _}) -> Tunresolved
     | CPPfun_call (CPPmember (inner, id), {rev = []})
       when String.equal (Id.to_string id) "get" ->
       (* shared_ptr::get() returns a raw pointer.
@@ -4044,8 +4044,8 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       ( match inner_ty with
       | Tptr t -> Tptr t  (* already a pointer *)
       | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
-      | _ -> Tunknown )
-    | CPPfun_call _ -> Tunknown
+      | _ -> Tunresolved )
+    | CPPfun_call _ -> Tunresolved
     | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
       let param_types = List.map fst (to_reversed params) in
@@ -4063,25 +4063,25 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
               env (to_reversed params)
           in
           let rec find_return_type = function
-            | [] -> Tunknown
+            | [] -> Tunresolved
             | Sreturn (Some e) :: _ -> infer_saved_type tparams lam_env e
             | Sif (_, then_body, else_body) :: rest ->
               let t = find_return_type then_body in
-              if t <> Tunknown then t
+              if t <> Tunresolved then t
               else
                 let t = find_return_type else_body in
-                if t <> Tunknown then t else find_return_type rest
+                if t <> Tunresolved then t else find_return_type rest
             | Sblock stmts :: rest ->
               let t = find_return_type stmts in
-              if t <> Tunknown then t else find_return_type rest
+              if t <> Tunresolved then t else find_return_type rest
             | _ :: rest -> find_return_type rest
           in
           find_return_type body
       in
-      if ret_ty = Tunknown then Tunknown
+      if ret_ty = Tunresolved then Tunresolved
       else Tfun (List.map strip_ref_and_const_type param_types,
                  strip_ref_and_const_type ret_ty)
-    | _ -> Tunknown
+    | _ -> Tunresolved
   in
   result
 
@@ -4354,7 +4354,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
       in
       match ty with
       | Tshared_ptr _ -> Sasgn (id, Declare ty, CPPmove field_expr)
-      | Tunknown -> Sasgn (id, Existing, field_expr)
+      | Tunresolved -> Sasgn (id, Existing, field_expr)
       | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
         Sasgn (id, Declare (Tref (Tmod (TMconst, inner))), field_expr)
       | t when not (is_trivially_copyable_type t) ->
@@ -4648,7 +4648,7 @@ let build_scrutinee_handler
     List.mapi
       (fun i id ->
         let ty = List.nth saved_types i in
-        let tgt = if ty = Tunknown then Existing else Declare ty in
+        let tgt = if ty = Tunresolved then Existing else Declare ty in
         let field_expr =
           frame_field_named field_names i
         in
@@ -5439,7 +5439,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
           List.mapi
             (fun i id ->
               let ty = List.nth lambda_types i in
-              let tgt = if ty = Tunknown then Existing else Declare ty in
+              let tgt = if ty = Tunresolved then Existing else Declare ty in
               Sasgn (id, tgt,
                      frame_field_named all_field_names (n_d + i)))
             lambda_fvs
@@ -7221,10 +7221,10 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
           | _ -> Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
         else
           match ty with
-          | Tunknown | Tauto ->
+          | Tunresolved | Tauto ->
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | Tunknown | Tauto ->
+            | Tunresolved | Tauto ->
               (* For lambda expressions whose return type can't be inferred
                  (e.g., a method call like a1_value.length()), generate
                  std::function<decltype(body_ret_expr)(params)> instead of

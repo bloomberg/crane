@@ -2251,7 +2251,7 @@ let wrap_param_by_ownership ?(is_owned = false) cpp_ty =
 (** Check if the return type of an ML function type is erased — i.e., it
     becomes [std::any] in C++.  This covers three cases:
     - Promoted type vars (erased carrier projections like [Obj C]).
-    - [Tunknown] arising from dependent type families.
+    - [Tunresolved] arising from dependent type families.
     - Erased type constants — non-promoted type-valued record fields
       (e.g. [Hom : Obj -> Obj -> Type] in [PreCategory]) registered during
       extraction via {!Table.add_erased_type_const}. *)
@@ -2381,7 +2381,7 @@ let rec clean_self_ns t =
 
 (** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
-    inserted around it.  Used to recover a type argument left [Tunknown] by
+    inserted around it.  Used to recover a type argument left [Tunresolved] by
     extraction. *)
 let rec ml_ast_type_hint = function
   | Miniml.MLcons (t, _, _) -> Some t
@@ -3404,11 +3404,11 @@ and build_template_params ?curry env tvars tys =
 
 and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
     r ts =
-  (* Extraction leaves a type argument [Tunknown] where it could not read the
+  (* Extraction leaves a type argument [Tunresolved] where it could not read the
      type off the term -- the element of [Some 1] passed at a parameter of an
      inductive that applies its own higher-kinded parameter ([F nat]).  The
      constructor's own field types say which type argument each value argument
-     pins down, so recover it from the argument.  Left as [Tunknown] the
+     pins down, so recover it from the argument.  Left as [Tunresolved] the
      argument erases to [std::any], and the erased instantiation
      ([optional<std::any>]) does not match the field's declared one.
 
@@ -5858,7 +5858,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None -> tys_orig )
               | _ -> tys_orig
             in
-            (* Resolve Tunknown from element types *)
+            (* Resolve Tunresolved from element types *)
             let has_unknown =
               List.exists
                 (fun (t : ml_type) ->
@@ -5932,7 +5932,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | None -> tys )
             | _ -> tys
           in
-          (* Resolve Tunknown type args from constructor element types. For
+          (* Resolve Tunresolved type args from constructor element types. For
              cons(elem, rest), elem's type provides the list's type param. *)
           let has_unknown =
             List.exists
@@ -7626,7 +7626,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
          field from a [PreStableCategory] record.
          Look up the record's field types from the case type rather than
-         relying on branch binding types (which may be Tunknown). *)
+         relying on branch binding types (which may be Tunresolved). *)
       let (binds, _, _, br_body) = branches.(0) in
       ( match br_body with
       | MLrel j when j >= 1 && j <= List.length binds ->
@@ -9080,7 +9080,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     (* A callee is only callable through the canonical adapter when nothing
        with a C++ call operator is left of its type -- which is what
        [std::any] means here.  The ML type may say so outright ([Tdummy],
-       [Tunknown], a bare [Tvar]) or only once converted: a type-level
+       [Tunresolved], a bare [Tvar]) or only once converted: a type-level
        [Fixpoint] applied to an argument is a perfectly concrete [Tglob] in
        MiniML and still lands on a [using sem = std::any] alias in C++. *)
     let erases_to_any ty =
@@ -9233,7 +9233,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         (CPPfun_call (gen_expr env f, of_reversed primary), of_reversed excess)
     else
       (* When the callee is a local variable whose ML type is a bare type
-         variable (Tvar/Tvar'/Tunknown), its C++ type is std::any.  std::any
+         variable (Tvar/Tvar'/Tunresolved), its C++ type is std::any.  std::any
          is not callable, so we must wrap it with std::any_cast to recover the
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
@@ -9949,13 +9949,13 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | None -> typ )
     | _ -> typ
   in
-  (* When the type is still unresolved (Tunknown / Tdummy / non-Tglob), recover
-     the inductive from the first branch's constructor pattern -- a constructor
-     determines the inductive it belongs to, so this is sound wherever the
-     scrutinee's own type failed to resolve.  It happens for a dependent field
-     stored as [std::any] (sigT's second projection) and for the body of an
-     instance method, which is extracted against the class's erased carrier and
-     so carries no type for the scrutinee at all. *)
+  (* When the type is still unresolved (Tunresolved / Tdummy / non-Tglob),
+     recover the inductive from the first branch's constructor pattern -- a
+     constructor determines the inductive it belongs to, so this is sound
+     wherever the scrutinee's own type failed to resolve.  It happens for a
+     dependent field stored as [std::any] (sigT's second projection) and for
+     the body of an instance method, which is extracted against the class's
+     erased carrier and so carries no type for the scrutinee at all. *)
   let scrut_is_mlmagic_case = match t with MLmagic (_, _) -> true | _ -> false in
   let typ =
     match typ with
@@ -12805,7 +12805,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     match ids with
     | (x, ml_ty) :: _ ->
       let ty = cpp_of_ml env ml_ty in
-      if ty == Tvoid || ty == Tunknown || ml_type_is_unit ml_ty then
+      if ty == Tvoid || ty == Tunresolved || ml_type_is_unit ml_ty then
         (* Unit/void bind result: execute the action for side effects,
            then declare the variable as Unit::e_TT so the continuation
            can reference it if needed. *)
@@ -12867,7 +12867,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let cpp_ty =
               cpp_of_ml env ty
             in
-            if cpp_ty = Tvoid || cpp_ty = Tunknown || ml_type_is_unit ty then
+            if cpp_ty = Tvoid || cpp_ty = Tunresolved || ml_type_is_unit ty then
               None
             else
               Some cpp_ty

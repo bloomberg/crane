@@ -306,7 +306,7 @@ let gen_record_cpp name fields ind =
       List.combine fields field_types
     else
       (* Length mismatch (e.g. erased/dummy fields dropped from one side):
-         pair each field with Tunknown rather than crash, mirroring the
+         pair each field with Tunresolved rather than crash, mirroring the
          fallback in [gen_typeclass_cpp]. *)
       List.map (fun f -> (f, Miniml.Tunknown)) fields
   in
@@ -1217,7 +1217,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       let fields_with_types =
         if List.length fields = List.length field_types then
           List.combine fields field_types
-        else (* Fallback: pair fields with Tunknown if lengths don't match *)
+        else (* Fallback: pair fields with Tunresolved if lengths don't match *)
           List.map (fun f -> (f, Miniml.Tunknown)) fields
       in
       let method_pairs =
@@ -2035,9 +2035,9 @@ let gen_dfun n b cty ty temps =
     | _ -> body_params
   in
   let ids = unify_param_types ids sig_types_for_ids in
-  (* Replace Tunknown in body param types with corresponding sig types. This
+  (* Replace Tunresolved in body param types with corresponding sig types. This
      handles promoted dependent records where the lambda's type annotation has
-     Tunknown for the erased carrier, while the function signature has
+     Tunresolved for the erased carrier, while the function signature has
      Tglob(m_carrier, []) which can be resolved by
      convert_ml_type_to_cpp_type. *)
   let rec merge_unknown body_ty sig_ty =
@@ -3067,7 +3067,7 @@ let rec replace_erased_proj_refs
   | Miniml.Tunknown -> Miniml.Tvar' 1
   | _ -> t
 
-(** Replace Tunknown in all type annotations within an ML AST body with the
+(** Replace Tunresolved in all type annotations within an ML AST body with the
     GlobRef of the first promoted type var (the carrier). This allows
     convert_ml_type_to_cpp_type to detect it as a promoted type var.
     [carrier_refs] is a list of (GlobRef.t * int) from erased_proj_tvar_map. *)
@@ -3186,7 +3186,7 @@ let gen_decl_for_pp__inner n b ty =
   (* Expand TC-typed carrier refs: when a carrier ref points to a
      typeclass-typed promoted field (e.g., base_category : PreCategory),
      replace it with the nested TC's Type-valued promoted vars (e.g., Obj).
-     This ensures rewrite_ml_ast_types replaces Tunknown with the actual
+     This ensures rewrite_ml_ast_types replaces Tunresolved with the actual
      type-level field rather than the struct-level typeclass field. *)
   let carrier_refs =
     match ty with
@@ -3263,7 +3263,7 @@ let gen_decl_for_pp n b ty =
 let gen_dfun_def__inner n b ty =
   (* Simplify the ML type to resolve metavariables before converting to C++ *)
   let ty = type_simpl ty in
-  (* Rewrite Tunknown in body types to promoted carrier refs. This allows
+  (* Rewrite Tunresolved in body types to promoted carrier refs. This allows
      convert_ml_type_to_cpp_type to resolve them correctly. *)
   let carrier_refs = get_erased_proj_map_from_type ty in
   let b = rewrite_ml_ast_types carrier_refs b in
@@ -3377,7 +3377,7 @@ let gen_spec__inner n b ty =
              concrete type, so no MLmagic is generated. *)
       let is_concrete_target =
         match ty with
-        | Tany | Tvar _ | Tunknown | Tvoid | Ttodo | Tauto -> false
+        | Tany | Tvar _ | Tunresolved | Tvoid | Ttodo | Tauto -> false
         | Tglob (g, _, _) when Table.is_erased_type_const g -> false
         | _ -> not (type_is_erased ty)
       in

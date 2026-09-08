@@ -117,7 +117,7 @@ let rec ml_codomain = function
 
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value
-    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunknown], which
+    arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunresolved], which
     no caller can mistake for a function type. *)
 let rec ml_drop_arrows n t =
   if n <= 0 then t
@@ -201,7 +201,7 @@ let filter_value_types = List.filter (fun t -> not (isTdummy t))
 (** Test whether the codomain of an ML function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
 
-    A [Tvar], [Tvar'], or [Tunknown] codomain erases to [std::any] only when
+    A [Tvar], [Tvar'], or [Tunresolved] codomain erases to [std::any] only when
     at least one [Tdummy Ktype] was encountered while traversing the domain.
     That marker identifies a higher-rank, universally-quantified function (e.g.
     [forall A : Type, A -> A]) whose C++ encoding stores arguments and results
@@ -412,7 +412,7 @@ and resolve_tvars_to_any ty =
   map_cpp_type (function Tvar (_, None) -> Tany | t -> t) ty
 
 (** [is_ml_erased_ty ty] — true if [ty] represents an erased position in the
-    ML AST: a bare type variable, [Tunknown], or an empty [Tmeta].  These
+    ML AST: a bare type variable, [Tunresolved], or an empty [Tmeta].  These
     arise from type-level parameters that were erased during extraction
     and correspond to [std::any] in the C++ representation. *)
 and is_ml_erased_ty = function
@@ -545,8 +545,8 @@ let filter_erased_type_args ?(preserve_positions = false) tys =
   else if List.exists prints_as_any tys then [] else tys
 
 (** Check if an ML type contains any unresolved type variable or placeholder.
-    Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to guard
-    Tvar substitution: we only substitute with fully concrete types. *)
+    Returns true for Tvar, Tvar', unresolved Tmeta, and Tunknown. Used to
+    guard Tvar substitution: we only substitute with fully concrete types. *)
 let rec has_tvar = function
   | Miniml.Tvar _ | Miniml.Tvar' _ -> true
   | Miniml.Tunknown -> true
@@ -635,7 +635,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map tvar_erase_type tys)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
-  | _ -> ty (* Tvoid, Ttodo, Tunknown, Tany *)
+  | _ -> ty (* Tvoid, Ttodo, Tunresolved, Tany *)
 
 (** Erase a type argument down to its outermost applied type constructors,
     boxing every leaf: [List<Nat>] becomes [List<std::any>] and a bare [Nat]

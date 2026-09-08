@@ -136,7 +136,11 @@ type cpp_type =
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
   | Tvoid  (** void type *)
   | Ttodo  (** Placeholder during development *)
-  | Tunknown  (** Type inference failed *)
+  | Tunresolved
+      (** No C++ type was determined for this position.  Distinct from
+          {!Miniml.Tunknown}, which is the ML-level bottom: this one is
+          produced by the back end, notably by {!Loopify} when a call frame
+          is built before the types of the values it saves are known. *)
   | Tany  (** std::any for type-erased storage of existentials *)
   | Ttyctor of cpp_type
       (** A type constructor named but not applied, as required at a template
