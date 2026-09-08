@@ -1404,7 +1404,7 @@ let mk_itree_ret_for_value r_cpp r_ml v =
     [shared_ptr<ITree<R>>] so the tree can be passed as a first-class value.
     Does nothing in sequential mode or when [ml_ty] is not monadic. *)
 let reify_monadic_param_type ml_ty cpp_ty =
-  if is_monadic_ml_type ml_ty && tctx.itree_mode = Reified then begin
+  if is_monadic_ml_type ml_ty && (!tctx).itree_mode = Reified then begin
     Table.require_itree_header ();
     let r_ty =
       match cpp_ty with
@@ -1529,40 +1529,40 @@ let return_captures_by_value stmts =
     multiple nesting levels (lambdas, let-in expressions, top-level functions)
     and each level has its own set of safe bindings. *)
 let with_escape_analysis body f =
-  let saved_depth = tctx.current_letin_depth in
-  let saved_dead = tctx.move_dead_after in
-  let saved_owned = tctx.move_owned_vars in
-  let saved_nparams = tctx.move_n_params in
-  let saved_match_counter = tctx.match_param_counter in
-  let saved_cs_counter = tctx.cs_counter in
-  let saved_return_type = tctx.current_cpp_return_type in
+  let saved_depth = (!tctx).current_letin_depth in
+  let saved_dead = (!tctx).move_dead_after in
+  let saved_owned = (!tctx).move_owned_vars in
+  let saved_nparams = (!tctx).move_n_params in
+  let saved_match_counter = (!tctx).match_param_counter in
+  let saved_cs_counter = (!tctx).cs_counter in
+  let saved_return_type = (!tctx).current_cpp_return_type in
   (* A lambda body is not part of the constructor expression that encloses it.
      Both flags make an unresolvable type variable erase to [std::any], which
      is right for a constructor's own arguments and wrong for the body of a
      lambda that merely happens to be one -- the lambda has its own binders
      and its own slots. *)
-  let saved_in_ctor = tctx.in_constructor_expr in
-  tctx.in_constructor_expr <- false;
-  tctx.current_letin_depth <- 0;
-  tctx.move_dead_after <- Escape.IntSet.empty;
-  tctx.move_owned_vars <- Escape.IntSet.empty;
-  tctx.move_n_params <- 0;
-  tctx.match_param_counter <- 0;
-  tctx.cs_counter <- 0;
+  let saved_in_ctor = (!tctx).in_constructor_expr in
+  tctx := { !tctx with in_constructor_expr = false };
+  tctx := { !tctx with current_letin_depth = 0 };
+  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
+  tctx := { !tctx with move_owned_vars = Escape.IntSet.empty };
+  tctx := { !tctx with move_n_params = 0 };
+  tctx := { !tctx with match_param_counter = 0 };
+  tctx := { !tctx with cs_counter = 0 };
   (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
      outer function returns void, gen_stmts generates bare 'return;' for tt,
      but IIFE bodies return their own type (e.g. monostate), not void. *)
-  ( if tctx.current_cpp_return_type = Some Tvoid then
-      tctx.current_cpp_return_type <- None );
+  ( if (!tctx).current_cpp_return_type = Some Tvoid then
+      tctx := { !tctx with current_cpp_return_type = None } );
   let result = f () in
-  tctx.current_letin_depth <- saved_depth;
-  tctx.move_dead_after <- saved_dead;
-  tctx.move_owned_vars <- saved_owned;
-  tctx.move_n_params <- saved_nparams;
-  tctx.match_param_counter <- saved_match_counter;
-  tctx.cs_counter <- saved_cs_counter;
-  tctx.current_cpp_return_type <- saved_return_type;
-  tctx.in_constructor_expr <- saved_in_ctor;
+  tctx := { !tctx with current_letin_depth = saved_depth };
+  tctx := { !tctx with move_dead_after = saved_dead };
+  tctx := { !tctx with move_owned_vars = saved_owned };
+  tctx := { !tctx with move_n_params = saved_nparams };
+  tctx := { !tctx with match_param_counter = saved_match_counter };
+  tctx := { !tctx with cs_counter = saved_cs_counter };
+  tctx := { !tctx with current_cpp_return_type = saved_return_type };
+  tctx := { !tctx with in_constructor_expr = saved_in_ctor };
   result
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
@@ -1574,10 +1574,10 @@ let with_escape_analysis body f =
     cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
     caller then projects with [.first.first]. *)
 let with_iife_return_type expected_ty f =
-  let saved = tctx.current_cpp_return_type in
-  tctx.current_cpp_return_type <- expected_ty;
+  let saved = (!tctx).current_cpp_return_type in
+  tctx := { !tctx with current_cpp_return_type = expected_ty };
   let result = f () in
-  tctx.current_cpp_return_type <- saved;
+  tctx := { !tctx with current_cpp_return_type = saved };
   result
 
 (** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
@@ -1609,27 +1609,39 @@ let with_iife_return_type expected_ty f =
 let with_shifted_move_tracking n ?(clear_dead = false) ?add_owned
     ?(add_owned_set = Escape.IntSet.empty)
     ?(exclude_owned_set = Escape.IntSet.empty) ?exclude_owned f =
-  let saved_owned = tctx.move_owned_vars in
-  let saved_dead = tctx.move_dead_after in
-  tctx.move_owned_vars <-
-    Escape.IntSet.diff
-      (Escape.IntSet.map (fun i -> i + n) tctx.move_owned_vars)
-      exclude_owned_set;
+  let saved_owned = (!tctx).move_owned_vars in
+  let saved_dead = (!tctx).move_dead_after in
+  tctx :=
+    { !tctx with
+      move_owned_vars =
+          Escape.IntSet.diff
+            (Escape.IntSet.map (fun i -> i + n) (!tctx).move_owned_vars)
+            exclude_owned_set };
   ( match add_owned with
-  | Some idx -> tctx.move_owned_vars <- Escape.IntSet.add idx tctx.move_owned_vars
+  | Some idx ->
+    tctx :=
+      { !tctx with
+        move_owned_vars = Escape.IntSet.add idx (!tctx).move_owned_vars }
   | None -> () );
-  tctx.move_owned_vars <-
-    Escape.IntSet.union tctx.move_owned_vars add_owned_set;
+  tctx :=
+    { !tctx with
+      move_owned_vars =
+          Escape.IntSet.union (!tctx).move_owned_vars add_owned_set };
   ( match exclude_owned with
-  | Some idx -> tctx.move_owned_vars <- Escape.IntSet.remove idx tctx.move_owned_vars
+  | Some idx ->
+    tctx :=
+      { !tctx with
+        move_owned_vars = Escape.IntSet.remove idx (!tctx).move_owned_vars }
   | None -> () );
-  tctx.move_dead_after <-
-    ( if clear_dead then Escape.IntSet.empty
-      else Escape.IntSet.map (fun i -> i + n) tctx.move_dead_after );
+  tctx :=
+    { !tctx with
+      move_dead_after =
+          ( if clear_dead then Escape.IntSet.empty
+            else Escape.IntSet.map (fun i -> i + n) (!tctx).move_dead_after ) };
   Fun.protect
     ~finally:(fun () ->
-      tctx.move_owned_vars <- saved_owned;
-      tctx.move_dead_after <- saved_dead )
+      tctx := { !tctx with move_owned_vars = saved_owned };
+      tctx := { !tctx with move_dead_after = saved_dead } )
     f
 
 (* ============================================================================
@@ -2511,7 +2523,7 @@ let rec convert_ml_type_to_cpp_type
       (match
         List.find_opt
           (fun (n, _) -> Id.equal n var_id)
-          tctx.promoted_var_map
+          (!tctx).promoted_var_map
       with
       | Some (_, resolved) -> resolved
       | None ->
@@ -2520,7 +2532,7 @@ let rec convert_ml_type_to_cpp_type
            type aliases are always std::any and non-Type promoted vars (like
            [base_category]) have no alias at all.  Otherwise keep the marker
            for concept generation and signature printing. *)
-        if tctx.in_constructor_expr then Tany
+        if (!tctx).in_constructor_expr then Tany
         else Tpromoted var_id )
     | None -> Tany )
   | Tglob (g, _, _) when Table.is_value_dep_type_scheme g ->
@@ -2852,7 +2864,7 @@ and param_expected_cpp_ty env param_tys i =
     more than the erased annotation it would replace. *)
 and promoted_tys_of_arity n =
   match List.filter_map (fun (_, t) -> if prints_as_any t then None else Some t)
-          tctx.promoted_var_map
+          (!tctx).promoted_var_map
   with
   | tys when List.length tys = n -> Some tys
   | _ -> None
@@ -3093,7 +3105,7 @@ and scrutinee_head_is_callable h =
 
 (** The C++ type recorded for the pattern variable at de Bruijn index [i], if
     this branch pinned one down. *)
-and binder_cpp_type i = IntMap.find_opt i tctx.cpp_binder_types
+and binder_cpp_type i = IntMap.find_opt i (!tctx).cpp_binder_types
 
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
@@ -3114,7 +3126,7 @@ and binder_is_boxed i =
 and binder_assigned_type i =
   match binder_cpp_type i with
   | Some _ as t -> t
-  | None -> IntMap.find_opt i tctx.cpp_binder_types_all
+  | None -> IntMap.find_opt i (!tctx).cpp_binder_types_all
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -3125,7 +3137,8 @@ and binder_assigned_type i =
     describes the runtime value. *)
 and record_binder_type i t =
   if not (binder_is_boxed i) then
-    tctx.cpp_binder_types <- IntMap.add i t tctx.cpp_binder_types
+    tctx :=
+      { !tctx with cpp_binder_types = IntMap.add i t (!tctx).cpp_binder_types }
 
 (** [push_binders env ids] is {!push_env_types} plus the C++ type assignment:
     each binder's C++ type is decided here, once, at the point it is bound,
@@ -3173,7 +3186,10 @@ and assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
       in
       match assigned with
       | Some t when t <> Topaque && not (is_cpp_dummy_type t) ->
-        tctx.cpp_binder_types_all <- IntMap.add (j + 1) t tctx.cpp_binder_types_all
+        tctx :=
+          { !tctx with
+            cpp_binder_types_all =
+              IntMap.add (j + 1) t (!tctx).cpp_binder_types_all }
       | _ -> ())
     ids
 
@@ -3186,12 +3202,12 @@ and strip_param_wrappers = function
 
 (** Save the current binder-type state for later restoration. *)
 and save_erased_env () : binder_env =
-  (tctx.cpp_binder_types, tctx.cpp_binder_types_all)
+  ((!tctx).cpp_binder_types, (!tctx).cpp_binder_types_all)
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
 and restore_erased_env (saved, saved_all) =
-  tctx.cpp_binder_types <- saved;
-  tctx.cpp_binder_types_all <- saved_all
+  tctx := { !tctx with cpp_binder_types = saved };
+  tctx := { !tctx with cpp_binder_types_all = saved_all }
 
 (** Follow a name for a type through to the type it stands for.  A [using]
     alias hides the arguments its right-hand side was written with, and those
@@ -3240,7 +3256,10 @@ and expected_type_args_from_return env ?slot ind ~arity =
      clears the enclosing return type. *)
   match slot with
   | Some t when go t <> None -> go t
-  | _ -> ( match tctx.current_cpp_return_type with Some rt -> go rt | None -> None )
+  | _ -> (
+    match (!tctx).current_cpp_return_type with
+    | Some rt -> go rt
+    | None -> None )
 
 (** Whether [e] reads a component straight out of a pair recovered from a
     [std::any].  Such a component is itself a box, so it needs no further
@@ -3410,7 +3429,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
                  | Some t -> has_tany_in_type (unfold_cpp_typedef env t)
                  | None -> false ))
            && not
-                ( match tctx.current_cpp_return_type with
+                ( match (!tctx).current_cpp_return_type with
                 | Some t -> resolves_to_any_type t
                 | None -> false ) ->
       let field_tys =
@@ -3528,8 +3547,8 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
      so that constructor type args match the function's declared return type.
      At module level, [promoted_var_map] is already empty, so the
      [in_constructor_expr] fallback handles it naturally. *)
-  let saved_in_ctor = tctx.in_constructor_expr in
-  tctx.in_constructor_expr <- true;
+  let saved_in_ctor = (!tctx).in_constructor_expr in
+  tctx := { !tctx with in_constructor_expr = true };
   (* Convert value arguments to C++ expressions.
 
      Erased proof/type arguments ([MLdummy]) produce [std::any{}] rather
@@ -3622,7 +3641,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       let temps = template_params_of_ml env tys in
       (* When all type args are erased and promoted_var_map is active, use
          concrete promoted types so elements don't get wrapped in std::any. *)
-      if List.for_all prints_as_any temps && tctx.promoted_var_map <> [] then
+      if List.for_all prints_as_any temps && (!tctx).promoted_var_map <> [] then
         match promoted_tys_of_arity (List.length tys) with
         | Some promoted_tys -> promoted_tys
         | None -> temps
@@ -3630,7 +3649,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         (* The constructor's own annotation was erased, but the enclosing
            method declares the very same type with its arguments intact --
            inside a member template, [Some a] returning [optional<_A0>]. *)
-        match tctx.current_cpp_return_type with
+        match (!tctx).current_cpp_return_type with
         | Some (Tglob (rn, rargs, _))
           when GlobRef.CanOrd.equal rn cn
                && List.length rargs = List.length temps
@@ -3672,7 +3691,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
   in
   let args =
     List.rev (List.mapi (fun i e ->
-      let saved_ret = tctx.current_cpp_return_type in
+      let saved_ret = (!tctx).current_cpp_return_type in
       let new_expected =
         match List.nth_opt ty_args_for_expected i with
         | Some (Tdummy _) | None ->
@@ -3717,7 +3736,9 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         | Some t -> resolves_to_any_type t
         | None -> false
       in
-      tctx.current_cpp_return_type <- (if propagate_erased_ctx then Some Tany else None);
+      tctx :=
+        { !tctx with
+          current_cpp_return_type = (if propagate_erased_ctx then Some Tany else None) };
       let expected_cpp_ty =
         match new_expected with
         | Some ml_ty ->
@@ -3787,7 +3808,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
             | None -> expected_cpp_ty )
           ~slot:{slot with expected_ml_ty = new_expected} e
       in
-      tctx.current_cpp_return_type <- saved_ret;
+      tctx := { !tctx with current_cpp_return_type = saved_ret };
       (* Whether this constructor's value lands in a DEEPLY erased slot: one
          whose consumer does not merely read a [std::any] back, but
          reconstructs the shape underneath it and reads every component boxed
@@ -3817,7 +3838,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       let slot_is_deeply_erased =
         List.mem Tany draft_ctor_temps_for_wrap
         || ((not is_list_cons_ctor)
-            && match tctx.current_cpp_return_type with
+            && match (!tctx).current_cpp_return_type with
                | Some t -> resolves_to_any_type t
                | None -> false)
       in
@@ -3981,7 +4002,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           if from_expected <> [] then from_expected
           else
             let from_ret =
-              match tctx.current_cpp_return_type with
+              match (!tctx).current_cpp_return_type with
               | Some (Minicpp.Tglob (ret_r, ret_tys, _))
                 when Names.GlobRef.CanOrd.equal n ret_r
                      && List.length ret_tys = List.length tys ->
@@ -3993,7 +4014,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
               | _ -> []
             in
             if from_ret <> [] then from_ret
-            else if tctx.promoted_var_map <> [] then
+            else if (!tctx).promoted_var_map <> [] then
               Option.default temps (promoted_tys_of_arity (List.length tys))
             else temps
         else temps
@@ -4061,7 +4082,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
          Tglob types. Fall back to bare constructor reference. *)
       app (mk_cppglob r [])
   in
-  tctx.in_constructor_expr <- saved_in_ctor;
+  tctx := { !tctx with in_constructor_expr = saved_in_ctor };
   (* Collapse identity inline customs (%a0) for constructors, matching
      the same collapse done for function applications at gen_expr. *)
   let result =
@@ -4398,7 +4419,7 @@ and coerce ?term ?from ~into expr =
     erases, or because it was itself recovered from a box and so goes through
     the canonical [std::function<std::any(std::any...)>] adapter. *)
 and recover_boxed_result ~boxed expr =
-  match tctx.current_cpp_return_type with
+  match (!tctx).current_cpp_return_type with
   | Some into when boxed -> coerce ~from:Tany ~into expr
   | _ -> expr
 
@@ -4797,8 +4818,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let move_candidate =
       (not is_tc_param)
-      && Escape.IntSet.mem i tctx.move_dead_after
-      && Escape.IntSet.mem i tctx.move_owned_vars
+      && Escape.IntSet.mem i (!tctx).move_dead_after
+      && Escape.IntSet.mem i (!tctx).move_owned_vars
     in
     let result = if move_candidate then CPPmove var_expr else var_expr in
     if binder_is_boxed i then begin
@@ -4860,7 +4881,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        as though it were a function. *)
     gen_expr ?expected_ty env absurd
   | MLapp (MLglob (r, ret_tys), a1 :: l) when is_ret r ->
-    if tctx.itree_mode = Reified then begin
+    if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
       Table.require_itree_header ();
       let t = Common.last (a1 :: l) in
@@ -4890,7 +4911,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
   (* | MLapp (MLglob (h, _), a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, _), _ :: _ :: _) as a when is_bind r
-      && tctx.itree_mode <> Reified ->
+      && (!tctx).itree_mode <> Reified ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
     with_escape_analysis a (fun () ->
@@ -5017,7 +5038,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
     let args, env = push_vars' lam_params env in
-    let saved_env_types = tctx.env_types in
+    let saved_env_types = (!tctx).env_types in
     push_binders env args;
     (* Infer owned/borrowed for each lambda parameter using escape analysis.
 
@@ -5038,7 +5059,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let filtered_args_with_owned =
       List.filter (fun (_, ty, _) ->
         not (isTdummy ty) && not (ml_type_is_void ty)
-        && not (tctx.itree_mode = Reified && ml_type_is_unit ty))
+        && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty))
         args_with_owned
     in
     let filtered_args =
@@ -5054,7 +5075,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 cpp_of_ml env ty
               in
               let stored_cpp_ty =
-                convert_ml_type_to_cpp_type env ~ns:tctx.method_self_ns tvars ty
+                convert_ml_type_to_cpp_type env ~ns:(!tctx).method_self_ns
+                  tvars ty
               in
               let body_subst =
                 match (bare_cpp_ty, stored_cpp_ty) with
@@ -5231,7 +5253,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            became [std::function<...>] instead of the plain return type). *)
         mk_lambda (List.rev cpp_args) None body_stmts ~by_value:true )
     in
-    tctx.env_types <- saved_env_types;
+    tctx := { !tctx with env_types = saved_env_types };
     ( match filtered_args with
     | [] ->
       (* All lambda params are dummy (type abstractions). Skip the lambda
@@ -5585,7 +5607,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            object rather than an IIFE. This is needed for itree_bind
            continuations which expect std::function, not the result of
            calling the function. *)
-        if tctx.itree_mode = Reified
+        if (!tctx).itree_mode = Reified
            && List.exists (fun (_, ty) -> ml_type_is_unit_or_void ty) lam_params then
           f
         else
@@ -5759,7 +5781,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         deep_erase =
           slot.deep_erase
           ||
-          ( match tctx.current_cpp_return_type with
+          ( match (!tctx).current_cpp_return_type with
           | Some t -> resolves_to_any_type t
           | None -> false ) }
     in
@@ -5773,9 +5795,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        For record constructors (fds != []), we clear [promoted_var_map]
        because record structs use erased types (std::any) for promoted fields,
        so lambda parameters assigned to record fields must also use std::any. *)
-    let saved_promoted_cons = tctx.promoted_var_map in
-    let saved_in_ctor_cons = tctx.in_constructor_expr in
-    tctx.in_constructor_expr <- true;
+    let saved_promoted_cons = (!tctx).promoted_var_map in
+    let saved_in_ctor_cons = (!tctx).in_constructor_expr in
+    tctx := { !tctx with in_constructor_expr = true };
     (* When an erased argument (a value-dependent leaf boxed as [std::any],
        holding a custom list whose elements are fully erased —
        [deque<std::any>] — at runtime) flows into a constructor/record field
@@ -6028,10 +6050,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    that promoted type vars resolve via promoted_var_map (giving
                    e.g. typename D::Defs::Parser_frame) rather than being erased
                    to std::any by the constructor-expression shortcut. *)
-                let saved_ctor = tctx.in_constructor_expr in
-                tctx.in_constructor_expr <- false;
+                let saved_ctor = (!tctx).in_constructor_expr in
+                tctx := { !tctx with in_constructor_expr = false };
                 let recovered = template_params_of_ml ~curry:false env exp_tys in
-                tctx.in_constructor_expr <- saved_ctor;
+                tctx := { !tctx with in_constructor_expr = saved_ctor };
                 if List.for_all (fun t -> not (prints_as_any t)) recovered
                 then recovered
                 else temps
@@ -6112,9 +6134,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              (set by a use_count()==1-guarded arm in gen_cpp_case), call the
              [<factory>__reuse] variant with the token appended (stored last =
              printed first, matching the [_tok] leading parameter). *)
-          ( match tctx.pending_reuse_token with
+          ( match (!tctx).pending_reuse_token with
           | Some (tok, ctor) when globref_equal r ctor ->
-            tctx.pending_reuse_token <- None;
+            tctx := { !tctx with pending_reuse_token = None };
             CPPfun_call
               ( CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
                 of_reversed (args @ [CPPmove tok]) )
@@ -6207,7 +6229,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let inner_g = match inner with
                 | Tglob (g, _, _) -> Some g | _ -> None in
               ( match inner_g with
-              | Some g when Refset'.mem g tctx.method_self_ns ->
+              | Some g when Refset'.mem g (!tctx).method_self_ns ->
                 mk_call (CPPalloc (Alloc_heap, inner)) [expr]
               | _ -> expr )
             | ct when prints_as_any ct
@@ -6715,8 +6737,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> expr )
       in
       let gen_and_wrap i e =
-        let saved_ret = tctx.current_cpp_return_type in
-        tctx.current_cpp_return_type <- None;
+        let saved_ret = (!tctx).current_cpp_return_type in
+        tctx := { !tctx with current_cpp_return_type = None };
         let ft_opt =
           try Some (List.nth field_types i)
           with Failure _ | Invalid_argument _ -> None
@@ -6820,7 +6842,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        field_types i e }
             ?expected_ty:expected_for_arg e
         in
-        tctx.current_cpp_return_type <- saved_ret;
+        tctx := { !tctx with current_cpp_return_type = saved_ret };
         let expr =
           match ft_opt with
           | Some ft -> wrap_if_needed_for_field ft e expr
@@ -6838,7 +6860,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       (* Records: clear [promoted_var_map] because record structs use erased
          types (std::any) for promoted fields.  Lambda parameters assigned to
          record fields must use std::any to match the field types. *)
-      tctx.promoted_var_map <- [];
+      tctx := { !tctx with promoted_var_map = [] };
       let nstempmod args =
         match ty with
         | Tglob (n, tys, _) ->
@@ -6865,8 +6887,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                "gen_expr: non-record MLcons with matching type expected Tglob" )
       in
       (* Defense-in-depth: same safeguard as for non-record constructors above *)
-      let saved_dead = tctx.move_dead_after in
-      tctx.move_dead_after <- Escape.IntSet.empty;
+      let saved_dead = (!tctx).move_dead_after in
+      tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
       let record_arg_exprs =
         (* A record's erased fields (a promoted [Type] field such as [dyn]'s
            [dty]) carry no argument, so the declared field types are aligned
@@ -7000,11 +7022,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | _ -> base_args
       in
       let result = nstempmod record_arg_exprs in
-      tctx.move_dead_after <- saved_dead;
+      tctx := { !tctx with move_dead_after = saved_dead };
       result
     in
-    tctx.promoted_var_map <- saved_promoted_cons;
-    tctx.in_constructor_expr <- saved_in_ctor_cons;
+    tctx := { !tctx with promoted_var_map = saved_promoted_cons };
+    tctx := { !tctx with in_constructor_expr = saved_in_ctor_cons };
     cons_result
   | MLcase (typ, t, pv) when is_custom_match pv ->
     let iife_ret =
@@ -7018,11 +7040,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          || ml_type_is_unit (ml_result_type branch_rty)
       then Tvoid else r
     in
-    let saved_ret = tctx.current_cpp_return_type in
+    let saved_ret = (!tctx).current_cpp_return_type in
     if iife_ret = Tvoid then
-      tctx.current_cpp_return_type <- Some Tvoid;
+      tctx := { !tctx with current_cpp_return_type = Some Tvoid };
     let stmts = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
-    tctx.current_cpp_return_type <- saved_ret;
+    tctx := { !tctx with current_cpp_return_type = saved_ret };
     mk_iife (Some iife_ret) stmts
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
@@ -7194,7 +7216,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           (* The arguments live under the branch's binders, so the ML type
              environment must be pushed alongside [env'] for the erasure
              checks below to see their real types. *)
-          let saved_env_types = tctx.env_types in
+          let saved_env_types = (!tctx).env_types in
           let saved_erased = save_erased_env () in
           push_binders env branch_binders;
           (* Source order, as {!mk_arity_call} takes them. *)
@@ -7207,7 +7229,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None -> e )
               value_args
           in
-          tctx.env_types <- saved_env_types;
+          tctx := { !tctx with env_types = saved_env_types };
           restore_erased_env saved_erased;
           let callee =
             if not hkt_class then make_field_access (gen_expr env t) fld
@@ -7835,7 +7857,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | Miniml.Tmeta {contents = Some t} -> t
           | t -> t
         in
-        match tctx.current_cpp_return_type with
+        match (!tctx).current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
           match find_type_opt id with
@@ -7878,9 +7900,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | _ -> []
       ) typeclass_ml_args
     in
-    let saved_promoted_map = tctx.promoted_var_map in
+    let saved_promoted_map = (!tctx).promoted_var_map in
     if instance_promoted_map <> [] then
-      tctx.promoted_var_map <- instance_promoted_map @ tctx.promoted_var_map;
+      tctx :=
+        { !tctx with
+          promoted_var_map = instance_promoted_map @ (!tctx).promoted_var_map };
     let args = List.mapi (fun i ml_arg ->
       (* {b Lambda arity limiting.}  When a lambda argument has more binders
          than the callee's parameter type has top-level arrows, the extra
@@ -8057,13 +8081,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | Some ml_ty -> ml_erases_to_box env ml_ty
         | None -> false
       in
-      let saved_ret_for_arg = tctx.current_cpp_return_type in
-      if param_resolves_to_any then tctx.current_cpp_return_type <- Some Tany;
+      let saved_ret_for_arg = (!tctx).current_cpp_return_type in
+      if param_resolves_to_any then
+        tctx := { !tctx with current_cpp_return_type = Some Tany };
       let expr =
         gen_expr ?expected_ty:arg_expected_ty
           ~slot:{slot with expected_ml_ty = arg_expected_ml_ty} env ml_arg
       in
-      if param_resolves_to_any then tctx.current_cpp_return_type <- saved_ret_for_arg;
+      if param_resolves_to_any then
+        tctx := { !tctx with current_cpp_return_type = saved_ret_for_arg };
       (* Annotate the outer lambda with the explicit return type computed
          during the split, so that C++ concept checking sees the concrete
          [std::function<...>] return type instead of the raw closure type. *)
@@ -8269,7 +8295,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       (* Monadic parameter (reified mode only): the callee expects
          [shared_ptr<ITree<R>>].  If the argument already produces a reified
          tree, pass through as-is; otherwise wrap in [ITree<R>::ret()]. *)
-      | Some param_ty when tctx.itree_mode = Reified
+      | Some param_ty when (!tctx).itree_mode = Reified
           && is_monadic_ml_type param_ty
           && not (is_reified_monadic_expr ml_arg) ->
         Table.require_itree_header ();
@@ -8335,7 +8361,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         mk_lambda params None body ~by_value:false
       | _ -> as_value ()
     ) regular_ml_args in
-    tctx.promoted_var_map <- saved_promoted_map;
+    tctx := { !tctx with promoted_var_map = saved_promoted_map };
     let ty = fn_ml_ty_subst in
     let ty = cpp_of_ml env ty in
     (* Combine: instance types first, then regular type args. If any regular
@@ -8406,7 +8432,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         (* [resolve_tmeta] is the one included from Ml_type_util (via the
            module-level [include]); it is identical to the local shadow that
            used to be defined here. *)
-        match tctx.current_cpp_return_type with
+        match (!tctx).current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
         match find_type_opt id with
@@ -9484,20 +9510,20 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     with_shifted_move_tracking n_pat_vars ~clear_dead:true
       ~add_owned_set:pat_var_owned ?exclude_owned:exclude_scrutinee
       (fun () ->
-      let saved_match_counter = tctx.match_param_counter in
-      let saved_cs_counter = tctx.cs_counter in
-      let saved_return_type = tctx.current_cpp_return_type in
-      ( if tctx.current_cpp_return_type = Some Tvoid then
-          tctx.current_cpp_return_type <- None );
+      let saved_match_counter = (!tctx).match_param_counter in
+      let saved_cs_counter = (!tctx).cs_counter in
+      let saved_return_type = (!tctx).current_cpp_return_type in
+      ( if (!tctx).current_cpp_return_type = Some Tvoid then
+          tctx := { !tctx with current_cpp_return_type = None } );
       populate_erased_field_env
         ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
         ~cname ~typ ~env ~n_pat_vars
         ~n_fields:(List.length rev_ids)
         ~non_erased_def_site_field_tys ();
       let body_stmts = gen_stmts env_for_body (fun x -> Sreturn (Some x)) body in
-      tctx.current_cpp_return_type <- saved_return_type;
-      tctx.match_param_counter <- saved_match_counter;
-      tctx.cs_counter <- saved_cs_counter;
+      tctx := { !tctx with current_cpp_return_type = saved_return_type };
+      tctx := { !tctx with match_param_counter = saved_match_counter };
+      tctx := { !tctx with cs_counter = saved_cs_counter };
       body_stmts)
   in
   let tvars = get_current_type_vars () in
@@ -9664,7 +9690,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
      This flag triggers pre-extraction even when [branch_has_lambda] is
      false (because the lambda is added externally by [inline_iife]). *)
   let return_type_is_coinductive =
-    match tctx.current_cpp_return_type with
+    match (!tctx).current_cpp_return_type with
     | Some (Tglob (r, _, _)) -> Table.is_coinductive r
     | _ -> false
   in
@@ -9999,11 +10025,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
       Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
     in
     let void_ret = iife_void_return env typ pv in
-    let saved_ret = tctx.current_cpp_return_type in
-    if void_ret = Some Tvoid then tctx.current_cpp_return_type <- Some Tvoid;
+    let saved_ret = (!tctx).current_cpp_return_type in
+    if void_ret = Some Tvoid then
+      tctx := { !tctx with current_cpp_return_type = Some Tvoid };
     let branches = gen_enum_branches (Array.to_list pv) in
     let default = gen_default_stmts () in
-    tctx.current_cpp_return_type <- saved_ret;
+    tctx := { !tctx with current_cpp_return_type = saved_ret };
     let body = [Sswitch (scrutinee, ind_ref, branches, default)] in
     let iife_ret_opt =
       match void_ret with
@@ -10018,8 +10045,8 @@ and gen_cpp_case (typ : ml_type) t env pv =
     (* Allocate a unique [_m] name for this match level.  All branches of
        the same match reuse this name (each [if (auto* _m = ...)] creates
        its own scope); nested matches get the next name ([_m0], [_m1]). *)
-    let match_i = tctx.match_param_counter in
-    tctx.match_param_counter <- match_i + 1;
+    let match_i = (!tctx).match_param_counter in
+    tctx := { !tctx with match_param_counter = match_i + 1 };
     let sname =
       Id.of_string
         ( if match_i = 0 then "_m"
@@ -10028,10 +10055,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
     (* Generate scrutinee expression.  Clear [move_dead_after] to prevent
        [std::move(x)->v()] use-after-move — the scrutinee is referenced
        across all branches. *)
-    let saved_dead_visit = tctx.move_dead_after in
-    tctx.move_dead_after <- Escape.IntSet.empty;
+    let saved_dead_visit = (!tctx).move_dead_after in
+    tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
     let scrut_expr = gen_expr env t in
-    tctx.move_dead_after <- saved_dead_visit;
+    tctx := { !tctx with move_dead_after = saved_dead_visit };
     let scrut_expr =
       recover_erased_scrutinee env ~is_magic:scrut_is_mlmagic_case typ scrut_expr
     in
@@ -10045,7 +10072,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | CPPthis | CPPderef CPPthis -> false
       | _ -> (
         match scrut_db with
-        | Some i -> Escape.IntSet.mem i tctx.move_owned_vars
+        | Some i -> Escape.IntSet.mem i (!tctx).move_owned_vars
         | None -> false )
     in
     (* Build variant accessor.  All inductives (including coinductives)
@@ -10088,7 +10115,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       | (ids, rty, p, body) :: cs ->
       match p with
       | Pusual r | Pcons (r, _) ->
-        let saved_env_types = tctx.env_types in
+        let saved_env_types = (!tctx).env_types in
         let saved_erased = save_erased_env () in
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
@@ -10099,7 +10126,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             ~scrut_db
             ~is_flat:is_flat_match
         in
-        tctx.env_types <- saved_env_types;
+        tctx := { !tctx with env_types = saved_env_types };
         restore_erased_env saved_erased;
         let rest, wild = gen_branches cs in
         (br :: rest, wild)
@@ -10195,7 +10222,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           in
           (match rec_idx with
           | Some rec_idx when n_rec = 1 ->
-            let saved_env_types = tctx.env_types in
+            let saved_env_types = (!tctx).env_types in
             push_binders env ids';
             let scrut_vmut =
               if scrut_is_ptr then
@@ -10236,13 +10263,14 @@ and gen_cpp_case (typ : ml_type) t env pv =
             in
             (match !token_expr with
             | Some tok ->
-              let saved_tok = tctx.pending_reuse_token in
-              tctx.pending_reuse_token <- Some (tok, tail_ctor);
+              let saved_tok = (!tctx).pending_reuse_token in
+              tctx :=
+                { !tctx with pending_reuse_token = Some (tok, tail_ctor) };
               let body_stmts =
                 gen_stmts env' (fun x -> Sreturn (Some x)) body
               in
-              tctx.pending_reuse_token <- saved_tok;
-              tctx.env_types <- saved_env_types;
+              tctx := { !tctx with pending_reuse_token = saved_tok };
+              tctx := { !tctx with env_types = saved_env_types };
               let use_count_cond =
                 CPPbinop
                   ( "==",
@@ -10251,7 +10279,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               in
               Some (branch_idx, extract @ body_stmts, use_count_cond)
             | None ->
-              tctx.env_types <- saved_env_types;
+              tctx := { !tctx with env_types = saved_env_types };
               None)
           | _ -> None )
         in
@@ -10499,7 +10527,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      the fields out instead of taking a const reference. *)
   let scrut_is_owned_pair = match t with
     | MLrel i | MLmagic (_, MLrel i) ->
-      Escape.IntSet.mem i tctx.move_owned_vars
+      Escape.IntSet.mem i (!tctx).move_owned_vars
       && Array.length pv = 1
       && (let (ids, _, _, body) = pv.(0) in
           let n = List.length ids in
@@ -10510,9 +10538,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
   in
   (* Before generating the scrutinee, mark owned vars that are dead after
      the scrutinee (not used in any branch body) so they get std::move. *)
-  let saved_dead = tctx.move_dead_after in
+  let saved_dead = (!tctx).move_dead_after in
   let dead_in_scrut =
-    if Escape.IntSet.is_empty tctx.move_owned_vars then
+    if Escape.IntSet.is_empty (!tctx).move_owned_vars then
       Escape.IntSet.empty
     else
       let branch_free =
@@ -10524,16 +10552,18 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       Escape.IntSet.filter (fun i ->
         not (Escape.IntSet.mem i branch_free)
         && Escape.nb_occur_match i t = 1)
-        tctx.move_owned_vars
+        (!tctx).move_owned_vars
   in
   let scrut_is_trivial_ml = match t with
     | MLrel _ | MLmagic (_, MLrel _) -> true
     | _ -> false
   in
   if scrut_uses > 1 && scrut_is_trivial_ml then
-    tctx.move_dead_after <- Escape.IntSet.empty
+    tctx := { !tctx with move_dead_after = Escape.IntSet.empty }
   else
-    tctx.move_dead_after <- Escape.IntSet.union saved_dead dead_in_scrut;
+    tctx :=
+      { !tctx with
+        move_dead_after = Escape.IntSet.union saved_dead dead_in_scrut };
   (* A scrutinee whose result is only pinned down by a type index arrives
      boxed, and a match cannot inspect a [std::any].  Telling the call what
      type this position wants is what makes it recover the value. *)
@@ -10550,7 +10580,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | _ -> None
   in
   let t = gen_expr ?expected_ty:scrut_expected env t in
-  tctx.move_dead_after <- saved_dead;
+  tctx := { !tctx with move_dead_after = saved_dead };
   let pair_g_opt = match concrete_match_type with
     | Tglob (g, _, _) when is_prod_global g -> Some g
     | _ -> None
@@ -10640,8 +10670,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
      a temporary to avoid double evaluation. *)
   let scrut, cache_prefix =
     if scrut_uses > 1 && not (is_trivial_scrut t) then begin
-      let n = tctx.cs_counter in
-      tctx.cs_counter <- n + 1;
+      let n = (!tctx).cs_counter in
+      tctx := { !tctx with cs_counter = n + 1 };
       let cache_id =
         Id.of_string (if n = 0 then "_cs" else "_cs" ^ string_of_int n)
       in
@@ -10708,8 +10738,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let ids' = recover_pattern_var_types_from_scrutinee ml_typ ids' in
       let ids' = retype_dependent_params ml_typ ids' in
       let n_pat_vars = List.length ids in
-      let saved_env_types = tctx.env_types in
-      let saved_owned = tctx.move_owned_vars in
+      let saved_env_types = (!tctx).env_types in
+      let saved_owned = (!tctx).move_owned_vars in
       push_binders env ids';
       (* When [fix_a_fired] and the outer scrutinee was truly [pair<any,any>]
          at runtime (i.e. outer [typ] was erased, not just magic-wrapped),
@@ -10771,8 +10801,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         with_shifted_move_tracking n_pat_vars ~add_owned_set:pat_owned (fun () ->
           gen_cpp_custom_body env' k rty ids' t scrut_ind_opt)
       in
-      tctx.env_types <- saved_env_types;
-      tctx.move_owned_vars <- saved_owned;
+      tctx := { !tctx with env_types = saved_env_types };
+      tctx := { !tctx with move_owned_vars = saved_owned };
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
          [std::any] at the binding site.  Pattern variables whose C++ type is
          concrete need [any_cast<T>] at each use site so the body compiles.
@@ -11443,7 +11473,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Generate the lifted function name *)
       let fix_name = fst ids.(x) in
       let outer_name =
-        match tctx.current_outer_function_name with
+        match (!tctx).current_outer_function_name with
         | Some n -> n
         | None -> "anon"
       in
@@ -11536,7 +11566,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
           let tvar_map =
-            match tctx.current_cpp_return_type with
+            match (!tctx).current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
             | None -> []
           in
@@ -11548,7 +11578,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                         tvar_map with
                 | Some (_, ty) -> ty
                 | None ->
-                  match tctx.current_cpp_return_type with
+                  match (!tctx).current_cpp_return_type with
                   | Some ret_ty -> ret_ty
                   | None -> Tvar (0, Some tvar_name) )
               extra_tvar_names
@@ -11785,7 +11815,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       if x == Dummy then (
         push_binders env [(x_renamed, t)];
         gen_stmts ~slot env' k b )
-      else if tctx.itree_mode = Reified && is_monadic_ml_type t then begin
+      else if (!tctx).itree_mode = Reified && is_monadic_ml_type t then begin
         (* Monadic let-binding (reified mode): wrap RHS in an ITree IIFE so
            the variable has type [shared_ptr<ITree<R>>]. *)
         Table.require_itree_header ();
@@ -11893,7 +11923,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
 
         (* 3. Generate the lifted function name *)
         let outer_name =
-          match tctx.current_outer_function_name with
+          match (!tctx).current_outer_function_name with
           | Some n -> n
           | None -> "anon"
         in
@@ -12058,7 +12088,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         in
         let body_params_for_env = free_var_params @ param_ids in
         let body_param_ids, body_env = push_vars' body_params_for_env env in
-        let saved_env_types = tctx.env_types in
+        let saved_env_types = (!tctx).env_types in
         push_binders env body_param_ids;
 
         (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
@@ -12081,18 +12111,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            their original positions are accessible. We push only the lambda
            params on top of the outer env. *)
         let lam_param_ids, lam_env = push_vars' param_ids env in
-        tctx.env_types <- saved_env_types;
+        tctx := { !tctx with env_types = saved_env_types };
         push_binders env lam_param_ids;
         (* Lambda bodies have their own return type; clear the enclosing
            function's void flag to avoid bare 'return;' inside the lambda. *)
-        let saved_return_type = tctx.current_cpp_return_type in
-        ( if tctx.current_cpp_return_type = Some Tvoid then
-            tctx.current_cpp_return_type <- None );
+        let saved_return_type = (!tctx).current_cpp_return_type in
+        ( if (!tctx).current_cpp_return_type = Some Tvoid then
+            tctx := { !tctx with current_cpp_return_type = None } );
         let compiled_body =
           gen_stmts lam_env (fun x -> Sreturn (Some x)) body
         in
-        tctx.current_cpp_return_type <- saved_return_type;
-        tctx.env_types <- saved_env_types;
+        tctx := { !tctx with current_cpp_return_type = saved_return_type };
+        tctx := { !tctx with env_types = saved_env_types };
         set_current_type_vars saved_tvars;
 
         (* 7. Now substitute free variable references in compiled body: Free
@@ -12190,15 +12220,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       rhs @ decl @ body )
     else
-      let depth = tctx.current_letin_depth in
-      tctx.current_letin_depth <- depth + 1;
+      let depth = (!tctx).current_letin_depth in
+      tctx := { !tctx with current_letin_depth = depth + 1 };
       (* Phase 2: set up dead-after info for move insertion. Compute free vars
          of the continuation [b] (shifted by 1 because [b] is under the let
          binder). A variable at de Bruijn index [i] in [a] is dead-after if
          [i+1] is not free in [b] (since [b] has one extra binder). Only move if
          the variable has exactly 1 occurrence in [a]. *)
-      let saved_dead = tctx.move_dead_after in
-      let saved_owned = tctx.move_owned_vars in
+      let saved_dead = (!tctx).move_dead_after in
+      let saved_owned = (!tctx).move_owned_vars in
       let cont_free = Escape.free_rels 1 b in
       (* free in b, shifted past let binder *)
       let dead_in_a =
@@ -12208,20 +12238,22 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                once in [a] *)
             (not (Escape.IntSet.mem i cont_free))
             && Escape.nb_occur_match i a = 1 )
-          tctx.move_owned_vars
+          (!tctx).move_owned_vars
       in
       (* Also add any vars from our current dead set that have single occurrence
          in a *)
       let dead_from_above =
         Escape.IntSet.filter
           (fun i ->
-            Escape.IntSet.mem i tctx.move_dead_after
+            Escape.IntSet.mem i (!tctx).move_dead_after
             && Escape.nb_occur_match i a = 1 )
-          tctx.move_owned_vars
+          (!tctx).move_owned_vars
       in
-      tctx.move_dead_after <- Escape.IntSet.union dead_in_a dead_from_above;
-      let saved_suppress = tctx.move_suppress_tail in
-      tctx.move_suppress_tail <- true;
+      tctx :=
+        { !tctx with
+          move_dead_after = Escape.IntSet.union dead_in_a dead_from_above };
+      let saved_suppress = (!tctx).move_suppress_tail in
+      tctx := { !tctx with move_suppress_tail = true };
       (* Single-use partial application optimization: when the RHS is a partial
          application and the bound variable is used at most once in the
          continuation without escaping, AND all free variables of the RHS are
@@ -12373,7 +12405,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               eta_keep_moves = is_single_use_partial_app }
           env afun a
       in
-      tctx.move_suppress_tail <- saved_suppress;
+      tctx := { !tctx with move_suppress_tail = saved_suppress };
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)
@@ -12382,13 +12414,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Shift saved_dead +1 for the body [b]: the new let binding adds one
          de Bruijn level, so all parent-scope indices must be shifted to stay
          in sync with the body's coordinate system. *)
-      tctx.move_dead_after <- Escape.IntSet.map (fun i -> i + 1) saved_dead;
+      tctx :=
+        { !tctx with
+          move_dead_after = Escape.IntSet.map (fun i -> i + 1) saved_dead };
       (* The new let binding is owned (it's a local variable). Update
          move_owned_vars for processing [b]: shift all existing indices by 1
          (because [b] has one more binder) and add index 1 if the type is
          shared_ptr. *)
       let shifted_owned =
-        Escape.IntSet.map (fun i -> i + 1) tctx.move_owned_vars
+        Escape.IntSet.map (fun i -> i + 1) (!tctx).move_owned_vars
       in
       (* Const-ref binding optimisation: when the RHS [a] is a record-field
          access (single-branch MLcase) on a source variable that is NOT being
@@ -12408,8 +12442,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | MLcase (_, MLrel k, pv)
             when Array.length pv = 1
                  && (match pv.(0) with (_, _, _, MLrel _) -> true | _ -> false)
-                 && not (Escape.IntSet.mem k tctx.move_owned_vars
-                         && Escape.IntSet.mem k tctx.move_dead_after) ->
+                 && not (Escape.IntSet.mem k (!tctx).move_owned_vars
+                         && Escape.IntSet.mem k (!tctx).move_dead_after) ->
             true
           | _ -> false )
       in
@@ -12423,7 +12457,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         else
           shifted_owned
       in
-      tctx.move_owned_vars <- owned_for_b;
+      tctx := { !tctx with move_owned_vars = owned_for_b };
       let result =
         match asgn with
           | [Sasgn (_, None, e)] ->
@@ -12473,7 +12507,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             let cpp_ty = cpp_of_ml env t in
             (Sdecl (x_renamed, cpp_ty) :: asgn) @ gen_stmts ~slot env' k b
       in
-      tctx.move_owned_vars <- saved_owned;
+      tctx := { !tctx with move_owned_vars = saved_owned };
       result
   | MLapp (MLfix (x, ids, funs, _), args) ->
     (* Resolve unresolved metas in fix function types to Tvars using mgu.
@@ -12504,7 +12538,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let fix_name = fst ids.(x) in
       let outer_name =
-        match tctx.current_outer_function_name with
+        match (!tctx).current_outer_function_name with
         | Some n -> n
         | None -> "anon"
       in
@@ -12596,7 +12630,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           in
           let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
           let tvar_map =
-            match tctx.current_cpp_return_type with
+            match (!tctx).current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
             | None -> []
           in
@@ -12608,7 +12642,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                         tvar_map with
                 | Some (_, ty) -> ty
                 | None ->
-                  match tctx.current_cpp_return_type with
+                  match (!tctx).current_cpp_return_type with
                   | Some ret_ty -> ret_ty
                   | None -> Tvar (0, Some tvar_name) )
               extra_tvar_names
@@ -12721,11 +12755,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
      (MLapp (a1, a2::[])) *)
   | MLapp (MLglob (r, bind_tys), a1 :: a2 :: l) when is_bind r ->
     (* Reified mode: bind is a real function call, not desugared. *)
-    if tctx.itree_mode = Reified then
-      let saved_dead = tctx.move_dead_after in
+    if (!tctx).itree_mode = Reified then
+      let saved_dead = (!tctx).move_dead_after in
       let e = gen_tail_expr ~slot env ast in
       let result = inline_iife k e in
-      tctx.move_dead_after <- saved_dead;
+      tctx := { !tctx with move_dead_after = saved_dead };
       result
     else begin
       (* Sequential mode: desugar bind into sequential statements. *)
@@ -12814,7 +12848,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       | MLglob (r, _) when is_ret r ->
         (* Eta-reduced Ret: bind action Ret = action (monad right identity).
            In sequential mode, just execute the action and return. *)
-        if tctx.current_cpp_return_type = Some Tvoid then
+        if (!tctx).current_cpp_return_type = Some Tvoid then
           side_effect @ [Sreturn None]
         else
           [k a]
@@ -12844,51 +12878,53 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           side_effect @ gen_stmts ~slot env k f ) ) )
     end
   | MLapp (MLglob (r, _), a1 :: l) when is_ret r ->
-    if tctx.itree_mode = Reified then begin
+    if (!tctx).itree_mode = Reified then begin
       (* Reified mode: Ret is a constructor call, not desugared. *)
-      let saved_dead = tctx.move_dead_after in
+      let saved_dead = (!tctx).move_dead_after in
       let e = gen_tail_expr ~slot env ast in
       let result = inline_iife k e in
-      tctx.move_dead_after <- saved_dead;
+      tctx := { !tctx with move_dead_after = saved_dead };
       result
     end
     else begin
       (* Sequential mode: eliminate Ret, just use the value. *)
       let t = Common.last (a1 :: l) in
-      if tctx.current_cpp_return_type = Some Tvoid then
+      if (!tctx).current_cpp_return_type = Some Tvoid then
         (* Void-returning function: discard the value and return. *)
         [Sreturn None]
       else
-        [k (gen_expr ?expected_ty:tctx.current_cpp_return_type env t)]
+        [k (gen_expr ?expected_ty:(!tctx).current_cpp_return_type env t)]
     end
   | MLcase (typ, t, pv) when is_custom_match pv ->
     (* Set up dead-after for owned variables at their last use, same as the
        default tail-position case below. Without this, owned variables
        passed as function arguments in the scrutinee would not get std::move.
        Suppress when processing a let-binding RHS to avoid use-after-move. *)
-    let saved_dead = tctx.move_dead_after in
-    ( if not tctx.move_suppress_tail then
+    let saved_dead = (!tctx).move_dead_after in
+    ( if not (!tctx).move_suppress_tail then
         let tail_dead =
           Escape.IntSet.filter
             (fun i -> Escape.nb_occur_match i ast = 1)
-            tctx.move_owned_vars
+            (!tctx).move_owned_vars
         in
-        tctx.move_dead_after <-
-          Escape.IntSet.union tctx.move_dead_after tail_dead );
+        tctx :=
+          { !tctx with
+            move_dead_after =
+                Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
     let result = gen_custom_cpp_case env k typ t pv in
-    tctx.move_dead_after <- saved_dead;
+    tctx := { !tctx with move_dead_after = saved_dead };
     result
   | MLcons (_, r, []) when Table.is_tt_constructor r
-      && tctx.current_cpp_return_type = Some Tvoid ->
+      && (!tctx).current_cpp_return_type = Some Tvoid ->
     (* tt (unit constructor) in tail position of a void-returning function *)
-    if tctx.itree_mode = Reified then begin
+    if (!tctx).itree_mode = Reified then begin
       Table.require_itree_header ();
       [k (mk_itree_ret Tvoid [])]
     end
     else
       [Sreturn None]
   | MLglob (r, _) when is_ghost r ->
-    if tctx.itree_mode = Reified then begin
+    if (!tctx).itree_mode = Reified then begin
       (* Reified mode: ghost (void value) at tail position must produce
          ITree<void>::ret() rather than bare return, since the function
          returns shared_ptr<ITree<void>>. *)
@@ -12919,28 +12955,32 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     if is_simple then
       (* Simple body: gen_expr handles these as direct field access (no IIFE),
          so delegate to the default path. *)
-      let saved_dead = tctx.move_dead_after in
-      ( if not tctx.move_suppress_tail then
+      let saved_dead = (!tctx).move_dead_after in
+      ( if not (!tctx).move_suppress_tail then
           let tail_dead =
             Escape.IntSet.filter
               (fun i -> Escape.nb_occur_match i ast = 1)
-              tctx.move_owned_vars
+              (!tctx).move_owned_vars
           in
-          tctx.move_dead_after <-
-            Escape.IntSet.union tctx.move_dead_after tail_dead );
-      let value = gen_expr ?expected_ty:tctx.current_cpp_return_type env ast in
+          tctx :=
+            { !tctx with
+              move_dead_after =
+                  Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
+      let value =
+        gen_expr ?expected_ty:(!tctx).current_cpp_return_type env ast
+      in
       (* A function value returned into an erased ([std::any]) return type --
          e.g. the [nat -> nat] branch of a dependent [if ... then nat else
          nat -> nat] -- must be stored in the canonical adapter form the
          application site casts back to. *)
       let value =
-        match tctx.current_cpp_return_type with
+        match (!tctx).current_cpp_return_type with
         | Some ret_ty when resolves_to_any_type ret_ty ->
           erase_fn_for_any_slot ast value
         | _ -> value
       in
       let result = inline_iife k value in
-      tctx.move_dead_after <- saved_dead;
+      tctx := { !tctx with move_dead_after = saved_dead };
       result
     else
       (* Complex body: emit field extraction assignments as flat statements
@@ -13018,7 +13058,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        No deref_reified needed: in sequential mode, monadic variables are
        direct values (bind desugars to let-binding); in reified mode,
        they are trees returned as-is. *)
-    let saved_dead = tctx.move_dead_after in
+    let saved_dead = (!tctx).move_dead_after in
     let is_void_tail = match t with
       | MLapp (f, args) | MLmagic (_, MLapp (f, args)) ->
         ml_callee_is_void f
@@ -13044,9 +13084,11 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       | _ -> false
     in
     if is_void_tail then begin
-      let e = gen_tail_expr ~slot ?expected_ty:tctx.current_cpp_return_type env t in
-      tctx.move_dead_after <- saved_dead;
-      if tctx.current_cpp_return_type = Some Tvoid then
+      let e =
+        gen_tail_expr ~slot ?expected_ty:(!tctx).current_cpp_return_type env t
+      in
+      tctx := { !tctx with move_dead_after = saved_dead };
+      if (!tctx).current_cpp_return_type = Some Tvoid then
         [Sexpr e; Sreturn None]
       else
         match k (CPPint 0) with
@@ -13062,19 +13104,21 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       (* Whether this continuation is the function's result rather than a
          binding.  Probing [k] is how the void case above already asks. *)
       let k_returns = match k (CPPint 0) with Sreturn _ -> true | _ -> false in
-      let e = gen_tail_expr ~slot ?expected_ty:tctx.current_cpp_return_type env t in
+      let e =
+        gen_tail_expr ~slot ?expected_ty:(!tctx).current_cpp_return_type env t
+      in
       (* A pair accessor applied to an erased pair yields a [std::any] at run
          time even though its ML type is concrete.  In tail position that value
          is the result, so cast it back to the declared return type -- the same
          recovery the let-binding path performs by marking the bound variable
          erased. *)
       let e =
-        match tctx.current_cpp_return_type with
+        match (!tctx).current_cpp_return_type with
         | Some rt when k_returns -> recover_boxed_component rt e
         | _ -> e
       in
       let result = inline_iife k e in
-      tctx.move_dead_after <- saved_dead;
+      tctx := { !tctx with move_dead_after = saved_dead };
       result
     end
 
@@ -13086,14 +13130,16 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     Used by the default tail case and by reified-mode bind/ret handlers
     (which bypass monadic desugaring and treat bind/Ret as plain calls). *)
 and gen_tail_expr ?expected_ty ?(slot = empty_slot) env t =
-  ( if not tctx.move_suppress_tail then
+  ( if not (!tctx).move_suppress_tail then
       let tail_dead =
         Escape.IntSet.filter
           (fun i -> Escape.nb_occur_match i t = 1)
-          tctx.move_owned_vars
+          (!tctx).move_owned_vars
       in
-      tctx.move_dead_after <-
-        Escape.IntSet.union tctx.move_dead_after tail_dead );
+      tctx :=
+        { !tctx with
+          move_dead_after =
+              Escape.IntSet.union (!tctx).move_dead_after tail_dead } );
   gen_expr ?expected_ty ~slot env t
 
 (** Generate a fixpoint (recursive function) definition. Handles both single and
@@ -13117,7 +13163,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let n_fix_funs = List.length fix_names in
   let fix_names_db_order = List.rev fix_names in
   let renamed_fix_ids, env = push_vars' (ids @ fix_names_db_order) env in
-  let saved_env_types = tctx.env_types in
+  let saved_env_types = (!tctx).env_types in
   push_binders env (ids @ fix_names_db_order);
   (* Extract the renamed name for THIS fixpoint function. fix_names_db_order
      is reversed from the array order, so fix array index i corresponds to
@@ -13132,46 +13178,48 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
      fix_names), de Bruijn indices in f are: ids[0] → db 1, ..., ids[k-1] → db
      k, fix_names[0] → db k+1, ..., fix_names[m-1] → db k+m. We only mark lambda
      params as owned (not the fix self-references). *)
-  let saved_dead = tctx.move_dead_after in
-  let saved_owned = tctx.move_owned_vars in
-  let saved_nparams = tctx.move_n_params in
+  let saved_dead = (!tctx).move_dead_after in
+  let saved_owned = (!tctx).move_owned_vars in
+  let saved_nparams = (!tctx).move_n_params in
   let n_fix_params = List.length ids in
   let n_total = n_fix_params + n_fix_funs in
   let fix_owned_base = Escape.infer_owned_params n_total f in
   let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
-  tctx.move_owned_vars <-
-    List.fold_left
-      (fun acc i ->
-        let db = i + 1 in
-        let base_owned =
-          match List.nth_opt fix_owned_base i with
-          | Some b -> b
-          | None -> false
-        in
-        let sub_esc =
-          match List.nth_opt fix_sub_esc i with
-          | Some b -> b
-          | None -> false
-        in
-        let ml_ty = snd (List.nth ids i) in
-        let owned = base_owned
-          || (sub_esc && is_prod_ml_type ml_ty) in
-        if owned && (Escape.is_shared_ptr_type ml_ty
-                     || is_nontrivial_value_ml_type ml_ty) then
-          Escape.IntSet.add db acc
-        else
-          acc )
-      Escape.IntSet.empty
-      (List.init n_fix_params (fun i -> i));
-  tctx.move_dead_after <- Escape.IntSet.empty;
-  tctx.move_n_params <- n_fix_params + n_fix_funs;
+  tctx :=
+    { !tctx with
+      move_owned_vars =
+          List.fold_left
+            (fun acc i ->
+              let db = i + 1 in
+              let base_owned =
+                match List.nth_opt fix_owned_base i with
+                | Some b -> b
+                | None -> false
+              in
+              let sub_esc =
+                match List.nth_opt fix_sub_esc i with
+                | Some b -> b
+                | None -> false
+              in
+              let ml_ty = snd (List.nth ids i) in
+              let owned = base_owned
+                || (sub_esc && is_prod_ml_type ml_ty) in
+              if owned && (Escape.is_shared_ptr_type ml_ty
+                           || is_nontrivial_value_ml_type ml_ty) then
+                Escape.IntSet.add db acc
+              else
+                acc )
+            Escape.IntSet.empty
+            (List.init n_fix_params (fun i -> i)) };
+  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
+  tctx := { !tctx with move_n_params = n_fix_params + n_fix_funs };
   let result =
     ((renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn (Some x)) f)
   in
-  tctx.env_types <- saved_env_types;
-  tctx.move_dead_after <- saved_dead;
-  tctx.move_owned_vars <- saved_owned;
-  tctx.move_n_params <- saved_nparams;
+  tctx := { !tctx with env_types = saved_env_types };
+  tctx := { !tctx with move_dead_after = saved_dead };
+  tctx := { !tctx with move_owned_vars = saved_owned };
+  tctx := { !tctx with move_n_params = saved_nparams };
   result
 
 (** Whether [expr] is a numeral-converter application (e.g.
@@ -13197,22 +13245,22 @@ let is_foldable_numeral_converter_app = function
     @param base  The namespace to extend, when the caller has one of its own in
       hand.  Defaults to the ambient {!Translation_state.method_self_ns}. *)
 let set_method_ns_for_locals ?base () =
-  let saved = tctx.method_self_ns in
+  let saved = (!tctx).method_self_ns in
   let full_ns =
     List.fold_left
       (fun acc g ->
         if Table.has_recursive_fields g && not (is_enum_inductive g)
         then Refset'.add g acc
         else acc)
-      (Option.default tctx.method_self_ns base)
+      (Option.default (!tctx).method_self_ns base)
       (get_local_inductives ())
   in
-  tctx.method_self_ns <- full_ns;
+  tctx := { !tctx with method_self_ns = full_ns };
   saved
 
 (** Restore method_self_ns to a previously saved value. *)
 let restore_method_self_ns saved =
-  tctx.method_self_ns <- saved
+  tctx := { !tctx with method_self_ns = saved }
 
 (** Adapt closures returned from a function whose return type is the erased
     [std::any] (e.g. the [nat -> nat] branch of a dependent

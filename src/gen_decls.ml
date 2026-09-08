@@ -30,13 +30,13 @@ module IntSet = Escape.IntSet
     a class's associated [Type], the unresolved class type variable, which
     reads as erased and provokes a spurious [any_cast]). *)
 let with_method_env_types env params f =
-  let saved_env_types = tctx.env_types in
+  let saved_env_types = (!tctx).env_types in
   let saved_erased = save_erased_env () in
   reset_env_types ();
   push_binders env params;
   Fun.protect
     ~finally:(fun () ->
-      tctx.env_types <- saved_env_types;
+      tctx := { !tctx with env_types = saved_env_types };
       restore_erased_env saved_erased )
     f
 
@@ -768,9 +768,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* Set up type variable context for fixpoint lifting. Without this,
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)
-      let saved_outer_name = tctx.current_outer_function_name in
+      let saved_outer_name = (!tctx).current_outer_function_name in
       let saved_decl_ref = !Table.current_decl_ref in
-      tctx.current_outer_function_name <- Some (Common.pp_global_name Term name);
+      tctx :=
+        { !tctx with
+          current_outer_function_name = Some (Common.pp_global_name Term name) };
       Table.current_decl_ref := Some name;
       set_current_type_vars type_var_names;
       (* Generate static methods for each field *)
@@ -1019,8 +1021,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              top-level function's body is: an expression whose C++ type is the
              erased [std::any] -- a call to a higher-rank callback, say -- is
              cast back to the concrete type the method declares. *)
-          let saved_method_ret = tctx.current_cpp_return_type in
-          tctx.current_cpp_return_type <- Some method_ret_ty;
+          let saved_method_ret = (!tctx).current_cpp_return_type in
+          tctx := { !tctx with current_cpp_return_type = Some method_ret_ty };
           let cpp_params, ret_ty, body_stmts =
             if ml_params = [] then
               (* No lambdas in the body — either a function reference that needs
@@ -1178,16 +1180,16 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  environment still spells them with the class's type variable,
                  so call sites inside the body need this to tell a concrete
                  parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
-              let saved_param_tys = tctx.current_param_types in
+              let saved_param_tys = (!tctx).current_param_types in
               set_current_param_types (List.rev renamed_ml);
               let stmts =
                 with_method_env_types env renamed_ml (fun () ->
                   gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
-              tctx.current_param_types <- saved_param_tys;
+              tctx := { !tctx with current_param_types = saved_param_tys };
               (cpp_params, method_ret_ty, stmts)
           in
-          tctx.current_cpp_return_type <- saved_method_ret;
+          tctx := { !tctx with current_cpp_return_type = saved_method_ret };
           Some
             ( Fmethod
                 {
@@ -1329,7 +1331,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           []
       in
       (* Restore type variable context *)
-      tctx.current_outer_function_name <- saved_outer_name;
+      tctx := { !tctx with current_outer_function_name = saved_outer_name };
       Table.current_decl_ref := saved_decl_ref;
       clear_current_type_vars ();
       (* Compute promoted vars and generate using fields. Promoted vars are
@@ -1927,11 +1929,13 @@ let gen_dfun n b cty ty temps =
      mode erases to [R].  We detect reified by checking whether the monad
      template contains "ITree" (e.g. ["std::shared_ptr<ITree<%t1>>"]).
      Must be set BEFORE void-ification so the mode is available. *)
-  let saved_mode = tctx.itree_mode in
+  let saved_mode = (!tctx).itree_mode in
   ( match extract_monad_from_codomain ty with
   | Some monad_ref ->
-    tctx.itree_mode <-
-      (if is_monad_reified monad_ref then Reified else Sequential)
+    tctx :=
+      { !tctx with
+        itree_mode =
+          (if is_monad_reified monad_ref then Reified else Sequential) }
   | None -> () );
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
@@ -1946,7 +1950,7 @@ let gen_dfun n b cty ty temps =
      | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
     && ml_type_is_unit (ml_result_type ty)
   in
-  let cod = apply_unit_void unit_void (tctx.itree_mode = Reified) cod in
+  let cod = apply_unit_void unit_void ((!tctx).itree_mode = Reified) cod in
   let rec get_dom l ty =
     match ty with
     | Tarr (t1, t2) -> get_dom (t1 :: l) t2
@@ -2572,12 +2576,14 @@ let gen_dfun n b cty ty temps =
   (* Activate promoted var resolution for body generation — types like
      [Tpromoted "Obj"] in type annotations will be resolved to
      qualified access through the typeclass instance chain. *)
-  let saved_promoted_var_map = tctx.promoted_var_map in
-  tctx.promoted_var_map <- promoted_var_resolutions;
+  let saved_promoted_var_map = (!tctx).promoted_var_map in
+  tctx := { !tctx with promoted_var_map = promoted_var_resolutions };
   (* Set the outer function name so inner fixpoints can generate lifted names *)
-  let saved_outer_name = tctx.current_outer_function_name in
+  let saved_outer_name = (!tctx).current_outer_function_name in
   let saved_decl_ref = !Table.current_decl_ref in
-  tctx.current_outer_function_name <- Some (Common.pp_global_name Term n);
+  tctx :=
+    { !tctx with
+      current_outer_function_name = Some (Common.pp_global_name Term n) };
   Table.current_decl_ref := Some n;
   (* Check if the return type is coinductive - if so, wrap body in lazy thunk *)
   let ml_ret = ml_return_type ty in
@@ -2679,30 +2685,32 @@ let gen_dfun n b cty ty temps =
               Some (Sassert ("true", Some comment)) )
         assertions
   in
-  tctx.current_letin_depth <- 0;
-  tctx.match_param_counter <- 0;
-  tctx.cs_counter <- 0;
+  tctx := { !tctx with current_letin_depth = 0 };
+  tctx := { !tctx with match_param_counter = 0 };
+  tctx := { !tctx with cs_counter = 0 };
   (* Phase 2: Initialize owned-variable tracking for move insertion. Parameters
      at de Bruijn indices 1..n_params; owned ones get added to the set. *)
   let n_all_params = List.length all_params in
-  tctx.move_n_params <- n_all_params;
-  tctx.move_owned_vars <-
-    List.fold_left
-      (fun acc (i, owned) ->
-        if owned then
-          let ml_ty = snd (List.nth all_params i) in
-          if Escape.is_shared_ptr_type ml_ty
-             || is_nontrivial_value_ml_type ml_ty then
-            Escape.IntSet.add (i + 1) acc
-          else acc
-        else acc )
-      Escape.IntSet.empty
-      (List.mapi (fun i o -> (i, o)) owned_flags);
-  tctx.move_dead_after <- Escape.IntSet.empty;
+  tctx := { !tctx with move_n_params = n_all_params };
+  tctx :=
+    { !tctx with
+      move_owned_vars =
+          List.fold_left
+            (fun acc (i, owned) ->
+              if owned then
+                let ml_ty = snd (List.nth all_params i) in
+                if Escape.is_shared_ptr_type ml_ty
+                   || is_nontrivial_value_ml_type ml_ty then
+                  Escape.IntSet.add (i + 1) acc
+                else acc
+              else acc )
+            Escape.IntSet.empty
+            (List.mapi (fun i o -> (i, o)) owned_flags) };
+  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
   (* Expose the C++ return type to inner call sites so they can recover erased
      template type args (see try_recover_erased_return_type). *)
-  let saved_return_type = tctx.current_cpp_return_type in
-  tctx.current_cpp_return_type <- Some cod;
+  let saved_return_type = (!tctx).current_cpp_return_type in
+  tctx := { !tctx with current_cpp_return_type = Some cod };
   (* For non-inlined custom constants (axioms mapped via Crane Extract
      Constant), generate a forwarding body that delegates to the custom
      implementation instead of the default CPPabort throw. *)
@@ -2812,10 +2820,10 @@ let gen_dfun n b cty ty temps =
             (erase_returned_fn_values cod (guard @ sigma_asserts @ b)),
           no_pure )
   in
-  tctx.current_cpp_return_type <- saved_return_type;
-  tctx.current_outer_function_name <- saved_outer_name;
+  tctx := { !tctx with current_cpp_return_type = saved_return_type };
+  tctx := { !tctx with current_outer_function_name = saved_outer_name };
   Table.current_decl_ref := saved_decl_ref;
-  tctx.promoted_var_map <- saved_promoted_var_map;
+  tctx := { !tctx with promoted_var_map = saved_promoted_var_map };
   (* {b Entry point detection for monadic [main].}
 
      When a Rocq definition named [main] has a monadic return type, it is
@@ -2900,7 +2908,7 @@ let gen_dfun n b cty ty temps =
     | _ -> inner
   in
   (* Restore saved itree mode *)
-  tctx.itree_mode <- saved_mode;
+  tctx := { !tctx with itree_mode = saved_mode };
   let temps, inner = relax_applied_return temps inner in
   match temps with
   | [] -> (inner, env)
@@ -3109,11 +3117,13 @@ let gen_decl__inner n b ty =
   (* Set itree extraction mode early — before type conversion — so that
      reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
      can correctly voidify unit result types in ITree parameters. *)
-  let saved_mode = tctx.itree_mode in
+  let saved_mode = (!tctx).itree_mode in
   ( match extract_monad_from_codomain ty with
   | Some monad_ref ->
-    tctx.itree_mode <-
-      (if is_monad_reified monad_ref then Reified else Sequential)
+    tctx :=
+      { !tctx with
+        itree_mode =
+          (if is_monad_reified monad_ref then Reified else Sequential) }
   | None -> () );
   let saved_method_ns = set_method_ns_for_locals () in
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
@@ -3136,11 +3146,11 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
-      let saved_return_type = tctx.current_cpp_return_type in
-      tctx.current_cpp_return_type <- Some cty;
-      tctx.cs_counter <- 0;
+      let saved_return_type = (!tctx).current_cpp_return_type in
+      tctx := { !tctx with current_cpp_return_type = Some cty };
+      tctx := { !tctx with cs_counter = 0 };
       let body_expr = gen_expr (empty_env ()) b in
-      tctx.current_cpp_return_type <- saved_return_type;
+      tctx := { !tctx with current_cpp_return_type = saved_return_type };
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
@@ -3163,8 +3173,8 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
   in
-  tctx.method_self_ns <- saved_method_ns;
-  tctx.itree_mode <- saved_mode;
+  tctx := { !tctx with method_self_ns = saved_method_ns };
+  tctx := { !tctx with itree_mode = saved_mode };
   result
 
 let gen_decl n b ty =
@@ -3239,7 +3249,7 @@ let gen_decl_for_pp__inner n b ty =
     (Some ds, empty_env (), tc_param_ids @ tvars)
   | _ -> (None, empty_env (), tc_param_ids @ tvars)
   in
-  tctx.method_self_ns <- saved_method_ns;
+  tctx := { !tctx with method_self_ns = saved_method_ns };
   result
 
 let gen_decl_for_pp n b ty =
@@ -3294,11 +3304,11 @@ let gen_dfun_def__inner n b ty =
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
     let tvars = tc_param_ids @ tvars @ fun_tys in
-    tctx.method_self_ns <- saved_method_ns;
+    tctx := { !tctx with method_self_ns = saved_method_ns };
     (f, env, tvars)
   | _ ->
     let f, env = gen_dfun n b cty ty temps in
-    tctx.method_self_ns <- saved_method_ns;
+    tctx := { !tctx with method_self_ns = saved_method_ns };
     (f, env, tc_param_ids @ tvars)
 
 let gen_dfun_def n b ty =
@@ -3337,8 +3347,8 @@ let gen_spec__inner n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      let saved_return_type = tctx.current_cpp_return_type in
-      tctx.current_cpp_return_type <- Some ty;
+      let saved_return_type = (!tctx).current_cpp_return_type in
+      tctx := { !tctx with current_cpp_return_type = Some ty };
       (* Strip MLmagic wrapper and track whether a type coercion from std::any
          is needed.  MLmagic wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int). *)
@@ -3353,12 +3363,12 @@ let gen_spec__inner n b ty =
       let has_magic =
         has_magic || ml_head_has_magic b
       in
-      tctx.cs_counter <- 0;
+      tctx := { !tctx with cs_counter = 0 };
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
       let b_expr = gen_expr ~expected_ty:ty (empty_env ()) inner_body in
-      tctx.current_cpp_return_type <- saved_return_type;
+      tctx := { !tctx with current_cpp_return_type = saved_return_type };
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) MLmagic — the extraction explicitly flagged a type coercion.
@@ -3405,7 +3415,7 @@ let gen_spec__inner n b ty =
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
   in
-  tctx.method_self_ns <- saved_method_ns;
+  tctx := { !tctx with method_self_ns = saved_method_ns };
   result
 
 let gen_spec n b ty =
@@ -4066,40 +4076,42 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   (* Generate method body. Initialize move tracking for owned parameters.
      'this' is always borrowed (const method). *)
-  let saved_dead = tctx.move_dead_after in
-  let saved_owned = tctx.move_owned_vars in
-  let saved_nparams = tctx.move_n_params in
+  let saved_dead = (!tctx).move_dead_after in
+  let saved_owned = (!tctx).move_owned_vars in
+  let saved_nparams = (!tctx).move_n_params in
   let saved_type_vars = get_current_type_vars () in
-  tctx.move_dead_after <- Escape.IntSet.empty;
+  tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
      ids_normal_order has outermost-first, push_vars' reverses them. *)
   let method_n_params = List.length ids_with_types in
-  tctx.move_n_params <- method_n_params;
+  tctx := { !tctx with move_n_params = method_n_params };
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (outermost-first, same order
      as push_vars' which prepends in list order).
      Only track ownership for non-trivial types (inductives). *)
-  tctx.move_owned_vars <-
-    List.fold_left
-      (fun acc (i, owned) ->
-        (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
-           (borrowed) and must never be treated as owned, or a reuse arm would
-           try to consume it via v_mut() on a const method.  Gated on reuse so
-           reuse-off output stays byte-identical to the pre-reuse baseline. *)
-        if owned && not (Table.reuse () && Table.reuse_loopify_ok () && i = this_pos)
-        then
-          let ml_ty = snd (List.nth ids_with_types i) in
-          if Escape.is_shared_ptr_type ml_ty
-             || is_nontrivial_value_ml_type ml_ty then
-            Escape.IntSet.add (i + 1) acc
-          else acc
-        else acc )
-      Escape.IntSet.empty
-      (List.mapi (fun i o -> (i, o)) method_owned_flags);
-  tctx.match_param_counter <- 0;
-  tctx.cs_counter <- 0;
-  tctx.current_letin_depth <- 0;
+  tctx :=
+    { !tctx with
+      move_owned_vars =
+          List.fold_left
+            (fun acc (i, owned) ->
+              (* Under [Crane Reuse], the receiver at [this_pos] is a const [this]
+                 (borrowed) and must never be treated as owned, or a reuse arm would
+                 try to consume it via v_mut() on a const method.  Gated on reuse so
+                 reuse-off output stays byte-identical to the pre-reuse baseline. *)
+              if owned && not (Table.reuse () && Table.reuse_loopify_ok () && i = this_pos)
+              then
+                let ml_ty = snd (List.nth ids_with_types i) in
+                if Escape.is_shared_ptr_type ml_ty
+                   || is_nontrivial_value_ml_type ml_ty then
+                  Escape.IntSet.add (i + 1) acc
+                else acc
+              else acc )
+            Escape.IntSet.empty
+            (List.mapi (fun i o -> (i, o)) method_owned_flags) };
+  tctx := { !tctx with match_param_counter = 0 };
+  tctx := { !tctx with cs_counter = 0 };
+  tctx := { !tctx with current_letin_depth = 0 };
   (* Set current type vars to include both the inductive's type vars and extra
      tvars. This ensures gen_expr/eta_fun correctly convert Tvars to named C++
      types when processing the method body (e.g., recursive calls carry type
@@ -4111,11 +4123,11 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
      type arguments get shared_ptr wrapping to match struct field types. *)
   let saved_method_ns = set_method_ns_for_locals ~base:method_ns () in
   let stmts = gen_stmts env method_k inner_body in
-  tctx.method_self_ns <- saved_method_ns;
+  tctx := { !tctx with method_self_ns = saved_method_ns };
   set_current_type_vars saved_type_vars;
-  tctx.move_dead_after <- saved_dead;
-  tctx.move_owned_vars <- saved_owned;
-  tctx.move_n_params <- saved_nparams;
+  tctx := { !tctx with move_dead_after = saved_dead };
+  tctx := { !tctx with move_owned_vars = saved_owned };
+  tctx := { !tctx with move_n_params = saved_nparams };
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces MLglob(func_ref, []) with empty type args for recursive
      references. When the function is a method, the recursive call needs
