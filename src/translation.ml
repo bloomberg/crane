@@ -1203,7 +1203,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       | _ -> CErrors.anomaly (Pp.str "gen_custom_type_conversion: expected IndRef") in
     match Table.find_custom_match_by_ref g with
     | None ->
-      CPPconverting_ctor (orig_dst_ty', [inner_expr])
+      Cpp_erasure.converting_ctor orig_dst_ty' [inner_expr]
     | Some match_tmpl ->
       let ctor_tmpls = Table.find_custom_ctor_templates ip in
       let src_type_strs = List.map render src_ts in
@@ -1306,7 +1306,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       let inner = strip_ns inner in
       let derefed = CPPderef expr in
       if inner = dst_ty then derefed
-      else CPPconverting_ctor (orig_dst_ty, [derefed])
+      else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
     | _, Tshared_ptr inner ->
       mk_call (CPPmk_shared inner) [expr]
     | Tglob (g1, src_ts, _), Tglob (g2, dst_ts, _)
@@ -1327,7 +1327,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
            && not (Table.is_inline_custom g1) ->
       (* Same Crane container, different element types → converting ctor *)
-      CPPconverting_ctor (orig_dst_ty, [expr])
+      Cpp_erasure.converting_ctor orig_dst_ty [expr]
     | Tvar (_, Some _), Tvar (_, Some _) ->
       (* Type-variable-to-type-variable conversion in converting constructors.
          When the source type variable is std::any at runtime (e.g. List<_U>
@@ -1343,7 +1343,8 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          pair<K,V>), and falling back to a two-level cast from pair<any,any>
          when A has first_type/second_type members (i.e. A is a std::pair). *)
       require_header "any";
-      if not (is_access_path expr) then CPPconverting_ctor (orig_dst_ty, [expr])
+      if not (is_access_path expr) then
+        Cpp_erasure.converting_ctor orig_dst_ty [expr]
       else begin
         (* Recovering [A] from a box -- including the case where [A] is a pair
            whose components were boxed one at a time -- is exactly what
@@ -1358,8 +1359,8 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
         mk_iife (Some dst)
           [ Sif_constexpr
               ( CPPis_same (src_ty, Tany),
-                [Sreturn (Some (CPPany_cast_tolerant (dst, expr)))],
-                [Sreturn (Some (CPPconverting_ctor (dst, [expr])))] ) ]
+                [Sreturn (Some (Cpp_erasure.unbox_tolerant dst expr))],
+                [Sreturn (Some (Cpp_erasure.converting_ctor dst [expr]))] ) ]
       end
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
                      match strip_ns dst with
@@ -1371,14 +1372,14 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       (match strip_ns dst with
        | Tglob (g, [_], _) ->
          (match src_ty with
-           | Tany -> CPPany_cast (Tglob (g, [Tany], []), expr)
+           | Tany -> Cpp_erasure.unbox (Tglob (g, [Tany], [])) expr
            | _ -> expr)
        | _ -> expr)
     | _ ->
       (* Type variables or fully concrete different types: converting
          constructor.  Type variables are always bare (never shared_ptr)
          because nested self-references are wrapped at the field level. *)
-      CPPconverting_ctor (orig_dst_ty, [expr])
+      Cpp_erasure.converting_ctor orig_dst_ty [expr]
 
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
@@ -1480,7 +1481,7 @@ let return_captures_by_value stmts =
     | CPPget' (e, id) -> CPPget' (expr e, id)
     | CPPmethod_call (e, id, args) ->
       CPPmethod_call (expr e, id, List.map expr args)
-    | CPPany_cast (ty, e) -> CPPany_cast (ty, expr e)
+    | CPPany_cast (ty, e) -> Cpp_erasure.unbox ty (expr e)
     | e -> e
   and stmt = function
     | Sreturn (Some e) -> Sreturn (Some (expr e))
@@ -1862,7 +1863,8 @@ let rec local_var_subst_expr ?(keep_cast = false) (target : Id.t)
     (repl : cpp_expr) (e : cpp_expr) =
   match e with
   | CPPany_cast (ty, CPPvar id) when keep_cast && Id.equal id target ->
-    CPPany_cast (ty, (match repl with CPPany_cast (_, inner) -> inner | r -> r))
+    Cpp_erasure.unbox ty
+      (match repl with CPPany_cast (_, inner) -> inner | r -> r)
   | CPPvar id when Id.equal id target -> repl
   | _ ->
     map_expr
@@ -3541,7 +3543,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
      prevents moving variables that appear more than once across all args). *)
   let gen_ctor_arg ?expected_ty ?(slot = slot) e =
     match e with
-    | MLdummy _ -> CPPconverting_ctor (Tany, [])
+    | MLdummy _ -> Cpp_erasure.converting_ctor Tany []
     | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
       wrap_void_call_as_value (gen_expr ~slot env e)
     | _ -> gen_expr ?expected_ty ~slot env e
@@ -4313,10 +4315,10 @@ and coerce ?term ?from ~into expr =
         match Cpp_erasure.erased_list_shape into with
         (* A custom list has no converting constructor to unbox its elements
            with, so it stays at the flat shape until a consumer converts it. *)
-        | Some (g, shape) when Table.is_custom g -> CPPany_cast (shape, expr)
+        | Some (g, shape) when Table.is_custom g -> Cpp_erasure.unbox shape expr
         | Some (_, shape) ->
-          CPPconverting_ctor (into, [CPPany_cast (shape, expr)])
-        | None -> CPPany_cast (into, expr) ) )
+          Cpp_erasure.converting_ctor into [Cpp_erasure.unbox shape expr]
+        | None -> Cpp_erasure.unbox into expr ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
        representation is unknown. *)
     | `Opaque -> expr
@@ -4346,7 +4348,7 @@ and coerce ?term ?from ~into expr =
               wrap_crane_erase_fn (erased_fn_instantiation expr)
             else expr
           in
-          CPPconverting_ctor (Tany, [adapted])
+          Cpp_erasure.converting_ctor Tany [adapted]
       else
         match into with
         (* A slot that erased only its domain -- a record field whose Rocq type
@@ -4417,8 +4419,8 @@ and apply_erased_callee callee arg_exprs =
 and apply_erased_curried ?(box = false) callee arg_exprs =
   List.fold_left
     (fun f a ->
-      let a = if box then CPPconverting_ctor (Tany, [a]) else a in
-      mk_call (CPPany_cast (Tfun ([Tany], Tany), f)) [a] )
+      let a = if box then Cpp_erasure.converting_ctor Tany [a] else a in
+      mk_call (Cpp_erasure.unbox (Tfun ([Tany], Tany)) (f)) [a] )
     callee arg_exprs
 
 (** Adapt a function value being stored into a slot whose C++ type is the
@@ -4844,8 +4846,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                | Tglob (g, args, ns) -> Tglob (g, List.map (fun _ -> Tany) args, ns)
                | t -> t
              in
-             CPPany_cast (erase_list_elems ty, result)
-           else CPPany_cast (ty, result)
+             Cpp_erasure.unbox (erase_list_elems ty) result
+           else Cpp_erasure.unbox ty result
       | _ -> result
     end
     else result
@@ -6141,7 +6143,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          constructor args is NOT in move_dead_after and cannot be moved twice. *)
       let gen_ctor_arg ?expected_ty ?(slot = slot) e =
       match e with
-        | MLdummy _ -> CPPconverting_ctor (Tany, [])
+        | MLdummy _ -> Cpp_erasure.converting_ctor Tany []
         | MLapp (f, _) | MLmagic (_, MLapp (f, _)) when ml_callee_is_void f ->
           wrap_void_call_as_value (gen_expr ~slot env e)
         | _ -> gen_expr ?expected_ty ~slot env e
@@ -6307,7 +6309,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                     let cast_stmt = Sasgn (orig_id, Some concrete_ty,
-                      CPPany_cast (concrete_ty, CPPvar any_id)) in
+                      Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
                 in
@@ -6337,7 +6339,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let erased_param_tys = List.map (fun _ -> Tany) renamed_params in
                 let new_lambda = CPPlambda (of_reversed renamed_params, new_ret_ty, new_body, cap) in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-                CPPconverting_ctor (func_ty, [new_lambda])
+                Cpp_erasure.converting_ctor func_ty [new_lambda]
               | _ ->
                 (* When a custom list literal (e.g. deque<Val>) is stored in a
                    std::any field, regenerate it with [deep_erase] so
@@ -6461,7 +6463,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let new_body =
                   List.fold_left (fun stmts (orig_id, any_id, concrete_ty) ->
                     let cast_stmt = Sasgn (orig_id, Some concrete_ty,
-                      CPPany_cast (concrete_ty, CPPvar any_id)) in
+                      Cpp_erasure.unbox concrete_ty (CPPvar any_id)) in
                     cast_stmt :: stmts
                   ) body_stmts (List.rev cast_bindings)
                 in
@@ -6491,7 +6493,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 in
                 let new_lambda = CPPlambda (of_reversed renamed_params, new_ret_ty, new_body, cap) in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-                CPPconverting_ctor (func_ty, [new_lambda])
+                Cpp_erasure.converting_ctor func_ty [new_lambda]
               (* A function value that is not a lambda literal (a reference to a
                  global, or a methodified one) cannot have its parameters
                  rewritten the way the branch above rewrites a literal's, so
@@ -6573,7 +6575,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                         strip_cpp_ref_const r
                       | None -> Tvoid )
                 in
-                CPPconverting_ctor (Tfun (param_types, ret_ty), [expr])
+                Cpp_erasure.converting_ctor (Tfun (param_types, ret_ty)) [expr]
               | _ -> expr )
         | ft ->
           (* Handle arrow types containing erased type variables.
@@ -6685,7 +6687,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             ) new_params in
             let cast_stmts = List.map (fun (_, orig_id, any_id, concrete_ty) ->
               Sasgn (orig_id, Some concrete_ty,
-                CPPany_cast (concrete_ty, CPPvar any_id))
+                Cpp_erasure.unbox concrete_ty (CPPvar any_id))
             ) cast_bindings in
             let new_body = cast_stmts @ body_stmts in
             let new_ret_ty = match ret_ty_opt with
@@ -6694,7 +6696,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             in
             let new_lambda = CPPlambda (of_reversed new_params, new_ret_ty, new_body, cap) in
             let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
-            CPPconverting_ctor (func_ty, [new_lambda])
+            Cpp_erasure.converting_ctor func_ty [new_lambda]
           (* The same erased-argument adaptation, for a function value that is
              not a lambda literal (a reference to a global, or to a method):
              there are no parameters here to rewrite, so defer to the runtime
@@ -8176,8 +8178,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | CPPconverting_ctor (t, _) as recovered when cpp_ty_eq t cpp_ty ->
             recovered
           | CPPany_cast _ as already_cast ->
-            CPPconverting_ctor (cpp_ty, [already_cast])
-          | v -> CPPconverting_ctor (cpp_ty, [CPPany_cast (list_any_ty, v)]) )
+            Cpp_erasure.converting_ctor cpp_ty [already_cast]
+          | v ->
+            Cpp_erasure.converting_ctor cpp_ty
+              [Cpp_erasure.unbox list_any_ty v] )
         | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
           let clean_cpp_ty = clean_self_ns cpp_ty in
           (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
@@ -8203,7 +8207,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           in
           let inner = match as_value () with
             | CPPany_cast _ as already_cast -> already_cast
-            | v -> CPPany_cast (erased_ty, v)
+            | v -> Cpp_erasure.unbox erased_ty v
           in
           (* When the callee is a REAL function whose parameter has a CONCRETE
              element type — a wholesale-boxed opaque element
@@ -8946,10 +8950,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                result needs no further recovery. *)
             Table.mark_needs_erase_fn ();
             mk_call cglob'
-              [CPPany_cast_tolerant (Tglob (g, glob_tys, []), single_arg)]
+              [Cpp_erasure.unbox_tolerant (Tglob (g, glob_tys, [])) single_arg]
           | Some g, _ ->
             mk_call cglob'
-              [CPPany_cast (Tglob (g, [Tany; Tany], []), single_arg)]
+              [Cpp_erasure.unbox (Tglob (g, [Tany; Tany], [])) (single_arg)]
           | None, _ -> primary_result )
         else
           primary_result
@@ -9112,7 +9116,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let expected = param_expected_cpp_ty env callee_param_tys i in
           ( match expected with
             | Some ty ->
-              CPPany_cast (erase_type_args_to_any ty, inner)
+              Cpp_erasure.unbox (erase_type_args_to_any ty) inner
             | None ->
               has_unresolved_boxed_arg := true;
               inner )
@@ -9746,15 +9750,16 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                    | Tnamespace (ns_g, _) -> Tnamespace (ns_g, Tglob (g, [Tany], []))
                    | _ -> Tglob (g, [Tany], [])
                  in
-                 CPPconverting_ctor (bare_ty, [CPPany_cast (list_any_ty, CPPvar binding_name)])
+                 Cpp_erasure.converting_ctor bare_ty
+                   [Cpp_erasure.unbox list_any_ty (CPPvar binding_name)]
                | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
                  let erased_elem = erase_type_to_any elem_ty in
                  let cast_ty =
                    if erased_elem = Tany then bare_ty
                    else Tglob (g, [erased_elem], [])
                  in
-                 CPPany_cast (cast_ty, CPPvar binding_name)
-               | _ -> CPPany_cast (bare_ty, CPPvar binding_name))
+                 Cpp_erasure.unbox cast_ty (CPPvar binding_name)
+               | _ -> Cpp_erasure.unbox bare_ty (CPPvar binding_name))
             else
               CPPvar binding_name
           in
@@ -9850,7 +9855,7 @@ and recover_erased_scrutinee env ~is_magic typ expr =
     let cpp_ty =
       cpp_of_ml env typ
     in
-    if prints_as_any cpp_ty then expr else CPPany_cast (cpp_ty, expr)
+    if prints_as_any cpp_ty then expr else Cpp_erasure.unbox cpp_ty expr
 
 (** Generate C++ pattern matching for an [MLcase].
 
@@ -10356,7 +10361,7 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
           not (binder_is_boxed i) && is_env_var_erased env tvars i
         | _ -> false
       in
-      if body_is_erased then (fun e -> k (CPPany_cast (ret, e)))
+      if body_is_erased then (fun e -> k (Cpp_erasure.unbox ret e))
       else k
     | _ -> k
   in
@@ -10575,7 +10580,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     in
     if needs_pair_any_cast then begin
       let g = Option.get pair_g_opt in
-      (CPPany_cast (Tglob (g, [Tany; Tany], []), t), true)
+      (Cpp_erasure.unbox (Tglob (g, [Tany; Tany], [])) (t), true)
     end
     else if (scrut_is_mlmagic || (scrut_is_magic && prints_as_any typ)
              || scrut_is_cpp_erased)
@@ -10602,7 +10607,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
           Tglob (g, List.map erase_tparams args, ns)
         | _ -> concrete_match_type
       in
-      (CPPany_cast (cast_ty, t), false)
+      (Cpp_erasure.unbox cast_ty t, false)
     else
       (t, false)
   in
@@ -10787,7 +10792,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                  let cast_expr =
                    match stripped with
                    | Tglob (g, _, _) when is_prod_global g ->
-                     CPPany_cast (Tglob (g, [Tany; Tany], []), CPPvar name)
+                     Cpp_erasure.unbox
+                       (Tglob (g, [Tany; Tany], []))
+                       (CPPvar name)
                    | Tglob (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
                      (* List<T> is stored as List<any> by grammar productions —
                         use the converting constructor List<T>(any_cast<List<any>>(v))
@@ -10799,8 +10806,8 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                          Tnamespace (ns_g, Tglob (g, [Tany], []))
                        | _ -> Tglob (g, [Tany], [])
                      in
-                     CPPconverting_ctor (cpp_ty,
-                       [CPPany_cast (list_any_ty, CPPvar name)])
+                     Cpp_erasure.converting_ctor cpp_ty
+                       [Cpp_erasure.unbox list_any_ty (CPPvar name)]
                    | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
                      CPPvar name
                    | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
@@ -10810,7 +10817,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                         wrapping it. any_cast<std::any>(any(V)) throws; pass
                         the std::any value as-is. *)
                      CPPvar name
-                   | _ -> CPPany_cast (cpp_ty, CPPvar name)
+                   | _ -> Cpp_erasure.unbox cpp_ty (CPPvar name)
                  in
                  List.map
                    (local_var_subst_stmt ~keep_cast:true name cast_expr)
@@ -10865,7 +10872,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             List.map (function
               | Sreturn (Some (CPPvar name))
                 when Id.Set.mem name erased_pat_vars ->
-                Sreturn (Some (CPPany_cast (br_ret, CPPvar name)))
+                Sreturn (Some (Cpp_erasure.unbox br_ret (CPPvar name)))
               | s -> s)
               br_stmts
         | _ -> br_stmts
@@ -12001,7 +12008,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                std::any), so drop the cast and replace with the lifted call. *)
             CPPfun_call
               (mk_cppglob lifted [], of_reversed (free_args @ List.map sub args))
-          | CPPany_cast (ty, e') -> CPPany_cast (ty, sub e')
+          | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
           | _ -> e
         and subst_lifted_call_stmt
             (target : Id.t)

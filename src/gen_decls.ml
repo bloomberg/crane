@@ -1139,7 +1139,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                     let param_name =
                       Id.of_string ("_p_" ^ Id.to_string name) in
                     Sasgn (name, Some body_cpp,
-                           CPPany_cast (body_cpp, CPPvar param_name)) :: acc
+                           Cpp_erasure.unbox body_cpp (CPPvar param_name))
+                    :: acc
                   ) stmts (List.rev cast_info)
                 in
                 (* Sync param names with push_vars' output (lowercased
@@ -3375,7 +3376,7 @@ let gen_spec__inner n b ty =
         && (has_magic || ml_body_returns_erased_field inner_body)
       in
       let b_expr =
-        if needs_any_cast then CPPany_cast (ty, b_expr)
+        if needs_any_cast then Cpp_erasure.unbox ty b_expr
         else
           (* (c) The emitted expression is itself the evidence: a projection
              out of a pair that was recovered from a box hands back a
@@ -5620,14 +5621,14 @@ let gen_ind_header_v2
                     :: partner_drains)]
                 in
                 [Sif_decl (_sp_id, Tptr Tauto,
-                  CPPany_cast (Tshared_ptr partner_ty,
-                    CPPunop ("&", CPPvar _cur_id)),
+                  Cpp_erasure.unbox (Tshared_ptr partner_ty)
+                    (CPPunop ("&", CPPvar _cur_id)),
                   partner_body, inner)]
             in
             let loop_body_stmts =
               [Sif_decl (_sp_id, Tptr Tauto,
-                CPPany_cast (Tshared_ptr self_ty,
-                  CPPunop ("&", CPPvar _cur_id)),
+                Cpp_erasure.unbox (Tshared_ptr self_ty)
+                  (CPPunop ("&", CPPvar _cur_id)),
                 self_branch_body,
                 build_if_chain partner_branches)]
             in

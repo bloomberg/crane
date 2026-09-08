@@ -1586,7 +1586,8 @@ let make_shadow_updates shadow_params args =
     let vty = strip_ref_and_const_type ty in
     match (ty, core) with
     | Tptr _, _ -> arg
-    | _, CPPderef _ when is_value_type_ret vty -> CPPconverting_ctor (vty, [core])
+    | _, CPPderef _ when is_value_type_ret vty ->
+      Cpp_erasure.converting_ctor vty [core]
     | _ -> arg
   in
   if List.length non_trivial <= 1 then
@@ -3234,7 +3235,7 @@ let build_cell_call ?token ~vt_ret cell =
              | None -> e)
           else e
         | None ->
-          CPPconverting_ctor (Tany, []) )
+          Cpp_erasure.converting_ctor Tany [] )
   in
   match vt_ret with
   | Some _ ->
@@ -3675,7 +3676,7 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
   let cursor_decls =
     if not !cursor_used then []
     else
-      [ Sasgn (id_own, Some head_ty, CPPconverting_ctor (head_ty, []));
+      [ Sasgn (id_own, Some head_ty, Cpp_erasure.converting_ctor head_ty []);
         (* [Tid] is the *user-defined* type constructor, so the printer
            namespace-qualifies it ("Mod::bool").  This is the builtin, which
            must never be qualified. *)
@@ -8509,7 +8510,8 @@ let hoist_rec_conditions (check : call_checker)
       (* The temporary is declared with the return type, so a [Topaque] in it
          has been written down as [std::any] and the value really is boxed. *)
       match (Ml_type_util.materialise_opaque ret_ty, cond') with
-      | Tany, CPPvar _ when want <> Tany -> (binds, CPPany_cast (want, cond'))
+      | Tany, CPPvar _ when want <> Tany ->
+        (binds, Cpp_erasure.unbox want cond')
       | _ -> (binds, cond')
     in
     let ty_bool = Tid_external (Id.of_string "bool", []) in

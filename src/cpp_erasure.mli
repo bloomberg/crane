@@ -56,6 +56,35 @@ type method_queries = {
 
 val method_queries : method_queries ref
 
+(** {2 Building and reading boxes}
+
+    Three ways of writing a box down are always mistakes, and {!Minicpp_check}
+    reports all three.  Going through these constructors is what makes them
+    not arise: each is the identity on the term that would have been wrong. *)
+
+(** [converting_ctor ty args] is the converting constructor [ty(args)].  When
+    [ty] is erased, that is a box.
+
+    A box built around a box is two sites each believing they owned the
+    boundary; the inner value is then unreachable, because the consumer casts
+    once.  So boxing a box re-boxes what was inside it instead. *)
+val converting_ctor : cpp_type -> cpp_expr list -> cpp_expr
+
+(** [unbox ty e] reads [e] back out of its box at type [ty].
+
+    Two readings are no reading at all, and neither is built.  [any_cast] to
+    an erased type does not unwrap the box -- it asks whether the box holds a
+    {e further} box, and throws when it does not -- so an erased [ty] gives
+    [e] itself.  A cast applied straight to a freshly built box is dead work,
+    so it gives back what was boxed. *)
+val unbox : cpp_type -> cpp_expr -> cpp_expr
+
+(** [unbox_tolerant ty e] is {!unbox} through the [crane_any_cast] runtime
+    helper, which recovers a value component by component and passes through
+    anything that was never boxed.  For a shape that is only knowable once C++
+    instantiates the surrounding template. *)
+val unbox_tolerant : cpp_type -> cpp_expr -> cpp_expr
+
 (** {2 The pass} *)
 
 (** A declaration whose types are all spelled the way they will be written

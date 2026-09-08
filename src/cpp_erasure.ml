@@ -224,6 +224,35 @@ let rec resolve_field ((f, vis, tag) as field) =
     (Fnested_struct (id, List.map resolve_field fields), vis, tag)
   | _ -> map_field resolve_expr resolve_stmt (fun t -> t) field
 
+(** [is_box e] -- [e] is a box built here, so its content is still in hand.
+    Boxing is spelled as a converting constructor at the erased type. *)
+let is_box = function
+  | CPPconverting_ctor (ty, [_]) -> Ml_type_util.prints_as_any ty
+  | _ -> false
+
+(** [converting_ctor ty args] -- see [cpp_erasure.mli]. *)
+let converting_ctor ty args =
+  match args with
+  | [inner] when Ml_type_util.prints_as_any ty && is_box inner ->
+    let inner = match inner with CPPconverting_ctor (_, [x]) -> x | x -> x in
+    CPPconverting_ctor (ty, [inner])
+  | _ -> CPPconverting_ctor (ty, args)
+
+(** [unbox ty e] -- see [cpp_erasure.mli]. *)
+let unbox ty e =
+  if Ml_type_util.prints_as_any ty then
+    e
+  else
+    match e with
+    | CPPconverting_ctor (_, [inner]) when is_box e -> inner
+    | _ -> CPPany_cast (ty, e)
+
+(** [unbox_tolerant ty e] -- see [cpp_erasure.mli]. *)
+let unbox_tolerant ty e =
+  match e with
+  | CPPconverting_ctor (_, [inner]) when is_box e -> inner
+  | _ -> CPPany_cast_tolerant (ty, e)
+
 (** [resolve_casts decl] rewrites every [CPPany_cast] in [decl] to say which
     caster the printer should emit: dropped where the cast is the identity,
     {!Minicpp.CPPany_cast_tolerant} where the shape is only knowable at
