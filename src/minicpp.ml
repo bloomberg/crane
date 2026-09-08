@@ -667,6 +667,13 @@ let mk_call fn args =
   | CPPabort _, [] -> fn
   | _ -> CPPfun_call (fn, List.rev args)
 
+(** [mk_apply fn args] applies [fn] to [args], given in {e source} order.
+
+    Applying no arguments is nothing to apply, so it is [fn] itself -- unlike
+    {!mk_call}, where the empty list is a nullary call [fn()].  Reach for this
+    where the arguments are whatever a call site had left over. *)
+let mk_apply fn args = match args with [] -> fn | _ -> mk_call fn args
+
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
 

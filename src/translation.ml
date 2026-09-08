@@ -4157,6 +4157,35 @@ and adapter_params ~prefix dom =
 (** An {!adapter_params} parameter read back as the argument to pass along. *)
 and adapter_arg (_, id) = CPPvar (Option.get id)
 
+(** [mk_arity_call ~params ~saturated args] applies a callee to [args], given
+    in {e source} order, where the callee's declaration fixes its parameters
+    to [params].  [saturated] builds the call, from exactly as many arguments
+    as [params] has.
+
+    A call site need not match that arity, and a flat call is wrong whichever
+    way it misses.  Arguments past the arity apply to the call's {e result} --
+    a binder instantiated at a function type, say -- rather than to the
+    callee.  Arguments short of it leave a closure over the ones still to
+    come, so the call is eta-expanded instead of emitted shorter than it is
+    declared. *)
+and mk_arity_call ~params ~saturated args =
+  let arity = List.length params in
+  let given = List.length args in
+  if given > arity && arity > 0 then
+    mk_apply
+      (saturated (List.filteri (fun i _ -> i < arity) args))
+      (List.filteri (fun i _ -> i >= arity) args)
+  else if given < arity then
+    let waiting =
+      adapter_params ~prefix:"_sat"
+        (List.filteri (fun i _ -> i >= given) params)
+    in
+    mk_lambda waiting None
+      [Sreturn (Some (saturated (args @ List.map adapter_arg waiting)))]
+      ~by_value:true
+  else
+    saturated args
+
 (** [classify_erasure ty] -- the erasure status of one side of a value
     boundary, as the single question worth asking about it.
 
@@ -7208,25 +7237,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     targs )
           in
           (* A class method is a static member function of the instance
-             struct, so it has a fixed arity: handing it fewer arguments than
-             that is a closure over the ones still to come, not a shorter
-             call. *)
-          let missing =
-            List.filteri
-              (fun i _ -> i >= List.length value_args)
-              fld_param_tys
-          in
-          if missing = [] then CPPfun_call (callee, arg_exprs)
-          else
-            let params =
-              adapter_params ~prefix:"_ep" (List.map (cpp_of_ml env') missing)
-            in
-            let filled =
-              List.rev_map adapter_arg params @ arg_exprs
-            in
-            mk_lambda params None
-              [Sreturn (Some (CPPfun_call (callee, filled)))]
-              ~by_value:true
+             struct, so its arity is the field's. *)
+          mk_arity_call
+            ~params:(List.map (cpp_of_ml env') fld_param_tys)
+            ~saturated:(mk_call callee)
+            (call_args arg_exprs)
         in
         let n_value_args = List.length value_args in
         let erased_cod =
@@ -8779,9 +8794,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               let k = max 0 (arity - List.length captured_args) in
               let fill = List.filteri (fun i _ -> i < k) eta_vars in
               let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
-              let base = mk_call cglob (captured_args @ fill) in
-              if surplus = [] then base
-              else mk_call base surplus
+              mk_apply (mk_call cglob (captured_args @ fill)) surplus
             | None -> mk_call cglob call_args
           in
           let ret_ty, body =
@@ -11881,17 +11894,21 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
            parameter C++ has to deduce.  A closure has no name to deduce, and
            so cannot agree with the same parameter as settled by another
            argument; {!name_fn_arg_for_tvar_param} names it. *)
-        let actual_param_ml_tys =
-          List.filter_map
-            (fun (_, ty) ->
-              if isTdummy ty || ml_type_is_void ty then None else Some ty )
-            params
+        (* {!Mlutil.collect_lams} hands the binders back innermost-first, so
+           the source order these are read in is the reverse of [params]. *)
+        let param_ml_tys =
+          List.rev
+            (List.filter_map
+               (fun (_, ty) ->
+                 if isTdummy ty || ml_type_is_void ty then None else Some ty )
+               params )
         in
-        let n_actual_params = List.length actual_param_ml_tys in
+        let n_actual_params = List.length param_ml_tys in
+        (* [args] in source order, as [param_ml_tys] is. *)
         let name_lifted_args args =
           List.mapi
             (fun i a ->
-              match List.nth_opt actual_param_ml_tys i with
+              match List.nth_opt param_ml_tys i with
               | Some ty -> name_fn_arg_for_tvar_param ty a
               | None -> a )
             args
@@ -11904,24 +11921,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let sub = subst_lifted_call_expr target lifted free_args in
           match e with
           | CPPfun_call (CPPvar id, args) when Id.equal id target ->
-            (* The lifted template's parameters come from the lambda, so a call
-               carrying more arguments than that is applying them to the
-               call's {e result} -- instantiating a polymorphic binder at a
-               function type, say.  Arguments are stored reversed, so the
-               surplus ones sit at the front. *)
-            let args = List.map sub args in
-            let surplus = List.length args - n_actual_params in
-            let excess, here =
-              if n_actual_params > 0 && surplus > 0 then
-                ( List.filteri (fun i _ -> i < surplus) args,
-                  List.filteri (fun i _ -> i >= surplus) args )
-              else ([], args)
-            in
-            let base =
-              CPPfun_call
-                (mk_cppglob lifted [], free_args @ name_lifted_args here)
-            in
-            if excess = [] then base else mk_call base (List.rev excess)
+            (* The lifted template's parameters come from the lambda, so its
+               arity is the lambda's. *)
+            mk_arity_call
+              ~params:(List.map (cpp_of_ml env) param_ml_tys)
+              ~saturated:(fun here ->
+                CPPfun_call
+                  ( mk_cppglob lifted [],
+                    free_args @ List.rev (name_lifted_args here) ) )
+              (call_args (List.map sub args))
           | CPPvar id when Id.equal id target ->
             (* Bare reference to lifted function: generate a properly-typed
                wrapper lambda with one parameter per non-erased Rocq lambda

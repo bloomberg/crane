@@ -154,9 +154,9 @@ struct ClassMethodPartialApp {
   static_assert(Sz<SzNat, uint64_t>);
   static inline const uint64_t test =
       List<std::function<uint64_t(uint64_t)>>::cons(
-          [](uint64_t _ep0) { return SzNat::sz(UINT64_C(2), _ep0); },
+          [](uint64_t _sat0) { return SzNat::sz(UINT64_C(2), _sat0); },
           List<std::function<uint64_t(uint64_t)>>::cons(
-              [](uint64_t _ep0) { return SzNat::sz(UINT64_C(3), _ep0); },
+              [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
               List<std::function<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
               [](std::function<uint64_t(uint64_t)> f, uint64_t n) {

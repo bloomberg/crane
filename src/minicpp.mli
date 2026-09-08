@@ -599,6 +599,11 @@ val of_reversed : 'a list -> 'a revd
     Calling a {!CPPabort} with no arguments is that same abort. *)
 val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
 
+(** [mk_apply fn args] applies [fn] to [args], given in {e source} order.
+    Applying no arguments is [fn] itself, unlike {!mk_call}, where the empty
+    list is a nullary call [fn()]. *)
+val mk_apply : cpp_expr -> cpp_expr list -> cpp_expr
+
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
     A nullary lambda whose body only throws reduces to {!CPPabort}, carrying
