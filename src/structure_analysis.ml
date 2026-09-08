@@ -175,7 +175,9 @@ let is_func_decl (_, se) =
 
     The main module is excluded because its declarations are emitted directly at
     top level, not inside a wrapper struct. *)
-let classify_module ~main_mp (mp, sel) =
+(** [taken] are names already spoken for at file scope by something a module
+    cannot be merged into. *)
+let classify_module ?(taken = []) ~main_mp (mp, sel) =
   let has_func = List.exists is_func_decl sel in
   let has_bare =
     List.exists
@@ -200,7 +202,16 @@ let classify_module ~main_mp (mp, sel) =
     | None -> false
   in
   if has_bare && all_bare && is_modfile mp && has_func && not is_main then
-    Some (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)))
+    let name =
+      Table.escape_reserved_struct_name
+        (String.capitalize_ascii (string_of_modfile mp))
+    in
+    (* The wrapper is a struct at file scope, and an eponymous inductive there
+       normally absorbs it -- the wrapper's members are emitted inside the
+       type's own declaration.  An [enum class] has no body to hold them, so
+       Rocq's [byte] and the [Byte] file wrapping its operations would collide
+       as two spellings of one name; the type keeps it. *)
+    Some (if List.mem name taken then name ^ "_Mod" else name)
   else
     None
 
@@ -515,11 +526,16 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     | (mp, _) :: _ -> Some mp
     | [] -> None
   in
+  let taken =
+    List.map
+      (fun r -> String.capitalize_ascii (Common.pp_global_name Type r))
+      global_scope_enums
+  in
   let entries =
     List.map
       (fun (mp, sel) ->
         let sel = sort_inductives_within_module reg s sel in
-        ((mp, sel), classify_module ~main_mp (mp, sel)) )
+        ((mp, sel), classify_module ~taken ~main_mp (mp, sel)) )
       s
   in
   let sorted = topological_sort reg entries in

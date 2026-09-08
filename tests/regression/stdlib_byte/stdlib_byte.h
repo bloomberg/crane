@@ -270,7 +270,7 @@ struct Byte0 {
   static bool eqb0(Byte a, Byte b0);
 };
 
-struct Byte {
+struct Byte_Mod {
   static std::pair<
       bool,
       std::pair<

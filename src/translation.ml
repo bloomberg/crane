@@ -7199,7 +7199,26 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     Common.id_of_global Term fld,
                     targs )
           in
-          CPPfun_call (callee, arg_exprs)
+          (* A class method is a static member function of the instance
+             struct, so it has a fixed arity: handing it fewer arguments than
+             that is a closure over the ones still to come, not a shorter
+             call. *)
+          let missing =
+            List.filteri
+              (fun i _ -> i >= List.length value_args)
+              fld_param_tys
+          in
+          if missing = [] then CPPfun_call (callee, arg_exprs)
+          else
+            let params =
+              adapter_params ~prefix:"_ep" (List.map (cpp_of_ml env') missing)
+            in
+            let filled =
+              List.rev_map adapter_arg params @ arg_exprs
+            in
+            mk_lambda params None
+              [Sreturn (Some (CPPfun_call (callee, filled)))]
+              ~by_value:true
         in
         let n_value_args = List.length value_args in
         let erased_cod =
@@ -11860,6 +11879,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               if isTdummy ty || ml_type_is_void ty then None else Some ty )
             params
         in
+        let n_actual_params = List.length actual_param_ml_tys in
         let name_lifted_args args =
           List.mapi
             (fun i a ->
@@ -11876,21 +11896,29 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let sub = subst_lifted_call_expr target lifted free_args in
           match e with
           | CPPfun_call (CPPvar id, args) when Id.equal id target ->
-            CPPfun_call
-              ( mk_cppglob lifted [],
-                free_args @ name_lifted_args (List.map sub args) )
+            (* The lifted template's parameters come from the lambda, so a call
+               carrying more arguments than that is applying them to the
+               call's {e result} -- instantiating a polymorphic binder at a
+               function type, say.  Arguments are stored reversed, so the
+               surplus ones sit at the front. *)
+            let args = List.map sub args in
+            let surplus = List.length args - n_actual_params in
+            let excess, here =
+              if n_actual_params > 0 && surplus > 0 then
+                ( List.filteri (fun i _ -> i < surplus) args,
+                  List.filteri (fun i _ -> i >= surplus) args )
+              else ([], args)
+            in
+            let base =
+              CPPfun_call
+                (mk_cppglob lifted [], free_args @ name_lifted_args here)
+            in
+            if excess = [] then base else mk_call base (List.rev excess)
           | CPPvar id when Id.equal id target ->
             (* Bare reference to lifted function: generate a properly-typed
                wrapper lambda with one parameter per non-erased Rocq lambda
                param. Capture by value ([=]) so that free variables don't
                dangle when the wrapper outlives the current stack frame. *)
-            let n_actual_params =
-              List.length
-                (List.filter
-                   (fun (_, ty) ->
-                     (not (isTdummy ty)) && not (ml_type_is_void ty))
-                   params)
-            in
             if free_args = [] && n_actual_params = 0 then
               mk_cppglob lifted []
             else

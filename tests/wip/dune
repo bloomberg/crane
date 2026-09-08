@@ -112,17 +112,6 @@
   (action (run ./cps_continuation_copy.t.exe))))
 
 
-(subdir class_method_partial_app
- (rule
-  (targets class_method_partial_app.t.exe)
-  (deps ClassMethodPartialApp.vo class_method_partial_app.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} class_method_partial_app.t.exe class_method_partial_app.cpp class_method_partial_app.t.cpp)))
- (rule
-  (alias runtest)
-  (deps class_method_partial_app.t.exe)
-  (action (run ./class_method_partial_app.t.exe))))
-
 (subdir dict_ctor_field
  (rule
   (targets dict_ctor_field.t.exe)
@@ -134,17 +123,6 @@
   (deps dict_ctor_field.t.exe)
   (action (run ./dict_ctor_field.t.exe))))
 
-(subdir let_poly_fn_instance
- (rule
-  (targets let_poly_fn_instance.t.exe)
-  (deps LetPolyFnInstance.vo let_poly_fn_instance.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} let_poly_fn_instance.t.exe let_poly_fn_instance.cpp let_poly_fn_instance.t.cpp)))
- (rule
-  (alias runtest)
-  (deps let_poly_fn_instance.t.exe)
-  (action (run ./let_poly_fn_instance.t.exe))))
-
 (subdir shared_dep_two_targets
  (rule
   (targets shared_dep_two_targets.t.exe)
@@ -155,14 +133,3 @@
   (alias runtest)
   (deps shared_dep_two_targets.t.exe)
   (action (run ./shared_dep_two_targets.t.exe))))
-
-(subdir stdlib_byte
- (rule
-  (targets stdlib_byte.t.exe)
-  (deps StdlibByte.vo stdlib_byte.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stdlib_byte.t.exe stdlib_byte.cpp stdlib_byte.t.cpp)))
- (rule
-  (alias runtest)
-  (deps stdlib_byte.t.exe)
-  (action (run ./stdlib_byte.t.exe))))

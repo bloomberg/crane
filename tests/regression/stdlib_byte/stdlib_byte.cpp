@@ -9,7 +9,7 @@ std::pair<
             std::pair<
                 bool,
                 std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
-Byte::to_bits(Byte b0) {
+Byte_Mod::to_bits(Byte b0) {
   switch (b0) {
   case Byte::X00: {
     return std::make_pair(
@@ -3227,14 +3227,14 @@ bool Bool::eqb(bool b1, bool b2) {
 }
 
 bool Byte0::eqb0(Byte a, Byte b0) {
-  auto [a0, p] = Byte::to_bits(a);
+  auto [a0, p] = Byte_Mod::to_bits(a);
   auto [a1, p0] = std::move(p);
   auto [a2, p1] = std::move(p0);
   auto [a3, p2] = std::move(p1);
   auto [a4, p3] = std::move(p2);
   auto [a5, p4] = std::move(p3);
   auto [a6, a7] = std::move(p4);
-  auto [b1, p5] = Byte::to_bits(b0);
+  auto [b1, p5] = Byte_Mod::to_bits(b0);
   auto [b2, p6] = std::move(p5);
   auto [b3, p7] = std::move(p6);
   auto [b4, p8] = std::move(p7);
