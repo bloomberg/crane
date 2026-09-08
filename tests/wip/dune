@@ -111,14 +111,3 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
-
-(subdir shared_dep_two_targets
- (rule
-  (targets shared_dep_two_targets.t.exe)
-  (deps SharedDepTwoTargets.vo shared_dep_two_targets.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_dep_two_targets.t.exe shared_dep_two_targets.cpp shared_dep_two_targets.t.cpp)))
- (rule
-  (alias runtest)
-  (deps shared_dep_two_targets.t.exe)
-  (action (run ./shared_dep_two_targets.t.exe))))
