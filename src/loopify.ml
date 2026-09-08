@@ -2421,9 +2421,10 @@ let has_higher_order_template_param tparams =
     call's result is combined with saved values via [rebuild]. *)
 type decomposed = {
   d_saved : cpp_expr list;
-      (** Expressions to evaluate and save before recursing *)
-  d_saved_types : cpp_type list;
-      (** Types of saved expressions (for frame struct fields) *)
+      (** Expressions to evaluate and save before recursing.  Their types are
+          not recorded here: they are recovered from the expressions by
+          {!infer_saved_types} once the frame is generated, in the
+          environment that holds there. *)
   d_rec_args : cpp_expr list;  (** Arguments to pass to the recursive call *)
   d_rebuild : cpp_expr list -> cpp_expr -> cpp_expr;
       (** [d_rebuild saved_vars result] reconstructs the final expression.
@@ -2516,7 +2517,6 @@ let rec decompose_single_call check expr =
           {
             d with
             d_saved = e1 :: d.d_saved;
-            d_saved_types = Tunresolved :: d.d_saved_types;
             d_rebuild =
               (fun saved result ->
                 let e1' = List.hd saved in
@@ -2530,7 +2530,6 @@ let rec decompose_single_call check expr =
         Some
           {
             d_saved = [e1];
-            d_saved_types = [Tunresolved];
             d_rec_args = cs.cs_args;
             d_rebuild =
               (fun saved result -> CPPbinop (op, List.hd saved, result));
@@ -2546,7 +2545,6 @@ let rec decompose_single_call check expr =
           {
             d with
             d_saved = d.d_saved @ [e2];
-            d_saved_types = d.d_saved_types @ [Tunresolved];
             d_rebuild =
               (fun saved result ->
                 let n = List.length d.d_saved in
@@ -2561,7 +2559,6 @@ let rec decompose_single_call check expr =
         Some
           {
             d_saved = [e2];
-            d_saved_types = [Tunresolved];
             d_rec_args = cs.cs_args;
             d_rebuild =
               (fun saved result -> CPPbinop (op, result, List.hd saved));
@@ -2583,8 +2580,6 @@ let rec decompose_single_call check expr =
         {
           d with
           d_saved = d.d_saved @ margs;
-          d_saved_types =
-            d.d_saved_types @ List.map (fun _ -> Tunresolved) margs;
           d_rebuild =
             (fun saved result ->
               let d_saved = list_take n_d saved in
@@ -2597,7 +2592,6 @@ let rec decompose_single_call check expr =
       Some
         {
           d_saved = margs;
-          d_saved_types = List.map (fun _ -> Tunresolved) margs;
           d_rec_args = cs.cs_args;
           d_rebuild =
             (fun saved result -> CPPmethod_call (result, method_id, saved));
@@ -2645,9 +2639,6 @@ and decompose_funcall check f args =
         {
           d with
           d_saved = f_extra @ non_rec_args @ d.d_saved;
-          d_saved_types =
-            List.map (fun _ -> Tunresolved) (f_extra @ non_rec_args)
-            @ d.d_saved_types;
           d_rebuild =
             (fun saved result ->
               let f' = if n_f > 0 then List.hd saved else f in
@@ -2673,8 +2664,6 @@ and decompose_funcall check f args =
       Some
         {
           d_saved = f_extra @ non_rec_args;
-          d_saved_types =
-            List.map (fun _ -> Tunresolved) (f_extra @ non_rec_args);
           d_rec_args = cs.cs_args;
           d_rebuild =
             (fun saved result ->
@@ -2705,7 +2694,6 @@ and decompose_double_call check expr =
       Some
         {
           d_saved = [];
-          d_saved_types = [];
           d_rec_args = cs.cs_args;
           d_rebuild = (fun _saved result -> result);
         }
@@ -4648,7 +4636,11 @@ let build_scrutinee_handler
     List.mapi
       (fun i id ->
         let ty = List.nth saved_types i in
-        let tgt = if ty = Tunresolved then Existing else Declare ty in
+        (* No type was inferred for this frame field.  [auto] still
+           declares the binding correctly here, since the initialiser is
+           the field itself; a bare assignment would name a variable that
+           nothing has declared. *)
+        let tgt = if ty = Tunresolved then Declare Tauto else Declare ty in
         let field_expr =
           frame_field_named field_names i
         in
@@ -5439,7 +5431,9 @@ let rec rewrite_enter_lambda_return ctx stmt =
           List.mapi
             (fun i id ->
               let ty = List.nth lambda_types i in
-              let tgt = if ty = Tunresolved then Existing else Declare ty in
+              let tgt =
+                if ty = Tunresolved then Declare Tauto else Declare ty
+              in
               Sasgn (id, tgt,
                      frame_field_named all_field_names (n_d + i)))
             lambda_fvs
