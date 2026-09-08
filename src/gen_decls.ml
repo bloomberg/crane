@@ -3561,9 +3561,9 @@ let rec replace_return_this_expr inner_ty = function
   | CPPlambda (params, ret, body, cap) ->
     CPPlambda
       (params, ret, List.map (replace_return_this_stmt inner_ty) body, cap)
-  | CPPfun_call (f, {rev = args}) ->
+  | CPPfun_call (_, f, {rev = args}) ->
     CPPfun_call
-      ( replace_return_this_expr inner_ty f,
+      ( Ropaque, replace_return_this_expr inner_ty f,
         of_reversed (List.map (replace_return_this_expr inner_ty) args) )
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
@@ -3617,8 +3617,8 @@ let rec deref_return_this_expr = function
   | CPPthis -> CPPderef CPPthis
   | CPPlambda (params, ret, body, cap) ->
     CPPlambda (params, ret, List.map deref_return_this_stmt body, cap)
-  | CPPfun_call (f, {rev = args}) ->
-    CPPfun_call (deref_return_this_expr f,
+  | CPPfun_call (_, f, {rev = args}) ->
+    CPPfun_call (Ropaque, deref_return_this_expr f,
                  of_reversed (List.map deref_return_this_expr args))
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map deref_return_this_expr exprs)
@@ -3752,7 +3752,7 @@ let replace_this_in_lambdas self_type stmts =
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true
   | CPPlambda (_, _, body, _) -> List.exists stmt_has_shared_from_this body
-  | CPPfun_call (f, {rev = args}) ->
+  | CPPfun_call (_, f, {rev = args}) ->
     expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
   | CPPoverloaded exprs -> List.exists expr_has_shared_from_this exprs
   | _ -> false
@@ -5907,9 +5907,9 @@ let gen_ind_header_v2
                 List.map
                   (fun a ->
                     match a with
-                    | CPPfun_call (CPPalloc (Alloc_heap, inner), cargs)
+                    | CPPfun_call (_, CPPalloc (Alloc_heap, inner), cargs)
                     | CPPfun_call
-                        (CPPalloc (Alloc_arena_scoped, inner), cargs) ->
+                        (_, CPPalloc (Alloc_arena_scoped, inner), cargs) ->
                       (* make_rc_reusing takes the token first. *)
                       mk_call (CPPalloc (Alloc_reusing, inner))
                         (CPPmove (CPPvar tok_id) :: call_args cargs)

@@ -118,10 +118,10 @@ let method_queries =
     because the tolerant caster hands back a box. *)
 let returns_a_box = function
   | CPPmethod_call (CPPglob (n, _, _), _, _) -> !method_queries.mq_returns_any n
-  | CPPfun_call (CPPglob (n, _, _), _) when !method_queries.mq_is_method n ->
+  | CPPfun_call (_, CPPglob (n, _, _), _) when !method_queries.mq_is_method n ->
     !method_queries.mq_returns_any n
-  | CPPfun_call (CPPget' (_, n), _) -> !method_queries.mq_returns_any n
-  | CPPfun_call (CPPany_cast _, _) -> true
+  | CPPfun_call (_, CPPget' (_, n), _) -> !method_queries.mq_returns_any n
+  | CPPfun_call (_, CPPany_cast _, _) -> true
   | _ -> false
 
 (** [castable_to ty] -- [ty] names something [any_cast] can ask for.  A type

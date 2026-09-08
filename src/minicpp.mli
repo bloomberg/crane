@@ -321,14 +321,31 @@ and alloc_kind =
           the rest construct the new [T].  Only emitted under
           [Crane NonAtomicRc]. *)
 
+(** What a call yields.
+
+    Translation knows the C++ type of every call it builds -- it has to, to
+    decide boxing -- and used to drop it, leaving later passes to reconstruct
+    it from the untyped expression.  {!Loopify.infer_saved_type} is what that
+    reconstruction looked like: a bottom-up guess that fell back on matching
+    the callee's *name string* to recover a return type.  Carrying the answer
+    is cheaper than re-deriving it and cannot disagree with itself. *)
+and call_result =
+  | Ryields of cpp_type  (** the call evaluates to a value of this type *)
+  | Ropaque
+      (** The callee has no Crane-level type: a runtime helper, or a callee
+          printed verbatim from a custom extraction string.  A consumer that
+          needs a type here must defer to C++ deduction ([auto], [decltype]);
+          it must not invent one. *)
+
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
       (** Global reference with type arguments and optional custom extraction
           info *)
   | CPPnamespace of GlobRef.t * cpp_expr  (** Namespace-qualified expression *)
-  | CPPfun_call of cpp_expr * cpp_expr revd
-      (** Function call with its arguments (in reverse order, see {!revd}) *)
+  | CPPfun_call of call_result * cpp_expr * cpp_expr revd
+      (** Function call: what it yields, the callee, and its arguments (in
+          reverse order, see {!revd}) *)
   | CPPconverting_ctor of cpp_type * cpp_expr list
       (** Converting constructor call: [Type(args)] *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
@@ -620,14 +637,17 @@ val to_reversed : 'a revd -> 'a list
     call's arguments, say -- and {!mk_call} or {!mk_lambda} everywhere else. *)
 val of_reversed : 'a list -> 'a revd
 
-(** [mk_call fn args] is a call of [fn] on [args] given in {e source} order.
+(** [mk_call ?yields fn args] is a call of [fn] on [args] given in {e source}
+    order.  [yields] is the call's result type where the builder knows it;
+    omitting it means {!Ropaque}, which is a claim -- that the callee has no
+    Crane-level type -- and not a shrug.
     Calling a {!CPPabort} with no arguments is that same abort. *)
-val mk_call : cpp_expr -> cpp_expr list -> cpp_expr
+val mk_call : ?yields:cpp_type -> cpp_expr -> cpp_expr list -> cpp_expr
 
 (** [mk_apply fn args] applies [fn] to [args], given in {e source} order.
     Applying no arguments is [fn] itself, unlike {!mk_call}, where the empty
     list is a nullary call [fn()]. *)
-val mk_apply : cpp_expr -> cpp_expr list -> cpp_expr
+val mk_apply : ?yields:cpp_type -> cpp_expr -> cpp_expr list -> cpp_expr
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
