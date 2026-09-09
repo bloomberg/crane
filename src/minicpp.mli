@@ -763,6 +763,11 @@ val mk_iife : cpp_type option -> cpp_stmt list -> cpp_expr
 (** The arguments of a {!CPPfun_call}, in source order. *)
 val call_args : cpp_expr revd -> cpp_expr list
 
+(** [map_args f args] rewrites each of a call's arguments with [f], keeping
+    them in the order they are stored.  For the many rewriters that descend
+    through a call without caring what order its arguments are in. *)
+val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
+
 (** The parameters of a {!CPPlambda}, in source order. *)
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list

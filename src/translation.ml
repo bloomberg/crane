@@ -841,7 +841,7 @@ let rewrite_state_threading_moves
   in
   let rec rewrite_expr subst e =
     match e with
-    | CPPfun_call (res, (CPPglob (g, tys, ci) as fn), {rev = args})
+    | CPPfun_call (res, (CPPglob (g, tys, ci) as fn), args)
       when GlobRef.CanOrd.equal g fn_ref ->
       (* Self-recursive call: move state_id (or its aliases) wherever they
          appear within the argument expressions, including nested positions
@@ -854,7 +854,7 @@ let rewrite_state_threading_moves
         | CPPvar id when subst id <> None -> wrap_state (CPPvar id) subst
         | _ -> map_expr move_states (rewrite_stmt subst) Fun.id e
       in
-      CPPfun_call (res, fn, of_reversed (List.map move_states args))
+      CPPfun_call (res, fn, map_args move_states args)
     | CPPfun_call (res, fn, {rev = [r_arg; s_arg]}) when is_make_pair_fn fn ->
       (* [make_pair(s, r)] with args reversed: [r_arg; s_arg].
          [s_arg] is [%a0] = the first (state) component.
@@ -1508,8 +1508,8 @@ let return_captures_by_value stmts =
     {(map_lambda stmt Fun.id l) with cl_by_value = true}
   and expr = function
     | CPPlambda l -> CPPlambda (by_value l)
-    | CPPfun_call (res, f, {rev = args}) ->
-      CPPfun_call (res, expr f, of_reversed (List.map expr args))
+    | CPPfun_call (res, f, args) ->
+      CPPfun_call (res, expr f, map_args expr args)
     | CPPderef e -> CPPderef (expr e)
     | CPPmove e -> CPPmove (expr e)
     | CPPforward (ty, e) -> CPPforward (ty, expr e)
@@ -8933,8 +8933,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              invocation. *)
           let rec strip_moves_deep = function
             | CPPmove inner -> strip_moves_deep inner
-            | CPPfun_call (res, f, {rev = fargs}) ->
-              CPPfun_call (res, f, of_reversed (List.map strip_moves_deep fargs))
+            | CPPfun_call (res, f, fargs) ->
+              CPPfun_call (res, f, map_args strip_moves_deep fargs)
             | e -> e
           in
           let captured_args =
@@ -11034,10 +11034,10 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         in
         if fix_a_fired || not (Id.Set.is_empty tany_pat_var_names) then
           let rec fix_expr e = match e with
-            | CPPfun_call (res, CPPglob (r, _ :: _, ci), {rev = args})
-              when should_strip args ->
+            | CPPfun_call (res, CPPglob (r, _ :: _, ci), args)
+              when should_strip (to_reversed args) ->
               CPPfun_call
-                (res, CPPglob (r, [], ci), of_reversed (List.map fix_expr args))
+                (res, CPPglob (r, [], ci), map_args fix_expr args)
             | _ -> map_expr fix_expr fix_stmt Fun.id e
           and fix_stmt s = map_stmt fix_expr fix_stmt Fun.id s in
           List.map fix_stmt br_stmts
@@ -11101,10 +11101,10 @@ and extract_block_template = function
       Some (ref, tmpl, [], tys)
     | _ -> None
     end
-  | CPPfun_call (_, CPPglob (ref, tys, Some ci), {rev = args}) -> begin
+  | CPPfun_call (_, CPPglob (ref, tys, Some ci), args) -> begin
     match ci.ci_inline with
     | Some tmpl when Common.contains_substring tmpl "%result" ->
-      Some (ref, tmpl, List.rev args, tys)
+      Some (ref, tmpl, call_args args, tys)
     | _ -> None
     end
   | _ -> None
@@ -11227,9 +11227,9 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
 and fixpoint_escapes_in_stmts target_id stmts =
   let rec check_expr e =
     match e with
-    | CPPfun_call (_, CPPvar id, {rev = args}) when Id.equal id target_id ->
+    | CPPfun_call (_, CPPvar id, args) when Id.equal id target_id ->
       (* Safe: direct call.  But check the arguments for escapes. *)
-      List.exists check_expr args
+      List.exists check_expr (to_reversed args)
     | CPPvar id when Id.equal id target_id ->
       true  (* Escape: bare reference outside call position *)
     | CPPlambda {cl_body = body; _} ->
@@ -11329,14 +11329,15 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
   in
   let rec rewrite_expr e =
     match e with
-    | CPPfun_call (_, CPPvar id, {rev = args}) -> (
+    | CPPfun_call (_, CPPvar id, args) -> (
       match find_self_id id with
       | Some self_id ->
         CPPfun_call
           (call_opaque, CPPvar self_id,
-            of_reversed (List.map rewrite_expr args @ self_vars_rev) )
+            of_reversed
+              (List.map rewrite_expr (to_reversed args) @ self_vars_rev) )
       | None ->
-        CPPfun_call (call_opaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
+        CPPfun_call (call_opaque, CPPvar id, map_args rewrite_expr args) )
     | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
   and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
   let impl_stmts =
@@ -11545,14 +11546,15 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
   in
   let rec rewrite_expr e =
     match e with
-    | CPPfun_call (_, CPPvar id, {rev = args}) -> (
+    | CPPfun_call (_, CPPvar id, args) -> (
       match find_self_id id with
       | Some self_id ->
         CPPfun_call
           (call_opaque, CPPvar self_id,
-            of_reversed (List.map rewrite_expr args @ self_vars_rev) )
+            of_reversed
+              (List.map rewrite_expr (to_reversed args) @ self_vars_rev) )
       | None ->
-        CPPfun_call (call_opaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
+        CPPfun_call (call_opaque, CPPvar id, map_args rewrite_expr args) )
     | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
   and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
@@ -12176,8 +12178,8 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                               ( call_opaque, mk_cppglob lifted [],
                                 of_reversed wrapper_call_args ) ) ) ];
                   cl_by_value = true }
-          | CPPfun_call (res, f, {rev = args}) ->
-            CPPfun_call (res, sub f, of_reversed (List.map sub args))
+          | CPPfun_call (res, f, args) ->
+            CPPfun_call (res, sub f, map_args sub args)
           | CPPderef e' -> CPPderef (sub e')
           | CPPmove e' -> CPPmove (sub e')
           | CPPlambda l -> CPPlambda (sub_lambda l)
@@ -12199,7 +12201,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | CPPstruct_id (sid, tys, args) ->
             CPPstruct_id (sid, tys, List.map sub args)
           | CPPqualified (e', qid) -> CPPqualified (sub e', qid)
-          | CPPany_cast (_, CPPfun_call (_, CPPvar id, {rev = args}))
+          | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
             when Id.equal id target ->
             (* The any_cast wraps a direct call to the variable being lifted.
                The lifted template function returns a concrete type (not
@@ -12207,7 +12209,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             CPPfun_call
               (call_opaque,
                 mk_cppglob lifted [],
-                of_reversed (free_args @ List.map sub args) )
+                of_reversed (free_args @ List.map sub (to_reversed args)) )
           | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
           | _ -> e
         and subst_lifted_call_stmt

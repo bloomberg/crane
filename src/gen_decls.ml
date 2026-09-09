@@ -3505,10 +3505,10 @@ let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
   | CPPlambda l ->
     CPPlambda (map_lambda (replace_return_this_stmt inner_ty) Fun.id l)
-  | CPPfun_call (_, f, {rev = args}) ->
+  | CPPfun_call (_, f, args) ->
     CPPfun_call
       (call_opaque, replace_return_this_expr inner_ty f,
-        of_reversed (List.map (replace_return_this_expr inner_ty) args) )
+        map_args (replace_return_this_expr inner_ty) args )
   | CPPoverloaded ls ->
     CPPoverloaded
       (List.map (map_lambda (replace_return_this_stmt inner_ty) Fun.id) ls)
@@ -3561,9 +3561,9 @@ and replace_return_this_stmt inner_ty = function
 let rec deref_return_this_expr = function
   | CPPthis -> CPPderef CPPthis
   | CPPlambda l -> CPPlambda (map_lambda deref_return_this_stmt Fun.id l)
-  | CPPfun_call (_, f, {rev = args}) ->
+  | CPPfun_call (_, f, args) ->
     CPPfun_call (call_opaque, deref_return_this_expr f,
-                 of_reversed (List.map deref_return_this_expr args))
+                 map_args deref_return_this_expr args)
   | CPPoverloaded ls ->
     CPPoverloaded (List.map (map_lambda deref_return_this_stmt Fun.id) ls)
   | e -> e
@@ -3696,8 +3696,8 @@ let replace_this_in_lambdas self_type stmts =
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true
   | CPPlambda {cl_body = body; _} -> List.exists stmt_has_shared_from_this body
-  | CPPfun_call (_, f, {rev = args}) ->
-    expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
+  | CPPfun_call (_, f, args) ->
+    expr_has_shared_from_this f || List.exists expr_has_shared_from_this (to_reversed args)
   | CPPoverloaded ls ->
     List.exists (fun l -> List.exists stmt_has_shared_from_this l.cl_body) ls
   | _ -> false

@@ -1452,12 +1452,12 @@ and pp_cpp_expr env args t =
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in
     h (name ++ str "::" ++ pp_cpp_expr env args t)
-  | CPPfun_call (res, CPPglob (n, tys, Some ci), {rev = ts}) when ci.ci_inline <> None ->
+  | CPPfun_call (res, CPPglob (n, tys, Some ci), ts) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
     if Common.contains_substring s "%result" then
       gen_block_iife
         ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
-        n s tys (List.rev ts)
+        n s tys (call_args ts)
     else
     let has_placeholder = String.contains s '%' in
     if not has_placeholder then
@@ -1466,7 +1466,7 @@ and pp_cpp_expr env args t =
         | [] -> mt ()
         | _ -> str "<" ++ pp_list (pp_cpp_type false []) tys ++ str ">"
       in
-      let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
+      let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
       let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
@@ -1483,11 +1483,11 @@ and pp_cpp_expr env args t =
         None
         tys
         []
-        (List.rev ts)
+        (call_args ts)
         arg_types
         []
         cmds
-  | CPPfun_call (_, CPPglob (n, tys, _), {rev = ts})
+  | CPPfun_call (_, CPPglob (n, tys, _), ts)
     when lookup_method_this_pos n <> None
     ->
     let method_name = Common.id_of_global Term n in
@@ -1496,7 +1496,7 @@ and pp_cpp_expr env args t =
       | Some p -> p
       | None -> 0
     in
-    let args_normal = List.rev ts in
+    let args_normal = call_args ts in
     let this_arg_opt, other_args = Common.extract_at_pos this_pos args_normal in
     ( match this_arg_opt with
     | Some this_arg ->
@@ -1521,11 +1521,11 @@ and pp_cpp_expr env args t =
       ++ args_s
       ++ str ")"
     | None -> pp_cpp_expr env args (CPPglob (n, tys, None)) ++ str "()" )
-  | CPPfun_call (_, CPPderef e, {rev = ts}) ->
+  | CPPfun_call (_, CPPderef e, ts) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
        Arises from the shared_ptr fixpoint pattern where recursive calls
        dereference the function pointer before invoking. *)
-    let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
+    let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call
       (_,  CPPlambda
@@ -1620,7 +1620,7 @@ and pp_cpp_expr env args t =
   | CPPfun_call (_, CPPglob (r, [], _), {rev = [arg]}) when Table.is_projection r ->
     let field_name = label_of_r r |> Names.Label.to_string in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
-  | CPPfun_call (_, f, {rev = ts}) ->
+  | CPPfun_call (_, f, ts) ->
     (* For constructor calls, compute the expected C++ element type for each
        field that is a custom list.  When an argument is a grammar-stack
        variable (id ∈ concrete_typed_any_params), use the callee-dictated
@@ -1673,11 +1673,11 @@ and pp_cpp_expr env args t =
     in
     let args_s =
       match ctor_ind_kn_opt with
-      | None -> pp_list (pp_cpp_expr env args) (List.rev ts)
+      | None -> pp_list (pp_cpp_expr env args) (call_args ts)
       | Some _ ->
         Pp.prlist_with_sep (fun () -> str ", ")
           render_ctor_arg
-          (List.rev ts)
+          (call_args ts)
     in
     let is_custom_list_funcall =
       match f with

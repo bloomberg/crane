@@ -503,16 +503,16 @@ let ref_matches fn_refs r =
 let fn_checker (fn_refs : (GlobRef.t * cpp_type list) list) : call_checker =
  fun e ->
    match e with
-   | CPPfun_call (_, CPPglob (r, _, _), {rev = args}) when ref_matches fn_refs r ->
-     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
-   | CPPfun_call (_, CPPvar id, {rev = args}) ->
+   | CPPfun_call (_, CPPglob (r, _, _), args) when ref_matches fn_refs r ->
+     Some {cs_args = to_reversed args; cs_is_tail = false; cs_recv = None}
+   | CPPfun_call (_, CPPvar id, args) ->
      let matches_name =
        List.exists
          (fun (r, _) -> Id.equal id (Label.to_id (Common.label_of_r r)))
          fn_refs
      in
      if matches_name then
-       Some {cs_args = args; cs_is_tail = false; cs_recv = None}
+       Some {cs_args = to_reversed args; cs_is_tail = false; cs_recv = None}
      else
        None
    | _ -> None
@@ -544,7 +544,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     | CPPget (e, _) | CPPget' (e, _)
     | CPPmethod_call (e, _, _) | CPPdot_method_call (e, _, _) ->
       denotes_stable e
-    | CPPfun_call (_, f, {rev = args}) -> List.exists denotes_stable (f :: args)
+    | CPPfun_call (_, f, args) -> List.exists denotes_stable (f :: to_reversed args)
     | _ -> false
   in
   (* A local initialised from a call keeps a copy of whatever the call
@@ -639,8 +639,8 @@ let method_checker
        Some {cs_args = recv_to_self recv :: args; cs_is_tail = false; cs_recv = Some recv}
      else
        Some {cs_args = args; cs_is_tail = false; cs_recv = None}
-   | CPPfun_call (_, CPPvar id, {rev = args}) when Id.equal id method_name ->
-     let args_normal = List.rev args in
+   | CPPfun_call (_, CPPvar id, args) when Id.equal id method_name ->
+     let args_normal = call_args args in
      if has_self_param && List.length args_normal > n_params then
        let self_arg, rest = extract_at this_pos args_normal in
        ( match self_arg with
@@ -652,10 +652,10 @@ let method_checker
              cs_is_tail = false; cs_recv = None}
      else
        Some {cs_args = args_normal; cs_is_tail = false; cs_recv = None}
-   | CPPfun_call (_, CPPglob (r, _, _), {rev = args}) ->
+   | CPPfun_call (_, CPPglob (r, _, _), args) ->
      let label = Label.to_id (Common.label_of_r r) in
      if Id.equal label method_name then
-       let args_normal = List.rev args in
+       let args_normal = call_args args in
        if has_self_param then
          let self_arg, rest = extract_at this_pos args_normal in
          ( match self_arg with
@@ -686,7 +686,8 @@ let rec collect_expr (check : call_checker) expr =
     (* Also look for nested calls in the arguments (e.g., f(m', f(m, n'))) *)
     let nested =
       match expr with
-      | CPPfun_call (_, _, {rev = args}) -> List.concat_map (collect_expr check) args
+      | CPPfun_call (_, _, args) ->
+        List.concat_map (collect_expr check) (to_reversed args)
       | CPPmethod_call (_, _, args) -> List.concat_map (collect_expr check) args
       | CPPdot_method_call (_, _, args) -> List.concat_map (collect_expr check) args
       | _ -> []
@@ -694,8 +695,9 @@ let rec collect_expr (check : call_checker) expr =
     cs :: nested
   | None ->
   match expr with
-  | CPPfun_call (_, f, {rev = args}) ->
-    collect_expr check f @ List.concat_map (collect_expr check) args
+  | CPPfun_call (_, f, args) ->
+    collect_expr check f
+    @ List.concat_map (collect_expr check) (to_reversed args)
   | CPPmethod_call (obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPdot_method_call (obj, _id, args) ->
@@ -818,7 +820,8 @@ and collect_stmt check ~in_visitor = function
       (* Also look for nested calls in arguments (e.g., f(m', f(m, n'))) *)
       let nested =
         match e with
-        | CPPfun_call (_, _, {rev = args}) -> List.concat_map (collect_expr check) args
+        | CPPfun_call (_, _, args) ->
+        List.concat_map (collect_expr check) (to_reversed args)
         | CPPmethod_call (_, _, args) ->
           List.concat_map (collect_expr check) args
         | _ -> []
@@ -893,9 +896,10 @@ let rec count_calls_expr (check : call_checker) expr =
   | Some _ -> 1
   | None ->
   match expr with
-  | CPPfun_call (_, f, {rev = args}) ->
+  | CPPfun_call (_, f, args) ->
     count_calls_expr check f
-    + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
+    + List.fold_left
+        (fun acc a -> acc + count_calls_expr check a) 0 (to_reversed args)
   | CPPmethod_call (obj, _, args) ->
     count_calls_expr check obj
     + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
@@ -1498,8 +1502,10 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
     expr_exists (function CPPvar id when is_ptr_shadow id -> true | _ -> false) e
   in
   let rec expr = function
-    | CPPfun_call (_, CPPmember (CPPvar id, meth), {rev = args}) when is_ptr_shadow id ->
-      CPPmethod_call (CPPvar id, meth, List.map expr args)
+    | CPPfun_call (_, CPPmember (CPPvar id, meth), args) when is_ptr_shadow id ->
+      (* A method call's arguments are in source order, a function call's are
+         not: the reversal has to come off here. *)
+      CPPmethod_call (CPPvar id, meth, List.map expr (call_args args))
     | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
@@ -2584,8 +2590,10 @@ let rec decompose_single_call check expr =
     else
       None
   (* Function call with recursive argument *)
-  | CPPfun_call (res, f, {rev = args}) when count_calls_expr check f = 0 ->
-    decompose_funcall check res f args
+  | CPPfun_call (res, f, args) when count_calls_expr check f = 0 ->
+    (* [decompose_funcall] works by position and rebuilds the call from the
+       same positions, so it takes the arguments as stored. *)
+    decompose_funcall check res f (to_reversed args)
   (* Method call: obj.method(args) where obj has the recursive call *)
   | CPPmethod_call (obj, method_id, margs)
     when count_calls_expr check obj >= 1
@@ -2800,7 +2808,10 @@ and decompose_double_call check expr =
       | None -> None
     else
       None
-  | CPPfun_call (res, f, {rev = args}) when count_calls_expr check f = 0 ->
+  | CPPfun_call (res, f, args) when count_calls_expr check f = 0 ->
+    (* Positions here are positions in the call as stored; the rebuild below
+       puts them back the same way. *)
+    let args = to_reversed args in
     let arg_calls = List.mapi (fun i a -> (i, count_calls_expr check a)) args in
     let rec_indices = List.filter (fun (_, c) -> c > 0) arg_calls in
     let rebuild_funcall
@@ -2924,7 +2935,7 @@ and decompose_double_call check expr =
     Factory calls are the only use of [CPPfun_call(CPPqualified_t(...), ...)]
     in the MiniCpp AST.  The struct name is the capitalized factory name. *)
 let is_ctor_factory_call = function
-  | CPPfun_call (_, CPPqualified_t (ty, factory_id), {rev = args}) ->
+  | CPPfun_call (_, CPPqualified_t (ty, factory_id), args) ->
     let factory_s = Id.to_string factory_id in
     let n = String.length factory_s in
     (* Strip trailing underscore (collision escape) before capitalizing *)
@@ -2953,7 +2964,9 @@ let is_ctor_factory_call = function
        || ptr_fields = None
     then None
     else
-      Some (ty, struct_name, factory_s, args)
+      (* The arguments come back as stored -- reversed.  Everything downstream
+         indexes them in that space; see [uptr_idxs] in [try_tmc_decompose]. *)
+      Some (ty, struct_name, factory_s, to_reversed args)
   | _ -> None
 
 (** Try to decompose a return expression as a TMC-eligible branch.  Handles
@@ -3983,7 +3996,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
          already raw (arena mode).  Infer from the inner expression. *)
       as_raw_ptr (infer_saved_type tparams env inner)
-    | CPPfun_call (_, CPPvar f, {rev = _}) ->
+    | CPPfun_call (_, CPPvar f, _) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
       | Some ty ->
@@ -3995,12 +4008,12 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
           | None -> Tunresolved )
         | None -> Tunresolved )
       | None -> Tunresolved )
-    | CPPfun_call (_, CPPnamespace (_, CPPvar f), {rev = _}) ->
+    | CPPfun_call (_, CPPnamespace (_, CPPvar f), _) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
       | _ -> Tunresolved )
-    | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, {rev = _}) -> ret_ty
-    | CPPfun_call (_, CPPglob _, {rev = _}) -> Tunresolved
+    | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, _) -> ret_ty
+    | CPPfun_call (_, CPPglob _, _) -> Tunresolved
     | CPPfun_call (_, CPPmember (inner, id), {rev = []})
       when String.equal (Id.to_string id) "get" ->
       (* shared_ptr::get() returns a raw pointer.
@@ -4055,8 +4068,8 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     Mutually recursive with [free_vars_stmt] and [free_vars_body]. *)
 let rec free_vars_expr = function
   | CPPvar id -> [id]
-  | CPPfun_call (_, f, {rev = args}) ->
-    free_vars_expr f @ List.concat_map free_vars_expr args
+  | CPPfun_call (_, f, args) ->
+    free_vars_expr f @ List.concat_map free_vars_expr (to_reversed args)
   | CPPmethod_call (obj, _, args) ->
     free_vars_expr obj @ List.concat_map free_vars_expr args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
@@ -4679,8 +4692,8 @@ let rec find_inner_visit check = function
   | CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})
     when count_calls_expr check scrut = 0
          && visit_branch_recurses check lambdas -> Some (scrut, lambdas, Fun.id)
-  | CPPfun_call (res, f, {rev = args}) ->
-    ( match search_in_args (find_inner_visit check) args with
+  | CPPfun_call (res, f, args) ->
+    ( match search_in_args (find_inner_visit check) (to_reversed args) with
     | Some ((scrut, lambdas, rebuild), mk_args) ->
       Some (scrut, lambdas, fun x -> CPPfun_call (res, f, of_reversed (mk_args (rebuild x))))
     | None -> None )
@@ -4702,8 +4715,8 @@ let rec find_inner_iife check = function
       cl_by_value = _cap }, {rev = []})
     when collect_stmts check ~in_visitor:false body <> [] ->
     Some (body, ret_ty, Fun.id)
-  | CPPfun_call (res, f, {rev = args}) ->
-    ( match search_in_args (find_inner_iife check) args with
+  | CPPfun_call (res, f, args) ->
+    ( match search_in_args (find_inner_iife check) (to_reversed args) with
     | Some ((body, ret_ty, rebuild), mk_args) ->
       Some (body, ret_ty, fun x -> CPPfun_call (res, f, of_reversed (mk_args (rebuild x))))
     | None -> None )
@@ -4890,7 +4903,9 @@ let rec decompose_all_calls check expr =
       | None -> None
     else
       None
-  | CPPfun_call (res, f, {rev = args}) when count_calls_expr check f = 0 ->
+  | CPPfun_call (res, f, args) when count_calls_expr check f = 0 ->
+    (* Positional throughout, in the order the call stores its arguments. *)
+    let args = to_reversed args in
     let n_args = List.length args in
     let arg_calls = List.mapi (fun i a -> (i, count_calls_expr check a)) args in
     let rec_indices = List.filter (fun (_, c) -> c > 0) arg_calls in
@@ -6855,7 +6870,7 @@ let rec rewrite_field_access_for_decltype env expr =
     { cl_params = params;
       cl_ret = rt;
       cl_body = body;
-      _ }, {rev = args})
+      _ }, args)
     when body <> [] && collect_env_vars env body <> [] ->
     (* An immediately-invoked lambda -- Crane's encoding of a local [fix] used
        in expression position.  Substituting [std::declval] for the captured
@@ -6893,7 +6908,8 @@ let rec rewrite_field_access_for_decltype env expr =
           cl_by_value = false },
         of_reversed
           ( extra_args
-          @ List.map (rewrite_field_access_for_decltype env) args ) )
+          @ List.map (rewrite_field_access_for_decltype env) (to_reversed args)
+          ) )
   | CPPvar id ->
     ( match lookup_var_type env id with
     | Some ty ->
@@ -7386,7 +7402,7 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
 let body_calls_id target_id stmts =
   body_exists
     (function
-      | CPPfun_call (_, CPPvar id, {rev = _}) when Id.equal id target_id -> true
+      | CPPfun_call (_, CPPvar id, _) when Id.equal id target_id -> true
       | _ -> false )
     stmts
 
@@ -7411,8 +7427,8 @@ let body_calls_any_ref refs body =
   in
   body_exists
     (function
-      | CPPfun_call (_, CPPglob (r, _, _), {rev = _}) when List.exists (eq r) refs -> true
-      | CPPfun_call (_, CPPvar id, {rev = _}) ->
+      | CPPfun_call (_, CPPglob (r, _, _), _) when List.exists (eq r) refs -> true
+      | CPPfun_call (_, CPPvar id, _) ->
         List.exists
           (fun r ->
             match label_of r with
@@ -7601,15 +7617,16 @@ let try_inline_mutual_into names body =
   in
   let rec find_callee_in_expr expr =
     match expr with
-    | CPPfun_call (_, CPPglob (r, _, _), {rev = _}) ->
+    | CPPfun_call (_, CPPglob (r, _, _), _) ->
       ( match find_registered_callee_by_ref r with
       | Some _ as result -> result
       | None -> None )
-    | CPPfun_call (_, CPPvar id, {rev = _}) ->
+    | CPPfun_call (_, CPPvar id, _) ->
       ( match find_registered_callee_by_id id with
       | Some _ as result -> result
       | None -> None )
-    | CPPfun_call (_, _, {rev = args}) -> List.find_map find_callee_in_expr args
+    | CPPfun_call (_, _, args) ->
+      List.find_map find_callee_in_expr (to_reversed args)
     | CPPbinop (_, e1, e2) ->
       ( match find_callee_in_expr e1 with
       | Some _ as r -> r
@@ -7721,13 +7738,13 @@ let try_inline_mutual_into names body =
       | _ -> Id.of_string ""
     in
     let is_callee_call = function
-      | CPPfun_call (_, CPPglob (r, _, _), {rev = _})
+      | CPPfun_call (_, CPPglob (r, _, _), _)
         when Common.globref_equal r callee_ref -> true
-      | CPPfun_call (_, CPPvar id, {rev = _}) when Id.equal id callee_label -> true
+      | CPPfun_call (_, CPPvar id, _) when Id.equal id callee_label -> true
       | _ -> false
     in
     let get_call_args = function
-      | CPPfun_call (_, _, {rev = args}) -> args
+      | CPPfun_call (_, _, args) -> to_reversed args
       | _ -> []
     in
     let spec = {
@@ -7767,12 +7784,12 @@ let try_inline_mutual_into names body =
 let lambda_checker (lambda_name : Id.t) : call_checker =
  fun e ->
    match e with
-   | CPPfun_call (_, CPPvar id, {rev = args}) when Id.equal id lambda_name ->
+   | CPPfun_call (_, CPPvar id, args) when Id.equal id lambda_name ->
      (* Direct call: [f(args)] — by-reference fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
-   | CPPfun_call (_, CPPderef (CPPvar id), {rev = args}) when Id.equal id lambda_name ->
+     Some {cs_args = to_reversed args; cs_is_tail = false; cs_recv = None}
+   | CPPfun_call (_, CPPderef (CPPvar id), args) when Id.equal id lambda_name ->
      (* Dereferenced call — shared_ptr fixpoint pattern *)
-     Some {cs_args = args; cs_is_tail = false; cs_recv = None}
+     Some {cs_args = to_reversed args; cs_is_tail = false; cs_recv = None}
    | _ -> None
 
 (** Walk through a statement list and loopify any self-recursive [std::function]
@@ -7870,10 +7887,11 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
   let self_checker self_id : call_checker =
    fun e ->
     match e with
-    | CPPfun_call (_, CPPvar id, {rev = args}) when Id.equal id self_id -> (
+    | CPPfun_call (_, CPPvar id, args) when Id.equal id self_id -> (
       (* Drop the trailing self-forward argument. *)
-      match List.rev args with
-      | _self_arg :: rest_rev -> Some {cs_args = List.rev rest_rev; cs_is_tail = false; cs_recv = None}
+      match call_args args with
+      | _self_arg :: rest_rev ->
+        Some {cs_args = List.rev rest_rev; cs_is_tail = false; cs_recv = None}
       | [] -> None )
     | _ -> None
   in
@@ -8073,8 +8091,8 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
     match expr with
     | CPPlambda l -> CPPlambda (process_lambda l)
     | CPPoverloaded ls -> CPPoverloaded (List.map process_lambda ls)
-    | CPPfun_call (res, f, {rev = args}) ->
-      CPPfun_call (res, process_expr f, of_reversed (List.map process_expr args))
+    | CPPfun_call (res, f, args) ->
+      CPPfun_call (res, process_expr f, map_args process_expr args)
     | _ -> map_expr process_expr process_stmt Fun.id expr
   and process_stmt = function
     | Sif (cond, then_br, else_br) ->
@@ -8208,7 +8226,7 @@ let has_lazy_body body =
     inside branches rather than at the top level (where {!has_lazy_body}
     catches it). *)
 let is_lazy_factory_call = function
-  | CPPfun_call (_, CPPqualified (_, lazy_id), {rev = _}) ->
+  | CPPfun_call (_, CPPqualified (_, lazy_id), _) ->
     Id.equal lazy_id id_lazy
   | _ -> false
 
@@ -8378,7 +8396,7 @@ let try_inline_functional_into names body =
     in
     let rec ve e =
       ( match e with
-      | CPPfun_call (_, callee, {rev = args}) -> consider callee args
+      | CPPfun_call (_, callee, args) -> consider callee (to_reversed args)
       | _ -> () );
       ignore (map_expr (fun e' -> ve e'; e') (fun s -> vs s; s) Fun.id e)
     and vs s = ignore (map_stmt (fun e -> ve e; e) (fun s' -> vs s'; s') Fun.id s) in
@@ -8395,7 +8413,7 @@ let try_inline_functional_into names body =
       let rec_param_called =
         body_exists
           (function
-            | CPPfun_call (_, CPPvar id, {rev = _}) -> Id.equal id rec_param_id
+            | CPPfun_call (_, CPPvar id, _) -> Id.equal id rec_param_id
             | _ -> false)
           g_body
       in
@@ -8404,8 +8422,8 @@ let try_inline_functional_into names body =
       (* Rewrite calls to the [rec] parameter into direct self-calls. *)
       let rec subst_rec e =
         match e with
-        | CPPfun_call (res, CPPvar id, {rev = cargs}) when Id.equal id rec_param_id ->
-          CPPfun_call (res, self_head, of_reversed (List.map subst_rec cargs))
+        | CPPfun_call (res, CPPvar id, cargs) when Id.equal id rec_param_id ->
+          CPPfun_call (res, self_head, map_args subst_rec cargs)
         | _ -> map_expr subst_rec subst_stmt Fun.id e
       and subst_stmt s = map_stmt subst_rec subst_stmt Fun.id s in
       let g_body = List.map subst_stmt g_body in
@@ -8499,7 +8517,8 @@ let try_inline_functional_into names body =
           {
             is_target =
               (function
-              | CPPfun_call (_, callee, {rev = cargs}) ->
+              | CPPfun_call (_, callee, cargs) ->
+                let cargs = to_reversed cargs in
                 lookup_functional callee <> None
                 && List.length cargs = List.length args
                 && (match List.nth_opt cargs k with
@@ -8508,7 +8527,8 @@ let try_inline_functional_into names body =
               | _ -> false);
             get_args =
               (function
-              | CPPfun_call (_, _, {rev = cargs}) -> List.filteri (fun i _ -> i <> k) cargs
+              | CPPfun_call (_, _, cargs) ->
+                List.filteri (fun i _ -> i <> k) (to_reversed cargs)
               | _ -> []);
             params = fresh_params;
             body = fresh_body;
@@ -8919,10 +8939,10 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
                  && is_value_recv recv
                  && not (List.exists mentions_self args) ->
             Some (recv, CPPmethod_call (CPPvar id_self_store, id, args))
-          | CPPfun_call (_, CPPglob (r, targs, x), {rev = args})
+          | CPPfun_call (_, CPPglob (r, targs, x), args)
             when Id.equal (Label.to_id (Common.label_of_r r)) mf.mf_name
-                 && List.length args > n_params ->
-            let args_normal = List.rev args in
+                 && List.length (to_reversed args) > n_params ->
+            let args_normal = call_args args in
             let recv = List.nth args_normal this_pos in
             if
               is_value_recv recv
@@ -9133,9 +9153,10 @@ let try_inline_mutual_fields fields =
     let spec = {
       is_target =
         (function
-          | CPPfun_call (_, CPPvar id, {rev = _}) -> Id.equal id name_b
+          | CPPfun_call (_, CPPvar id, _) -> Id.equal id name_b
           | _ -> false);
-      get_args = (function CPPfun_call (_, _, {rev = args}) -> args | _ -> []);
+      get_args =
+        (function CPPfun_call (_, _, args) -> to_reversed args | _ -> []);
       params = params_b;
       body = body_b;
       ret_ty = ret_ty_b;

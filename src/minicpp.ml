@@ -777,6 +777,11 @@ let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 (** The arguments of a {!CPPfun_call}, in source order. *)
 let call_args (args : 'a revd) = List.rev args.rev
 
+(** [map_args f args] rewrites each of a call's arguments with [f], keeping
+    them in the order they are stored.  For the many rewriters that descend
+    through a call without caring what order its arguments are in. *)
+let map_args f (args : cpp_expr revd) = {rev = List.map f args.rev}
+
 (** The parameters of a {!CPPlambda}, in source order. *)
 let lambda_params (params : 'a revd) = List.rev params.rev
 
