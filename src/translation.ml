@@ -2086,23 +2086,18 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
   let all_temps_with_funs = base_temps @ extra_temps in
   (cpp_params, all_temps_with_funs)
 
-(** Substitute type schema variables [Tvar i] with concrete types.
-    [ml_subst_tvars subst ty] replaces [Tvar i] with [subst.(i-1)] when
-    the index is in range. Used to instantiate the polymorphic type of a
-    global reference with its actual type arguments from [MLglob(r, tys)]. *)
-let rec ml_subst_tvars (subst : ml_type array) (ty : ml_type) : ml_type =
-  match ty with
-  | Miniml.Tvar (_, i) when i >= 1 && i <= Array.length subst -> subst.(i - 1)
-  | Tarr (t1, t2) -> Tarr (ml_subst_tvars subst t1, ml_subst_tvars subst t2)
-  | Tglob (g, ts, args) ->
-    Tglob (g, List.map (ml_subst_tvars subst) ts, args)
-  | Tmeta {contents = Some t} -> ml_subst_tvars subst t
-  | _ -> ty
+(** Infer the ML type of a body expression from its structure, or [None] where
+    the structure does not say.
 
-(** Infer the ML type of a body expression from its structure.
-    Returns [None] when the type cannot be determined.
-    Used to annotate CPPlambda return types so that loopify's frame type
-    inference doesn't fall back to [decltype(lambda)]. *)
+    This reads a type off a typed AST -- [MLcons] and [MLcase] carry theirs,
+    and a global's is in the table -- rather than guessing one back out of an
+    untyped C++ expression, which is what {!Loopify.infer_saved_type} used to
+    do.  Its answer annotates a [CPPlambda]'s return type, so the frame a
+    loopified call builds is typed instead of falling back on
+    [decltype(lambda)].
+
+    Instantiation goes through {!Mlutil.type_subst_list}, the one substituter:
+    a second one here would be a second oracle, free to disagree. *)
 let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   match a with
   | MLapp (MLglob (r, tys), args) ->
@@ -2111,7 +2106,7 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
       (* Instantiate type schema variables with actual type arguments *)
       let ty = match tys with
         | [] -> ty
-        | _ -> ml_subst_tvars (Array.of_list tys) ty
+        | _ -> Mlutil.type_subst_list tys ty
       in
       strip_tarr_n (count_real_ml_args args) ty
     | None -> None )
@@ -2283,7 +2278,7 @@ let rec ml_body_returns_erased_field = function
     let direct =
       match find_type_opt r with
       | Some ty ->
-        let ty = match tys with [] -> ty | _ -> ml_subst_tvars (Array.of_list tys) ty in
+        let ty = match tys with [] -> ty | _ -> Mlutil.type_subst_list tys ty in
         ( match strip_tarr_n (count_real_ml_args args) ty with
         | Some ret_ty -> ml_return_type_is_erased ret_ty
         | None -> false )
@@ -9059,7 +9054,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       let fty_opt = match f with
         | MLglob (r, tys) when tys <> [] ->
           (match find_type_opt r with
-           | Some ty -> Some (ml_subst_tvars (Array.of_list tys) ty)
+           | Some ty -> Some (Mlutil.type_subst_list tys ty)
            | None -> infer_ml_body_type f)
         | _ ->
           ( match infer_ml_body_type f with
@@ -10519,7 +10514,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     | MLapp (MLglob (r, tys), args) ->
       ( match find_type_opt r with
       | Some fty ->
-        let fty = match tys with [] -> fty | _ -> ml_subst_tvars (Array.of_list tys) fty in
+        let fty = match tys with [] -> fty | _ -> Mlutil.type_subst_list tys fty in
         ( match strip_tarr_n (count_real_ml_args args) fty with
         | Some rty ->
           (* Both spellings of "is a [std::any] at run time" are needed here:
@@ -10729,9 +10724,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
     if scrut_uses > 1 && not (is_trivial_scrut t) then begin
       let n = (!tctx).cs_counter in
       tctx := { !tctx with cs_counter = n + 1 };
-      let cache_id =
-        Id.of_string (if n = 0 then "_cs" else "_cs" ^ string_of_int n)
-      in
+      let cache_id = Common.scrutinee_cache_id n in
       match lift_iife_assignment cache_id Ttodo t with
       | Some stmts -> (CPPvar cache_id, stmts)
       | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare Ttodo, t)])
