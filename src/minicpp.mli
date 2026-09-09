@@ -325,14 +325,25 @@ and alloc_kind =
           the rest construct the new [T].  Only emitted under
           [Crane NonAtomicRc]. *)
 
-(** What a call yields.
+(** What translation knew about a call.
 
-    Translation knows the C++ type of every call it builds -- it has to, to
-    decide boxing -- and used to drop it, leaving later passes to reconstruct
-    it from the untyped expression.  {!Loopify.infer_saved_type} is what that
-    reconstruction looked like: a bottom-up guess that fell back on matching
-    the callee's *name string* to recover a return type.  Carrying the answer
-    is cheaper than re-deriving it and cannot disagree with itself. *)
+    Translation knows the C++ types of every call it builds -- it has to, to
+    decide boxing -- and used to drop them, leaving later passes to
+    reconstruct them from the untyped expression.  {!Loopify.infer_saved_type}
+    is what that reconstruction looked like for the result: a bottom-up guess
+    that fell back on matching the callee's *name string*.  The printer did
+    the same for the parameters, re-reading the callee's ML type out of the
+    front-end table and re-splitting its arrows.  Carrying the answers is
+    cheaper than re-deriving them and cannot disagree with itself.
+
+    Both fields are derived from one instantiated callee type, in
+    [Translation.record_call_sig]. *)
+and call_sig = {
+  cs_yields : call_result;  (** what the call evaluates to *)
+  cs_params : call_params;  (** what the callee takes *)
+}
+
+(** What a call yields. *)
 and call_result =
   | Ryields of cpp_type  (** the call evaluates to a value of this type *)
   | Ropaque
@@ -341,15 +352,26 @@ and call_result =
           needs a type here must defer to C++ deduction ([auto], [decltype]);
           it must not invent one. *)
 
+(** The callee's parameter types, as C++ spells them. *)
+and call_params =
+  | Ptypes of cpp_type list
+      (** One type per argument, positionally aligned with the call's
+          arguments.  Alignment is guaranteed by construction: {!call_sig}
+          drops a list whose length does not match the argument count, since
+          a misaligned list is worse than none. *)
+  | Punknown
+      (** The callee's parameter types are not Crane-level types, or are not
+          known here. *)
+
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
       (** Global reference with type arguments and optional custom extraction
           info *)
   | CPPnamespace of GlobRef.t * cpp_expr  (** Namespace-qualified expression *)
-  | CPPfun_call of call_result * cpp_expr * cpp_expr revd
-      (** Function call: what it yields, the callee, and its arguments (in
-          reverse order, see {!revd}) *)
+  | CPPfun_call of call_sig * cpp_expr * cpp_expr revd
+      (** Function call: what translation knew about it, the callee, and its
+          arguments (in reverse order, see {!revd}) *)
   | CPPconverting_ctor of cpp_type * cpp_expr list
       (** Converting constructor call: [Type(args)] *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
@@ -657,12 +679,36 @@ val of_reversed : 'a list -> 'a revd
     omitting it means {!Ropaque}, which is a claim -- that the callee has no
     Crane-level type -- and not a shrug.
     Calling a {!CPPabort} with no arguments is that same abort. *)
-val mk_call : ?yields:cpp_type -> cpp_expr -> cpp_expr list -> cpp_expr
+val call_opaque : call_sig
+(** The signature of a call nothing is known about. *)
+
+val call_sig :
+  ?yields:cpp_type ->
+  ?params:cpp_type list ->
+  nargs:int ->
+  unit ->
+  call_sig
+(** [call_sig ?yields ?params ~nargs ()] is what a builder knows about a call
+    on [nargs] arguments.  [params] is recorded only when its length matches
+    [nargs]: a misaligned list is worse than none, so alignment holds by
+    construction rather than by convention. *)
+
+val mk_call :
+  ?yields:cpp_type ->
+  ?params:cpp_type list ->
+  cpp_expr ->
+  cpp_expr list ->
+  cpp_expr
 
 (** [mk_apply fn args] applies [fn] to [args], given in {e source} order.
     Applying no arguments is [fn] itself, unlike {!mk_call}, where the empty
     list is a nullary call [fn()]. *)
-val mk_apply : ?yields:cpp_type -> cpp_expr -> cpp_expr list -> cpp_expr
+val mk_apply :
+  ?yields:cpp_type ->
+  ?params:cpp_type list ->
+  cpp_expr ->
+  cpp_expr list ->
+  cpp_expr
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].

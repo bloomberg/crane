@@ -311,16 +311,25 @@ and alloc_kind =
        under [Crane NonAtomicRc] (needs crane::rc's control block). *)
 
 (** C++ expressions. *)
-(** What a call yields; see [minicpp.mli] for why it is carried. *)
+(** What translation knew about a call; see [minicpp.mli]. *)
+and call_sig = {
+  cs_yields : call_result;
+  cs_params : call_params;
+}
+
 and call_result =
   | Ryields of cpp_type
   | Ropaque
+
+and call_params =
+  | Ptypes of cpp_type list
+  | Punknown
 
 and cpp_expr =
   | CPPvar of Id.t
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
   | CPPnamespace of GlobRef.t * cpp_expr
-  | CPPfun_call of call_result * cpp_expr * cpp_expr revd
+  | CPPfun_call of call_sig * cpp_expr * cpp_expr revd
   | CPPconverting_ctor of cpp_type * cpp_expr list
     (** Converting constructor call: [Type(args)]. Used in clone-field
         conversions where the destination type differs from the source. *)
@@ -675,12 +684,27 @@ let to_reversed (l : 'a revd) : 'a list = l.rev
     call's arguments, say -- and {!mk_call} or {!mk_lambda} everywhere else. *)
 let of_reversed (l : 'a list) : 'a revd = {rev = l}
 
-(** [mk_call ?yields fn args] is a call of [fn] on [args] given in {e source}
-    order.  [yields] is the call's result type where the builder knows it;
-    omitting it means {!Ropaque}, which is a claim -- that the callee has no
-    Crane-level type -- and not a shrug. *)
-let mk_call ?yields fn args =
-  let res = match yields with Some t -> Ryields t | None -> Ropaque in
+(** The signature of a call nothing is known about. *)
+let call_opaque = {cs_yields = Ropaque; cs_params = Punknown}
+
+(** [call_sig ?yields ?params ()] is what a builder knows about a call.
+    [params] is recorded only when it is positionally aligned with the
+    arguments; a length mismatch is no knowledge at all, so it is dropped
+    rather than stored misaligned. *)
+let call_sig ?yields ?params ~nargs () =
+  { cs_yields = (match yields with Some t -> Ryields t | None -> Ropaque);
+    cs_params =
+      ( match params with
+      | Some ts when List.length ts = nargs -> Ptypes ts
+      | _ -> Punknown ) }
+
+(** [mk_call ?yields ?params fn args] is a call of [fn] on [args] given in
+    {e source} order.  [yields] is the call's result type and [params] the
+    callee's parameter types, where the builder knows them; omitting either
+    is a claim -- that the callee has no Crane-level type there -- and not a
+    shrug. *)
+let mk_call ?yields ?params fn args =
+  let res = call_sig ?yields ?params ~nargs:(List.length args) () in
   match (fn, args) with
   (* [fn] never returns, so the call never happens: it is that same
      abort, which already carries the type the call would have had. *)
@@ -692,8 +716,8 @@ let mk_call ?yields fn args =
     Applying no arguments is nothing to apply, so it is [fn] itself -- unlike
     {!mk_call}, where the empty list is a nullary call [fn()].  Reach for this
     where the arguments are whatever a call site had left over. *)
-let mk_apply ?yields fn args =
-  match args with [] -> fn | _ -> mk_call ?yields fn args
+let mk_apply ?yields ?params fn args =
+  match args with [] -> fn | _ -> mk_call ?yields ?params fn args
 
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
@@ -746,7 +770,14 @@ let map_expr
   | CPPglob (r, tys, ci) -> CPPglob (r, List.map ft tys, ci)
   | CPPnamespace (r, e') -> CPPnamespace (r, fe e')
   | CPPfun_call (res, f, args) ->
-    let res = match res with Ryields t -> Ryields (ft t) | Ropaque -> Ropaque in
+    let res =
+      { cs_yields =
+          (match res.cs_yields with Ryields t -> Ryields (ft t) | Ropaque -> Ropaque);
+        cs_params =
+          (match res.cs_params with
+          | Ptypes ts -> Ptypes (List.map ft ts)
+          | Punknown -> Punknown) }
+    in
     CPPfun_call (res, fe f, {rev = List.map fe args.rev})
   | CPPconverting_ctor (ty, args) -> CPPconverting_ctor (ft ty, List.map fe args)
   | CPPderef e' -> CPPderef (fe e')

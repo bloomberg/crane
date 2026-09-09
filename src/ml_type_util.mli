@@ -74,6 +74,10 @@ val ml_type_contains_erased : Miniml.ml_type -> bool
 (** The codomain (final result type) of a MiniML arrow type. *)
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 
+(** The domains of a MiniML arrow type, in argument order, with the erased
+    ([Tdummy]) ones dropped -- one entry per argument a C++ call passes. *)
+val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
+
 (** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
     arrows have been applied; [Tunresolved] if it has fewer than [n]. *)
 val ml_drop_arrows : int -> Miniml.ml_type -> Miniml.ml_type

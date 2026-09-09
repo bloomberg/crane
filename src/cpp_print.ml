@@ -1460,7 +1460,7 @@ and pp_cpp_expr env args t =
     let s = Option.get ci.ci_inline in
     if Common.contains_substring s "%result" then
       gen_block_iife
-        ?yields:(match res with Ryields ty -> Some ty | Ropaque -> None)
+        ?yields:(match res.cs_yields with Ryields ty -> Some ty | Ropaque -> None)
         n s tys (List.rev ts)
     else
     let has_placeholder = String.contains s '%' in
@@ -1477,27 +1477,7 @@ and pp_cpp_expr env args t =
       let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
       let cmds = expand_elem_args cmds in
       let arg_types =
-        try
-          let ml_ty = Table.find_type n in
-          let rec extract_arg_types = function
-            | Miniml.Tarr (t1, t2) ->
-              if Mlutil.isTdummy t1 then
-                extract_arg_types t2
-              else
-                t1 :: extract_arg_types t2
-            | _ -> []
-          in
-          let ml_arg_types = extract_arg_types ml_ty in
-          let raw = List.map
-            (Translation.convert_ml_type_to_cpp_type env [])
-            ml_arg_types
-          in
-          let result = List.map (Minicpp.map_cpp_type (function
-            | Tvar (i, None) when i >= 1 && i - 1 < List.length tys ->
-              List.nth tys (i - 1)
-            | t -> t)) raw in
-          result
-        with _ -> []
+        match res.cs_params with Ptypes ts -> ts | Punknown -> []
       in
       pp_custom
         ~container:n

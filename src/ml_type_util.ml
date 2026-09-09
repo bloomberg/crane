@@ -115,6 +115,16 @@ let rec ml_codomain = function
   | Miniml.Tmeta {contents = Some t} -> ml_codomain t
   | t -> t
 
+(** The domains of an ML type, in argument order, skipping the erased
+    ([Tdummy]) ones -- so the result lines up with the arguments a C++ call
+    actually passes. *)
+let rec ml_value_domains t =
+  match t with
+  | Miniml.Tmeta {contents = Some t} -> ml_value_domains t
+  | Miniml.Tarr (Miniml.Tdummy _, t2) -> ml_value_domains t2
+  | Miniml.Tarr (t1, t2) -> t1 :: ml_value_domains t2
+  | _ -> []
+
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value
     arrows a C++ call consumes. Fewer than [n] arrows leaves [Tunresolved], which

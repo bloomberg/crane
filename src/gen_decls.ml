@@ -3563,7 +3563,7 @@ let rec replace_return_this_expr inner_ty = function
       (params, ret, List.map (replace_return_this_stmt inner_ty) body, cap)
   | CPPfun_call (_, f, {rev = args}) ->
     CPPfun_call
-      ( Ropaque, replace_return_this_expr inner_ty f,
+      (call_opaque, replace_return_this_expr inner_ty f,
         of_reversed (List.map (replace_return_this_expr inner_ty) args) )
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
@@ -3618,7 +3618,7 @@ let rec deref_return_this_expr = function
   | CPPlambda (params, ret, body, cap) ->
     CPPlambda (params, ret, List.map deref_return_this_stmt body, cap)
   | CPPfun_call (_, f, {rev = args}) ->
-    CPPfun_call (Ropaque, deref_return_this_expr f,
+    CPPfun_call (call_opaque, deref_return_this_expr f,
                  of_reversed (List.map deref_return_this_expr args))
   | CPPoverloaded exprs ->
     CPPoverloaded (List.map deref_return_this_expr exprs)

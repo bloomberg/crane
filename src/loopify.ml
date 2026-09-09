@@ -599,7 +599,7 @@ let method_checker
    match recv with
    | CPPderef inner ->
      Table.mark_needs_erase_fn ();
-     CPPfun_call (Ropaque, CPPvar id_crane_raw, of_reversed ([inner]))
+     CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
    | _ ->
      CPPunop ("&", recv)
  in
@@ -1130,7 +1130,7 @@ let make_visit_expr scrut lambdas =
     | CPPlambda _ -> ()
     | _ -> CErrors.anomaly (Pp.str "make_visit_expr: CPPoverloaded requires lambda elements"))
     lambdas;
-  CPPfun_call (Ropaque, CPPvisit, of_reversed ([scrut; CPPoverloaded lambdas]))
+  CPPfun_call (call_opaque, CPPvisit, of_reversed ([scrut; CPPoverloaded lambdas]))
 
 (** Wrap a [std::visit] dispatch into a single-statement list. *)
 let make_visit_stmt scrut lambdas =
@@ -1332,7 +1332,7 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
     CPPvar id
   | Tptr _, CPPderef inner ->
     Table.mark_needs_erase_fn ();
-    CPPfun_call (Ropaque, CPPvar id_crane_raw, of_reversed ([inner]))
+    CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
   | Tptr _, CPPvar _ -> CPPunop ("&", arg)
   | _ -> arg
 
@@ -3187,7 +3187,7 @@ let patch_tmc_dest ~vt_ret _ti val_expr =
 let wrap_base_for_vt vt_ret val_expr =
   match vt_ret with
   | Some ret_ty ->
-    CPPfun_call (Ropaque, CPPalloc (Alloc_heap, ret_ty), of_reversed ([val_expr]))
+    CPPfun_call (call_opaque, CPPalloc (Alloc_heap, ret_ty), of_reversed ([val_expr]))
   | None -> val_expr
 
 (** Build a constructor call with [nullptr] at the recursive argument position.
@@ -3226,7 +3226,7 @@ let build_cell_call ?token ~vt_ret cell =
           in
           if should_wrap then
             (match vt_ret with
-             | Some _ -> CPPfun_call (Ropaque, mk_shared_cell, of_reversed ([e]))
+             | Some _ -> CPPfun_call (call_opaque, mk_shared_cell, of_reversed ([e]))
              | None -> e)
           else e
         | None ->
@@ -3239,16 +3239,16 @@ let build_cell_call ?token ~vt_ret cell =
     let struct_init =
       CPPtypename_qualified (cell.tca_type, Id.of_string cell.tca_ctor_name)
     in
-    let cell_expr = CPPfun_call (Ropaque, struct_init, of_reversed (args)) in
+    let cell_expr = CPPfun_call (call_opaque, struct_init, of_reversed (args)) in
     (match token with
      | Some tok ->
        (* T is deduced from the token's [rc<T>]; the cell value is built from
           the constructor struct exactly as [make_rc] would build it. *)
-       CPPfun_call (Ropaque, CPPrt Crane_rt.Make_rc_reusing_unchecked,
+       CPPfun_call (call_opaque, CPPrt Crane_rt.Make_rc_reusing_unchecked,
                     of_reversed ([cell_expr; tok]))   (* reversed: (token, cell) *)
-     | None -> CPPfun_call (Ropaque, mk_shared_cell, of_reversed ([cell_expr])))
+     | None -> CPPfun_call (call_opaque, mk_shared_cell, of_reversed ([cell_expr])))
   | None ->
-    CPPfun_call (Ropaque, cell.tca_factory, of_reversed (args))
+    CPPfun_call (call_opaque, cell.tca_factory, of_reversed (args))
 
 (** Turn destructive matches on any of [ids] back into borrowing ones.
 
@@ -3437,7 +3437,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
       (* CPPfun_call holds its arguments reversed (see translation.ml:1776),
          so [reuse_step(_own, _uniq, a1)] is written innermost-first here. *)
       [ Sasgn (id_rstep, Declare Tauto,
-               CPPfun_call (Ropaque, CPPrt Crane_rt.Reuse_step,
+               CPPfun_call (call_opaque, CPPrt Crane_rt.Reuse_step,
                             of_reversed ([rec_field; CPPvar id_uniq; CPPvar id_own]))) ]
     | None -> []
   in
@@ -3929,7 +3929,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
     | CPPlit (ty, _) -> strip_ref_and_const_type ty
-    | CPPfun_call (Ryields ty, _, _) ->
+    | CPPfun_call ({cs_yields = Ryields ty; _}, _, _) ->
       (* The call says what it yields; nothing below can improve on that, and
          a guess that disagreed with it would be a bug. *)
       strip_ref_and_const_type ty
@@ -4335,7 +4335,7 @@ let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
 let make_stack_push arg =
   Sexpr
     (CPPfun_call
-       ( Ropaque, CPPmember (CPPvar (id_stack), id_emplace_back),
+       (call_opaque, CPPmember (CPPvar (id_stack), id_emplace_back),
          of_reversed [arg] ) )
 
 (** Read the [i]-th saved field from frame variable [_f] using the given
@@ -6432,7 +6432,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
       let arg = match arg with CPPmove a -> a | a -> a in
       let raw_of e =
         Table.mark_needs_erase_fn ();
-        CPPfun_call (Ropaque, CPPvar id_crane_raw, of_reversed ([e]))
+        CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([e]))
       in
       if is_uptr then
         (* If the argument is a local variable loaded as a const-reference from a
@@ -6481,9 +6481,9 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
           in
           let args' = List.map2 (fun (safe, is_uptr) arg -> adjust_arg safe is_uptr arg)
             (List.combine flags uptr_flags) args in
-          Sexpr (CPPfun_call (Ropaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
+          Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
         | _ -> map_stmt Fun.id on_stmt Fun.id
-                 (Sexpr (CPPfun_call (Ropaque, callee, of_reversed ([CPPstruct_id (name, targs, args)])))))
+                 (Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args)])))))
       | s -> map_stmt Fun.id on_stmt Fun.id s
     in
     List.map on_stmt stmts
@@ -6638,7 +6638,7 @@ let optimize_frame_push_args frame_field_types stmts =
             if should_move_in_group ~is_enter idx ty arg
             then CPPmove arg else arg
           ) types args in
-          Sexpr (CPPfun_call (Ropaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
+          Sexpr (CPPfun_call (call_opaque, callee, of_reversed ([CPPstruct_id (name, targs, args')])))
         | _ -> List.nth pushes idx
       ) push_data
     in
@@ -6668,7 +6668,7 @@ let optimize_frame_push_args frame_field_types stmts =
           let is_enter = Id.to_string name = "_Enter" in
           Sexpr
             (CPPfun_call
-               (Ropaque, callee,
+               (call_opaque, callee,
                 of_reversed
                   [CPPstruct_id (name, targs,
                     adjust_args ~is_enter ~owned_vars types args)]))
@@ -6756,11 +6756,11 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       Sasgn (id_frame, Declare frame_ty,
              CPPmove
                (CPPfun_call
-                  (Ropaque, CPPmember (CPPvar (id_stack),
+                  (call_opaque, CPPmember (CPPvar (id_stack),
                               id_back), of_reversed [])));
       Sexpr
         (CPPfun_call
-           (Ropaque, CPPmember (CPPvar (id_stack),
+           (call_opaque, CPPmember (CPPvar (id_stack),
                        id_pop_back), of_reversed []));
       dispatch_stmt;
     ]
@@ -6782,7 +6782,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       Swhile
         (CPPunop ("!",
                   CPPfun_call
-                    (Ropaque, CPPmember (CPPvar (id_stack),
+                    (call_opaque, CPPmember (CPPvar (id_stack),
                                 id_empty), of_reversed [])),
          loop_body);
       Sreturn (Some (CPPvar (id_result)));
@@ -6852,7 +6852,7 @@ let rec rewrite_field_access_for_decltype env expr =
        each list -- and in the same orientation, so the two line up. *)
     let extra_args = List.map (fun (ty, _) -> CPPdeclval ty) extra in
     CPPfun_call
-      ( Ropaque, CPPlambda (of_reversed (extra @ to_reversed params), rt, body, false),
+      (call_opaque, CPPlambda (of_reversed (extra @ to_reversed params), rt, body, false),
         of_reversed
           ( extra_args
           @ List.map (rewrite_field_access_for_decltype env) args ) )
@@ -7332,7 +7332,7 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
 
 (** Check if a function body contains any call to a function identified by
     [target_id]. Searches through all statements and nested expressions for a
-    [CPPfun_call (Ropaque, CPPvar id, of_reversed (_))] where [id] equals [target_id].
+    [CPPfun_call (call_opaque, CPPvar id, of_reversed (_))] where [id] equals [target_id].
 
     @param target_id The function name to search for
     @param stmts     The statement list (function body) to search
@@ -7348,7 +7348,7 @@ let body_calls_id target_id stmts =
 
 (** Check if a function body calls any function whose [GlobRef.t] appears in
     [refs]. Searches through all statements and nested expressions for a
-    [CPPfun_call (Ropaque, CPPglob (r, _, _), of_reversed (_))] where [r] matches any element of [refs].
+    [CPPfun_call (call_opaque, CPPglob (r, _, _), of_reversed (_))] where [r] matches any element of [refs].
 
     Used in mutual recursion detection to determine whether a callee calls back
     into the current function.
@@ -7447,7 +7447,7 @@ and generic_inline_expr spec expr =
       List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
     in
     CPPfun_call
-      ( Ropaque, CPPlambda (of_reversed lparams, None, spec.body, true),
+      (call_opaque, CPPlambda (of_reversed lparams, None, spec.body, true),
         of_reversed (spec.get_args expr) )
   else
     map_expr
@@ -7701,7 +7701,7 @@ let try_inline_mutual_into names body =
     as top-level functions. *)
 
 (** Create a {!call_checker} that recognises self-recursive calls within an
-    inner lambda. Matches [CPPfun_call (Ropaque, CPPvar id, of_reversed (args))] where [id] equals
+    inner lambda. Matches [CPPfun_call (call_opaque, CPPvar id, of_reversed (args))] where [id] equals
     [lambda_name]. All matched calls are marked as non-tail since inner lambda
     calls are processed within expression contexts.
 
@@ -7929,7 +7929,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
        If loopification fails (recursion cannot be converted), the original
        shared_ptr pattern is preserved with its body recursively processed. *)
     | Sasgn (id, (Declare Tauto as _ty_opt),
-             ( CPPfun_call (Ropaque, CPPalloc (Alloc_heap, func_ty), {rev = []}) as
+             ( CPPfun_call ({cs_yields = Ropaque; _}, CPPalloc (Alloc_heap, func_ty), {rev = []}) as
                init_expr ))
       :: Sderef_asgn (CPPvar id2, CPPlambda (lparams, ret_ty_opt, lbody, cap))
       :: rest
@@ -8218,7 +8218,7 @@ let try_inline_functional_into names body =
     | CPPlambda
         ( {rev = [(_, Some y)]},
           _,
-          [Sreturn (Some (CPPfun_call (Ropaque, head, {rev = [CPPvar y']})))],
+          [Sreturn (Some (CPPfun_call ({cs_yields = Ropaque; _}, head, {rev = [CPPvar y']})))],
           _ )
       when Id.equal y y'
            && (match callee_name head with
@@ -8822,7 +8822,7 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
               let args' =
                 List.rev (replace_at this_pos (CPPvar id_self_store) args_normal)
               in
-              Some (recv, CPPfun_call (Ropaque, CPPglob (r, targs, x), of_reversed (args')))
+              Some (recv, CPPfun_call (call_opaque, CPPglob (r, targs, x), of_reversed (args')))
             else None
           | _ -> None
         in

@@ -3921,7 +3921,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
   let app x =
     match args with
     | [] -> x
-    | _ -> CPPfun_call (Ropaque, x, of_reversed args)
+    | _ -> CPPfun_call (call_opaque, x, of_reversed args)
   in
   (* When [ty] (the MLcons node's own type annotation) is not itself a
      resolved [Tglob] — e.g. an unresolved [Tmeta {contents = None}], which
@@ -4801,22 +4801,37 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
     expression, the body of a lambda that is itself the stored value.  A
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
-(** [yields_codomain env callee_ty e] records what [e] yields, when [e] is a
-    call whose result type is not recorded yet and the callee's ML type says
-    what it is.
+(** [record_call_sig env callee_ty e] records what the callee's ML type says
+    about [e], when [e] is a call nothing has been recorded on yet.
 
     The application site is where the answer is known; the {!CPPfun_call} node
     is built further down, in {!eta_fun}, so the answer is stamped on here
     rather than threaded through every intermediate that only forwards it.  A
-    callee with no ML type, or one that is not a call at all, is left
-    {!Ropaque}: a consumer must defer to C++ deduction rather than invent a
-    type. *)
-and yields_codomain env callee_ty e =
+    callee with no ML type, or one that is not a call at all, keeps
+    {!call_opaque}: a consumer must defer to C++ deduction rather than invent
+    a type.
+
+    Both fields come off the {e same} instantiated type, so a consumer reading
+    one cannot be looking at a different callee than a consumer reading the
+    other.  The parameter list is kept only when it has one entry per
+    argument -- {!Minicpp.call_sig} enforces that -- since a partial
+    application, or a callee whose arrows an eta-expansion has rearranged,
+    would otherwise hand the printer a misaligned list. *)
+and record_call_sig env callee_ty e =
   match (e, callee_ty) with
-  | CPPfun_call (Ropaque, f, args), Some ml_ty ->
-    ( match convert_ml_type_to_cpp_type env [] (ml_codomain ml_ty) with
+  | CPPfun_call ({cs_yields = Ropaque; cs_params = Punknown}, f, args),
+    Some ml_ty ->
+    let cpp_of ml = convert_ml_type_to_cpp_type env [] ml in
+    ( match cpp_of (ml_codomain ml_ty) with
     | exception _ -> e
-    | ty -> CPPfun_call (Ryields ty, f, args) )
+    | ty ->
+      let params =
+        try Some (List.map cpp_of (ml_value_domains ml_ty)) with _ -> None
+      in
+      let sg =
+        Minicpp.call_sig ~yields:ty ?params ~nargs:(List.length args.rev) ()
+      in
+      CPPfun_call (sg, f, args) )
   | _ -> e
 
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
@@ -5028,7 +5043,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         coerce ~from:Tany ~into result
       | _ -> result
     in
-    yields_codomain env callee_ty_inst result
+    record_call_sig env callee_ty_inst result
   | MLlam _ as a ->
     let args, a = collect_lams a in
     (* Nested binders normally flatten into one multi-parameter C++ lambda.
@@ -6173,18 +6188,18 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some (tok, ctor) when globref_equal r ctor ->
             tctx := { !tctx with pending_reuse_token = None };
             CPPfun_call
-              ( Ropaque, CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
+              (call_opaque, CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
                 of_reversed (args @ [CPPmove tok]) )
           | _ ->
             CPPfun_call
-              ( Ropaque, CPPqualified_t (type_expr, Id.of_string fname),
+              (call_opaque, CPPqualified_t (type_expr, Id.of_string fname),
                 of_reversed args ) )
         | _ ->
           (* Fallback for non-Tglob types *)
           let ctor_struct = ctor_struct_name_of_ref r in
           let fname = factory_name_of_ctor ctor_struct in
           CPPfun_call
-            ( Ropaque, CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
+            (call_opaque, CPPqualified_t (Tglob (r, [], []), Id.of_string fname),
               of_reversed args )
       in
       (* [CPPfun_call] stores args reversed; [List.rev_map] compensates.
@@ -8390,7 +8405,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           List.rev_map (fun (_, id) -> CPPvar (Option.get id)) params
         in
         let body =
-          [ Sexpr (CPPfun_call (Ropaque, expr, of_reversed args));
+          [ Sexpr (CPPfun_call (call_opaque, expr, of_reversed args));
             Sreturn (Some (mk_tt_expr ())) ]
         in
         mk_lambda params None body ~by_value:false
@@ -8901,7 +8916,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              get the [()]. *)
           cglob
         else
-          CPPfun_call (Ropaque, cglob, of_reversed args)
+          CPPfun_call (call_opaque, cglob, of_reversed args)
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity
@@ -9265,8 +9280,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call
-        ( Ropaque,
-          CPPfun_call (Ropaque, gen_expr env f, of_reversed primary),
+        (call_opaque,
+          CPPfun_call (call_opaque, gen_expr env f, of_reversed primary),
           of_reversed excess )
     else
       (* When the callee is a local variable whose ML type is a bare type
@@ -9289,7 +9304,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         if !has_unresolved_boxed_arg && not callee_is_bare_any then begin
           Table.mark_needs_erase_fn ();
           CPPfun_call
-            ( Ropaque, CPPvar (Id.of_string "crane_call_erased"),
+            (call_opaque, CPPvar (Id.of_string "crane_call_erased"),
               of_reversed (List.rev args @ [callee_expr]) )
         end
         else if callee_is_bare_any then
@@ -11213,10 +11228,10 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
       match find_self_id id with
       | Some self_id ->
         CPPfun_call
-          ( Ropaque, CPPvar self_id,
+          (call_opaque, CPPvar self_id,
             of_reversed (List.map rewrite_expr args @ self_vars_rev) )
       | None ->
-        CPPfun_call (Ropaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
+        CPPfun_call (call_opaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
     | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
   and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
   let impl_stmts =
@@ -11264,7 +11279,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
           List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call = CPPfun_call (Ropaque, CPPvar _impl_id, of_reversed fwd_args) in
+        let call = CPPfun_call (call_opaque, CPPvar _impl_id, of_reversed fwd_args) in
         let wrapper_body =
           match rty with
           | None -> [Sexpr call]
@@ -11424,10 +11439,10 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
       match find_self_id id with
       | Some self_id ->
         CPPfun_call
-          ( Ropaque, CPPvar self_id,
+          (call_opaque, CPPvar self_id,
             of_reversed (List.map rewrite_expr args @ self_vars_rev) )
       | None ->
-        CPPfun_call (Ropaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
+        CPPfun_call (call_opaque, CPPvar id, of_reversed (List.map rewrite_expr args)) )
     | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
   and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
@@ -11469,7 +11484,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
           List.map (fun (id, _) -> CPPvar id) args @ impl_vars_rev
         in
         let rty = ret_ty fty in
-        let call = CPPfun_call (Ropaque, CPPvar impl_id, of_reversed fwd_args) in
+        let call = CPPfun_call (call_opaque, CPPvar impl_id, of_reversed fwd_args) in
         let wrapper_body =
           match rty with
           | None -> [Sexpr call]
@@ -12013,7 +12028,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               ~params:(List.map (cpp_of_ml env) param_ml_tys)
               ~saturated:(fun here ->
                 CPPfun_call
-                  ( Ropaque, mk_cppglob lifted [],
+                  (call_opaque, mk_cppglob lifted [],
                     of_reversed (free_args @ List.rev (name_lifted_args here)) ) )
               (List.map sub (call_args args))
           | CPPvar id when Id.equal id target ->
@@ -12041,7 +12056,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                     Sreturn
                       (Some
                          (CPPfun_call
-                            ( Ropaque, mk_cppglob lifted [],
+                            (call_opaque, mk_cppglob lifted [],
                               of_reversed wrapper_call_args )));
                   ],
                   true )
@@ -12079,7 +12094,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                The lifted template function returns a concrete type (not
                std::any), so drop the cast and replace with the lifted call. *)
             CPPfun_call
-              ( Ropaque,
+              (call_opaque,
                 mk_cppglob lifted [],
                 of_reversed (free_args @ List.map sub args) )
           | CPPany_cast (ty, e') -> Cpp_erasure.unbox ty (sub e')
@@ -12694,7 +12709,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           outer_args @ extra_args
       in
       let cpp_args = List.rev_map (gen_expr env) args in
-      [k (CPPfun_call (Ropaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args))] )
+      [k (CPPfun_call (call_opaque, mk_cppglob lifted_ref call_type_args, of_reversed cpp_args))] )
     else (* No extra Tvars - proceed with by-ref local fixpoint (immediately applied) *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
@@ -12766,7 +12781,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             owned_flags_per_fun
         in
         decls @ defs
-        @ [k (CPPfun_call (Ropaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
+        @ [k (CPPfun_call (call_opaque, CPPvar (fst (List.nth renamed_ids x)), of_reversed args))]
       end
   | MLfix (x, ids, funs, _) ->
     (* Standalone fixpoint (not immediately applied) — e.g., appearing as the
