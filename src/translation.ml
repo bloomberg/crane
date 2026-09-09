@@ -6223,10 +6223,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    that promoted type vars resolve via promoted_var_map (giving
                    e.g. typename D::Defs::Parser_frame) rather than being erased
                    to std::any by the constructor-expression shortcut. *)
-                let saved_ctor = (!tctx).in_constructor_expr in
-                tctx := { !tctx with in_constructor_expr = false };
-                let recovered = template_params_of_ml ~curry:false env exp_tys in
-                tctx := { !tctx with in_constructor_expr = saved_ctor };
+                let recovered =
+                  with_in_constructor_expr false (fun () ->
+                      template_params_of_ml ~curry:false env exp_tys )
+                in
                 if List.for_all (fun t -> not (prints_as_any t)) recovered
                 then recovered
                 else temps
@@ -10436,13 +10436,10 @@ and gen_cpp_case (typ : ml_type) t env pv =
             in
             (match !token_expr with
             | Some tok ->
-              let saved_tok = (!tctx).pending_reuse_token in
-              tctx :=
-                { !tctx with pending_reuse_token = Some (tok, tail_ctor) };
               let body_stmts =
-                gen_stmts env' (fun x -> Sreturn (Some x)) body
+                with_reuse_token (Some (tok, tail_ctor)) (fun () ->
+                    gen_stmts env' (fun x -> Sreturn (Some x)) body )
               in
-              tctx := { !tctx with pending_reuse_token = saved_tok };
               tctx := { !tctx with env_types = saved_env_types };
               let use_count_cond =
                 CPPbinop
@@ -12440,160 +12437,158 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       tctx :=
         { !tctx with
           move_dead_after = Escape.IntSet.union dead_in_a dead_from_above };
-      let saved_suppress = (!tctx).move_suppress_tail in
-      tctx := { !tctx with move_suppress_tail = true };
-      (* Single-use partial application optimization: when the RHS is a partial
-         application and the bound variable is used at most once in the
-         continuation without escaping, AND all free variables of the RHS are
-         dead in the continuation (so [&] capture references stay valid),
-         tell eta_fun to keep CPPmove wrappers and use [&] capture for
-         zero-copy closure generation. *)
-      let is_single_use_partial_app =
-        match a with
-        | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
-          (match Escape.partial_app_remaining head ml_args with
-           | Some remaining ->
-             Escape.nb_occur_match 1 b <= 1
-             && not (Escape.escapes 1 b)
-             && Escape.IntSet.is_empty
-                  (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
-             && Escape.single_use_nargs 1 b >= remaining
-           | None -> false)
-        | _ -> false
-      in
-      let afun v = Sasgn (x_renamed, Existing, v) in
-      (* Thread the let-binding's type annotation as the expected ML type
-         so that gen_ctor_call can recover the concrete element type for
-         constructors (like nil) whose ML annotation has unresolved metas or
-         erased type args.  For example: let sk = [] : list parser_frame — the
-         let-binding knows the element type even when the nil's own annotation
-         has Tdummy Ktype. *)
-      (* Look ahead: if t has erased type args, look at the body b to see if the
-         bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
-         with a non-erased corresponding type arg. If so, use that type instead of t.
-         This recovers the correct element type for nils bound before pair constructors:
-           let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
-         where the pair type says the second arg is list(parser_frame). *)
-      let t_effective =
-        let t_has_erased = ml_type_contains_erased t in
-        if not t_has_erased then t
-        else begin
-          (* Try to infer from an MLcons that immediately follows in the body.
-             The body b may be directly an MLcons, or wrapped in one more MLletin. *)
-          let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
-            (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
-            let target_rel = 1 + db_offset in
-            (* Resolve t to get the underlying inductive (through metas) *)
-            let t_ind_opt = match resolve_tmeta t with
-              | Miniml.Tglob (t_ind, _, _) -> Some t_ind
-              | _ -> None
-            in
-            match b_inner with
-            | Miniml.MLcons (ctor_ty, _, ts) ->
-              let result = ref None in
-              List.iteri (fun i (ti : Miniml.ml_ast) ->
-                match ti with
-                | Miniml.MLrel r when r = target_rel ->
-                  (match resolve_tmeta ctor_ty with
-                   | Miniml.Tglob (_, ctor_tys, _) ->
-                     (match List.nth_opt ctor_tys i with
-                      | Some raw_candidate ->
-                        (match resolve_tmeta raw_candidate with
-                        | Miniml.Tglob (ind, sub_tys, _) as candidate ->
-                          (* Check that candidate's inductive matches t's inductive.
-                             When t is fully erased (Tmeta{None}), accept any concrete type. *)
-                          let matches_t = match t_ind_opt with
-                            | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
-                            | None -> true
-                          in
-                          if matches_t && not (List.exists is_erased_ml_type sub_tys) then
-                            result := Some candidate
-                        | _ -> ())
-                      | _ -> ())
-                   | _ -> ())
-                | _ -> ()
-              ) ts;
-              !result
-            | _ -> None
-          in
-          (* Try to infer t from an MLapp body: find the position of target_rel
-             in the application args, look up the function's ML type, and extract
-             the type of that arg.  This handles the pattern:
-               let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
-             where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
-          let try_app_body (b_inner : Miniml.ml_ast) db_offset =
-            let target_rel = 1 + db_offset in
-            match b_inner with
-            | Miniml.MLapp (Miniml.MLglob (func_ref, _), app_args)
-            | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob (func_ref, _)), app_args) ->
-              let rec find_pos args i =
-                match args with
-                | [] -> None
-                | (Miniml.MLrel r) :: _ when r = target_rel -> Some i
-                | (Miniml.MLmagic (_, Miniml.MLrel r)) :: _ when r = target_rel -> Some i
-                | _ :: rest -> find_pos rest (i + 1)
-              in
-              (match find_pos app_args 0 with
-              | None -> None
-              | Some idx ->
-                (match find_type_opt func_ref with
-                | None -> None
-                | Some func_ty ->
-                  let rec nth_arg ty n =
-                    match ty with
-                    | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
-                    | Miniml.Tarr (dom, _) when n = 0 -> Some dom
-                    | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
-                    | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
-                    | _ -> None
-                  in
-                  let try_unfold_typedef resolved =
-                    match resolved with
-                    | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
-                      (match Table.lookup_typedef_unchecked kn with
-                       | Some expanded -> expanded
-                       | None -> resolved)
-                    | _ -> resolved
-                  in
-                  (match nth_arg func_ty idx with
-                  | Some arg_ty ->
-                    let resolved = resolve_tmeta arg_ty in
-                    let resolved = try_unfold_typedef resolved in
-                    (match resolve_tmeta t, resolved with
-                    | _, Miniml.Tglob (_, r_sub, _)
-                      when not (List.exists is_erased_ml_type r_sub) ->
-                      Some resolved
-                    | _ -> None)
-                  | None -> None)))
-            | _ -> None
-          in
-          let inferred = match (b : Miniml.ml_ast) with
-            | Miniml.MLcons _ -> try_cons_body b 0
-            | Miniml.MLletin (_, _, a', _) ->
-              (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
-                 db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
-              (match try_cons_body a' 0 with
-               | Some _ as r -> r
-               | None -> try_cons_body b 0)
-            | Miniml.MLapp _ ->
-              (* Body is a function application — look up the function type to find
-                 the type expected for the bound variable at its argument position. *)
-              try_app_body b 0
-            | _ -> None
-          in
-          match inferred with Some ty -> ty | None -> t
-        end
-      in
       let asgn =
-        gen_stmts
-          ~slot:
-            { slot with
-              deep_erase = false;
-              expected_ml_ty = Some t_effective;
-              eta_keep_moves = is_single_use_partial_app }
-          env afun a
+        with_move_suppress_tail true (fun () ->
+          (* Single-use partial application optimization: when the RHS is a partial
+             application and the bound variable is used at most once in the
+             continuation without escaping, AND all free variables of the RHS are
+             dead in the continuation (so [&] capture references stay valid),
+             tell eta_fun to keep CPPmove wrappers and use [&] capture for
+             zero-copy closure generation. *)
+          let is_single_use_partial_app =
+            match a with
+            | MLapp (head, ml_args) | MLmagic (_, MLapp (head, ml_args)) ->
+              (match Escape.partial_app_remaining head ml_args with
+               | Some remaining ->
+                 Escape.nb_occur_match 1 b <= 1
+                 && not (Escape.escapes 1 b)
+                 && Escape.IntSet.is_empty
+                      (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
+                 && Escape.single_use_nargs 1 b >= remaining
+               | None -> false)
+            | _ -> false
+          in
+          let afun v = Sasgn (x_renamed, Existing, v) in
+          (* Thread the let-binding's type annotation as the expected ML type
+             so that gen_ctor_call can recover the concrete element type for
+             constructors (like nil) whose ML annotation has unresolved metas or
+             erased type args.  For example: let sk = [] : list parser_frame — the
+             let-binding knows the element type even when the nil's own annotation
+             has Tdummy Ktype. *)
+          (* Look ahead: if t has erased type args, look at the body b to see if the
+             bound var (MLrel 1 in b) is used as the i-th arg of a constructor call
+             with a non-erased corresponding type arg. If so, use that type instead of t.
+             This recovers the correct element type for nils bound before pair constructors:
+               let empty_stack : list(Tmeta) = [] in make_pair(fr, empty_stack)
+             where the pair type says the second arg is list(parser_frame). *)
+          let t_effective =
+            let t_has_erased = ml_type_contains_erased t in
+            if not t_has_erased then t
+            else begin
+              (* Try to infer from an MLcons that immediately follows in the body.
+                 The body b may be directly an MLcons, or wrapped in one more MLletin. *)
+              let try_cons_body (b_inner : Miniml.ml_ast) db_offset =
+                (* db_offset: how many let-bindings above b_inner, so MLrel (1+db_offset) = x *)
+                let target_rel = 1 + db_offset in
+                (* Resolve t to get the underlying inductive (through metas) *)
+                let t_ind_opt = match resolve_tmeta t with
+                  | Miniml.Tglob (t_ind, _, _) -> Some t_ind
+                  | _ -> None
+                in
+                match b_inner with
+                | Miniml.MLcons (ctor_ty, _, ts) ->
+                  let result = ref None in
+                  List.iteri (fun i (ti : Miniml.ml_ast) ->
+                    match ti with
+                    | Miniml.MLrel r when r = target_rel ->
+                      (match resolve_tmeta ctor_ty with
+                       | Miniml.Tglob (_, ctor_tys, _) ->
+                         (match List.nth_opt ctor_tys i with
+                          | Some raw_candidate ->
+                            (match resolve_tmeta raw_candidate with
+                            | Miniml.Tglob (ind, sub_tys, _) as candidate ->
+                              (* Check that candidate's inductive matches t's inductive.
+                                 When t is fully erased (Tmeta{None}), accept any concrete type. *)
+                              let matches_t = match t_ind_opt with
+                                | Some t_ind -> GlobRef.CanOrd.equal ind t_ind
+                                | None -> true
+                              in
+                              if matches_t && not (List.exists is_erased_ml_type sub_tys) then
+                                result := Some candidate
+                            | _ -> ())
+                          | _ -> ())
+                       | _ -> ())
+                    | _ -> ()
+                  ) ts;
+                  !result
+                | _ -> None
+              in
+              (* Try to infer t from an MLapp body: find the position of target_rel
+                 in the application args, look up the function's ML type, and extract
+                 the type of that arg.  This handles the pattern:
+                   let sk0 : Tmeta = (fr, nil) in multistep(..., sk0, ...)
+                 where multistep's type tells us sk0 has type parser_frame × list(parser_frame). *)
+              let try_app_body (b_inner : Miniml.ml_ast) db_offset =
+                let target_rel = 1 + db_offset in
+                match b_inner with
+                | Miniml.MLapp (Miniml.MLglob (func_ref, _), app_args)
+                | Miniml.MLapp (Miniml.MLmagic (_, Miniml.MLglob (func_ref, _)), app_args) ->
+                  let rec find_pos args i =
+                    match args with
+                    | [] -> None
+                    | (Miniml.MLrel r) :: _ when r = target_rel -> Some i
+                    | (Miniml.MLmagic (_, Miniml.MLrel r)) :: _ when r = target_rel -> Some i
+                    | _ :: rest -> find_pos rest (i + 1)
+                  in
+                  (match find_pos app_args 0 with
+                  | None -> None
+                  | Some idx ->
+                    (match find_type_opt func_ref with
+                    | None -> None
+                    | Some func_ty ->
+                      let rec nth_arg ty n =
+                        match ty with
+                        | Miniml.Tarr (Miniml.Tdummy _, cod) -> nth_arg cod n
+                        | Miniml.Tarr (dom, _) when n = 0 -> Some dom
+                        | Miniml.Tarr (_, cod) -> nth_arg cod (n - 1)
+                        | Miniml.Tmeta {contents = Some t2} -> nth_arg t2 n
+                        | _ -> None
+                      in
+                      let try_unfold_typedef resolved =
+                        match resolved with
+                        | Miniml.Tglob (GlobRef.ConstRef kn, _, _) ->
+                          (match Table.lookup_typedef_unchecked kn with
+                           | Some expanded -> expanded
+                           | None -> resolved)
+                        | _ -> resolved
+                      in
+                      (match nth_arg func_ty idx with
+                      | Some arg_ty ->
+                        let resolved = resolve_tmeta arg_ty in
+                        let resolved = try_unfold_typedef resolved in
+                        (match resolve_tmeta t, resolved with
+                        | _, Miniml.Tglob (_, r_sub, _)
+                          when not (List.exists is_erased_ml_type r_sub) ->
+                          Some resolved
+                        | _ -> None)
+                      | None -> None)))
+                | _ -> None
+              in
+              let inferred = match (b : Miniml.ml_ast) with
+                | Miniml.MLcons _ -> try_cons_body b 0
+                | Miniml.MLletin (_, _, a', _) ->
+                  (* In body = MLletin(sk0, pair_expr, ...), nil is at MLrel 1 in pair_expr.
+                     db_offset=0 because pair_expr is evaluated before sk0 is bound. *)
+                  (match try_cons_body a' 0 with
+                   | Some _ as r -> r
+                   | None -> try_cons_body b 0)
+                | Miniml.MLapp _ ->
+                  (* Body is a function application — look up the function type to find
+                     the type expected for the bound variable at its argument position. *)
+                  try_app_body b 0
+                | _ -> None
+              in
+              match inferred with Some ty -> ty | None -> t
+            end
+          in
+            gen_stmts
+              ~slot:
+                { slot with
+                  deep_erase = false;
+                  expected_ml_ty = Some t_effective;
+                  eta_keep_moves = is_single_use_partial_app }
+              env afun a )
       in
-      tctx := { !tctx with move_suppress_tail = saved_suppress };
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]
          (generated below) does include it. *)

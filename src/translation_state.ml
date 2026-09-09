@@ -188,6 +188,23 @@ let tctx =
         cpp_binder_types = IntMap.empty;
     }
 
+(** [with_field get set v f] runs [f] with one context field set to [v], and
+    puts the enclosing value back on the way out however [f] leaves --
+    returning or raising.
+
+    Only the one field is restored, deliberately: the effects [f] means to
+    have on the rest of the context (a lifted declaration enqueued, a counter
+    advanced) must survive, so saving and restoring the whole record would be
+    wrong here even though it is right at a declaration boundary.
+
+    Every dynamic-extent field gets a [with_*] built from this, so that no
+    caller writes the save/set/restore by hand -- an omitted restore does not
+    fail, it silently leaks the setting into whatever is translated next. *)
+let with_field get set v f =
+  let saved = get !tctx in
+  set v;
+  Fun.protect ~finally:(fun () -> set saved) f
+
 (** Accessors for {!translation_ctx.current_type_vars}: the template type
     variables in scope for the function currently being translated.
 
@@ -209,9 +226,33 @@ let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
     does not fail: the next conversion quietly numbers its type variables
     against the wrong function. *)
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
-  let saved = get_current_type_vars () in
-  set_current_type_vars tvars;
-  Fun.protect ~finally:(fun () -> set_current_type_vars saved) f
+  with_field (fun c -> c.current_type_vars) set_current_type_vars tvars f
+
+(** [with_in_constructor_expr b f] runs [f] with
+    {!translation_ctx.in_constructor_expr} set to [b]. *)
+let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.in_constructor_expr)
+    (fun b -> tctx := { !tctx with in_constructor_expr = b })
+    b f
+
+(** [with_move_suppress_tail b f] runs [f] with
+    {!translation_ctx.move_suppress_tail} set to [b]. *)
+let with_move_suppress_tail (b : bool) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.move_suppress_tail)
+    (fun b -> tctx := { !tctx with move_suppress_tail = b })
+    b f
+
+(** [with_reuse_token tok f] runs [f] with [tok] as the pending Perceus reuse
+    token.  The token is linear, and [f] clears it if it consumes it; the
+    restore puts back whatever the enclosing scope had, consumed or not. *)
+let with_reuse_token (tok : (cpp_expr * GlobRef.t) option) (f : unit -> 'a) : 'a
+    =
+  with_field
+    (fun c -> c.pending_reuse_token)
+    (fun t -> tctx := { !tctx with pending_reuse_token = t })
+    tok f
 
 (** Accessors for {!translation_ctx.current_param_types}: the 1-indexed
     parameter types of the current function, used to recover erased type info
