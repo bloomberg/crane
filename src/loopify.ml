@@ -7107,7 +7107,8 @@ let fix_handler_bindings field_names cf_ps handler =
     @return Transformed body with frame-based stack structure, or the original
             [body] unchanged when the transformation is unsafe (branch
             dependencies on recursive calls) *)
-let transform_nontail ?(fn_name : string option) check _pp_expr tparams params ret_ty body =
+let transform_nontail ?(fn_name : string option) check tparams params ret_ty
+    body =
   let varying = find_varying_params check params body in
   let binding_env = collect_binding_env body in
   let pointer_safe = tail_pointer_safe_flags check params body ~binding_env () in
@@ -7811,11 +7812,10 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     [std::visit] lambdas, switch, blocks) and into lambda expressions within
     assignments and returns, to find recursive lambda patterns at any depth.
 
-    @param pp_expr  Expression pretty-printer (threaded to {!transform_nontail})
     @param tparams  Type parameters of the enclosing function
     @param body     The statement list to scan and transform
     @return The statement list with all self-recursive inner lambdas loopified *)
-let loopify_inner_lambdas ~pp_expr ~tparams body =
+let loopify_inner_lambdas ~tparams body =
   let try_loopify_lambda id lparams ret_ty_opt lbody cap =
     let lparams = to_reversed lparams in
     let check = lambda_checker id in
@@ -7843,8 +7843,8 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
             (transform_tail check params ret_ty lbody)
         | Nontail_recursion ->
           report_outcome ~name ~check ~strategy:Lp_frame
-            (transform_nontail ~fn_name:name check pp_expr tparams
-               params ret_ty lbody)
+            (transform_nontail ~fn_name:name check tparams params ret_ty
+               lbody)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       Some lbody'
@@ -7896,28 +7896,6 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
       | [] -> None )
     | _ -> None
   in
-  (* Whole-word occurrence test used to detect params that vanish from the
-     printed body (e.g. erased-index args dropped by a custom-extraction
-     template).  Such params are still [CPPvar] nodes in the AST, so the
-     lambda printer would keep their names and trip [-Wunused-parameter]; we
-     render the transformed body with [pp_expr] and drop the name of any param
-     whose identifier does not survive to the printed output. *)
-  let word_appears name s =
-    let n = String.length name and len = String.length s in
-    let is_word_char c =
-      (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
-      || (c >= '0' && c <= '9') || c = '_'
-    in
-    let rec scan i =
-      if i + n > len then false
-      else if String.sub s i n = name
-              && (i = 0 || not (is_word_char s.[i - 1]))
-              && (i + n >= len || not (is_word_char s.[i + n]))
-      then true
-      else scan (i + 1)
-    in
-    n > 0 && scan 0
-  in
   let try_loopify_ycomb lparams ret_ty_opt lbody =
     match ycomb_self_id lparams with
     | None -> None
@@ -7937,20 +7915,10 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
         in
         let ret_ty = match ret_ty_opt with Some ty -> ty | None -> Tvoid in
         let body' = transform_tail check params ret_ty lbody in
-        (* Drop names of params (including the self-param) that no longer
-           appear in the printed loop body, so unused ones become unnamed
-           rather than triggering [-Wunused-parameter]. *)
-        let rendered = pp_expr (mk_lambda [] None body' ~by_value:false) in
-        let lparams' =
-          List.map
-            (fun (ty, id_opt) ->
-              match id_opt with
-              | Some id when not (word_appears (Id.to_string id) rendered) ->
-                (ty, None)
-              | _ -> (ty, id_opt) )
-            lparams
-        in
-        Some (lparams', body')
+        (* Params the loop body no longer mentions keep their names here; the
+           lambda printer drops the name of any param its body does not
+           reference, so unused ones do not trip [-Wunused-parameter]. *)
+        Some (lparams, body')
       | No_recursion | Nontail_recursion -> None )
   in
   let rec process_stmts stmts =
@@ -8251,7 +8219,6 @@ let body_contains_lazy_factory body =
     @param fn_name     Optional function name for loop-comment annotations
                        (forwarded to {!transform_nontail}).
     @param check       Call checker for identifying recursive calls
-    @param pp_expr     Expression pretty-printer
     @param tparams     Template parameter context
     @param params      Function parameters [(id, type)]
     @param ret_ty      Return type
@@ -8260,7 +8227,7 @@ let body_contains_lazy_factory body =
     when [param_inits] were consumed by the transform (TMC uses them for
     method-self initialisation), meaning the caller does not need a separate
     initialiser statement. *)
-let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_expr
+let apply_nontail_loopification ?(param_inits = []) ?fn_name check
     tparams params ret_ty body =
   last_nontail_strategy := Lp_frame;
   if has_recursive_branch_dependency check body then
@@ -8269,7 +8236,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check pp_expr
   else
   let frame () =
     last_nontail_strategy := Lp_frame;
-    ( transform_nontail ?fn_name check pp_expr tparams params ret_ty body,
+    ( transform_nontail ?fn_name check tparams params ret_ty body,
       false )
   in
   (* A transform may discover mid-flight that the body's shape has no
@@ -8712,7 +8679,6 @@ let hoist_rec_conditions (check : call_checker)
     [lazy_] pattern via {!has_lazy_body} and skip the main loopification
     pass.  See the {!has_lazy_body} section header for the full rationale.
 
-    @param pp_expr   Expression pretty-printer (forwarded to transformation
                      passes and [decltype] generation)
     @param tparams   Template parameters of the enclosing declaration
     @param names     List of [(GlobRef.t, type_args)] pairs identifying this
@@ -8723,7 +8689,7 @@ let hoist_rec_conditions (check : call_checker)
     @param no_pure   Whether the function is marked [no_pure] (passed through
                      to the [Dfundef] node unchanged)
     @return A [Dfundef] declaration with the loopified body *)
-let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
+let transform_fundef_exn ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names ret_ty params body;
   (* Try to inline mutual recursion partners *)
@@ -8759,7 +8725,7 @@ let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
     if has_lazy_body body || body_contains_lazy_factory body then begin
       if classify check body <> No_recursion then
         record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
-      loopify_inner_lambdas ~pp_expr ~tparams body
+      loopify_inner_lambdas ~tparams body
     end else
       (* Normal (non-lazy) function — existing path *)
       let kind = classify check body in
@@ -8770,7 +8736,7 @@ let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
           (transform_tail check params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
             let body' =
-              fst (apply_nontail_loopification ?fn_name check pp_expr
+              fst (apply_nontail_loopification ?fn_name check
                      tparams params ret_ty body)
             in
             (body', Some !last_nontail_strategy)
@@ -8782,7 +8748,7 @@ let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
          self-call.  The inner pass records outcomes of its own, which clobbers
          [pending_decline], so carry our reason across it. *)
       let pending = !pending_decline in
-      let body = loopify_inner_lambdas ~pp_expr ~tparams body in
+      let body = loopify_inner_lambdas ~tparams body in
       pending_decline := pending;
       (match strategy with
        | None -> pending_decline := None; body
@@ -8794,9 +8760,9 @@ let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
     transform is turned into a decline for this one function: the original body
     is emitted unchanged and the outcome is recorded, so a shape the pass cannot
     linearise never aborts the surrounding extraction. *)
-let transform_fundef ~pp_expr ~tparams names ret_ty params body no_pure =
+let transform_fundef ~tparams names ret_ty params body no_pure =
   try
-    transform_fundef_exn ~pp_expr ~tparams names ret_ty params body
+    transform_fundef_exn ~tparams names ret_ty params body
       no_pure
   with Not_linearisable reason ->
     ignore (decline reason body);
@@ -8820,13 +8786,12 @@ let transform_fundef ~pp_expr ~tparams names ret_ty params body no_pure =
     + For nontail recursion: prepends [_self = this] initialization before the
       loop, since the [_Enter] frame references [_self] by name.
 
-    @param pp_expr        Expression pretty-printer
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g.,
                           [Tmod (TMconst, Tptr (Tglob (...)))])
     @param mf             The method record to transform
     @return An [Fmethod] field with the loopified body *)
-let transform_method ~pp_expr ~tparams ~self_ty mf =
+let transform_method ~tparams ~self_ty mf =
   let n_params = List.length mf.mf_params in
   let this_pos = mf.mf_this_pos in
   (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
@@ -9017,7 +8982,7 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
               ?fn_name
-              self_check pp_expr tparams
+              self_check tparams
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =
@@ -9045,15 +9010,14 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
     Non-method fields (e.g., [Ffield], [Ftype]) are returned unchanged. For
     [Fmethod] fields, delegates to {!transform_method}.
 
-    @param pp_expr        Expression pretty-printer
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g., [Tmod (TMconst, Tptr (Tglob (...)))])
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
-let rec transform_field ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
   (* Same contract as {!transform_fundef}: a shape the pass cannot linearise
      declines this one field instead of aborting the extraction. *)
-  try transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag)
+  try transform_field_exn ~tparams ~self_ty (fld, vis, tag)
   with Not_linearisable reason ->
     let body =
       match fld with
@@ -9064,10 +9028,10 @@ let rec transform_field ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     ignore (decline reason body);
     (fld, vis, tag)
 
-and transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
+and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
-    (transform_method ~pp_expr ~tparams ~self_ty mf, vis, tag)
+    (transform_method ~tparams ~self_ty mf, vis, tag)
   | Ffundef (name, ret_ty, params, body) ->
     let check = lambda_checker name in
     let kind = classify check body in
@@ -9079,7 +9043,7 @@ and transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
         (transform_tail check params ret_ty body, Some Lp_tail)
       | Nontail_recursion ->
         let body' =
-          fst (apply_nontail_loopification ~fn_name:dname check pp_expr
+          fst (apply_nontail_loopification ~fn_name:dname check
                  tparams params ret_ty body)
         in
         (body', Some !last_nontail_strategy)
@@ -9087,7 +9051,7 @@ and transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     (* As in {!transform_fundef}: the postcondition is only meaningful once
        inner lambdas have been linearised too. *)
     let pending = !pending_decline in
-    let body' = loopify_inner_lambdas ~pp_expr ~tparams body' in
+    let body' = loopify_inner_lambdas ~tparams body' in
     pending_decline := pending;
     let body' =
       match strategy with
@@ -9097,7 +9061,7 @@ and transform_field_exn ~pp_expr ~tparams ~self_ty (fld, vis, tag) =
     (Ffundef (name, ret_ty, params, body'), vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =
-      List.map (transform_field ~pp_expr ~tparams ~self_ty) fields
+      List.map (transform_field ~tparams ~self_ty) fields
     in
     (Fnested_struct (id, fields'), vis, tag)
   | _ -> (fld, vis, tag)
@@ -9178,12 +9142,12 @@ let try_inline_mutual_fields fields =
     declarations (templates, structs, namespaces). Dispatches to
     {!transform_fundef}, {!transform_method}, or recurses for composite
     declarations. *)
-let rec transform_decl ?(tparams = []) ~pp_expr = function
+let rec transform_decl ?(tparams = []) = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
-      (tparams, constraint_opt, transform_decl ~tparams ~pp_expr inner)
+      (tparams, constraint_opt, transform_decl ~tparams inner)
   | Dfundef (names, ret_ty, params, body, no_pure) ->
-    transform_fundef ~pp_expr ~tparams names ret_ty params body no_pure
+    transform_fundef ~tparams names ret_ty params body no_pure
   | Dstruct ds ->
     (* Name the struct's own template arguments: inside a nested inductive the
        receiver type is spelled through its module ([typename List::template
@@ -9225,7 +9189,7 @@ let rec transform_decl ?(tparams = []) ~pp_expr = function
         ds with
         ds_fields =
           List.map
-            (transform_field ~pp_expr ~tparams ~self_ty)
+            (transform_field ~tparams ~self_ty)
             fields;
       }
   | Dnspace (r, decls) ->
@@ -9239,5 +9203,5 @@ let rec transform_decl ?(tparams = []) ~pp_expr = function
           register_fundef names ret_ty params body
         | _ -> () )
       decls;
-    Dnspace (r, List.map (transform_decl ~tparams ~pp_expr) decls)
+    Dnspace (r, List.map (transform_decl ~tparams) decls)
   | d -> d

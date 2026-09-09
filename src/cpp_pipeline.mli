@@ -16,15 +16,9 @@
     asked for and what kind of declaration it is. *)
 val should_loopify : Minicpp.cpp_decl -> bool
 
-(** [finish ~pp_expr ~loopify decl] runs every pass between translation and
-    printing, and hands back the printable declaration.
+(** [finish ~loopify decl] runs every pass between translation and printing,
+    and hands back the printable declaration.
 
-    @param pp_expr renders an expression as a string, for the diagnostics
-                   {!Loopify} emits about what it declined to transform.
     @param loopify whether to loopify, normally {!should_loopify} of the same
                    declaration. *)
-val finish :
-  pp_expr:(Minicpp.cpp_expr -> string) ->
-  loopify:bool ->
-  Minicpp.cpp_decl ->
-  Cpp_erasure.settled
+val finish : loopify:bool -> Minicpp.cpp_decl -> Cpp_erasure.settled

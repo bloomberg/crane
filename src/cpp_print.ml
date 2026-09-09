@@ -3861,10 +3861,6 @@ let pp_meyers_singleton env id ty expr_pp =
   ++ fnl ()
   ++ str "}"
 
-(** An expression as a bare string, for the diagnostics the later passes emit
-    about declarations they declined to transform. *)
-let pp_expr_string e = Pp.string_of_ppcmds (pp_cpp_expr ([], Id.Set.empty) [] e)
-
 (** The parameters and statements of a declaration, for the traversals that
     need to see what a signature's body actually does with its parameters (see
     {!erased_into_storage_tparam}).  A declaration with no body gives empty
@@ -3886,8 +3882,7 @@ let rec decl_body = function
     @param decl  the MiniCpp declaration to render *)
 let rec pp_cpp_decl env decl =
   pp_cpp_decl_raw env
-    (Cpp_pipeline.finish ~pp_expr:pp_expr_string
-       ~loopify:(Cpp_pipeline.should_loopify decl) decl )
+    (Cpp_pipeline.finish ~loopify:(Cpp_pipeline.should_loopify decl) decl)
 
 (** Inner declaration printer, called after loopification and after the
     {!Cpp_erasure.settled} seam: every type here is spelled the way it will be

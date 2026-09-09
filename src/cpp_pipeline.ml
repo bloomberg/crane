@@ -29,8 +29,8 @@ let should_loopify decl =
   | Some r -> Table.should_loopify r
   | None -> Table.loopify ()
 
-let finish ~pp_expr ~loopify decl =
-  let decl = if loopify then Loopify.transform_decl ~pp_expr decl else decl in
+let finish ~loopify decl =
+  let decl = if loopify then Loopify.transform_decl decl else decl in
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = Cpp_depth.flatten decl in

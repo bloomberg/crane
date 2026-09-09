@@ -539,8 +539,7 @@ let pp_cpp_ind_header kn ind =
                  default the way the same methods are on an unpromoted one,
                  and turning that on here is a change to what Crane emits
                  rather than to how it is organised. *)
-              ( Cpp_pipeline.finish ~pp_expr:pp_expr_string
-                  ~loopify:(Table.loopify ()) decl
+              ( Cpp_pipeline.finish ~loopify:(Table.loopify ()) decl
                 :> cpp_decl )
             in
             match decl with

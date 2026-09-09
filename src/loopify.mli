@@ -13,16 +13,9 @@ open Minicpp
 
 (** Transform a single top-level declaration. Recursion through [Dtemplate]
     wrappers to find inner [Dfundef] nodes. Also transforms recursive methods
-    inside [Dstruct] fields ([Fmethod]).
-
-    @param pp_expr
-      converts a [cpp_expr] to its C++ string representation. Used to generate
-      [decltype(expr)] for struct fields when the type cannot be inferred. *)
+    inside [Dstruct] fields ([Fmethod]). *)
 val transform_decl :
-  ?tparams:(template_type * Id.t) list ->
-  pp_expr:(cpp_expr -> string) ->
-  cpp_decl ->
-  cpp_decl
+  ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 
 (** Pre-register a function definition for mutual recursion detection.
     Call this for all functions in a mutual fixpoint group before any of

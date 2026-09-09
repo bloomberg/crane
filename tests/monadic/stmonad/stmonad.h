@@ -326,9 +326,9 @@ struct STMonadTests {
       x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
       std::shared_ptr<uint64_t> y;
       y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
-      auto fib_loop_impl = [&](auto &, uint64_t k, std::shared_ptr<uint64_t> x0,
-                               std::shared_ptr<uint64_t> y0, uint64_t,
-                               uint64_t) -> uint64_t {
+      auto fib_loop_impl = [](auto &, uint64_t k, std::shared_ptr<uint64_t> x0,
+                              std::shared_ptr<uint64_t> y0, uint64_t idx_x,
+                              uint64_t idx_y) -> uint64_t {
         uint64_t _loop_k = std::move(k);
         while (true) {
           if (_loop_k <= 0) {
