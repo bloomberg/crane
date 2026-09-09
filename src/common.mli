@@ -118,6 +118,11 @@ val push_vars' : (Id.t * ml_type) list -> env -> (Id.t * ml_type) list * env
 (** Look up a de Bruijn index in the environment. *)
 val get_db_name : int -> env -> Id.t
 
+(** Look up a de Bruijn index in the environment, or [None] when it names no
+    binder there.  Indices out of the current scope do occur; prefer this to
+    catching the exception {!get_db_name} raises. *)
+val get_db_name_opt : int -> env -> Names.Id.t option
+
 (** {2 Extraction phases and renaming} *)
 
 type phase =
@@ -356,6 +361,13 @@ val tc_instance_name : int -> string
 
 (** {!tc_instance_name} as an [Id.t]. *)
 val tc_instance_id : int -> Id.t
+
+(** Whether an identifier is one {!tc_instance_id} minted -- the binder for a
+    typeclass instance passed as a concept template parameter.  Such a binder
+    is synthesised here rather than extracted, so its name is the record of
+    what it is; a binder that came from Coq is classified by its ML type
+    instead. *)
+val is_tc_instance_id : Names.Id.t -> bool
 
 (** Fallback name for constructor [i] when no better name is available, e.g.
     ["Ctor0"]. *)

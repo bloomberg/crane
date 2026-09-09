@@ -2121,6 +2121,26 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
   | MLmagic (_, e) -> infer_ml_body_type e
   | _ -> None
 
+(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
+    whose class extraction records as a [ConstRef] mapped to the empty string,
+    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
+    are infrastructure and are erased. *)
+let ml_ret_is_skipped ty =
+  match ml_return_type ty with
+  | Tglob (rr, _, _) ->
+    Table.is_inline_custom rr && Table.find_custom_opt rr = Some ""
+  | _ -> false
+
+(** Whether a value of ML type [ty] is a typeclass instance.
+
+    The result is what decides it: an instance parameterised over types is
+    still an instance, and its type is an arrow -- [MList : forall A, Monoid
+    (list A)].  This is the one place that answer is worked out; a caller with
+    a global asks {!ref_is_instance} and one with a binder asks
+    {!binder_is_instance}. *)
+let ml_type_is_instance ty =
+  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
 let ref_returns_typeclass r =
@@ -2132,13 +2152,14 @@ let ref_returns_typeclass r =
     Class is extracted as a ConstRef, not IndRef, and thus not recognized by
     [is_typeclass]). Such arguments are infrastructure that should be erased. *)
 let ref_returns_skipped r =
+  match find_type_opt r with Some ty -> ml_ret_is_skipped ty | None -> false
+
+(** Whether a global denotes a typeclass instance. *)
+let ref_is_instance r =
   match find_type_opt r with
-  | Some ty ->
-    ( match ml_return_type ty with
-    | Tglob (rr, _, _) ->
-      Table.is_inline_custom rr && Table.find_custom_opt rr = Some ""
-    | _ -> false )
+  | Some ty -> ml_type_is_instance ty
   | None -> false
+
 
 (* Use Common.extract_at_pos for extracting elements at a position *)
 
@@ -4877,15 +4898,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (* Phase 2: move on last use. Emit std::move if: (1) the variable is dead
        after this point, (2) it's an owned variable (not borrowed), and (3) this
        is its only occurrence in the current RHS expression.
-       Never move typeclass template parameters (_tcI0, _tcI1, ...) — they
-       are type references in the concept paradigm, not owned values. Wrapping
-       them in std::move produces invalid C++ like [std::move(_tcI0)::method()]. *)
+       Never move a typeclass instance -- it is a type reference in the concept
+       paradigm, not an owned value, and wrapping it produces invalid C++ like
+       [std::move(_tcI0)::method()].  Recognised by identity rather than by ML
+       type: this binder is synthesised by {!Common.tc_instance_id}, and inside
+       a generated instance method it is a template parameter of the enclosing
+       struct, with no entry of its own in [env_types]. *)
     let is_tc_param =
-      match var_expr with
-      | CPPvar id ->
-        let s = Id.to_string id in
-        String.length s >= 4 && String.sub s 0 4 = "_tcI"
-      | _ -> false
+      match var_expr with CPPvar id -> Common.is_tc_instance_id id | _ -> false
     in
     let move_candidate =
       (not is_tc_param)
@@ -7647,24 +7667,19 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          [MList : forall A, Monoid (list A)].  Read the codomain, as the
          application case below does, or such an instance is left in value
          position and the call names the instance struct as if it were one. *)
-      ref_returns_typeclass r || ref_returns_skipped r
+      ref_is_instance r
     | MLrel i ->
-      (* Check if the referenced parameter is a type class instance *)
-      ( try
-          let db, _ = env in
-          let _name = List.nth db (pred i) in
-          (* Look up the type of this de Bruijn variable in the env's type context *)
-          (* Check if the name matches our typeclass instance naming: _tcI0, _tcI1, etc. *)
-          (* This is a heuristic - ideally we'd track types in the env *)
-          let name_str = Id.to_string _name in
-          String.length name_str >= 5 && String.sub name_str 0 4 = "_tcI"
-        with _ -> false )
+      (* An instance parameter is not a value argument.  Recognised by
+         identity: {!collect_typeclass_param_ids} mints this binder from a
+         typeclass-typed domain of the enclosing arrow, so it is Crane's own
+         and has no ML type of its own in [env_types]. *)
+      Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
     | MLapp (MLglob (r, _), _) ->
       (* Parameterized instance application, e.g. numList A H. Check if r's
          return type (after stripping Tarr) is a typeclass type, or if it
          returns a skipped type (e.g. ReSum instances where the Class is a
          ConstRef not recognized by is_typeclass). *)
-      ref_returns_typeclass r || ref_returns_skipped r
+      ref_is_instance r
     | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
       (* Single-branch case = record field projection.  If the projected
          field's type is itself a typeclass, this is a typeclass instance

@@ -402,6 +402,12 @@ let push_vars' ids (db, avoid) =
 (** Look up a de Bruijn index in the environment. *)
 let get_db_name n (db, _) = List.nth db (pred n)
 
+(** Look up a de Bruijn index in the environment, or [None] when it names no
+    binder there.  A term reaching translation can carry an index that is out
+    of the current scope -- an inlined body's, say -- so a question about the
+    binder's name has to allow for there being none. *)
+let get_db_name_opt n (db, _) = if n < 1 then None else List.nth_opt db (pred n)
+
 (** {1 Renamings of global objects} *)
 
 (** {2 Tables of global renamings} *)
@@ -1618,9 +1624,14 @@ let eta_param_name i = "_x" ^ string_of_int i
 
 let eta_param_id i = Id.of_string (eta_param_name i)
 
-let tc_instance_name i = "_tcI" ^ string_of_int i
+let tc_instance_prefix = "_tcI"
+
+let tc_instance_name i = tc_instance_prefix ^ string_of_int i
 
 let tc_instance_id i = Id.of_string (tc_instance_name i)
+
+let is_tc_instance_id id =
+  String.starts_with ~prefix:tc_instance_prefix (Id.to_string id)
 
 
 let ctor_fallback_name i = "Ctor" ^ string_of_int i
