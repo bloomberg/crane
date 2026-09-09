@@ -762,6 +762,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPfn_value _
    |CPPcontainer_cast _
    |CPPconverting_ctor _
+   |CPPbox _
    |CPPqualified_t _
    |CPPstring _
    |CPPuint _
@@ -4013,7 +4014,8 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
          Infer from the inner expression. *)
       as_raw_ptr (infer_saved_type tparams env inner)
     | CPPfun_call _ -> Tunresolved
-    | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
+    | CPPconverting_ctor (ty, _) | CPPbox (ty, _) ->
+      strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
       let param_types = List.map fst (to_reversed params) in
       let ret_ty =

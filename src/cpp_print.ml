@@ -1694,6 +1694,10 @@ and pp_cpp_expr env args t =
       | _ -> mt ()
     in
     prefix ++ pp_cpp_expr env args f ++ str "(" ++ args_s ++ str ")" )
+  (* A box is the converting constructor [std::any(e)], so it prints as one.
+     The list-conversion case below cannot arise for it: a box's type is
+     [std::any], never a custom-extracted list. *)
+  | CPPbox (ty, e) -> pp_cpp_expr env args (CPPconverting_ctor (ty, [ e ]))
   | CPPconverting_ctor (ty, ts) ->
     (* When the target type is a custom-extracted list (e.g. std::deque<T>),
        a functional-style cast from deque<any> won't work because std::deque

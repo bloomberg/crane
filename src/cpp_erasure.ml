@@ -224,33 +224,31 @@ let rec resolve_field ((f, vis, tag) as field) =
     (Fnested_struct (id, List.map resolve_field fields), vis, tag)
   | _ -> map_field resolve_expr resolve_stmt (fun t -> t) field
 
-(** [is_box e] -- [e] is a box built here, so its content is still in hand.
-    Boxing is spelled as a converting constructor at the erased type. *)
-let is_box = function
-  | CPPconverting_ctor (ty, [_]) -> Ml_type_util.prints_as_any ty
-  | _ -> false
-
 (** [converting_ctor ty args] -- see [cpp_erasure.mli]. *)
 let converting_ctor ty args =
   match args with
-  | [inner] when Ml_type_util.prints_as_any ty && is_box inner ->
-    let inner = match inner with CPPconverting_ctor (_, [x]) -> x | x -> x in
-    CPPconverting_ctor (ty, [inner])
+  | [inner] when Ml_type_util.prints_as_any ty ->
+    (* Boxing a box is two sites each believing they owned the boundary; the
+       inner value would then be unreachable, because the consumer casts once.
+       Re-box what was inside instead. *)
+    let inner = match inner with CPPbox (_, x) -> x | x -> x in
+    CPPbox (ty, inner)
   | _ -> CPPconverting_ctor (ty, args)
 
 (** [unbox ty e] -- see [cpp_erasure.mli]. *)
 let unbox ty e =
-  if Ml_type_util.prints_as_any ty then
-    e
-  else
-    match e with
-    | CPPconverting_ctor (_, [inner]) when is_box e -> inner
-    | _ -> CPPany_cast (ty, e)
+  match e with
+  (* [any_cast] to an erased type does not unwrap the box: it asks whether the
+     box holds a *further* box, and throws when it does not. *)
+  | _ when Ml_type_util.prints_as_any ty -> e
+  (* A cast applied straight to a box built here is dead work. *)
+  | CPPbox (_, inner) -> inner
+  | _ -> CPPany_cast (ty, e)
 
 (** [unbox_tolerant ty e] -- see [cpp_erasure.mli]. *)
 let unbox_tolerant ty e =
   match e with
-  | CPPconverting_ctor (_, [inner]) when is_box e -> inner
+  | CPPbox (_, inner) -> inner
   | _ -> CPPany_cast_tolerant (ty, e)
 
 (** [resolve_casts decl] rewrites every [CPPany_cast] in [decl] to say which
@@ -274,10 +272,9 @@ let rec resolve_casts (d : settled) : settled =
   (* A constant initialised from a boxed call has to unbox to reach its own
      declared type.  The printer used to decide this while rendering; saying it
      in the IR means the cast goes through the normalisation above like every
-     other one, and [Minicpp_check] can see it. *)
+     other one. *)
   | Dasgn (id, ty, e) when returns_a_box e && castable_to ty ->
-    Dasgn (id, ty,
-      resolve_expr (CPPany_cast (Ml_type_util.resolve_tvars_to_any ty, e)))
+    Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with

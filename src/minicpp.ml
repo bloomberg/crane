@@ -327,6 +327,12 @@ and cpp_expr =
   | CPPconverting_ctor of cpp_type * cpp_expr list
     (** Converting constructor call: [Type(args)]. Used in clone-field
         conversions where the destination type differs from the source. *)
+  | CPPbox of cpp_type * cpp_expr
+    (** A value put into a [std::any], spelled at the erased type the box is
+        written as ([std::any] itself, or a [using] alias for it).  Prints
+        exactly as the converting constructor it is, but boxing is a category
+        of its own so that recognising one is a pattern rather than a question
+        about a type.  Built only by {!Cpp_erasure.converting_ctor}. *)
   | CPPderef of cpp_expr
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr
@@ -783,6 +789,7 @@ let map_expr
     in
     CPPfun_call (res, fe f, {rev = List.map fe args.rev})
   | CPPconverting_ctor (ty, args) -> CPPconverting_ctor (ft ty, List.map fe args)
+  | CPPbox (ty, e') -> CPPbox (ft ty, fe e')
   | CPPderef e' -> CPPderef (fe e')
   | CPPmove e' -> CPPmove (fe e')
   | CPPforward (ty, e') -> CPPforward (ft ty, fe e')
@@ -937,6 +944,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (_, f, args) -> on_expr f; List.iter on_expr args.rev
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
+  | CPPbox (_, e') -> on_expr e'
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _)
@@ -1020,6 +1028,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPlambda (_, _, stmts, _) -> on_stmts acc stmts
   | CPPfun_call (_, fn, args) -> List.fold_left fe (fe acc fn) args.rev
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
+  | CPPbox (_, e') -> fe acc e'
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
   | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
   | CPPqualified (e', _)

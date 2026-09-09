@@ -363,6 +363,15 @@ and cpp_expr =
           arguments (in reverse order, see {!revd}) *)
   | CPPconverting_ctor of cpp_type * cpp_expr list
       (** Converting constructor call: [Type(args)] *)
+  | CPPbox of cpp_type * cpp_expr
+      (** A value put into a [std::any], spelled at the erased type the box is
+          written as — [std::any] itself, or a [using] alias for it.  Prints
+          exactly as the converting constructor it is; it is a category of its
+          own so that recognising a box is a pattern match rather than a
+          question about a type, and so that the two ways of writing one down
+          that mean nothing — a box around a box, and a cast applied straight
+          to a fresh box — are normalised away at the single place that builds
+          them, {!Cpp_erasure.converting_ctor}. *)
   | CPPderef of cpp_expr  (** Pointer dereference *)
   | CPPmove of cpp_expr  (** std::move for move semantics *)
   | CPPforward of cpp_type * cpp_expr

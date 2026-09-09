@@ -4419,7 +4419,7 @@ and coerce ?term ?from ~into expr =
         (* Boxing is not idempotent: [std::any] holding a [std::any] is a box
            no consumer opens twice. *)
         match expr with
-        | CPPconverting_ctor (Tany, _) | CPPany_cast (Tany, _) -> expr
+        | CPPbox (Tany, _) | CPPany_cast (Tany, _) -> expr
         | _ ->
           (* A closure does not survive as itself: the consumer recovers it with
              [any_cast<std::function<std::any(std::any...)>>], so it is adapted

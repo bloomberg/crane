@@ -58,12 +58,13 @@ val method_queries : method_queries ref
 
 (** {2 Building and reading boxes}
 
-    Three ways of writing a box down are always mistakes, and {!Minicpp_check}
-    reports all three.  Going through these constructors is what makes them
-    not arise: each is the identity on the term that would have been wrong. *)
+    Three ways of writing a box down are always mistakes.  These are the only
+    constructors of {!Minicpp.CPPbox} and {!Minicpp.CPPany_cast}, and each is
+    the identity on the term that would have been wrong, so none of the three
+    arises. *)
 
 (** [converting_ctor ty args] is the converting constructor [ty(args)].  When
-    [ty] is erased, that is a box.
+    [ty] is erased and there is one argument, that is a box.
 
     A box built around a box is two sites each believing they owned the
     boundary; the inner value is then unreachable, because the consumer casts

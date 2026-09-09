@@ -30,11 +30,7 @@ let should_loopify decl =
   | None -> Table.loopify ()
 
 let finish ~pp_expr ~loopify decl =
-  (* Validate at both pass boundaries, so a report names the pass that
-     introduced the violation rather than merely the last one to run. *)
-  Minicpp_check.check ~where:"translation" decl;
   let decl = if loopify then Loopify.transform_decl ~pp_expr decl else decl in
-  Minicpp_check.check ~where:"loopify" decl;
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = Cpp_depth.flatten decl in
