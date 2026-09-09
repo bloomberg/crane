@@ -2500,7 +2500,30 @@ let find_custom_opt r =
     Some s
   | None -> None
 
-(** True when [s] names a C++ scalar type that is trivially copyable.
+(** The C++ type names the user has declared trivially copyable with
+    [Crane TriviallyCopyable], each without its arguments: the declaration on
+    [prod] records ["std::pair"], not ["std::pair<%t0, %t1>"].
+
+    A custom mapping is a template string, and nothing in it says how the
+    named type behaves when it is copied.  Crane cannot read
+    [std::pair<%t0, %t1>] and find out that copying it is free when copying
+    its arguments is, so the user says so.  Before this the answer was a list
+    of names built into the compiler, which was wrong twice over: it made a
+    property of the user's C++ library a property of Crane, and it named only
+    the [std] spellings, so the same types under the BDE flavour
+    ([bsl::pair], [bsl::optional]) were quietly excluded. *)
+let trivially_copyable_heads =
+  Summary.ref CString.Set.empty ~name:"CraneExtrTriviallyCopyable"
+
+(** The same declaration, keyed by the Rocq type it was written against.
+
+    Both keys are needed because the question is asked from both sides: a
+    [Tglob] still knows its {!GlobRef.t}, while a type Crane has already
+    rendered to a name has nothing left but the name. *)
+let trivially_copyable_refs = Summary.ref Refset'.empty ~name:"CraneExtrTCRefs"
+
+(** True when [s] names a C++ scalar type that is trivially copyable, or names
+    a type the user declared with [Crane TriviallyCopyable].
     This covers all built-in integer, floating-point, and character types,
     their common modifiers (signed/unsigned/long/short), fixed-width aliases
     from [<cstdint>] and [<cstddef>], and [std::nullptr_t].
@@ -2536,7 +2559,61 @@ let is_trivially_copyable_cpp_name (s : string) : bool =
   | ["unsigned"; "long"; "long"] -> true
   (* Four-word types *)
   | ["signed"; "long"; "long"; "int"] | ["unsigned"; "long"; "long"; "int"] -> true
+  | [w] -> CString.Set.mem w !trivially_copyable_heads
   | _ -> false
+
+(** The type a mapping template names, without its arguments:
+    ["std::pair<%t0, %t1>"] gives ["std::pair"], and a template with no
+    arguments is its own head. *)
+let template_head (s : string) : string =
+  match String.index_opt s '<' with
+  | Some i -> String.trim (String.sub s 0 i)
+  | None -> String.trim s
+
+let trivially_copyable_object : GlobRef.t * string -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane TriviallyCopyable"
+       ~cache:(fun (r, s) ->
+         trivially_copyable_heads :=
+           CString.Set.add s !trivially_copyable_heads;
+         trivially_copyable_refs := Refset'.add r !trivially_copyable_refs )
+       ~subst:(Some (fun (sub, (r, s)) -> (fst (subst_global sub r), s)))
+       ~discharge:(fun x -> Some x)
+
+(** True when [r] was declared trivially copyable with
+    [Crane TriviallyCopyable].  The declaration is conditional: the caller
+    must still check the type arguments. *)
+let is_trivially_copyable_ref (r : GlobRef.t) : bool =
+  Refset'.mem r !trivially_copyable_refs
+
+(** Declare that the C++ type each of [l] is mapped to is trivially copyable
+    whenever its type arguments are.
+
+    The declaration is written against the Rocq name, so it is checked and
+    cannot be misspelled, but what is recorded is the C++ head name its
+    mapping produces -- that is the only thing left of the type by the time
+    the question is asked.  Which means the mapping has to exist first, and
+    saying so is more use than silently recording nothing. *)
+let extraction_trivially_copyable (l : qualid list) =
+  List.iter
+    (fun q ->
+      let r = Smartlocate.global_with_alias q in
+      (* Read [customs] directly rather than through [find_custom_opt], which
+         would mark the mapping used and pull in its headers. *)
+      match Refmap'.find_opt r !customs with
+      | Some (_, s) ->
+        Lib.add_leaf (trivially_copyable_object (r, template_head s))
+      | None ->
+        CErrors.user_err
+          Pp.(
+            str "Crane: "
+            ++ Printer.pr_global r
+            ++ str
+                 " has no custom extraction, so there is no C++ type to \
+                  declare trivially copyable.  Give it a mapping with Crane \
+                  Extract Inductive first." ) )
+    l
 
 (** True when [r] is a custom-extracted inductive whose C++ representation
     is a trivially-copyable scalar (e.g. [nat] extracted to [unsigned int]).

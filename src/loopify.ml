@@ -255,17 +255,21 @@ let rec is_trivially_copyable_type = function
   | Tvar _ -> true
   | Tid (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
   | Tid_external (s, ts) -> is_trivially_copyable_named s ts
-  | Tglob (r, _, _) ->
+  | Tglob (r, ts, _) ->
     Table.is_enum_inductive r || Table.is_custom_scalar_ref r
+    || Table.is_trivially_copyable_ref r
+       && List.for_all is_trivially_copyable_type ts
   | _ -> false
 
-(** Whether the named type [s] applied to [ts] is trivially copyable. *)
+(** Whether the named type [s] applied to [ts] is trivially copyable: its head
+    is, and so is every argument.
+
+    A scalar takes no arguments, so the second half is vacuous for the builtin
+    names.  It is the whole question for a mapped type like [std::pair], which
+    the user declares with [Crane TriviallyCopyable]. *)
 and is_trivially_copyable_named s ts =
-  match ts with
-  | [] -> Table.is_trivially_copyable_cpp_name s
-  | _ ->
-    (s = "std::pair" || s = "std::optional")
-    && List.for_all is_trivially_copyable_type ts
+  Table.is_trivially_copyable_cpp_name s
+  && List.for_all is_trivially_copyable_type ts
 
 (** Returns [true] for types that are expensive to copy and benefit from
     [std::move]: [shared_ptr], value-type inductives, type variables, and

@@ -26,7 +26,7 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<uint64_t> &l = *_f.l;
-      const std::optional<uint64_t> &cache = _f.cache;
+      const std::optional<uint64_t> cache = _f.cache;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
@@ -198,7 +198,7 @@ LoopifyConditionalRecursion::multi_return(
     if (std::holds_alternative<_Enter>(_frame)) {
       auto _f = std::move(std::get<_Enter>(_frame));
       const List<uint64_t> &l = *_f.l;
-      const std::optional<std::pair<uint64_t, uint64_t>> &memo = _f.memo;
+      const std::optional<std::pair<uint64_t, uint64_t>> memo = _f.memo;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(
             UINT64_C(0), std::optional<std::pair<uint64_t, uint64_t>>());

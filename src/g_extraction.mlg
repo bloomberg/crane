@@ -189,6 +189,11 @@ VERNAC COMMAND EXTEND ResetExtractionLoopify CLASSIFIED AS SIDEFF
   -> { reset_extraction_loopify () }
 END
 
+VERNAC COMMAND EXTEND ExtractionTriviallyCopyable CLASSIFIED AS SIDEFF
+| [ "Crane" "TriviallyCopyable" ne_global_list(l) ]
+  -> { Table.extraction_trivially_copyable l }
+END
+
 VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
 | [ "Crane" "Reuse" ne_global_list(l) ]
   -> { extraction_reuse true l }

@@ -128,6 +128,40 @@ Crane normally wraps a constructor field that recurses through a container in `s
 
 ---
 
+## `Crane TriviallyCopyable`
+
+Declare that the C++ type a Rocq type is mapped to is trivially copyable whenever its type arguments are.
+
+### Syntax
+
+```coq
+Crane TriviallyCopyable <Rocq type> ... .
+```
+
+Each argument must already have a mapping (from `Crane Extract Inductive`); the command errors otherwise, because it records the C++ name that mapping produces, not the Rocq name.
+
+### What it is for
+
+A mapping template is a string. Nothing in `"std::pair<%t0, %t1>"` tells Crane what copying a `std::pair` costs, so without a declaration Crane must assume the worst and reach for `std::move` or `const &` where a copy would have been free — most visibly in loopified functions, whose frame fields are copied on every iteration.
+
+The property is conditional on the arguments, which is what these types actually satisfy: `std::pair<int, char>` is trivially copyable, `std::pair<std::string, int>` is not. Scalars take no arguments, so the condition is vacuous for them, and built-in scalar names (`int`, `uint64_t`, `double`, …) are recognised without a declaration.
+
+### Example
+
+```coq
+Crane Extract Inductive prod =>
+  "std::pair<%t0, %t1>"
+  [ "std::make_pair(%a0, %a1)" ]
+  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
+  From "utility".
+
+Crane TriviallyCopyable prod.
+```
+
+`Mapping/Std.v` and `Mapping/BDE.v` declare this for `option` and `prod`, so the `std::` and `bsl::` flavours of these types are treated alike.
+
+---
+
 ## `Crane Extract Inlined Constant`
 
 Map a Rocq constant to a literal C++ expression (i.e., no function call or wrapper).

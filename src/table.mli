@@ -808,8 +808,19 @@ val find_custom : GlobRef.t -> string
 val find_custom_opt : GlobRef.t -> string option
 
 (** True when [s] names a C++ scalar type that is trivially copyable
-    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]). *)
+    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]),
+    or names a type declared with {!extraction_trivially_copyable}. *)
 val is_trivially_copyable_cpp_name : string -> bool
+
+(** True when the type was declared trivially copyable with
+    [Crane TriviallyCopyable].  Conditional on the type arguments, which the
+    caller must check. *)
+val is_trivially_copyable_ref : GlobRef.t -> bool
+
+(** [Crane TriviallyCopyable r] declares that the C++ type [r] is mapped to is
+    trivially copyable whenever its type arguments are (as [std::pair] is).
+    Errors when [r] has no custom mapping to take a C++ name from. *)
+val extraction_trivially_copyable : qualid list -> unit
 
 (** True when [r] is a custom-extracted inductive whose C++ representation is
     a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)

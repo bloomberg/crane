@@ -27,6 +27,11 @@ Crane Extract Inductive prod =>
   [ "bsl::make_pair(%a0, %a1)" ]
   "auto [%b0a0, %b0a1] = %scrut; %br0"
   From "bsl_utility.h".
+
+(* [bsl::pair] and [bsl::optional] cost nothing to copy beyond what their
+   contents cost, which the mapping template above has no way of saying. *)
+Crane TriviallyCopyable option prod.
+
 Crane Extract Inlined Constant fst => "%a0.first" From "bsl_utility.h".
 Crane Extract Inlined Constant snd => "%a0.second" From "bsl_utility.h".
 

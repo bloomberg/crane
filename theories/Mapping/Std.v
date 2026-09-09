@@ -25,6 +25,11 @@ Crane Extract Inductive prod =>
   [ "std::make_pair(%a0, %a1)" ]
   "const auto& [%b0a0, %b0a1] = %scrut; %br0"
   From "utility".
+
+(* [std::pair] and [std::optional] cost nothing to copy beyond what their
+   contents cost, which the mapping template above has no way of saying. *)
+Crane TriviallyCopyable option prod.
+
 Crane Extract Inlined Constant fst => "%a0.first" From "utility".
 Crane Extract Inlined Constant snd => "%a0.second" From "utility".
 

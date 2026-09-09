@@ -467,7 +467,7 @@ std::pair<uint64_t, uint64_t> MemSafetyProbe23::interleaved_ops(
     } else {
       auto _f = std::move(std::get<_Cont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      std::pair<uint64_t, uint64_t> pl = std::move(_f.pl);
+      std::pair<uint64_t, uint64_t> pl = _f.pl;
       uint64_t sl = _f.sl;
       uint64_t sr = _f.sr;
       std::pair<uint64_t, uint64_t> pr = std::move(_result);
