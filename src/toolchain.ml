@@ -63,6 +63,42 @@ let compiler_output errfile program args =
   remove_if_exists errfile;
   (status, errors)
 
+(** The [-isysroot] arguments a [clang++] invocation needs, or none.
+
+    On macOS a Homebrew [clang++] defaults to an SDK named after the running OS
+    version, which need not be installed; without a sysroot the libc++ headers
+    fail to find [memcpy] and [mbstate_t]. The SDK actually present is what
+    [SDKROOT] names, falling back on [xcrun]. Elsewhere the compiler's own
+    default is right and this is empty.
+
+    The shell scripts under [scripts/] resolve the sysroot the same way for the
+    compilations they drive; this covers the ones Crane runs itself. *)
+let sysroot_args =
+  let cached = ref None in
+  fun () ->
+    match !cached with
+    | Some args -> args
+    | None ->
+      let args =
+        if not (String.equal Sys.os_type "Unix" && Sys.file_exists "/usr/bin/xcrun")
+        then []
+        else
+          let sdk =
+            match Sys.getenv_opt "SDKROOT" with
+            | Some dir when not (String.equal dir "") -> Some dir
+            | _ -> (
+              match Subprocess.capture "/usr/bin/xcrun" ["--show-sdk-path"] with
+              | {status = Unix.WEXITED 0; stdout; _} -> (
+                match String.trim stdout with "" -> None | dir -> Some dir )
+              | _ | (exception _) -> None )
+          in
+          match sdk with
+          | Some dir when Sys.file_exists dir -> ["-isysroot"; dir]
+          | _ -> []
+      in
+      cached := Some args;
+      args
+
 (** Compile or link one C++ source file with [clang++].
 
     Include directories and user flags are kept as distinct argv entries. BDE
@@ -121,7 +157,7 @@ let compile_cpp
       @ flags
       @ [infile; "-o"; outfile]
   in
-  match compiler_output errfile "clang++" args with
+  match compiler_output errfile "clang++" (sysroot_args () @ args) with
   | Unix.WEXITED 0, _ -> ()
   | status, errors ->
     raise (ClangError (Subprocess.exit_code status, errors))
@@ -220,7 +256,7 @@ let compile_and_test ?outfile ?errfile infile =
         executable;
       ]
   in
-  ( match compiler_output errfile "clang++" args with
+  ( match compiler_output errfile "clang++" (sysroot_args () @ args) with
   | Unix.WEXITED 0, _ -> ()
   | status, errors ->
     raise (ClangError (Subprocess.exit_code status, errors)) );
