@@ -6207,6 +6207,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              [make_shared], [std::get] and [typename T::Ctor] nodes, and can
              only do that if it is not hidden inside an expression. *)
           let type_expr = Tglob (n, temps, []) in
+          (* A factory returns the inductive value at the very instantiation
+             the qualifier spells (see [mk_factory_methods] in {!Gen_decls}),
+             so the call knows its own result -- and loopify can type a frame
+             field holding one instead of falling back on [decltype]. *)
+          let ctor_sig args =
+            Minicpp.call_sig ~yields:type_expr ~nargs:(List.length args) ()
+          in
           (* Perceus reuse: if a reuse token is pending for this constructor
              (set by a use_count()==1-guarded arm in gen_cpp_case), call the
              [<factory>__reuse] variant with the token appended (stored last =
@@ -6214,12 +6221,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           ( match (!tctx).pending_reuse_token with
           | Some (tok, ctor) when globref_equal r ctor ->
             tctx := { !tctx with pending_reuse_token = None };
+            let args = args @ [CPPmove tok] in
             CPPfun_call
-              (call_opaque, CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
-                of_reversed (args @ [CPPmove tok]) )
+              ( ctor_sig args,
+                CPPqualified_t (type_expr, Id.of_string (fname ^ "__reuse")),
+                of_reversed args )
           | _ ->
             CPPfun_call
-              (call_opaque, CPPqualified_t (type_expr, Id.of_string fname),
+              ( ctor_sig args, CPPqualified_t (type_expr, Id.of_string fname),
                 of_reversed args ) )
         | _ ->
           (* Fallback for non-Tglob types *)

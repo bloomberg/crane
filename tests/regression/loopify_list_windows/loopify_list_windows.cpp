@@ -228,7 +228,7 @@ List<List<uint64_t>> LoopifyListWindows::inits(
 
   /// _Resume_Cons: saves [_s0, a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(List<uint64_t>::nil())> _s0;
+    List<uint64_t> _s0;
     uint64_t a0;
   };
 
@@ -254,7 +254,7 @@ List<List<uint64_t>> LoopifyListWindows::inits(
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
       _result = List<List<uint64_t>>::cons(
-          _f._s0, map_cons_helper(_f.a0, std::move(_result)));
+          std::move(_f._s0), map_cons_helper(_f.a0, std::move(_result)));
     }
   }
   return _result;

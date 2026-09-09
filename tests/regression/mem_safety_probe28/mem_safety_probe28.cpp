@@ -123,7 +123,7 @@ uint64_t MemSafetyProbe28::zip_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    std::decay_t<decltype(tree::leaf())> _s0;
+    MemSafetyProbe28::tree _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -221,7 +221,7 @@ uint64_t MemSafetyProbe28::zip_depth(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    std::decay_t<decltype(tree::leaf())> _s0;
+    MemSafetyProbe28::tree _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -311,7 +311,7 @@ uint64_t MemSafetyProbe28::zip_and_sum(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    std::decay_t<decltype(tree::leaf())> _s0;
+    MemSafetyProbe28::tree _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };
@@ -505,7 +505,7 @@ List<uint64_t> MemSafetyProbe28::zip_collect(
 
   /// _Resume_Leaf: saves [_s0, a0], resumes after recursive call with _result.
   struct _Resume_Leaf {
-    std::decay_t<decltype(tree::leaf())> _s0;
+    MemSafetyProbe28::tree _s0;
     const MemSafetyProbe28::tree *a0;
   };
 
@@ -632,7 +632,7 @@ MemSafetyProbe28::tree MemSafetyProbe28::merge_trees(
 
   /// _After_Leaf: saves [_s0, a0, a1], dispatches next recursive call.
   struct _After_Leaf {
-    std::decay_t<decltype(tree::leaf())> _s0;
+    MemSafetyProbe28::tree _s0;
     const MemSafetyProbe28::tree *a0;
     uint64_t a1;
   };

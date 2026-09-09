@@ -205,9 +205,7 @@ List<uint64_t> LoopifyStrings::reverse(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(List<uint64_t>::cons(std::declval<uint64_t &>(),
-                                               List<uint64_t>::nil()))>
-        _s0;
+    List<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -231,7 +229,7 @@ List<uint64_t> LoopifyStrings::reverse(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append(std::move(_result), _f._s0);
+      _result = append(std::move(_result), std::move(_f._s0));
     }
   }
   return _result;

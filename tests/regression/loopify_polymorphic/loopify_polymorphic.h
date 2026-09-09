@@ -165,9 +165,7 @@ struct LoopifyPolymorphic {
 
     /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      std::decay_t<decltype(List<T1>::cons(std::declval<T1 &>(),
-                                           List<T1>::nil()))>
-          _s0;
+      List<T1> _s0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -191,7 +189,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = std::move(_result).app(_f._s0);
+        _result = std::move(_result).app(std::move(_f._s0));
       }
     }
     return _result;

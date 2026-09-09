@@ -20,7 +20,7 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(
 
   /// _Resume_S: saves [_s0], resumes after recursive call with _result.
   struct _Resume_S {
-    std::decay_t<decltype(List<TmcNestedCtorWrap::rose>::nil())> _s0;
+    List<TmcNestedCtorWrap::rose> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_S>;
@@ -43,8 +43,8 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(
       }
     } else {
       auto _f = std::move(std::get<_Resume_S>(_frame));
-      _result = rose::rnode(
-          List<TmcNestedCtorWrap::rose>::cons(std::move(_result), _f._s0));
+      _result = rose::rnode(List<TmcNestedCtorWrap::rose>::cons(
+          std::move(_result), std::move(_f._s0)));
     }
   }
   return _result;

@@ -399,7 +399,7 @@ struct LoopifyLists {
     /// _Resume_Cons: saves [_s0, map_cons], resumes after recursive call with
     /// _result.
     struct _Resume_Cons {
-      std::decay_t<decltype(list<T1>::nil())> _s0;
+      list<T1> _s0;
       std::function<list<list<T1>>(list<list<T1>>)> map_cons;
     };
 
@@ -440,7 +440,7 @@ struct LoopifyLists {
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
         _result = list<list<T1>>::cons(
-            _f._s0, std::move(_f.map_cons)(std::move(_result)));
+            std::move(_f._s0), std::move(_f.map_cons)(std::move(_result)));
       }
     }
     return _result;

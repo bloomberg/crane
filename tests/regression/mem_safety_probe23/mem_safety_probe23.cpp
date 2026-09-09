@@ -553,9 +553,7 @@ uint64_t MemSafetyProbe23::mixed_recurse(
   /// _After_Node: saves [n_, _s1], dispatches next recursive call.
   struct _After_Node {
     uint64_t n_;
-    std::decay_t<decltype(tree::node(std::declval<MemSafetyProbe23::tree &>(),
-                                     std::declval<uint64_t &>(), tree::leaf()))>
-        _s1;
+    MemSafetyProbe23::tree _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final

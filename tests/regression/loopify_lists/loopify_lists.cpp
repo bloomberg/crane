@@ -1149,9 +1149,7 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    std::decay_t<decltype(list<uint64_t>::cons(std::declval<uint64_t &>(),
-                                               list<uint64_t>::nil()))>
-        _s0;
+    LoopifyLists::list<uint64_t> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Cont1, _Resume2>;
@@ -1216,8 +1214,8 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
       }
     } else {
       auto _f = std::move(std::get<_Resume2>(_frame));
-      _result =
-          list<LoopifyLists::list<uint64_t>>::cons(_f._s0, std::move(_result));
+      _result = list<LoopifyLists::list<uint64_t>>::cons(std::move(_f._s0),
+                                                         std::move(_result));
     }
   }
   return _result;
@@ -1259,7 +1257,7 @@ LoopifyLists::list<uint64_t> LoopifyLists::reverse_insert(
 
   /// _Resume_Cons: saves [_s0, a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(list<uint64_t>::nil())> _s0;
+    LoopifyLists::list<uint64_t> _s0;
     uint64_t a0;
   };
 
@@ -1285,8 +1283,8 @@ LoopifyLists::list<uint64_t> LoopifyLists::reverse_insert(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result =
-          rev_helper(_f._s0, list<uint64_t>::cons(_f.a0, std::move(_result)));
+      _result = rev_helper(std::move(_f._s0),
+                           list<uint64_t>::cons(_f.a0, std::move(_result)));
     }
   }
   return _result;

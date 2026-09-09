@@ -180,14 +180,14 @@ struct Comp {
       /// _After_Add: saves [a0, _s1], dispatches next recursive call.
       struct _After_Add {
         expr *a0;
-        std::decay_t<decltype(Nat::s(Nat::o()))> _s1;
+        Nat _s1;
       };
 
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
         Nat _result;
-        std::decay_t<decltype(Nat::s(Nat::o()))> _s1;
+        Nat _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _Combine_Add>;
@@ -211,11 +211,14 @@ struct Comp {
           }
         } else if (std::holds_alternative<_After_Add>(_frame)) {
           auto _f = std::move(std::get<_After_Add>(_frame));
-          _stack.emplace_back(_Combine_Add{std::move(_result), _f._s1});
+          _stack.emplace_back(
+              _Combine_Add{std::move(_result), std::move(_f._s1)});
           _stack.emplace_back(_Enter{_f.a0});
         } else {
           auto _f = std::move(std::get<_Combine_Add>(_frame));
-          _result = _f._s1.add(std::move(_result)).add(std::move(_f._result));
+          _result = std::move(_f._s1)
+                        .add(std::move(_result))
+                        .add(std::move(_f._result));
         }
       }
       return _result;
@@ -473,14 +476,14 @@ struct Comp {
       /// _After_Node: saves [a0, _s1], dispatches next recursive call.
       struct _After_Node {
         avl *a0;
-        std::decay_t<decltype(Nat::s(Nat::o()))> _s1;
+        Nat _s1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         Nat _result;
-        std::decay_t<decltype(Nat::s(Nat::o()))> _s1;
+        Nat _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -505,11 +508,14 @@ struct Comp {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{std::move(_result), _f._s1});
+          _stack.emplace_back(
+              _Combine_Node{std::move(_result), std::move(_f._s1)});
           _stack.emplace_back(_Enter{_f.a0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result = _f._s1.add(std::move(_result)).add(std::move(_f._result));
+          _result = std::move(_f._s1)
+                        .add(std::move(_result))
+                        .add(std::move(_f._result));
         }
       }
       return _result;
