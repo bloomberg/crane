@@ -917,7 +917,11 @@ let rec pp_cpp_type par vl t =
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tvoid -> str "void"
     | Ttodo -> str "auto"
-    | Tunresolved -> str "UNKNOWN"
+    | Tunresolved ->
+      (* There is no C++ spelling for "no type was determined"; emitting a
+         placeholder would hand the user a file that does not compile, with
+         nothing to say where it came from. *)
+      CErrors.anomaly (Pp.str "pp_cpp_type: Tunresolved reached the printer")
     | Tany | Topaque ->
       (* [Topaque] is a type we could not pin down; [std::any] is the only
          spelling that accepts whatever it turns out to be. *)

@@ -140,7 +140,11 @@ type cpp_type =
       (** No C++ type was determined for this position.  Distinct from
           {!Miniml.Tunknown}, which is the ML-level bottom: this one is
           produced by the back end, notably by {!Loopify} when a call frame
-          is built before the types of the values it saves are known. *)
+          is built before the types of the values it saves are known.
+
+          Consumers must resolve it -- to a real type, or to [Tauto] where C++
+          can deduce one.  Reaching the printer is an anomaly: there is no C++
+          spelling for it. *)
   | Tany  (** std::any for type-erased storage of existentials *)
   | Ttyctor of cpp_type
       (** A type constructor named but not applied, as required at a template
