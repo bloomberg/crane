@@ -1805,10 +1805,10 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       List.iter
         (fun (ds, _env) ->
           match ds with
-          | Dfundef (names, _, params, body, _) ->
-            Loopify.register_fundef names params body
-          | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
-            Loopify.register_fundef names params body
+          | Dfundef (names, ret_ty, params, body, _) ->
+            Loopify.register_fundef names ret_ty params body
+          | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+            Loopify.register_fundef names ret_ty params body
           | _ -> () )
         defs )
     all_results;

@@ -5822,8 +5822,12 @@ let gen_ind_header_v2
                         ~src_ty:api_ret ~dst_ty:storage_ret
                         call
                   in
-                  mk_lambda lambda_params None [Sreturn (Some ret)]
-                    ~by_value:true
+                  (* The lambda's result is the storage-side type by
+                     construction -- [ret] is the call converted into it.  Say
+                     so, rather than leaving a later pass to read it back off
+                     the body. *)
+                  mk_lambda lambda_params (Some storage_ret)
+                    [Sreturn (Some ret)] ~by_value:true
                 | _ when storage_ty = api_ty -> CPPmove var
                 | _ ->
                   gen_type_conversion_expr

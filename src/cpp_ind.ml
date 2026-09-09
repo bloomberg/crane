@@ -150,10 +150,10 @@ let pp_decl = function
       List.iter
         (fun (ds, _env, _) ->
           match ds with
-          | Dfundef (names, _, params, body, _) ->
-            Loopify.register_fundef names params body
-          | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
-            Loopify.register_fundef names params body
+          | Dfundef (names, ret_ty, params, body, _) ->
+            Loopify.register_fundef names ret_ty params body
+          | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+            Loopify.register_fundef names ret_ty params body
           | _ -> () )
         defs;
       pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs

@@ -32,11 +32,14 @@ val transform_decl :
     @param refs   List of [(GlobRef.t, type_args)] pairs identifying the
                   function — a single definition may be known under several
                   global references in a mutual fixpoint group.
+    @param ret_ty Function return type, used as the return type of the lambda
+                  a non-tail inlined call is wrapped in.
     @param params Function parameters [(id, type)] used to reconstruct the
                   callee's signature when inlining it into a caller.
     @param body   Function body statements, stored verbatim for inlining. *)
 val register_fundef :
   (GlobRef.t * cpp_type list) list ->
+  cpp_type ->
   (Id.t * cpp_type) list ->
   cpp_stmt list ->
   unit

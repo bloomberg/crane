@@ -295,19 +295,28 @@ let rec worthwhile_move_type = function
     Functions register their bodies here so mutual pairs can be detected and
     inlined during the loopify pass. Keyed by GlobRef. *)
 
-(** Table mapping GlobRef → (params, body) for function definitions. *)
-let mutual_fn_table :
-    (GlobRef.t, (Id.t * cpp_type) list * cpp_stmt list) Hashtbl.t =
-  Hashtbl.create 32
+(** A registered function definition, as an inlining site needs it.  The
+    return type is carried because inlining a non-tail call builds a lambda
+    around the body, and that lambda's return type is this one -- there is no
+    reason for a later pass to go looking for it in the statements. *)
+type registered_fn = {
+  rf_ret_ty : cpp_type;  (** the function's declared return type *)
+  rf_params : (Id.t * cpp_type) list;  (** its formal parameters *)
+  rf_body : cpp_stmt list;  (** its body *)
+}
+
+(** Table mapping GlobRef → definition, for function definitions. *)
+let mutual_fn_table : (GlobRef.t, registered_fn) Hashtbl.t = Hashtbl.create 32
 
 (** Register a function definition for mutual recursion detection. Each
-    [GlobRef.t] in [refs] maps to the function's parameters and body. *)
+    [GlobRef.t] in [refs] maps to the function's definition. *)
 let register_fundef
     (refs : (GlobRef.t * cpp_type list) list)
+    (ret_ty : cpp_type)
     (params : (Id.t * cpp_type) list)
     (body : cpp_stmt list) =
   List.iter
-    (fun (r, _) -> Hashtbl.replace mutual_fn_table r (params, body))
+    (fun (r, _) -> Hashtbl.replace mutual_fn_table r {rf_ret_ty = ret_ty; rf_params = params; rf_body = body})
     refs
 
 (** Clear the mutual recursion table. Called between extraction units. *)
@@ -3995,7 +4004,11 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
         match ret_ty_opt with
         | Some ty when ty <> Tvoid -> ty
         | _ ->
-          (* Infer return type from body's Sreturn statements *)
+          (* No recorded return type.  Ten construction sites in
+             [translation.ml] still build a lambda without one, so the body's
+             [Sreturn] statements remain the only answer available here; each
+             site that learns to record its type retires a little more of
+             this. *)
           let lam_env =
             List.fold_left
               (fun acc (ty, id_opt) ->
@@ -7413,6 +7426,9 @@ type inline_spec = {
       (** Formal parameters of the function being inlined (possibly renamed) *)
   body : cpp_stmt list;
       (** Body of the function being inlined (possibly with renamed variables) *)
+  ret_ty : cpp_type;
+      (** Return type of the function being inlined.  A non-tail call becomes
+          a lambda around [body]; this is that lambda's return type. *)
 }
 
 (** Inline all calls matching [spec] in a statement list.  Tail calls are
@@ -7465,7 +7481,8 @@ and generic_inline_expr spec expr =
       List.map (fun (pid, ty) -> (ty, Some pid)) spec.params
     in
     CPPfun_call
-      (call_opaque, CPPlambda (of_reversed lparams, None, spec.body, true),
+      ( call_opaque,
+        CPPlambda (of_reversed lparams, Some spec.ret_ty, spec.body, true),
         of_reversed (spec.get_args expr) )
   else
     map_expr
@@ -7530,7 +7547,7 @@ let try_inline_mutual_into names body =
         visited := r :: !visited;
         match Hashtbl.find_opt mutual_fn_table r with
         | None -> false
-        | Some (_, b) ->
+        | Some {rf_body = b; _} ->
           body_calls_any_ref self_refs b
           || Hashtbl.fold
                (fun r2 _ acc ->
@@ -7546,19 +7563,19 @@ let try_inline_mutual_into names body =
     if is_self r then None
     else
       match Hashtbl.find_opt mutual_fn_table r with
-      | Some (callee_params, callee_body) when reaches_self r ->
-        Some (r, callee_params, callee_body)
+      | Some {rf_ret_ty; rf_params; rf_body} when reaches_self r ->
+        Some (r, rf_ret_ty, rf_params, rf_body)
       | _ -> None
   in
   let find_registered_callee_by_id id =
     Hashtbl.fold
-      (fun r (callee_params, callee_body) acc ->
+      (fun r {rf_ret_ty; rf_params; rf_body} acc ->
         match acc with
         | Some _ -> acc
         | None ->
           if is_self r then None
           else if Id.equal id (label_of r) && reaches_self r then
-            Some (r, callee_params, callee_body)
+            Some (r, rf_ret_ty, rf_params, rf_body)
           else None )
       mutual_fn_table
       None
@@ -7605,7 +7622,7 @@ let try_inline_mutual_into names body =
   (* Inline one cycle partner ([callee_ref]) into [body], returning the new
      body.  Applied repeatedly by the loop below until this function only calls
      itself (or no cycle partner remains). *)
-  let inline_one (callee_ref, callee_params, callee_body) body =
+  let inline_one (callee_ref, callee_ret_ty, callee_params, callee_body) body =
     (* Collect all locally-declared IDs from a statement list, including
        structured binding names from Smatch branches. *)
     let rec collect_local_ids stmts =
@@ -7698,6 +7715,7 @@ let try_inline_mutual_into names body =
       get_args = get_call_args;
       params = fresh_params;
       body = fresh_body;
+      ret_ty = callee_ret_ty;
     } in
     generic_inline_stmts spec body
   in
@@ -8266,18 +8284,19 @@ let try_inline_functional_into names body =
     | _ -> None
   in
   (* Find, anywhere in [body], a call to a registered functional with an
-     eta-self argument.  Returns (g_params, g_body, args, k, self_head). *)
+     eta-self argument.  Returns (g_ret_ty, g_params, g_body, args, k, self_head). *)
   let find_knot body =
     let result = ref None in
     let consider callee args =
       if !result = None then
         match lookup_functional callee with
-        | Some (g_params, g_body) ->
+        | Some {rf_ret_ty = g_ret_ty; rf_params = g_params; rf_body = g_body} ->
           List.iteri
             (fun k a ->
               if !result = None then
                 match eta_self_head a with
-                | Some head -> result := Some (g_params, g_body, args, k, head)
+                | Some head ->
+                  result := Some (g_ret_ty, g_params, g_body, args, k, head)
                 | None -> () )
             args
         | None -> ()
@@ -8291,7 +8310,7 @@ let try_inline_functional_into names body =
     List.iter vs body;
     !result
   in
-  let inline_into a_body (g_params, g_body, args, k, self_head) =
+  let inline_into a_body (g_ret_ty, g_params, g_body, args, k, self_head) =
     if List.length g_params <> List.length args then None
     else
       let rec_param_id = fst (List.nth g_params k) in
@@ -8419,6 +8438,7 @@ let try_inline_functional_into names body =
               | _ -> []);
             params = fresh_params;
             body = fresh_body;
+            ret_ty = g_ret_ty;
           }
         in
         Some (generic_inline_stmts spec a_body)
@@ -8610,7 +8630,7 @@ let hoist_rec_conditions (check : call_checker)
     @return A [Dfundef] declaration with the loopified body *)
 let transform_fundef_exn ~pp_expr ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
-  register_fundef names params body;
+  register_fundef names ret_ty params body;
   (* Try to inline mutual recursion partners *)
   let body = try_inline_mutual_into names body in
   (* Inline an Equations-style functional applied to itself so its hidden
@@ -9034,7 +9054,7 @@ let try_inline_mutual_fields fields =
   | None -> fields
   | Some (i, j) ->
     let name_a, _ret_ty_a, _params_a, _body_a = List.nth fundefs i in
-    let name_b, _ret_ty_b, params_b, body_b = List.nth fundefs j in
+    let name_b, ret_ty_b, params_b, body_b = List.nth fundefs j in
     (* Build an inline_spec that identifies calls to B by name *)
     let spec = {
       is_target =
@@ -9044,6 +9064,7 @@ let try_inline_mutual_fields fields =
       get_args = (function CPPfun_call (_, _, {rev = args}) -> args | _ -> []);
       params = params_b;
       body = body_b;
+      ret_ty = ret_ty_b;
     } in
     (* Inline B into A — works for both Ffundef and Fmethod *)
     List.map
@@ -9116,9 +9137,10 @@ let rec transform_decl ?(tparams = []) ~pp_expr = function
        transforming *)
     List.iter
       (function
-        | Dfundef (names, _, params, body, _) -> register_fundef names params body
-        | Dtemplate (_, _, Dfundef (names, _, params, body, _)) ->
-          register_fundef names params body
+        | Dfundef (names, ret_ty, params, body, _) ->
+          register_fundef names ret_ty params body
+        | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+          register_fundef names ret_ty params body
         | _ -> () )
       decls;
     Dnspace (r, List.map (transform_decl ~tparams ~pp_expr) decls)
