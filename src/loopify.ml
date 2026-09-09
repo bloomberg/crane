@@ -3903,6 +3903,9 @@ let rec extract_fwd_ref_tvar = function
   | Tvar (_, Some id) -> Some id
   | _ -> None
 
+(** The C++ [bool] type, as the printer spells it. *)
+let ty_bool = Tid_external (Id.of_string "bool", [])
+
 (** Infer the C++ type of a saved CPP expression bottom-up.
     Returns [Tunresolved] when the type cannot be determined.
     Handles the common cases: variable lookups, smart-pointer derefs,
@@ -3940,6 +3943,11 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
     | CPPlit (ty, _) -> strip_ref_and_const_type ty
+    | CPPbool _ -> ty_bool
+    | CPPglob (_, _, Some {ci_yields = Some ty; _}) ->
+      (* Translation recorded what the reference evaluates to while the
+         global's ML type was in hand; nothing here can improve on it. *)
+      strip_ref_and_const_type ty
     | CPPfun_call ({cs_yields = Ryields ty; _}, _, _) ->
       (* The call says what it yields; nothing below can improve on that, and
          a guess that disagreed with it would be a bug. *)
@@ -8502,7 +8510,6 @@ let hoist_rec_conditions (check : call_checker)
         (binds, Cpp_erasure.unbox want cond')
       | _ -> (binds, cond')
     in
-    let ty_bool = Tid_external (Id.of_string "bool", []) in
     let hoist_expr e =
       bindings := [];
       let e' = hoist_ternaries e in

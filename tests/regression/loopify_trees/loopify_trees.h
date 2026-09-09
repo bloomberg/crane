@@ -268,14 +268,14 @@ struct LoopifyTrees {
       struct _After_Node {
         tree<A> *a0;
         const tree<A> *a20;
-        std::decay_t<decltype(true)> _s2;
+        bool _s2;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         bool _result;
-        std::decay_t<decltype(true)> _s1;
+        bool _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

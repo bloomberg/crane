@@ -863,7 +863,7 @@ struct LoopifyExprVariants {
 
       /// _Resume_n: saves [n], resumes after recursive call with _result.
       struct _Resume_n {
-        std::decay_t<decltype((std::declval<uint64_t &>() + 1))> n;
+        uint64_t n;
       };
 
       using _Frame =

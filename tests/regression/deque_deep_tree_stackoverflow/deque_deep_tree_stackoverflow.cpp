@@ -10,7 +10,7 @@ DequeDeepTreeStackoverflow::rose DequeDeepTreeStackoverflow::deep_tree(
 
   /// _Resume_n: saves [_s0], resumes after recursive call with _result.
   struct _Resume_n {
-    std::decay_t<decltype(std::deque<DequeDeepTreeStackoverflow::rose>{})> _s0;
+    std::deque<DequeDeepTreeStackoverflow::rose> _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_n>;
@@ -37,7 +37,7 @@ DequeDeepTreeStackoverflow::rose DequeDeepTreeStackoverflow::deep_tree(
       _result = rose::rnode([](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;
-      }(std::move(_result), _f._s0));
+      }(std::move(_result), std::move(_f._s0)));
     }
   }
   return _result;

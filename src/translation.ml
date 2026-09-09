@@ -3912,11 +3912,18 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       in
       result) ts)
   in
-  (* Helper to wrap expression in function call syntax if it has arguments *)
-  let app x =
+  (* Helper to wrap expression in function call syntax if it has arguments.
+     [yields] is the constructed value's C++ type, where the caller could work
+     it out: a custom constructor is still a value of its inductive, so
+     recording it here is what lets a consumer -- a loopification frame field,
+     say -- name the type instead of falling back on [decltype]. *)
+  let app ?yields x =
     match args with
     | [] -> x
-    | _ -> CPPfun_call (call_opaque, x, of_reversed args)
+    | _ ->
+      CPPfun_call
+        (Minicpp.call_sig ?yields ~nargs:(List.length args) (), x,
+         of_reversed args)
   in
   (* When [ty] (the MLcons node's own type annotation) is not itself a
      resolved [Tglob] — e.g. an unresolved [Tmeta {contents = None}], which
@@ -4074,7 +4081,8 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           List.map (fun _ -> Tany) temps
         else temps
       in
-      app (mk_cppglob r temps)
+      let value_ty = Tglob (n, temps, []) in
+      app ~yields:value_ty (mk_cppglob ~yields:value_ty r temps)
     | _ ->
       (* Type is not a Tglob - no type args to pass.
          This case is rare for custom constructors, which typically have
@@ -4812,33 +4820,33 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
     argument -- {!Minicpp.call_sig} enforces that -- since a partial
     application, or a callee whose arrows an eta-expansion has rearranged,
     would otherwise hand the printer a misaligned list. *)
-(** What a [%result] block template mapped onto global [x], instantiated at
-    [tys], evaluates to.
+(** What a reference to global [x], instantiated at [tys], evaluates to as it
+    is printed.
 
-    A block in value position is printed as an immediately invoked lambda, and
-    a lambda has to be given a return type.  A call node carries one in its
-    {!Minicpp.call_sig}; a bare reference has no call node, so the answer is
-    recorded on the global itself.  The printer must not re-derive it: it
-    would be reading the uninstantiated scheme out of the front-end table,
-    answering [List<T1>] where [List<uint64_t>] was meant.
+    Usually that is simply the global's type.  The exception is a [%result]
+    block template, which prints as an immediately invoked lambda: the block
+    is the global's body {e run}, so the reference evaluates to the result,
+    and the lambda has to be given that as its return type.
 
-    [None] for a global with no such template, where the question does not
-    arise and any answer would be a guess -- a bare reference to a function is
-    the function, not its result. *)
+    A call node carries its result in its {!Minicpp.call_sig}; a bare
+    reference has no call node, so the answer is recorded on the global
+    itself.  Consumers must not re-derive it -- doing so means reading the
+    uninstantiated scheme back out of the front-end table, answering
+    [List<T1>] where [List<uint64_t>] was meant. *)
 and glob_yields env x tys =
-  let is_result_block =
-    Table.to_inline x
-    && match Table.find_custom_opt x with
-       | Some tmpl -> Common.contains_substring tmpl "%result"
-       | None -> false
-  in
-  if not is_result_block then None
-  else
-    match find_type_opt x with
-    | None -> None
-    | Some ml_ty -> (
-      try Some (cpp_of_ml env (ml_codomain (Mlutil.type_subst_list tys ml_ty)))
-      with e when CErrors.noncritical e -> None )
+  match find_type_opt x with
+  | None -> None
+  | Some ml_ty -> (
+    let is_result_block =
+      Table.to_inline x
+      && match Table.find_custom_opt x with
+         | Some tmpl -> Common.contains_substring tmpl "%result"
+         | None -> false
+    in
+    let inst = Mlutil.type_subst_list tys ml_ty in
+    let value_ty = if is_result_block then ml_codomain inst else inst in
+    try Some (cpp_of_ml env value_ty)
+    with e when CErrors.noncritical e -> None )
 
 and record_call_sig env callee_ty e =
   match (e, callee_ty) with

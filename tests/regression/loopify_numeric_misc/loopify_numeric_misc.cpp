@@ -49,7 +49,7 @@ uint64_t LoopifyNumericMisc::alternating_ops(
 
   /// _Resume1: saves [n_], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype((std::declval<uint64_t &>() + 1))> n_;
+    uint64_t n_;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.

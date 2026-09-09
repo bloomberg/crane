@@ -115,7 +115,7 @@ uint64_t LoopifyConditionalRecursion::nested_cond(
 
   /// _Cont1: saves [_s0], resumes after recursive call, then processes rest.
   struct _Cont1 {
-    std::decay_t<decltype(false)> _s0;
+    bool _s0;
   };
 
   using _Frame = std::variant<_Enter, _Cont1>;
