@@ -811,7 +811,7 @@ let rewrite_state_threading_moves
     | CPPvar id -> (
       match subst id with
       | Some (scrut_id, first_id) ->
-        CPPmove (CPPmember (CPPvar scrut_id, first_id))
+        CPPmove (CPPaccess (Adot, CPPvar scrut_id, first_id))
       | None -> e )
     | _ -> e
   in
@@ -921,16 +921,16 @@ let rec render_cpp_expr_simple = function
   | CPPget' (e, field_ref) ->
     Option.map (fun s -> s ^ "." ^ Common.pp_global_name Type field_ref)
       (render_cpp_expr_simple e)
-  | CPPmember (e, field) ->
+  | CPPaccess (Adot, e, field) ->
     Option.map (fun s -> s ^ "." ^ Id.to_string field)
       (render_cpp_expr_simple e)
-  | CPPdot_method_call (e, method_id, []) ->
+  | CPPaccess_call (Adot, e, method_id, []) ->
     Option.map (fun s -> s ^ "." ^ Id.to_string method_id ^ "()")
       (render_cpp_expr_simple e)
-  | CPParrow (e, field) ->
+  | CPPaccess (Aarrow, e, field) ->
     Option.map (fun s -> s ^ "->" ^ Id.to_string field)
       (render_cpp_expr_simple e)
-  | CPPmethod_call (e, method_id, []) ->
+  | CPPaccess_call (Aarrow, e, method_id, []) ->
     Option.map (fun s -> s ^ "->" ^ Id.to_string method_id ^ "()")
       (render_cpp_expr_simple e)
   | CPPnullptr -> Some "nullptr"
@@ -1226,10 +1226,10 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          | None -> binding)
   in
   (* Apply a Table.accessor to a C++ expression, producing a field
-     access (CPPmember) or pointer dereference (CPPderef). *)
+     access ([CPPaccess]) or pointer dereference ([CPPderef]). *)
   let apply_accessor acc e =
     match (acc : Table.accessor) with
-    | AccMember f -> CPPmember (e, Id.of_string f)
+    | AccMember f -> CPPaccess (Adot, e, Id.of_string f)
     | AccDeref -> CPPderef e
   in
   (* Generate a conversion expression for a non-recursive custom type whose
@@ -1492,7 +1492,7 @@ let is_reified_monadic_expr ml_expr =
     Otherwise returns [cpp_expr] unchanged. *)
 let deref_reified ml_expr cpp_expr =
   if is_reified_monadic_var ml_expr then
-    CPPmethod_call (cpp_expr, Id.of_string "run", [])
+    CPPaccess_call (Aarrow, cpp_expr, Id.of_string "run", [])
   else
     cpp_expr
 
@@ -1520,12 +1520,12 @@ let return_captures_by_value stmts =
     | CPPshared_ptr_ctor (ty, e) -> CPPshared_ptr_ctor (ty, expr e)
     | CPPbinop (op, a, b) -> CPPbinop (op, expr a, expr b)
     | CPPunop (op, e) -> CPPunop (op, expr e)
-    | CPPmember (e, id) -> CPPmember (expr e, id)
-    | CPPqualified (e, id) -> CPPqualified (expr e, id)
+    | CPPaccess (Adot, e, id) -> CPPaccess (Adot, expr e, id)
+    | CPPscope (e, id, []) -> CPPscope (expr e, id, [])
     | CPPget (e, id) -> CPPget (expr e, id)
     | CPPget' (e, id) -> CPPget' (expr e, id)
-    | CPPmethod_call (e, id, args) ->
-      CPPmethod_call (expr e, id, List.map expr args)
+    | CPPaccess_call (Aarrow, e, id, args) ->
+      CPPaccess_call (Aarrow, expr e, id, List.map expr args)
     | CPPany_cast (ty, e) -> Cpp_erasure.unbox ty (expr e)
     | e -> e
   and stmt = function
@@ -4346,7 +4346,7 @@ and yields_boxed_component = function
     | None -> false )
   (* The accessor is not always a custom-inline call: a projection out of a
      [std::pair] is a plain member read, and that is the same evidence. *)
-  | CPPmember (arg, _) -> reads_recovered_pair arg
+  | CPPaccess (Adot, arg, _) -> reads_recovered_pair arg
   | _ -> false
 
 (** Whether [expr] is a pair recovered from a box, i.e. one whose [any_cast]
@@ -7239,7 +7239,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let make_field_access base_expr fld =
       if is_typeclass then
         let fld_name = Common.id_of_global Term fld in
-        CPPqualified (base_expr, fld_name)
+        CPPscope (base_expr, fld_name, [])
       else
         CPPget' (base_expr, fld)
     in
@@ -7403,8 +7403,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                       convert_ml_type_to_cpp_type env tvars
                         (Miniml.Tvar (Schematic, (ipv + 1 + k))) )
                 in
-                CPPqualified_tpl
-                  ( gen_expr env t,
+                CPPscope ( gen_expr env t,
                     Common.id_of_global Term fld,
                     targs )
           in
@@ -10238,9 +10237,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
       if is_flat_match then
         scrut_expr
       else if scrut_is_ptr then
-        CPPmethod_call (scrut_expr, Id.of_string "v", [])
+        CPPaccess_call (Aarrow, scrut_expr, Id.of_string "v", [])
       else
-        mk_call (CPPmember (scrut_expr, Id.of_string "v")) []
+        mk_call (CPPaccess (Adot, scrut_expr, Id.of_string "v")) []
     in
     (* Push renamed pattern variables into the environment, register their
        types in [env_types], and compute a dummies mask (true = non-Dummy).
@@ -10378,8 +10377,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
             push_binders env ids';
             let scrut_vmut =
               if scrut_is_ptr then
-                CPPmethod_call (scrut_expr, Id.of_string "v_mut", [])
-              else mk_call (CPPmember (scrut_expr, Id.of_string "v_mut")) []
+                CPPaccess_call (Aarrow, scrut_expr, Id.of_string "v_mut", [])
+              else
+                mk_call (CPPaccess (Adot, scrut_expr, Id.of_string "v_mut")) []
             in
             (* Name the alternative rather than number it: the branch index
                and the variant position coincide, but [std::get<typename
@@ -10388,8 +10388,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
               Id.of_string_soft (ctor_struct_name_of_ref matched_ctor)
             in
             let rf i =
-              CPPmember
-                ( CPPstd_get (scrut_cpp_ty, Some matched_alt, Some scrut_vmut),
+              CPPaccess
+                ( Adot,
+                  CPPstd_get (scrut_cpp_ty, Some matched_alt, Some scrut_vmut),
                   field_param_id i )
             in
             let token_expr = ref None in
@@ -10431,7 +10432,9 @@ and gen_cpp_case (typ : ml_type) t env pv =
               let use_count_cond =
                 CPPbinop
                   ( "==",
-                    mk_call (CPPmember (rf rec_idx, Id.of_string "use_count")) [],
+                    mk_call
+                      (CPPaccess (Adot, rf rec_idx, Id.of_string "use_count"))
+                      [],
                     CPPint 1 )
               in
               Some (branch_idx, extract @ body_stmts, use_count_cond)
@@ -10451,7 +10454,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let index_cond =
         CPPbinop
           ( "==",
-            mk_call (CPPmember (scrut_v, Id.of_string "index")) [],
+            mk_call (CPPaccess (Adot, scrut_v, Id.of_string "index")) [],
             CPPint branch_idx )
       in
       let normal = [Smatch (branches, wildcard)] in
@@ -10559,8 +10562,8 @@ and gen_cpp_custom_body env k rty ids body scrut_ind_opt =
     cached in a temporary when the custom match template uses [%scrut] more
     than once. *)
 and is_trivial_scrut = function
-  | CPPvar _ | CPPget _ | CPPget' _ | CPParrow _ | CPPmember _
-  | CPPqualified _ | CPPqualified_t _ | CPPderef _ | CPPenum_val _
+  | CPPvar _ | CPPget _ | CPPget' _ | CPPaccess _
+  | CPPscope _ | CPPqualified_t _ | CPPderef _ | CPPenum_val _
   | CPPglob _ -> true
   | _ -> false
 
@@ -12191,16 +12194,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | CPPget' (e', id') -> CPPget' (sub e', id')
           | CPPnamespace (id', e') -> CPPnamespace (id', sub e')
           | CPPparray (args, e') -> CPPparray (Array.map sub args, sub e')
-          | CPPmethod_call (obj, meth, args) ->
-            CPPmethod_call (sub obj, meth, List.map sub args)
-          | CPPmember (e', mid) -> CPPmember (sub e', mid)
-          | CPParrow (e', mid) -> CPParrow (sub e', mid)
+          | CPPaccess_call (Aarrow, obj, meth, args) ->
+            CPPaccess_call (Aarrow, sub obj, meth, List.map sub args)
+          | CPPaccess (a, e', mid) -> CPPaccess (a, sub e', mid)
           | CPPforward (ty, e') -> CPPforward (ty, sub e')
           | CPPnew (ty, args) -> CPPnew (ty, List.map sub args)
           | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ty, sub e')
           | CPPstruct_id (sid, tys, args) ->
             CPPstruct_id (sid, tys, List.map sub args)
-          | CPPqualified (e', qid) -> CPPqualified (sub e', qid)
+          | CPPscope (e', qid, []) -> CPPscope (sub e', qid, [])
           | CPPany_cast (_, CPPfun_call (_, CPPvar id, args))
             when Id.equal id target ->
             (* The any_cast wraps a direct call to the variable being lifted.
@@ -13167,7 +13169,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let make_field_access base_expr fld =
         if is_typeclass then
           let fld_name = Common.id_of_global Term fld in
-          CPPqualified (base_expr, fld_name)
+          CPPscope (base_expr, fld_name, [])
         else
           CPPget' (base_expr, fld)
       in

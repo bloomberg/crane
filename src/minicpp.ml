@@ -319,6 +319,13 @@ and call_params =
   | Ptypes of cpp_type list
   | Punknown
 
+(** How a member name attaches to the object in front of it.  Scope
+    resolution is not one of these: [::] takes a namespace or a type, not an
+    object, so it is {!CPPscope} rather than a third token here. *)
+and obj_access =
+  | Adot (** [obj.member] *)
+  | Aarrow (** [obj->member] *)
+
 and cpp_expr =
   | CPPvar of Id.t
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -366,14 +373,11 @@ and cpp_expr =
   | CPPshared_from_this of cpp_type
     (* std::const_pointer_cast<T>(shared_from_this()) — for returning this as
        shared_ptr *)
-  | CPPmember of cpp_expr * Id.t (* expr.member - for accessing v_ etc *)
-  | CPParrow of cpp_expr * Id.t (* expr->member - for ptr->v_ access *)
-  | CPPmethod_call of cpp_expr * Id.t * cpp_expr list (* obj->method(args) *)
-  | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list (* obj.method(args) *)
-  | CPPqualified of
-      cpp_expr * Id.t (* expr::id - for qualified name access like Type::ctor *)
-  | CPPqualified_tpl of cpp_expr * Id.t * cpp_type list
-    (* expr::template id<tys...> - a member template of a dependent base *)
+  | CPPaccess of obj_access * cpp_expr * Id.t (* obj.member or obj->member *)
+  | CPPaccess_call of obj_access * cpp_expr * Id.t * cpp_expr list
+    (* obj.method(args) or obj->method(args) *)
+  | CPPscope of cpp_expr * Id.t * cpp_type list
+    (* expr::id, or expr::template id<tys...> when the list is non-empty *)
   | CPPqualified_t of
       cpp_type * Id.t (* Type::id - for type-qualified member access *)
   | CPPconvertible_to of cpp_type (* std::convertible_to<T> constraint *)
@@ -845,15 +849,10 @@ let map_expr
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ft ty, fe e')
   | CPPthis -> e
   | CPPshared_from_this ty -> CPPshared_from_this (ft ty)
-  | CPPmember (e', id) -> CPPmember (fe e', id)
-  | CPParrow (e', id) -> CPParrow (fe e', id)
-  | CPPmethod_call (obj, id, args) ->
-    CPPmethod_call (fe obj, id, List.map fe args)
-  | CPPdot_method_call (obj, id, args) ->
-    CPPdot_method_call (fe obj, id, List.map fe args)
-  | CPPqualified (e', id) -> CPPqualified (fe e', id)
-  | CPPqualified_tpl (e', id, tys) ->
-    CPPqualified_tpl (fe e', id, List.map ft tys)
+  | CPPaccess (a, e', id) -> CPPaccess (a, fe e', id)
+  | CPPaccess_call (a, obj, id, args) ->
+    CPPaccess_call (a, fe obj, id, List.map fe args)
+  | CPPscope (e', id, tys) -> CPPscope (fe e', id, List.map ft tys)
   | CPPqualified_t (ty, id) -> CPPqualified_t (ft ty, id)
   | CPPconvertible_to ty -> CPPconvertible_to (ft ty)
   | CPPabort (msg, ty) -> CPPabort (msg, ft ty)
@@ -971,9 +970,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
   | CPPbox (_, e') -> on_expr e'
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
-  | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
-  | CPPqualified (e', _)
-  | CPPqualified_tpl (e', _, _)
+  | CPPget (e', _) | CPPget' (e', _) | CPPaccess (_, e', _)
+  | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
@@ -985,8 +983,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
     List.iter on_expr es
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
-  | CPPmethod_call (obj, _, args) -> on_expr obj; List.iter on_expr args
-  | CPPdot_method_call (obj, _, args) -> on_expr obj; List.iter on_expr args
+  | CPPaccess_call (_, obj, _, args) -> on_expr obj; List.iter on_expr args
   | CPPrequires (_, constraints, _) ->
     List.iter (fun (e', _) -> on_expr e') constraints
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
@@ -1058,9 +1055,8 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPbox (_, e') -> fe acc e'
   | CPPnamespace (_, e') | CPPderef e' | CPPmove e' | CPPforward (_, e')
-  | CPPget (e', _) | CPPget' (e', _) | CPPmember (e', _) | CPParrow (e', _)
-  | CPPqualified (e', _)
-  | CPPqualified_tpl (e', _, _)
+  | CPPget (e', _) | CPPget' (e', _) | CPPaccess (_, e', _)
+  | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
@@ -1070,8 +1066,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
     List.fold_left fe acc es
   | CPPparray (arr, e') -> fe (Array.fold_left fe acc arr) e'
-  | CPPmethod_call (obj, _, args) -> List.fold_left fe (fe acc obj) args
-  | CPPdot_method_call (obj, _, args) -> List.fold_left fe (fe acc obj) args
+  | CPPaccess_call (_, obj, _, args) -> List.fold_left fe (fe acc obj) args
   | CPPrequires (_, constraints, _) ->
     List.fold_left (fun a (e', _) -> fe a e') acc constraints
   | CPPbinop (_, l, r) -> fe (fe acc l) r

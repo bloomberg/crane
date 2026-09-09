@@ -450,7 +450,7 @@ let gen_typeclass_cpp name fields ind =
         let ret_cpp = subst_promoted_in_cpp_type ret_cpp in
         let constraint_expr = CPPconvertible_to ret_cpp in
         let qualified =
-          CPPqualified (CPPvar inst_id, Id.of_string method_name)
+          CPPscope (CPPvar inst_id, Id.of_string method_name, [])
         in
         let call_form =
           CPPrequires ([], [(mk_call qualified [], constraint_expr)], [])
@@ -508,10 +508,9 @@ let gen_typeclass_cpp name fields ind =
         in
         let callee =
           if ntv = 0 then
-            CPPqualified (CPPvar inst_id, Id.of_string method_name)
+            CPPscope (CPPvar inst_id, Id.of_string method_name, [])
           else
-            CPPqualified_tpl
-              ( CPPvar inst_id,
+            CPPscope ( CPPvar inst_id,
                 Id.of_string method_name,
                 List.init ntv (fun _ -> Tany) )
         in
@@ -2563,8 +2562,7 @@ let gen_dfun n b cty ty temps =
         | _ -> []
       in
       let lazy_factory =
-        CPPqualified
-          (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
+        CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
       in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
       Sreturn (Some (mk_call lazy_factory [thunk]))
@@ -4011,8 +4009,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
                "gen_method_field: cofixpoint return type expected to be Tglob" )
       in
       let lazy_factory =
-        CPPqualified
-          (mk_cppglob coind_ref type_args, Id.of_string "lazy_")
+        CPPscope (mk_cppglob coind_ref type_args, Id.of_string "lazy_", [])
       in
       let thunk = mk_lambda [] (Some ret_cpp) [Sreturn (Some x)] ~by_value:true in
       Sreturn (Some (mk_call lazy_factory [thunk]))
@@ -4910,7 +4907,7 @@ let gen_ind_header_v2
                 let arg = String.sub tmpl (!i + yl) (!j - (!i + yl)) in
                 flush_raw ();
                 stmts :=
-                  Sexpr (CPPdot_method_call (
+                  Sexpr (CPPaccess_call (Adot, 
                     CPPvar _stack_id,
                     Id.of_string "push_back",
                     [CPPraw (
@@ -5040,9 +5037,9 @@ let gen_ind_header_v2
           let verbatim_ml t = verbatim_ty (cpp_of_ml t) in
           (* [e.m()] -- the harvester only ever calls nullary members
              ([use_count], [reset], [has_value], [v_mut]) on a value. *)
-          let dot0 e m = CPPdot_method_call (e, Id.of_string m, []) in
+          let dot0 e m = CPPaccess_call (Adot, e, Id.of_string m, []) in
           (* [p->m()], for a [p] that is a raw or smart pointer. *)
-          let arrow0 e m = CPPmethod_call (e, Id.of_string m, []) in
+          let arrow0 e m = CPPaccess_call (Aarrow, e, Id.of_string m, []) in
           (* Guard [body] on [p] being the sole owner of its pointee -- every
              drain moves a value out of one, so it must first establish that
              nobody else can see it.  The acquire fence follows the [use_count]
@@ -5056,7 +5053,7 @@ let gen_ind_header_v2
           (* [_stack.push_back(make_shared<Self>(std::move(e)))] -- hand one
              discovered [Self] to the destructor's worklist. *)
           let push_self_stmt e =
-            Sexpr (CPPdot_method_call (
+            Sexpr (CPPaccess_call (Adot, 
               CPPvar _stack_id,
               Id.of_string "push_back",
               [ mk_call
@@ -5138,7 +5135,7 @@ let gen_ind_header_v2
                  | Some tmpl when starts_with "std::pair" tmpl ->
                    (match args with
                     | [a; b] ->
-                      let fld n = CPPmember (e, Id.of_string n) in
+                      let fld n = CPPaccess (Adot, e, Id.of_string n) in
                       (if contains_self a
                        then harvest_val (fuel - 1) a (fld "first")
                        else [])
@@ -5232,7 +5229,8 @@ let gen_ind_header_v2
                        if not (contains_self inst) then []
                        else
                          let fe =
-                           CPPmember (x, Id.of_string_soft (List.nth names k))
+                           CPPaccess
+                             (Adot, x, Id.of_string_soft (List.nth names k))
                          in
                          if field_is_ptr g fty
                          then harvest_ptr (fuel - 1) inst fe
@@ -5244,7 +5242,7 @@ let gen_ind_header_v2
                 let cname_str =
                   ctor_struct_name_of_ref ~fallback_idx:0 (ctor_ref j)
                 in
-                field_stmts cname_str (fun f -> CPPmember (x, f)) ftys
+                field_stmts cname_str (fun f -> CPPaccess (Adot, x, f)) ftys
               | _ ->
                 List.concat_map
                   (fun (j, ftys) ->
@@ -5254,7 +5252,8 @@ let gen_ind_header_v2
                     in
                     let av = Id.of_string (fresh_hv "_ha") in
                     let inner =
-                      field_stmts cname_str (fun f -> CPParrow (CPPvar av, f))
+                      field_stmts cname_str (fun f ->
+                        CPPaccess (Aarrow, CPPvar av, f) )
                         ftys
                     in
                     if inner = [] then []
@@ -5280,7 +5279,7 @@ let gen_ind_header_v2
                     [Tshared_ptr (verbatim_ml g_ty)] )
               in
               let push fe =
-                [Sexpr (CPPdot_method_call (
+                [Sexpr (CPPaccess_call (Adot, 
                    CPPvar wl_id, Id.of_string "push_back", [CPPmove fe]))]
               in
               let on_spine = Some push in
@@ -5305,7 +5304,7 @@ let gen_ind_header_v2
              shape is one the harvester does not handle. *)
           let harvest_field field_id ml_ty =
             try
-              let fe = CPParrow (CPPvar _alt_id, field_id) in
+              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
               match harvest_ptr harvest_fuel ml_ty fe with
               | [] -> None
               | stmts -> Some stmts
@@ -5316,12 +5315,12 @@ let gen_ind_header_v2
              custom mapping (e.g. std::deque) iterate elements onto the stack. *)
           let mk_classified_field_stmts classified_fields =
             List.concat_map (fun (field_id, cls) ->
-              let fe = CPParrow (CPPvar _alt_id, field_id) in
+              let fe = CPPaccess (Aarrow, CPPvar _alt_id, field_id) in
               match cls with
               | `Stmts stmts -> stmts
               | `Direct ->
                 [Sif_then (fe,
-                  [Sexpr (CPPdot_method_call (
+                  [Sexpr (CPPaccess_call (Adot, 
                      CPPvar _stack_id,
                      Id.of_string "push_back",
                      [CPPmove fe]))])]
@@ -5329,7 +5328,8 @@ let gen_ind_header_v2
                 (* Reach through a uniquely-owned wrapper cell and move each
                    nested [Self] onto the worklist, then drop the cell. *)
                 sole_owner fe
-                  (List.map (fun wf -> push_self_stmt (CPParrow (fe, wf)))
+                  (List.map
+                     (fun wf -> push_self_stmt (CPPaccess (Aarrow, fe, wf)))
                      wfields
                    @ [Sexpr (dot0 fe "reset")])
               | `List list_g ->
@@ -5374,7 +5374,7 @@ let gen_ind_header_v2
                     Common.lookup_ctor_field_name ~owner:list_g cons_s 1
                   in
                   let lp = Id.of_string "_lp" and lc = Id.of_string "_lc" in
-                  let tail = CPPmember (CPPvar lc, tail_field) in
+                  let tail = CPPaccess (Adot, CPPvar lc, tail_field) in
                   (* Walk the cons spine, moving each element onto the
                      worklist.  Ownership must be re-established at every cell,
                      not just the head: list cells share their tails through
@@ -5392,7 +5392,8 @@ let gen_ind_header_v2
                         [ Sasgn (lc, Declare (Tref Tauto),
                             CPPstd_get (ls, Some cons_id,
                               Some (arrow0 (CPPvar lp) "v_mut")));
-                          push_self_stmt (CPPmember (CPPvar lc, elem_field));
+                          push_self_stmt
+                            (CPPaccess (Adot, CPPvar lc, elem_field));
                           Sif (
                             CPPbinop ("&&", tail,
                               CPPbinop ("==", dot0 tail "use_count", CPPint 1)),
@@ -5496,21 +5497,21 @@ let gen_ind_header_v2
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
-                    CPPdot_method_call (CPPvar _stack_id,
+                    CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
                   [ Sasgn (_cur_id, Declare Tauto,
-                      CPPmove (CPPdot_method_call (CPPvar _stack_id,
+                      CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
                         Id.of_string "back", [])));
-                    Sexpr (CPPdot_method_call (CPPvar _stack_id,
+                    Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "pop_back", []));
                     Sif_then (
                       CPPbinop ("==",
-                        CPPdot_method_call (CPPvar _cur_id,
+                        CPPaccess_call (Adot, CPPvar _cur_id,
                           Id.of_string "use_count", []),
                         CPPint 1),
                       unique_fence
                       @ [Sexpr (mk_call (CPPvar _drain_id)
-                        [CPPmethod_call (CPPvar _cur_id,
+                        [CPPaccess_call (Aarrow, CPPvar _cur_id,
                           Id.of_string "v_mut", [])])])
                   ])
               ]
@@ -5556,7 +5557,7 @@ let gen_ind_header_v2
             let sp_alive_and_unique =
               CPPbinop ("&&", deref_sp,
                 CPPbinop ("==",
-                  CPPdot_method_call (deref_sp,
+                  CPPaccess_call (Adot, deref_sp,
                     Id.of_string "use_count", []),
                   CPPint 1))
             in
@@ -5564,7 +5565,7 @@ let gen_ind_header_v2
               [Sif_then (sp_alive_and_unique,
                 unique_fence
                 @ [Sexpr (mk_call (CPPvar _drain_self_id)
-                  [CPPmethod_call (deref_sp,
+                  [CPPaccess_call (Aarrow, deref_sp,
                     Id.of_string "v_mut", [])])])]
             in
             let rec build_if_chain branches =
@@ -5575,7 +5576,7 @@ let gen_ind_header_v2
                 let partner_body =
                   [Sif_then (sp_alive_and_unique,
                     Sasgn (_pv_id, Declare (Tref Tauto),
-                      CPPmethod_call (deref_sp,
+                      CPPaccess_call (Aarrow, deref_sp,
                         Id.of_string "v_mut", []))
                     :: partner_drains)]
                 in
@@ -5598,12 +5599,12 @@ let gen_ind_header_v2
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
                   CPPunop ("!",
-                    CPPdot_method_call (CPPvar _stack_id,
+                    CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
                   Sasgn (_cur_id, Declare Tauto,
-                    CPPmove (CPPdot_method_call (CPPvar _stack_id,
+                    CPPmove (CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "back", [])))
-                  :: Sexpr (CPPdot_method_call (CPPvar _stack_id,
+                  :: Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
                        Id.of_string "pop_back", []))
                   :: loop_body_stmts)
               ]
@@ -5918,8 +5919,8 @@ let gen_ind_header_v2
                   Sreturn
                     (Some
                        (mk_call
-                          (CPPmember
-                             (CPPvar (Id.of_string "_tmp"), Id.of_string "v"))
+                          (CPPaccess
+                             (Adot, CPPvar (Id.of_string "_tmp"), Id.of_string "v"))
                           [] ) );
               ]
               ~by_value:true
@@ -6042,7 +6043,7 @@ let gen_ind_header_v2
                 match field_info with
                 | [] ->
                   [Sassign_expr
-                     ( CPParrow (CPPthis, vmn_id),
+                     ( CPPaccess (Aarrow, CPPthis, vmn_id),
                        CPPstruct_id (cname_id, [], []) )]
                 | _ ->
                   let bindings =
@@ -6064,7 +6065,7 @@ let gen_ind_header_v2
                      ^ "] = std::get<" ^ source_ctor_s
                      ^ ">(" ^ "_other.v()" ^ ");");
                    Sassign_expr
-                     ( CPParrow (CPPthis, vmn_id),
+                     ( CPPaccess (Aarrow, CPPthis, vmn_id),
                        CPPstruct_id (cname_id, [], converted) )]
               in
               let body =
@@ -6076,7 +6077,7 @@ let gen_ind_header_v2
                 else
                   (* Build if/else if/else chain *)
                   let other_v =
-                    CPPdot_method_call (CPPvar other_id,
+                    CPPaccess_call (Adot, CPPvar other_id,
                                        Id.of_string "v", [])
                   in
                   let rec build_if_chain = function
@@ -6147,7 +6148,8 @@ let gen_ind_header_v2
                     Sreturn
                       (Some
                          (mk_call
-                            (CPPmember (CPPvar vmn_id, Id.of_string "force"))
+                            (CPPaccess
+                               (Adot, CPPvar vmn_id, Id.of_string "force"))
                             [] ) );
                   ];
                 mf_is_const = true;

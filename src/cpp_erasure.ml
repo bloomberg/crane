@@ -117,7 +117,8 @@ let method_queries =
     boxed-return positions the registry tracks; a nested [any_cast] counts too,
     because the tolerant caster hands back a box. *)
 let returns_a_box = function
-  | CPPmethod_call (CPPglob (n, _, _), _, _) -> !method_queries.mq_returns_any n
+  | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) ->
+    !method_queries.mq_returns_any n
   | CPPfun_call (_, CPPglob (n, _, _), _) when !method_queries.mq_is_method n ->
     !method_queries.mq_returns_any n
   | CPPfun_call (_, CPPget' (_, n), _) -> !method_queries.mq_returns_any n

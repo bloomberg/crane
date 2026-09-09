@@ -662,6 +662,9 @@ let is_any_type = Cpp_erasure.is_any_shaped
     A {!Minicpp.Tpromoted} reaching the printer is one no resolution map
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
+(** The C++ token an {!Minicpp.obj_access} prints as. *)
+let pp_obj_access = function Adot -> "." | Aarrow -> "->"
+
 let rec pp_cpp_type par vl t =
   let rec pp_rec par = function
     | Tvar (i, None) -> print_cpp_type_var vl i
@@ -1500,22 +1503,17 @@ and pp_cpp_expr env args t =
     let this_arg_opt, other_args = Common.extract_at_pos this_pos args_normal in
     ( match this_arg_opt with
     | Some this_arg ->
-      let obj_s = pp_cpp_expr env args this_arg in
       let args_s = pp_list (pp_cpp_expr env args) other_args in
       (* All inductives (including coinductives) are value types, so use
          dot access.  Exceptions: [this] is a raw pointer and [CPPderef e]
          dereferences a smart pointer — both use arrow. *)
-      let use_arrow =
-        match this_arg with CPPthis | CPPderef _ -> true | _ -> false
+      let acc, obj = match this_arg with
+        | CPPthis -> (Aarrow, this_arg)
+        | CPPderef e -> (Aarrow, e)
+        | _ -> (Adot, this_arg)
       in
-      let accessor = if use_arrow then "->" else "." in
-      let obj_pp =
-        match this_arg with
-        | CPPderef e -> pp_cpp_expr env args e
-        | _ -> obj_s
-      in
-      obj_pp
-      ++ str accessor
+      pp_cpp_expr env args obj
+      ++ str (pp_obj_access acc)
       ++ pp_method_call_name n method_name tys
       ++ str "("
       ++ args_s
@@ -1756,8 +1754,8 @@ and pp_cpp_expr env args t =
     pp_cpp_type false [] ty ++ str "(" ++ args_s ++ str ")" )
   | CPPderef e ->
     let needs_parens = match e with
-      | CPPvar _ | CPPthis | CPPfun_call _ | CPPmember _ | CPParrow _
-      | CPPmethod_call _ | CPPdot_method_call _ -> false
+      | CPPvar _ | CPPthis | CPPfun_call _ | CPPaccess _
+      | CPPaccess_call _ -> false
       | _ -> true
     in
     if needs_parens then str "*(" ++ pp_cpp_expr env args e ++ str ")"
@@ -2029,35 +2027,31 @@ and pp_cpp_expr env args t =
       str "std::const_pointer_cast<"
       ++ pp_cpp_type false [] ty
       ++ str ">(this->shared_from_this())"
-  | CPPmember (e, id) ->
+  | CPPaccess (acc, e, id) ->
     (* Rewrite std::move(x).field → std::move(x.field): access the field
        first, then move its value.  This is semantically equivalent and:
        - Fixes Infer Use-After-Delete (moving a pointer then accessing it is flagged)
        - Enables the Unnecessary-Copy-Intermediate fix (field value is moved, not copied)
        For method calls we strip the move instead since methods need a live object. *)
-    ( match e with
-    | CPPmove inner ->
-      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "." ++ Id.print id ++ str ")"
-    | CPPderef inner ->
-      pp_object env args inner ++ str "->" ++ Id.print id
-    | _ ->
-      pp_object env args e ++ str "." ++ Id.print id )
-  | CPParrow (e, id) ->
-    ( match e with
-    | CPPmove inner ->
+    ( match (acc, e) with
+    | Adot, CPPmove inner ->
+      str (sn ()).move ++ str "(" ++ pp_cpp_expr env args inner ++ str "."
+      ++ Id.print id ++ str ")"
+    | Aarrow, CPPmove inner ->
       (* std::move(ptr)->field → std::move(ptr->field) *)
-      str (sn ()).move ++ str "(" ++ pp_object env args inner ++ str "->" ++ Id.print id ++ str ")"
-    | _ ->
-      pp_object env args e ++ str "->" ++ Id.print id )
-  | CPPmethod_call (obj, method_name, call_args)
-  | CPPdot_method_call (obj, method_name, call_args) ->
-    let sep = match t with CPPmethod_call _ -> "->" | _ -> "." in
+      str (sn ()).move ++ str "(" ++ pp_object env args inner ++ str "->"
+      ++ Id.print id ++ str ")"
+    | Adot, CPPderef inner ->
+      (* Dot access on a dereferenced pointer is arrow access on the pointer. *)
+      pp_object env args inner ++ str "->" ++ Id.print id
+    | _ -> pp_object env args e ++ str (pp_obj_access acc) ++ Id.print id )
+  | CPPaccess_call (acc, obj, method_name, call_args) ->
     let obj = match obj with CPPmove inner -> inner | _ -> obj in
-    pp_object env args obj ++ str sep ++ Id.print method_name
+    pp_object env args obj ++ str (pp_obj_access acc) ++ Id.print method_name
     ++ str "(" ++ pp_list (pp_cpp_expr env args) call_args ++ str ")"
-  | CPPqualified (e, id) ->
+  | CPPscope (e, id, []) ->
     pp_cpp_expr env args e ++ str "::" ++ Id.print id
-  | CPPqualified_tpl (e, id, tys) ->
+  | CPPscope (e, id, tys) ->
     pp_cpp_expr env args e ++ str "::template " ++ Id.print id ++ str "<"
     ++ pp_list (pp_cpp_type false []) tys ++ str ">"
   | CPPqualified_t (ty, id) ->
@@ -2258,7 +2252,7 @@ and pp_cpp_stmt env args = function
        shared_ptr) where explicit move is required. *)
     let e = match e with
       | CPPmove (CPPvar _ as inner) -> inner
-      | CPPmove ((CPPfun_call _ | CPPmethod_call _ | CPPstruct _ | CPPstructmk _
+      | CPPmove ((CPPfun_call _ | CPPaccess_call _ | CPPstruct _ | CPPstructmk _
                  | CPPstruct_id _) as inner) -> inner
       | _ -> e
     in
@@ -2624,8 +2618,9 @@ and pp_cpp_stmt env args = function
         | None -> mt () )
     in
     (* Extract the scrutinee object expression from the variant accessor.
-       Handles both [CPPmethod_call(obj, "v", [])] (pointer: [obj->v()])
-       and [CPPfun_call(CPPmember(obj, "v"), [])] (value: [obj.v()]).
+       Handles both [CPPaccess_call (Aarrow, obj, "v", [])] (pointer:
+       [obj->v()])
+       and [CPPfun_call(CPPaccess (Adot, obj, "v"), [])] (value: [obj.v()]).
        Bind temporaries with [auto&&] to extend lifetime, then reconstruct
        the accessor. *)
     let first_br =
@@ -2637,9 +2632,10 @@ and pp_cpp_stmt env args = function
     let is_value_type = first_br.smb_is_value_type in
     let scrut_obj_opt =
       match first_scrut with
-      | CPPmethod_call (obj, v_id, []) when Id.to_string v_id = "v" ->
+      | CPPaccess_call (Aarrow, obj, v_id, []) when Id.to_string v_id = "v" ->
         Some obj
-      | CPPfun_call (_, CPPmember (obj, v_id), {rev = []}) when Id.to_string v_id = "v" ->
+      | CPPfun_call (_, CPPaccess (Adot, obj, v_id), {rev = []})
+        when Id.to_string v_id = "v" ->
         Some obj
       | _ -> None
     in
@@ -2836,7 +2832,7 @@ and is_concrete_cpp_type = function
 
 (** Check if an expression is a method call whose return type is [std::any]. *)
 and expr_is_any_returning_method = function
-  | CPPmethod_call (CPPglob (n, _, _), _, _) -> method_returns_any n
+  | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) -> method_returns_any n
   | CPPfun_call (_, CPPglob (n, _, _), _) when lookup_method_this_pos n <> None ->
     method_returns_any n
   | CPPfun_call (_, CPPget' (_, n), _) -> method_returns_any n

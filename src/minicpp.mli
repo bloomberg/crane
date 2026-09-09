@@ -352,6 +352,13 @@ and call_params =
       (** The callee's parameter types are not Crane-level types, or are not
           known here. *)
 
+(** How a member name attaches to the object in front of it.  Scope
+    resolution is not one of these: [::] takes a namespace or a type, not an
+    object, so it is {!CPPscope} rather than a third token here. *)
+and obj_access =
+  | Adot (** [obj.member] *)
+  | Aarrow (** [obj->member] *)
+
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -407,17 +414,15 @@ and cpp_expr =
   | CPPthis  (** this pointer in method context *)
   | CPPshared_from_this of cpp_type
       (** std::const_pointer_cast<T>(shared_from_this()) *)
-  | CPPmember of cpp_expr * Id.t
-      (** Member access with dot operator: expr.member *)
-  | CPParrow of cpp_expr * Id.t
-      (** Member access with arrow operator: expr->member *)
-  | CPPmethod_call of cpp_expr * Id.t * cpp_expr list
-      (** Method call: object, method name, arguments *)
-  | CPPdot_method_call of cpp_expr * Id.t * cpp_expr list
-      (** Dot method call: object.method(args) *)
-  | CPPqualified of cpp_expr * Id.t  (** Scope resolution: expr::id *)
-  | CPPqualified_tpl of cpp_expr * Id.t * cpp_type list
-      (** Member template of a dependent base: [expr::template id<tys...>] *)
+  | CPPaccess of obj_access * cpp_expr * Id.t
+      (** Member access: [obj.member] or [obj->member], the token being the
+          only difference between the two. *)
+  | CPPaccess_call of obj_access * cpp_expr * Id.t * cpp_expr list
+      (** The applied form of {!CPPaccess}: object, method name, arguments. *)
+  | CPPscope of cpp_expr * Id.t * cpp_type list
+      (** Scope resolution: [expr::id], or [expr::template id<tys...>] when
+          the type list is non-empty.  Template arguments belong here and
+          nowhere else, [.] and [->] having no such form. *)
   | CPPqualified_t of cpp_type * Id.t  (** Type-qualified member: Type::id *)
   | CPPconvertible_to of cpp_type  (** std::convertible_to<T> type trait *)
   | CPPabort of string * cpp_type

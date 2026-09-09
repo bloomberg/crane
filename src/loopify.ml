@@ -110,7 +110,7 @@ let id_own          = Id.of_string "_own"
 let id_uniq         = Id.of_string "_uniq"
 let id_rstep        = Id.of_string "_rs"
 
-(* Method names used with CPPmethod_call / CPPmember *)
+(* Method names used with CPPaccess / CPPaccess_call *)
 let id_get          = Id.of_string "get"
 
 (* [lazy_]: the factory a coinductive type's cofixpoint body returns.  Its
@@ -540,9 +540,9 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
     match e with
     | CPPthis -> true
     | CPPvar v -> Id.Set.mem v !stable
-    | CPPderef e | CPPmove e | CPPmember (e, _) | CPParrow (e, _)
+    | CPPderef e | CPPmove e | CPPaccess (_, e, _)
     | CPPget (e, _) | CPPget' (e, _)
-    | CPPmethod_call (e, _, _) | CPPdot_method_call (e, _, _) ->
+    | CPPaccess_call (_, e, _, _) ->
       denotes_stable e
     | CPPfun_call (_, f, args) -> List.exists denotes_stable (f :: to_reversed args)
     | _ -> false
@@ -558,7 +558,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
   in
   let copies_its_initialiser e ty =
     ( match e with
-    | CPPmethod_call _ | CPPdot_method_call _ | CPPfun_call _ -> true
+    | CPPaccess_call _ | CPPfun_call _ -> true
     | _ -> false )
     && match ty with Declare t -> not (is_alias_ty t) | Existing -> true
   in
@@ -589,7 +589,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
   List.iter walk body;
   !unstable
 
-(** Build a call checker for struct methods. Matches [CPPmethod_call] on
+(** Build a call checker for struct methods. Matches [CPPaccess_call] on
     [method_name] and, when [has_self_param] is true, includes the receiver
     pointer as the first argument. Also matches [CPPglob] calls that resolve to
     the same method name.
@@ -634,7 +634,7 @@ let method_checker
  in
  fun e ->
    match e with
-   | CPPmethod_call (recv, id, args) when Id.equal id method_name ->
+   | CPPaccess_call (Aarrow, recv, id, args) when Id.equal id method_name ->
      if has_self_param then
        Some {cs_args = recv_to_self recv :: args; cs_is_tail = false; cs_recv = Some recv}
      else
@@ -688,8 +688,8 @@ let rec collect_expr (check : call_checker) expr =
       match expr with
       | CPPfun_call (_, _, args) ->
         List.concat_map (collect_expr check) (to_reversed args)
-      | CPPmethod_call (_, _, args) -> List.concat_map (collect_expr check) args
-      | CPPdot_method_call (_, _, args) -> List.concat_map (collect_expr check) args
+      | CPPaccess_call (_, _, _, args) ->
+        List.concat_map (collect_expr check) args
       | _ -> []
     in
     cs :: nested
@@ -698,9 +698,9 @@ let rec collect_expr (check : call_checker) expr =
   | CPPfun_call (_, f, args) ->
     collect_expr check f
     @ List.concat_map (collect_expr check) (to_reversed args)
-  | CPPmethod_call (obj, _id, args) ->
+  | CPPaccess_call (Aarrow, obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
-  | CPPdot_method_call (obj, _id, args) ->
+  | CPPaccess_call (Adot, obj, _id, args) ->
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     collect_expr check e
@@ -717,10 +717,8 @@ let rec collect_expr (check : call_checker) expr =
       (collect_stmts check ~in_visitor:false stmts)
   | CPPget (e, _)
    |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _)
-   |CPPqualified_tpl (e, _, _) -> collect_expr check e
+   |CPPaccess (_, e, _)
+   |CPPscope (e, _, _) -> collect_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -822,7 +820,7 @@ and collect_stmt check ~in_visitor = function
         match e with
         | CPPfun_call (_, _, args) ->
         List.concat_map (collect_expr check) (to_reversed args)
-        | CPPmethod_call (_, _, args) ->
+        | CPPaccess_call (Aarrow, _, _, args) ->
           List.concat_map (collect_expr check) args
         | _ -> []
       in
@@ -900,7 +898,7 @@ let rec count_calls_expr (check : call_checker) expr =
     count_calls_expr check f
     + List.fold_left
         (fun acc a -> acc + count_calls_expr check a) 0 (to_reversed args)
-  | CPPmethod_call (obj, _, args) ->
+  | CPPaccess_call (Aarrow, obj, _, args) ->
     count_calls_expr check obj
     + List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
@@ -909,10 +907,8 @@ let rec count_calls_expr (check : call_checker) expr =
     count_calls_expr check e1 + count_calls_expr check e2
   | CPPget (e, _)
    |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _)
-   |CPPqualified_tpl (e, _, _) -> count_calls_expr check e
+   |CPPaccess (_, e, _)
+   |CPPscope (e, _, _) -> count_calls_expr check e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -1394,12 +1390,14 @@ let compute_binder_provenance params body =
     | CPPvar x ->
       if is_param x then Some x
       else (match List.assoc_opt x !tbl with Some p -> p | None -> None)
-    | CPPderef e | CPPmove e | CPPmember (e, _) | CPParrow (e, _)
+    | CPPderef e | CPPmove e | CPPaccess (Adot, e, _) | CPPaccess (Aarrow, e, _)
     | CPPget (e, _) | CPPget' (e, _) | CPPunop (_, e) ->
       prov_of e
     | CPPfun_call (_, CPPvar f, {rev = [e]}) when Id.equal f id_crane_raw -> prov_of e
     (* [x.v()] / [std::get<K>(e)]: projections that stay inside [e]'s storage. *)
-    | CPPfun_call (_, CPPmember (e, _), {rev = []}) | CPPmethod_call (e, _, []) -> prov_of e
+    | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []})
+     |CPPaccess_call (Aarrow, e, _, []) ->
+      prov_of e
     | CPPstd_get (_, _, Some e) -> prov_of e
     | _ -> None
   in
@@ -1476,7 +1474,7 @@ let tail_pointer_safe_flags check params body ?(binding_env = []) () =
 
 (** Rewrite references to pointer-safe shadow variables ([const T*]) so that
     reads dereference the pointer and method calls use [->] via
-    [CPPmethod_call].
+    [CPPaccess_call].
 
     Pointer-safe shadows store a [const T*] instead of copying the value.
     Code originally written against [const T&] needs adjustment:
@@ -1502,10 +1500,11 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
     expr_exists (function CPPvar id when is_ptr_shadow id -> true | _ -> false) e
   in
   let rec expr = function
-    | CPPfun_call (_, CPPmember (CPPvar id, meth), args) when is_ptr_shadow id ->
+    | CPPfun_call (_, CPPaccess (Adot, CPPvar id, meth), args)
+      when is_ptr_shadow id ->
       (* A method call's arguments are in source order, a function call's are
          not: the reversal has to come off here. *)
-      CPPmethod_call (CPPvar id, meth, List.map expr (call_args args))
+      CPPaccess_call (Aarrow, CPPvar id, meth, List.map expr (call_args args))
     | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
@@ -2102,7 +2101,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
     let rec walk = function
       | CPPmove _ | CPPlambda _ -> ()
       | CPPvar id -> add (Id.to_string id)
-      | CPPmember (CPPvar fid, field) when Id.equal fid id_f ->
+      | CPPaccess (Adot, CPPvar fid, field) when Id.equal fid id_f ->
         add (frame_field_key field)
       | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
     in
@@ -2142,7 +2141,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
       | CPPlambda _ as e -> e
       | CPPvar id as e ->
         if Hashtbl.mem to_move (Id.to_string id) then CPPmove e else e
-      | CPPmember (CPPvar fid, field) as e
+      | CPPaccess (Adot, CPPvar fid, field) as e
         when Id.equal fid id_f ->
         let key = frame_field_key field in
         if Hashtbl.mem to_move key then CPPmove e else e
@@ -2595,7 +2594,7 @@ let rec decompose_single_call check expr =
        same positions, so it takes the arguments as stored. *)
     decompose_funcall check res f (to_reversed args)
   (* Method call: obj.method(args) where obj has the recursive call *)
-  | CPPmethod_call (obj, method_id, margs)
+  | CPPaccess_call (Aarrow, obj, method_id, margs)
     when count_calls_expr check obj >= 1
          && List.for_all (fun a -> count_calls_expr check a = 0) margs ->
     ( match decompose_single_call check obj with
@@ -2609,7 +2608,8 @@ let rec decompose_single_call check expr =
             (fun saved result ->
               let d_saved = list_take n_d saved in
               let method_args = list_drop n_d saved in
-              CPPmethod_call (d.d_rebuild d_saved result, method_id, method_args) );
+              CPPaccess_call
+                (Aarrow, d.d_rebuild d_saved result, method_id, method_args) );
         }
     | None ->
     match check obj with
@@ -2619,7 +2619,8 @@ let rec decompose_single_call check expr =
           d_saved = margs;
           d_rec_args = cs.cs_args;
           d_rebuild =
-            (fun saved result -> CPPmethod_call (result, method_id, saved));
+            (fun saved result ->
+              CPPaccess_call (Aarrow, result, method_id, saved) );
         }
     | None -> None )
   (* Move wrapping a recursive expression *)
@@ -3170,7 +3171,7 @@ let try_tmc_classify check body =
     it; {!patch_cell_field} is the assignment. *)
 let cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr =
   let field_idx = n_args - 1 - rec_field_idx in
-  let v_mut = CPPmethod_call (ptr, id_v_mut, []) in
+  let v_mut = CPPaccess_call (Aarrow, ptr, id_v_mut, []) in
   ( CPPstd_get (cell_ty, Some (Id.of_string ctor_name), Some v_mut),
     cell_field_name ~cell_ty ~ctor_name field_idx )
 
@@ -3476,7 +3477,8 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
   in
   let token =
     Option.map
-      (fun _ -> CPPmove (CPPmember (CPPvar id_rstep, Id.of_string "token")))
+      (fun _ ->
+        CPPmove (CPPaccess (Adot, CPPvar id_rstep, Id.of_string "token")) )
       cursor
   in
   (* Generate unique cell names: _cell, _cell1, _cell2, ... *)
@@ -3568,10 +3570,10 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
       in
       List.filter (fun s -> not (is_cursor_update s)) shadow_updates
       @ [ Sexpr (CPPbinop ("=", CPPvar id_own,
-                           CPPmove (CPPmember (CPPvar id_rstep,
+                           CPPmove (CPPaccess (Adot, CPPvar id_rstep,
                                                Id.of_string "next"))));
           Sexpr (CPPbinop ("=", CPPvar cursor_id,
-                           CPPdot_method_call (CPPvar id_own, id_get, []))) ]
+                           CPPaccess_call (Adot, CPPvar id_own, id_get, []))) ]
   in
   step_decl @ cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
 
@@ -3740,10 +3742,8 @@ let derive_field_names (exprs : cpp_expr list) : Id.t list =
       match e with
       | CPPvar id -> Id.to_string id
       | CPPmove (CPPvar id) -> Id.to_string id
-      | CPPmethod_call (CPPvar id, _, []) -> Id.to_string id
-      | CPPdot_method_call (CPPvar id, _, []) -> Id.to_string id
-      | CPPmember (_, field_id) -> Id.to_string field_id
-      | CPParrow (_, field_id) -> Id.to_string field_id
+      | CPPaccess_call (_, CPPvar id, _, []) -> Id.to_string id
+      | CPPaccess (_, _, field_id) -> Id.to_string field_id
       | CPPderef (CPPvar id) -> Id.to_string id
       | CPPfun_call (_, _, {rev = [CPPvar id]}) -> Id.to_string id
       | CPPfun_call (_, _, {rev = [CPPmove (CPPvar id)]}) -> Id.to_string id
@@ -4014,7 +4014,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       | _ -> Tunresolved )
     | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, _) -> ret_ty
     | CPPfun_call (_, CPPglob _, _) -> Tunresolved
-    | CPPfun_call (_, CPPmember (inner, id), {rev = []})
+    | CPPfun_call (_, CPPaccess (Adot, inner, id), {rev = []})
       when String.equal (Id.to_string id) "get" ->
       (* shared_ptr::get() returns a raw pointer.
          Infer from the inner expression. *)
@@ -4070,17 +4070,15 @@ let rec free_vars_expr = function
   | CPPvar id -> [id]
   | CPPfun_call (_, f, args) ->
     free_vars_expr f @ List.concat_map free_vars_expr (to_reversed args)
-  | CPPmethod_call (obj, _, args) ->
+  | CPPaccess_call (_, obj, _, args) ->
     free_vars_expr obj @ List.concat_map free_vars_expr args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     free_vars_expr e
   | CPPbinop (_, e1, e2) -> free_vars_expr e1 @ free_vars_expr e2
   | CPPget (e, _)
    |CPPget' (e, _)
-   |CPPmember (e, _)
-   |CPParrow (e, _)
-   |CPPqualified (e, _)
-   |CPPqualified_tpl (e, _, _) -> free_vars_expr e
+   |CPPaccess (_, e, _)
+   |CPPscope (e, _, _) -> free_vars_expr e
   | CPPstructmk (_, _, args)
    |CPPstruct (_, _, args)
    |CPPstruct_id (_, _, args)
@@ -4324,7 +4322,7 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
     (fun i id ->
       let ty = List.nth cont_types i in
       let field_expr =
-        CPPmember (CPPvar (id_f),
+        CPPaccess (Adot, CPPvar (id_f),
                    List.nth field_names (offset + i))
       in
       match ty with
@@ -4381,19 +4379,20 @@ let register_frame frames_ref ~name ~saved_types ~saved_exprs ~env ~handler =
     The [call_counter] ref assigns sequential IDs (starting from 1). The
     [frames_ref] accumulates call frame info in order. *)
 
-(** Build a stack push expression. Uses [CPPfun_call(CPPmember(...))] so that
+(** Build a stack push expression. Uses
+    [CPPfun_call (CPPaccess (Adot, ...))] so that
     [CPPvar "_stack"] is visible to capture detection (ensuring [[&]] capture),
     and renders with [.] not [->]. *)
 let make_stack_push arg =
   Sexpr
     (CPPfun_call
-       (call_opaque, CPPmember (CPPvar (id_stack), id_emplace_back),
+       (call_opaque, CPPaccess (Adot, CPPvar (id_stack), id_emplace_back),
          of_reversed [arg] ) )
 
 (** Read the [i]-th saved field from frame variable [_f] using the given
     [names] list. Generates [_f.<name>] where [<name>] is [List.nth names i]. *)
 let frame_field_named names i =
-  CPPmember (CPPvar (id_f), List.nth names i)
+  CPPaccess (Adot, CPPvar (id_f), List.nth names i)
 
 (** Read [n] consecutive saved fields from frame [_f] using [names],
     starting at [offset]. *)
@@ -4413,7 +4412,7 @@ let move_for_frame ty expr =
      through unnoticed on types whose drain destructor had suppressed the move
      constructor, because the "move" silently resolved to the copy. *)
   let is_lvalue = function
-    | CPPvar _ | CPPderef _ | CPPmember _ -> true
+    | CPPvar _ | CPPderef _ | CPPaccess (Adot, _, _) -> true
     | _ -> false
   in
   match ty with
@@ -6237,7 +6236,7 @@ let make_param_copies ?(pointer_safe = []) varying_params =
   (* Helper: choose the right binding expression for a frame field access. *)
   let bind_field id ty =
     let stripped = strip_ref_type ty in
-    let f = CPPmember (CPPvar (id_f), id) in
+    let f = CPPaccess (Adot, CPPvar (id_f), id) in
     match stripped with
     | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
@@ -6268,11 +6267,11 @@ let make_param_copies ?(pointer_safe = []) varying_params =
           match borrowed_value_param_pointee ty with
           | Some t ->
             Sasgn (id, Declare (Tref (Tmod (TMconst, t))),
-                   CPPderef (CPPmember (CPPvar (id_f), id)))
+                   CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
           | None ->
             let stripped = strip_ref_type ty in
             Sasgn (id, Declare stripped,
-                   CPPmember (CPPvar (id_f), id))
+                   CPPaccess (Adot, CPPvar (id_f), id))
         else
           bind_field id ty)
       pointer_safe varying_params
@@ -6296,7 +6295,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     let field_idx expr =
       let base = match expr with CPPmove e -> e | e -> e in
       match base with
-      | CPPmember (CPPvar f, field_id) when Id.equal f id_f ->
+      | CPPaccess (Adot, CPPvar f, field_id) when Id.equal f id_f ->
         let rec find i = function
           | [] -> None
           | fn :: rest -> if Id.equal fn field_id then Some i else find (i + 1) rest
@@ -6316,10 +6315,11 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
   in
   let is_field_access_or_alias local_map field_names j expr =
     (* Strip CPPmove wrappers before pattern matching, since push arguments
-       are commonly [CPPmove (CPPvar x)] or [CPPmove (CPPmember (CPPvar _f, fld))]. *)
+       are commonly [CPPmove (CPPvar x)] or
+       [CPPmove (CPPaccess (Adot, CPPvar _f, fld))]. *)
     let expr = match expr with CPPmove e -> e | e -> e in
     match expr with
-    | CPPmember (CPPvar f, field_id) ->
+    | CPPaccess (Adot, CPPvar f, field_id) ->
       Id.equal f id_f
       && j < List.length field_names
       && Id.equal field_id (List.nth field_names j)
@@ -6331,7 +6331,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
       (match List.assoc_opt x local_map with
        | Some k -> k = j
        | None -> false)
-    | CPPderef (CPPmember (CPPvar f, field_id)) ->
+    | CPPderef (CPPaccess (Adot, CPPvar f, field_id)) ->
       Id.equal f id_f
       && j < List.length field_names
       && Id.equal field_id (List.nth field_names j)
@@ -6485,7 +6485,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
         (match arg with
          | CPPvar x ->
            (match List.assoc_opt x binding_env with
-            | Some (CPPderef (CPPmember (CPPvar f, _)))
+            | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
               when Id.equal f id_f ->
               CPPunop ("&", arg)
             | _ ->
@@ -6495,7 +6495,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
         match arg with
         | CPPderef (CPPvar x) ->
           (match List.assoc_opt x binding_env with
-           | Some (CPPderef (CPPmember (CPPvar f, _)))
+           | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
              when Id.equal f id_f ->
              CPPunop ("&", CPPvar x)
            | Some (CPPderef sp) ->
@@ -6506,7 +6506,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
           raw_of inner
         | CPPvar x ->
           (match List.assoc_opt x binding_env with
-           | Some (CPPderef (CPPmember (CPPvar f, _)))
+           | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
              when Id.equal f id_f ->
              CPPunop ("&", arg)
            | Some (CPPderef sp) ->
@@ -6547,9 +6547,10 @@ let make_owned_param_matches owned_names stmts =
       match branches with
       | br :: _ ->
         let is_owned_param =
-          (* Value-type inductives: scrutinee = CPPfun_call(CPPmember(id, "v"), []) *)
+          (* Value-type inductives:
+             scrutinee = CPPfun_call (CPPaccess (Adot, id, "v"), []) *)
           match br.smb_scrutinee with
-          | CPPfun_call (_, CPPmember (CPPvar id, v_id), {rev = []})
+          | CPPfun_call (_, CPPaccess (Adot, CPPvar id, v_id), {rev = []})
             when Id.equal v_id id_v ->
             List.exists (Id.equal id) owned_names
           | _ -> false
@@ -6603,7 +6604,7 @@ let optimize_frame_push_args frame_field_types stmts =
       &&
       match arg with
       | CPPmove _ -> false
-      | CPPmember (CPPvar id, _) when Id.equal id id_f -> true
+      | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
       | CPPvar id when Id.equal id id_result -> true
       | CPPvar id when List.exists (Id.equal id) owned_vars -> true
       | _ -> false
@@ -6667,7 +6668,7 @@ let optimize_frame_push_args frame_field_types stmts =
         &&
         match arg with
         | CPPmove _ -> false
-        | CPPmember (CPPvar id, _) when Id.equal id id_f -> true
+        | CPPaccess (Adot, CPPvar id, _) when Id.equal id id_f -> true
         | CPPvar id when Id.equal id id_result -> true
         | CPPvar id when List.exists (Id.equal id) owned_vars ->
           Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
@@ -6799,11 +6800,11 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       Sasgn (id_frame, Declare frame_ty,
              CPPmove
                (CPPfun_call
-                  (call_opaque, CPPmember (CPPvar (id_stack),
+                  (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
                               id_back), of_reversed [])));
       Sexpr
         (CPPfun_call
-           (call_opaque, CPPmember (CPPvar (id_stack),
+           (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
                        id_pop_back), of_reversed []));
       dispatch_stmt;
     ]
@@ -6825,7 +6826,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       Swhile
         (CPPunop ("!",
                   CPPfun_call
-                    (call_opaque, CPPmember (CPPvar (id_stack),
+                    (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
                                 id_empty), of_reversed [])),
          loop_body);
       Sreturn (Some (CPPvar (id_result)));
@@ -6927,9 +6928,9 @@ let rec rewrite_field_access_for_decltype env expr =
         | Tmod (TMconst, t) -> t
         | t -> t
       in
-      CPPmember (CPPdeclval (Tref struct_ty), field)
+      CPPaccess (Adot, CPPdeclval (Tref struct_ty), field)
     | None -> expr )
-  | CPParrow (CPPvar id, field) ->
+  | CPPaccess (Aarrow, CPPvar id, field) ->
     (* Arrow access on a pointer variable — used by Smatch bindings
        ([_m->d_field] from [std::get_if]) and loopify frame dispatch. *)
     ( match lookup_var_type env id with
@@ -6940,7 +6941,7 @@ let rec rewrite_field_access_for_decltype env expr =
         | Tptr (Tmod (TMconst, t)) | Tptr t -> t
         | t -> t
       in
-      CPPmember (CPPdeclval (Tref pointee_ty), field)
+      CPPaccess (Adot, CPPdeclval (Tref pointee_ty), field)
     | None -> expr )
   | CPPlambda
     { cl_params = params;
@@ -7009,7 +7010,7 @@ let fix_handler_bindings field_names cf_ps handler =
   if ps_field_ids = [] then handler
   else
     let is_ps_field_access = function
-      | CPPmember (CPPvar f, field_id)
+      | CPPaccess (Adot, CPPvar f, field_id)
         when Id.equal f id_f ->
         List.exists (Id.equal field_id) ps_field_ids
       | _ -> false
@@ -8186,7 +8187,7 @@ let loopify_inner_lambdas ~pp_expr ~tparams body =
     {v
       Sreturn(Some(
         CPPfun_call(
-          CPPqualified(type_expr, "lazy_"),
+          CPPscope (type_expr, "lazy_", []),
           [CPPlambda
             { cl_params = [];
               cl_ret = Some ret_ty;
@@ -8216,7 +8217,7 @@ let has_lazy_body body =
   in
   match last_stmt body with
   | Some (Sreturn (Some (CPPfun_call (_, 
-      CPPqualified (_, lazy_id),
+      CPPscope (_, lazy_id, []),
       {rev = [CPPlambda {cl_params = {rev = []}; cl_ret = Some _; _}]}))))
     when Id.equal lazy_id id_lazy -> true
   | _ -> false
@@ -8226,7 +8227,7 @@ let has_lazy_body body =
     inside branches rather than at the top level (where {!has_lazy_body}
     catches it). *)
 let is_lazy_factory_call = function
-  | CPPfun_call (_, CPPqualified (_, lazy_id), _) ->
+  | CPPfun_call (_, CPPscope (_, lazy_id, []), _) ->
     Id.equal lazy_id id_lazy
   | _ -> false
 
@@ -8876,7 +8877,7 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
          [cs_args] is whatever [recv_to_self] produced, always a [CPPunop
          ("&", _)] or a [crane_raw] call and so never one of the three safe
          shapes.  The guard therefore fired for *every* method whose recursion
-         went through a [CPPmethod_call], declining 120 functions across the
+         went through a [CPPaccess_call], declining 120 functions across the
          test corpus that have no value receiver at all. *)
       let calls = collect_stmts self_check ~in_visitor:false body_with_self in
       (* A receiver that names existing storage is only safe when that storage
@@ -8934,11 +8935,11 @@ let transform_method ~pp_expr ~tparams ~self_ty mf =
            replaced by a reference to the parking slot, or [None]. *)
         let park e =
           match e with
-          | CPPmethod_call (recv, id, args)
+          | CPPaccess_call (Aarrow, recv, id, args)
             when Id.equal id mf.mf_name
                  && is_value_recv recv
                  && not (List.exists mentions_self args) ->
-            Some (recv, CPPmethod_call (CPPvar id_self_store, id, args))
+            Some (recv, CPPaccess_call (Aarrow, CPPvar id_self_store, id, args))
           | CPPfun_call (_, CPPglob (r, targs, x), args)
             when Id.equal (Label.to_id (Common.label_of_r r)) mf.mf_name
                  && List.length (to_reversed args) > n_params ->
