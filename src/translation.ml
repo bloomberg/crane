@@ -6226,6 +6226,24 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | Tglob (_, tys_orig, _) -> tys_orig
         | _ -> []
       in
+      (* The result type of a function-valued constructor field whose declared
+         type is [Tvar i].  The [MLcons]'s own type arguments say what [i]
+         stands for -- [nat -> nat], say -- so peeling off the [n_params]
+         arrows the generated lambda consumes leaves the codomain.
+
+         This is the only source for the answer: reading it back off the
+         lambda that was already generated would take one branch's [return]
+         for the whole function's result type.  [None] where the type
+         arguments do not reach that far, as for a type-INDEXED inductive,
+         which has none; each caller then supplies its own default. *)
+      let field_fun_ret_ty i n_params =
+        match List.nth_opt ty_ml_tparams (i - 1) with
+        | None -> None
+        | Some actual_ml_ty -> (
+          match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
+          | Some ret_ml -> Some (strip_cpp_ref_const (cpp_of_ml env ret_ml))
+          | None -> None )
+      in
       let ctor_temps = match ty with
         | Tglob (n, tys_orig, _) ->
           let tys_filt = match n with
@@ -6390,14 +6408,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | None -> (ty, id_opt)
                 ) new_params in
                 let erased_ret_ty =
-                  let actual_ml_ty =
-                    try List.nth ty_ml_tparams (i - 1)
-                    with _ -> Miniml.Tunknown
-                  in
-                  match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
-                  | Some ret_ml ->
-                    let r = cpp_of_ml env ret_ml in
-                    strip_cpp_ref_const r
+                  match field_fun_ret_ty i n_params with
+                  | Some t -> t
                   | None -> Tany
                 in
                 let new_ret_ty = match ret_ty_opt with
@@ -6545,14 +6557,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 ) new_params in
                 let erased_param_tys = List.map (fun _ -> Tany) renamed_params in
                 let erased_ret_ty =
-                  let actual_ml_ty =
-                    try List.nth ty_ml_tparams (i - 1)
-                    with _ -> Miniml.Tunknown
-                  in
-                  match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
-                  | Some ret_ml ->
-                    let r = cpp_of_ml env ret_ml in
-                    strip_cpp_ref_const r
+                  match field_fun_ret_ty i n_params with
+                  | Some t -> t
                   | None -> Tany
                 in
                 let new_ret_ty = match ret_ty_opt with
@@ -6584,64 +6590,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let params = to_reversed params in
                 let param_types = List.map (fun (ty, _) ->
                   strip_cpp_ref_const ty) params in
-                (* Build a name→type map from the lambda's parameter list. *)
-                let param_env =
-                  List.filter_map
-                    (fun (ty, id_opt) ->
-                      Option.map (fun id -> (id, strip_cpp_ref_const ty)) id_opt)
-                    params
-                in
-                (* Infer return type from the first Sreturn in the body. *)
-                let rec infer_ret_from_expr = function
-                  | CPPvar id ->
-                    List.assoc_opt id param_env
-                  | CPPbinop (_, a, b) ->
-                    ( match infer_ret_from_expr a with
-                    | Some _ as r -> r
-                    | None -> infer_ret_from_expr b )
-                  | _ -> None
-                in
-                let rec infer_ret_from_stmts = function
-                  | [] -> None
-                  | Sreturn (Some e) :: _ -> infer_ret_from_expr e
-                  | Sif (_, t, f) :: rest ->
-                    ( match infer_ret_from_stmts t with
-                    | Some _ as r -> r
-                    | None ->
-                      match infer_ret_from_stmts f with
-                      | Some _ as r -> r
-                      | None -> infer_ret_from_stmts rest )
-                  | Sblock ss :: rest ->
-                    ( match infer_ret_from_stmts ss with
-                    | Some _ as r -> r
-                    | None -> infer_ret_from_stmts rest )
-                  | _ :: rest -> infer_ret_from_stmts rest
-                in
                 let ret_ty = match ret_ty_opt with
                   | Some ty -> strip_cpp_ref_const ty
                   | None ->
-                    (* Try the lambda body first (works when the return expression
-                       contains a lambda parameter). *)
-                    ( match infer_ret_from_stmts body_stmts with
-                    | Some ty -> ty
-                    | None ->
-                      (* Fall back: recover the return type from the MLcons type
-                         arguments.  For [ft = Tvar i], the actual ML type is
-                         [ty_ml_tparams.(i-1)] = e.g. [nat -> nat].  Strip as many
-                         arrow levels as there are C++ params to get the codomain.
-                         This works for type-PARAMETER inductives (ind_nparams > 0);
-                         for type-INDEXED inductives the tys list may be empty. *)
-                      let actual_ml_ty =
-                        try List.nth ty_ml_tparams (i - 1)
-                        with Failure _ | Invalid_argument _ ->
-                          Tmeta {Miniml.id = -1; Miniml.contents = None}
-                      in
-                      let n_params = List.length param_types in
-                      match strip_tarr_n n_params (resolve_tmeta actual_ml_ty) with
-                      | Some ret_ml ->
-                        let r = cpp_of_ml env ret_ml in
-                        strip_cpp_ref_const r
-                      | None -> Tvoid )
+                    ( match
+                        field_fun_ret_ty i (List.length param_types)
+                      with
+                    | Some t -> t
+                    | None -> Tvoid )
                 in
                 Cpp_erasure.converting_ctor (Tfun (param_types, ret_ty)) [expr]
               | _ -> expr )
