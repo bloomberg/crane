@@ -12,12 +12,12 @@ uint64_t LoopifyNumericSequences::collatz_length_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;
@@ -345,7 +345,7 @@ uint64_t LoopifyNumericSequences::dec_to_bin_fuel(
   /// _Resume1: saves [_s0, _s1], resumes after recursive call with _result.
   struct _Resume1 {
     uint64_t _s0;
-    std::decay_t<decltype(UINT64_C(10))> _s1;
+    uint64_t _s1;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;

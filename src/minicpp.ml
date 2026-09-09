@@ -389,6 +389,8 @@ and cpp_expr =
   | CPPtypename_qualified of cpp_type * Id.t
     (* typename T::Nested, usable where a dependent nested struct name is
        required as an expression/type-name token. *)
+  | CPPlit of cpp_type * string
+    (* A literal rendered verbatim, at the type it has. *)
   | CPPraw of string
   | CPPrt of Crane_rt.helper
     (* Raw C++ expression, printed verbatim. Used for low-level operations
@@ -797,6 +799,7 @@ let map_expr
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
   | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
+  | CPPlit (ty, s) -> CPPlit (ft ty, s)
   | CPPraw _ | CPPrt _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
   | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
@@ -894,7 +897,8 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
-  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _ | CPPrt _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
+   |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (_, f, args) -> on_expr f; List.iter on_expr args.rev
@@ -975,7 +979,8 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
-  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPraw _ | CPPrt _
+  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
+   |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
   | CPPlambda (_, _, stmts, _) -> on_stmts acc stmts

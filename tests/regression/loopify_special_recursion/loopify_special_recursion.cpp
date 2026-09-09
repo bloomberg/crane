@@ -295,17 +295,17 @@ uint64_t LoopifySpecialRecursion::categorize_by(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype(UINT64_C(3))> _s0;
+    uint64_t _s0;
   };
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    std::decay_t<decltype(UINT64_C(2))> _s0;
+    uint64_t _s0;
   };
 
   /// _Resume3: saves [_s0], resumes after recursive call with _result.
   struct _Resume3 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2, _Resume3>;

@@ -219,14 +219,14 @@ struct LoopifyExprVariants {
       /// _After_Add: saves [a0, _s1], dispatches next recursive call.
       struct _After_Add {
         cond_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _After_Cond: saves [a1, a0, _s2], dispatches next recursive call.
       struct _After_Cond {
         const cond_expr *a1;
         const cond_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       /// _After_Cond_1: saves [_result, a0, _s2], dispatches next recursive
@@ -234,14 +234,14 @@ struct LoopifyExprVariants {
       struct _After_Cond_1 {
         uint64_t _result;
         const cond_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Cond: receives partial results, combines with _result from
@@ -249,7 +249,7 @@ struct LoopifyExprVariants {
       struct _Combine_Cond {
         uint64_t _result_0;
         uint64_t _result_1;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _After_Cond,
@@ -732,40 +732,40 @@ struct LoopifyExprVariants {
       /// _After_AAdd: saves [a0, _s1], dispatches next recursive call.
       struct _After_AAdd {
         arith_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _After_ADiv: saves [a0, _s1], dispatches next recursive call.
       struct _After_ADiv {
         arith_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _After_AMul: saves [a0, _s1], dispatches next recursive call.
       struct _After_AMul {
         arith_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_AAdd: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AAdd {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_ADiv: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ADiv {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_AMul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_AMul {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_AAdd, _After_ADiv, _After_AMul,
@@ -2075,19 +2075,19 @@ struct LoopifyExprVariants {
       /// _After_LAppend: saves [a0, _s1], dispatches next recursive call.
       struct _After_LAppend {
         list_expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_LAppend: receives partial results, combines with _result from
       /// final call.
       struct _Combine_LAppend {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Resume_LCons: saves [_s0], resumes after recursive call with _result.
       struct _Resume_LCons {
-        std::decay_t<decltype(UINT64_C(1))> _s0;
+        uint64_t _s0;
       };
 
       using _Frame =

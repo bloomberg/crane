@@ -92,7 +92,7 @@ struct LoopifyTreeVariants {
       struct _After_TNode {
         const ternary *a2;
         const ternary *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       /// _After_TNode_1: saves [_result, a0, _s2], dispatches next recursive
@@ -100,7 +100,7 @@ struct LoopifyTreeVariants {
       struct _After_TNode_1 {
         uint64_t _result;
         const ternary *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       /// _Combine_TNode: receives partial results, combines with _result from
@@ -108,7 +108,7 @@ struct LoopifyTreeVariants {
       struct _Combine_TNode {
         uint64_t _result_0;
         uint64_t _result_1;
-        std::decay_t<decltype(UINT64_C(1))> _s2;
+        uint64_t _s2;
       };
 
       using _Frame =

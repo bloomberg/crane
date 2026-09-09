@@ -96,9 +96,9 @@ LoopifyPatterns::deep_nest(uint64_t n) { /// _Enter: captures varying parameters
   /// _Resume_m: saves [_s0, _s1, _s2], resumes after recursive call with
   /// _result.
   struct _Resume_m {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
-    std::decay_t<decltype(UINT64_C(1))> _s1;
-    std::decay_t<decltype(UINT64_C(1))> _s2;
+    uint64_t _s0;
+    uint64_t _s1;
+    uint64_t _s2;
   };
 
   using _Frame = std::variant<_Enter, _Resume_m>;

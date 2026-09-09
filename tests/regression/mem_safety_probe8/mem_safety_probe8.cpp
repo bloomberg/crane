@@ -16,7 +16,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(
   /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe8::tree *a0;
-    std::decay_t<decltype(UINT64_C(0))> _s1;
+    uint64_t _s1;
     uint64_t a1;
   };
 
@@ -76,7 +76,7 @@ uint64_t MemSafetyProbe8::tree_weighted(
   struct _After_Node {
     uint64_t _s0;
     const MemSafetyProbe8::tree *a0;
-    std::decay_t<decltype(UINT64_C(0))> _s2;
+    uint64_t _s2;
     uint64_t _s3;
   };
 
@@ -228,7 +228,7 @@ uint64_t MemSafetyProbe8::tree_flatten(
   /// _After_Node: saves [a0, _s1, a1], dispatches next recursive call.
   struct _After_Node {
     const MemSafetyProbe8::tree *a0;
-    std::decay_t<decltype(UINT64_C(0))> _s1;
+    uint64_t _s1;
     uint64_t a1;
   };
 

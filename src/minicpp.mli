@@ -422,10 +422,21 @@ and cpp_expr =
           only be asked inside an {!Sif_constexpr}. *)
   | CPPtypename_qualified of cpp_type * Id.t
       (** typename T::Nested *)
+  | CPPlit of cpp_type * string
+      (** A literal rendered verbatim, at the type it has.
+
+          Distinct from {!CPPraw}, which is an arbitrary snippet whose type
+          nothing knows: a literal is precisely the case where the producer
+          does know -- a numeral mapping renders [UINT64_C(1)] through a
+          format string it holds alongside the C++ type the numeral inductive
+          extracts to.  Spelling the value but dropping the type left
+          consumers to guess, and {!Loopify} guessed
+          [std::decay_t<decltype(UINT64_C(1))>]. *)
   | CPPraw of string
       (** Raw C++ expression code, from a user-supplied extraction template or
           a snippet Crane assembles as text.  A reference to the Crane runtime
-          is a {!CPPrt}, not one of these. *)
+          is a {!CPPrt}, not one of these.  A literal belongs in a
+          {!CPPlit}. *)
   | CPPrt of Crane_rt.helper
       (** A Crane runtime helper, named rather than spelled. *)
   | CPPbinop of string * cpp_expr * cpp_expr

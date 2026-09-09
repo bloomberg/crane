@@ -173,7 +173,7 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(
   /// _Resume1: saves [n, _s1], resumes after recursive call with _result.
   struct _Resume1 {
     uint64_t n;
-    std::decay_t<decltype(UINT64_C(1))> _s1;
+    uint64_t _s1;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;

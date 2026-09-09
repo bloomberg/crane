@@ -190,7 +190,7 @@ uint64_t LoopifyListOfLists::list_len(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

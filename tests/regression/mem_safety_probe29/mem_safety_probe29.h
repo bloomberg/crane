@@ -727,27 +727,27 @@ struct MemSafetyProbe29 {
       /// _After_Add: saves [a0, _s1], dispatches next recursive call.
       struct _After_Add {
         expr *a0;
-        std::decay_t<decltype(UINT64_C(0))> _s1;
+        uint64_t _s1;
       };
 
       /// _After_Mul: saves [a0, _s1], dispatches next recursive call.
       struct _After_Mul {
         expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Add: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Add {
         inner _result;
-        std::decay_t<decltype(UINT64_C(0))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Mul: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Mul {
         inner _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Add, _After_Mul, _Combine_Add,

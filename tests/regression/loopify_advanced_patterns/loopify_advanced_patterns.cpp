@@ -10,7 +10,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -81,7 +81,7 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;

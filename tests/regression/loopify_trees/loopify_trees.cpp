@@ -213,7 +213,7 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
 
   /// _After2: saves [_s0, a0], dispatches next recursive call.
   struct _After2 {
-    std::decay_t<decltype(UINT64_C(0))> _s0;
+    uint64_t _s0;
     const LoopifyTrees::tree<uint64_t> *a0;
   };
 

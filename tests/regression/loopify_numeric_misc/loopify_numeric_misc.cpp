@@ -101,7 +101,7 @@ uint64_t LoopifyNumericMisc::count_even(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -144,7 +144,7 @@ uint64_t LoopifyNumericMisc::count_odd(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype(UINT64_C(1))> _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;

@@ -107,27 +107,27 @@ struct WhereClause {
       /// _After_Plus: saves [a0, _s1], dispatches next recursive call.
       struct _After_Plus {
         Expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _After_Times: saves [a0, _s1], dispatches next recursive call.
       struct _After_Times {
         Expr *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Plus: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Plus {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       /// _Combine_Times: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Times {
         uint64_t _result;
-        std::decay_t<decltype(UINT64_C(1))> _s1;
+        uint64_t _s1;
       };
 
       using _Frame = std::variant<_Enter, _After_Plus, _After_Times,

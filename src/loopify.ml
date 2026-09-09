@@ -729,6 +729,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPstd_holds_alternative _
    |CPPdeclval _
    |CPPtypename_qualified _
+   |CPPlit _
    |CPPraw _
    |CPPrt _
    |CPPbool _
@@ -3927,6 +3928,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       let tl = infer_saved_type tparams env lhs in
       if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
+    | CPPlit (ty, _) -> strip_ref_and_const_type ty
     | CPPfun_call (Ryields ty, _, _) ->
       (* The call says what it yields; nothing below can improve on that, and
          a guess that disagreed with it would be a bug. *)

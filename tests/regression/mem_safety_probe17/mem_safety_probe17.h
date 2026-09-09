@@ -412,7 +412,7 @@ struct MemSafetyProbe17 {
         const qtree *a3;
         const qtree *a1;
         const qtree *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s3;
+        uint64_t _s3;
       };
 
       /// _After_QNode_1: saves [_result, a1, a0, _s3], dispatches next
@@ -421,7 +421,7 @@ struct MemSafetyProbe17 {
         uint64_t _result;
         const qtree *a1;
         const qtree *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s3;
+        uint64_t _s3;
       };
 
       /// _After_QNode_2: saves [_result_0, _result_1, a0, _s3], dispatches next
@@ -430,7 +430,7 @@ struct MemSafetyProbe17 {
         uint64_t _result_0;
         uint64_t _result_1;
         const qtree *a0;
-        std::decay_t<decltype(UINT64_C(1))> _s3;
+        uint64_t _s3;
       };
 
       /// _Combine_QNode: receives partial results, combines with _result from
@@ -439,7 +439,7 @@ struct MemSafetyProbe17 {
         uint64_t _result_0;
         uint64_t _result_1;
         uint64_t _result_2;
-        std::decay_t<decltype(UINT64_C(1))> _s3;
+        uint64_t _s3;
       };
 
       using _Frame = std::variant<_Enter, _After_QNode, _After_QNode_1,
