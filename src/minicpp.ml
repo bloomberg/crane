@@ -110,10 +110,10 @@ type cpp_type =
        parameter nor a qualified type. *)
   | Tid of Id.t * cpp_type list
     (* Simple Id-based type, for local names like nested structs *)
-  | Tid_external of Id.t * cpp_type list
+  | Tid_external of string * cpp_type list
     (* A named type that is never struct-qualified, unlike [Tid]: a type from
        an included header, a builtin scalar, or a struct local to a function
-       body.  The name is emitted verbatim. *)
+       body.  The name is C++ text, emitted verbatim. *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
   | Tfun of cpp_type list * cpp_type
   | Tmod of cpp_tymod * cpp_type

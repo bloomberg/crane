@@ -102,10 +102,12 @@ type cpp_type =
           by substituting a resolution map. *)
   | Tid of Id.t * cpp_type list
       (** Local type identifier with type arguments, for nested structs *)
-  | Tid_external of Id.t * cpp_type list
+  | Tid_external of string * cpp_type list
       (** A named type emitted verbatim, never struct-qualified (unlike
           {!Tid}): a type from an included header, a builtin scalar, or a
-          struct local to a function body. *)
+          struct local to a function body.  The name is a [string] rather than
+          an [Id.t] because it is C++ text, not a Rocq identifier: several of
+          these carry a qualified name such as [std::invoke_result_t]. *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type

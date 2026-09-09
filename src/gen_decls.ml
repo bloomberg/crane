@@ -1612,8 +1612,9 @@ let relax_applied_return temps decl =
           | TTfun (doms, cod) when is_tvar id cod ->
             Some
               (Tid_external
-                 ( Id.of_string_soft "std::invoke_result_t",
-                   Tref (Tid_external (fid, [])) :: List.map (fun d -> Tref d) doms
+                 ( "std::invoke_result_t",
+                   Tref (Tid_external (Id.to_string fid, []))
+                   :: List.map (fun d -> Tref d) doms
                  ) )
           | _ -> None )
         temps
@@ -2824,7 +2825,7 @@ let gen_dfun n b cty ty temps =
           (* Case 2: top-level sequential — emit [int main()] directly.
              Replace [Tvoid] return type with [int] and every [Sreturn None]
              with [Sreturn (Some (CPPint 0))]. *)
-          let int_ty = Tid_external (Id.of_string "int", []) in
+          let int_ty = Tid_external ("int", []) in
           let rec void_return_to_zero = function
             | Sreturn None -> Sreturn (Some (CPPint 0))
             | Sif (c, t, e) ->
@@ -4624,9 +4625,7 @@ let gen_ind_header_v2
       let vmn_id = Id.of_string variant_member_name in
       let variant_member_ty =
         if is_coinductive then
-          Tid
-            ( Id.of_string_soft Crane_rt.lazy_,
-              [variant_alias_ty] )
+          Tid_external (Crane_rt.lazy_, [variant_alias_ty])
         else
           variant_alias_ty
       in
@@ -5034,7 +5033,7 @@ let gen_ind_header_v2
              the inductive's own declaration and must agree with the struct
              names printed there; the type printer, reached from here without
              that context, spells some inductives differently. *)
-          let verbatim_ty ty = Tid (Id.of_string_soft (render_q_destr ty), []) in
+          let verbatim_ty ty = Tid_external (render_q_destr ty, []) in
           let verbatim_ml t = verbatim_ty (cpp_of_ml t) in
           (* [e.m()] -- the harvester only ever calls nullary members
              ([use_count], [reset], [has_value], [v_mut]) on a value. *)
@@ -5275,9 +5274,8 @@ let gen_ind_header_v2
               let pv = Id.of_string (wl ^ "p")
               and ev = Id.of_string (wl ^ "e") in
               let wl_ty =
-                Tid
-                  ( Id.of_string_soft Crane_rt.small_vector,
-                    [Tshared_ptr (verbatim_ml g_ty)] )
+                Tid_external
+                  (Crane_rt.small_vector, [Tshared_ptr (verbatim_ml g_ty)])
               in
               let push fe =
                 [Sexpr (CPPaccess_call (Adot, 
@@ -5476,7 +5474,7 @@ let gen_ind_header_v2
             let stack_elem_ty = Tshared_ptr self_ty in
             let stack_ty =
               Table.mark_needs_small_vector ();
-              Tid_external (Id.of_string_soft Crane_rt.small_vector, [stack_elem_ty])
+              Tid_external (Crane_rt.small_vector, [stack_elem_ty])
             in
             let _drain_id = Id.of_string "_drain" in
             let drain_lambda =
@@ -5523,7 +5521,7 @@ let gen_ind_header_v2
                shared_ptrs of different types in the mutual group *)
             let stack_ty =
               Table.mark_needs_small_vector ();
-              Tid_external (Id.of_string_soft Crane_rt.small_vector, [Tany])
+              Tid_external (Crane_rt.small_vector, [Tany])
             in
             let _drain_self_id = Id.of_string "_drain_self" in
             let drain_self_lambda =
@@ -5987,7 +5985,7 @@ let gen_ind_header_v2
                 let ctor_struct_name =
                   ctor_struct_name_of_ref ~fallback_idx:i c
                 in
-                let source_ctor_ty = Tid_external (cname_id, []) in
+                let source_ctor_ty = Tid_external (Id.to_string cname_id, []) in
                 let field_info =
                   List.mapi
                     (fun j ty ->

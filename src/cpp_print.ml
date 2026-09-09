@@ -677,8 +677,7 @@ let rec pp_cpp_type par vl t =
         ++ pp_list (pp_rec false) args
         ++ str ">"
       | _ -> Id.print id ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
-    | Tid_external (id, args) ->
-      let id_s = Id.to_string id in
+    | Tid_external (id_s, args) ->
       let id_s =
         if String.equal id_s "std::vector" then begin
           require_header "vector";
@@ -3340,7 +3339,8 @@ let erased_into_storage_tparam ~params body =
   if Id.Set.is_empty stored then fun _ -> false
   else fun id ->
     let names = function
-      | Tvar (_, Some n) | Tid (n, _) | Tid_external (n, _) -> Id.equal n id
+      | Tvar (_, Some n) | Tid (n, _) -> Id.equal n id
+      | Tid_external (n, _) -> String.equal n (Id.to_string id)
       | _ -> false
     in
     List.exists

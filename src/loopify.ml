@@ -253,16 +253,19 @@ let rec is_trivially_copyable_type = function
     is_trivially_copyable_type t
   | Tdecltype _ -> true
   | Tvar _ -> true
-  | Tid (id, ts) | Tid_external (id, ts) ->
-    let s = Id.to_string id in
-    ( match ts with
-    | [] -> Table.is_trivially_copyable_cpp_name s
-    | _ ->
-      (s = "std::pair" || s = "std::optional")
-      && List.for_all is_trivially_copyable_type ts )
+  | Tid (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
+  | Tid_external (s, ts) -> is_trivially_copyable_named s ts
   | Tglob (r, _, _) ->
     Table.is_enum_inductive r || Table.is_custom_scalar_ref r
   | _ -> false
+
+(** Whether the named type [s] applied to [ts] is trivially copyable. *)
+and is_trivially_copyable_named s ts =
+  match ts with
+  | [] -> Table.is_trivially_copyable_cpp_name s
+  | _ ->
+    (s = "std::pair" || s = "std::optional")
+    && List.for_all is_trivially_copyable_type ts
 
 (** Returns [true] for types that are expensive to copy and benefit from
     [std::move]: [shared_ptr], value-type inductives, type variables, and
@@ -3712,7 +3715,7 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
            must never be qualified. *)
         Sasgn
           ( id_uniq,
-            Declare (Tid_external (Id.of_string "bool", [])),
+            Declare (Tid_external ("bool", [])),
             CPPbool true )
       ]
   in
@@ -3929,7 +3932,7 @@ let rec extract_fwd_ref_tvar = function
   | _ -> None
 
 (** The C++ [bool] type, as the printer spells it. *)
-let ty_bool = Tid_external (Id.of_string "bool", [])
+let ty_bool = Tid_external ("bool", [])
 
 (** Whether a binary operator's result is [bool] whatever its operands are.
     Comparisons and the short-circuiting connectives are the ones that do not
@@ -6758,7 +6761,7 @@ let optimize_frame_push_args frame_field_types stmts =
     @return An [smatch_branch] for use in [Smatch (branches, None)] *)
 let make_frame_branch frame_name body =
   { smb_scrutinee = CPPvar (id_frame);
-    smb_ctor_type = Tid_external (Id.of_string frame_name, []);
+    smb_ctor_type = Tid_external (frame_name, []);
     smb_var = Some (id_f);
     smb_field_bindings = [];
     smb_extra_conds = [];
@@ -6778,7 +6781,7 @@ let make_frame_branch frame_name body =
     @return Complete statement list for the loopified function body *)
 let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
   let result_decl = Sdecl_init (id_result, ret_ty) in
-  let frame_ty = Tid_external (id_Frame, []) in
+  let frame_ty = Tid_external (Id.to_string id_Frame, []) in
   (* [crane::small_vector] rather than [std::vector]: the frame stack is only
      as deep as the recursion it replaced, so for the overwhelming majority of
      calls it never exceeds the inline capacity.  A [std::vector] with
@@ -6788,7 +6791,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
      comparison-heavy workload. *)
   Table.mark_needs_small_vector ();
   let vector_ty =
-    Tid_external (Id.of_string_soft Crane_rt.small_vector, [frame_ty])
+    Tid_external (Crane_rt.small_vector, [frame_ty])
   in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
@@ -7269,10 +7272,10 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
       frames
   in
   let call_names = List.map (fun cf -> cf.cf_name) frames in
-  let enter_ty = Tid_external (id_enter, []) in
+  let enter_ty = Tid_external (Id.to_string id_enter, []) in
   let variant_tys =
     enter_ty
-    :: List.map (fun name -> Tid_external (Id.of_string name, [])) call_names
+    :: List.map (fun name -> Tid_external (name, [])) call_names
   in
   let struct_defs =
     [Scomment "_Enter: captures varying parameters for each recursive call.";

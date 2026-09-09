@@ -400,7 +400,7 @@ let extract_itree_result_ml (ml_ty : ml_type) : ml_type =
 
 (** Build the C++ type [std::shared_ptr<ITree<r_cpp>>]. *)
 let mk_itree_type (r_cpp : cpp_type) : cpp_type =
-  Tshared_ptr (Tid_external (Id.of_string "ITree", [r_cpp]))
+  Tshared_ptr (Tid_external ("ITree", [r_cpp]))
 
 (** Map well-known identifier names to their C++ equivalents.
     Returns [None] for ordinary (non-special) identifiers. *)
@@ -505,7 +505,7 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
       | _ -> Common.pp_global_name Type r
     in
     with_args base ts
-  | Tid_external (id, ts) -> with_args (Id.to_string id) ts
+  | Tid_external (s, ts) -> with_args s ts
   | Tnamespace (g, t) ->
     (* For local inductives whose names are eponymous with their parent module,
        no qualification is needed.  For others, prepend the capitalized parent
@@ -1429,7 +1429,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
 (** Build a [CPPfun_call] for [ITree<R>::ret(...)].
     When [r_cpp] is [Tvoid], generates [ITree<void>::ret()]. *)
 let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
-  let itree_ty = Tid_external (Id.of_string_soft "ITree", [r_cpp]) in
+  let itree_ty = Tid_external ("ITree", [r_cpp]) in
   mk_call (CPPqualified_t (itree_ty, Id.of_string "ret")) args
 
 (** Build [ITree<R>::ret(v)] or [ITree<void>::ret()] depending on whether
@@ -2793,7 +2793,7 @@ let rec convert_ml_type_to_cpp_type
   | Tdummy (Kimplicit _) ->
     Tglob (GlobRef.VarRef (Id.of_string "dummy_implicit"), [], [])
   | Tstring ->
-    Tid_external (Id.of_string_soft "std::string", [])
+    Tid_external ("std::string", [])
   (* Extraction gave up naming this type.  It prints as [std::any], but we
      know nothing about how the value is actually represented. *)
   | Tunknown -> Topaque
@@ -5646,7 +5646,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    ( g,
                      List.map
                        (fun t ->
-                         Tid_external (Id.of_string_soft (render_ml_ty t), []) )
+                         Tid_external (render_ml_ty t, []) )
                        ts,
                      [] ))
             | _ -> "auto"
