@@ -459,6 +459,20 @@ let arg_is_type env sg a =
 (* [j] stands for the next ML type var. [j=0] means we do not generate ML type
    var anymore (in subterms for example). *)
 
+(** Whether a failure of {!extract_type} means "this term is not a type",
+    as opposed to something that must not be caught.
+
+    {!extract_type} is total only on terms that really are types: it asserts
+    when it meets a bare lambda, since a lambda cannot be one.  The
+    speculative re-extractions that fill an unresolved [Tmeta] hand it a term
+    that may turn out not to be a type at all, so there the assertion is an
+    answer -- the answer being the fallback those sites already have.  An
+    interrupt, a stack overflow, or an anomaly is not an answer and still
+    propagates. *)
+let type_extraction_declined = function
+  | Assert_failure _ -> true
+  | e -> CErrors.noncritical e
+
 (** Extracts a Rocq CIC type into an ML type. The [db] context translates [Rel]
     to [Tvar], and [j] is the next type var.
     @param env Rocq environment for reduction and sort checking
@@ -1895,7 +1909,12 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
           | [], _ | _, [] -> List.rev acc
           | Kill Ktype :: s_rest, a :: a_rest ->
             let ty =
-              try extract_type env sg db 0 a [] with _ -> Tdummy Ktype
+              (* A promoted type field whose argument does not extract is
+                 erased, which is the honest answer; a critical exception
+                 (an interrupt, an anomaly) is not an erasure and must not
+                 be turned into one. *)
+              try extract_type env sg db 0 a []
+              with e when type_extraction_declined e -> Tdummy Ktype
             in
             extract_promoted s_rest a_rest (ty :: acc)
           | _ :: s_rest, _ :: a_rest -> extract_promoted s_rest a_rest acc
@@ -2057,8 +2076,11 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
               match meta with
               | Tmeta ({contents = None} as r) ->
                 let ml_ty =
+                  (* Leaving the meta unresolved is the fallback, so a
+                     failure to extract this argument is recoverable; a
+                     critical exception is not. *)
                   try extract_type env sg [] 0 coq_arg []
-                  with _ -> Tunknown
+                  with e when type_extraction_declined e -> Tunknown
                 in
                 let rec has_unknown = function
                   | Tunknown -> true
@@ -2073,7 +2095,7 @@ and extract_case env sg mle (((kn, i) as ip), c, br) mlt =
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()
-        with _ -> () );
+        with e when type_extraction_declined e -> () );
       (* The extraction of each branch. *)
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in

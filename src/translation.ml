@@ -4818,10 +4818,11 @@ and record_call_sig env callee_ty e =
     Some ml_ty ->
     let cpp_of ml = convert_ml_type_to_cpp_type env [] ml in
     ( match cpp_of (ml_codomain ml_ty) with
-    | exception _ -> e
+    | exception e' when CErrors.noncritical e' -> e
     | ty ->
       let params =
-        try Some (List.map cpp_of (ml_value_domains ml_ty)) with _ -> None
+        try Some (List.map cpp_of (ml_value_domains ml_ty))
+        with e' when CErrors.noncritical e' -> None
       in
       let sg =
         Minicpp.call_sig ~yields:ty ?params ~nargs:(List.length args.rev) ()
