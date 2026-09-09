@@ -189,11 +189,29 @@ let tctx =
     }
 
 (** Accessors for {!translation_ctx.current_type_vars}: the template type
-    variables in scope for the function currently being translated. *)
+    variables in scope for the function currently being translated.
+
+    Reach for {!with_type_vars} first.  These two are for the few scopes whose
+    extent is not a lexical one -- opened partway through a declaration
+    emitter and closed at each of its exits. *)
 let set_current_type_vars (tvars : Id.t list) =
   tctx := { !tctx with current_type_vars = tvars }
 let get_current_type_vars () = (!tctx).current_type_vars
 let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
+
+(** [with_type_vars tvars f] runs [f] with [tvars] as the type-variable scope,
+    and puts the enclosing scope back on the way out however [f] leaves --
+    returning or raising.
+
+    Prefer this to a hand-written save/set/restore wherever the scope's extent
+    is a lexical one.  Everything that converts a type reads the scope
+    ambiently (see {!Translation.cpp_of_ml}), so a restore that a path skips
+    does not fail: the next conversion quietly numbers its type variables
+    against the wrong function. *)
+let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
+  let saved = get_current_type_vars () in
+  set_current_type_vars tvars;
+  Fun.protect ~finally:(fun () -> set_current_type_vars saved) f
 
 (** Accessors for {!translation_ctx.current_param_types}: the 1-indexed
     parameter types of the current function, used to recover erased type info

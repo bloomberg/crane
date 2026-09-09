@@ -4021,7 +4021,6 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
   let saved_nparams = (!tctx).move_n_params in
-  let saved_type_vars = get_current_type_vars () in
   tctx := { !tctx with move_dead_after = Escape.IntSet.empty };
   (* Initialize owned-variable tracking for method parameters.
      The de Bruijn environment has parameters in reverse order:
@@ -4054,19 +4053,21 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   tctx := { !tctx with match_param_counter = 0 };
   tctx := { !tctx with cs_counter = 0 };
   tctx := { !tctx with current_letin_depth = 0 };
-  (* Set current type vars to include both the inductive's type vars and extra
-     tvars. This ensures gen_expr/eta_fun correctly convert Tvars to named C++
-     types when processing the method body (e.g., recursive calls carry type
-     args). *)
-  set_current_type_vars (vars @ extra_tvar_names);
-  (* Include all local value-type inductives with recursive fields in the
-     method ns.  This ensures that when the method body constructs or
-     manipulates containers of recursive types (e.g. List<tree>), the
-     type arguments get shared_ptr wrapping to match struct field types. *)
-  let saved_method_ns = set_method_ns_for_locals ~base:method_ns () in
-  let stmts = gen_stmts env method_k inner_body in
-  tctx := { !tctx with method_self_ns = saved_method_ns };
-  set_current_type_vars saved_type_vars;
+  (* The scope covers both the inductive's type vars and the extra ones, so
+     that gen_expr/eta_fun convert Tvars to the named C++ types the method
+     body expects (e.g. recursive calls carry type args). *)
+  let stmts =
+    with_type_vars (vars @ extra_tvar_names) (fun () ->
+        (* Include all local value-type inductives with recursive fields in the
+           method ns.  This ensures that when the method body constructs or
+           manipulates containers of recursive types (e.g. List<tree>), the
+           type arguments get shared_ptr wrapping to match struct field
+           types. *)
+        let saved_method_ns = set_method_ns_for_locals ~base:method_ns () in
+        let stmts = gen_stmts env method_k inner_body in
+        tctx := { !tctx with method_self_ns = saved_method_ns };
+        stmts )
+  in
   tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
   tctx := { !tctx with move_n_params = saved_nparams };

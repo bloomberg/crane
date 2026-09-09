@@ -11670,22 +11670,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let lifted_name_str = "_" ^ outer_name ^ "_" ^ Id.to_string fix_name in
       let lifted_ref = GlobRef.VarRef (Id.of_string lifted_name_str) in
-      (* Save and set current_type_vars to the full tvar list for the lifted
-         function *)
-      let saved_tvars = get_current_type_vars () in
-      set_current_type_vars all_tvar_names;
-      (* Generate the fixpoint body using gen_fix, passing all mutual fixpoint
-         names *)
+      (* Generate the fixpoint body using gen_fix, under the lifted function's
+         own tvar scope, passing all mutual fixpoint names *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
-        Array.to_list
-          (Array.mapi
-             (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
-             funs )
+        with_type_vars all_tvar_names (fun () ->
+            Array.to_list
+              (Array.mapi
+                 (fun i f ->
+                   gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
+                     f )
+                 funs ) )
       in
-      (* Restore outer type vars *)
-      set_current_type_vars saved_tvars;
       (* Build a lifted Dfundef for each fixpoint function (usually just one) *)
       let n_fix = Array.length funs in
       List.iteri
@@ -12258,61 +12254,64 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | _ -> s
         in
 
-        (* 6. Compile the lambda body with extended type variables *)
-        let saved_tvars = get_current_type_vars () in
-        set_current_type_vars extended_tvar_names;
-        (* Push lambda params into env for body compilation *)
-        let param_ids =
-          List.map
-            (fun (ml_id, ty) -> (remove_prime_id (id_of_mlid ml_id), ty))
-            params
-        in
-        (* For free variables, we need to adjust de Bruijn indices in the body.
-           The body references free vars as MLrel (n_params + i) where i is the
-           outer index. We compile with an env that has: [free_var_params...;
-           lambda_params...] So we push free var names first, then lambda param
-           names. *)
-        let free_var_params =
-          List.map (fun (name, ty, _) -> (name, ty)) free_vars
-        in
-        let body_params_for_env = free_var_params @ param_ids in
-        let body_param_ids, body_env = push_vars' body_params_for_env env in
-        let saved_env_types = (!tctx).env_types in
-        push_binders env body_param_ids;
+        (* 6. Compile the lambda body under the extended type-variable
+           scope, which numbers the body's Tvars the way the lifted
+           function's signature will. *)
+        let free_var_params, lam_param_ids, lam_env, compiled_body =
+          with_type_vars extended_tvar_names (fun () ->
+              (* Push lambda params into env for body compilation *)
+              let param_ids =
+                List.map
+                  (fun (ml_id, ty) -> (remove_prime_id (id_of_mlid ml_id), ty))
+                  params
+              in
+              (* For free variables, we need to adjust de Bruijn indices in the body.
+                 The body references free vars as MLrel (n_params + i) where i is the
+                 outer index. We compile with an env that has: [free_var_params...;
+                 lambda_params...] So we push free var names first, then lambda param
+                 names. *)
+              let free_var_params =
+                List.map (fun (name, ty, _) -> (name, ty)) free_vars
+              in
+              let body_params_for_env = free_var_params @ param_ids in
+              let body_param_ids, body_env = push_vars' body_params_for_env env in
+              let saved_env_types = (!tctx).env_types in
+              push_binders env body_param_ids;
 
-        (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
-           -> lambda params (at positions n_free+1..n_free+n_params in our env)
-           MLrel n_params+i -> free var i (should map to position n_free-i+1 in
-           our env, but we actually need to adjust: MLrel (n_params +
-           orig_outer_idx) in the body maps to outer env position
-           orig_outer_idx. In our extended env, free vars are at positions
-           n_params+1..n_params+n_free. So we need to remap. Actually, the body
-           already has correct de Bruijn indices: - MLrel 1..n_params are the
-           lambda params - MLrel (n_params + i) references outer scope position
-           i When we push [free_var_params @ param_ids], the env has: positions
-           1..n_params = param_ids (lambda params) positions
-           n_params+1..n_params+n_free = free_var_params But the body references
-           MLrel(n_params + original_outer_idx), and original_outer_idx may not
-           equal the position in free_var_params. We need the body env to map
-           MLrel(n_params + i) correctly for each free var. *)
+              (* Now compile the body. The body's de Bruijn indices: MLrel 1..n_params
+                 -> lambda params (at positions n_free+1..n_free+n_params in our env)
+                 MLrel n_params+i -> free var i (should map to position n_free-i+1 in
+                 our env, but we actually need to adjust: MLrel (n_params +
+                 orig_outer_idx) in the body maps to outer env position
+                 orig_outer_idx. In our extended env, free vars are at positions
+                 n_params+1..n_params+n_free. So we need to remap. Actually, the body
+                 already has correct de Bruijn indices: - MLrel 1..n_params are the
+                 lambda params - MLrel (n_params + i) references outer scope position
+                 i When we push [free_var_params @ param_ids], the env has: positions
+                 1..n_params = param_ids (lambda params) positions
+                 n_params+1..n_params+n_free = free_var_params But the body references
+                 MLrel(n_params + original_outer_idx), and original_outer_idx may not
+                 equal the position in free_var_params. We need the body env to map
+                 MLrel(n_params + i) correctly for each free var. *)
 
-        (* Simpler approach: compile body in a modified env where free vars at
-           their original positions are accessible. We push only the lambda
-           params on top of the outer env. *)
-        let lam_param_ids, lam_env = push_vars' param_ids env in
-        tctx := { !tctx with env_types = saved_env_types };
-        push_binders env lam_param_ids;
-        (* Lambda bodies have their own return type; clear the enclosing
-           function's void flag to avoid bare 'return;' inside the lambda. *)
-        let saved_return_type = (!tctx).current_cpp_return_type in
-        ( if (!tctx).current_cpp_return_type = Some Tvoid then
-            tctx := { !tctx with current_cpp_return_type = None } );
-        let compiled_body =
-          gen_stmts lam_env (fun x -> Sreturn (Some x)) body
+              (* Simpler approach: compile body in a modified env where free vars at
+                 their original positions are accessible. We push only the lambda
+                 params on top of the outer env. *)
+              let lam_param_ids, lam_env = push_vars' param_ids env in
+              tctx := { !tctx with env_types = saved_env_types };
+              push_binders env lam_param_ids;
+              (* Lambda bodies have their own return type; clear the enclosing
+                 function's void flag to avoid bare 'return;' inside the lambda. *)
+              let saved_return_type = (!tctx).current_cpp_return_type in
+              ( if (!tctx).current_cpp_return_type = Some Tvoid then
+                  tctx := { !tctx with current_cpp_return_type = None } );
+              let compiled_body =
+                gen_stmts lam_env (fun x -> Sreturn (Some x)) body
+              in
+              tctx := { !tctx with current_cpp_return_type = saved_return_type };
+              tctx := { !tctx with env_types = saved_env_types };
+              (free_var_params, lam_param_ids, lam_env, compiled_body) )
         in
-        tctx := { !tctx with current_cpp_return_type = saved_return_type };
-        tctx := { !tctx with env_types = saved_env_types };
-        set_current_type_vars saved_tvars;
 
         (* 7. Now substitute free variable references in compiled body: Free
            vars in the body were compiled as CPPvar(name_from_outer_env). In the
@@ -12736,20 +12735,18 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       in
       let lifted_name_str = "_" ^ outer_name ^ "_" ^ Id.to_string fix_name in
       let lifted_ref = GlobRef.VarRef (Id.of_string lifted_name_str) in
-      (* Save and set current_type_vars to the extended tvar list for the lifted
-         function. extended_tvar_names covers both signature and body Tvar
-         indices. *)
-      let saved_tvars = get_current_type_vars () in
-      set_current_type_vars extended_tvar_names;
+      (* Compile under the lifted function's extended tvar scope, which covers
+         both signature and body Tvar indices. *)
       let all_fix_ids_list = Array.to_list ids in
       let funs_compiled =
-        Array.to_list
-          (Array.mapi
-             (fun i f ->
-               gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i) f )
-             funs )
+        with_type_vars extended_tvar_names (fun () ->
+            Array.to_list
+              (Array.mapi
+                 (fun i f ->
+                   gen_fix env ~all_fix_ids:all_fix_ids_list ~fix_idx:i ids.(i)
+                     f )
+                 funs ) )
       in
-      set_current_type_vars saved_tvars;
       (* Build lifted declarations *)
       let n_fix = Array.length funs in
       List.iteri
