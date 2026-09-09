@@ -859,9 +859,7 @@ uint64_t LoopifyLists::sum_list_lengths(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(len_list(
-        std::declval<LoopifyLists::list<uint64_t> &>()))>
-        a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

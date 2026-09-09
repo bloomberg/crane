@@ -1084,13 +1084,19 @@ and pp_cpp_expr env args t =
      position.  [ref_name] is for debug labels, [custom] is the raw template
      string, [tys] are type args, [val_args] are value args (already reversed
      for pp_custom). *)
-  let gen_block_iife ref_name custom tys val_args =
+  let gen_block_iife ?yields ref_name custom tys val_args =
+    (* What the block evaluates to.  A call node says so directly; a bare
+       reference to a block-valued constant has no call node to say it, so
+       there the callee's ML type is still the only source. *)
     let ret_ty =
-      try
-        let ml_ty = Table.find_type ref_name in
-        Translation.convert_ml_type_to_cpp_type
-          env [] (Translation.ml_codomain ml_ty)
-      with _ -> Tauto
+      match yields with
+      | Some ty -> ty
+      | None -> (
+        try
+          let ml_ty = Table.find_type ref_name in
+          Translation.convert_ml_type_to_cpp_type
+            env [] (Translation.ml_codomain ml_ty)
+        with _ -> Tauto )
     in
     let result_str = "_r" in
     let substituted =
@@ -1446,10 +1452,12 @@ and pp_cpp_expr env args t =
   | CPPnamespace (r, t) ->
     let name, _ = inductive_name_info r in
     h (name ++ str "::" ++ pp_cpp_expr env args t)
-  | CPPfun_call (_, CPPglob (n, tys, Some ci), {rev = ts}) when ci.ci_inline <> None ->
+  | CPPfun_call (res, CPPglob (n, tys, Some ci), {rev = ts}) when ci.ci_inline <> None ->
     let s = Option.get ci.ci_inline in
     if Common.contains_substring s "%result" then
-      gen_block_iife n s tys (List.rev ts)
+      gen_block_iife
+        ?yields:(match res with Ryields ty -> Some ty | Ropaque -> None)
+        n s tys (List.rev ts)
     else
     let has_placeholder = String.contains s '%' in
     if not has_placeholder then

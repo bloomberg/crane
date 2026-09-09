@@ -100,16 +100,14 @@ struct MemSafetyProbe {
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
       struct _After_Node {
         tree *a0;
-        std::decay_t<decltype(std::declval<F0 &>()(std::declval<uint64_t &>()))>
-            a1;
+        uint64_t a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree _result;
-        std::decay_t<decltype(std::declval<F0 &>()(std::declval<uint64_t &>()))>
-            a1;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

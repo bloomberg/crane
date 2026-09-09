@@ -4799,6 +4799,24 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
     expression, the body of a lambda that is itself the stored value.  A
     position that opens a new slot (a let-bound right-hand side, a
     non-tail statement) does not take it. *)
+(** [yields_codomain env callee_ty e] records what [e] yields, when [e] is a
+    call whose result type is not recorded yet and the callee's ML type says
+    what it is.
+
+    The application site is where the answer is known; the {!CPPfun_call} node
+    is built further down, in {!eta_fun}, so the answer is stamped on here
+    rather than threaded through every intermediate that only forwards it.  A
+    callee with no ML type, or one that is not a call at all, is left
+    {!Ropaque}: a consumer must defer to C++ deduction rather than invent a
+    type. *)
+and yields_codomain env callee_ty e =
+  match (e, callee_ty) with
+  | CPPfun_call (Ropaque, f, args), Some ml_ty ->
+    ( match convert_ml_type_to_cpp_type env [] (ml_codomain ml_ty) with
+    | exception _ -> e
+    | ty -> CPPfun_call (Ryields ty, f, args) )
+  | _ -> e
+
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
   match ml_e with
@@ -4978,6 +4996,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | MLrel i -> get_env_type_opt i
       | _ -> None
     in
+    (* The same type, at the instantiation this call uses: what the call
+       yields is the codomain of *that*, not of the general scheme. *)
+    let callee_ty_inst =
+      match (f, callee_ty) with
+      | MLglob (_, (_ :: _ as tys)), Some ty ->
+        Some (try Mlutil.type_subst_list tys ty with _ -> ty)
+      | _ -> callee_ty
+    in
     (* A callee typed by a function alias ([church]) hands back whatever the
        alias's codomain erased to; the alias is the only place that says so,
        since the term itself carries no arrows. *)
@@ -4992,12 +5018,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         | _ -> false )
       | _ -> false
     in
-    ( match (callee_ty, expected_ty) with
-    | Some ty, Some into
-      when (result_is_index_only_tvar ty || alias_result_is_boxed ty)
-           && not (prints_as_any into || contains_tvar into) ->
-      coerce ~from:Tany ~into result
-    | _ -> result )
+    let result =
+      match (callee_ty, expected_ty) with
+      | Some ty, Some into
+        when (result_is_index_only_tvar ty || alias_result_is_boxed ty)
+             && not (prints_as_any into || contains_tvar into) ->
+        coerce ~from:Tany ~into result
+      | _ -> result
+    in
+    yields_codomain env callee_ty_inst result
   | MLlam _ as a ->
     let args, a = collect_lams a in
     (* Nested binders normally flatten into one multi-parameter C++ lambda.

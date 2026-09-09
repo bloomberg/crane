@@ -459,10 +459,7 @@ uint64_t LoopifyNumbers::digitsum_fuel(
 
   /// _Resume__x: saves [_s0], resumes after recursive call with _result.
   struct _Resume__x {
-    std::decay_t<decltype((UINT64_C(10)
-                               ? std::declval<uint64_t &>() % UINT64_C(10)
-                               : std::declval<uint64_t &>()))>
-        _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume__x>;

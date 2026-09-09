@@ -54,8 +54,7 @@ uint64_t LoopifyNumericMisc::alternating_ops(
 
   /// _Resume2: saves [_s0], resumes after recursive call with _result.
   struct _Resume2 {
-    std::decay_t<decltype(((std::declval<uint64_t &>() + 1) * UINT64_C(2)))>
-        _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1, _Resume2>;

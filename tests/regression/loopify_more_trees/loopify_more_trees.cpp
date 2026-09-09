@@ -249,18 +249,14 @@ LoopifyMoreTrees::tree LoopifyMoreTrees::tree_max(
   struct _After_Node {
     LoopifyMoreTrees::tree a00;
     LoopifyMoreTrees::tree a0;
-    std::decay_t<decltype(std::max(std::declval<uint64_t &>(),
-                                   std::move(std::declval<uint64_t &>())))>
-        _s2;
+    uint64_t _s2;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     LoopifyMoreTrees::tree _result;
-    std::decay_t<decltype(std::max(std::declval<uint64_t &>(),
-                                   std::move(std::declval<uint64_t &>())))>
-        _s1;
+    uint64_t _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -595,9 +591,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(tree_children(
-        std::declval<LoopifyMoreTrees::tree &>()))>
-        a0;
+    List<LoopifyMoreTrees::tree> a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -622,7 +616,7 @@ List<LoopifyMoreTrees::tree> LoopifyMoreTrees::concat_map_children(
       }
     } else {
       auto _f = std::move(std::get<_Resume_Cons>(_frame));
-      _result = append_trees(_f.a0, std::move(_result));
+      _result = append_trees(std::move(_f.a0), std::move(_result));
     }
   }
   return _result;

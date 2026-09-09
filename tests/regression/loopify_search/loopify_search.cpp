@@ -1054,11 +1054,7 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
 
   /// _Resume_Nil: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Nil {
-    std::decay_t<decltype(map_cons(
-        std::declval<uint64_t &>(),
-        List<List<uint64_t>>::cons(List<uint64_t>::nil(),
-                                   List<List<uint64_t>>::nil())))>
-        _s0;
+    List<List<uint64_t>> _s0;
   };
 
   using _Frame = std::variant<_Enter, _After_Cons, _Combine_Cons, _Resume_Nil>;
@@ -1107,7 +1103,7 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
       _result = map_cons(_f.a0, std::move(_result)).app(std::move(_f._result));
     } else {
       auto _f = std::move(std::get<_Resume_Nil>(_frame));
-      _result = _f._s0.app(std::move(_result));
+      _result = std::move(_f._s0).app(std::move(_result));
     }
   }
   return _result;

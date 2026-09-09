@@ -325,11 +325,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(
 
   /// _After2: saves [_s0, fuel_], dispatches next recursive call.
   struct _After2 {
-    std::decay_t<decltype((
-        ((std::declval<uint64_t &>() - UINT64_C(1)) > std::declval<uint64_t &>()
-             ? 0
-             : (std::declval<uint64_t &>() - UINT64_C(1)))))>
-        _s0;
+    uint64_t _s0;
     uint64_t fuel_;
   };
 

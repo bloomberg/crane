@@ -249,9 +249,7 @@ bool LoopifyStrings::list_eq(
 
   /// _Resume_Cons: saves [_s0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(std::declval<uint64_t &>() ==
-                          std::declval<uint64_t &>())>
-        _s0;
+    bool _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

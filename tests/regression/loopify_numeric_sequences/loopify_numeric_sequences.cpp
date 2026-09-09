@@ -293,10 +293,7 @@ uint64_t LoopifyNumericSequences::digitsum_fuel(
 
   /// _Resume1: saves [_s0], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype((UINT64_C(10)
-                               ? std::declval<uint64_t &>() % UINT64_C(10)
-                               : std::declval<uint64_t &>()))>
-        _s0;
+    uint64_t _s0;
   };
 
   using _Frame = std::variant<_Enter, _Resume1>;
@@ -347,10 +344,7 @@ uint64_t LoopifyNumericSequences::dec_to_bin_fuel(
 
   /// _Resume1: saves [_s0, _s1], resumes after recursive call with _result.
   struct _Resume1 {
-    std::decay_t<decltype((UINT64_C(2)
-                               ? std::declval<uint64_t &>() % UINT64_C(2)
-                               : std::declval<uint64_t &>()))>
-        _s0;
+    uint64_t _s0;
     std::decay_t<decltype(UINT64_C(10))> _s1;
   };
 

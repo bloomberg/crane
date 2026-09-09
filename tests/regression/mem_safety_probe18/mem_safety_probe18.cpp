@@ -103,8 +103,7 @@ uint64_t MemSafetyProbe18::sum_tree_list(
 
   /// _Resume_Mycons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Mycons {
-    std::decay_t<decltype(std::declval<MemSafetyProbe18::tree &>().tree_sum())>
-        a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Mycons>;

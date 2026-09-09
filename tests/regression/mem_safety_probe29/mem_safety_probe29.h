@@ -390,14 +390,14 @@ struct MemSafetyProbe29 {
       /// _After_ONode: saves [a0, a1], dispatches next recursive call.
       struct _After_ONode {
         outer *a0;
-        std::decay_t<decltype(std::declval<inner &>().double_inner())> a1;
+        inner a1;
       };
 
       /// _Combine_ONode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ONode {
         outer _result;
-        std::decay_t<decltype(std::declval<inner &>().double_inner())> a1;
+        inner a1;
       };
 
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;
@@ -421,12 +421,13 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_After_ONode>(_frame)) {
           auto _f = std::move(std::get<_After_ONode>(_frame));
-          _stack.emplace_back(_Combine_ONode{std::move(_result), _f.a1});
+          _stack.emplace_back(
+              _Combine_ONode{std::move(_result), std::move(_f.a1)});
           _stack.emplace_back(_Enter{_f.a0});
         } else {
           auto _f = std::move(std::get<_Combine_ONode>(_frame));
-          _result =
-              outer::onode(std::move(_result), _f.a1, std::move(_f._result));
+          _result = outer::onode(std::move(_result), std::move(_f.a1),
+                                 std::move(_f._result));
         }
       }
       return _result;
@@ -443,14 +444,14 @@ struct MemSafetyProbe29 {
       /// _After_ONode: saves [a0, a1], dispatches next recursive call.
       struct _After_ONode {
         outer *a0;
-        std::decay_t<decltype(std::declval<inner &>().inner_sum())> a1;
+        uint64_t a1;
       };
 
       /// _Combine_ONode: receives partial results, combines with _result from
       /// final call.
       struct _Combine_ONode {
         uint64_t _result;
-        std::decay_t<decltype(std::declval<inner &>().inner_sum())> a1;
+        uint64_t a1;
       };
 
       using _Frame = std::variant<_Enter, _After_ONode, _Combine_ONode>;

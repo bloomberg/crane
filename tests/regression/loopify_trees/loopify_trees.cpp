@@ -1223,18 +1223,14 @@ bool LoopifyTrees::tree_contains(
   /// _After_Node: saves [a0, _s1], dispatches next recursive call.
   struct _After_Node {
     const LoopifyTrees::tree<uint64_t> *a0;
-    std::decay_t<decltype(std::declval<uint64_t &>() ==
-                          std::declval<uint64_t &>())>
-        _s1;
+    bool _s1;
   };
 
   /// _Combine_Node: receives partial results, combines with _result from final
   /// call.
   struct _Combine_Node {
     bool _result;
-    std::decay_t<decltype(std::declval<uint64_t &>() ==
-                          std::declval<uint64_t &>())>
-        _s1;
+    bool _s1;
   };
 
   using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;

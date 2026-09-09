@@ -318,9 +318,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(extract_value(
-        std::declval<LoopifyAdvancedPatterns::shape &>()))>
-        a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;

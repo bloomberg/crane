@@ -210,14 +210,14 @@ struct LoopifyTrees {
       /// _After_Node: saves [a0, a1], dispatches next recursive call.
       struct _After_Node {
         tree<A> *a0;
-        std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a1;
+        std::decay_t<T1> a1;
       };
 
       /// _Combine_Node: receives partial results, combines with _result from
       /// final call.
       struct _Combine_Node {
         tree<T1> _result;
-        std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a1;
+        std::decay_t<T1> a1;
       };
 
       using _Frame = std::variant<_Enter, _After_Node, _Combine_Node>;
@@ -242,12 +242,13 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_After_Node>(_frame)) {
           auto _f = std::move(std::get<_After_Node>(_frame));
-          _stack.emplace_back(_Combine_Node{std::move(_result), _f.a1});
+          _stack.emplace_back(
+              _Combine_Node{std::move(_result), std::move(_f.a1)});
           _stack.emplace_back(_Enter{_f.a0});
         } else {
           auto _f = std::move(std::get<_Combine_Node>(_frame));
-          _result =
-              tree<T1>::node(std::move(_result), _f.a1, std::move(_f._result));
+          _result = tree<T1>::node(std::move(_result), std::move(_f.a1),
+                                   std::move(_f._result));
         }
       }
       return _result;
@@ -2070,12 +2071,7 @@ struct LoopifyTrees {
       /// _After2: saves [a0, _s1], dispatches next recursive call.
       struct _After2 {
         simple_tree *a0;
-        std::decay_t<decltype((
-            ((std::declval<uint64_t &>() - UINT64_C(1)) >
-                     std::declval<uint64_t &>()
-                 ? 0
-                 : (std::declval<uint64_t &>() - UINT64_C(1)))))>
-            _s1;
+        uint64_t _s1;
       };
 
       /// _Combine1: receives partial results, combines with _result from final

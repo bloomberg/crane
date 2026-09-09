@@ -120,7 +120,7 @@ public:
 
     /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
     struct _Resume_Cons {
-      std::decay_t<decltype(std::declval<F0 &>()(std::declval<A &>()))> a0;
+      List<T1> a0;
     };
 
     using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -144,7 +144,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_Resume_Cons>(_frame));
-        _result = _f.a0.app(std::move(_result));
+        _result = std::move(_f.a0).app(std::move(_result));
       }
     }
     return _result;

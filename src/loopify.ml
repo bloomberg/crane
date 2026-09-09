@@ -3927,6 +3927,10 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       let tl = infer_saved_type tparams env lhs in
       if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
+    | CPPfun_call (Ryields ty, _, _) ->
+      (* The call says what it yields; nothing below can improve on that, and
+         a guess that disagreed with it would be a bug. *)
+      strip_ref_and_const_type ty
     | CPPfun_call (_, CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
       (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
          already raw (arena mode).  Infer from the inner expression. *)

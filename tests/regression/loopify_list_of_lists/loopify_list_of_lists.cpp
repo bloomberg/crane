@@ -229,7 +229,7 @@ uint64_t LoopifyListOfLists::total_length(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(list_len(std::declval<List<uint64_t> &>()))> a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -314,7 +314,7 @@ uint64_t LoopifyListOfLists::count_total(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(list_len(std::declval<List<uint64_t> &>()))> a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
@@ -447,7 +447,7 @@ uint64_t LoopifyListOfLists::max_length(
 
   /// _Resume_Cons: saves [a0], resumes after recursive call with _result.
   struct _Resume_Cons {
-    std::decay_t<decltype(list_len(std::declval<List<uint64_t> &>()))> a0;
+    uint64_t a0;
   };
 
   using _Frame = std::variant<_Enter, _Resume_Cons>;
