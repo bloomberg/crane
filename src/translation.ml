@@ -1099,6 +1099,38 @@ let retype_dependent_params (typ : ml_type) ids =
       match ml_ty with Miniml.Tvar (Rigid, _) -> (n, Tdummy Ktype) | _ -> (n, ml_ty)) ids
   else ids
 
+(** The declared ML types of constructor [ctor]'s value fields, instantiated at
+    scrutinee type [typ]'s type arguments — the types a branch's pattern
+    variables have by construction, in field order.
+
+    [None] when the answer would not be trustworthy: either the inductive has
+    no recorded [ip_types] (custom-extracted ones such as [prod] do not; for
+    those the scrutinee's own type arguments {i are} the field types), or a
+    field mentions a parameter the scrutinee does not instantiate, in which
+    case substitution would leave a stray [Tvar] behind and a stray [Tvar] is
+    worse than the [std::any] it would replace. *)
+let ctor_field_types_at ctor (typ : ml_type) =
+  let tyargs = match typ with Tglob (_, args, _) -> args | _ -> [] in
+  let nargs = List.length tyargs in
+  let rec within_scope : ml_type -> bool = function
+    | Tvar (_, i) -> i <= nargs
+    | Tapp (i, args) -> i <= nargs && List.for_all within_scope args
+    | Tarr (a, b) -> within_scope a && within_scope b
+    | Tglob (_, l, _) -> List.for_all within_scope l
+    | Tmeta {contents = Some t} -> within_scope t
+    | _ -> true
+  in
+  match Table.get_ctor_ip_types_opt ctor with
+  | Some tys ->
+    let tys = List.filter (fun t -> not (Mlutil.isTdummy t)) tys in
+    if List.for_all within_scope tys then
+      Some (List.map (Mlutil.type_subst_list tyargs) tys)
+    else None
+  | None -> (
+    match typ with
+    | Tglob (g, _, _) when is_prod_global g -> Some tyargs
+    | _ -> None )
+
 (** Recover a pattern variable's type from the scrutinee's own type structure
     when extraction left it as an unresolved meta-variable ([Tmeta
     {contents=None}]).
@@ -1119,19 +1151,23 @@ let retype_dependent_params (typ : ml_type) ids =
     involved) keeps it — the reason nil and cons productions of the very
     same Coq-level [list] type diverge in their erased C++ representation.
 
-    [ids] here is in reverse-bound order relative to [tyargs] (the last
-    pattern variable in the list is the first component of the scrutinee
-    pair), matching the convention already used elsewhere in this file. *)
-let recover_pattern_var_types_from_scrutinee (typ : ml_type) ids =
-  match typ with
-  | Tglob (g, tyargs, _) when is_prod_global g
-                               && List.length tyargs = List.length ids ->
-    let n = List.length tyargs in
-    List.mapi (fun i (x, ml_ty) ->
-      match ml_ty with
-      | Tmeta {contents = None} ->
-        (x, List.nth tyargs (n - 1 - i))
-      | _ -> (x, ml_ty))
+    The pair is only the clearest case; the same recovery applies to any
+    inductive, which is why the field types come from
+    {!ctor_field_types_at} rather than from the scrutinee's type arguments
+    directly.
+
+    [ids] here is in reverse-bound order relative to the constructor's fields
+    (the last pattern variable in the list is the first field), matching the
+    convention already used elsewhere in this file. *)
+let recover_pattern_var_types_from_scrutinee ~ctor (typ : ml_type) ids =
+  match ctor_field_types_at ctor typ with
+  | Some ftys when List.length ftys = List.length ids ->
+    let n = List.length ftys in
+    List.mapi
+      (fun i (x, ml_ty) ->
+        match ml_ty with
+        | Tmeta {contents = None} -> (x, List.nth ftys (n - 1 - i))
+        | _ -> (x, ml_ty))
       ids
   | _ -> ids
 
@@ -10794,7 +10830,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
             | Tglob (g, _ :: _, _) when is_list_global g && Table.is_custom g -> true
             | _ -> false)
       in
-      let ids' = recover_pattern_var_types_from_scrutinee ml_typ ids' in
+      let ids' = recover_pattern_var_types_from_scrutinee ~ctor:r ml_typ ids' in
       let ids' = retype_dependent_params ml_typ ids' in
       let n_pat_vars = List.length ids in
       let saved_env_types = (!tctx).env_types in
