@@ -1577,11 +1577,11 @@ let return_captures_by_value stmts =
       | s -> s )
     stmts
 
-(** Run escape analysis on [body], saving and restoring the analysis state
-    around the call to [f]. This is needed because escape analysis runs at
-    multiple nesting levels (lambdas, let-in expressions, top-level functions)
-    and each level has its own set of safe bindings. *)
-let with_escape_analysis body f =
+(** Run [f] in a fresh escape-analysis scope, restoring the enclosing one
+    afterwards.  Escape analysis runs at several nesting levels (lambdas,
+    let-in expressions, top-level functions) and each level has its own set of
+    safe bindings. *)
+let with_escape_analysis f =
   let saved_depth = (!tctx).current_letin_depth in
   let saved_dead = (!tctx).move_dead_after in
   let saved_owned = (!tctx).move_owned_vars in
@@ -5072,13 +5072,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       && (!tctx).itree_mode <> Reified ->
     (* Sequential mode: bind in expression context (e.g., nested inside
        another expression). Wrap in IIFE so gen_stmts can sequentialize. *)
-    with_escape_analysis a (fun () ->
+    with_escape_analysis (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLapp (MLfix _, _) as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
        Wrap in an IIFE, delegating to gen_stmts which handles MLapp(MLfix
        ...). *)
-    with_escape_analysis a (fun () ->
+    with_escape_analysis (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLapp (MLapp ((MLglob _ as g), inner_args), outer_args) ->
     (* Flatten nested MLapp when inner callee is a global reference. This arises
@@ -5235,7 +5235,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       List.map (fun (id, ty, _) -> (id, ty)) filtered_args_with_owned
     in
     let f =
-      with_escape_analysis a (fun () ->
+      with_escape_analysis (fun () ->
         let tvars = get_current_type_vars () in
         let cpp_arg_info =
           List.map
@@ -7498,13 +7498,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        supported — each field is destructured individually. *)
   | MLcase (typ, t, pv) when lang () == Cpp -> gen_cpp_case typ t env pv
   | MLletin (_, ty, _, _) as a ->
-    with_escape_analysis a (fun () ->
+    with_escape_analysis (fun () ->
       with_iife_return_type expected_ty (fun () ->
         mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) ) )
   | MLfix _ as a ->
     (* Bare fixpoint in expression context — wrap in IIFE, delegate to
        gen_stmts. *)
-    with_escape_analysis a (fun () ->
+    with_escape_analysis (fun () ->
       mk_iife None (gen_stmts env (fun x -> Sreturn (Some x)) a) )
   | MLstring s -> CPPstring s
   | MLuint x -> CPPuint x
