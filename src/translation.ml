@@ -1058,7 +1058,11 @@ let replace_return_with_assign s var_name =
   Buffer.contents buf
 
 (** When [expr] is a single-argument IIFE
-    [CPPfun_call(CPPlambda([(ty, id)], ret, body, false), [arg])], lift the
+    [CPPfun_call(CPPlambda
+      { cl_params = [(ty, id)];
+        cl_ret = ret;
+        cl_body = body;
+        cl_by_value = false }, [arg])], lift the
     lambda body into assignment statements targeting [target_var]:
     {[
       Type target_var{};
@@ -1070,7 +1074,11 @@ let replace_return_with_assign s var_name =
 let lift_iife_assignment target_var target_ty expr =
   match expr with
   | CPPfun_call (_, 
-      CPPlambda ({rev = [(param_ty, Some param_id)]}, Some ret_ty, body, false),
+      CPPlambda
+        { cl_params = {rev = [(param_ty, Some param_id)]};
+          cl_ret = Some ret_ty;
+          cl_body = body;
+          cl_by_value = false },
       {rev = [arg]}) ->
     let actual_ty = match target_ty with Ttodo -> ret_ty | t -> t in
     let tv_s = Id.to_string target_var in
@@ -1491,20 +1499,21 @@ let deref_reified ml_expr cpp_expr =
 (** Convert returned lambdas to capture by value. Lambdas returned from
     functions outlive the function's stack frame, so capturing by reference
     ([&]) would create dangling references. This rewrites
-    [Sreturn (Some (CPPlambda (_, _, _, false)))] to capture by value ([true]).
+    [Sreturn (Some (CPPlambda
+      { cl_by_value = false;
+        _ }))] to capture by value ([true]).
 *)
 let return_captures_by_value stmts =
-  let rec expr = function
-    | CPPlambda (args, ret, body, false) ->
-      CPPlambda (args, ret, List.map stmt body, true)
-    | CPPlambda (args, ret, body, true) ->
-      CPPlambda (args, ret, List.map stmt body, true)
+  let rec by_value l =
+    {(map_lambda stmt Fun.id l) with cl_by_value = true}
+  and expr = function
+    | CPPlambda l -> CPPlambda (by_value l)
     | CPPfun_call (res, f, {rev = args}) ->
       CPPfun_call (res, expr f, of_reversed (List.map expr args))
     | CPPderef e -> CPPderef (expr e)
     | CPPmove e -> CPPmove (expr e)
     | CPPforward (ty, e) -> CPPforward (ty, expr e)
-    | CPPoverloaded es -> CPPoverloaded (List.map expr es)
+    | CPPoverloaded ls -> CPPoverloaded (List.map by_value ls)
     | CPPstruct (id, tys, es) -> CPPstruct (id, tys, List.map expr es)
     | CPPstruct_id (id, tys, es) -> CPPstruct_id (id, tys, List.map expr es)
     | CPPstructmk (id, tys, es) -> CPPstructmk (id, tys, List.map expr es)
@@ -1554,8 +1563,16 @@ let return_captures_by_value stmts =
   List.map
     (fun s ->
       match s with
-      | Sreturn (Some (CPPlambda (args, ret, body, false))) ->
-        Sreturn (Some (CPPlambda (args, ret, body, true)))
+      | Sreturn (Some (CPPlambda
+        { cl_params = args;
+          cl_ret = ret;
+          cl_body = body;
+          cl_by_value = false })) ->
+        Sreturn (Some (CPPlambda
+          { cl_params = args;
+            cl_ret = ret;
+            cl_body = body;
+            cl_by_value = true }))
       | Sreturn (Some e) -> Sreturn (Some (expr e))
       | s -> s )
     stmts
@@ -5761,7 +5778,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          expression is not this lambda's result. *)
       let returns_a_lambda =
         match f with
-        | CPPlambda (_, _, body, _) ->
+        | CPPlambda {cl_body = body; _} ->
           let found = ref false in
           let rec walk s =
             ( match s with
@@ -6405,7 +6422,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           | Tglob (g, [], _) -> Table.is_erased_type_const g
                           | _ -> false) ->
               ( match expr with
-              | CPPlambda (params, ret_ty_opt, body_stmts, cap) ->
+              | CPPlambda
+                { cl_params = params;
+                  cl_ret = ret_ty_opt;
+                  cl_body = body_stmts;
+                  cl_by_value = cap } ->
                 let params = to_reversed params in
                 let n_params = List.length params in
                 let new_params = List.map (fun (orig_ty, orig_id) ->
@@ -6521,7 +6542,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
                 let erased_param_tys = List.map (fun _ -> Tany) renamed_params in
-                let new_lambda = CPPlambda (of_reversed renamed_params, new_ret_ty, new_body, cap) in
+                let new_lambda = CPPlambda
+                  { cl_params = of_reversed renamed_params;
+                    cl_ret = new_ret_ty;
+                    cl_body = new_body;
+                    cl_by_value = cap } in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
                 Cpp_erasure.converting_ctor func_ty [new_lambda]
               | _ ->
@@ -6564,7 +6589,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 end )
             | Tfun (param_tys, ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
-              | CPPlambda (params, ret_ty_opt, body_stmts, cap) ->
+              | CPPlambda
+                { cl_params = params;
+                  cl_ret = ret_ty_opt;
+                  cl_body = body_stmts;
+                  cl_by_value = cap } ->
                 let params = to_reversed params in
                 let n_params = List.length params in
                 let new_params = List.mapi (fun j (orig_ty, orig_id) ->
@@ -6669,7 +6698,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | Some _ -> ret_ty_opt
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
-                let new_lambda = CPPlambda (of_reversed renamed_params, new_ret_ty, new_body, cap) in
+                let new_lambda = CPPlambda
+                  { cl_params = of_reversed renamed_params;
+                    cl_ret = new_ret_ty;
+                    cl_body = new_body;
+                    cl_by_value = cap } in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
                 Cpp_erasure.converting_ctor func_ty [new_lambda]
               (* A function value that is not a lambda literal (a reference to a
@@ -6690,7 +6723,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  std::function so that std::any stores the type-erased wrapper
                  and any_cast<std::function<...>> can recover it. *)
               match expr with
-              | CPPlambda (params, ret_ty_opt, body_stmts, _) ->
+              | CPPlambda
+                { cl_params = params;
+                  cl_ret = ret_ty_opt;
+                  cl_body = body_stmts;
+                  _ } ->
                 let params = to_reversed params in
                 let param_types = List.map (fun (ty, _) ->
                   strip_cpp_ref_const ty) params in
@@ -6723,7 +6760,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | _ -> false
           in
           ( match ft, expr with
-          | Miniml.Tarr _, CPPlambda (params, ret_ty_opt, body_stmts, cap)
+          | Miniml.Tarr _, CPPlambda
+            { cl_params = params;
+              cl_ret = ret_ty_opt;
+              cl_body = body_stmts;
+              cl_by_value = cap }
             when ft_has_erased_tvar ft ->
             let params = to_reversed params in
             let rec collect_tarr = function
@@ -6822,7 +6863,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | Some _ -> ret_ty_opt
               | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
             in
-            let new_lambda = CPPlambda (of_reversed new_params, new_ret_ty, new_body, cap) in
+            let new_lambda = CPPlambda
+              { cl_params = of_reversed new_params;
+                cl_ret = new_ret_ty;
+                cl_body = new_body;
+                cl_by_value = cap } in
             let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
             Cpp_erasure.converting_ctor func_ty [new_lambda]
           (* The same erased-argument adaptation, for a function value that is
@@ -8191,13 +8236,25 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          [std::function<...>] return type instead of the raw closure type. *)
       let expr =
         match split_ret_ty, expr with
-        | Some ret_ty, CPPlambda (params, None, body, cap) ->
-          CPPlambda (params, Some ret_ty, body, cap)
+        | Some ret_ty, CPPlambda
+          { cl_params = params;
+            cl_ret = None;
+            cl_body = body;
+            cl_by_value = cap } ->
+          CPPlambda
+            { cl_params = params;
+              cl_ret = Some ret_ty;
+              cl_body = body;
+              cl_by_value = cap }
         | _ -> expr
       in
       let expr =
         match (List.nth_opt fn_param_ml_tys i, expr) with
-        | Some param_ty, CPPlambda (params, ret_opt, body, cap) ->
+        | Some param_ty, CPPlambda
+          { cl_params = params;
+            cl_ret = ret_opt;
+            cl_body = body;
+            cl_by_value = cap } ->
           let param_cpp_ty =
             cpp_of_ml env param_ty
           in
@@ -8209,7 +8266,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | s -> map_stmt Fun.id wrap_stmt Fun.id s
             in
             CPPlambda
-              (params, Some (Tshared_ptr inner), List.map wrap_stmt body, cap)
+              { cl_params = params;
+                cl_ret = Some (Tshared_ptr inner);
+                cl_body = List.map wrap_stmt body;
+                cl_by_value = cap }
           | _ -> expr )
         | _ -> expr
       in
@@ -9721,15 +9781,15 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   in
   let field_bindings_arr = Array.of_list field_bindings in
   let rec expr_has_lambda = function
-    | CPPfun_call (_, CPPlambda (_, _, body, _), _) ->
+    | CPPfun_call (_, CPPlambda {cl_body = body; _}, _) ->
       (* IIFE: lambda is invoked immediately, so reference captures are safe.
          Only check the lambda body for nested non-IIFE lambdas. *)
       List.exists stmt_has_lambda body
-    | CPPlambda (_, _, _, true) ->
+    | CPPlambda {cl_by_value = true; _} ->
       (* [=] value-capture: non-coinductive self-ref fields (shared_ptr) need
          pre-extraction into a value binding before the lambda is entered. *)
       true
-    | CPPlambda (_, _, body, false) ->
+    | CPPlambda {cl_body = body; cl_by_value = false; _} ->
       (* [&] ref-capture: shared_ptr fields are captured by reference — fine.
          Check the body for nested [=] lambdas that would need pre-extraction. *)
       List.exists stmt_has_lambda body
@@ -11050,7 +11110,10 @@ and extract_block_template = function
   | _ -> None
 
 (** [inline_iife k expr] checks whether [expr] is an IIFE
-    ([CPPfun_call(CPPlambda(\[\], _, body, _), \[\])]).  If so, it replaces
+    ([CPPfun_call(CPPlambda
+      { cl_params = \[\];
+        cl_body = body;
+        _ }, \[\])]).  If so, it replaces
     the final [Sreturn(Some v)] in [body] with [k v] and returns the
     inlined statement list.  Otherwise it falls back to [\[k expr\]].
 
@@ -11062,7 +11125,11 @@ and extract_block_template = function
     @param k     the statement-level continuation (e.g. [Sreturn], [Sasgn])
     @param expr  the expression produced by [gen_expr] *)
 and inline_iife (k : cpp_expr -> cpp_stmt) = function
-  | CPPfun_call (_, CPPlambda ({rev = []}, ret_ty, body, _), {rev = []})
+  | CPPfun_call (_, CPPlambda
+    { cl_params = {rev = []};
+      cl_ret = ret_ty;
+      cl_body = body;
+      _ }, {rev = []})
     when body <> [] ->
     let k_is_return =
       match k (CPPint 0) with Sreturn _ -> true | _ -> false
@@ -11165,7 +11232,7 @@ and fixpoint_escapes_in_stmts target_id stmts =
       List.exists check_expr args
     | CPPvar id when Id.equal id target_id ->
       true  (* Escape: bare reference outside call position *)
-    | CPPlambda (_, _, body, _) ->
+    | CPPlambda {cl_body = body; _} ->
       (* Any reference inside a lambda means the fixpoint is captured.
          Even if only called, the capture copies the std::function whose
          internal lambda still has dangling [&] references.
@@ -11292,10 +11359,10 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
           ( impl_id,
             Declare Tauto,
             CPPlambda
-              ( of_reversed (orig_params @ self_params),
-                ret_ty fty,
-                List.map rewrite_stmt body,
-                false ) ))
+              { cl_params = of_reversed (orig_params @ self_params);
+                cl_ret = ret_ty fty;
+                cl_body = List.map rewrite_stmt body;
+                cl_by_value = false } ))
       (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
       funs_with_params
   in
@@ -11326,7 +11393,11 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
         Sasgn
           ( fix_id,
             Declare Tauto,
-            CPPlambda (of_reversed orig_params, rty, wrapper_body, false) ))
+            CPPlambda
+              { cl_params = of_reversed orig_params;
+                cl_ret = rty;
+                cl_body = wrapper_body;
+                cl_by_value = false } ))
       (List.combine (List.combine renamed_ids impl_ids) owned_flags_per_fun)
       funs_with_params
   in
@@ -11397,13 +11468,14 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
         Sderef_asgn
           ( CPPvar id,
             CPPlambda
-              ( of_reversed
-                  (List.map
-                     (fun (id, ty) -> (cpp_of_ml env ty, Some id))
-                     args),
-                ret_ty _fty,
-                deref_subst body,
-                true ) ) )
+              { cl_params =
+                  of_reversed
+                    (List.map
+                       (fun (id, ty) -> (cpp_of_ml env ty, Some id))
+                       args );
+                cl_ret = ret_ty _fty;
+                cl_body = deref_subst body;
+                cl_by_value = true } ) )
       renamed_ids funs_with_params
   in
   (decls, defs, deref_subst)
@@ -11500,10 +11572,10 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
           ( impl_id,
             Declare Tauto,
             CPPlambda
-              ( of_reversed (orig_params @ self_params),
-                ret_ty fty,
-                List.map rewrite_stmt body,
-                true ) ))
+              { cl_params = of_reversed (orig_params @ self_params);
+                cl_ret = ret_ty fty;
+                cl_body = List.map rewrite_stmt body;
+                cl_by_value = true } ))
       (List.combine renamed_ids impl_ids)
       funs_with_params
   in
@@ -11531,7 +11603,11 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
         Sasgn
           ( fix_id,
             Declare Tauto,
-            CPPlambda (of_reversed orig_params, rty, wrapper_body, true) ))
+            CPPlambda
+              { cl_params = of_reversed orig_params;
+                cl_ret = rty;
+                cl_body = wrapper_body;
+                cl_by_value = true } ))
       (List.combine renamed_ids impl_ids)
       funs_with_params
   in
@@ -12058,6 +12134,9 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             (free_args : cpp_expr list)
             (e : cpp_expr) =
           let sub = subst_lifted_call_expr target lifted free_args in
+          let sub_lambda =
+            map_lambda (subst_lifted_call_stmt target lifted free_args) Fun.id
+          in
           match e with
           | CPPfun_call (_, CPPvar id, args) when Id.equal id target ->
             (* The lifted template's parameters come from the lambda, so its
@@ -12088,27 +12167,21 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 free_args @ List.map (fun id -> CPPvar id) fresh_ids
               in
               CPPlambda
-                ( of_reversed wrapper_params,
-                  None,
-                  [
-                    Sreturn
-                      (Some
-                         (CPPfun_call
-                            (call_opaque, mk_cppglob lifted [],
-                              of_reversed wrapper_call_args )));
-                  ],
-                  true )
+                { cl_params = of_reversed wrapper_params;
+                  cl_ret = None;
+                  cl_body =
+                    [ Sreturn
+                        (Some
+                           (CPPfun_call
+                              ( call_opaque, mk_cppglob lifted [],
+                                of_reversed wrapper_call_args ) ) ) ];
+                  cl_by_value = true }
           | CPPfun_call (res, f, {rev = args}) ->
             CPPfun_call (res, sub f, of_reversed (List.map sub args))
           | CPPderef e' -> CPPderef (sub e')
           | CPPmove e' -> CPPmove (sub e')
-          | CPPlambda (args, ty, b, cbv) ->
-            CPPlambda
-              ( args,
-                ty,
-                List.map (subst_lifted_call_stmt target lifted free_args) b,
-                cbv )
-          | CPPoverloaded cases -> CPPoverloaded (List.map sub cases)
+          | CPPlambda l -> CPPlambda (sub_lambda l)
+          | CPPoverloaded cases -> CPPoverloaded (List.map sub_lambda cases)
           | CPPstructmk (id', tys, args) ->
             CPPstructmk (id', tys, List.map sub args)
           | CPPstruct (id', tys, args) -> CPPstruct (id', tys, List.map sub args)
@@ -12565,7 +12638,10 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                types. *)
             let cpp_ty =
               match (cpp_ty, e) with
-              | Tfun (dom, _), CPPlambda (params, Some ret_ty, _, _)
+              | Tfun (dom, _), CPPlambda
+                { cl_params = params;
+                  cl_ret = Some ret_ty;
+                  _ }
                 when List.exists has_tany_in_type dom ->
                 let strip_tmod = function
                   | Tmod (_, t) -> t

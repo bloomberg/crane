@@ -166,7 +166,7 @@ let rec resolve_expr boxed e =
     end
     else
       CPPany_cast (ty, inner)
-  | CPPlambda (params, ret_ty, body, by_value) ->
+  | CPPlambda ({cl_params = params; cl_ret = ret_ty; _} as l) ->
     let boxed =
       List.fold_left
         (fun acc (ty, id_opt) ->
@@ -175,8 +175,7 @@ let rec resolve_expr boxed e =
           | _ -> acc)
         boxed (to_reversed params)
     in
-    CPPlambda (params, ret_ty,
-      List.map (resolve_stmt ~ret:ret_ty boxed) body, by_value)
+    CPPlambda (map_lambda (resolve_stmt ~ret:ret_ty boxed) Fun.id l)
   | _ ->
     map_expr (resolve_expr boxed) (resolve_stmt ~ret:None boxed) (fun t -> t) e
 

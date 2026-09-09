@@ -1798,8 +1798,8 @@ let dead_unit_returns_to_abort (cod : cpp_type) (body : cpp_stmt list) =
     | _ -> map_stmt (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) s
   and fix_expr ret_ty e =
     match e with
-    | CPPlambda (params, lam_ret, stmts, by_value) ->
-      CPPlambda (params, lam_ret, fix_stmts lam_ret stmts, by_value)
+    | CPPlambda l ->
+      CPPlambda {l with cl_body = fix_stmts l.cl_ret l.cl_body}
     | _ -> map_expr (fix_expr ret_ty) (fix_stmt ret_ty) (fun t -> t) e
   in
   fix_stmts (Some cod) body
@@ -3503,15 +3503,15 @@ let gen_decl_for_pp_dual ~is_header n b ty =
 
 let rec replace_return_this_expr inner_ty = function
   | CPPthis -> CPPshared_from_this inner_ty
-  | CPPlambda (params, ret, body, cap) ->
-    CPPlambda
-      (params, ret, List.map (replace_return_this_stmt inner_ty) body, cap)
+  | CPPlambda l ->
+    CPPlambda (map_lambda (replace_return_this_stmt inner_ty) Fun.id l)
   | CPPfun_call (_, f, {rev = args}) ->
     CPPfun_call
       (call_opaque, replace_return_this_expr inner_ty f,
         of_reversed (List.map (replace_return_this_expr inner_ty) args) )
-  | CPPoverloaded exprs ->
-    CPPoverloaded (List.map (replace_return_this_expr inner_ty) exprs)
+  | CPPoverloaded ls ->
+    CPPoverloaded
+      (List.map (map_lambda (replace_return_this_stmt inner_ty) Fun.id) ls)
   | e -> e
 
 (** Statement-level counterpart of {!replace_return_this_expr}: recurses into
@@ -3560,13 +3560,12 @@ and replace_return_this_stmt inner_ty = function
     is invalid because [this] is a pointer.  We need [return *this;] instead. *)
 let rec deref_return_this_expr = function
   | CPPthis -> CPPderef CPPthis
-  | CPPlambda (params, ret, body, cap) ->
-    CPPlambda (params, ret, List.map deref_return_this_stmt body, cap)
+  | CPPlambda l -> CPPlambda (map_lambda deref_return_this_stmt Fun.id l)
   | CPPfun_call (_, f, {rev = args}) ->
     CPPfun_call (call_opaque, deref_return_this_expr f,
                  of_reversed (List.map deref_return_this_expr args))
-  | CPPoverloaded exprs ->
-    CPPoverloaded (List.map deref_return_this_expr exprs)
+  | CPPoverloaded ls ->
+    CPPoverloaded (List.map (map_lambda deref_return_this_stmt Fun.id) ls)
   | e -> e
 
 and deref_return_this_stmt s =
@@ -3634,7 +3633,7 @@ let replace_this_in_lambdas self_type stmts =
   let stmts_have_this stmts = List.exists stmt_has_this stmts in
   (* Check if any by-value lambda in the method body captures this. *)
   let rec lambda_captures_this_expr = function
-    | CPPlambda (_, _, body, true) -> stmts_have_this body
+    | CPPlambda {cl_body = body; cl_by_value = true; _} -> stmts_have_this body
     | e ->
       let found = ref false in
       ignore (map_expr (fun e' ->
@@ -3678,8 +3677,8 @@ let replace_this_in_lambdas self_type stmts =
       map_stmt subst_expr subst_stmt id_type s
     in
     let rec walk_expr = function
-      | CPPlambda (params, ret, body, true) ->
-        CPPlambda (params, ret, List.map subst_stmt body, true)
+      | CPPlambda ({cl_by_value = true; _} as l) ->
+        CPPlambda (map_lambda subst_stmt Fun.id l)
       | e -> map_expr walk_expr walk_stmt id_type e
     and walk_stmt s =
       map_stmt walk_expr walk_stmt id_type s
@@ -3696,10 +3695,11 @@ let replace_this_in_lambdas self_type stmts =
 (** Check if any expression or statement contains [CPPshared_from_this]. *)
 let rec expr_has_shared_from_this = function
   | CPPshared_from_this _ -> true
-  | CPPlambda (_, _, body, _) -> List.exists stmt_has_shared_from_this body
+  | CPPlambda {cl_body = body; _} -> List.exists stmt_has_shared_from_this body
   | CPPfun_call (_, f, {rev = args}) ->
     expr_has_shared_from_this f || List.exists expr_has_shared_from_this args
-  | CPPoverloaded exprs -> List.exists expr_has_shared_from_this exprs
+  | CPPoverloaded ls ->
+    List.exists (fun l -> List.exists stmt_has_shared_from_this l.cl_body) ls
   | _ -> false
 
 (** Statement-level counterpart of {!expr_has_shared_from_this}: checks whether

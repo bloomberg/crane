@@ -336,16 +336,12 @@ and cpp_expr =
   | CPPderef of cpp_expr
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr
-  | CPPlambda of
-      (cpp_type * Id.t option) revd
-      * cpp_type option
-      * cpp_stmt list
-      * bool (* capture_by_value *)
+  | CPPlambda of cpp_lambda
   | CPPvisit
   | CPPalloc of alloc_kind * cpp_type
-  | CPPoverloaded of cpp_expr list
-    (* Invariant: all elements must be CPPlambda. Enforced at construction
-       in make_visit_expr (loopify.ml). *)
+  | CPPoverloaded of cpp_lambda list
+    (* An overload set is lambdas and nothing else, which is why it is typed
+       by {!cpp_lambda} rather than by [cpp_expr] plus a comment. *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
   | CPPstruct of
       GlobRef.t
@@ -447,6 +443,19 @@ and cpp_expr =
     (* std::get_if<T>(&variant) — pointer-returning variant accessor.
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
        [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
+
+(** A lambda expression.  Named as a record because an overload set
+    ({!CPPoverloaded}) is a list of {e lambdas}: the elements' shape is part of
+    what an overload set is, so it is stated in the type rather than checked at
+    the one constructor that happens to build one. *)
+and cpp_lambda = {
+  cl_params : (cpp_type * Id.t option) revd;
+      (** Parameters, reversed -- see {!revd}.  Read them with
+          {!lambda_params}. *)
+  cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
+  cl_body : cpp_stmt list;
+  cl_by_value : bool;  (** A [\[=\]] capture rather than a [\[&\]] one. *)
+}
 
 (** A C++ constraint expression (used in requires clauses). *)
 and cpp_constraint = cpp_expr
@@ -744,13 +753,18 @@ let mk_apply ?yields ?params fn args =
     [void] and could not stand where a value is expected; [Tany] is what an
     erased slot asks for, and is the only thing left to say when the caller
     named no type. *)
+let lambda params ret body ~by_value =
+  { cl_params = {rev = List.rev params};
+    cl_ret = (match ret with Some (Tmod (TMconst, t)) -> Some t | r -> r);
+    cl_body = body;
+    cl_by_value = by_value }
+
 let mk_lambda params ret body ~by_value =
-  let ret =
-    match ret with Some (Tmod (TMconst, t)) -> Some t | r -> r
-  in
+  let l = lambda params ret body ~by_value in
   match (params, body) with
-  | [], [Sthrow msg] -> CPPabort (msg, (match ret with Some t -> t | None -> Tany))
-  | _ -> CPPlambda ({rev = List.rev params}, ret, body, by_value)
+  | [], [Sthrow msg] ->
+    CPPabort (msg, match l.cl_ret with Some t -> t | None -> Tany)
+  | _ -> CPPlambda l
 
 (** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
     immediately, capturing by reference.
@@ -765,6 +779,17 @@ let call_args (args : 'a revd) = List.rev args.rev
 
 (** The parameters of a {!CPPlambda}, in source order. *)
 let lambda_params (params : 'a revd) = List.rev params.rev
+
+(** [map_lambda fs ft l] maps [ft] over the parameter and return types of [l]
+    and [fs] over its body.  A lambda has no immediate sub-expression of its
+    own, so there is no expression function to take. *)
+let map_lambda fs ft l =
+  { l with
+    cl_params =
+      of_reversed
+        (List.map (fun (ty, id) -> (ft ty, id)) (to_reversed l.cl_params));
+    cl_ret = Option.map ft l.cl_ret;
+    cl_body = List.map fs l.cl_body }
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -793,15 +818,10 @@ let map_expr
   | CPPderef e' -> CPPderef (fe e')
   | CPPmove e' -> CPPmove (fe e')
   | CPPforward (ty, e') -> CPPforward (ft ty, fe e')
-  | CPPlambda (params, ret_ty, stmts, capture) ->
-    CPPlambda
-      ( of_reversed (List.map (fun (ty, id) -> (ft ty, id)) (to_reversed params)),
-        Option.map ft ret_ty,
-        List.map fs stmts,
-        capture )
+  | CPPlambda l -> CPPlambda (map_lambda fs ft l)
   | CPPvisit -> e
   | CPPalloc (k, ty) -> CPPalloc (k, ft ty)
-  | CPPoverloaded exprs -> CPPoverloaded (List.map fe exprs)
+  | CPPoverloaded ls -> CPPoverloaded (List.map (map_lambda fs ft) ls)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
   | CPPstruct (r, tys, args) -> CPPstruct (r, List.map ft tys, List.map fe args)
@@ -954,8 +974,9 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
-  | CPPlambda (_, _, stmts, _) -> on_stmts stmts
-  | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+  | CPPlambda l -> on_stmts l.cl_body
+  | CPPoverloaded ls -> List.iter (fun l -> on_stmts l.cl_body) ls
+  | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
     List.iter on_expr es
   | CPPparray (arr, e') -> Array.iter on_expr arr; on_expr e'
@@ -1025,7 +1046,9 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
-  | CPPlambda (_, _, stmts, _) -> on_stmts acc stmts
+  | CPPlambda l -> on_stmts acc l.cl_body
+  | CPPoverloaded ls ->
+    List.fold_left (fun acc l -> on_stmts acc l.cl_body) acc ls
   | CPPfun_call (_, fn, args) -> List.fold_left fe (fe acc fn) args.rev
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPbox (_, e') -> fe acc e'
@@ -1038,7 +1061,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     fe acc e'
-  | CPPoverloaded es | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
+  | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
     List.fold_left fe acc es
   | CPPparray (arr, e') -> fe (Array.fold_left fe acc arr) e'

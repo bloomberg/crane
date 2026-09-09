@@ -190,7 +190,7 @@ let lambda_needs_capture
     | CPPthis | CPPshared_from_this _ ->
       uses_this := true;
       (refs, decls)
-    | CPPlambda (inner_params, _, inner_body, _) ->
+    | CPPlambda {cl_params = inner_params; cl_body = inner_body; _} ->
       let inner_param_names =
         List.fold_left
           (fun acc (_, id_opt) ->
@@ -285,7 +285,7 @@ let lambda_needs_capture
     initializers. Closed lambdas (with []) don't need IIFE wrapping. *)
 let rec expr_contains_capturing_lambda (e : Minicpp.cpp_expr) : bool =
   match e with
-  | CPPlambda (params, _, body, _) ->
+  | CPPlambda {cl_params = params; cl_body = body; _} ->
     fst (lambda_needs_capture (to_reversed params) body)
     || List.exists stmt_contains_capturing_lambda body
   | _ ->
@@ -1528,7 +1528,11 @@ and pp_cpp_expr env args t =
     let args_s = pp_list (pp_cpp_expr env args) (List.rev ts) in
     str "(*" ++ pp_cpp_expr env args e ++ str ")(" ++ args_s ++ str ")"
   | CPPfun_call
-      (_,  CPPlambda ({rev = []}, _, [Smatch (branches, wildcard)], false),
+      (_,  CPPlambda
+        { cl_params = {rev = []};
+          cl_body = [Smatch (branches, wildcard)];
+          cl_by_value = false;
+          _ },
         {rev = []} )
     when (* Detect simple IIFE-wrapped matches that can be printed as ternary.
             Eligible: exactly 2 return-only branches (no wildcard), or 1 branch
@@ -1575,7 +1579,10 @@ and pp_cpp_expr env args t =
     in
     str "(" ++ cond_pp ++ str " ? " ++ pp then_e ++ str " : " ++ pp else_e ++ str ")"
   | CPPfun_call
-      (_,  CPPlambda ({rev = []}, _, [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])], _),
+      (_,  CPPlambda
+        { cl_params = {rev = []};
+          cl_body = [Sif (cond, [Sreturn (Some e1)], [Sreturn (Some e2)])];
+          _ },
         {rev = []} )
     when not (expr_contains_string e1 || expr_contains_string e2) ->
     (* IIFE wrapping a simple if/else with single-expression returns in both
@@ -1584,7 +1591,10 @@ and pp_cpp_expr env args t =
     let pp = pp_cpp_expr env args in
     str "(" ++ pp cond ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
   | CPPfun_call
-      (_,  CPPlambda ({rev = []}, _, [Scustom_case (_, scrut, _, branches, cmatch)], _),
+      (_,  CPPlambda
+        { cl_params = {rev = []};
+          cl_body = [Scustom_case (_, scrut, _, branches, cmatch)];
+          _ },
         {rev = []} )
     when (* Custom case with exactly 2 return-only branches and the standard
             bool-like if/else template → emit ternary.  Skip when branches
@@ -1762,7 +1772,11 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
-  | CPPlambda (params, ret_ty, body, capture_by_value) ->
+  | CPPlambda
+    { cl_params = params;
+      cl_ret = ret_ty;
+      cl_body = body;
+      cl_by_value = capture_by_value } ->
     let params = to_reversed params in
     let needs_capture, uses_this = lambda_needs_capture params body in
     let body_derefs_var =
@@ -1892,7 +1906,9 @@ and pp_cpp_expr env args t =
       cpp_angle Crane_rt.arena_make_shared inner
     end
   | CPPoverloaded ls ->
-    let ls_s = pp_list_newline (pp_cpp_expr env args) ls in
+    let ls_s =
+      pp_list_newline (fun l -> pp_cpp_expr env args (CPPlambda l)) ls
+    in
     str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
   | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
     let suffix = match e with CPPstructmk _ -> "::make(" | _ -> "{" in
