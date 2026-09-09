@@ -3321,7 +3321,7 @@ let gen_spec__inner n b ty =
              concrete type, so no MLmagic is generated. *)
       let is_concrete_target =
         match ty with
-        | Tany | Tvar _ | Tunresolved | Tvoid | Ttodo | Tauto -> false
+        | Tany | Tvar _ | Tunresolved | Tvoid | Tauto -> false
         | Tglob (g, _, _) when Table.is_erased_type_const g -> false
         | _ -> not (type_is_erased ty)
       in

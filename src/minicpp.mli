@@ -124,7 +124,6 @@ type cpp_type =
   | Tvariant of cpp_type list  (** std::variant<...> for sum types *)
   | Tshared_ptr of cpp_type  (** std::shared_ptr<T> for managed memory *)
   | Tvoid  (** void type *)
-  | Ttodo  (** Placeholder during development *)
   | Tunresolved
       (** No C++ type was determined for this position.  Distinct from
           {!Miniml.Tunknown}, which is the ML-level bottom: this one is

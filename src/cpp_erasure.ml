@@ -129,7 +129,7 @@ let returns_a_box = function
     variable or an unresolved type does not. *)
 let rec castable_to = function
   | Tvar _ -> false
-  | Tunresolved | Ttodo | Tany | Topaque | Tauto -> false
+  | Tunresolved | Tany | Topaque | Tauto -> false
   | Tmod (_, inner) -> castable_to inner
   | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true

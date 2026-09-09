@@ -1070,8 +1070,9 @@ let replace_return_with_assign s var_name =
       <body with "return X;" rewritten to "target_var = X;">
     ]}
     Returns [Some stmts] on success, [None] if [expr] is not a liftable IIFE.
-    When [target_ty = Ttodo], the lambda's return type is used instead. *)
-let lift_iife_assignment target_var target_ty expr =
+    [target_ty] is [None] where the declaration has no type of its own to
+    impose, and the lambda's return type is used instead. *)
+let lift_iife_assignment target_var (target_ty : cpp_type option) expr =
   match expr with
   | CPPfun_call (_, 
       CPPlambda
@@ -1080,7 +1081,7 @@ let lift_iife_assignment target_var target_ty expr =
           cl_body = body;
           cl_by_value = false },
       {rev = [arg]}) ->
-    let actual_ty = match target_ty with Ttodo -> ret_ty | t -> t in
+    let actual_ty = match target_ty with Some t -> t | None -> ret_ty in
     let tv_s = Id.to_string target_var in
     let lifted_body = List.map (function
       | Sreturn (Some e) -> Sasgn (target_var, Existing, e)
@@ -7485,7 +7486,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             let decl_ty =
               convert_ml_type_to_cpp_type env [] ty
             in
-            match lift_iife_assignment renamed_name decl_ty e with
+            match lift_iife_assignment renamed_name (Some decl_ty) e with
             | Some stmts -> stmts
             | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
@@ -10847,9 +10848,9 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let n = (!tctx).cs_counter in
       tctx := { !tctx with cs_counter = n + 1 };
       let cache_id = Common.scrutinee_cache_id n in
-      match lift_iife_assignment cache_id Ttodo t with
+      match lift_iife_assignment cache_id None t with
       | Some stmts -> (CPPvar cache_id, stmts)
-      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare Ttodo, t)])
+      | None -> (CPPvar cache_id, [Sasgn (cache_id, Declare Tauto, t)])
     end else begin
       (t, [])
     end
@@ -13231,7 +13232,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               else
                 api_ty_for_decl
             in
-            match lift_iife_assignment renamed_name decl_ty e with
+            match lift_iife_assignment renamed_name (Some decl_ty) e with
             | Some stmts -> stmts
             | None -> [Sasgn (renamed_name, Declare decl_ty, e)])
           (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))

@@ -919,7 +919,6 @@ let rec pp_cpp_type par vl t =
       require_header "memory";
       cpp_angle (sn ()).shared_ptr (pp_rec false t)
     | Tvoid -> str "void"
-    | Ttodo -> str "auto"
     | Tunresolved ->
       (* There is no C++ spelling for "no type was determined"; emitting a
          placeholder would hand the user a file that does not compile, with
@@ -2744,7 +2743,7 @@ and pp_cpp_stmt env args = function
     transitively call axiom stubs that throw std::logic_error. *)
 and is_pure_return_type = function
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tany | Topaque | Tauto | Ttodo | Tunresolved -> false
+  | Tvoid | Tvar _ | Tany | Topaque | Tauto | Tunresolved -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
   | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
@@ -2764,7 +2763,7 @@ and is_constexpr_type ty =
   if is_any_type ty then false else
   match ty with
   | Tshared_ptr _ -> false
-  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto | Ttodo
+  | Tvoid | Tvar _ | Tinstance _ | Tpromoted _ | Tany | Topaque | Tauto
   | Tunresolved -> false
   | Tfun _ -> false  (* std::function uses type erasure *)
   | Tdecltype _ | Tdecay _ -> false
@@ -2825,7 +2824,7 @@ and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
     and unknown types are not concrete - we can't cast to them. *)
 and is_concrete_cpp_type = function
   | Tvar _ -> false
-  | Tunresolved | Ttodo | Tany | Topaque | Tauto -> false
+  | Tunresolved | Tany | Topaque | Tauto -> false
   | Tmod (_, inner) -> is_concrete_cpp_type inner
   | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true

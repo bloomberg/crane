@@ -247,7 +247,7 @@ let rec is_value_type_ret = function
     For these types, copying is cheaper than indirecting through a reference,
     so frame-field bindings should remain copies rather than [const T&]. *)
 let rec is_trivially_copyable_type = function
-  | Tvoid | Tauto | Tunresolved | Ttodo | Tany -> true
+  | Tvoid | Tauto | Tunresolved | Tany -> true
   | Tptr _ | Tref _ -> true
   | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) ->
     is_trivially_copyable_type t
@@ -281,7 +281,7 @@ let rec worthwhile_move_type = function
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
   | Tdecay t -> worthwhile_move_type t
-  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Ttodo | Tany | Topaque
+  | Ttyctor _ | Tptr _ | Tvoid | Tauto | Tunresolved | Tany | Topaque
   | Tdecltype _ ->
     false
 

@@ -1,6 +1,6 @@
 (include_subdirs qualified)
 
-(env (_ (env-vars (INSIDE_DUNE "1"))))
+(env (_ (env-vars (INSIDE_DUNE "1") (CRANE_CHECK_IR "1"))))
 
 (coq.theory
  (name CraneTestsBasics)

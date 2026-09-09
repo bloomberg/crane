@@ -667,7 +667,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tid (id, tys) -> Tid (id, List.map tvar_erase_type tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map tvar_erase_type tys)
   | Tqualified (ty, id) -> Tqualified (tvar_erase_type ty, id)
-  | _ -> ty (* Tvoid, Ttodo, Tunresolved, Tany *)
+  | _ -> ty (* Tvoid, Tunresolved, Tany *)
 
 (** Erase a type argument down to its outermost applied type constructors,
     boxing every leaf: [List<Nat>] becomes [List<std::any>] and a bare [Nat]
