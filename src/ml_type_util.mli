@@ -74,9 +74,19 @@ val ml_type_contains_erased : Miniml.ml_type -> bool
 (** The codomain (final result type) of a MiniML arrow type. *)
 val ml_codomain : Miniml.ml_type -> Miniml.ml_type
 
+(** The domains of a MiniML arrow type, in argument order -- every arrow,
+    erased ones included, so a position in the result is a position in the
+    type. Only the arrow spine is chased through metavariables. *)
+val ml_domains : Miniml.ml_type -> Miniml.ml_type list
+
 (** The domains of a MiniML arrow type, in argument order, with the erased
     ([Tdummy]) ones dropped -- one entry per argument a C++ call passes. *)
 val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
+
+(** A class method's type with the leading domains a concept erased -- its own
+    [forall A] binders and the class instance -- stripped back off, as read
+    from the projection constant which kept them. *)
+val strip_erased_method_prefix : Miniml.ml_type -> Miniml.ml_type
 
 (** [ml_drop_arrows n t] is what is left of [t] once [n] of its value-carrying
     arrows have been applied; [Tunresolved] if it has fewer than [n]. *)

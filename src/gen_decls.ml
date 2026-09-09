@@ -124,13 +124,8 @@ let hkt_alias_param_name i = Id.of_string (Printf.sprintf "_A%d" i)
 let recover_method_quantifier class_ref field_ref erased =
   if Table.get_ind_hkt_params class_ref = [] then erased
   else
-    let rec strip = function
-      | Miniml.Tarr (d, rest)
-        when Mlutil.isTdummy d || Table.is_typeclass_type d ->
-        strip rest
-      | t -> t
-    in
-    try strip (Table.find_type field_ref) with Not_found -> erased
+    try Ml_type_util.strip_erased_method_prefix (Table.find_type field_ref)
+    with Not_found -> erased
 
 (** [method_tvar_count class_ref ty] is the arity of the member template an
     instance method of type [ty] emits: the type variables the method
@@ -1951,12 +1946,8 @@ let gen_dfun n b cty ty temps =
     && ml_type_is_unit (ml_result_type ty)
   in
   let cod = apply_unit_void unit_void ((!tctx).itree_mode = Reified) cod in
-  let rec get_dom l ty =
-    match ty with
-    | Tarr (t1, t2) -> get_dom (t1 :: l) t2
-    | _ -> l
-  in
-  let mldom = get_dom [] ty in
+  (* Reversed: the lambda collection below peels the innermost arrow first. *)
+  let mldom = List.rev (Ml_type_util.ml_domains ty) in
   (* Limit lambda collection to the number of type arrows. When a type alias
      like [State S A = S -> A * S] is used as a return type, the extraction may
      fully uncurry the body (producing more lambdas than the type has arrows),
@@ -2164,7 +2155,7 @@ let gen_dfun n b cty ty temps =
             (pos + 1, rank + 1, acc)
           | _ -> (pos + 1, rank, acc) )
         (1, 1, [])
-        (List.rev (get_dom [] (try Table.find_type n with Not_found -> ty)))
+        (Ml_type_util.ml_domains (try Table.find_type n with Not_found -> ty))
     in
     let n_type_binders = n_type_binders - 1 in
     (* Extraction does not always fall out of step: when the body happens to

@@ -115,15 +115,37 @@ let rec ml_codomain = function
   | Miniml.Tmeta {contents = Some t} -> ml_codomain t
   | t -> t
 
+(** The domains of an ML type, in argument order -- every arrow it has,
+    including the erased ones, so a position in the result is a position in the
+    type.  Callers that need the arguments a C++ call actually passes want
+    {!ml_value_domains}; callers indexing by type-variable position want this.
+
+    Only the arrow spine is chased through metavariables; each domain is
+    returned as written, since a caller that cares runs {!resolve_tmeta} on the
+    one entry it looks at. *)
+let rec ml_domains t =
+  match resolve_tmeta t with
+  | Miniml.Tarr (t1, t2) -> t1 :: ml_domains t2
+  | _ -> []
+
 (** The domains of an ML type, in argument order, skipping the erased
     ([Tdummy]) ones -- so the result lines up with the arguments a C++ call
     actually passes. *)
-let rec ml_value_domains t =
-  match t with
-  | Miniml.Tmeta {contents = Some t} -> ml_value_domains t
-  | Miniml.Tarr (Miniml.Tdummy _, t2) -> ml_value_domains t2
-  | Miniml.Tarr (t1, t2) -> t1 :: ml_value_domains t2
-  | _ -> []
+let ml_value_domains t =
+  List.filter (fun d -> not (Mlutil.isTdummy d)) (ml_domains t)
+
+(** A class method's type with the quantifier a concept erased put back.
+
+    A class's [ip_types] entry has already erased the method's own [forall A]
+    and the class instance itself; the projection constant kept both.  Reading
+    the projection's type and dropping those leading domains recovers the
+    method as its instances must spell it -- a member template, not a signature
+    flattened to [std::any].  Both the instance side ({!Gen_decls}) and the
+    call side ({!Translation}) need the same answer, so they ask here. *)
+let rec strip_erased_method_prefix = function
+  | Miniml.Tarr (d, rest) when Mlutil.isTdummy d || Table.is_typeclass_type d ->
+    strip_erased_method_prefix rest
+  | t -> t
 
 (** [ml_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Tdummy]) domains do not count, matching the value

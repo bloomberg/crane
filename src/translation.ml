@@ -7219,13 +7219,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                [forall A]; the projection constant has not, and an instance of
                a higher-kinded class needs it back (see the instance side in
                [Gen_decls]). *)
-            let rec strip = function
-              | Miniml.Tarr (d, rest)
-                when Mlutil.isTdummy d || Table.is_typeclass_type d ->
-                strip rest
-              | t -> t
-            in
-            try Some (strip (Table.find_type fld)) with Not_found -> declared
+            try Some (strip_erased_method_prefix (Table.find_type fld))
+            with Not_found -> declared
         in
         (* The field's own parameter types drive erasure of function-valued
            arguments: a class method polymorphic in its own type argument
@@ -8487,11 +8482,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           let ret = resolve_tmeta (ml_return_type ml_ty_orig) in
           ( match ret with
           | Miniml.Tvar (_, i) ->
-            let rec collect_dom acc = function
-              | Miniml.Tarr (t1, t2) -> collect_dom (resolve_tmeta t1 :: acc) t2
-              | _ -> List.rev acc
-            in
-            let all_dom = collect_dom [] ml_ty_orig in
+            let all_dom = List.map resolve_tmeta (ml_domains ml_ty_orig) in
             (* Tvar uses 1-based indexing (matching type_subst_list); convert to
                0-based for list access. *)
             let idx = i - 1 in
@@ -8523,10 +8514,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | Miniml.Tmeta { contents = Some t } -> mentions t
               | _ -> false
             in
-            let rec doms acc = function
-              | Miniml.Tarr (t1, t2) -> doms (resolve_tmeta t1 :: acc) t2
-              | _ -> acc
-            in
             (* A function-typed parameter reaches C++ as an opaque template
                parameter [F0], not as a spelled-out signature, so a variable
                occurring inside it -- as the callback's own codomain, say -- is
@@ -8535,7 +8522,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               | Miniml.Tarr _ -> false
               | t -> mentions t
             in
-            not (List.exists deducible (doms [] ml_ty_orig))
+            not
+              (List.exists deducible
+                 (List.map resolve_tmeta (ml_domains ml_ty_orig)))
           | _ -> false )
       in
       if filtered = [] && regular_type_args <> [] then
@@ -8985,18 +8974,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         in
         if arg_ml_erased then
           let prod_g_opt =
-            try
-              let ml_ty = Table.find_type n in
-              let rec find_prod = function
-                | Miniml.Tarr (t, rest) ->
-                  ( match resolve_tmeta t with
-                  | Miniml.Tglob (g, _, _) when is_prod_global g -> Some g
-                  | Miniml.Tdummy _ -> find_prod rest
-                  | _ -> None )
-                | _ -> None
-              in
-              find_prod ml_ty
-            with Not_found -> None
+            (* The first argument the C++ call passes: erased domains carry no
+               value, so they are not it. *)
+            let first_dom =
+              try
+                match ml_value_domains (Table.find_type n) with
+                | t :: _ -> Some (resolve_tmeta t)
+                | [] -> None
+              with Not_found -> None
+            in
+            match first_dom with
+            | Some (Miniml.Tglob (g, _, _)) when is_prod_global g -> Some g
+            | _ -> None
           in
           ( match prod_g_opt, single_arg with
           | _, CPPany_cast (Tglob (g, cast_args, _), _)
