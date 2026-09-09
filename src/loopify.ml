@@ -3207,7 +3207,12 @@ let patch_tmc_dest ~vt_ret _ti val_expr =
 let wrap_base_for_vt vt_ret val_expr =
   match vt_ret with
   | Some ret_ty ->
-    CPPfun_call (call_opaque, CPPalloc (Alloc_heap, ret_ty), of_reversed ([val_expr]))
+    (* The allocation's result type is [ret_ty] by construction; say so rather
+       than leaving {!infer_saved_type} to rediscover it. *)
+    CPPfun_call
+      ( call_sig ~yields:(Tshared_ptr ret_ty) ~nargs:1 (),
+        CPPalloc (Alloc_heap, ret_ty),
+        of_reversed [ val_expr ] )
   | None -> val_expr
 
 (** Build a constructor call with [nullptr] at the recursive argument position.
@@ -3228,6 +3233,10 @@ let build_cell_call ?token ~vt_ret cell =
      wraps the recursive [rose] in a [list rose]).  Allocate at the cell's own
      type, which [tca_type] carries. *)
   let mk_shared_cell = CPPalloc (Alloc_heap, cell.tca_type) in
+  (* What that allocation yields, recorded at the one place that knows it. *)
+  let shared_cell_sig =
+    call_sig ~yields:(Tshared_ptr cell.tca_type) ~nargs:1 ()
+  in
   let expr_builds_cell_type e =
     match is_ctor_factory_call e with
     | Some (ty, _, _, _) -> ty = cell.tca_type
@@ -3246,7 +3255,7 @@ let build_cell_call ?token ~vt_ret cell =
           in
           if should_wrap then
             (match vt_ret with
-             | Some _ -> CPPfun_call (call_opaque, mk_shared_cell, of_reversed ([e]))
+             | Some _ -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([e]))
              | None -> e)
           else e
         | None ->
@@ -3266,7 +3275,7 @@ let build_cell_call ?token ~vt_ret cell =
           the constructor struct exactly as [make_rc] would build it. *)
        CPPfun_call (call_opaque, CPPrt Crane_rt.Make_rc_reusing_unchecked,
                     of_reversed ([cell_expr; tok]))   (* reversed: (token, cell) *)
-     | None -> CPPfun_call (call_opaque, mk_shared_cell, of_reversed ([cell_expr])))
+     | None -> CPPfun_call (shared_cell_sig, mk_shared_cell, of_reversed ([cell_expr])))
   | None ->
     CPPfun_call (call_opaque, cell.tca_factory, of_reversed (args))
 
@@ -3915,6 +3924,19 @@ let rec extract_fwd_ref_tvar = function
 (** The C++ [bool] type, as the printer spells it. *)
 let ty_bool = Tid_external (Id.of_string "bool", [])
 
+(** Whether a binary operator's result is [bool] whatever its operands are.
+    Comparisons and the short-circuiting connectives are the ones that do not
+    hand their operand's type back. *)
+let binop_yields_bool = function
+  | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" -> true
+  | _ -> false
+
+(** The raw-pointer type an owning or raw pointer decays to.  Both
+    [crane_raw(x)] and [x.get()] answer this way. *)
+let as_raw_ptr = function
+  | Tptr t | Tshared_ptr t -> Tptr t
+  | _ -> Tunresolved
+
 (** Infer the C++ type of a saved CPP expression bottom-up.
     Returns [Tunresolved] when the type cannot be determined.
     Handles the common cases: variable lookups, smart-pointer derefs,
@@ -3944,10 +3966,12 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
         | t -> t
       in
       pointee (infer_saved_type tparams env inner)
+    | CPPbinop (op, _, _) when binop_yields_bool op -> ty_bool
     | CPPbinop (_, lhs, rhs) ->
-      (* Try left operand first; fall back to right.  This handles the common
-         pattern [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda
-         param) is, and the result type matches the param type. *)
+      (* An arithmetic or assignment operator hands back an operand's type.
+         Try left first, fall back to right: this handles the common pattern
+         [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda param) is,
+         and the result type matches the param type. *)
       let tl = infer_saved_type tparams env lhs in
       if tl <> Tunresolved then tl
       else infer_saved_type tparams env rhs
@@ -3964,11 +3988,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
     | CPPfun_call (_, CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
       (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
          already raw (arena mode).  Infer from the inner expression. *)
-      let inner_ty = infer_saved_type tparams env inner in
-      ( match inner_ty with
-      | Tptr t -> Tptr t
-      | Tshared_ptr t -> Tptr t
-      | _ -> Tunresolved )
+      as_raw_ptr (infer_saved_type tparams env inner)
     | CPPfun_call (_, CPPvar f, {rev = _}) ->
       ( match lookup_var_type env f with
       | Some (Tfun (_, cod)) -> cod
@@ -3991,11 +4011,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
       when String.equal (Id.to_string id) "get" ->
       (* shared_ptr::get() returns a raw pointer.
          Infer from the inner expression. *)
-      let inner_ty = infer_saved_type tparams env inner in
-      ( match inner_ty with
-      | Tptr t -> Tptr t  (* already a pointer *)
-      | Tshared_ptr t -> Tptr t  (* shared_ptr<T> → T* *)
-      | _ -> Tunresolved )
+      as_raw_ptr (infer_saved_type tparams env inner)
     | CPPfun_call _ -> Tunresolved
     | CPPconverting_ctor (ty, _) -> strip_ref_and_const_type ty
     | CPPlambda (params, ret_ty_opt, body, _) ->
