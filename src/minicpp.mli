@@ -62,17 +62,6 @@ type cpp_ind_kind =
   | IK_TypeClass of GlobRef.t option list
       (** Type class rendered as C++ concept *)
 
-(** {2 Custom extraction info}
-
-    Resolved once during translation. *)
-
-(** Custom extraction metadata for manually mapped entities. *)
-type custom_info = {
-  ci_inline : string option;
-      (** Some code if entity should be inlined, None otherwise *)
-  ci_is_custom : bool;  (** True if entity has custom C++ mapping *)
-}
-
 (** {2 Visibility modifiers} *)
 
 (** Visibility for struct members (C++ public/private). *)
@@ -572,6 +561,19 @@ and method_field = {
   mf_is_noexcept : bool;
       (** When true, emit [noexcept] after the parameter list.  Set for
           move assignment operators. *)
+}
+
+(** Custom extraction metadata for manually mapped entities.  Resolved once
+    during translation. *)
+and custom_info = {
+  ci_inline : string option;
+      (** Some code if entity should be inlined, None otherwise *)
+  ci_is_custom : bool;  (** True if entity has custom C++ mapping *)
+  ci_yields : cpp_type option;
+      (** For a [%result] block template used as a value: what the block
+          evaluates to, recorded where the global's ML type was still in
+          hand.  A block in expression position is printed as an immediately
+          invoked lambda, and a lambda has to be given a return type. *)
 }
 
 (** {2 Type schemas} *)

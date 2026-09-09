@@ -4812,6 +4812,34 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
     argument -- {!Minicpp.call_sig} enforces that -- since a partial
     application, or a callee whose arrows an eta-expansion has rearranged,
     would otherwise hand the printer a misaligned list. *)
+(** What a [%result] block template mapped onto global [x], instantiated at
+    [tys], evaluates to.
+
+    A block in value position is printed as an immediately invoked lambda, and
+    a lambda has to be given a return type.  A call node carries one in its
+    {!Minicpp.call_sig}; a bare reference has no call node, so the answer is
+    recorded on the global itself.  The printer must not re-derive it: it
+    would be reading the uninstantiated scheme out of the front-end table,
+    answering [List<T1>] where [List<uint64_t>] was meant.
+
+    [None] for a global with no such template, where the question does not
+    arise and any answer would be a guess -- a bare reference to a function is
+    the function, not its result. *)
+and glob_yields env x tys =
+  let is_result_block =
+    Table.to_inline x
+    && match Table.find_custom_opt x with
+       | Some tmpl -> Common.contains_substring tmpl "%result"
+       | None -> false
+  in
+  if not is_result_block then None
+  else
+    match find_type_opt x with
+    | None -> None
+    | Some ml_ty -> (
+      try Some (cpp_of_ml env (ml_codomain (Mlutil.type_subst_list tys ml_ty)))
+      with e when CErrors.noncritical e -> None )
+
 and record_call_sig env callee_ty e =
   match (e, callee_ty) with
   | CPPfun_call ({cs_yields = Ropaque; cs_params = Punknown}, f, args),
@@ -5684,12 +5712,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       eta_expand_to_expected ?expected_ty ~ml_arity ~returns_a_lambda
         ~arity:(List.length filtered_args) f )
   | MLglob (x, tys) when is_inline_custom x ->
-    let ty = find_type x in
-    let ty = cpp_of_ml env ty in
+    let ml_ty = find_type x in
+    let ty = cpp_of_ml env ml_ty in
     ( match ty with
     | Tfun (dom, cod) ->
       eta_fun ?expected_ty env (MLglob (x, tys)) []
-    | _ -> mk_cppglob x (template_params_of_ml env tys) )
+    | _ ->
+      mk_cppglob ?yields:(glob_yields env x tys)
+        x (template_params_of_ml env tys) )
   | MLglob (x, tys) ->
     let tvars = get_current_type_vars () in
     let tys_cpp =
@@ -5704,10 +5734,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> t )
         tys
     in
+    let yields = glob_yields env x tys in
     let cglob =
       match filter_erased_type_args tys_cpp with
-      | [] -> mk_cppglob x (phantom_prefix_args x)
-      | tys -> mk_cppglob x tys
+      | [] -> mk_cppglob ?yields x (phantom_prefix_args x)
+      | tys_cpp -> mk_cppglob ?yields x tys_cpp
     in
     let needs_call =
       match find_type_opt x with
@@ -8554,7 +8585,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if all_type_args = [] then phantom_prefix_args id else all_type_args
     in
 
-    let cglob = mk_cppglob id all_type_args in
+    let cglob = mk_cppglob ?yields:(glob_yields env id tys) id all_type_args in
     (* Check if this is a typeclass instance used as a type (for :: access).
        When all args are consumed (domain and args both empty after filtering),
        return just the type reference, not a function call. This avoids

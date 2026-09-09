@@ -28,12 +28,17 @@ let clear_local_inductives () = local_inductives := []
 (** Return the list of inductives local to the current module scope. *)
 let get_local_inductives () = !local_inductives
 
-(** Helper to create CPPglob with pre-computed custom_info *)
-let mk_cppglob (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
+(** Helper to create CPPglob with pre-computed custom_info.  [yields] is what
+    the global evaluates to, and is worth passing whenever the caller has the
+    global's instantiated type: for a [%result] block template in value
+    position it is the only record of the type, since there is no call node to
+    carry one. *)
+let mk_cppglob ?yields (r : GlobRef.t) (tys : cpp_type list) : cpp_expr =
   let ci =
     {
       ci_inline = (if Table.to_inline r then Table.find_custom_opt r else None);
       ci_is_custom = Table.is_custom r;
+      ci_yields = yields;
     }
   in
   CPPglob (r, tys, Some ci)

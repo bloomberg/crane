@@ -73,12 +73,6 @@ type cpp_ind_kind =
   | IK_Eponymous of GlobRef.t option list (* record merged into module *)
   | IK_TypeClass of GlobRef.t option list (* C++ concept *)
 
-(** Custom extraction info, resolved once during translation. *)
-type custom_info = {
-  ci_inline : string option; (* Some code if to_inline, None otherwise *)
-  ci_is_custom : bool;
-}
-
 (** Visibility for struct members. *)
 type cpp_visibility =
   | VPublic
@@ -515,6 +509,15 @@ and method_field = {
   mf_this_pos : int;
   mf_no_pure : bool;
   mf_is_noexcept : bool;
+}
+
+(** Custom extraction info, resolved once during translation. *)
+and custom_info = {
+  ci_inline : string option; (* Some code if to_inline, None otherwise *)
+  ci_is_custom : bool;
+  (* For a [%result] block template used as a value: what the block evaluates
+     to, recorded while the global's ML type was still in hand. *)
+  ci_yields : cpp_type option;
 }
 
 (** C++ type schema. The integer is the number of variables in the schema. *)

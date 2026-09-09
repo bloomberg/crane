@@ -986,7 +986,9 @@ and pp_value_qualifier env ty =
   | Tglob (r, tys, []) ->
     let ci =
       { ci_inline = (if to_inline r then find_custom_opt r else None);
-        ci_is_custom = Table.is_custom r }
+        ci_is_custom = Table.is_custom r;
+        (* A type qualifier, never a block in value position. *)
+        ci_yields = None }
     in
     pp_cpp_expr env [] (CPPglob (r, tys, Some ci))
   | _ ->
@@ -1089,19 +1091,13 @@ and pp_cpp_expr env args t =
      string, [tys] are type args, [val_args] are value args (already reversed
      for pp_custom). *)
   let gen_block_iife ?yields ref_name custom tys val_args =
-    (* What the block evaluates to.  A call node says so directly; a bare
-       reference to a block-valued constant has no call node to say it, so
-       there the callee's ML type is still the only source. *)
-    let ret_ty =
-      match yields with
-      | Some ty -> ty
-      | None -> (
-        try
-          let ml_ty = Table.find_type ref_name in
-          Translation.convert_ml_type_to_cpp_type
-            env [] (Translation.ml_codomain ml_ty)
-        with _ -> Tauto )
-    in
+    (* What the block evaluates to, as translation recorded it -- on the call
+       node for a call, and on the global's own [ci_yields] for a bare
+       reference to a block-valued constant, which has no call node.  The
+       printer does not re-derive it: it would be reading the uninstantiated
+       scheme out of the front-end table, and answering [List<T1>] where
+       [List<uint64_t>] was meant. *)
+    let ret_ty = match yields with Some ty -> ty | None -> Tauto in
     let result_str = "_r" in
     let substituted =
       flatten_custom_strings
@@ -1191,7 +1187,7 @@ and pp_cpp_expr env args t =
   | CPPglob (x, tys, Some ci) when ci.ci_inline <> None ->
     let custom = Option.get ci.ci_inline in
     if Common.contains_substring custom "%result" then
-      gen_block_iife x custom tys []
+      gen_block_iife ?yields:ci.ci_yields x custom tys []
     else
     let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
     let cmds = expand_elem_args cmds in
