@@ -392,7 +392,29 @@ let get_record_fields r =
     | _ -> assert false
   in
   match Mindmap_env.find_opt kn !inductive_kinds with
+  | Some (Record f | TypeClass f) -> List.map fst f
+  | _ -> []
+
+(** The fields of a record or type class, each paired with its ML type, in
+    declaration order.  Prefer this to zipping {!get_record_fields} against
+    {!record_field_types}: the latter is read straight off [ip_types] and still
+    holds the implicit arguments field selection dropped, so the two lists can
+    differ in length and the pairing is then lost. *)
+let get_record_field_bindings r =
+  let kn =
+    let open GlobRef in
+    match r with
+    | ConstructRef ((kn, _), _) -> Some kn
+    | IndRef (kn, _) -> Some kn
+    | _ -> None
+  in
+  match Option.bind kn (fun kn -> Mindmap_env.find_opt kn !inductive_kinds) with
   | Some (Record f | TypeClass f) -> f
+  | _ -> []
+
+(** {!get_record_field_bindings} for a record named by an ML type. *)
+let record_field_bindings_of_type = function
+  | Tglob (r, _, _) -> get_record_field_bindings r
   | _ -> []
 
 (** Get record fields from an ML type, filtering by extracting from Tglob. *)

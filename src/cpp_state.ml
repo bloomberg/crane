@@ -433,7 +433,7 @@ let method_candidates :
     module struct to avoid C++ name conflicts. Stores: (record_ref, field_refs,
     ind_packet) *)
 let eponymous_record :
-    (GlobRef.t * GlobRef.t option list * Miniml.ml_ind_packet) option ref =
+    (GlobRef.t * Miniml.record_field list * Miniml.ml_ind_packet) option ref =
   ref None
 
 (* NOTE: The global method registry has moved to Method_registry. Lookups go

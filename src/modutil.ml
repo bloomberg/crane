@@ -97,7 +97,8 @@ type do_ref = GlobRef.t -> unit
 
 (** Iterate over field references in an inductive kind (Record/TypeClass). *)
 let record_iter_references do_term = function
-  | Record l | TypeClass l -> List.iter (Option.iter do_term) l
+  | Record l | TypeClass l ->
+    List.iter (fun (r, _) -> Option.iter do_term r) l
   | _ -> ()
 
 (** Iterate over all GlobRef.t occurring in an ML type. *)

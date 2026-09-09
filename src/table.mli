@@ -310,6 +310,14 @@ val get_record_fields : GlobRef.t -> GlobRef.t option list
 (** Get record fields from ML type. *)
 val record_fields_of_type : ml_type -> GlobRef.t option list
 
+(** The fields of a record or type class, each paired with its ML type.  Use
+    this rather than zipping {!get_record_fields} against
+    {!record_field_types}, which can disagree in length. *)
+val get_record_field_bindings : GlobRef.t -> Miniml.record_field list
+
+(** {!get_record_field_bindings} for a record named by an ML type. *)
+val record_field_bindings_of_type : ml_type -> Miniml.record_field list
+
 (** Get types of record fields. *)
 val record_field_types : GlobRef.t -> ml_type list
 

@@ -184,14 +184,9 @@ let class_promoted_vars_arities class_ref =
 let class_promoted_vars class_ref =
   List.map fst (class_promoted_vars_arities class_ref)
 
-(** A class's fields paired with their non-dummy ML types, as recorded in the
-    extraction tables.  Empty when the two disagree in length: the pairing
-    would be meaningless. *)
-let class_fields_with_types class_ref =
-  let fields = Table.get_record_fields class_ref in
-  let types = filter_value_types (Table.record_field_types class_ref) in
-  if List.length fields = List.length types then List.combine fields types
-  else []
+(** A class's fields paired with their ML types, as extraction recorded the
+    pairing. *)
+let class_fields_with_types = Table.get_record_field_bindings
 
 (** The associated types an instance parameter provides, as a substitution from
     the bare name a promoted type variable carries to the qualified type it
@@ -260,11 +255,6 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     and fs s = Minicpp.map_stmt fe fs ft s in
     List.map fs stmts
 
-(** Filter [Tdummy] entries from the first constructor's type list.  Both
-    [gen_record_cpp] and [gen_typeclass_cpp] need the non-erased types only,
-    because [select_fields] already drops the corresponding field names. *)
-let non_dummy_constructor_types ind =
-  filter_value_types ind.ip_types.(0)
 
 (** Generate C++ struct for a record type.
 
@@ -295,16 +285,6 @@ let gen_record_cpp name fields ind =
       | _ -> Tany )
     | ty -> ty
   in
-  let field_types = non_dummy_constructor_types ind in
-  let l =
-    if List.length fields = List.length field_types then
-      List.combine fields field_types
-    else
-      (* Length mismatch (e.g. erased/dummy fields dropped from one side):
-         pair each field with Tunresolved rather than crash, mirroring the
-         fallback in [gen_typeclass_cpp]. *)
-      List.map (fun f -> (f, Miniml.Tunknown)) fields
-  in
   let l =
     List.mapi
       (fun i (x, t) ->
@@ -320,7 +300,7 @@ let gen_record_cpp name fields ind =
         in
         let ct = Minicpp.map_cpp_type replace_promoted ct in
         ( Fvar' (n, ct), VPublic, SNoTag ) )
-      l
+      fields
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
   Dstruct
@@ -384,14 +364,8 @@ let gen_typeclass_cpp name fields ind =
       promoted_vars
       (List.map snd (class_promoted_vars_arities name))
   in
-  let non_dummy_types = non_dummy_constructor_types ind in
-  let method_list =
-    ( try List.combine fields non_dummy_types
-      with _ ->
-        List.map (fun f -> (f, Miniml.Tunknown)) fields )
-  in
   let promoted_map =
-    promoted_resolutions ~fields:method_list name (Tinstance (inst_id, name))
+    promoted_resolutions ~fields name (Tinstance (inst_id, name))
   in
   (* Substitute promoted Tvars in cpp_type trees.  After conversion, a promoted
      var appears as [Tvar (_, Some name)]; [promoted_map] says which qualified
@@ -547,7 +521,7 @@ let gen_typeclass_cpp name fields ind =
         Some (`Normal ([], (call, constraint_expr)))
   in
   let all_reqs =
-    List.filter_map (fun pair -> gen_method_req pair) method_list
+    List.filter_map (fun pair -> gen_method_req pair) fields
   in
   (* Superclass fields contribute [typename I::field;] alongside the promoted
      associated types.  Without them a class made purely of superclasses would
@@ -706,12 +680,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
   | Tglob (class_ref, type_args, _) when Table.is_typeclass class_ref ->
     (* Get the type class fields (method names) and field types (from
        ind_packet) *)
-    let fields = Table.record_fields_of_type inner_ty in
-    let field_types =
-      List.filter
-        (fun t -> not (Mlutil.isTdummy t))
-        (Table.record_field_types class_ref)
-    in
+    let fields = Table.record_field_bindings_of_type inner_ty in
     (* Strip MLmagic wrapper if present — promoted dependent records may have
        their constructor wrapped in MLmagic due to Tvar/Tglob mismatches during
        extraction unification. *)
@@ -1208,23 +1177,16 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               VPublic,
               SNoTag )
       in
-      (* Zip fields with their types from ind_packet *)
-      let fields_with_types =
-        if List.length fields = List.length field_types then
-          List.combine fields field_types
-        else (* Fallback: pair fields with Tunresolved if lengths don't match *)
-          List.map (fun f -> (f, Miniml.Tunknown)) fields
-      in
       let method_pairs =
-        if List.length fields_with_types = List.length method_bodies then
-          List.combine fields_with_types method_bodies
+        if List.length fields = List.length method_bodies then
+          List.combine fields method_bodies
         else
           CErrors.anomaly
             (Pp.str
                (Printf.sprintf
                   "gen_decls: eponymous record has %d fields but its \
                    constructor has %d arguments"
-                  (List.length fields_with_types)
+                  (List.length fields)
                   (List.length method_bodies)))
       in
       let methods =
@@ -1292,7 +1254,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          references produce incomplete [Tglob(r, [], [])] that can't
          be used as using declarations. *)
       let tc_promoted_usings =
-        if List.length fields_with_types = List.length method_bodies then
+        if List.length fields = List.length method_bodies then
           List.filter_map
             (fun ((fld, fty), body) ->
               match (fld, fty) with
@@ -1321,7 +1283,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                         VPublic,
                         SNoTag )
               | _ -> None )
-            (List.combine fields_with_types method_bodies)
+            (List.combine fields method_bodies)
         else
           []
       in
@@ -1488,7 +1450,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                       then Some fml_ty
                       else None
                     | None -> None)
-                  fields_with_types
+                  fields
               in
               ( match field_ml_ty with
               | Some (Miniml.Tglob (tc_ref, _, _))
@@ -3004,16 +2966,8 @@ let rec expand_tc_typed_carriers
     (class_ref : GlobRef.t)
     (carrier_refs : (GlobRef.t * int) list)
     : (GlobRef.t * int) list =
-  let fields = Table.get_record_fields class_ref in
-  let field_types = Table.record_field_types class_ref in
-  let non_dummy =
-    filter_value_types field_types
-  in
-  if List.length fields <> List.length non_dummy then
-    carrier_refs
-  else
-    let field_type_pairs = List.combine fields non_dummy in
-    let expanded =
+  let field_type_pairs = Table.get_record_field_bindings class_ref in
+  let expanded =
       List.concat_map (fun (ref, idx) ->
         let ref_name = Common.pp_global_name Common.Term ref in
         match List.find_opt (fun (fopt, _) ->
@@ -3028,12 +2982,12 @@ let rec expand_tc_typed_carriers
           else expand_tc_typed_carriers r nested
         | _ -> [(ref, idx)]
       ) carrier_refs
-    in
-    (* Sort by ascending tvar index so the first-declared field (lowest
-       index) comes first.  [erased_proj_tvar_map] assigns index
-       [n_promoted - i], so field 0 gets index 1 (lowest).  This matters
-       because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
-    List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
+  in
+  (* Sort by ascending tvar index so the first-declared field (lowest
+     index) comes first.  [erased_proj_tvar_map] assigns index
+     [n_promoted - i], so field 0 gets index 1 (lowest).  This matters
+     because [rewrite_ml_ast_types] uses [List.hd] to pick the carrier. *)
+  List.sort (fun (_, i1) (_, i2) -> compare i1 i2) expanded
 
 (** Replace Tglob references to erased projections with a rigid type variable
     in an ML type. *)

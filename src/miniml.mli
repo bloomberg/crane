@@ -129,8 +129,17 @@ and ml_meta = {
 and inductive_kind =
   | Coinductive
   | Standard
-  | Record of GlobRef.t option list  (** None for anonymous field *)
-  | TypeClass of GlobRef.t option list  (** Type class methods *)
+  | Record of record_field list
+  | TypeClass of record_field list  (** Type class methods *)
+
+(** One field of a record or type class: its projection ([None] when the field
+    is anonymous) paired with its ML type.  Extraction selects the two together
+    -- walking binder names and constructor argument types in step, dropping
+    the same positions from both -- so they are stored together; a consumer
+    that zips a name list against a type list rebuilt from [ip_types] gets a
+    length mismatch, because that list still holds the implicit arguments the
+    selection dropped. *)
+and record_field = GlobRef.t option * ml_type
 
 (** The miniml counterpart of a single kernel [one_inductive_body], i.e. one of
     the (mutually) defined inductive types. When [ip_logical] is [true] the type

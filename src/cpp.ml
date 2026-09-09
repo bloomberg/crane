@@ -1343,15 +1343,9 @@ let rec pp_structure_elem ~is_header f = function
                     ++ str ">"
                     ++ fnl ()
                 in
-                let ctor_types = packet.ip_types.(0) in
-                if List.length fields <> List.length ctor_types then
-                  CErrors.anomaly
-                    (str "cpp: eponymous record field count ("
-                    ++ int (List.length fields)
-                    ++ str ") does not match its constructor arity ("
-                    ++ int (List.length ctor_types)
-                    ++ str ")");
-                let field_list = List.combine fields ctor_types in
+                (* [fields] already pairs each projection with its type:
+                   extraction selected the two together. *)
+                let field_list = fields in
                 let pp_field i (field_ref, field_ty) =
                   let field_name =
                     match field_ref with

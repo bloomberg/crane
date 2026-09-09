@@ -218,7 +218,7 @@ val method_candidates :
     [(record_ref, field_refs, ind_packet)], whose fields are merged into the
     module struct. Reset to [None] by [reset_cpp_state]. *)
 val eponymous_record :
-  (Names.GlobRef.t * Names.GlobRef.t option list * Miniml.ml_ind_packet)
+  (Names.GlobRef.t * Miniml.record_field list * Miniml.ml_ind_packet)
   option ref
 
 (** {2 std:: names} *)

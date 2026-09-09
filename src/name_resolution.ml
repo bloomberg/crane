@@ -127,11 +127,12 @@ let classify_inductive
       else
         IK_Standard
     | Miniml.Record fields ->
+      let projections = List.map fst fields in
       if is_eponymous then
-        IK_Eponymous fields
+        IK_Eponymous projections
       else
-        IK_Record fields
-    | Miniml.TypeClass fields -> IK_TypeClass fields
+        IK_Record projections
+    | Miniml.TypeClass fields -> IK_TypeClass (List.map fst fields)
   in
   let rtn =
     {

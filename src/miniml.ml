@@ -80,8 +80,19 @@ and ml_meta = {
 and inductive_kind =
   | Coinductive
   | Standard
-  | Record of GlobRef.t option list  (** None for anonymous field *)
-  | TypeClass of GlobRef.t option list  (** Type class methods *)
+  | Record of record_field list
+  | TypeClass of record_field list  (** Type class methods *)
+
+(** One field of a record or type class: its projection ([None] when the field
+    is anonymous) paired with its ML type.
+
+    The two travel together because extraction selects them together, walking
+    the binder names and the constructor's argument types in step and dropping
+    the same positions from both.  Splitting them into two lists and zipping
+    them back downstream cannot reproduce that: the type list a consumer can
+    rebuild from [ip_types] still holds the implicit arguments this selection
+    dropped, so the lists have different lengths and the pairing is lost. *)
+and record_field = GlobRef.t option * ml_type
 
 (** A [ml_ind_packet] is the miniml counterpart of a [one_inductive_body]. If
     the inductive is logical ([ip_logical = true]), then all other fields are
