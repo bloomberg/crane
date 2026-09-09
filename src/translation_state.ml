@@ -128,30 +128,28 @@ type translation_ctx = {
      the same helper (e.g. _index_eq_dec_F) appears only once per file.
      Reset per-file via clear_seen_lifted_refs. *)
   seen_lifted_refs : GlobRef.t list;
-  (** The C++ type each pattern variable actually has, by de Bruijn index --
-      the constructor field's definition-site type as the scrutinee
-      instantiates it.  Matching [SigT<Tag, std::function<any(any)>>] records
-      [Tfun (\[Tany\], Tany)] for the function field, and a field the
-      instantiation erases records [Tany].
+  (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
+      with what decided it.
 
-      Whether a binder is boxed is therefore read off this map rather than
-      tracked beside it: the two answers cannot drift apart.  Populated by
-      [populate_erased_field_env] during pattern-match branch setup,
-      shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
-  cpp_binder_types : cpp_type IntMap.t;
-  (** The C++ type assigned to {e every} binder at the point it is bound,
-      rather than only to the pattern variables an erased instantiation
-      pinned down.  Written by [push_binders], and by [assign_binder_types]
-      again at call sites that only settle a binder's declared C++ type after
-      opening its scope.  Consulted when {!cpp_binder_types} has nothing to
-      say, so that a binder with no pattern-match instantiation behind it is
-      still answered from its binding site rather than defaulting to
-      not-boxed.
+      A binder is typed once, where it is bound ({!Bbinding}, written by
+      [push_binders]); a pattern match that pins a field down more precisely
+      than its definition-site type says -- matching [SigT<Tag,
+      std::function<any(any)>>] records [Tfun (\[Tany\], Tany)] for the
+      function field -- overrides it ({!Bpattern}, written by
+      [populate_erased_field_env]).  Whether a binder is boxed is read off
+      this map rather than tracked beside it, so the two answers cannot drift
+      apart.
 
-      Shifted by {!push_env_types} and cleared by {!reset_env_types}, exactly
-      as {!cpp_binder_types} is. *)
-  cpp_binder_types_all : cpp_type IntMap.t;
+      Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
+  cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
 }
+
+(** What decided a binder's C++ type, and so which answer wins when both are
+    available: an instantiation a pattern match pinned down is more precise
+    than the type the binder was given where it was bound. *)
+and binder_origin =
+  | Bbinding  (** Assigned at the binding site, from the binder's ML type *)
+  | Bpattern  (** Pinned down by the scrutinee's instantiation in a branch *)
 
 (** Mode for ITree effect extraction: sequential erases the tree,
     reified preserves it as [shared_ptr<ITree<R>>]. *)
@@ -188,7 +186,6 @@ let tctx =
         method_self_ns = Refset'.empty;
         seen_lifted_refs = [];
         cpp_binder_types = IntMap.empty;
-        cpp_binder_types_all = IntMap.empty;
     }
 
 (** Accessors for {!translation_ctx.current_type_vars}: the template type
@@ -250,9 +247,8 @@ let take_lifted_decls () =
 let clear_seen_lifted_refs () = tctx := { !tctx with seen_lifted_refs = [] }
 
 (** Prepend bindings to the de Bruijn environment type stack.
-    Also shifts all indices in {!cpp_binder_types} and
-    {!cpp_binder_types_all} upward by [n] to account for the new bindings,
-    keeping de Bruijn references consistent. *)
+    Also shifts all indices in {!cpp_binder_types} upward by [n] to account
+    for the new bindings, keeping de Bruijn references consistent. *)
 let push_env_types (ids : (Id.t * ml_type) list) =
   let n = List.length ids in
   let shift m =
@@ -261,8 +257,6 @@ let push_env_types (ids : (Id.t * ml_type) list) =
     else m
   in
   tctx := { !tctx with cpp_binder_types = shift (!tctx).cpp_binder_types };
-  tctx :=
-    { !tctx with cpp_binder_types_all = shift (!tctx).cpp_binder_types_all };
   tctx := { !tctx with env_types = ids @ (!tctx).env_types }
 
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
@@ -277,8 +271,7 @@ let get_env_type_opt (i : int) : ml_type option =
        | None -> None
 
 (** Reset the environment type stack to empty.
-    Also clears {!cpp_binder_types} and {!cpp_binder_types_all}. *)
+    Also clears {!cpp_binder_types}. *)
 let reset_env_types () =
   tctx := { !tctx with env_types = [] };
-  tctx := { !tctx with cpp_binder_types = IntMap.empty };
-  tctx := { !tctx with cpp_binder_types_all = IntMap.empty }
+  tctx := { !tctx with cpp_binder_types = IntMap.empty }

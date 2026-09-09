@@ -2428,12 +2428,9 @@ let strip_ns_tglob = function
   | Tnamespace (_, (Tglob _ as inner)) -> inner
   | t -> t
 
-(** Binder-type state: the pattern-variable assignment
-    ({!Translation_state.cpp_binder_types}) paired with the total binding-site
-    assignment ({!Translation_state.cpp_binder_types_all}) it falls back to.
-    Saved and restored together so the two can never describe different
-    scopes. *)
-type binder_env = cpp_type IntMap.t * cpp_type IntMap.t
+(** Binder-type state: {!Translation_state.cpp_binder_types}, every binder's
+    C++ type tagged with what decided it. *)
+type binder_env = (cpp_type * binder_origin) IntMap.t
 
 (** Strip self-referential [Tnamespace] wrappers, at every depth.
 
@@ -3061,7 +3058,7 @@ and populate_erased_field_env ?scrut_db ~cname ~typ ~env ~n_pat_vars ~n_fields
        down -- [SigT<any, pair<any,any>>] tells us its payload binder is a
        [pair<any,any>], which its ML type (a bare type variable) does not.
        Prefer that over re-deriving from the ML type. *)
-    match Option.bind scrut_db binder_cpp_type with
+    match Option.bind scrut_db pattern_binder_type with
     | Some t when not (resolves_to_any_type t) -> t
     | _ ->
       cpp_of_ml env typ
@@ -3176,9 +3173,21 @@ and scrutinee_head_is_callable h =
     (match get_env_type_opt i with Some t -> is_arrow t | None -> true)
   | None -> true
 
-(** The C++ type recorded for the pattern variable at de Bruijn index [i], if
-    this branch pinned one down. *)
-and binder_cpp_type i = IntMap.find_opt i (!tctx).cpp_binder_types
+(** The C++ type the binder at de Bruijn index [i] was decided to have: the
+    instantiation a pattern match pinned down where there is one, and
+    otherwise the type assigned where the binder was bound. *)
+and binder_cpp_type i =
+  Option.map fst (IntMap.find_opt i (!tctx).cpp_binder_types)
+
+(** The C++ type a pattern match pinned down for the binder at de Bruijn index
+    [i], if this branch pinned one.  A binding-site assignment is not an
+    answer here: it says what the binder's ML type converts to, which for a
+    field read out of an erased carrier is the type the value {e would} have
+    had, not the [std::any] it is actually stored as. *)
+and pattern_binder_type i =
+  match IntMap.find_opt i (!tctx).cpp_binder_types with
+  | Some (t, Bpattern) -> Some t
+  | _ -> None
 
 (** Whether the pattern variable at de Bruijn index [i] holds a box, and so
     must be recovered with an [any_cast] before it is used at a concrete
@@ -3189,17 +3198,9 @@ and binder_is_boxed i =
   (* [Topaque] prints as [std::any] but admits only that the representation is
      unknown here; nothing may be unboxed on the strength of it.  The
      distinction is {!coerce}'s, and a binder's answer has to draw it too. *)
-  match binder_assigned_type i with
+  match binder_cpp_type i with
   | Some Topaque | None -> false
   | Some t -> resolves_to_any_type t
-
-(** [binder_assigned_type i] is the C++ type the binder at de Bruijn index [i]
-    was decided to have: the instantiation a pattern match pinned down where
-    there is one, and otherwise the type assigned where the binder was bound. *)
-and binder_assigned_type i =
-  match binder_cpp_type i with
-  | Some _ as t -> t
-  | None -> IntMap.find_opt i (!tctx).cpp_binder_types_all
 
 (** Record the C++ type of the pattern variable at de Bruijn index [i].
 
@@ -3209,13 +3210,19 @@ and binder_assigned_type i =
     the scrutinee instantiates -- and the erased view is the one that
     describes the runtime value. *)
 and record_binder_type i t =
-  if not (binder_is_boxed i) then
+  let boxed_by_pattern =
+    match IntMap.find_opt i (!tctx).cpp_binder_types with
+    | Some (t', Bpattern) -> t' <> Topaque && resolves_to_any_type t'
+    | _ -> false
+  in
+  if not boxed_by_pattern then
     tctx :=
-      { !tctx with cpp_binder_types = IntMap.add i t (!tctx).cpp_binder_types }
+      { !tctx with
+        cpp_binder_types = IntMap.add i (t, Bpattern) (!tctx).cpp_binder_types }
 
 (** [push_binders env ids] is {!push_env_types} plus the C++ type assignment:
     each binder's C++ type is decided here, once, at the point it is bound,
-    and recorded in {!Translation_state.cpp_binder_types_all}.
+    and recorded in {!Translation_state.cpp_binder_types}.
 
     This is the assignment that use sites are being migrated onto.  Today they
     re-derive a binder's C++ type wherever they need it, from whatever type
@@ -3258,13 +3265,23 @@ and assign_binder_types ?(cpp = []) env (ids : (Id.t * ml_type) list) =
         | _ -> (try Some (cpp_of_ml env ml_ty) with _ -> None)
       in
       match assigned with
-      | Some t when t <> Topaque && not (is_cpp_dummy_type t) ->
+      | Some t
+        when t <> Topaque && not (is_cpp_dummy_type t)
+             && not (pinned_by_pattern (j + 1)) ->
         tctx :=
           { !tctx with
-            cpp_binder_types_all =
-              IntMap.add (j + 1) t (!tctx).cpp_binder_types_all }
+            cpp_binder_types =
+              IntMap.add (j + 1) (t, Bbinding) (!tctx).cpp_binder_types }
       | _ -> ())
     ids
+
+(** Whether the binder at de Bruijn index [i] was typed by a pattern match.
+    A binding-site assignment does not overwrite such an entry: the
+    instantiation the branch pinned down is the more precise of the two. *)
+and pinned_by_pattern i =
+  match IntMap.find_opt i (!tctx).cpp_binder_types with
+  | Some (_, Bpattern) -> true
+  | _ -> false
 
 (** Strip the const/reference decoration a parameter type carries, leaving the
     type of the value the binder denotes.  [const auto &] assigns [Tauto]:
@@ -3274,13 +3291,10 @@ and strip_param_wrappers = function
   | t -> t
 
 (** Save the current binder-type state for later restoration. *)
-and save_erased_env () : binder_env =
-  ((!tctx).cpp_binder_types, (!tctx).cpp_binder_types_all)
+and save_erased_env () : binder_env = (!tctx).cpp_binder_types
 
 (** Restore binder-type state saved by {!save_erased_env}. *)
-and restore_erased_env (saved, saved_all) =
-  tctx := { !tctx with cpp_binder_types = saved };
-  tctx := { !tctx with cpp_binder_types_all = saved_all }
+and restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
 
 (** Follow a name for a type through to the type it stands for.  A [using]
     alias hides the arguments its right-hand side was written with, and those
@@ -7538,7 +7552,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          the binder was assigned and there is no box to open. *)
       | Mboxed -> (
         match t with
-        | MLrel i -> ( match binder_assigned_type i with
+        | MLrel i -> ( match binder_cpp_type i with
           | Some ty -> Some ty
           | None -> Some Tany )
         | _ -> Some Tany )
@@ -7580,7 +7594,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              Say so rather than assert [Tany]: {!coerce} recovers from a box
              and must not invent one. *)
           let rec binder_is_opaque = function
-            | MLrel i -> binder_assigned_type i = Some Topaque
+            | MLrel i -> binder_cpp_type i = Some Topaque
             | MLmagic (_, t') -> binder_is_opaque t'
             | _ -> false
           in
@@ -9207,7 +9221,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let callee_known_concrete =
       match callee_rel_idx with
       | Some i when not callee_cpp_erased ->
-        ( match binder_cpp_type i with
+        ( match pattern_binder_type i with
         | Some t -> not (resolves_to_any_type t)
         | None ->
           (* Likewise for a parameter of the enclosing function: the ambient
@@ -9257,7 +9271,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       | _ -> false) ||
       (match callee_rel_idx with
        | Some i ->
-         (match binder_cpp_type i with
+         (match pattern_binder_type i with
           | Some (Tfun (params, _)) -> List.exists (fun p -> p = Tany) params
           | _ -> false)
        | None -> false)
