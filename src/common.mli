@@ -364,6 +364,17 @@ val ctor_fallback_name : int -> string
 (** {!ctor_fallback_name} as an [Id.t]. *)
 val ctor_fallback_id : int -> Id.t
 
+(** The [n]th scrutinee cache temporary: [_cs], [_cs1], [_cs2], ...  A custom
+    match template that mentions its scrutinee more than once binds it to one
+    of these first, so a non-trivial scrutinee is evaluated once.
+
+    Minted and recognised in the same place: {!Loopify} elides the redundant
+    alias these introduce, and had been re-parsing the spelling to spot them. *)
+val scrutinee_cache_id : int -> Id.t
+
+(** Whether [id] is a {!scrutinee_cache_id}. *)
+val is_scrutinee_cache_id : Id.t -> bool
+
 (** Fallback name for a de-Bruijn-indexed variable [i] when no source binder
     name is available, e.g. ["_db0"]. *)
 val db_fallback_name : int -> string

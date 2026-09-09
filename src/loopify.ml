@@ -99,6 +99,12 @@ let id_frame        = Id.of_string "_frame"
 let id_Frame        = Id.of_string "_Frame"
 let id_self         = Id.of_string "_self"
 
+(** The move-analysis key for a read of the frame field [_f.x].  Reads of a
+    frame field and reads of a plain local share one table, so the field's
+    key is spelled once here rather than at each of the four sites that
+    builds or tests one. *)
+let frame_field_key field = Id.to_string id_f ^ "." ^ Id.to_string field
+
 (* Perceus reuse cursor (see {!section:reuse-cursor}). *)
 let id_own          = Id.of_string "_own"
 let id_uniq         = Id.of_string "_uniq"
@@ -107,11 +113,16 @@ let id_rstep        = Id.of_string "_rs"
 (* Method names used with CPPmethod_call / CPPmember *)
 let id_get          = Id.of_string "get"
 
+(* [lazy_]: the factory a coinductive type's cofixpoint body returns.  Its
+   presence is how a cofixpoint is told from a fixpoint here. *)
+let id_lazy         = Id.of_string "lazy_"
+
 (* [crane_raw] (crane_fn.h): extracts a raw pointer from either a
    [std::shared_ptr<T>] or an already-raw [T*] (arena mode), by overload
    resolution.  Used in place of a bare [.get()] call wherever the extraction
    target may be either representation. *)
 let id_crane_raw    = Id.of_string "crane_raw"
+let id_v            = Id.of_string "v"
 let id_v_mut        = Id.of_string "v_mut"
 let id_empty        = Id.of_string "empty"
 let id_emplace_back = Id.of_string "emplace_back"
@@ -2080,8 +2091,8 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
     let rec walk = function
       | CPPmove _ | CPPlambda _ -> ()
       | CPPvar id -> add (Id.to_string id)
-      | CPPmember (CPPvar fid, field) when Id.to_string fid = "_f" ->
-        add ("_f." ^ Id.to_string field)
+      | CPPmember (CPPvar fid, field) when Id.equal fid id_f ->
+        add (frame_field_key field)
       | e -> iter_expr_children ~on_expr:walk ~on_stmts:(fun _ -> ()) e
     in
     walk expr;
@@ -2121,8 +2132,8 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
       | CPPvar id as e ->
         if Hashtbl.mem to_move (Id.to_string id) then CPPmove e else e
       | CPPmember (CPPvar fid, field) as e
-        when Id.to_string fid = "_f" ->
-        let key = "_f." ^ Id.to_string field in
+        when Id.equal fid id_f ->
+        let key = frame_field_key field in
         if Hashtbl.mem to_move key then CPPmove e else e
       | e -> map_expr rw Fun.id Fun.id e
     in
@@ -5929,8 +5940,7 @@ and rewrite_enter_stmts ctx stmts =
       let handler_ty = match tgt with Existing -> Declare Tauto | t -> t in
       let handler =
         match assign_expr with
-        | CPPvar v when String.length (Id.to_string id) >= 3
-            && String.sub (Id.to_string id) 0 3 = "_cs" ->
+        | CPPvar v when Common.is_scrutinee_cache_id id ->
           (* assign_expr is a plain variable (e.g. _result) and id is a
              scrutinee cache variable (_cs, _cs1, ...) — skip the
              redundant alias [auto _cs = v;] and substitute v for id. *)
@@ -6253,7 +6263,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     let field_idx expr =
       let base = match expr with CPPmove e -> e | e -> e in
       match base with
-      | CPPmember (CPPvar f, field_id) when Id.to_string f = "_f" ->
+      | CPPmember (CPPvar f, field_id) when Id.equal f id_f ->
         let rec find i = function
           | [] -> None
           | fn :: rest -> if Id.equal fn field_id then Some i else find (i + 1) rest
@@ -6277,7 +6287,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
     let expr = match expr with CPPmove e -> e | e -> e in
     match expr with
     | CPPmember (CPPvar f, field_id) ->
-      Id.to_string f = "_f"
+      Id.equal f id_f
       && j < List.length field_names
       && Id.equal field_id (List.nth field_names j)
     | CPPvar x ->
@@ -6289,7 +6299,7 @@ let compute_frame_pointer_safe pointer_safe_varying frames =
        | Some k -> k = j
        | None -> false)
     | CPPderef (CPPmember (CPPvar f, field_id)) ->
-      Id.to_string f = "_f"
+      Id.equal f id_f
       && j < List.length field_names
       && Id.equal field_id (List.nth field_names j)
     | _ -> false
@@ -6443,7 +6453,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
          | CPPvar x ->
            (match List.assoc_opt x binding_env with
             | Some (CPPderef (CPPmember (CPPvar f, _)))
-              when Id.to_string f = "_f" ->
+              when Id.equal f id_f ->
               CPPunop ("&", arg)
             | _ ->
               raw_of arg)
@@ -6453,7 +6463,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
         | CPPderef (CPPvar x) ->
           (match List.assoc_opt x binding_env with
            | Some (CPPderef (CPPmember (CPPvar f, _)))
-             when Id.to_string f = "_f" ->
+             when Id.equal f id_f ->
              CPPunop ("&", CPPvar x)
            | Some (CPPderef sp) ->
              raw_of sp
@@ -6464,7 +6474,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
         | CPPvar x ->
           (match List.assoc_opt x binding_env with
            | Some (CPPderef (CPPmember (CPPvar f, _)))
-             when Id.to_string f = "_f" ->
+             when Id.equal f id_f ->
              CPPunop ("&", arg)
            | Some (CPPderef sp) ->
              raw_of sp
@@ -6507,7 +6517,7 @@ let make_owned_param_matches owned_names stmts =
           (* Value-type inductives: scrutinee = CPPfun_call(CPPmember(id, "v"), []) *)
           match br.smb_scrutinee with
           | CPPfun_call (_, CPPmember (CPPvar id, v_id), {rev = []})
-            when Id.to_string v_id = "v" ->
+            when Id.equal v_id id_v ->
             List.exists (Id.equal id) owned_names
           | _ -> false
         in
@@ -6560,8 +6570,8 @@ let optimize_frame_push_args frame_field_types stmts =
       &&
       match arg with
       | CPPmove _ -> false
-      | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
-      | CPPvar id when Id.to_string id = "_result" -> true
+      | CPPmember (CPPvar id, _) when Id.equal id id_f -> true
+      | CPPvar id when Id.equal id id_result -> true
       | CPPvar id when List.exists (Id.equal id) owned_vars -> true
       | _ -> false
     in
@@ -6624,8 +6634,8 @@ let optimize_frame_push_args frame_field_types stmts =
         &&
         match arg with
         | CPPmove _ -> false
-        | CPPmember (CPPvar id, _) when Id.to_string id = "_f" -> true
-        | CPPvar id when Id.to_string id = "_result" -> true
+        | CPPmember (CPPvar id, _) when Id.equal id id_f -> true
+        | CPPvar id when Id.equal id id_result -> true
         | CPPvar id when List.exists (Id.equal id) owned_vars ->
           Hashtbl.find_opt last_push_of (Id.to_string id) = Some idx
         | _ -> false
@@ -6633,7 +6643,7 @@ let optimize_frame_push_args frame_field_types stmts =
       List.mapi (fun idx (callee, name, targs, args) ->
         match lookup (Id.to_string name) with
         | Some types when List.length types = List.length args ->
-          let is_enter = Id.to_string name = "_Enter" in
+          let is_enter = Id.equal name id_enter in
           let args' = List.map2 (fun ty arg ->
             if should_move_in_group ~is_enter idx ty arg
             then CPPmove arg else arg
@@ -6665,7 +6675,7 @@ let optimize_frame_push_args frame_field_types stmts =
         let owned_vars = decl_owned @ match_owned in
         match lookup (Id.to_string name) with
         | Some types ->
-          let is_enter = Id.to_string name = "_Enter" in
+          let is_enter = Id.equal name id_enter in
           Sexpr
             (CPPfun_call
                (call_opaque, callee,
@@ -6948,7 +6958,7 @@ let fix_handler_bindings field_names cf_ps handler =
   else
     let is_ps_field_access = function
       | CPPmember (CPPvar f, field_id)
-        when Id.to_string f = "_f" ->
+        when Id.equal f id_f ->
         List.exists (Id.equal field_id) ps_field_ids
       | _ -> false
     in
@@ -7261,11 +7271,11 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
   let enter_field_keys =
     List.filter_map (fun (id, ty) ->
       if worthwhile_move_type (strip_ref_and_const_type ty)
-      then Some ("_f." ^ Id.to_string id) else None)
+      then Some (frame_field_key id) else None)
     enter_fields
   in
   let is_enter_cand key =
-    key = "_result" || List.mem key enter_field_keys
+    key = Id.to_string id_result || List.mem key enter_field_keys
   in
   let enter_body =
     make_param_copies ~pointer_safe:pointer_safe_varying varying_params
@@ -7306,11 +7316,11 @@ let transform_nontail ?(fn_name : string option) check _pp_expr tparams params r
         let cf_field_keys =
           List.filter_map (fun (id, ty) ->
             if worthwhile_move_type (strip_ref_and_const_type ty)
-            then Some ("_f." ^ Id.to_string id) else None)
+            then Some (frame_field_key id) else None)
           (List.combine (cf_field_names cf) cf_types)
         in
         let is_cf_cand key =
-          key = "_result" || List.mem key cf_field_keys
+          key = Id.to_string id_result || List.mem key cf_field_keys
         in
         make_frame_branch cf.cf_name
           (handler
@@ -8092,7 +8102,7 @@ let has_lazy_body body =
   | Some (Sreturn (Some (CPPfun_call (_, 
       CPPqualified (_, lazy_id),
       {rev = [CPPlambda ({rev = []}, Some _, _, _)]}))))
-    when Id.to_string lazy_id = "lazy_" -> true
+    when Id.equal lazy_id id_lazy -> true
   | _ -> false
 
 (** Whether the expression tree contains a [lazy_] factory call.
@@ -8101,7 +8111,7 @@ let has_lazy_body body =
     catches it). *)
 let is_lazy_factory_call = function
   | CPPfun_call (_, CPPqualified (_, lazy_id), {rev = _}) ->
-    Id.to_string lazy_id = "lazy_"
+    Id.equal lazy_id id_lazy
   | _ -> false
 
 let body_contains_lazy_factory body =

@@ -1627,6 +1627,16 @@ let ctor_fallback_name i = "Ctor" ^ string_of_int i
 
 let ctor_fallback_id i = Id.of_string (ctor_fallback_name i)
 
+let scrutinee_cache_prefix = "_cs"
+
+let scrutinee_cache_id n =
+  Id.of_string
+    (if n = 0 then scrutinee_cache_prefix
+     else scrutinee_cache_prefix ^ string_of_int n)
+
+let is_scrutinee_cache_id id =
+  String.starts_with ~prefix:scrutinee_cache_prefix (Id.to_string id)
+
 let db_fallback_name i = "_db" ^ string_of_int i
 
 let db_fallback_id i = Id.of_string (db_fallback_name i)
