@@ -762,7 +762,6 @@ let rec collect_expr (check : call_checker) expr =
    |CPPrt _
    |CPPbool _
    |CPPint _
-   |CPPbrace_init
    |CPPunop _
    |CPPany_cast _
    |CPPany_cast_tolerant _

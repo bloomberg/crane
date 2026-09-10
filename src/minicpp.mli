@@ -12,20 +12,17 @@
     optimizations on a language-agnostic functional AST.  MiniCpp (this file)
     captures C++-specific idioms: [shared_ptr] memory management,
     [std::variant], templates, concepts, namespaces, structs with visibility,
-    move semantics, enum classes, and constructors.  Every name is
-    pre-resolved ({!cpp_name}) and every inductive pre-classified
-    ({!cpp_ind_kind}) during {!Translation}, so {!Cpp} — the pretty-printer —
-    needs no name-resolution or type-analysis logic of its own.
+    move semantics, enum classes, and constructors.  Every inductive is
+    pre-classified ({!cpp_ind_kind}) during {!Translation}; names, by
+    contrast, are still resolved by the printer, which knows the enclosing
+    module structure that a name is spelled relative to.
 
     See [minicpp.ml] for a detailed explanation of why both representations are
     needed and cannot be merged. *)
 
 open Names
 
-(** {2 Pre-resolved C++ name}
-
-    Computed during translation so the pretty-printer doesn't need
-    name-resolution logic. *)
+(** {2 Argument order} *)
 
 (** A list held in reverse of the order it is written in.
 
@@ -36,16 +33,6 @@ open Names
     {!of_reversed}.  Reading is unrestricted -- a [revd] pattern-matches and
     iterates as the list it is. *)
 type 'a revd = private {rev : 'a list}
-
-(** Pre-resolved C++ identifier with qualification information. *)
-type cpp_name = {
-  cn_base : string;  (** Base identifier, e.g., "add", "list", "Nat" *)
-  cn_qualified : string option;
-      (** Optional qualifier prefix, e.g., Some "Nat::" *)
-  cn_needs_typename : bool;
-      (** True if dependent type requires typename keyword in template context
-      *)
-}
 
 (** {2 Inductive classification}
 
@@ -84,7 +71,6 @@ type section_tag =
 type cpp_tymod =
   | TMconst  (** Const qualifier *)
   | TMstatic  (** Static storage class *)
-  | TMextern  (** External linkage *)
 
 (** {2 C++ type expressions} *)
 
@@ -298,12 +284,6 @@ and smatch_branch = {
     the callee of a {!CPPfun_call}. *)
 and alloc_kind =
   | Alloc_heap  (** [std::make_shared<T>] / [crane::make_rc<T>] *)
-  | Alloc_arena
-      (** [crane::arena_alloc<T>]: allocates in the ambient arena and returns
-          a raw [T*]. *)
-  | Alloc_arena_shared
-      (** [crane::arena_shared_alloc<T>]: allocates into [T]'s single
-          thread-local shared capsule and returns a [crane::capsule<T>]. *)
   | Alloc_arena_scoped
       (** The arena-aware form of the ordinary factory ([crane::rc<T>::make],
           [crane::arena_make_shared<T>], or plain [make_shared] under BDE).
@@ -474,7 +454,6 @@ and cpp_expr =
       (** Ternary conditional: cond ? then_expr : else_expr *)
   | CPPbool of bool  (** Boolean literal: true/false *)
   | CPPint of int  (** Integer literal *)
-  | CPPbrace_init  (** Empty brace initialization: {} *)
   | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
       (** [std::any_cast<T>(expr)] — recovers a typed value from a
@@ -541,8 +520,6 @@ and cpp_field =
   | Fvar' of GlobRef.t * cpp_type  (** Field variable by global reference *)
   | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
       (** Member function definition: name, return type, parameters, body *)
-  | Ffundecl of Id.t * cpp_type * (Id.t * cpp_type) list
-      (** Member function declaration without body *)
   | Fmethod of method_field  (** Method with full descriptor *)
   | Fconstructor of
       (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool * bool

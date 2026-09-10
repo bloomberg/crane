@@ -297,7 +297,6 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
 let pp_tymod = function
   | TMconst -> str "const "
   | TMstatic -> str "static "
-  | TMextern -> str "extern "
 
 (** Print a qualified standard-library angle-bracket type: [std::label<s>].
 
@@ -1848,12 +1847,6 @@ and pp_cpp_expr env args t =
   | CPPalloc (Alloc_reusing, t) ->
     (* Perceus reuse factory; only emitted under NonAtomicRc (crane::rc). *)
     cpp_angle Crane_rt.make_rc_reusing (pp_cpp_type false [] t)
-  | CPPalloc (Alloc_arena, t) ->
-    Table.mark_needs_arena ();
-    cpp_angle Crane_rt.arena_alloc (pp_cpp_type false [] t)
-  | CPPalloc (Alloc_arena_shared, t) ->
-    Table.mark_needs_arena ();
-    cpp_angle Crane_rt.arena_shared_alloc (pp_cpp_type false [] t)
   | CPPalloc (Alloc_arena_scoped, t) ->
     (* Runtime scoped-arena factory: the arena-aware form of make_shared/make_rc
        for the current pointer flavor.  Falls back to a plain heap allocation at
@@ -2118,7 +2111,6 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPbool b -> str (if b then "true" else "false")
   | CPPint n -> str (string_of_int n)
-  | CPPbrace_init -> str "{}"
   | CPPunop (op, e) ->
     (* Parenthesize the operand only when it is a lower-precedence compound
        expression (a binary operator or ternary), so that e.g. [!(a == b)] is
@@ -3507,22 +3499,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ fnl ()
     ++ body_s
     ++ str "}"
-  | Ffundecl (id, ret_ty, params) ->
-    let params_s =
-      pp_list
-        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
-        (List.rev params)
-    in
-    let qualifier =
-      fun_qualifier ~can_constexpr:true ~throws:false ~no_pure:false ret_ty params
-    in
-    h
-      ( qualifier
-      ++ pp_type ret_ty
-      ++ str " "
-      ++ Id.print id
-      ++ pp_par true params_s )
-    ++ str ";"
   | Fmethod
       {
         mf_name;

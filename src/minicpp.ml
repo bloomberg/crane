@@ -41,10 +41,6 @@
 
 open Names
 
-(** {2 Pre-resolved C++ name}
-    Computed during translation so the pretty-printer doesn't need
-    name-resolution logic. *)
-
 (** A list held in reverse of the order it is written in.
 
     [CPPlambda] stores its parameters, and [CPPfun_call] its arguments, this
@@ -53,13 +49,6 @@ open Names
     source order, or, where a reversed list is genuinely what is in hand, say
     so with {!of_reversed}. *)
 type 'a revd = {rev : 'a list}
-
-(** Pre-resolved C++ name, computed during translation. *)
-type cpp_name = {
-  cn_base : string; (* e.g., "add", "list", "Nat" *)
-  cn_qualified : string option; (* Some "Nat::" for wrapper-qualified names *)
-  cn_needs_typename : bool; (* true if dependent type in template context *)
-}
 
 (** {2 Inductive classification}
 
@@ -93,7 +82,6 @@ type section_tag =
 type cpp_tymod =
   | TMconst
   | TMstatic
-  | TMextern
 
 type cpp_type =
   | Tvar of int * Id.t option
@@ -282,14 +270,6 @@ and smatch_branch = {
 and alloc_kind =
   | Alloc_heap
     (* std::make_shared<T> / crane::make_rc<T>. *)
-  | Alloc_arena
-    (* crane::arena_alloc<T>: allocates a T in the ambient arena and returns a
-       raw T*, for arena-mode recursive-field allocation. *)
-  | Alloc_arena_shared
-    (* crane::arena_shared_alloc<T>: allocates a T into T's single
-       thread-local shared capsule and returns a crane::capsule<T> (not a raw
-       pointer), for `Crane Arena Shared`-mode recursive-field allocation.
-       See theories/cpp/arena.h. *)
   | Alloc_arena_scoped
     (* The ordinary-smart-pointer factory that is *arena-aware at runtime* --
        [crane::rc<T>::make] under NonAtomicRc, [crane::arena_make_shared<T>]
@@ -415,7 +395,6 @@ and cpp_expr =
     (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
   | CPPint of int (* integer literal *)
-  | CPPbrace_init (* {} — empty brace initialization *)
   | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any at a
@@ -486,7 +465,6 @@ and cpp_field =
   | Fvar of Id.t * cpp_type
   | Fvar' of GlobRef.t * cpp_type
   | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
-  | Ffundecl of Id.t * cpp_type * (Id.t * cpp_type) list
   | Fmethod of method_field
   (* Private constructor: params, initializer list (as stmts for v_(x) style) *)
   | Fconstructor of
@@ -872,7 +850,6 @@ let map_expr
   | CPPcond (c, t, f) -> CPPcond (fe c, fe t, fe f)
   | CPPbool _ -> e
   | CPPint _ -> e
-  | CPPbrace_init -> e
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
   | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ft ty, fe e')
@@ -967,8 +944,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
-  | CPPconcept_app _
-  | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
+  | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (_, f, args) -> on_expr f; List.iter on_expr args.rev
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
   | CPPbox (_, e') -> on_expr e'
@@ -1050,8 +1026,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
-  | CPPconcept_app _
-  | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
+  | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> acc
   | CPPlambda l -> on_stmts acc l.cl_body
   | CPPoverloaded ls ->
     List.fold_left (fun acc l -> on_stmts acc l.cl_body) acc ls
@@ -1171,7 +1146,6 @@ let rec map_field
     | Fvar' (r, ty) -> Fvar' (r, ft ty)
     | Ffundef (id, ret, ps, body) ->
       Ffundef (id, ft ret, params ps, List.map fs body)
-    | Ffundecl (id, ret, ps) -> Ffundecl (id, ft ret, params ps)
     | Fmethod m ->
       Fmethod
         { m with
