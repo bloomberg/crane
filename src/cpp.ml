@@ -562,6 +562,12 @@ let held_back_concepts : string list ref = ref []
     emits it. *)
 let deferred_concept_asserts : (string * Pp.t * Pp.t) list ref = ref []
 
+(** The one spelling of "this struct satisfies this concept".  Both the
+    immediate assertion and the deferred one go through here, so the two cannot
+    drift apart. *)
+let pp_concept_assert concept subject =
+  fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
+
 (** The assertion that the module rendered as [name] satisfies the concept of
     its module type [mty].  When that concept is one the enclosing struct holds
     back, so is the assertion: the concept is not declared yet. *)
@@ -575,9 +581,7 @@ let concept_assert_pp name mty =
       deferred_concept_asserts :=
         (cn, concept_name, name) :: !deferred_concept_asserts;
       mt () )
-    else
-      fnl () ++ str "static_assert(" ++ concept_name ++ str "<" ++ name
-      ++ str ">);"
+    else pp_concept_assert concept_name name
 
 (** Like {!get_concept_name_from_mt}, but returns the base module type's raw
     kernel name (for callers that emit [Name<M>] directly rather than a
@@ -1248,8 +1252,7 @@ let rec pp_structure_elem ~is_header f = function
             let deferred_asserts_pp =
               prlist
                 (fun (_, concept, sub) ->
-                  fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ name
-                  ++ str "::" ++ sub ++ str ">);" )
+                  pp_concept_assert concept (name ++ str "::" ++ sub) )
                 mine
             in
             deferred_concept_asserts :=
