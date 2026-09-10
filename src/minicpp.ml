@@ -189,20 +189,9 @@ and cpp_stmt =
     (* Local using alias: using Name = Type; *)
   | Sdecl_init of Id.t * cpp_type
     (* Value-initialized declaration: Type name{}; *)
-  | Sassign_field of cpp_expr * Id.t * cpp_expr
-  (* Field assignment: obj.field = expr. Used for in-place mutation during
-     memory reuse. *)
   | Sassign_expr of cpp_expr * cpp_expr
-  (* General assignment: lhs = rhs. Used when the left-hand side is not a plain
-     local variable or direct field. *)
-  | Sderef_asgn of cpp_expr * cpp_expr
-  (* Dereference assignment: [*lhs = rhs;].  Introduced for the
-     [shared_ptr<std::function>] fixpoint pattern where a fixpoint is
-     allocated as [auto f = make_shared<function<...>>()] and the body is
-     assigned via [*f = [=](...) mutable { ... }].  The indirection allows
-     the by-value lambda to capture [f] (a [shared_ptr] copy) instead of a
-     dangling [&]-reference.  Also used for [reset()] body: [*this = T()].
-     See {!Translation.gen_local_fix_shared_ptr}. *)
+  (* Assignment [lhs = rhs;] to anything addressable: a field ([CPPget]), a
+     dereferenced pointer ([CPPderef]), or any other lvalue expression. *)
   | Sfor_range of Id.t * cpp_expr * cpp_stmt list
   | Swhile of cpp_expr * cpp_stmt list
     (* while (condition) { body } — used by loopify pass *)
@@ -904,9 +893,7 @@ let map_stmt
     Sstruct_def (id, List.map (fun (fid, ty) -> (fid, ft ty)) fields)
   | Susing (id, ty) -> Susing (id, ft ty)
   | Sdecl_init (id, ty) -> Sdecl_init (id, ft ty)
-  | Sassign_field (obj, field, e) -> Sassign_field (fe obj, field, fe e)
   | Sassign_expr (lhs, e) -> Sassign_expr (fe lhs, fe e)
-  | Sderef_asgn (lhs, e) -> Sderef_asgn (fe lhs, fe e)
   | Sfor_range (id, e, body) -> Sfor_range (id, fe e, List.map fs body)
   | Swhile (cond, body) -> Swhile (fe cond, List.map fs body)
   | Sblock stmts -> Sblock (List.map fs stmts)
@@ -994,9 +981,7 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Scustom_case (_, scrut, _, branches, _) ->
     on_expr scrut;
     List.iter (fun (_, _, stmts) -> on_stmts stmts) branches
-  | Sassign_field (obj, _, e) -> on_expr obj; on_expr e
   | Sassign_expr (lhs, e) -> on_expr lhs; on_expr e
-  | Sderef_asgn (lhs, e) -> on_expr lhs; on_expr e
   | Sfor_range (_, e, body) -> on_expr e; on_stmts body
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
@@ -1075,9 +1060,7 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Scustom_case (_, scrut, _, branches, _) ->
     let acc = on_expr acc scrut in
     List.fold_left (fun a (_, _, stmts) -> on_stmts a stmts) acc branches
-  | Sassign_field (obj, _, e) -> on_expr (on_expr acc obj) e
   | Sassign_expr (lhs, e) -> on_expr (on_expr acc lhs) e
-  | Sderef_asgn (lhs, e) -> on_expr (on_expr acc lhs) e
   | Sfor_range (_, e, body) -> on_stmts (on_expr acc e) body
   | Swhile (cond, body) -> on_stmts (on_expr acc cond) body
   | Sblock stmts -> on_stmts acc stmts

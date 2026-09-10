@@ -1533,7 +1533,7 @@ let return_captures_by_value stmts =
     | Sreturn (Some e) -> Sreturn (Some (expr e))
     | Sexpr e -> Sexpr (expr e)
     | Sasgn (_, _, _) as s -> s
-    | Sderef_asgn (_, _) as s -> s
+    | Sassign_expr (_, _) as s -> s
     | Sif (c, t, f) -> Sif (expr c, List.map stmt t, List.map stmt f)
     | Sswitch (scrut, ind, branches, default) ->
       Sswitch
@@ -9814,7 +9814,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       !found
   and stmt_has_lambda = function
     | Sreturn (Some e) | Sexpr e -> expr_has_lambda e
-    | Sasgn (_, _, e) | Sderef_asgn (_, e) -> expr_has_lambda e
+    | Sasgn (_, _, e) -> expr_has_lambda e
     | Sif (c, t, f) ->
       expr_has_lambda c || List.exists stmt_has_lambda t
       || List.exists stmt_has_lambda f
@@ -9838,7 +9838,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       || List.exists
            (fun (_, _, body) -> List.exists stmt_has_lambda body)
            branches
-    | Sassign_field (obj, _, e) -> expr_has_lambda obj || expr_has_lambda e
+    | Sassign_expr (obj, e) -> expr_has_lambda obj || expr_has_lambda e
     | Swhile (c, body) -> expr_has_lambda c || List.exists stmt_has_lambda body
     | Sblock body -> List.exists stmt_has_lambda body
     | Sblock_custom (_, _, _, _, args, _) -> List.exists expr_has_lambda args
@@ -11441,7 +11441,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
     statement list, so that call sites in the continuation use the
     dereferenced form.
     @see gen_local_fix_by_ref for the non-escaping alternative.
-    @see Minicpp.Sderef_asgn for the dereference assignment node. *)
+    @see Minicpp.Sassign_expr for the assignment node. *)
 and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
   let fix_func_type ty =
     match ty with
@@ -11481,8 +11481,8 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
   let defs =
     List.map2
       (fun (id, _fty) (args, body) ->
-        Sderef_asgn
-          ( CPPvar id,
+        Sassign_expr
+          ( CPPderef (CPPvar id),
             CPPlambda
               { cl_params =
                   of_reversed

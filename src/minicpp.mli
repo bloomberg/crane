@@ -203,15 +203,13 @@ and cpp_stmt =
       (** Local using alias: using Name = Type; *)
   | Sdecl_init of Id.t * cpp_type
       (** Value-initialized declaration: Type name{}; *)
-  | Sassign_field of cpp_expr * Id.t * cpp_expr
-      (** Field assignment for in-place mutation during memory reuse *)
   | Sassign_expr of cpp_expr * cpp_expr
-      (** General assignment: lhs = rhs *)
-  | Sderef_asgn of cpp_expr * cpp_expr
-      (** Dereference assignment: [*lhs = rhs].  Used by the
-          [shared_ptr<std::function>] fixpoint pattern to assign through
-          the pointer indirection, and for [reset()] body: [*this = T()].
-          See {!Translation.gen_local_fix_shared_ptr}. *)
+      (** Assignment [lhs = rhs;] to anything addressable.  The left-hand side
+          is an expression rather than a name, because it is a field
+          ([CPPget]) during in-place reuse, a dereferenced pointer
+          ([CPPderef]) in the [shared_ptr<std::function>] fixpoint pattern,
+          or an arbitrary lvalue elsewhere; a dedicated statement per shape
+          would only make the printer decide the same thing twice. *)
   | Sfor_range of Id.t * cpp_expr * cpp_stmt list
       (** Range-based for: [for (auto& id : e) { body }].  The binding is
           always [auto&] -- every producer walks a container in order to move

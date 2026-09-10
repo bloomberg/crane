@@ -197,9 +197,9 @@ let lambda_needs_capture
       ( match ty with
       | Declare _ -> (refs', IdSet.add id decls')
       | Existing -> (IdSet.add id refs', decls') )
-    | Sderef_asgn (lhs, e) ->
-      (* [*lhs = e]: the lhs is scanned for captures (referenced, not
-         declared); the RHS is also scanned. *)
+    | Sassign_expr (lhs, e) ->
+      (* The lhs is scanned for captures (referenced, not declared); the RHS
+         is also scanned. *)
       let refs', decls' = collect_from_expr (refs, decls) lhs in
       collect_from_expr (refs', decls') e
     | Scustom_case (_, scrut, _, branches, _) ->
@@ -2400,23 +2400,11 @@ and pp_cpp_stmt env args = function
     ++ str "}"
   | Scontinue -> str "continue;"
   | Sbreak -> str "break;"
-  | Sassign_field (obj, field, e) ->
-    pp_cpp_expr env args obj
-    ++ str "."
-    ++ Id.print field
-    ++ str " = "
-    ++ pp_cpp_expr env args e
-    ++ str ";"
   | Sassign_expr (lhs, e) ->
     pp_cpp_expr env args lhs
     ++ str " = "
     ++ pp_cpp_expr env args e
     ++ str ";"
-  | Sderef_asgn (lhs, e) ->
-    (* Dereference assignment [*lhs = expr;] for the shared_ptr fixpoint
-       pattern and reset().  Assigns through the pointer/reference. *)
-    str "*" ++ pp_cpp_expr env args lhs ++ str " = "
-    ++ pp_cpp_expr env args e ++ str ";"
   | Sblock_custom (_ref, tmpl, result_var, result_ty, args, tyargs) ->
     (* Block template: emit a declaration + template-substituted statements.
        %result → result_var, %aN → value args, %tN → type args *)

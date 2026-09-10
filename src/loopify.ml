@@ -842,7 +842,7 @@ and collect_stmt check ~in_visitor = function
     | _ -> collect_expr check e )
   | Sreturn None -> []
   | Sexpr e -> collect_expr check e
-  | Sasgn (_, _, e) | Sderef_asgn (_, e) -> collect_expr check e
+  | Sasgn (_, _, e) -> collect_expr check e
   | Sassign_expr (lhs, e) -> collect_expr check lhs @ collect_expr check e
   | Sif_constexpr (cond, then_br, else_br) ->
     collect_expr check cond
@@ -871,7 +871,6 @@ and collect_stmt check ~in_visitor = function
     @ List.concat_map
         (fun (_, _, body) -> collect_stmts check ~in_visitor body)
         branches
-  | Sassign_field (obj, _, e) -> collect_expr check obj @ collect_expr check e
   | Sblock_custom (_, _, _, _, args, _) ->
     List.concat_map (collect_expr check) args
   | Smatch (branches, default) ->
@@ -935,7 +934,7 @@ let rec count_calls_stmts (check : call_checker) stmts =
       acc
       +
       match stmt with
-      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) ->
         count_calls_expr check e
       | Sif (cond, then_br, else_br) ->
         count_calls_expr check cond
@@ -954,8 +953,6 @@ let rec count_calls_stmts (check : call_checker) stmts =
             (fun acc (_, _, body) -> acc + count_calls_stmts check body)
             0
             branches
-      | Sassign_field (obj, _, e) ->
-        count_calls_expr check obj + count_calls_expr check e
       | Smatch (branches, default) ->
         List.fold_left
           (fun acc br ->
@@ -1000,7 +997,7 @@ and expr_has_call_or_branch_dep check expr =
 and has_recursive_branch_dependency check stmts =
   List.exists
     (function
-      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+      | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) ->
         expr_has_recursive_branch_dependency check e
       | Sif (cond, then_br, else_br) ->
         expr_has_call_or_branch_dep check cond
@@ -1050,9 +1047,6 @@ and has_recursive_branch_dependency check stmts =
         | None -> false)
       | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
     has_recursive_branch_dependency check body
-      | Sassign_field (obj, _, e) ->
-        expr_has_recursive_branch_dependency check obj
-        || expr_has_recursive_branch_dependency check e
       | Sblock_custom (_, _, _, _, args, _) ->
         List.exists (expr_has_recursive_branch_dependency check) args
       | _ -> false)
@@ -3186,7 +3180,7 @@ let patch_cell_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr val_expr =
   let obj, field_id =
     cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr
   in
-  Sassign_field (obj, field_id, val_expr)
+  Sassign_expr (CPPget (obj, field_id), val_expr)
 
 (** Generate the if/else that links a value into the TMC chain.  On the first
     iteration, assigns to [_head]; on subsequent iterations, patches the
@@ -4106,7 +4100,7 @@ and free_vars_stmt = function
   | Sreturn None -> []
   | Sexpr e -> free_vars_expr e
   | Sasgn (_, _, e) -> free_vars_expr e
-  | Sderef_asgn (lhs, e) -> free_vars_expr lhs @ free_vars_expr e
+  | Sassign_expr (lhs, e) -> free_vars_expr lhs @ free_vars_expr e
   | Sif (c, t, f) ->
     free_vars_expr c @ free_vars_body t @ free_vars_body f
   | Scustom_case (_, s, _, bs, _) ->
@@ -4535,7 +4529,7 @@ let rec expr_has_unique_owner_decomposition check tparams env expr =
   with Exit -> true)
 
 and stmt_has_unique_owner_decomposition check tparams env = function
-  | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) | Sderef_asgn (_, e) ->
+  | Sreturn (Some e) | Sexpr e | Sasgn (_, _, e) ->
     expr_has_unique_owner_decomposition check tparams env e
   | Sassign_expr (lhs, e) ->
     expr_has_unique_owner_decomposition check tparams env lhs
@@ -4583,9 +4577,6 @@ and stmt_has_unique_owner_decomposition check tparams env = function
        | None -> false)
   | Sblock body | Swhile (_, body) | Sfor_range (_, _, body) ->
     body_has_unique_owner_decomposition check tparams env body
-  | Sassign_field (obj, _, e) ->
-    expr_has_unique_owner_decomposition check tparams env obj
-    || expr_has_unique_owner_decomposition check tparams env e
   | Sblock_custom (_, _, _, _, args, _) ->
     List.exists (expr_has_unique_owner_decomposition check tparams env) args
   | Sreturn None | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _
@@ -7500,8 +7491,8 @@ and generic_inline_stmt spec = function
           err ) ]
   | Sreturn (Some e) -> [Sreturn (Some (generic_inline_expr spec e))]
   | Sasgn (id, ty, e) -> [Sasgn (id, ty, generic_inline_expr spec e)]
-  | Sderef_asgn (lhs, e) ->
-    [Sderef_asgn (generic_inline_expr spec lhs, generic_inline_expr spec e)]
+  | Sassign_expr (lhs, e) ->
+    [Sassign_expr (generic_inline_expr spec lhs, generic_inline_expr spec e)]
   | Sexpr e -> [Sexpr (generic_inline_expr spec e)]
   | Smatch (branches, default) ->
     [ Smatch
@@ -7648,7 +7639,7 @@ let try_inline_mutual_into names body =
   and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
   and find_callee_in_stmt = function
     | Sreturn (Some e) -> find_callee_in_expr e
-    | Sasgn (_, _, e) | Sderef_asgn (_, e) | Sexpr e -> find_callee_in_expr e
+    | Sasgn (_, _, e) | Sexpr e -> find_callee_in_expr e
     | Sif (_, t, e) ->
       ( match find_callee_in_stmts t with
       | Some _ as r -> r
@@ -8005,7 +7996,7 @@ let loopify_inner_lambdas ~tparams body =
     | Sasgn (id, (Declare Tauto as _ty_opt),
              ( CPPfun_call ({cs_yields = Ropaque; _}, CPPalloc (Alloc_heap, func_ty), {rev = []}) as
                init_expr ))
-      :: Sderef_asgn (CPPvar id2, CPPlambda
+      :: Sassign_expr (CPPderef (CPPvar id2), CPPlambda
         { cl_params = lparams;
           cl_ret = ret_ty_opt;
           cl_body = lbody;
@@ -8024,7 +8015,7 @@ let loopify_inner_lambdas ~tparams body =
       | None ->
         let lbody' = process_stmts lbody in
         Sasgn (id, _ty_opt, init_expr)
-        :: Sderef_asgn (CPPvar id, CPPlambda
+        :: Sassign_expr (CPPderef (CPPvar id), CPPlambda
           { cl_params = lparams;
             cl_ret = ret_ty_opt;
             cl_body = lbody';
@@ -8102,7 +8093,7 @@ let loopify_inner_lambdas ~tparams body =
     | Swhile (cond, body) -> Swhile (process_expr cond, process_stmts body)
     | Sexpr e -> Sexpr (process_expr e)
     | Sasgn (id, ty, e) -> Sasgn (id, ty, process_expr e)
-    | Sderef_asgn (lhs, e) -> Sderef_asgn (process_expr lhs, process_expr e)
+    | Sassign_expr (lhs, e) -> Sassign_expr (process_expr lhs, process_expr e)
     | Sreturn (Some e) -> Sreturn (Some (process_expr e))
     | s -> s
   in
