@@ -961,13 +961,8 @@ and pp_typename_member ty id =
 and pp_value_qualifier env ty =
   match ty with
   | Tglob (r, tys, []) ->
-    let ci =
-      { ci_inline = (if to_inline r then find_custom_opt r else None);
-        ci_is_custom = Table.is_custom r;
-        (* A type qualifier, never a block in value position. *)
-        ci_yields = None }
-    in
-    pp_cpp_expr env [] (CPPglob (r, tys, Some ci))
+    (* No [~yields]: a type qualifier is never a block in value position. *)
+    pp_cpp_expr env [] (Translation_state.mk_cppglob r tys)
   | _ ->
   let s = string_of_ppcmds (pp_cpp_type false [] ty) in
   let kw = "typename " in
@@ -1618,7 +1613,7 @@ and pp_cpp_expr env args t =
            (value type). Strip the shared_ptr and re-emit as deque<Inner>. *)
         let fix_opt = match stored_ty with
           | Tglob (g, [Tshared_ptr inner], _)
-            when is_list_global g && Table.is_custom g ->
+            when Ml_type_util.is_custom_list_global g ->
             ( match inner with
             | Tglob (GlobRef.IndRef (kn_inner, _), _, _)
               when not (MutInd.CanOrd.equal kn_inner kn_ctor) ->
@@ -1654,7 +1649,7 @@ and pp_cpp_expr env args t =
     let is_custom_list_funcall =
       match f with
       | CPPglob (GlobRef.IndRef _ as g, (_ :: _ as tys), _)
-        when is_list_global g && Table.is_custom g ->
+        when Ml_type_util.is_custom_list_global g ->
         let elem_ty = List.hd tys in
         if elem_ty <> Tany && elem_ty <> Tauto then Some elem_ty
         else None
@@ -1686,7 +1681,7 @@ and pp_cpp_expr env args t =
        has no converting constructor.  Emit an inline loop instead. *)
     let is_custom_list_convert =
       let check g elem_ty =
-        is_list_global g && Table.is_custom g
+        Ml_type_util.is_custom_list_global g
         && elem_ty <> Tany && elem_ty <> Tauto
       in
       match ty with
@@ -3158,11 +3153,11 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
         | Some expected_ty, CPPvar id
           when Id.Map.mem id !concrete_typed_any_params ->
           let check_custom_list = function
-            | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g
+            | Tglob (g, [elem_ty], _) when Ml_type_util.is_custom_list_global g
               && elem_ty <> Tany && elem_ty <> Tauto ->
               Some (Tglob (g, [Tany], []), elem_ty)
             | Tnamespace (_, Tglob (g, [elem_ty], _))
-              when is_list_global g && Table.is_custom g
+              when Ml_type_util.is_custom_list_global g
               && elem_ty <> Tany && elem_ty <> Tauto ->
               Some (Tglob (g, [Tany], []), elem_ty)
             | _ -> None

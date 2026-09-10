@@ -315,6 +315,12 @@ let is_list_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "list"
 
+(** Whether [g] is [list] under a custom mapping, so that its values are a C++
+    container -- [std::deque<T>] and the like -- rather than a Crane inductive.
+    Such a container has no converting constructor and no factory methods, so
+    several printers have to build and take it apart element by element. *)
+let is_custom_list_global g = is_list_global g && Table.is_custom g
+
 let list_ctor_struct_names (g : GlobRef.t) : string * string =
   match g with
   | GlobRef.IndRef (kn, i) ->

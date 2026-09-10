@@ -1410,7 +1410,7 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
                      match strip_ns dst with
                      | Tglob (g, [elem_ty], _) ->
-                       is_list_global g && Table.is_custom g
+                       Ml_type_util.is_custom_list_global g
                        && elem_ty <> Tany && elem_ty <> Tauto
                      | _ -> false) ->
       let strip_ns = function Tnamespace (_, t) -> t | t -> t in
@@ -3814,7 +3814,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          is_list_global ind && Table.is_custom ind
+          Ml_type_util.is_custom_list_global ind
         | _ -> false
       in
       let propagate_erased_ctx =
@@ -3920,7 +3920,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          is_list_global ind && Table.is_custom ind
+          Ml_type_util.is_custom_list_global ind
         | _ -> false
       in
       let slot_is_deeply_erased =
@@ -4131,7 +4131,7 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          is_list_global ind && Table.is_custom ind
+          Ml_type_util.is_custom_list_global ind
         | _ -> false
       in
       let rec ml_ty_all_dummy = function
@@ -5996,7 +5996,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let clean_ct = clean_self_ns ct in
         match strip_ns_tglob clean_ct with
         | Tglob (g, [elem_ty], _)
-          when is_list_global g && Table.is_custom g
+          when Ml_type_util.is_custom_list_global g
                && not (resolves_to_any_type elem_ty) ->
           (* [expr] came out as the erased [deque<std::any>] from the
              MLrel/MLmagic path; rebuild it as the concrete element container. *)
@@ -6474,7 +6474,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                    [std::bad_any_cast] at runtime.  See the matching
                    invariant in [gen_expr]'s [MLrel]/[MLmagic] cases. *)
                 let erase_custom_list_elems = function
-                  | Tglob (g, _ :: _, ns) when is_list_global g && Table.is_custom g ->
+                  | Tglob (g, _ :: _, ns) when Ml_type_util.is_custom_list_global g ->
                     Tglob (g, [Tany], ns)
                   | t -> t
                 in
@@ -6573,7 +6573,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let rec is_custom_list_cons = function
                   | MLcons (_, GlobRef.ConstructRef ((kn, _), _), _) ->
                     let ind = GlobRef.IndRef (kn, 0) in
-                    is_list_global ind && Table.is_custom ind
+                    Ml_type_util.is_custom_list_global ind
                   | MLmagic (_, inner) -> is_custom_list_cons inner
                   | _ -> false
                 in
@@ -8378,7 +8378,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | v ->
             Cpp_erasure.converting_ctor cpp_ty
               [Cpp_erasure.unbox list_any_ty v] )
-        | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
+        | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
           let clean_cpp_ty = clean_self_ns cpp_ty in
           (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
              with fully-erased elements at runtime ([deque<pair<any,any>>]).
@@ -9944,7 +9944,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
                  in
                  Cpp_erasure.converting_ctor bare_ty
                    [Cpp_erasure.unbox list_any_ty (CPPvar binding_name)]
-               | Tglob (g, [elem_ty], _) when is_list_global g && Table.is_custom g ->
+               | Tglob (g, [elem_ty], _) when Ml_type_util.is_custom_list_global g ->
                  let erased_elem = erase_type_to_any elem_ty in
                  let cast_ty =
                    if erased_elem = Tany then bare_ty
@@ -10902,7 +10902,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let scrut_elems_are_any =
         (scrut_is_mlmagic || scrut_is_magic)
         && (match ml_typ with
-            | Tglob (g, _ :: _, _) when is_list_global g && Table.is_custom g -> true
+            | Tglob (g, _ :: _, _) when Ml_type_util.is_custom_list_global g -> true
             | _ -> false)
       in
       let ids' = recover_pattern_var_types_from_scrutinee ~ctor:r ml_typ ids' in
@@ -11008,7 +11008,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
                      in
                      Cpp_erasure.converting_ctor cpp_ty
                        [Cpp_erasure.unbox list_any_ty (CPPvar name)]
-                   | Tglob (g, [_], _) when is_list_global g && Table.is_custom g ->
+                   | Tglob (g, [_], _) when Ml_type_util.is_custom_list_global g ->
                      CPPvar name
                    | Tqualified _ | Tglob (GlobRef.ConstRef _, _, _) ->
                      (* Opaque type alias (e.g. nt_semty = std::any) or

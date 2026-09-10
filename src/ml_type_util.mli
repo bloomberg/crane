@@ -152,6 +152,10 @@ val cpp_ty_eq : Minicpp.cpp_type -> Minicpp.cpp_type -> bool
 (** Whether a global reference is [list]. *)
 val is_list_global : Names.GlobRef.t -> bool
 
+(** Whether [g] is [list] under a custom mapping, so that its values are a C++
+    container rather than a Crane inductive. *)
+val is_custom_list_global : Names.GlobRef.t -> bool
+
 (** Struct names for the two [list] constructors (cons and nil). *)
 val list_ctor_struct_names : Names.GlobRef.t -> string * string
 
