@@ -31,7 +31,7 @@ struct DepMatchUnitOption {
 
     explicit tg(TU _v) : v_(_v) {}
 
-    static tg to(std::optional<uint64_t> a0) { return tg(TO{std::move(a0)}); }
+    static tg to(std::optional<uint64_t> a0) { return tg(TO{a0}); }
 
     static tg tu() { return tg(TU{}); }
 

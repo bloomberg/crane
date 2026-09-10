@@ -281,7 +281,9 @@ val count_real_ml_args : Miniml.ml_ast list -> int
 (** Whether a C++ type is an inductive value type. *)
 val is_inductive_value_type : Minicpp.cpp_type -> bool
 
-(** Whether a C++ type is trivially copyable. *)
+(** Whether a C++ type is trivially copyable: an enum, a custom-extracted
+    scalar, or a type declared with [Crane TriviallyCopyable] whose arguments
+    are themselves trivially copyable. *)
 val is_trivially_copyable_type : Minicpp.cpp_type -> bool
 
 (** Whether a MiniML type is a non-trivial value type. *)

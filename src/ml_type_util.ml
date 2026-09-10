@@ -767,9 +767,17 @@ let is_inductive_value_type = function
     | _ -> false )
   | _ -> false
 
-let is_trivially_copyable_type = function
-  | Tglob (g, _, _) | Tnamespace (g, _) ->
+(** Whether copying a value of this C++ type is free.
+
+    A type declared with [Crane TriviallyCopyable] qualifies only when its
+    type arguments do -- copying a [std::pair] costs what copying its
+    components costs. *)
+let rec is_trivially_copyable_type = function
+  | Tglob (g, ts, _) ->
     is_enum_inductive g || Table.is_custom_scalar_ref g
+    || Table.is_trivially_copyable_ref g
+       && List.for_all is_trivially_copyable_type ts
+  | Tnamespace (g, _) -> is_enum_inductive g || Table.is_custom_scalar_ref g
   | _ -> false
 
 (** Check if an ML type maps to a non-trivially-copyable C++ value type.
