@@ -984,9 +984,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              top-level function's body is: an expression whose C++ type is the
              erased [std::any] -- a call to a higher-rank callback, say -- is
              cast back to the concrete type the method declares. *)
-          let saved_method_ret = (!tctx).current_cpp_return_type in
-          tctx := { !tctx with current_cpp_return_type = Some method_ret_ty };
           let cpp_params, ret_ty, body_stmts =
+            with_cpp_return_type (Some method_ret_ty) @@ fun () ->
             if ml_params = [] then
               (* No lambdas in the body — either a function reference that needs
                  eta-expansion, or a non-function value field. *)
@@ -1143,16 +1142,13 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  environment still spells them with the class's type variable,
                  so call sites inside the body need this to tell a concrete
                  parameter (e.g. [Sz (nat -> nat)]'s [f]) from an erased one. *)
-              let saved_param_tys = (!tctx).current_param_types in
-              set_current_param_types (List.rev renamed_ml);
               let stmts =
+                with_param_types (List.rev renamed_ml) @@ fun () ->
                 with_method_env_types env renamed_ml (fun () ->
                   gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
-              tctx := { !tctx with current_param_types = saved_param_tys };
               (cpp_params, method_ret_ty, stmts)
           in
-          tctx := { !tctx with current_cpp_return_type = saved_method_ret };
           Some
             ( Fmethod
                 {
@@ -3070,7 +3066,7 @@ let gen_decl__inner n b ty =
         itree_mode =
           (if is_monad_reified monad_ref then Reified else Sequential) }
   | None -> () );
-  let saved_method_ns = set_method_ns_for_locals () in
+  with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
@@ -3091,11 +3087,10 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
     | _ ->
-      let saved_return_type = (!tctx).current_cpp_return_type in
-      tctx := { !tctx with current_cpp_return_type = Some cty };
       tctx := { !tctx with cs_counter = 0 };
-      let body_expr = gen_expr (empty_env ()) b in
-      tctx := { !tctx with current_cpp_return_type = saved_return_type };
+      let body_expr =
+        with_cpp_return_type (Some cty) (fun () -> gen_expr (empty_env ()) b)
+      in
       (* When a unit-typed constant's body calls a void-ified function,
          the call produces no value.  Wrap in an IIFE that executes the
          body for side effects and returns Unit::e_TT. *)
@@ -3118,7 +3113,6 @@ let gen_decl__inner n b ty =
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
   in
-  tctx := { !tctx with method_self_ns = saved_method_ns };
   tctx := { !tctx with itree_mode = saved_mode };
   result
 
@@ -3142,7 +3136,7 @@ let gen_decl_for_pp__inner n b ty =
   in
   let b = rewrite_ml_ast_types carrier_refs b in
   let b = resolve_body_tvars b ty in
-  let saved_method_ns = set_method_ns_for_locals () in
+  with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars cty in
   (* Count typeclass-typed parameters in the ML domain — these become template
@@ -3194,7 +3188,6 @@ let gen_decl_for_pp__inner n b ty =
     (Some ds, empty_env (), tc_param_ids @ tvars)
   | _ -> (None, empty_env (), tc_param_ids @ tvars)
   in
-  tctx := { !tctx with method_self_ns = saved_method_ns };
   result
 
 let gen_decl_for_pp n b ty =
@@ -3213,7 +3206,7 @@ let gen_dfun_def__inner n b ty =
   let carrier_refs = get_erased_proj_map_from_type ty in
   let b = rewrite_ml_ast_types carrier_refs b in
   let b = resolve_body_tvars b ty in
-  let saved_method_ns = set_method_ns_for_locals () in
+  with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars cty in
   let index_tvar_set = collect_ml_type_index_tvars ty in
@@ -3249,11 +3242,9 @@ let gen_dfun_def__inner n b ty =
         (List.mapi (fun i ty -> (ty, i)) dom)
     in
     let tvars = tc_param_ids @ tvars @ fun_tys in
-    tctx := { !tctx with method_self_ns = saved_method_ns };
     (f, env, tvars)
   | _ ->
     let f, env = gen_dfun n b cty ty temps in
-    tctx := { !tctx with method_self_ns = saved_method_ns };
     (f, env, tc_param_ids @ tvars)
 
 let gen_dfun_def n b ty =
@@ -3270,7 +3261,7 @@ let gen_spec__inner n b ty =
   let is_reified = unit_void &&
     (match extract_monad_from_codomain ty with
      | Some mr -> is_monad_reified mr | None -> false) in
-  let saved_method_ns = set_method_ns_for_locals () in
+  with_method_ns_for_locals @@ fun () ->
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
@@ -3292,8 +3283,7 @@ let gen_spec__inner n b ty =
          erased template type args (see try_recover_erased_return_type). Without
          this, calls like pick<natBoxed>() inside a constant body cannot deduce
          the missing type parameter. *)
-      let saved_return_type = (!tctx).current_cpp_return_type in
-      tctx := { !tctx with current_cpp_return_type = Some ty };
+      with_cpp_return_type (Some ty) @@ fun () ->
       (* Strip MLmagic wrapper and track whether a type coercion from std::any
          is needed.  MLmagic wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int). *)
@@ -3313,7 +3303,6 @@ let gen_spec__inner n b ty =
          IIFE standing in for a let-in tail expression re-bases onto it rather
          than onto nothing. *)
       let b_expr = gen_expr ~expected_ty:ty (empty_env ()) inner_body in
-      tctx := { !tctx with current_cpp_return_type = saved_return_type };
       (* Wrap with std::any_cast when the C++ expression returns std::any but the
          declared type is concrete.  Two detection paths:
          (a) MLmagic — the extraction explicitly flagged a type coercion.
@@ -3360,7 +3349,6 @@ let gen_spec__inner n b ty =
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
   in
-  tctx := { !tctx with method_self_ns = saved_method_ns };
   result
 
 let gen_spec n b ty =
@@ -4064,10 +4052,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
            manipulates containers of recursive types (e.g. List<tree>), the
            type arguments get shared_ptr wrapping to match struct field
            types. *)
-        let saved_method_ns = set_method_ns_for_locals ~base:method_ns () in
-        let stmts = gen_stmts env method_k inner_body in
-        tctx := { !tctx with method_self_ns = saved_method_ns };
-        stmts )
+        with_method_ns_for_locals ~base:method_ns (fun () ->
+            gen_stmts env method_k inner_body ) )
   in
   tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };

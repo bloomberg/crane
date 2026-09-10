@@ -48,13 +48,10 @@ val clear_local_inductives : unit -> unit
 (** Return the inductives currently recorded as local to this module scope. *)
 val get_local_inductives : unit -> GlobRef.t list
 
-(** Set method_self_ns from local_inductives for standalone functions.
-    Returns the saved previous value for restoration via
-    {!restore_method_self_ns}. *)
-val set_method_ns_for_locals : ?base:Refset'.t -> unit -> Refset'.t
-
-(** Restore method_self_ns to a previously saved value. *)
-val restore_method_self_ns : Refset'.t -> unit
+(** [with_method_ns_for_locals () f] runs [f] with the module's local
+    inductives added to [method_self_ns], restoring the enclosing namespace on
+    the way out however [f] leaves. *)
+val with_method_ns_for_locals : ?base:Refset'.t -> (unit -> 'a) -> 'a
 
 (** Return the codomain of an ML type, chasing through arrows and meta
     indirections. For [A -> B -> C] this returns [C]. *)

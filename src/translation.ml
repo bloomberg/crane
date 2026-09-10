@@ -1583,45 +1583,40 @@ let return_captures_by_value stmts =
     let-in expressions, top-level functions) and each level has its own set of
     safe bindings. *)
 let with_escape_analysis f =
-  let saved_depth = (!tctx).current_letin_depth in
-  let saved_dead = (!tctx).move_dead_after in
-  let saved_owned = (!tctx).move_owned_vars in
-  let saved_nparams = (!tctx).move_n_params in
-  let saved_match_counter = (!tctx).match_param_counter in
-  let saved_cs_counter = (!tctx).cs_counter in
-  let saved_return_type = (!tctx).current_cpp_return_type in
+  (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
+     outer function returns void, gen_stmts generates bare 'return;' for tt,
+     but IIFE bodies return their own type (e.g. monostate), not void. *)
+  let inner_return_type =
+    match (!tctx).current_cpp_return_type with
+    | Some Tvoid -> None
+    | rt -> rt
+  in
   (* A lambda body is not part of the constructor expression that encloses it.
      Both flags make an unresolvable type variable erase to [std::any], which
      is right for a constructor's own arguments and wrong for the body of a
      lambda that merely happens to be one -- the lambda has its own binders
      and its own slots. *)
-  let saved_in_ctor = (!tctx).in_constructor_expr in
-  tctx :=
-    { !tctx with
-      in_constructor_expr = false;
-      current_letin_depth = 0;
-      move_dead_after = Escape.IntSet.empty;
-      move_owned_vars = Escape.IntSet.empty;
-      move_n_params = 0;
-      match_param_counter = 0;
-      cs_counter = 0 };
-  (* Prevent void optimization from leaking into IIFE/lambda bodies: when the
-     outer function returns void, gen_stmts generates bare 'return;' for tt,
-     but IIFE bodies return their own type (e.g. monostate), not void. *)
-  ( if (!tctx).current_cpp_return_type = Some Tvoid then
-      tctx := { !tctx with current_cpp_return_type = None } );
-  let result = f () in
-  tctx :=
-    { !tctx with
-      current_letin_depth = saved_depth;
-      move_dead_after = saved_dead;
-      move_owned_vars = saved_owned;
-      move_n_params = saved_nparams;
-      match_param_counter = saved_match_counter;
-      cs_counter = saved_cs_counter;
-      current_cpp_return_type = saved_return_type;
-      in_constructor_expr = saved_in_ctor };
-  result
+  with_field
+    (fun c ->
+      ( c.current_letin_depth,
+        c.move_dead_after,
+        c.move_owned_vars,
+        c.move_n_params,
+        c.match_param_counter,
+        c.cs_counter ) )
+    (fun (depth, dead, owned, nparams, match_counter, cs) ->
+      tctx :=
+        { !tctx with
+          current_letin_depth = depth;
+          move_dead_after = dead;
+          move_owned_vars = owned;
+          move_n_params = nparams;
+          match_param_counter = match_counter;
+          cs_counter = cs } )
+    (0, Escape.IntSet.empty, Escape.IntSet.empty, 0, 0, 0)
+  @@ fun () ->
+  with_in_constructor_expr false @@ fun () ->
+  with_cpp_return_type inner_return_type f
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
     fixpoint, or a record destructure in argument position).  The lambda
@@ -1631,12 +1626,7 @@ let with_escape_analysis f =
     function's return type leaks into the IIFE body and its tail expression is
     cast to it — e.g. [any_cast<uint64_t>] on an erased record field that the
     caller then projects with [.first.first]. *)
-let with_iife_return_type expected_ty f =
-  let saved = (!tctx).current_cpp_return_type in
-  tctx := { !tctx with current_cpp_return_type = expected_ty };
-  let result = f () in
-  tctx := { !tctx with current_cpp_return_type = saved };
-  result
+let with_iife_return_type expected_ty f = with_cpp_return_type expected_ty f
 
 (** Save move-tracking state, shift de Bruijn indices by [n] binders, run [f],
     then restore the original state.  This is the standard bracket for code
@@ -3824,9 +3814,9 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
         | Some t -> resolves_to_any_type t
         | None -> false
       in
-      tctx :=
-        { !tctx with
-          current_cpp_return_type = (if propagate_erased_ctx then Some Tany else None) };
+      let erased_fn_slot, result =
+        with_cpp_return_type (if propagate_erased_ctx then Some Tany else None)
+        @@ fun () ->
       let expected_cpp_ty =
         match new_expected with
         | Some ml_ty ->
@@ -3896,7 +3886,9 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
             | None -> expected_cpp_ty )
           ~slot:{slot with expected_ml_ty = new_expected} e
       in
-      tctx := { !tctx with current_cpp_return_type = saved_ret };
+      (erased_fn_slot, result)
+      in
+
       (* Whether this constructor's value lands in a DEEPLY erased slot: one
          whose consumer does not merely read a [std::any] back, but
          reconstructs the shape underneath it and reads every component boxed
@@ -6903,112 +6895,115 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> expr )
       in
       let gen_and_wrap i e =
-        let saved_ret = (!tctx).current_cpp_return_type in
-        tctx := { !tctx with current_cpp_return_type = None };
-        let ft_opt =
-          try Some (List.nth field_types i)
-          with Failure _ | Invalid_argument _ -> None
+        let ft_opt, expr =
+          (* A constructor argument returns its own value, not the enclosing
+             function's, so the ambient return type must not reach it. *)
+          with_cpp_return_type None (fun () ->
+          let ft_opt =
+            try Some (List.nth field_types i)
+            with Failure _ | Invalid_argument _ -> None
+          in
+          (* A constructor field with a CONCRETE type receiving an argument that
+             is an erased ([std::any]) pattern variable (e.g. a leaf destructured
+             from a deeply-erased [pair<any,any>] via [any_cast]) needs a final
+             [any_cast<concrete>] — otherwise the bare [std::any] is forwarded
+             straight into a concrete-typed factory parameter and fails to
+             compile.  Thread the field's concrete C++ type as the expected type
+             so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
+             the cast.  [Tvar] fields are left to
+             [wrap_if_needed_for_field], which handles the erased-field cases. *)
+          (* The field's declared type with this constructor call's own type
+             arguments substituted in — the [P] of [sigT A P] becomes the
+             concrete C++ type the field holds at this call site. *)
+          let instantiated_field_cpp_ty ft =
+            subst_cpp_tvars
+              (fun i -> List.nth_opt ctor_temps (i - 1))
+              (cpp_of_ml env ft)
+          in
+          let expected_for_arg =
+            match ft_opt with
+            | Some ft ->
+              let is_erased_rel =
+                match e with
+                | MLrel j | MLmagic (_, MLrel j) ->
+                  binder_is_boxed j
+                | _ -> false
+              in
+              ( match ft with
+              | (Miniml.Tvar (_, _))
+                when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
+                      | Tglob (_, args, _) ->
+                        args <> [] && List.exists has_tany_in_type args
+                      | _ -> false) ->
+                (* An element type the slot has already erased.  A nested
+                   constructor has to be built at that same instantiation --
+                   [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
+                   produces does not convert into the container holding it. *)
+                Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
+              | Miniml.Tvar (_, _) -> None
+              | Miniml.Tapp _ ->
+                (* A field that applies one of the inductive's [template
+                   <typename> class] parameters ([F A]).  Nothing in the
+                   argument names the instantiation -- a [None] has no value to
+                   read it off -- so it can only come from this call's own type
+                   arguments.  The substitution is done on the ML type: only
+                   there does applying [option] to [nat] reduce, since the C++
+                   side of a custom-extracted [option] is a template string. *)
+                let ct = cpp_of_ml env (Mlutil.type_subst_list ty_ml_tparams ft) in
+                if prints_as_any ct || has_tany_in_type ct then None else Some ct
+              | _ when is_erased_rel ->
+                let ct = cpp_of_ml env ft in
+                if prints_as_any ct then None else Some ct
+              | _ ->
+                (* A field whose instantiated C++ type is a curried function
+                   (e.g. [A -> A] at [A = nat -> nat]) must keep its currying:
+                   without the expected type, [gen_expr]'s [MLlam] case would
+                   flatten the nested binders into one multi-parameter lambda,
+                   which does not convert to [std::function<F(F)>]. *)
+                let ct = instantiated_field_cpp_ty ft in
+                ( match (ft, ct) with
+                | _, Tfun (_, Tfun _) when not (prints_as_any ct) -> Some ct
+                | _ -> None ) )
+            | None -> None
+          in
+          (* When a function value is stored into an erased ([std::any])
+             constructor field (e.g. the action [unit -> semty s] stored in a
+             heterogeneous [sigT] list), the function's return value is, at
+             runtime, boxed inside a single [std::any].  Consumers recover it
+             with a fixed [any_cast] shape, so ALL of a given Coq type's
+             producers must erase to the SAME canonical C++ representation.  For
+             [list (nat*nat)] the empty ("nil") production erases to
+             [deque<pair<any,any>>] (its element type is already opaque in the
+             ML annotation), whereas a non-empty ("cons") production built from
+             concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
+             a different C++ type for the same Coq type, causing
+             [std::bad_any_cast] at the consumer.  Generate the body with
+             [deep_erase] so cons productions deep-erase their element
+             type to match nil.  See the mirror in the record-constructor path. *)
+          (* The same field type on the ML side, for the argument that can only
+             learn its instantiation from the slot: an applied parameter
+             ([F A]) says nothing on its own, and substituting this call's type
+             arguments turns it into the [option nat] the argument is built at. *)
+          let expected_ml_for_arg =
+            match ft_opt with
+            | Some (Miniml.Tapp _ as ft) ->
+              Some (Mlutil.type_subst_list ty_ml_tparams ft)
+            | _ -> slot.expected_ml_ty
+          in
+          let expr =
+            gen_ctor_arg
+              ~slot:
+                { slot with
+                  expected_ml_ty = expected_ml_for_arg;
+                  deep_erase =
+                    slot.deep_erase
+                    || field_stores_erased_fn_value
+                         ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
+                         field_types i e }
+              ?expected_ty:expected_for_arg e
+          in
+            (ft_opt, expr) )
         in
-        (* A constructor field with a CONCRETE type receiving an argument that
-           is an erased ([std::any]) pattern variable (e.g. a leaf destructured
-           from a deeply-erased [pair<any,any>] via [any_cast]) needs a final
-           [any_cast<concrete>] — otherwise the bare [std::any] is forwarded
-           straight into a concrete-typed factory parameter and fails to
-           compile.  Thread the field's concrete C++ type as the expected type
-           so the erased-[MLrel] path (see [gen_expr]'s [MLrel] case) inserts
-           the cast.  [Tvar] fields are left to
-           [wrap_if_needed_for_field], which handles the erased-field cases. *)
-        (* The field's declared type with this constructor call's own type
-           arguments substituted in — the [P] of [sigT A P] becomes the
-           concrete C++ type the field holds at this call site. *)
-        let instantiated_field_cpp_ty ft =
-          subst_cpp_tvars
-            (fun i -> List.nth_opt ctor_temps (i - 1))
-            (cpp_of_ml env ft)
-        in
-        let expected_for_arg =
-          match ft_opt with
-          | Some ft ->
-            let is_erased_rel =
-              match e with
-              | MLrel j | MLmagic (_, MLrel j) ->
-                binder_is_boxed j
-              | _ -> false
-            in
-            ( match ft with
-            | (Miniml.Tvar (_, _))
-              when (match unfold_cpp_typedef env (instantiated_field_cpp_ty ft) with
-                    | Tglob (_, args, _) ->
-                      args <> [] && List.exists has_tany_in_type args
-                    | _ -> false) ->
-              (* An element type the slot has already erased.  A nested
-                 constructor has to be built at that same instantiation --
-                 [SigT<any, any>], not [SigT<any, Nat>] -- or the value it
-                 produces does not convert into the container holding it. *)
-              Some (unfold_cpp_typedef env (instantiated_field_cpp_ty ft))
-            | Miniml.Tvar (_, _) -> None
-            | Miniml.Tapp _ ->
-              (* A field that applies one of the inductive's [template
-                 <typename> class] parameters ([F A]).  Nothing in the
-                 argument names the instantiation -- a [None] has no value to
-                 read it off -- so it can only come from this call's own type
-                 arguments.  The substitution is done on the ML type: only
-                 there does applying [option] to [nat] reduce, since the C++
-                 side of a custom-extracted [option] is a template string. *)
-              let ct = cpp_of_ml env (Mlutil.type_subst_list ty_ml_tparams ft) in
-              if prints_as_any ct || has_tany_in_type ct then None else Some ct
-            | _ when is_erased_rel ->
-              let ct = cpp_of_ml env ft in
-              if prints_as_any ct then None else Some ct
-            | _ ->
-              (* A field whose instantiated C++ type is a curried function
-                 (e.g. [A -> A] at [A = nat -> nat]) must keep its currying:
-                 without the expected type, [gen_expr]'s [MLlam] case would
-                 flatten the nested binders into one multi-parameter lambda,
-                 which does not convert to [std::function<F(F)>]. *)
-              let ct = instantiated_field_cpp_ty ft in
-              ( match (ft, ct) with
-              | _, Tfun (_, Tfun _) when not (prints_as_any ct) -> Some ct
-              | _ -> None ) )
-          | None -> None
-        in
-        (* When a function value is stored into an erased ([std::any])
-           constructor field (e.g. the action [unit -> semty s] stored in a
-           heterogeneous [sigT] list), the function's return value is, at
-           runtime, boxed inside a single [std::any].  Consumers recover it
-           with a fixed [any_cast] shape, so ALL of a given Coq type's
-           producers must erase to the SAME canonical C++ representation.  For
-           [list (nat*nat)] the empty ("nil") production erases to
-           [deque<pair<any,any>>] (its element type is already opaque in the
-           ML annotation), whereas a non-empty ("cons") production built from
-           concrete pair values would otherwise stay [deque<Prod<Nat,Nat>>] --
-           a different C++ type for the same Coq type, causing
-           [std::bad_any_cast] at the consumer.  Generate the body with
-           [deep_erase] so cons productions deep-erase their element
-           type to match nil.  See the mirror in the record-constructor path. *)
-        (* The same field type on the ML side, for the argument that can only
-           learn its instantiation from the slot: an applied parameter
-           ([F A]) says nothing on its own, and substituting this call's type
-           arguments turns it into the [option nat] the argument is built at. *)
-        let expected_ml_for_arg =
-          match ft_opt with
-          | Some (Miniml.Tapp _ as ft) ->
-            Some (Mlutil.type_subst_list ty_ml_tparams ft)
-          | _ -> slot.expected_ml_ty
-        in
-        let expr =
-          gen_ctor_arg
-            ~slot:
-              { slot with
-                expected_ml_ty = expected_ml_for_arg;
-                deep_erase =
-                  slot.deep_erase
-                  || field_stores_erased_fn_value
-                       ?field_cpp_ty:(Option.map instantiated_field_cpp_ty ft_opt)
-                       field_types i e }
-            ?expected_ty:expected_for_arg e
-        in
-        tctx := { !tctx with current_cpp_return_type = saved_ret };
         let expr =
           match ft_opt with
           | Some ft -> wrap_if_needed_for_field ft e expr
@@ -7206,11 +7201,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          || ml_type_is_unit (ml_result_type branch_rty)
       then Tvoid else r
     in
-    let saved_ret = (!tctx).current_cpp_return_type in
-    if iife_ret = Tvoid then
-      tctx := { !tctx with current_cpp_return_type = Some Tvoid };
-    let stmts = gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv in
-    tctx := { !tctx with current_cpp_return_type = saved_ret };
+    let stmts =
+      let ret =
+        if iife_ret = Tvoid then Some Tvoid
+        else (!tctx).current_cpp_return_type
+      in
+      with_cpp_return_type ret (fun () ->
+          gen_custom_cpp_case env (fun x -> Sreturn (Some x)) typ t pv )
+    in
     mk_iife (Some iife_ret) stmts
   | MLcase (typ, t, pv)
     when (not (record_fields_of_type typ == [])) && Array.length pv == 1 ->
@@ -8232,15 +8230,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | Some ml_ty -> ml_erases_to_box env ml_ty
         | None -> false
       in
-      let saved_ret_for_arg = (!tctx).current_cpp_return_type in
-      if param_resolves_to_any then
-        tctx := { !tctx with current_cpp_return_type = Some Tany };
       let expr =
-        gen_expr ?expected_ty:arg_expected_ty
-          ~slot:{slot with expected_ml_ty = arg_expected_ml_ty} env ml_arg
+        let ret =
+          if param_resolves_to_any then Some Tany
+          else (!tctx).current_cpp_return_type
+        in
+        with_cpp_return_type ret (fun () ->
+            gen_expr ?expected_ty:arg_expected_ty
+              ~slot:{slot with expected_ml_ty = arg_expected_ml_ty} env ml_arg )
       in
-      if param_resolves_to_any then
-        tctx := { !tctx with current_cpp_return_type = saved_ret_for_arg };
       (* Annotate the outer lambda with the explicit return type computed
          during the split, so that C++ concept checking sees the concrete
          [std::function<...>] return type instead of the raw closure type. *)
@@ -9672,21 +9670,24 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
     with_shifted_move_tracking n_pat_vars ~clear_dead:true
       ~add_owned_set:pat_var_owned ?exclude_owned:exclude_scrutinee
       (fun () ->
-      let saved_match_counter = (!tctx).match_param_counter in
-      let saved_cs_counter = (!tctx).cs_counter in
-      let saved_return_type = (!tctx).current_cpp_return_type in
-      ( if (!tctx).current_cpp_return_type = Some Tvoid then
-          tctx := { !tctx with current_cpp_return_type = None } );
-      populate_erased_field_env
-        ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
-        ~cname ~typ ~env ~n_pat_vars
-        ~n_fields:(List.length rev_ids)
-        ~non_erased_def_site_field_tys ();
-      let body_stmts = gen_stmts env_for_body (fun x -> Sreturn (Some x)) body in
-      tctx := { !tctx with current_cpp_return_type = saved_return_type };
-      tctx := { !tctx with match_param_counter = saved_match_counter };
-      tctx := { !tctx with cs_counter = saved_cs_counter };
-      body_stmts)
+      let inner_ret =
+        match (!tctx).current_cpp_return_type with
+        | Some Tvoid -> None
+        | rt -> rt
+      in
+      with_field
+        (fun c -> (c.match_param_counter, c.cs_counter))
+        (fun (m, cs) ->
+          tctx := { !tctx with match_param_counter = m; cs_counter = cs } )
+        ((!tctx).match_param_counter, (!tctx).cs_counter)
+      @@ fun () ->
+      with_cpp_return_type inner_ret (fun () ->
+          populate_erased_field_env
+            ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)
+            ~cname ~typ ~env ~n_pat_vars
+            ~n_fields:(List.length rev_ids)
+            ~non_erased_def_site_field_tys ();
+          gen_stmts env_for_body (fun x -> Sreturn (Some x)) body ))
   in
   let tvars = get_current_type_vars () in
   let field_bindings =
@@ -10187,12 +10188,15 @@ and gen_cpp_case (typ : ml_type) t env pv =
       Option.map (fun (_, _, _, body) -> gen_stmts env (fun x -> Sreturn (Some x)) body) wild_br
     in
     let void_ret = iife_void_return env typ pv in
-    let saved_ret = (!tctx).current_cpp_return_type in
-    if void_ret = Some Tvoid then
-      tctx := { !tctx with current_cpp_return_type = Some Tvoid };
-    let branches = gen_enum_branches (Array.to_list pv) in
-    let default = gen_default_stmts () in
-    tctx := { !tctx with current_cpp_return_type = saved_ret };
+    let branches, default =
+      let ret =
+        if void_ret = Some Tvoid then Some Tvoid
+        else (!tctx).current_cpp_return_type
+      in
+      with_cpp_return_type ret (fun () ->
+          let branches = gen_enum_branches (Array.to_list pv) in
+          (branches, gen_default_stmts ()) )
+    in
     let body = [Sswitch (scrutinee, ind_ref, branches, default)] in
     let iife_ret_opt =
       match void_ret with
@@ -12295,13 +12299,15 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               push_binders env lam_param_ids;
               (* Lambda bodies have their own return type; clear the enclosing
                  function's void flag to avoid bare 'return;' inside the lambda. *)
-              let saved_return_type = (!tctx).current_cpp_return_type in
-              ( if (!tctx).current_cpp_return_type = Some Tvoid then
-                  tctx := { !tctx with current_cpp_return_type = None } );
               let compiled_body =
-                gen_stmts lam_env (fun x -> Sreturn (Some x)) body
+                let ret =
+                  match (!tctx).current_cpp_return_type with
+                  | Some Tvoid -> None
+                  | rt -> rt
+                in
+                with_cpp_return_type ret (fun () ->
+                    gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
               in
-              tctx := { !tctx with current_cpp_return_type = saved_return_type };
               tctx := { !tctx with env_types = saved_env_types };
               (free_var_params, lam_param_ids, lam_env, compiled_body) )
         in
@@ -13416,16 +13422,17 @@ let is_foldable_numeral_converter_app = function
     | None -> Option.has_some (try_fold_num_int arg) )
   | _ -> false
 
-(** Set method_self_ns from local_inductives for standalone functions.
+(** [with_method_ns_for_locals () f] runs [f] with the module's local
+    inductives added to {!Translation_state.method_self_ns}, and puts the
+    enclosing namespace back on the way out however [f] leaves.
+
     Functions inside wrapper modules (e.g. Cotree.tree_of_cotree) construct
     containers whose type parameters must use shared_ptr for recursive
-    value-type inductives, matching struct field types.  Returns the saved
-    previous value for restoration.
+    value-type inductives, matching struct field types.
 
     @param base  The namespace to extend, when the caller has one of its own in
       hand.  Defaults to the ambient {!Translation_state.method_self_ns}. *)
-let set_method_ns_for_locals ?base () =
-  let saved = (!tctx).method_self_ns in
+let with_method_ns_for_locals ?base (f : unit -> 'a) : 'a =
   let full_ns =
     List.fold_left
       (fun acc g ->
@@ -13435,12 +13442,7 @@ let set_method_ns_for_locals ?base () =
       (Option.default (!tctx).method_self_ns base)
       (get_local_inductives ())
   in
-  tctx := { !tctx with method_self_ns = full_ns };
-  saved
-
-(** Restore method_self_ns to a previously saved value. *)
-let restore_method_self_ns saved =
-  tctx := { !tctx with method_self_ns = saved }
+  with_method_self_ns full_ns f
 
 (** Adapt closures returned from a function whose return type is the erased
     [std::any] (e.g. the [nat -> nat] branch of a dependent

@@ -228,6 +228,32 @@ let clear_current_type_vars () = tctx := { !tctx with current_type_vars = [] }
 let with_type_vars (tvars : Id.t list) (f : unit -> 'a) : 'a =
   with_field (fun c -> c.current_type_vars) set_current_type_vars tvars f
 
+(** [with_cpp_return_type ty f] runs [f] with [ty] as the enclosing function's
+    C++ return type -- the type a tail expression is cast to. *)
+let with_cpp_return_type (ty : cpp_type option) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.current_cpp_return_type)
+    (fun t -> tctx := { !tctx with current_cpp_return_type = t })
+    ty f
+
+(** [with_param_types params f] runs [f] with [params] as the current
+    function's parameters, indexed from 1. *)
+let with_param_types (params : (Id.t * ml_type) list) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.current_param_types)
+    (fun t -> tctx := { !tctx with current_param_types = t })
+    (List.mapi (fun i (_, ty) -> (i + 1, ty)) params)
+    f
+
+(** [with_method_self_ns ns f] runs [f] with [ns] as the inductives whose
+    methods are being generated, so self-references inside container types get
+    the same [shared_ptr] wrapping as in the struct definition. *)
+let with_method_self_ns (ns : Refset'.t) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.method_self_ns)
+    (fun ns -> tctx := { !tctx with method_self_ns = ns })
+    ns f
+
 (** [with_in_constructor_expr b f] runs [f] with
     {!translation_ctx.in_constructor_expr} set to [b]. *)
 let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
