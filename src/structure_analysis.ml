@@ -33,6 +33,7 @@ type t = {
   inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
   collision_wrappers : (ModPath.t * string) list;
+  eponymous_records : GlobRef.t list;
 }
 
 (** {2 Enum registration} *)
@@ -625,6 +626,40 @@ let collect_collision_wrappers
     modules;
   List.rev !acc
 
+(** Collect every eponymous record: a record inductive whose name is, up to
+    case, the name of the module that declares it, and which is therefore
+    flattened into that module's struct rather than nested inside it.
+
+    Like the collision wrappers, this is layout, and the name resolver copies
+    the set when it is built.  Discovering it while rendering would mean
+    discovering it after the resolver had already answered. *)
+let collect_eponymous_records (s : ml_structure) : GlobRef.t list =
+  let acc = ref [] in
+  let rec collect module_name sel =
+    let lowercase_module = String.lowercase_ascii module_name in
+    List.iter
+      (fun (l, se) ->
+        match se with
+        | SEdecl (Dind (kn, ind)) ->
+          Array.iteri
+            (fun i _p ->
+              let ind_ref = GlobRef.IndRef (kn, i) in
+              let ind_name = Common.pp_global_name Type ind_ref in
+              if
+                String.equal
+                  (String.lowercase_ascii ind_name)
+                  lowercase_module
+                && match ind.ind_kind with Record _ -> true | _ -> false
+              then acc := ind_ref :: !acc )
+            ind.ind_packets
+        | SEmodule {ml_mod_expr = MEstruct (_mp, inner_sel); _} ->
+          collect (Label.to_string l) inner_sel
+        | _ -> () )
+      sel
+  in
+  List.iter (fun (mp, sel) -> collect (string_of_modfile mp) sel) s;
+  List.rev !acc
+
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   List.iter (fun (_mp, sel) -> register_enum_inductives sel) s;
@@ -669,4 +704,10 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   let names = Hashtbl.create 16 in
   List.iter (fun (n, mp) -> Hashtbl.replace names n mp) inductive_names;
   let collision_wrappers = collect_collision_wrappers names sorted_modules in
-  {sorted_modules; inductive_names; global_scope_enums; collision_wrappers}
+  (* 6. Collect the eponymous records, for the same reason. *)
+  let eponymous_records = collect_eponymous_records s in
+  { sorted_modules;
+    inductive_names;
+    global_scope_enums;
+    collision_wrappers;
+    eponymous_records }

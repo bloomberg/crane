@@ -875,8 +875,10 @@ let rec pp_structure_elem ~is_header f = function
                     with
                     | TypeClass _ -> ()
                     | Record fields ->
-                      eponymous_record := Some (ind_ref, fields, p);
-                      register_eponymous_record ind_ref
+                      (* Registered up front from
+                         {!Structure_analysis.eponymous_records}; here we only
+                         need it as the module currently being rendered. *)
+                      eponymous_record := Some (ind_ref, fields, p)
                     | _ -> eponymous_type_ref := Some ind_ref )
                 ind.ind_packets
             | _ -> () )
@@ -1905,6 +1907,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       Hashtbl.replace wrapper_module_table cmp name;
       Hashtbl.replace collision_wrapper_table cmp () )
     analysis.collision_wrappers;
+  List.iter register_eponymous_record analysis.eponymous_records;
   let is_func_decl (_, se) =
     match se with
     | SEdecl (Dterm _ | Dfix _) -> true

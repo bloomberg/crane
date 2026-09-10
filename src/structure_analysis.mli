@@ -106,6 +106,15 @@ type t = {
           name resolver is built from it before rendering begins, and a table
           the printer went on adding to would be one the resolver had already
           read. *)
+  eponymous_records : GlobRef.t list;
+      (** The record inductives whose name is, up to case, that of the module
+          declaring them, and which are therefore flattened into that module's
+          struct instead of being nested inside it.
+
+          Here for the same reason as {!collision_wrappers}: the name resolver
+          copies this set when it is built, so a record discovered later --
+          while rendering a module the resolver has already answered for --
+          would never reach it. *)
 }
 
 (** Perform all structure analysis in a single pass.
