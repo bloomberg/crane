@@ -166,8 +166,7 @@ and cpp_stmt =
   | Sthrow of string (* throw statement for unreachable/absurd cases *)
   | Sswitch of cpp_expr * GlobRef.t * (Id.t * cpp_stmt list) list * cpp_stmt list option
     (* switch on enum: scrutinee, enum type, branches, optional default body *)
-  | Sassert of string * string option
-    (* runtime assert: C++ expression string, optional Rocq predicate comment *)
+  | Sassert of precondition (* a Rocq precondition, checked or merely stated *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
   | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
     (* if-else: condition, then-branch, else-branch. Used for reuse
@@ -253,6 +252,14 @@ and smatch_branch = {
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
 }
+
+(* A precondition carried over from a Rocq annotation.  Either it has a C++
+   spelling and is checked at run time, or it has none and is only stated in a
+   comment.  There is no third state: no assertion goes out without saying
+   what it asserts, and no "always true" stands in for an absent check. *)
+and precondition =
+  | Pchecked of string  (* the C++ predicate, which is also its own statement *)
+  | Pstated of string  (* the statement alone, for a predicate C++ cannot spell *)
 
 (* The C++ binary operators Crane emits.  A closed set, so that the printer
    cannot be handed an operator it has no spelling for. *)

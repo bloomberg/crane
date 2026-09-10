@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 #define INCLUDED_SIG_FUN_PARAM_RESULT_CAST
 
-#include <cassert>
 #include <functional>
 #include <utility>
 #include <variant>

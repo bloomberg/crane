@@ -1,7 +1,6 @@
 #ifndef INCLUDED_ROCQ_BUG_10757
 #define INCLUDED_ROCQ_BUG_10757
 
-#include <cassert>
 #include <functional>
 #include <type_traits>
 #include <utility>
@@ -29,7 +28,6 @@ struct RocqBug10757 {
   iterate_func(F0 &&beq, F1 &&f,
                const T1 &x) { // Precondition: (exists _ : le x (F x), forall z
                               // : A, le (F z) z -> le x z)
-    assert(true);
     T1 x0 = [&]() {
       const auto &[x0] = x;
       return x0;

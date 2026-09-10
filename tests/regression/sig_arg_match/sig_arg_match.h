@@ -5,7 +5,6 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <cassert>
 #include <memory>
 #include <type_traits>
 #include <utility>

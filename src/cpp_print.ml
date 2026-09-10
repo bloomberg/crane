@@ -2298,25 +2298,25 @@ and pp_cpp_stmt env args = function
          ++ str "  std::unreachable();" )
     ++ fnl ()
     ++ str "}"
-  | Sassert (expr_str, comment_opt) ->
-    require_header "cassert";
-    ( match comment_opt with
-    | Some c ->
-      (* The Rocq term is pretty-printed and may span several lines; a bare
-         [//] would only comment out the first one and leave the rest to be
-         parsed as C++.  Prefix every line. *)
-      let lines = String.split_on_char '\n' c in
-      let lines = List.map (fun l -> String.trim l) lines in
-      let lines = List.filter (fun l -> l <> "") lines in
-      prlist_with_sep fnl (fun l -> str "// " ++ str l)
-        (match lines with
-         | [] -> [ "Precondition:" ]
-         | first :: rest -> ("Precondition: " ^ first) :: rest)
-      ++ fnl ()
-      ++ str "assert("
-      ++ str expr_str
-      ++ str ");"
-    | None -> str "assert(" ++ str expr_str ++ str ");" )
+  | Sassert precond ->
+    (* The Rocq term is pretty-printed and may span several lines; a bare [//]
+       would only comment out the first one and leave the rest to be parsed as
+       C++.  Prefix every line. *)
+    let statement = match precond with Pchecked s | Pstated s -> s in
+    let lines = String.split_on_char '\n' statement in
+    let lines = List.map (fun l -> String.trim l) lines in
+    let lines = List.filter (fun l -> l <> "") lines in
+    prlist_with_sep fnl
+      (fun l -> str "// " ++ str l)
+      ( match lines with
+      | [] -> ["Precondition:"]
+      | first :: rest -> ("Precondition: " ^ first) :: rest )
+    ++
+    ( match precond with
+    | Pchecked expr_str ->
+      require_header "cassert";
+      fnl () ++ str "assert(" ++ str expr_str ++ str ");"
+    | Pstated _ -> mt () )
   (* Reuse optimization constructs *)
   | Sif_constexpr (cond, then_stmts, else_stmts) ->
     str "if constexpr ("

@@ -2,9 +2,7 @@
 
 Nat SigArgMatch::addp(const Sig<Nat> &p,
                       const Sig<Nat> &q) { // Precondition: q >= 1
-  assert(true);
   // Precondition: p >= 1
-  assert(true);
   return [=]() mutable {
     const auto &[x] = p;
     return x;

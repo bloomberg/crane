@@ -2627,10 +2627,9 @@ let gen_dfun n b cty ty temps =
             with
             | Table.AssertExpr template ->
               ( match subst_placeholders param_idx template with
-              | Ok expr_str -> Some (Sassert (expr_str, Some expr_str))
-              | Error comment -> Some (Sassert ("true", Some comment)) )
-            | Table.AssertComment comment ->
-              Some (Sassert ("true", Some comment)) )
+              | Ok expr_str -> Some (Sassert (Pchecked expr_str))
+              | Error comment -> Some (Sassert (Pstated comment)) )
+            | Table.AssertComment comment -> Some (Sassert (Pstated comment)) )
         assertions
   in
   tctx := { !tctx with current_letin_depth = 0 };

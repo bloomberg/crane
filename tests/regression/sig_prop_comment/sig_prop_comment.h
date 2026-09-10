@@ -3,7 +3,6 @@
 
 #include "small_vector.h"
 #include <atomic>
-#include <cassert>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
