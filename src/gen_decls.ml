@@ -456,7 +456,7 @@ let gen_typeclass_cpp name fields ind =
           CPPrequires ([], [(mk_call qualified [], constraint_expr)], [])
         in
         let value_form = CPPrequires ([], [(qualified, constraint_expr)], []) in
-        Some (`Disjunctive (CPPbinop ("||", call_form, value_form)))
+        Some (`Disjunctive (CPPbinop (Bor, call_form, value_form)))
       else
         let args, ret = get_args_and_ret [] field_ty in
         (* Filter out type class instance arguments (they're passed via
@@ -565,18 +565,18 @@ let gen_typeclass_cpp name fields ind =
     | Some np, [] -> np
     | None, [d] ->
       if type_reqs <> [] then
-        CPPbinop ("&&", CPPrequires ([], [], type_reqs), d)
+        CPPbinop (Band, CPPrequires ([], [], type_reqs), d)
       else
         d
     | None, d :: rest ->
       let base =
         if type_reqs <> [] then
-          CPPbinop ("&&", CPPrequires ([], [], type_reqs), d)
+          CPPbinop (Band, CPPrequires ([], [], type_reqs), d)
         else
           d
       in
-      List.fold_left (fun acc e -> CPPbinop ("&&", acc, e)) base rest
-    | Some np, ds -> List.fold_left (fun acc e -> CPPbinop ("&&", acc, e)) np ds
+      List.fold_left (fun acc e -> CPPbinop (Band, acc, e)) base rest
+    | Some np, ds -> List.fold_left (fun acc e -> CPPbinop (Band, acc, e)) np ds
     | None, [] ->
       if type_reqs <> [] then
         CPPrequires ([], [], type_reqs)
@@ -5032,8 +5032,8 @@ let gen_ind_header_v2
              test rather than preceding it; see {!unique_fence}. *)
           let sole_owner p body =
             [Sif_then (
-              CPPbinop ("&&", p,
-                CPPbinop ("==", dot0 p "use_count", CPPint 1)),
+              CPPbinop (Band, p,
+                CPPbinop (Beq, dot0 p "use_count", CPPint 1)),
               unique_fence @ body)]
           in
           (* [_stack.push_back(make_shared<Self>(std::move(e)))] -- hand one
@@ -5248,7 +5248,7 @@ let gen_ind_header_v2
                          av, Tptr Tauto,
                          CPPstd_get_if (
                            g_cpp, Some (Id.of_string_soft cname_str),
-                           CPPunop ("&", dot0 x "v_mut")),
+                           CPPunop (Uaddr, dot0 x "v_mut")),
                          inner, [])])
                   ctors
             in
@@ -5271,13 +5271,13 @@ let gen_ind_header_v2
               [Sdecl (wl_id, wl_ty)]
               @ body_for on_spine e
               @ [Swhile (
-                   CPPunop ("!", dot0 (CPPvar wl_id) "empty"),
+                   CPPunop (Unot, dot0 (CPPvar wl_id) "empty"),
                    [ Sasgn (pv, Declare Tauto,
                        CPPmove (dot0 (CPPvar wl_id) "back"));
                      Sexpr (dot0 (CPPvar wl_id) "pop_back");
                      Sif_then (
-                       CPPbinop ("||", CPPunop ("!", CPPvar pv),
-                         CPPbinop ("!=", dot0 (CPPvar pv) "use_count",
+                       CPPbinop (Bor, CPPunop (Unot, CPPvar pv),
+                         CPPbinop (Bneq, dot0 (CPPvar pv) "use_count",
                            CPPint 1)),
                        [Scontinue]) ]
                    @ unique_fence
@@ -5380,8 +5380,8 @@ let gen_ind_header_v2
                           push_self_stmt
                             (CPPaccess (Adot, CPPvar lc, elem_field));
                           Sif (
-                            CPPbinop ("&&", tail,
-                              CPPbinop ("==", dot0 tail "use_count", CPPint 1)),
+                            CPPbinop (Band, tail,
+                              CPPbinop (Beq, dot0 tail "use_count", CPPint 1)),
                             (* The fence follows the [use_count] test rather
                                than preceding it -- see [unique_fence]. *)
                             unique_fence
@@ -5441,7 +5441,7 @@ let gen_ind_header_v2
               Some (Sif_decl (
                 _alt_id, Tptr Tauto,
                 CPPstd_get_if (fst ctor_arg, snd ctor_arg,
-                  CPPunop ("&", CPPvar variant_var)),
+                  CPPunop (Uaddr, CPPvar variant_var)),
                 mk_classified_field_stmts classified_fields,
                 []))
           in
@@ -5481,7 +5481,7 @@ let gen_ind_header_v2
                 Sexpr (mk_call (CPPvar _drain_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
-                  CPPunop ("!",
+                  CPPunop (Unot,
                     CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
                   [ Sasgn (_cur_id, Declare Tauto,
@@ -5490,7 +5490,7 @@ let gen_ind_header_v2
                     Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "pop_back", []));
                     Sif_then (
-                      CPPbinop ("==",
+                      CPPbinop (Beq,
                         CPPaccess_call (Adot, CPPvar _cur_id,
                           Id.of_string "use_count", []),
                         CPPint 1),
@@ -5540,8 +5540,8 @@ let gen_ind_header_v2
                Partner branches: any_cast<shared_ptr<Partner>>, inline drain. *)
             let deref_sp = CPPderef (CPPvar _sp_id) in
             let sp_alive_and_unique =
-              CPPbinop ("&&", deref_sp,
-                CPPbinop ("==",
+              CPPbinop (Band, deref_sp,
+                CPPbinop (Beq,
                   CPPaccess_call (Adot, deref_sp,
                     Id.of_string "use_count", []),
                   CPPint 1))
@@ -5567,13 +5567,13 @@ let gen_ind_header_v2
                 in
                 [Sif_decl (_sp_id, Tptr Tauto,
                   Cpp_erasure.unbox (Tshared_ptr partner_ty)
-                    (CPPunop ("&", CPPvar _cur_id)),
+                    (CPPunop (Uaddr, CPPvar _cur_id)),
                   partner_body, inner)]
             in
             let loop_body_stmts =
               [Sif_decl (_sp_id, Tptr Tauto,
                 Cpp_erasure.unbox (Tshared_ptr self_ty)
-                  (CPPunop ("&", CPPvar _cur_id)),
+                  (CPPunop (Uaddr, CPPvar _cur_id)),
                 self_branch_body,
                 build_if_chain partner_branches)]
             in
@@ -5583,7 +5583,7 @@ let gen_ind_header_v2
                 Sexpr (mk_call (CPPvar _drain_self_id)
                   [mk_call (CPPvar (Id.of_string "v_mut")) []]);
                 Swhile (
-                  CPPunop ("!",
+                  CPPunop (Unot,
                     CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "empty", [])),
                   Sasgn (_cur_id, Declare Tauto,

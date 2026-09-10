@@ -293,6 +293,17 @@ and stmt_contains_capturing_lambda (s : Minicpp.cpp_stmt) : bool =
 
 (** {2 Pretty-printing C++ syntax.} *)
 
+(** The C++ source spelling of a binary operator. *)
+let spell_binop = function
+  | Beq -> "=="
+  | Bneq -> "!="
+  | Band -> "&&"
+  | Bor -> "||"
+  | Bassign -> "="
+
+(** The C++ source spelling of a unary prefix operator. *)
+let spell_unop = function Unot -> "!" | Uaddr -> "&"
+
 (** Print a C++ type modifier keyword (const, static, extern). *)
 let pp_tymod = function
   | TMconst -> str "const "
@@ -2087,15 +2098,15 @@ and pp_cpp_expr env args t =
        -Wlogical-op-parentheses warnings. *)
     let paren_child child =
       match child with
-      | CPPbinop ("&&", _, _) when op = "||" ->
+      | CPPbinop (Band, _, _) when op = Bor ->
         str "(" ++ pp_cpp_expr env args child ++ str ")"
-      | CPPbinop ("||", _, _) when op = "&&" ->
+      | CPPbinop (Bor, _, _) when op = Band ->
         str "(" ++ pp_cpp_expr env args child ++ str ")"
       | _ -> pp_cpp_expr env args child
     in
     paren_child lhs
     ++ str " "
-    ++ str op
+    ++ str (spell_binop op)
     ++ str " "
     ++ paren_child rhs
   | CPPcond (cond, then_expr, else_expr) ->
@@ -2121,7 +2132,7 @@ and pp_cpp_expr env args t =
       | CPPbinop _ | CPPcond _ -> str "(" ++ pp_cpp_expr env args e ++ str ")"
       | _ -> pp_cpp_expr env args e
     in
-    str op ++ operand
+    str (spell_unop op) ++ operand
   | CPPany_cast (ty, e) | CPPany_cast_tolerant (ty, e) ->
     require_header "any";
     (* When [e] is a bare variable already registered in

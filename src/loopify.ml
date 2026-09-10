@@ -628,7 +628,7 @@ let method_checker
      Table.mark_needs_erase_fn ();
      CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
    | _ ->
-     CPPunop ("&", recv)
+     CPPunop (Uaddr, recv)
  in
  let extract_at pos lst =
    let rec aux i acc = function
@@ -1332,7 +1332,7 @@ let tail_shadow_type ~pointer_safe ty =
     - Otherwise: plain copy *)
 let tail_shadow_init orig_id shadow_ty ty =
   match shadow_ty, borrowed_value_param_pointee ty with
-  | Tptr _, Some _ -> CPPunop ("&", CPPvar orig_id)
+  | Tptr _, Some _ -> CPPunop (Uaddr, CPPvar orig_id)
   | _ ->
     if is_moveable_param_type ty then CPPmove (CPPvar orig_id)
     else CPPvar orig_id
@@ -1356,7 +1356,7 @@ let tail_shadow_arg ~shadow_ids shadow_ty arg =
   | Tptr _, CPPderef inner ->
     Table.mark_needs_erase_fn ();
     CPPfun_call (call_opaque, CPPvar id_crane_raw, of_reversed ([inner]))
-  | Tptr _, CPPvar _ -> CPPunop ("&", arg)
+  | Tptr _, CPPvar _ -> CPPunop (Uaddr, arg)
   | _ -> arg
 
 (** Provenance of a local binder: the loop *parameter* whose storage the binder
@@ -1509,10 +1509,10 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
     | CPPvar id when is_ptr_shadow id -> CPPderef (CPPvar id)
     | e -> map_expr expr stmt Fun.id e
   and stmt = function
-    | Sexpr (CPPbinop ("=", CPPvar id, rhs)) when is_ptr_shadow id ->
+    | Sexpr (CPPbinop (Bassign, CPPvar id, rhs)) when is_ptr_shadow id ->
       (* Assignment to a pointer shadow: keep the LHS as a raw pointer
          (don't dereference it), only rewrite the RHS. *)
-      Sexpr (CPPbinop ("=", CPPvar id, expr rhs))
+      Sexpr (CPPbinop (Bassign, CPPvar id, expr rhs))
     | Smatch (branches, default) ->
       Smatch
         ( List.map
@@ -1543,7 +1543,7 @@ let move_if_lvalue = function
 (** Assign [expr] to the [_result] accumulator variable.
     Generates the statement list [[\[_result = expr;\]]]. *)
 let assign_result expr =
-  [Sexpr (CPPbinop ("=", CPPvar (id_result), move_if_lvalue expr))]
+  [Sexpr (CPPbinop (Bassign, CPPvar (id_result), move_if_lvalue expr))]
 
 (** Return [expr] directly from the tail-recursion while loop.
     Used only in tail-recursion rewriting. *)
@@ -1699,7 +1699,7 @@ let make_shadow_updates shadow_params args =
               else
                 CPPmove (CPPvar (temp_name shadow_id))
             in
-            Some (Sexpr (CPPbinop ("=", CPPvar shadow_id, rhs)))
+            Some (Sexpr (CPPbinop (Bassign, CPPvar shadow_id, rhs)))
           else
             None)
         non_trivial
@@ -2117,7 +2117,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   let rec collect_reads_stmt stmt =
     match stmt with
-    | Sexpr (CPPbinop ("=", CPPvar _, rhs)) -> collect_reads rhs
+    | Sexpr (CPPbinop (Bassign, CPPvar _, rhs)) -> collect_reads rhs
     | Sasgn (_, _, rhs) -> collect_reads rhs
     | Sexpr e -> collect_reads e
     | Sreturn (Some e) -> collect_reads e
@@ -2152,15 +2152,15 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   let rewrite_stmt to_move stmt =
     match stmt with
-    | Sexpr (CPPbinop ("=", (CPPvar _ as lhs), rhs)) ->
-      Sexpr (CPPbinop ("=", lhs, rewrite_expr to_move rhs))
+    | Sexpr (CPPbinop (Bassign, (CPPvar _ as lhs), rhs)) ->
+      Sexpr (CPPbinop (Bassign, lhs, rewrite_expr to_move rhs))
     | _ ->
       map_stmt (rewrite_expr to_move) Fun.id Fun.id stmt
   in
   let build_to_move reads read_after stmt =
     let to_move : (string, unit) Hashtbl.t = Hashtbl.create 4 in
     ( match stmt with
-      | Sexpr (CPPbinop ("=", CPPvar lhs, _))
+      | Sexpr (CPPbinop (Bassign, CPPvar lhs, _))
       | Sasgn (lhs, _, _) ->
         let key = Id.to_string lhs in
         if self_ref_candidate key
@@ -2240,7 +2240,7 @@ let drop_unread_shadows shadow_decls body =
     | _ -> None
   in
   let write_target = function
-    | Sasgn (id, _, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) -> Some id
+    | Sasgn (id, _, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) -> Some id
     | _ -> None
   in
   (* Every variable the statements *read* — the target of an assignment is a
@@ -2253,7 +2253,7 @@ let drop_unread_shadows shadow_decls body =
       | _ -> iter_expr_children ~on_expr:walk_expr ~on_stmts:walk_stmts e
     and walk_stmt s =
       match s with
-      | Sasgn (_, _, rhs) | Sexpr (CPPbinop ("=", CPPvar _, rhs)) ->
+      | Sasgn (_, _, rhs) | Sexpr (CPPbinop (Bassign, CPPvar _, rhs)) ->
         walk_expr rhs
       | _ -> iter_stmt_children ~on_expr:walk_expr ~on_stmts:walk_stmts s
     and walk_stmts ss = List.iter walk_stmt ss in
@@ -3206,7 +3206,7 @@ let patch_tmc_dest ~vt_ret _ti val_expr =
     | Some _ -> CPPmove val_expr
     | None -> val_expr
   in
-  [Sexpr (CPPbinop ("=", CPPderef (CPPvar (id_write)), val_expr))]
+  [Sexpr (CPPbinop (Bassign, CPPderef (CPPvar (id_write)), val_expr))]
 
 (** Wrap a base-case value in [make_unique] for value-type returns.
     TMC branch cells are already [shared_ptr]-wrapped from {!build_cell_call}. *)
@@ -3551,7 +3551,7 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
         inner_field (ptr_to_cell (CPPderef (CPPvar id_write)) br.tmc_cells)
       | None -> inner_field (CPPvar (List.rev cell_names |> List.hd))
     in
-    Sexpr (CPPbinop ("=", CPPvar id_write, CPPunop ("&", target)))
+    Sexpr (CPPbinop (Bassign, CPPvar id_write, CPPunop (Uaddr, target)))
   in
   (* 5. Shadow variable updates.  The cursor advances through [_own] instead:
         the recursive field has been stolen into [_rs.next] (the cell it lived
@@ -3565,15 +3565,15 @@ let build_tmc_branch_stmts ?(cursor_used = ref false) ~vt_ret ti br
     | None -> shadow_updates
     | Some (cursor_id, _) ->
       let is_cursor_update = function
-        | Sasgn (id, Existing, _) | Sexpr (CPPbinop ("=", CPPvar id, _)) ->
+        | Sasgn (id, Existing, _) | Sexpr (CPPbinop (Bassign, CPPvar id, _)) ->
           Id.equal id cursor_id
         | _ -> false
       in
       List.filter (fun s -> not (is_cursor_update s)) shadow_updates
-      @ [ Sexpr (CPPbinop ("=", CPPvar id_own,
+      @ [ Sexpr (CPPbinop (Bassign, CPPvar id_own,
                            CPPmove (CPPaccess (Adot, CPPvar id_rstep,
                                                Id.of_string "next"))));
-          Sexpr (CPPbinop ("=", CPPvar cursor_id,
+          Sexpr (CPPbinop (Bassign, CPPvar cursor_id,
                            CPPaccess_call (Adot, CPPvar id_own, id_get, []))) ]
   in
   step_decl @ cell_decls @ link_stmts @ patch @ [update_write] @ shadow_updates
@@ -3653,7 +3653,7 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
   let head_decl = Sdecl_init (id_head, head_ty) in
   let write_decl =
     Sasgn (id_write, Declare (Tptr head_ty),
-           CPPunop ("&", CPPvar (id_head)))
+           CPPunop (Uaddr, CPPvar (id_head)))
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
@@ -3936,8 +3936,8 @@ let ty_bool = Tid_external ("bool", [])
     Comparisons and the short-circuiting connectives are the ones that do not
     hand their operand's type back. *)
 let binop_yields_bool = function
-  | "==" | "!=" | "<" | "<=" | ">" | ">=" | "&&" | "||" -> true
-  | _ -> false
+  | Beq | Bneq | Band | Bor -> true
+  | Bassign -> false
 
 (** The raw-pointer type an owning or raw pointer decays to.  Both
     [crane_raw(x)] and [x.get()] answer this way. *)
@@ -5647,7 +5647,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
                 in
                 [
                   Sexpr
-                    (CPPbinop ("=", CPPvar (id_result), rebuilt));
+                    (CPPbinop (Bassign, CPPvar (id_result), rebuilt));
                 ]
               in
               register_frame frames_ref ~name:inner_call_name
@@ -6216,7 +6216,7 @@ let make_stack_init ?(pointer_safe = []) varying_params =
            List.map2
              (fun safe (id, ty) ->
                let v = CPPvar id in
-               if safe then CPPunop ("&", v)
+               if safe then CPPunop (Uaddr, v)
                else move_if_needed ty v)
              pointer_safe varying_params ))
 
@@ -6485,7 +6485,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
            (match List.assoc_opt x binding_env with
             | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
               when Id.equal f id_f ->
-              CPPunop ("&", arg)
+              CPPunop (Uaddr, arg)
             | _ ->
               raw_of arg)
          | _ -> raw_of arg)
@@ -6495,7 +6495,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
           (match List.assoc_opt x binding_env with
            | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
              when Id.equal f id_f ->
-             CPPunop ("&", CPPvar x)
+             CPPunop (Uaddr, CPPvar x)
            | Some (CPPderef sp) ->
              raw_of sp
            | _ ->
@@ -6506,10 +6506,10 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
           (match List.assoc_opt x binding_env with
            | Some (CPPderef (CPPaccess (Adot, CPPvar f, _)))
              when Id.equal f id_f ->
-             CPPunop ("&", arg)
+             CPPunop (Uaddr, arg)
            | Some (CPPderef sp) ->
              raw_of sp
-           | _ -> CPPunop ("&", arg))
+           | _ -> CPPunop (Uaddr, arg))
         | _ -> arg
     in
     let rec on_stmt = function
@@ -6822,7 +6822,7 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       init_push;
       Scomment loop_comment;
       Swhile
-        (CPPunop ("!",
+        (CPPunop (Unot,
                   CPPfun_call
                     (call_opaque, CPPaccess (Adot, CPPvar (id_stack),
                                 id_empty), of_reversed [])),

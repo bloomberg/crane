@@ -746,7 +746,7 @@ let build_guard_compare_stmts n ids =
         | _ -> mk_cppglob ctor_ref []
       in
       [ Sif_then
-          ( CPPbinop ("==", CPPunop ("&", CPPvar p1), CPPunop ("&", CPPvar p2)),
+          ( CPPbinop (Beq, CPPunop (Uaddr, CPPvar p1), CPPunop (Uaddr, CPPvar p2)),
             [Sreturn (Some ctor_expr)] ) ]
     | None -> [] )
 
@@ -10443,7 +10443,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               tctx := { !tctx with env_types = saved_env_types };
               let use_count_cond =
                 CPPbinop
-                  ( "==",
+                  ( Beq,
                     mk_call
                       (CPPaccess (Adot, rf rec_idx, Id.of_string "use_count"))
                       [],
@@ -10465,7 +10465,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
     | Some (branch_idx, reuse_body, use_count_cond) ->
       let index_cond =
         CPPbinop
-          ( "==",
+          ( Beq,
             mk_call (CPPaccess (Adot, scrut_v, Id.of_string "index")) [],
             CPPint branch_idx )
       in

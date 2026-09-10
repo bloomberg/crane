@@ -277,6 +277,23 @@ and smatch_branch = {
 (** {2 C++ expressions} *)
 
 (** C++ expression representation. *)
+(** The C++ binary operators Crane emits.  A closed set: the printer cannot be
+    handed an operator it has no spelling for, and a caller cannot invent one
+    by writing a different string. *)
+and cpp_binop =
+  | Beq  (** [==] *)
+  | Bneq  (** [!=] *)
+  | Band  (** [&&] *)
+  | Bor  (** [||] *)
+  | Bassign
+      (** [=] in expression position -- a for-loop step, a comma expression.
+          An assignment in statement position is an {!Sassign_expr}. *)
+
+(** The C++ unary operators Crane emits. *)
+and cpp_unop =
+  | Unot  (** [!] *)
+  | Uaddr  (** [&]: take the address, or declare a by-reference capture *)
+
 (** Where an allocation's storage comes from.  These differ only in where the
     cell is taken from and what smart pointer comes back; every one of them is
     the callee of a {!CPPfun_call}. *)
@@ -446,13 +463,13 @@ and cpp_expr =
           {!CPPlit}. *)
   | CPPrt of Crane_rt.helper
       (** A Crane runtime helper, named rather than spelled. *)
-  | CPPbinop of string * cpp_expr * cpp_expr
-      (** Binary operator for reuse optimization conditions *)
+  | CPPbinop of cpp_binop * cpp_expr * cpp_expr
+      (** Binary operator applied to two operands. *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
       (** Ternary conditional: cond ? then_expr : else_expr *)
   | CPPbool of bool  (** Boolean literal: true/false *)
   | CPPint of int  (** Integer literal *)
-  | CPPunop of string * cpp_expr  (** Unary operator: !expr, -expr, etc. *)
+  | CPPunop of cpp_unop * cpp_expr  (** Unary operator applied to one operand. *)
   | CPPany_cast of cpp_type * cpp_expr
       (** [std::any_cast<T>(expr)] — recovers a typed value from a
           [std::any] at a shape known exactly at codegen time. *)

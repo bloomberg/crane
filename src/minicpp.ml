@@ -254,6 +254,22 @@ and smatch_branch = {
         field accesses use direct [CPPvar binding_name] references. *)
 }
 
+(* The C++ binary operators Crane emits.  A closed set, so that the printer
+   cannot be handed an operator it has no spelling for. *)
+and cpp_binop =
+  | Beq  (* == *)
+  | Bneq  (* != *)
+  | Band  (* && *)
+  | Bor  (* || *)
+  | Bassign
+    (* = in expression position (a for-loop step, a comma expression).  A
+       statement-position assignment is an [Sassign_expr]. *)
+
+(* The C++ unary operators Crane emits. *)
+and cpp_unop =
+  | Unot  (* ! *)
+  | Uaddr  (* & -- take the address, or declare a by-reference capture *)
+
 (* Where an allocation's storage comes from.  Each kind is used the same way:
    as the callee of a CPPfun_call whose arguments are the constructor's. *)
 and alloc_kind =
@@ -375,16 +391,15 @@ and cpp_expr =
   | CPPrt of Crane_rt.helper
     (* Raw C++ expression, printed verbatim. Used for low-level operations
        (e.g., literal "1" for use_count check). *)
-  | CPPbinop of string * cpp_expr * cpp_expr
-    (* Binary operator: operator string, lhs, rhs. Used for conditions in reuse
-       optimization (&&, ==). *)
+  | CPPbinop of cpp_binop * cpp_expr * cpp_expr
+    (* Binary operator applied to two operands. *)
     (* Pair of two sub-expressions, used internally by loopify to thread
        two values through a single expression slot.  Never reaches the printer. *)
   | CPPcond of cpp_expr * cpp_expr * cpp_expr
     (* Ternary conditional: cond ? then_expr : else_expr. *)
   | CPPbool of bool (* true / false literal *)
   | CPPint of int (* integer literal *)
-  | CPPunop of string * cpp_expr (* unary operator: !expr, -expr, etc. *)
+  | CPPunop of cpp_unop * cpp_expr (* unary operator applied to one operand *)
   | CPPany_cast of cpp_type * cpp_expr
     (* std::any_cast<T>(expr) — recovers a typed value from std::any at a
        shape known exactly here *)
