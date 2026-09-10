@@ -8008,17 +8008,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if tys <> [] || excess_args = [] then
         None
       else
-        let resolve_tmeta_local = function
-          | Miniml.Tmeta {contents = Some t} -> t
-          | t -> t
-        in
         match (!tctx).current_cpp_return_type with
         | None -> None
         | Some ret_ty ->
           match find_type_opt id with
           | None -> None
           | Some ml_ty_orig ->
-            let ret = resolve_tmeta_local (ml_return_type ml_ty_orig) in
+            let ret = Ml_type_util.resolve_tmeta (ml_return_type ml_ty_orig) in
             ( match ret with
             | Miniml.Tvar (_, _) ->
               (* Compute excess arg C++ types from de Bruijn lookup. *)
