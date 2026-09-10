@@ -1900,6 +1900,11 @@ let do_struct_with_decl_tracking ~is_header f s =
       | Some name -> Hashtbl.replace wrapper_module_table mi.modpath name
       | None -> () )
     analysis.sorted_modules;
+  List.iter
+    (fun (cmp, name) ->
+      Hashtbl.replace wrapper_module_table cmp name;
+      Hashtbl.replace collision_wrapper_table cmp () )
+    analysis.collision_wrappers;
   let is_func_decl (_, se) =
     match se with
     | SEdecl (Dterm _ | Dfix _) -> true
@@ -2008,118 +2013,25 @@ let do_struct_with_decl_tracking ~is_header f s =
           type_pp
         end
       | None ->
-        let child_has_eponymous_ind child_name se =
-          match se with
-          | SEmodule m ->
-            ( match m.ml_mod_expr with
-            | MEstruct (_inner_mp, inner_sel) ->
-              List.exists
-                (fun (_l', se') ->
-                  match se' with
-                  | SEdecl (Dind (kn, ind)) ->
-                    let found = ref false in
-                    Array.iteri
-                      (fun i _p ->
-                        let ind_ref = GlobRef.IndRef (kn, i) in
-                        let ind_name = Common.pp_global_name Type ind_ref in
-                        let ind_name_cap = String.capitalize_ascii ind_name in
-                        if String.equal ind_name_cap child_name then
-                          found := true )
-                      ind.ind_packets;
-                    !found
-                  | _ -> false )
-                inner_sel
-            | _ -> false )
-          | _ -> false
+        (* Which children a name collision forces inside a wrapper struct is
+           layout, decided by {!Structure_analysis} before any rendering began;
+           here we only read the answer back. *)
+        let is_colliding_child l _se =
+          Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
         in
-        let has_sibling_inductive child_name =
+        let has_child_collision =
           List.exists
-            (fun (_l', se') ->
-              match se' with
-              | SEdecl (Dind (kn, ind)) ->
-                let found = ref false in
-                Array.iteri
-                  (fun i _p ->
-                    let ind_ref = GlobRef.IndRef (kn, i) in
-                    let ind_name = Common.pp_global_name Type ind_ref in
-                    let ind_name_cap = String.capitalize_ascii ind_name in
-                    if String.equal ind_name_cap child_name then
-                      found := true )
-                  ind.ind_packets;
-                !found
+            (fun (l, se) ->
+              match se with
+              | SEmodule _ -> is_colliding_child l se
               | _ -> false )
             sel
         in
-        let has_child_collision =
-          is_modfile mp
-          && List.exists
-               (fun (l, se) ->
-                 match se with
-                 | SEmodule _ ->
-                   let child_name =
-                     String.capitalize_ascii (Label.to_string l)
-                   in
-                   ( match
-                       Hashtbl.find_opt global_inductive_names child_name
-                     with
-                   | Some ind_mp ->
-                     let is_collision =
-                       (not (ModPath.equal ind_mp mp))
-                       && (not (child_has_eponymous_ind child_name se))
-                       && not (has_sibling_inductive child_name)
-                     in
-                     is_collision
-                   | None -> false )
-                 | _ -> false )
-               sel
-        in
         if has_child_collision then (
-          let parent_name = Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)) in
-          let is_colliding_child l se =
-            let child_name = String.capitalize_ascii (Label.to_string l) in
-            match Hashtbl.find_opt global_inductive_names child_name with
-            | Some ind_mp ->
-              (not (ModPath.equal ind_mp mp))
-              && (not (child_has_eponymous_ind child_name se))
-              && not (has_sibling_inductive child_name)
-            | None -> false
+          let parent_name =
+            Table.escape_reserved_struct_name
+              (String.capitalize_ascii (string_of_modfile mp))
           in
-          let register_decl_modpaths qualified inner_sel =
-            List.iter
-              (fun (_l', se') ->
-                match se' with
-                | SEdecl (Dterm (r, _, _)) ->
-                  let rmp = modpath_of_r r in
-                  Hashtbl.replace wrapper_module_table rmp qualified;
-                  Hashtbl.replace collision_wrapper_table rmp ()
-                | SEdecl (Dfix (rn, _, _)) ->
-                  Array.iter
-                    (fun r ->
-                      let rmp = modpath_of_r r in
-                      Hashtbl.replace wrapper_module_table rmp qualified;
-                      Hashtbl.replace collision_wrapper_table rmp () )
-                    rn
-                | _ -> () )
-              inner_sel
-          in
-          List.iter
-            (fun (l, se) ->
-              match se with
-              | SEmodule m when is_colliding_child l se ->
-                let vis_mp = MPdot (mp, l) in
-                Hashtbl.replace wrapper_module_table vis_mp parent_name;
-                Hashtbl.replace collision_wrapper_table vis_mp ();
-                ( match m.ml_mod_expr with
-                | MEstruct (inner_mp, inner_sel) ->
-                  Hashtbl.replace wrapper_module_table inner_mp parent_name;
-                  Hashtbl.replace collision_wrapper_table inner_mp ();
-                  register_decl_modpaths parent_name inner_sel
-                | MEident alias_mp ->
-                  Hashtbl.replace wrapper_module_table alias_mp parent_name;
-                  Hashtbl.replace collision_wrapper_table alias_mp ()
-                | _ -> () )
-              | _ -> () )
-            sel;
           if is_header then
             let non_colliding_pp, colliding_pp =
               with_render_ctx

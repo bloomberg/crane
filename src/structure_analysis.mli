@@ -96,6 +96,16 @@ type t = {
 
           Enums inside sub-modules are emitted within their containing module's
           scope instead. *)
+  collision_wrappers : (ModPath.t * string) list;
+      (** [(modpath, wrapper_struct_name)] for every module path that a name
+          collision forces inside a parent wrapper struct: a child module whose
+          capitalised name is already taken by an inductive from elsewhere, that
+          child's body, and each of its declarations.
+
+          This is layout, and so belongs here rather than in the printer: the
+          name resolver is built from it before rendering begins, and a table
+          the printer went on adding to would be one the resolver had already
+          read. *)
 }
 
 (** Perform all structure analysis in a single pass.

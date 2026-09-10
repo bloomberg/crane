@@ -32,6 +32,7 @@ type t = {
   sorted_modules : module_info list;
   inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
+  collision_wrappers : (ModPath.t * string) list;
 }
 
 (** {2 Enum registration} *)
@@ -512,6 +513,118 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
 
     The main module is identified as the last module in the input structure
     (following Rocq's convention that the extracted module is listed last). *)
+(** Does the child module [se] itself define an inductive whose C++ name is
+    [child_name]?  If it does, the name is the child's own and no wrapper is
+    needed. *)
+let child_has_eponymous_ind (child_name : string) (se : ml_structure_elem) :
+    bool =
+  let names_it kn ind =
+    let found = ref false in
+    Array.iteri
+      (fun i _p ->
+        let n =
+          String.capitalize_ascii
+            (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+        in
+        if String.equal n child_name then found := true )
+      ind.ind_packets;
+    !found
+  in
+  match se with
+  | SEmodule {ml_mod_expr = MEstruct (_inner_mp, inner_sel); _} ->
+    List.exists
+      (fun (_l, se') ->
+        match se' with
+        | SEdecl (Dind (kn, ind)) -> names_it kn ind
+        | _ -> false )
+      inner_sel
+  | _ -> false
+
+(** Does the module whose declarations are [sel] define an inductive whose C++
+    name is [child_name]?  Then the collision is with a sibling, which the
+    ordinary namespace rules already separate. *)
+let has_sibling_inductive
+    (sel : (Label.t * ml_structure_elem) list) (child_name : string) : bool =
+  List.exists
+    (fun (_l, se') ->
+      match se' with
+      | SEdecl (Dind (kn, ind)) ->
+        let found = ref false in
+        Array.iteri
+          (fun i _p ->
+            let n =
+              String.capitalize_ascii
+                (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+            in
+            if String.equal n child_name then found := true )
+          ind.ind_packets;
+        !found
+      | _ -> false )
+    sel
+
+(** Decide, for every module, which of its children a name collision forces
+    inside a parent wrapper struct, and under what name.
+
+    A child module collides when its capitalised name is already the C++ name of
+    an inductive declared elsewhere; the child, its body, and each of its
+    declarations then live inside a struct named after the file-level module. *)
+let collect_collision_wrappers
+    (names : (string, ModPath.t) Hashtbl.t) (modules : module_info list) :
+    (ModPath.t * string) list =
+  let acc = ref [] in
+  let add mp name = acc := (mp, name) :: !acc in
+  List.iter
+    (fun mi ->
+      let mp = mi.modpath and sel = mi.sels in
+      if mi.wrapper_name = None && is_modfile mp then begin
+        let is_colliding_child l se =
+          let child_name = String.capitalize_ascii (Label.to_string l) in
+          match Hashtbl.find_opt names child_name with
+          | Some ind_mp ->
+            (not (ModPath.equal ind_mp mp))
+            && (not (child_has_eponymous_ind child_name se))
+            && not (has_sibling_inductive sel child_name)
+          | None -> false
+        in
+        let colliding =
+          List.filter
+            (fun (l, se) ->
+              match se with
+              | SEmodule _ -> is_colliding_child l se
+              | _ -> false )
+            sel
+        in
+        if colliding <> [] then begin
+          let parent_name =
+            Table.escape_reserved_struct_name
+              (String.capitalize_ascii (string_of_modfile mp))
+          in
+          let register_decl_modpaths inner_sel =
+            List.iter
+              (fun (_l, se') ->
+                match se' with
+                | SEdecl (Dterm (r, _, _)) -> add (modpath_of_r r) parent_name
+                | SEdecl (Dfix (rn, _, _)) ->
+                  Array.iter (fun r -> add (modpath_of_r r) parent_name) rn
+                | _ -> () )
+              inner_sel
+          in
+          List.iter
+            (fun (l, se) ->
+              add (MPdot (mp, l)) parent_name;
+              match se with
+              | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
+                add inner_mp parent_name;
+                register_decl_modpaths inner_sel
+              | SEmodule {ml_mod_expr = MEident alias_mp; _} ->
+                add alias_mp parent_name
+              | _ -> () )
+            colliding
+        end
+      end )
+    modules;
+  List.rev !acc
+
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   List.iter (fun (_mp, sel) -> register_enum_inductives sel) s;
@@ -550,4 +663,10 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
         {modpath = mp; sels; wrapper_name; is_main} )
       sorted
   in
-  {sorted_modules; inductive_names; global_scope_enums}
+  (* 5. Decide which modules a name collision forces inside a wrapper struct.
+     This has to be settled before any rendering, because name resolution is
+     built from it. *)
+  let names = Hashtbl.create 16 in
+  List.iter (fun (n, mp) -> Hashtbl.replace names n mp) inductive_names;
+  let collision_wrappers = collect_collision_wrappers names sorted_modules in
+  {sorted_modules; inductive_names; global_scope_enums; collision_wrappers}
