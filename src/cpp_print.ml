@@ -653,8 +653,8 @@ let rec pp_cpp_type par vl t =
 
            in struct:  using Obj = std::any;
            in .cpp:    DepRecord::Obj my_var = ...; *)
-      ( match render_ctx.rc_struct_name with
-      | Some struct_name when not render_ctx.rc_in_struct ->
+      ( match (!render_ctx).rc_struct_name with
+      | Some struct_name when not (!render_ctx).rc_in_struct ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tvar (_, Some id) -> Id.print id
@@ -663,13 +663,13 @@ let rec pp_cpp_type par vl t =
        parameterized like generic types: Leaf<int>. When generating
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, []) ->
-      ( match render_ctx.rc_struct_name with
-      | Some struct_name when not render_ctx.rc_in_struct ->
+      ( match (!render_ctx).rc_struct_name with
+      | Some struct_name when not (!render_ctx).rc_in_struct ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tid (id, args) ->
-      ( match render_ctx.rc_struct_name with
-      | Some struct_name when not render_ctx.rc_in_struct ->
+      ( match (!render_ctx).rc_struct_name with
+      | Some struct_name when not (!render_ctx).rc_in_struct ->
         struct_name
         ++ str "::"
         ++ Id.print id
@@ -774,8 +774,8 @@ let rec pp_cpp_type par vl t =
           (* Enum types at global scope need no struct qualification. Enums
              inside structs (e.g., Comparison::cmp) need it. *)
           let qualifier =
-            match render_ctx.rc_struct_name with
-            | Some struct_name when not render_ctx.rc_in_struct ->
+            match (!render_ctx).rc_struct_name with
+            | Some struct_name when not (!render_ctx).rc_in_struct ->
               if is_global_scope_enum_cached r' then
                 mt ()
               else
@@ -806,7 +806,7 @@ let rec pp_cpp_type par vl t =
               cap
           in
           let cap_pp =
-            if args <> [] && render_ctx.rc_in_template then
+            if args <> [] && (!render_ctx).rc_in_template then
               insert_template_keyword (str cap) cap
             else str cap in
           (* The qualified name is relative to the enclosing module struct, so
@@ -1190,13 +1190,13 @@ and pp_cpp_expr env args t =
               This prevents e.g. SigT::projT1 from being rendered as
               this->projT1() when generating code inside a different struct like
               Levenshtein. *)
-           ( match render_ctx.rc_struct_name with
+           ( match (!render_ctx).rc_struct_name with
            | Some sn ->
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
              String.equal (String.capitalize_ascii epon_name) sn_str
            | None -> false )
-         | None -> render_ctx.rc_struct_name <> None ->
+         | None -> (!render_ctx).rc_struct_name <> None ->
     (* A bare reference to a method on the same struct (eta-reduced from \self.
        method self). Generate this->method() - a call to the method via this,
        not a function pointer. *)
@@ -1211,13 +1211,13 @@ and pp_cpp_expr env args t =
               function value). Since C++ non-static member functions can't be
               passed as function pointers, wrap in a lambda that calls the
               method on its argument. *)
-           ( match render_ctx.rc_struct_name with
+           ( match (!render_ctx).rc_struct_name with
            | Some sn ->
              let epon_name = Common.pp_global_name Type epon_ref in
              let sn_str = Pp.string_of_ppcmds sn in
              not (String.equal (String.capitalize_ascii epon_name) sn_str)
            | None -> true )
-         | None -> render_ctx.rc_struct_name = None ->
+         | None -> (!render_ctx).rc_struct_name = None ->
     let method_name = Common.id_of_global Term x in
     let accessor = if method_receiver_is_ptr x then "->" else "." in
     let arity = lookup_method_arity x in
@@ -3422,7 +3422,7 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
     does not reliably see as the same constraint. *)
 let register_forward_struct_decl ~name ~tparams ~cstr =
   if
-    (not render_ctx.rc_in_struct)
+    (not (!render_ctx).rc_in_struct)
     && cstr = None
     && pp_requires_of_tparams tparams = None
   then
@@ -3888,7 +3888,7 @@ and pp_initialiser env ty e =
 and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
   let sub d = Cpp_erasure.settled_child ~parent:settled d in
   match (settled :> cpp_decl) with
-  | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when render_ctx.rc_in_struct ->
+  | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when (!render_ctx).rc_in_struct ->
     let args = pp_list pp_template_param temps in
     let expr_pp = pp_initialiser env ty e in
     let req = pp_requires_of_tparams ~body:[Sreturn (Some e)] temps in
@@ -3947,7 +3947,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       let struct_name = str struct_name_str in
       let f_s =
         with_render_ctx
-          ~setup:(fun () -> render_ctx.rc_in_struct <- true)
+          (fun c -> { c with rc_in_struct = true })
           (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
       in
       let inherit_clause =
@@ -3981,9 +3981,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       let struct_name = str struct_name_str in
       let f_s =
         with_render_ctx
-          ~setup:(fun () ->
-            render_ctx.rc_in_struct <- true;
-            render_ctx.rc_in_template <- true )
+          (fun c -> { c with rc_in_struct = true; rc_in_template = true })
           (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
       in
       let args = pp_list pp_template_param temps in
@@ -4020,7 +4018,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
          children) *)
       let ds =
         with_render_ctx
-          ~setup:(fun () -> render_ctx.rc_in_struct <- true)
+          (fun c -> { c with rc_in_struct = true })
           (fun () -> pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls)
       in
       let pending_fwd =
@@ -4061,8 +4059,8 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | _ -> false
     in
     let name =
-      match render_ctx.rc_struct_name with
-      | Some struct_name when (not render_ctx.rc_in_struct) && not is_lifted ->
+      match (!render_ctx).rc_struct_name with
+      | Some struct_name when (not (!render_ctx).rc_in_struct) && not is_lifted ->
         struct_name ++ str "::" ++ base_name
       | _ -> base_name
     in
@@ -4091,10 +4089,10 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     in
     (* Check if qualified name (out-of-line definition) OR inside a struct
        context *)
-    let is_struct_member = is_qualified || render_ctx.rc_in_struct in
+    let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
     let is_out_of_struct_def =
-      match render_ctx.rc_struct_name with
-      | Some _ -> not render_ctx.rc_in_struct
+      match (!render_ctx).rc_struct_name with
+      | Some _ -> not (!render_ctx).rc_in_struct
       | None -> false
     in
     (* Add static for struct member functions *)
@@ -4111,7 +4109,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     let throws = body_is_throw body in
     let qualifier =
       fun_qualifier
-        ~can_constexpr:(render_ctx.rc_in_struct && not is_out_of_struct_def)
+        ~can_constexpr:((!render_ctx).rc_in_struct && not is_out_of_struct_def)
         ~throws
         ~no_pure
         ret_ty params
@@ -4155,7 +4153,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | [(_, tys)] when tys <> [] -> true
       | _ -> false
     in
-    let is_struct_member = is_qualified || render_ctx.rc_in_struct in
+    let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
     let static_kw = if is_struct_member then str "static " else mt () in
     (* Dfundecl is always a forward declaration for an out-of-line .cpp
        definition, so constexpr is never applicable here (it requires the
@@ -4193,14 +4191,14 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | _ -> pp_global Type id
     in
     register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
-    if render_ctx.rc_in_struct then
+    if (!render_ctx).rc_in_struct then
       add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =
       match tparams with
       | [] -> pp_cpp_fields_with_vis ~struct_name env fields
       | _ ->
         with_render_ctx
-          ~setup:(fun () -> render_ctx.rc_in_template <- true)
+          (fun c -> { c with rc_in_template = true })
           (fun () -> pp_cpp_fields_with_vis ~struct_name env fields)
     in
     let tmpl =
@@ -4248,8 +4246,8 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     ++ str "};"
   | Dasgn (id, ty, e) ->
     let expr_pp = pp_initialiser env ty e in
-    if render_ctx.rc_in_template
-       || (render_ctx.rc_in_struct
+    if (!render_ctx).rc_in_template
+       || ((!render_ctx).rc_in_struct
            && Common.get_force_qualified_capitalization ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
@@ -4257,13 +4255,13 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       pp_meyers_singleton env id ty expr_pp
     else
       let static_kw =
-        if render_ctx.rc_in_struct then
+        if (!render_ctx).rc_in_struct then
           str "static inline "
         else
           mt ()
       in
       let needs_iife =
-        render_ctx.rc_in_struct && expr_contains_capturing_lambda e
+        (!render_ctx).rc_in_struct && expr_contains_capturing_lambda e
       in
       let wrapped_expr =
         if needs_iife then
@@ -4361,7 +4359,7 @@ let () =
   Translation.set_cpp_type_printer (fun ty ->
     Pp.string_of_ppcmds
       (with_render_ctx
-         ~setup:(fun () -> render_ctx.rc_in_template <- true)
+         (fun c -> { c with rc_in_template = true })
          (fun () -> pp_cpp_type false [] ty)))
 
 let () =

@@ -344,7 +344,7 @@ let pp_inductive_type_name r =
 (** Add typename prefix for dependent types in template contexts. C++ requires
     'typename' keyword when accessing nested types in templates. *)
 let typename_prefix_for name_str =
-  if render_ctx.rc_in_template && is_qualified_name name_str then
+  if (!render_ctx).rc_in_template && is_qualified_name name_str then
     str "typename "
   else
     mt ()
@@ -417,8 +417,8 @@ let find_ancestor_qualifier_from full_path struct_name_dotted =
     @return a [Pp.t] prefix of the form [StructName::] when qualification is
             required, or [mt ()] otherwise *)
 let struct_qualifier_for r name_str =
-  match render_ctx.rc_struct_name with
-  | Some struct_name when not render_ctx.rc_in_struct ->
+  match (!render_ctx).rc_struct_name with
+  | Some struct_name when not (!render_ctx).rc_in_struct ->
     let struct_name_str = Pp.string_of_ppcmds struct_name in
     (* Already contains the struct prefix — nothing to add. *)
     if Common.contains_substring name_str (struct_name_str ^ "::") then
@@ -459,7 +459,7 @@ let struct_qualifier_for r name_str =
        duplicate-avoidance rename ([Pos] and [Coq_Pos]) or a collision
        suffix. *)
     else if
-      match render_ctx.rc_struct_mp with
+      match (!render_ctx).rc_struct_mp with
       | Some mp -> ModPath.equal mp (modpath_of_r r)
       | None -> false
     then
@@ -525,7 +525,7 @@ let global_scope_qualifier_for r name_str =
     generating out-of-struct definitions, we add :: to call external functions
     rather than recursing into the struct's own member. *)
 let needs_global_qualifier x =
-  match render_ctx.rc_struct_name with
+  match (!render_ctx).rc_struct_name with
   | Some struct_name ->
     let name_str = str_global Term x in
     if is_qualified_name name_str then
@@ -538,7 +538,7 @@ let needs_global_qualifier x =
         false
       else (
         match
-          render_ctx.rc_struct_mp
+          (!render_ctx).rc_struct_mp
         with
         | Some struct_mp ->
           let callee_mp = modpath_of_r x in

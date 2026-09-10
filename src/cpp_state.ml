@@ -292,36 +292,39 @@ let sig_preamble _ comment used_modules _usf =
    are saved/restored around sub-renders using with_render_ctx.
    ============================================================================ *)
 
-(** Consolidated render context state. All mutable rendering context in a single
-    record instead of 5 separate refs. *)
+(** Consolidated render context state: where in the output the printer
+    currently is.
+
+    The record is immutable and the mutability lives in the one {!render_ctx}
+    ref, so saving and restoring a context around a sub-render is total --
+    [let saved = !render_ctx in ... ; render_ctx := saved] cannot forget a
+    field, whatever fields are added later. *)
 type render_ctx = {
   (* Inside a struct body? Affects qualification of nested type references. *)
-  mutable rc_in_struct : bool;
+  rc_in_struct : bool;
   (* TypeClass concepts already emitted for the current module? *)
-  mutable rc_concepts_hoisted : bool;
+  rc_concepts_hoisted : bool;
   (* Current struct name for qualifying out-of-struct definitions *)
-  mutable rc_struct_name : Pp.t option;
+  rc_struct_name : Pp.t option;
   (* Current struct's ModPath for ModPath-based qualification checks. Needed
      when the C++ struct name differs from the Rocq module path. *)
-  mutable rc_struct_mp : ModPath.t option;
+  rc_struct_mp : ModPath.t option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
-  mutable rc_in_template : bool;
-  (* Inside the initializer expression of a Meyers singleton? Suppresses
-     MPbound-based accessor detection to avoid adding () to functor-parameter
-     references that are plain values in their concrete implementations. *)
-  mutable rc_in_meyers_body : bool;
+  rc_in_template : bool;
 }
 
-(** Global render context state. *)
-let render_ctx =
+(** The context at the start of a file: file scope, outside every struct. *)
+let initial_render_ctx =
   {
     rc_in_struct = false;
     rc_concepts_hoisted = false;
     rc_struct_name = None;
     rc_struct_mp = None;
     rc_in_template = false;
-    rc_in_meyers_body = false;
   }
+
+(** Global render context state. *)
+let render_ctx = ref initial_render_ctx
 
 (** Accumulator for nested module type concepts that must be hoisted out of
     requires bodies *)
@@ -333,50 +336,18 @@ let hoisted_concept_defs : Pp.t list ref = ref []
     emitted at file scope instead. *)
 let file_scope_concepts : Pp.t list ref = ref []
 
-(** Snapshot of render context state for save/restore. Using a record prevents
-    individual fields from drifting out of sync across save/restore boundaries.
-*)
-type render_ctx_snapshot = {
-  rcs_in_struct : bool;
-  rcs_concepts_hoisted : bool;
-  rcs_struct_name : Pp.t option;
-  rcs_struct_mp : ModPath.t option;
-  rcs_in_template : bool;
-  rcs_in_meyers_body : bool;
-}
+(** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
+    current one, and puts the enclosing context back on the way out however [f]
+    leaves -- returning or raising.
 
-(** Save the current render context state. *)
-let save_render_ctx () =
-  {
-    rcs_in_struct = render_ctx.rc_in_struct;
-    rcs_concepts_hoisted = render_ctx.rc_concepts_hoisted;
-    rcs_struct_name = render_ctx.rc_struct_name;
-    rcs_struct_mp = render_ctx.rc_struct_mp;
-    rcs_in_template = render_ctx.rc_in_template;
-    rcs_in_meyers_body = render_ctx.rc_in_meyers_body;
-  }
-
-(** Restore render context from a snapshot. *)
-let restore_render_ctx s =
-  render_ctx.rc_in_struct <- s.rcs_in_struct;
-  render_ctx.rc_concepts_hoisted <- s.rcs_concepts_hoisted;
-  render_ctx.rc_struct_name <- s.rcs_struct_name;
-  render_ctx.rc_struct_mp <- s.rcs_struct_mp;
-  render_ctx.rc_in_template <- s.rcs_in_template;
-  render_ctx.rc_in_meyers_body <- s.rcs_in_meyers_body
-
-(** Execute [f] with modified render context, restoring the snapshot afterward.
-    This replaces the error-prone pattern of manually saving/restoring
-    individual refs.
-    @param setup function that mutates [render_ctx] to the desired state before [f] runs
-    @param f the rendering computation to run inside the modified context
-    @return the value produced by [f] *)
-let with_render_ctx ~(setup : unit -> unit) (f : unit -> 'a) : 'a =
-  let saved = save_render_ctx () in
-  setup ();
-  let result = f () in
-  restore_render_ctx saved;
-  result
+    Every context change goes through this, so that no caller writes the
+    save/set/restore by hand: an omitted restore does not fail, it silently
+    renders the rest of the file as though it were still inside the struct that
+    has just closed. *)
+let with_render_ctx (upd : render_ctx -> render_ctx) (f : unit -> 'a) : 'a =
+  let saved = !render_ctx in
+  render_ctx := upd saved;
+  Fun.protect ~finally:(fun () -> render_ctx := saved) f
 
 (** Track definitions rendered as function accessors (Meyers singletons) instead
     of static inline variables, due to template static init ordering. Stores
@@ -819,11 +790,7 @@ let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
     running multiple extractions in the same process (e.g., during 'dune
     build'). *)
 let reset_cpp_state () =
-  render_ctx.rc_in_struct <- false;
-  render_ctx.rc_concepts_hoisted <- false;
-  render_ctx.rc_struct_name <- None;
-  render_ctx.rc_struct_mp <- None;
-  render_ctx.rc_in_template <- false;
+  render_ctx := initial_render_ctx;
   Doc_comments.reset ();
   eponymous_type_ref := None;
   eponymous_promote_ref := None;

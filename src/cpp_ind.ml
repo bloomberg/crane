@@ -200,7 +200,7 @@ let pp_cpp_ind_header kn ind =
   | TypeClass fields ->
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
-    if render_ctx.rc_in_struct || render_ctx.rc_concepts_hoisted then
+    if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then
       mt ()
     else
       pp_cpp_decl
@@ -389,7 +389,7 @@ let pp_cpp_ind_header kn ind =
               when globref_equal ind_ref epon_ref ->
               !method_candidates
             | _
-              when (not render_ctx.rc_in_struct) && not is_inside_submodule_decl
+              when (not (!render_ctx).rc_in_struct) && not is_inside_submodule_decl
               ->
               (* For top-level inductives only, find methods from sibling
                  declarations *)
@@ -550,10 +550,10 @@ let pp_cpp_ind_header kn ind =
               in
               let f_s =
                 with_render_ctx
-                  ~setup:(fun () ->
-                    render_ctx.rc_in_struct <- true;
-                    if ds_tparams <> [] then
-                      render_ctx.rc_in_template <- true )
+                  (fun c ->
+                    { c with
+                      rc_in_struct = true;
+                      rc_in_template = c.rc_in_template || ds_tparams <> [] } )
                   (fun () ->
                     pp_cpp_fields_with_vis ~struct_name (empty_env ()) ds_fields )
               in
@@ -573,7 +573,7 @@ let pp_cpp_ind_header kn ind =
               match decl with
               | Denum _ -> decl (* Enums don't need namespace wrapper *)
               | _ ->
-                if render_ctx.rc_in_struct then
+                if (!render_ctx).rc_in_struct then
                   decl
                 else
                   Dnspace (Some names.(i), [decl])
@@ -697,7 +697,7 @@ let pp_hdecl d =
     ( match (ds, tvars) with
     | Some ds, [] ->
       (* For template structs, use full definitions instead of specs *)
-      if render_ctx.rc_in_template then
+      if (!render_ctx).rc_in_template then
         let ds, env, _ = gen_decl r a t in
         pp_cpp_decl env ds
       else
@@ -707,7 +707,7 @@ let pp_hdecl d =
         pp_cpp_decl env (decl_to_spec ds)
     | Some ds, _ :: _ -> pp_cpp_decl env ds
     | None, _ ->
-      if render_ctx.rc_in_template then
+      if (!render_ctx).rc_in_template then
         let ds, env, _ = gen_decl r a t in
         pp_cpp_decl env ds
       else
@@ -720,7 +720,7 @@ let pp_hdecl d =
     else if
       (* For template structs, generate full definitions inline, not just
          declarations *)
-      render_ctx.rc_in_template
+      (!render_ctx).rc_in_template
     then
       pp_list_stmt
         (fun (ds, env, _) -> pp_cpp_decl env ds)

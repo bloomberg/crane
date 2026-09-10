@@ -570,7 +570,7 @@ let concept_assert_pp name mty =
   | None -> mt ()
   | Some concept_name ->
     let cn = Pp.string_of_ppcmds concept_name in
-    if render_ctx.rc_in_struct && List.exists (String.equal cn) !held_back_concepts
+    if (!render_ctx).rc_in_struct && List.exists (String.equal cn) !held_back_concepts
     then (
       deferred_concept_asserts :=
         (cn, concept_name, name) :: !deferred_concept_asserts;
@@ -768,7 +768,7 @@ let rec pp_structure_elem ~is_header f = function
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so {!Cpp_names.global_scope_qualifier_for} spells the
        global one [::Nat]. *)
-    if render_ctx.rc_in_struct then
+    if (!render_ctx).rc_in_struct then
       add_nested_struct_name (Pp.string_of_ppcmds name) (NSmodule mp);
     let mod_pp =
       match m.ml_mod_expr with
@@ -799,9 +799,7 @@ let rec pp_structure_elem ~is_header f = function
           in
           let struct_body =
             with_render_ctx
-              ~setup:(fun () ->
-                render_ctx.rc_in_struct <- true;
-                render_ctx.rc_in_template <- true )
+              (fun c -> { c with rc_in_struct = true; rc_in_template = true })
               (fun () ->
                 pp_module_expr
                   ~is_header
@@ -855,9 +853,7 @@ let rec pp_structure_elem ~is_header f = function
           in
           using_decl ++ concept_assert_pp name m.ml_mod_type
       | MEstruct (_mp, sel) ->
-        let old_context = render_ctx.rc_in_struct in
-        let old_struct_name = render_ctx.rc_struct_name in
-        let old_struct_mp = render_ctx.rc_struct_mp in
+        let old_context = (!render_ctx).rc_in_struct in
         let old_eponymous = !eponymous_type_ref in
         let old_methods = !method_candidates in
         let old_eponymous_record = !eponymous_record in
@@ -1204,60 +1200,65 @@ let rec pp_structure_elem ~is_header f = function
           Option.iter
             (fun r -> Hashtbl.remove promoted_inductives r)
             !eponymous_type_ref;
-        let old_in_template = render_ctx.rc_in_template in
-        let old_concepts_hoisted = render_ctx.rc_concepts_hoisted in
-        if is_header && not has_concept_collision then (
-          render_ctx.rc_in_struct <- true;
-          (* For promoted modules with template params, set rc_in_template so
-             non-inductive defs inside get full inline definitions. *)
-          if is_promoted then
-            match
-              promoted_tparams
-            with
-            | Some (_ :: _) -> render_ctx.rc_in_template <- true
-            | _ -> () )
-        else if (not is_header) && not has_concept_collision then (
-          render_ctx.rc_struct_name <-
-            ( match old_struct_name with
-            | Some parent -> Some (parent ++ str "::" ++ name)
-            | None -> Some name );
-          render_ctx.rc_struct_mp <- Some mp );
-        if is_header && typeclass_concepts <> [] then
-          render_ctx.rc_concepts_hoisted <- true;
-        let outer_deferred_asserts = !deferred_concept_asserts in
-        let outer_held_back = !held_back_concepts in
-        deferred_concept_asserts := [];
-        held_back_concepts := this_held_back @ outer_held_back;
-        let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-        held_back_concepts := outer_held_back;
-        (* The assertions this struct held back: those naming a concept it
-           declares are emitted after it, now that both are in scope; the rest
-           travel further out, qualified by this struct on the way. *)
-        let mine, passed_out =
-          List.partition
-            (fun (cn, _, _) -> List.exists (String.equal cn) this_held_back)
-            (List.rev !deferred_concept_asserts)
+        (* Where the body of this module is rendered: inside the struct when
+           the header spells it out, qualified by it in the implementation. *)
+        let enter_module c =
+          let c =
+            if has_concept_collision then c
+            else if is_header then
+              (* For promoted modules with template params, set rc_in_template
+                 so non-inductive defs inside get full inline definitions. *)
+              let promoted_template =
+                is_promoted
+                && match promoted_tparams with Some (_ :: _) -> true | _ -> false
+              in
+              { c with
+                rc_in_struct = true;
+                rc_in_template = c.rc_in_template || promoted_template }
+            else
+              { c with
+                rc_struct_name =
+                  ( match c.rc_struct_name with
+                  | Some parent -> Some (parent ++ str "::" ++ name)
+                  | None -> Some name );
+                rc_struct_mp = Some mp }
+          in
+          if is_header && typeclass_concepts <> [] then
+            { c with rc_concepts_hoisted = true }
+          else c
         in
-        let deferred_asserts_pp =
-          prlist
-            (fun (_, concept, sub) ->
-              fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ name
-              ++ str "::" ++ sub ++ str ">);" )
-            mine
+        let body, deferred_asserts_pp, this_method_candidates =
+          with_render_ctx enter_module (fun () ->
+            let outer_deferred_asserts = !deferred_concept_asserts in
+            let outer_held_back = !held_back_concepts in
+            deferred_concept_asserts := [];
+            held_back_concepts := this_held_back @ outer_held_back;
+            let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
+            held_back_concepts := outer_held_back;
+            (* The assertions this struct held back: those naming a concept it
+               declares are emitted after it, now that both are in scope; the rest
+               travel further out, qualified by this struct on the way. *)
+            let mine, passed_out =
+              List.partition
+                (fun (cn, _, _) -> List.exists (String.equal cn) this_held_back)
+                (List.rev !deferred_concept_asserts)
+            in
+            let deferred_asserts_pp =
+              prlist
+                (fun (_, concept, sub) ->
+                  fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ name
+                  ++ str "::" ++ sub ++ str ">);" )
+                mine
+            in
+            deferred_concept_asserts :=
+              List.rev_append
+                (List.map
+                   (fun (cn, concept, sub) ->
+                     (cn, concept, name ++ str "::" ++ sub) )
+                   passed_out )
+                outer_deferred_asserts;
+            (body, deferred_asserts_pp, !method_candidates) )
         in
-        deferred_concept_asserts :=
-          List.rev_append
-            (List.map
-               (fun (cn, concept, sub) ->
-                 (cn, concept, name ++ str "::" ++ sub) )
-               passed_out )
-            outer_deferred_asserts;
-        let this_method_candidates = !method_candidates in
-        render_ctx.rc_in_struct <- old_context;
-        render_ctx.rc_in_template <- old_in_template;
-        render_ctx.rc_concepts_hoisted <- old_concepts_hoisted;
-        render_ctx.rc_struct_name <- old_struct_name;
-        render_ctx.rc_struct_mp <- old_struct_mp;
         eponymous_type_ref := old_eponymous;
         eponymous_record := old_eponymous_record;
         method_candidates := old_methods;
@@ -1488,11 +1489,11 @@ let rec pp_structure_elem ~is_header f = function
                 | MEident mp -> is_modfile mp
                 | _ -> false
               in
-              if target_is_namespace && render_ctx.rc_in_struct then
+              if target_is_namespace && (!render_ctx).rc_in_struct then
                 mt ()
               else
                 let body_with_typename =
-                  if render_ctx.rc_in_template && is_qualified_name body_str then
+                  if (!render_ctx).rc_in_template && is_qualified_name body_str then
                     str "typename " ++ body
                   else body
                 in
@@ -1531,7 +1532,7 @@ let rec pp_structure_elem ~is_header f = function
       let doc = pp_doc_comment l in
       doc ++ mod_pp
   | l, SEmodtype m ->
-    if (not is_header) || render_ctx.rc_in_struct then
+    if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
     else
       (* Every site naming a module-type concept goes through
@@ -1615,7 +1616,7 @@ and pp_module_expr ~is_header f params = function
     let base_pp = pp_module_expr ~is_header f [] base in
     let pp_module_arg arg =
       let arg_pp = pp_module_expr ~is_header f [] arg in
-      if render_ctx.rc_in_template then
+      if (!render_ctx).rc_in_template then
         let s = Pp.string_of_ppcmds arg_pp in
         if is_qualified_name s then str "typename " ++ arg_pp
         else arg_pp
@@ -1625,7 +1626,7 @@ and pp_module_expr ~is_header f params = function
       prlist_with_sep (fun () -> str ", ") pp_module_arg args
     in
     let base_pp =
-      if render_ctx.rc_in_template then
+      if (!render_ctx).rc_in_template then
         let s = Pp.string_of_ppcmds base_pp in
         if is_qualified_name s then
           match
@@ -1821,14 +1822,15 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   in
   let specs_pp =
     with_render_ctx
-      ~setup:(fun () -> render_ctx.rc_in_struct <- true)
+      (fun c -> { c with rc_in_struct = true })
       (fun () -> prlist_sep_nonempty cut2 render_sel_specs all_results)
   in
   let defs_pp =
     with_render_ctx
-      ~setup:(fun () ->
-        render_ctx.rc_struct_name <- Some (str wrapper_name);
-        render_ctx.rc_struct_mp <- Some wrapper_mp )
+      (fun c ->
+        { c with
+          rc_struct_name = Some (str wrapper_name);
+          rc_struct_mp = Some wrapper_mp } )
       (fun () -> prlist_sep_nonempty cut2 render_sel_defs all_results)
   in
   let lifted_pp =
@@ -2121,7 +2123,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           if is_header then
             let non_colliding_pp, colliding_pp =
               with_render_ctx
-                ~setup:(fun () -> render_ctx.rc_in_struct <- true)
+                (fun c -> { c with rc_in_struct = true })
                 (fun () ->
                   let non_colliding =
                     List.filter
@@ -2181,9 +2183,10 @@ let do_struct_with_decl_tracking ~is_header f s =
           else
             let non_colliding_pp, colliding_pp =
               with_render_ctx
-                ~setup:(fun () ->
-                  render_ctx.rc_struct_name <- Some (str parent_name);
-                  render_ctx.rc_struct_mp <- Some mp )
+                (fun c ->
+                  { c with
+                    rc_struct_name = Some (str parent_name);
+                    rc_struct_mp = Some mp } )
                 (fun () ->
                   let non_colliding =
                     List.filter

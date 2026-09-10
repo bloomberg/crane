@@ -3,7 +3,7 @@
 
 (** This module holds the mutable, per-extraction rendering state and registries
    shared across the C++ pretty-printers. It owns the current render context
-   ([render_ctx], with save/restore snapshots), the method and name-resolution
+   ([render_ctx]), the method and name-resolution
    registries, the [std::]-namespace name configuration ([std_names]),
    eponymous-record tracking, and the wrapper/collision/global-scope tables.
    Much of the surface is intentionally mutable global state (refs and
@@ -122,19 +122,23 @@ val sig_preamble : 'a -> Pp.t option -> Names.module_path list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 
-(** Mutable current render context threaded through the pretty-printers. *)
+(** Where in the output the pretty-printer currently is. Immutable: the
+    mutability lives in the {!render_ctx} ref, so that save/restore around a
+    sub-render cannot forget a field. *)
 type render_ctx = {
-  mutable rc_in_struct : bool;
-  mutable rc_concepts_hoisted : bool;
-  mutable rc_struct_name : Pp.t option;
-  mutable rc_struct_mp : Names.module_path option;
-  mutable rc_in_template : bool;
-  mutable rc_in_meyers_body : bool;
+  rc_in_struct : bool;
+  rc_concepts_hoisted : bool;
+  rc_struct_name : Pp.t option;
+  rc_struct_mp : Names.module_path option;
+  rc_in_template : bool;
 }
 
-(** The single global render context, mutated in place during rendering and
-    reset by [reset_cpp_state]. *)
-val render_ctx : render_ctx
+(** The context at the start of a file: file scope, outside every struct. *)
+val initial_render_ctx : render_ctx
+
+(** The single global render context, reset by [reset_cpp_state]. Change it
+    only through [with_render_ctx]. *)
+val render_ctx : render_ctx ref
 
 (** Concept definitions hoisted out of the current struct. *)
 val hoisted_concept_defs : Pp.t list ref
@@ -144,26 +148,11 @@ val hoisted_concept_defs : Pp.t list ref
     struct -- is collected here and emitted at file scope instead. *)
 val file_scope_concepts : Pp.t list ref
 
-(** Immutable snapshot of a [render_ctx] for save/restore. *)
-type render_ctx_snapshot = {
-  rcs_in_struct : bool;
-  rcs_concepts_hoisted : bool;
-  rcs_struct_name : Pp.t option;
-  rcs_struct_mp : Names.module_path option;
-  rcs_in_template : bool;
-  rcs_in_meyers_body : bool;
-}
-
-(** Capture the current fields of [render_ctx] as a snapshot. *)
-val save_render_ctx : unit -> render_ctx_snapshot
-
-(** Overwrite every field of [render_ctx] from the snapshot. *)
-val restore_render_ctx : render_ctx_snapshot -> unit
-
-(** Run a rendering computation under a temporarily modified context.
-    @param setup mutates [render_ctx] before the computation runs
-    @return the computation's result, with the previous context restored *)
-val with_render_ctx : setup:(unit -> unit) -> (unit -> 'a) -> 'a
+(** [with_render_ctx upd f] renders [f] in the context [upd] derives from the
+    current one, restoring the enclosing context on the way out however [f]
+    leaves -- returning or raising. The only supported way to change the
+    context. *)
+val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 
 (** {2 Template static accessors} *)
 
