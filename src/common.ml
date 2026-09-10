@@ -1725,15 +1725,14 @@ let capitalize_last_component s =
   let prefix, suffix = split_last_component s in
   prefix ^ String.capitalize_ascii suffix
 
-(* ---- Needed C++ headers (demand-driven) ---- *)
+(* ---- Needed C++ headers ---- *)
 
-module SSet = Set.Make (String)
+(* A standard header is a {!Table} demand named after itself, so that it is
+   collected, frozen and cleared along with every other thing the preamble has
+   to provide.  These two wrappers exist only to keep the call sites reading as
+   what they are. *)
 
-let needed_headers : SSet.t ref = ref SSet.empty
+let require_header h = Table.mark_demand h
 
-let require_header h = needed_headers := SSet.add h !needed_headers
-
-let get_needed_headers () = SSet.elements !needed_headers
-
-let reset_needed_headers () = needed_headers := SSet.empty
+let get_needed_headers () = Table.demanded_list ()
 

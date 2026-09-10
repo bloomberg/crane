@@ -243,14 +243,38 @@ val has_any_coinductive : unit -> bool
 (** Check if ML type is coinductive. *)
 val is_coinductive_type : ml_type -> bool
 
+(** {2 Demands}
+
+    A demand is something the preamble of the generated file must provide -- a
+    standard or runtime header, a directive -- that only code generation can
+    discover.  It is raised while a declaration is generated and read when the
+    preamble is emitted, which happens first; the dry run in [extract_env.ml]
+    generates the whole file and discards it so that every demand is in before
+    a byte is written. *)
+
+(** [mark_demand d] records that the file being generated needs [d]. Standard
+    headers are demanded by their own names via [Common.require_header]. *)
+val mark_demand : string -> unit
+
+(** Whether [d] has been demanded for the file being generated. *)
+val demanded : string -> bool
+
+(** Every demand raised so far, sorted. *)
+val demanded_list : unit -> string list
+
+(** Start collecting demands afresh, for a new output file. *)
+val reset_demands : unit -> unit
+
+(** Close collection: from here on the preamble may be written. A demand raised
+    afterwards is reported under [CRANE_CHECK_IR], since the preamble that has
+    already gone out is missing it. *)
+val freeze_demands : unit -> unit
+
 (** Mark that string literals are needed. *)
 val mark_needs_string_literals : unit -> unit
 
 (** Check if string literals are needed. *)
 val needs_string_literals : unit -> bool
-
-(** Reset string literals flag. *)
-val reset_needs_string_literals : unit -> unit
 
 (** Mark that the [crane_erase_fn] runtime helper must be emitted. *)
 val mark_needs_erase_fn : unit -> unit
@@ -258,17 +282,11 @@ val mark_needs_erase_fn : unit -> unit
 (** Check whether the [crane_erase_fn] runtime helper is needed. *)
 val needs_erase_fn : unit -> bool
 
-(** Reset the [crane_erase_fn] flag. *)
-val reset_needs_erase_fn : unit -> unit
-
 (** Mark that the [arena.h] runtime header is needed (arena-mode codegen). *)
 val mark_needs_arena : unit -> unit
 
 (** Check whether the [arena.h] runtime header is needed. *)
 val needs_arena : unit -> bool
-
-(** Reset the arena-needed flag. *)
-val reset_needs_arena : unit -> unit
 
 (** Mark that [small_vector.h] is needed (small-buffer-optimized destructor
     drain worklist codegen). *)
@@ -277,17 +295,11 @@ val mark_needs_small_vector : unit -> unit
 (** Check whether [small_vector.h] is needed. *)
 val needs_small_vector : unit -> bool
 
-(** Reset the small_vector-needed flag. *)
-val reset_needs_small_vector : unit -> unit
-
 (** Mark that [crane_itree.h] is needed (reified ITree types in output). *)
 val require_itree_header : unit -> unit
 
 (** Check whether [crane_itree.h] is needed. *)
 val needs_itree_header : unit -> bool
-
-(** Reset the itree header flag (between extraction units). *)
-val reset_itree_header : unit -> unit
 
 (** Record a [main] function for wrapper generation.
     @param name       the renamed function name (e.g. [_main])

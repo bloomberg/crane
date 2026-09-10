@@ -426,8 +426,6 @@ val capitalize_last_component : string -> string
 (** Record that a C++ header is needed by the current extraction output. *)
 val require_header : string -> unit
 
-(** Return the sorted list of headers requested via {!require_header}. *)
+(** Return every {!Table} demand raised so far, sorted. Callers filter it
+    against the headers they know how to emit. *)
 val get_needed_headers : unit -> string list
-
-(** Clear the set of required headers. Call between extraction passes. *)
-val reset_needed_headers : unit -> unit

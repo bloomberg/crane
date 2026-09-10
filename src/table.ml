@@ -310,56 +310,83 @@ let is_coinductive r =
 let has_any_coinductive () =
   Mindmap_env.exists (fun _ kind -> kind == Coinductive) !inductive_kinds
 
-(* Flag for tracking whether the current file needs string literal operators *)
-let needs_string_literals_flag = ref false
+(** {2 Demands}
 
-let mark_needs_string_literals () = needs_string_literals_flag := true
+    A demand is something the preamble of the generated file must provide -- a
+    standard or runtime header, a directive -- that only code generation can
+    discover.  It is raised while a declaration is generated and read when the
+    preamble is emitted, which happens first: the dry run in [extract_env.ml]
+    is what makes that order work, generating the whole file and discarding it
+    so that every demand is in before a byte is written.
 
-let needs_string_literals () = !needs_string_literals_flag
+    They share one set rather than taking a ref apiece so that clearing them
+    between files is a single call.  A per-file reset that has to name every
+    demand is one that a later demand is silently left out of, and the demand
+    then leaks from one file into the next of a separate extraction.
 
-let reset_needs_string_literals () = needs_string_literals_flag := false
+    {!freeze_demands} closes collection at the end of the dry run.  A demand
+    raised after that is one the dry run failed to discover, so the preamble
+    already written is missing it; under [CRANE_CHECK_IR] that is an error
+    rather than a C++ file that does not compile. *)
 
-(* Whether the [crane_erase_fn] runtime helper (adapts a concrete callable to
-   the erased [std::function<std::any(std::any...)>] representation) must be
-   emitted into the header preamble. *)
-let needs_erase_fn_flag = ref false
+let raised_demands = ref CString.Set.empty
 
-let mark_needs_erase_fn () = needs_erase_fn_flag := true
+let demands_frozen = ref false
 
-let needs_erase_fn () = !needs_erase_fn_flag
+(** [mark_demand d] records that the file being generated needs [d]. *)
+let mark_demand (d : string) =
+  if not (CString.Set.mem d !raised_demands) then begin
+    if !demands_frozen && Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+      CErrors.user_err
+        Pp.(
+          str "Crane: demand '" ++ str d
+          ++ str "' raised after the preamble was written.  The dry run did \
+                  not reach the code that raised it." );
+    raised_demands := CString.Set.add d !raised_demands
+  end
 
-let reset_needs_erase_fn () = needs_erase_fn_flag := false
+(** Whether [d] has been demanded for the file being generated. *)
+let demanded (d : string) = CString.Set.mem d !raised_demands
 
-(* Set when arena-mode codegen emits a [crane::arena_alloc] / relies on the
-   [arena.h] runtime header, so the emitter includes it. *)
-let needs_arena_flag = ref false
+(** Every demand raised so far, sorted. *)
+let demanded_list () = CString.Set.elements !raised_demands
 
-let mark_needs_arena () = needs_arena_flag := true
+(** Start collecting demands afresh, for a new output file. *)
+let reset_demands () =
+  raised_demands := CString.Set.empty;
+  demands_frozen := false
 
-let needs_arena () = !needs_arena_flag
+(** Close collection: from here on the preamble may be written. *)
+let freeze_demands () = demands_frozen := true
 
-let reset_needs_arena () = needs_arena_flag := false
+(* The named demands.  Standard-library headers are demanded by their own
+   names, from [Common.require_header]; these are the rest. *)
 
-(* Set when generated code uses [crane::small_vector] (the small-buffer-
-   optimized worklist used by the iterative destructor drain), so the
-   emitter includes the [small_vector.h] runtime header. *)
-let needs_small_vector_flag = ref false
+let mark_needs_string_literals () = mark_demand "string_literals"
 
-let mark_needs_small_vector () = needs_small_vector_flag := true
+let needs_string_literals () = demanded "string_literals"
 
-let needs_small_vector () = !needs_small_vector_flag
+(* The [crane_erase_fn] runtime helper adapts a concrete callable to the erased
+   [std::function<std::any(std::any...)>] representation. *)
+let mark_needs_erase_fn () = mark_demand "erase_fn"
 
-let reset_needs_small_vector () = needs_small_vector_flag := false
+let needs_erase_fn () = demanded "erase_fn"
 
-(** Track whether any reified [ITree<R>] types appear in the output,
-    requiring the [crane_itree.h] header. *)
-let itree_header_needed : bool ref = ref false
+(* Arena-mode codegen emits [crane::arena_alloc], from [arena.h]. *)
+let mark_needs_arena () = mark_demand "arena"
 
-let require_itree_header () = itree_header_needed := true
+let needs_arena () = demanded "arena"
 
-let needs_itree_header () = !itree_header_needed
+(* [crane::small_vector], from [small_vector.h], is the small-buffer-optimized
+   worklist used by the iterative destructor drain. *)
+let mark_needs_small_vector () = mark_demand "small_vector"
 
-let reset_itree_header () = itree_header_needed := false
+let needs_small_vector () = demanded "small_vector"
+
+(* Reified [ITree<R>] types in the output need [crane_itree.h]. *)
+let require_itree_header () = mark_demand "itree_header"
+
+let needs_itree_header () = demanded "itree_header"
 
 (** Track if a main function returning a monad was encountered.
     Stores (function_name, return_type, struct_qualifier, needs_run) for

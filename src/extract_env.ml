@@ -1205,24 +1205,18 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
         | _ -> false )
       struc
   in
-  if has_custom_string_arg then
-    Table.mark_needs_string_literals ()
-  else
-    Table.reset_needs_string_literals ();
-  (* [crane_erase_fn] is emitted on demand; translation sets the flag when it
-     wraps a non-lambda function value stored into an erased field. *)
-  Table.reset_needs_erase_fn ();
-  (* [arena.h] / [small_vector.h] includes are gated on flags marked during
-     this structure's dry run (loopify/inductive codegen).  Reset them here so
-     one file's needs don't leak into a later file in separate extraction. *)
-  Table.reset_needs_arena ();
-  Table.reset_needs_small_vector ();
-  (* First, a dry run, for computing objects to rename or duplicate.
-     Also accumulates needed standard headers via require_header. *)
-  Common.reset_needed_headers ();
+  (* Start this file's demands from nothing, so that one file's needs don't
+     leak into a later file of a separate extraction. *)
+  Table.reset_demands ();
+  if has_custom_string_arg then Table.mark_needs_string_literals ();
+  (* A dry run, for computing objects to rename or duplicate -- and the only
+     chance to discover what the preamble must provide, since the preamble is
+     written before the body that demands it.  Everything raised from here on
+     is already too late, which [freeze_demands] is there to catch. *)
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
+  Table.freeze_demands ();
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* In separate extraction, force fully qualified cross-module references
      (e.g. Datatypes::List instead of bare List). *)
