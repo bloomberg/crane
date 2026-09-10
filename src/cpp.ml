@@ -1884,7 +1884,7 @@ let do_struct_with_decl_tracking ~is_header f s =
   method_registry := Some
     ( match !global_method_registry with
     | Some reg -> reg
-    | None -> Method_registry.create s );
+    | None -> Method_registry.create ~ret_is_erased:Translation.return_type_is_erased s );
   let analysis = Structure_analysis.analyze (get_method_registry ()) s in
   Hashtbl.clear global_inductive_names;
   List.iter

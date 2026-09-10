@@ -13461,3 +13461,14 @@ let erase_returned_fn_values (ret_ty : cpp_type) (body : cpp_stmt list) =
       | _ -> map_stmt Fun.id fix_stmt Fun.id s
     in
     List.map fix_stmt body
+
+(** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
+    on an inductive whose kept parameters are [param_vars], has no C++ spelling
+    and must be rendered as [std::any].
+
+    This is the judgement {!Method_registry.create} asks for.  It lives here
+    because it is a question about C++ types, and the registry is deliberately
+    kept below the type translation. *)
+let return_type_is_erased (param_vars : Id.t list) (ret : ml_type) : bool =
+  type_is_erased
+    (convert_ml_type_to_cpp_type (empty_env ()) param_vars ret)

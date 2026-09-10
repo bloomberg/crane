@@ -101,16 +101,15 @@ let needs_deep_recovery = function
     [crane_any_cast]. *)
 let tolerant ty = instance_dependent ty <> None || needs_deep_recovery ty
 
-(** The two method-registry queries the boxed-result test needs.  The registry
-    sits above this module in the dependency order, so {!Cpp_print} installs
-    them at load time. *)
-type method_queries = {
-  mq_returns_any : GlobRef.t -> bool;  (** is the result declared [std::any]? *)
-  mq_is_method : GlobRef.t -> bool;  (** is this global called as a method? *)
-}
-
-let method_queries =
-  ref {mq_returns_any = (fun _ -> false); mq_is_method = (fun _ -> false)}
+(** [is_method n] -- [n] is rendered as a member function: either a candidate
+    collected for the inductive currently being rendered, or one the registry
+    found in its up-front scan.  Mirrors [Cpp_names.lookup_method_this_pos],
+    which answers the same question and additionally says where [this] sits. *)
+let is_method (n : GlobRef.t) : bool =
+  List.exists
+    (fun (r, _, _, _) -> Common.globref_equal n r)
+    !Cpp_state.method_candidates
+  || Cpp_state.is_registered_method n <> None
 
 (** [returns_a_box e] -- [e] is a call whose result is declared [std::any], so
     reading it at a concrete type needs a cast.  Method results are the only
@@ -118,10 +117,10 @@ let method_queries =
     because the tolerant caster hands back a box. *)
 let returns_a_box = function
   | CPPaccess_call (Aarrow, CPPglob (n, _, _), _, _) ->
-    !method_queries.mq_returns_any n
-  | CPPfun_call (_, CPPglob (n, _, _), _) when !method_queries.mq_is_method n ->
-    !method_queries.mq_returns_any n
-  | CPPfun_call (_, CPPget' (_, n), _) -> !method_queries.mq_returns_any n
+    Cpp_state.method_returns_any n
+  | CPPfun_call (_, CPPglob (n, _, _), _) when is_method n ->
+    Cpp_state.method_returns_any n
+  | CPPfun_call (_, CPPget' (_, n), _) -> Cpp_state.method_returns_any n
   | CPPfun_call (_, CPPany_cast _, _) -> true
   | _ -> false
 

@@ -368,3 +368,10 @@ val is_list_global : GlobRef.t -> bool
 (** [has_tvar ty] returns true iff [ty] contains any type variable
     ([Tvar], [Tunknown], or unresolved [Tmeta]). *)
 val has_tvar : Miniml.ml_type -> bool
+
+(** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
+    on an inductive whose kept parameters are [param_vars], has no C++ spelling
+    and must be rendered as [std::any].  Pass this to
+    {!Method_registry.create}: the registry needs the judgement but is kept
+    below the type translation, so it is told rather than deciding. *)
+val return_type_is_erased : Id.t list -> ml_type -> bool

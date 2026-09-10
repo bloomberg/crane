@@ -4328,8 +4328,3 @@ let () =
       (with_render_ctx
          (fun c -> { c with rc_in_template = true })
          (fun () -> pp_cpp_type false [] ty)))
-
-let () =
-  Cpp_erasure.method_queries :=
-    { Cpp_erasure.mq_returns_any = method_returns_any;
-      mq_is_method = (fun n -> lookup_method_this_pos n <> None) }

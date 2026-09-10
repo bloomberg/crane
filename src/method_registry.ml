@@ -797,10 +797,16 @@ and pre_register_methods_from_module_expr
     The algorithm: 1. Build a mapping from each inductive [GlobRef] to its
     parameter variable names (the [ip_vars] that correspond to kept parameters).
     2. For each registered method, find its ML type in the structure, extract
-    the return type, convert it to a MiniCpp type, and check if
-    [Translation.type_is_erased] reports it as erased. 3. If erased, set
-    [returns_any = true] in the method's entry. *)
-let compute_returns_any tbl (s : ml_structure) =
+    the return type, and ask [ret_is_erased] whether it has a C++ spelling. 3.
+    If it does not, set [returns_any = true] in the method's entry.
+
+    Whether a type erases is a judgement about C++ types, which this module does
+    not otherwise make: it records which functions are methods, it does not type
+    them.  So the judgement arrives as a parameter rather than as a call into
+    {!Translation}, which would make the two modules mutually dependent. *)
+let compute_returns_any
+    ~(ret_is_erased : Id.t list -> Miniml.ml_type -> bool) tbl
+    (s : ml_structure) =
   (* Step 1: In a single walk of the structure, build (a) IndRef -> param_vars
      for all inductives and (b) a term-ref -> ML type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
@@ -847,14 +853,7 @@ let compute_returns_any tbl (s : ml_structure) =
         | None -> ()
         | Some ty ->
           let ret_ml = get_return_type ty in
-          let env = empty_env () in
-          let ret_cpp =
-            Translation.convert_ml_type_to_cpp_type
-              env
-              param_vars
-              ret_ml
-          in
-          if Translation.type_is_erased ret_cpp then
+          if ret_is_erased param_vars ret_ml then
             Hashtbl.replace tbl func_ref {info with returns_any = true} ) )
     tbl
 
@@ -868,7 +867,7 @@ let compute_returns_any tbl (s : ml_structure) =
     The two-phase approach (register methods, then compute returns_any) is
     necessary because [compute_returns_any] needs the full set of registered
     methods and all inductives' parameter information to work correctly. *)
-let create (s : ml_structure) : t =
+let create ~ret_is_erased (s : ml_structure) : t =
   let tbl = Hashtbl.create 100 in
   let cands = Hashtbl.create 32 in
   (* Gather all top-level declarations across all modules. These serve as
@@ -885,7 +884,7 @@ let create (s : ml_structure) : t =
         all_top_level_decls
         sel )
     s;
-  compute_returns_any tbl s;
+  compute_returns_any ~ret_is_erased tbl s;
   {methods = tbl; candidates = cands}
 
 (** Lookup full method information for a registered function. Returns

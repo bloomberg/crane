@@ -27,7 +27,9 @@
 
     + [create s] scans the full [ml_structure] to find all methods.
     + [compute_returns_any] (called internally by [create]) determines which
-      methods have erased return types that must be rendered as [std::any].
+      methods have erased return types that must be rendered as [std::any].  It
+      is told what erases rather than deciding it, so that this module stays
+      below the type translation rather than beside it.
     + During rendering, [lookup] / [is_registered_method] / [method_returns_any]
       are used to query the registry.
     + [register_method] / [register_method_returns_any] allow cpp.ml to add
@@ -96,7 +98,10 @@ type t
     detected early during this pass and registered via
     [Table.add_enum_inductive], since the method scanner needs to exclude them.
 *)
-val create : Miniml.ml_structure -> t
+val create :
+  ret_is_erased:(Id.t list -> Miniml.ml_type -> bool) ->
+  Miniml.ml_structure ->
+  t
 
 (** Look up full method info for a function reference. Returns [None] if the
     function is not a registered method.

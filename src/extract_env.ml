@@ -1746,7 +1746,7 @@ let separate_extraction ~opaque_access lr =
      mpfiles (include tracking), so save/restore the mpfiles state. *)
   let saved_mpfiles = Common.mpfiles_save () in
   set_phase Pre;
-  Cpp_state.set_global_method_registry (Method_registry.create struc);
+  Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
   let iter_structure visit struc =
