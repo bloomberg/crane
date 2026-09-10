@@ -366,6 +366,9 @@ and cpp_expr =
   | CPPrequires of
       (cpp_type * Id.t) list * (cpp_expr * cpp_constraint) list * cpp_type list
   (* requires (params) { typename type_reqs; { expr } -> constraint; } *)
+  | CPPconcept_app of GlobRef.t * GlobRef.t * cpp_type list
+  (* Concept<Subject, Args...> -- a concept applied to a named subject and
+     further type arguments.  A boolean expression, not a type. *)
   | CPPnew of cpp_type * cpp_expr list (* new Type(args) or new Type{args} *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr (* std::shared_ptr<T>(expr) *)
   | CPPthis (* this pointer in methods *)
@@ -843,6 +846,7 @@ let map_expr
       ( List.map (fun (ty, id) -> (ft ty, id)) params,
         List.map (fun (e', c) -> (fe e', fe c)) constrs,
         List.map ft tyreqs )
+  | CPPconcept_app (c, subj, tys) -> CPPconcept_app (c, subj, List.map ft tys)
   | CPPnew (ty, args) -> CPPnew (ft ty, List.map fe args)
   | CPPshared_ptr_ctor (ty, e') -> CPPshared_ptr_ctor (ft ty, fe e')
   | CPPthis -> e
@@ -963,6 +967,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
+  | CPPconcept_app _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> ()
   | CPPfun_call (_, f, args) -> on_expr f; List.iter on_expr args.rev
   | CPPconverting_ctor (_, args) -> List.iter on_expr args
@@ -1045,6 +1050,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
+  | CPPconcept_app _
   | CPPbrace_init | CPPthis | CPPshared_from_this _ -> acc
   | CPPlambda l -> on_stmts acc l.cl_body
   | CPPoverloaded ls ->

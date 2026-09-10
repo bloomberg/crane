@@ -776,6 +776,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPuint _
    |CPPfloat _
    |CPPis_same _
+   |CPPconcept_app _
    |CPPrequires _ -> []
 
 (** Collect recursive call sites from a list of statements.

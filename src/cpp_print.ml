@@ -1931,6 +1931,14 @@ and pp_cpp_expr env args t =
       | None -> str s )
     | _ -> str s )
   | CPPfloat f -> str (Printf.sprintf "%h" (Float64.to_float f))
+  | CPPconcept_app (concept, subject, tys) ->
+    (* A concept is hoisted out of every enclosing struct, so it is named
+       unqualified here however deeply the subject is nested. *)
+    pp_concept_name_of_ref concept
+    ++ str "<"
+    ++ pp_global Type subject
+    ++ prlist (fun ty -> str ", " ++ pp_cpp_type false [] ty) tys
+    ++ str ">"
   | CPPrequires (ty_vars, exprs, type_reqs) ->
     let ty_vars_s =
       match ty_vars with

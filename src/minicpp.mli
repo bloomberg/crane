@@ -409,6 +409,11 @@ and cpp_expr =
       (cpp_type * Id.t) list * (cpp_expr * cpp_constraint) list * cpp_type list
       (** Requires expression: parameters, expression-constraint pairs, type
           requirements *)
+  | CPPconcept_app of GlobRef.t * GlobRef.t * cpp_type list
+      (** [Concept<Subject, Args...>]: a concept applied to a named subject
+          (a module, or a type-class instance) and any further type arguments.
+          This is a boolean expression, not a type, which is why it cannot be
+          spelled as a {!cpp_type}. *)
   | CPPnew of cpp_type * cpp_expr list  (** Heap allocation: new Type(args) *)
   | CPPshared_ptr_ctor of cpp_type * cpp_expr
       (** Direct std::shared_ptr<T>(expr) construction *)

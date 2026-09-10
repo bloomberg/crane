@@ -660,34 +660,15 @@ let pp_hdecl d =
     let static_assert_pp =
       match class_ref_opt with
       | Some class_ref when not is_template ->
-        let instance_name = pp_global Type r in
-        (* A concept is hoisted out of every enclosing struct, so it is
-           named unqualified here too. *)
-        let class_name = pp_concept_name_of_ref class_ref in
-        let type_args_pp =
-          match type_args with
-          | [] -> mt ()
-          | args ->
-            str ", "
-            ++ prlist_with_sep
-                 (fun () -> str ", ")
-                 (fun ty ->
-                   pp_cpp_type
-                     false
-                     []
-                     (convert_ml_type_to_cpp_type
-                        (empty_env ())
-                        []
-                        ty ) )
-                 args
+        let tys =
+          List.map
+            (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
+            type_args
         in
         fnl ()
-        ++ str "static_assert("
-        ++ class_name
-        ++ str "<"
-        ++ instance_name
-        ++ type_args_pp
-        ++ str ">);"
+        ++ pp_cpp_decl
+             (empty_env ())
+             (Dstatic_assert (CPPconcept_app (class_ref, r, tys), None))
       | _ -> mt ()
     in
     struct_pp ++ static_assert_pp
