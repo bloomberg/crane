@@ -1668,6 +1668,8 @@ let rec prlist_sep_nonempty sep f = function
     let r = prlist_sep_nonempty sep f t in
     if Pp.ismt e then
       r
+    else if Pp.ismt r then
+      e
     else
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
       e ++ boundary ++ r
@@ -2197,21 +2199,10 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   let p_pre = prlist_sep_nonempty cut2 snd pre_entries in
   let p =
-    match main_entry with
-    | Some main_p ->
-      prlist_sep_nonempty
-        cut2
-        (fun x -> x)
-        (List.filter
-           (fun x -> not (Pp.ismt x))
-           [p_pre; remaining_wrappers; pass2_pre_pp; main_p] )
-    | None ->
-      if Pp.ismt remaining_wrappers then
-        p_pre
-      else if Pp.ismt p_pre then
-        remaining_wrappers
-      else
-        p_pre ++ cut2 () ++ remaining_wrappers
+    prlist_sep_nonempty cut2 (fun x -> x)
+      ( match main_entry with
+      | Some main_p -> [p_pre; remaining_wrappers; pass2_pre_pp; main_p]
+      | None -> [p_pre; remaining_wrappers] )
   in
   if not (modular ()) then
     repeat (List.length wrapper_names) pop_visible ();
