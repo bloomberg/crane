@@ -1455,8 +1455,19 @@ let rec pp_structure_elem ~is_header f = function
           let () = match m.ml_mod_expr with
           | MEident fmp -> Hashtbl.replace functor_app_sources mp fmp
           | _ -> () in
-          let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
-          let body_str = Pp.string_of_ppcmds body in
+          (* [MEident] is the only shape here, so the target resolves to a
+             name that says for itself whether it was reached through a
+             duplicate wrapper and whether it came out qualified. *)
+          let resolved =
+            match m.ml_mod_expr with
+            | MEident target -> Some (Common.resolve_module target)
+            | _ -> None
+          in
+          let body =
+            match resolved with
+            | Some r -> str (Common.resolved_string r)
+            | None -> pp_module_expr ~is_header f [] m.ml_mod_expr
+          in
           (* Skip [using] aliases whose target is a [Coq__N] duplicate
              wrapper.  These wrappers are an OCaml-specific qualification
              mechanism from {!Common.add_duplicate}: when an OCaml name is
@@ -1467,8 +1478,11 @@ let rec pp_structure_elem ~is_header f = function
              Moreover, the wrapped namespace may never be emitted (e.g.
              notation-only modules with no computational content), causing
              the [using] alias to reference an undefined type. *)
-          if String.length body_str >= 5
-             && String.sub body_str 0 5 = "Coq__" then
+          if
+            match resolved with
+            | Some r -> r.Common.rn_via_duplicate
+            | None -> false
+          then
             mt ()
           else
             (* Check whether this alias is itself a functor (i.e., the module
@@ -1498,7 +1512,12 @@ let rec pp_structure_elem ~is_header f = function
                 mt ()
               else
                 let body_with_typename =
-                  if (!render_ctx).rc_in_template && is_qualified_name body_str then
+                  let qualified =
+                    match resolved with
+                    | Some r -> Common.resolved_is_qualified r
+                    | None -> is_qualified_name (Pp.string_of_ppcmds body)
+                  in
+                  if (!render_ctx).rc_in_template && qualified then
                     str "typename " ++ body
                   else body
                 in
@@ -1618,34 +1637,47 @@ and pp_module_expr ~is_header f params = function
       | base -> (base, acc)
     in
     let base, args = collect_args [me'] me in
-    let base_pp = pp_module_expr ~is_header f [] base in
+    (* A module path resolves to a name that already knows whether it came out
+       qualified; only the expressions that have no single resolved name (a
+       nested application, a struct) still have to be asked as text. *)
+    let qualified_pp me =
+      match me with
+      | MEident mp ->
+        let r = Common.resolve_module mp in
+        (str (Common.resolved_string r), Common.resolved_is_qualified r, Some r)
+      | _ ->
+        let pp = pp_module_expr ~is_header f [] me in
+        (pp, is_qualified_name (Pp.string_of_ppcmds pp), None)
+    in
     let pp_module_arg arg =
-      let arg_pp = pp_module_expr ~is_header f [] arg in
-      if (!render_ctx).rc_in_template then
-        let s = Pp.string_of_ppcmds arg_pp in
-        if is_qualified_name s then str "typename " ++ arg_pp
-        else arg_pp
+      let arg_pp, qualified, _ = qualified_pp arg in
+      if (!render_ctx).rc_in_template && qualified then
+        str "typename " ++ arg_pp
       else arg_pp
     in
+    let base_pp, base_qualified, base_resolved = qualified_pp base in
     let args_pp =
       prlist_with_sep (fun () -> str ", ") pp_module_arg args
     in
     let base_pp =
-      if (!render_ctx).rc_in_template then
-        let s = Pp.string_of_ppcmds base_pp in
-        if is_qualified_name s then
-          match
-            String.rindex_opt s ':'
-          with
-          | Some i when i > 0 && s.[i - 1] = ':' ->
-            str (String.sub s 0 (i - 1))
-            ++ str "::template "
-            ++ str (String.sub s (i + 1) (String.length s - i - 1))
-          | _ -> base_pp
-        else
-          base_pp
-      else
-        base_pp
+      if (!render_ctx).rc_in_template && base_qualified then
+        (* [A::B<...>] must be spelled [A::template B<...>] inside a template. *)
+        let split =
+          match base_resolved with
+          | Some r -> Common.resolved_split r
+          | None ->
+            let s = Pp.string_of_ppcmds base_pp in
+            ( match String.rindex_opt s ':' with
+            | Some i when i > 0 && s.[i - 1] = ':' ->
+              Some
+                ( String.sub s 0 (i - 1),
+                  String.sub s (i + 1) (String.length s - i - 1) )
+            | _ -> None )
+        in
+        match split with
+        | Some (qual, last) -> str qual ++ str "::template " ++ str last
+        | None -> base_pp
+      else base_pp
     in
     base_pp ++ str "<" ++ args_pp ++ str ">"
   | MEfunctor (mbid, mt, me) ->

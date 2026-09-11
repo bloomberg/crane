@@ -246,6 +246,37 @@ let rec qualify delim = function
 (** Join strings with "::" for C++ namespace qualification. *)
 let dottify = qualify "::"
 
+(** A name as name resolution settled it, before it is flattened to text.
+
+    Callers used to recover these two facts by inspecting the printed string --
+    testing it for a [':'] to see whether it came out qualified, and for a
+    ["Coq__"] prefix to see whether it was reached through a duplicate wrapper.
+    Both are properties the resolver knows and the string only hints at, so the
+    resolver says them. *)
+type resolved = {
+  rn_parts : string list;  (** components, outermost first; may contain [""] *)
+  rn_via_duplicate : bool;
+      (** the outermost component is a {!add_duplicate} [Coq__N] wrapper *)
+}
+
+(** A name that no duplicate wrapper was needed to reach. *)
+let plain rn_parts = {rn_parts; rn_via_duplicate = false}
+
+(** The name as text: exactly what {!dottify} makes of its components. *)
+let resolved_string r = dottify r.rn_parts
+
+(** Whether the name comes out with a [::] qualifier, i.e. whether more than
+    one of its components survives {!qualify}'s dropping of empty strings. *)
+let resolved_is_qualified r =
+  List.length (List.filter (fun s -> s <> "") r.rn_parts) > 1
+
+(** The resolved name split at its last [::]: the qualifier and the final
+    component.  [None] when the name comes out unqualified. *)
+let resolved_split r =
+  match List.rev (List.filter (fun s -> s <> "") r.rn_parts) with
+  | last :: (_ :: _ as rev_prefix) -> Some (dottify (List.rev rev_prefix), last)
+  | _ -> None
+
 (** {2 Uppercase/lowercase renamings} *)
 
 (** Test if string starts with lowercase. *)
@@ -1153,12 +1184,12 @@ let pp_duplicate k' prefix mp rls olab =
       (List.tl rls, get_nth_label_mp (mp_length mp - mp_length prefix) mp)
   in
   match get_duplicate prefix lbl with
-  | Some ren -> dottify (ren :: rls')
+  | Some ren -> {rn_parts = ren :: rls'; rn_via_duplicate = true}
   | None ->
     assert (get_phase () == Pre);
     (* otherwise it's too late *)
     add_duplicate prefix lbl;
-    dottify rls
+    plain rls
 
 (** Extract the kind and name for first-level clash detection. *)
 let fstlev_ks k = function
@@ -1182,7 +1213,7 @@ let pp_ocaml_local k prefix mp rls olab =
   let k's = fstlev_ks k rls' in
   (* Reference r / module path mp is of the form [<prefix>.s.<...>]. *)
   if not (visible_clash prefix k's) then
-    dottify rls'
+    plain rls'
   else
     pp_duplicate (fst k's) prefix mp rls' olab
 
@@ -1195,7 +1226,7 @@ let pp_ocaml_local k prefix mp rls olab =
 let pp_ocaml_bound base rls =
   (* clash with a MPbound will be detected and fixed by renaming this MPbound *)
   if get_phase () == Pre then ignore (visible_clash base (Mod, List.hd rls));
-  dottify rls
+  plain rls
 
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
     it is defined in another [MPfile].
@@ -1220,10 +1251,10 @@ let pp_ocaml_extern k base rls =
         match
           visible_clash_dbg base (Mod, base_s)
         with
-      | None -> dottify rls
+      | None -> plain rls
       | Some (mp, l) -> error_module_clash base (MPdot (mp, l))
     else (* Standard situation : object in an opened file *)
-      dottify rls'
+      plain rls'
 
 (** Main name printer: dispatch between local, bound, and external.
     [pp_ocaml_gen] : choosing between [pp_ocaml_local] or [pp_ocaml_extern].
@@ -1257,7 +1288,7 @@ let pp_cpp_gen k mp rls olab =
     if is_mp_bound base then
       pp_ocaml_bound base rls
     else if is_non_output_module base then
-      unquote (last rls)
+      plain [unquote (last rls)]
     else
       pp_ocaml_extern k base rls
 
@@ -1288,7 +1319,7 @@ let pp_global_with_key k key r =
     let rls = List.rev ls in
     (* for what come next it's easier this way *)
     match lang () with
-    | Cpp -> pp_cpp_gen k mp rls (Some l)
+    | Cpp -> resolved_string (pp_cpp_gen k mp rls (Some l))
 
 (** Print a reference using its canonical kernel name.
     @param k The kind of the global reference
@@ -1320,9 +1351,10 @@ let pp_type_name_capitalized r =
   let mp = modpath_of_r r in
   List.hd (mp_renaming mp)
 
-(** Print a module path. The next function is used only in Ocaml extraction...
-*)
-let pp_module mp =
+(** Resolve a module path to its name, registering it in the visible scope.
+    Has the side effects of {!add_visible} and, through {!pp_duplicate}, of
+    {!add_duplicate}, so it must be called once per occurrence. *)
+let resolve_module mp =
   let ls = mp_renaming mp in
   match mp with
   | MPdot (mp0, l) when ModPath.equal mp0 (top_visible_mp ()) ->
@@ -1330,8 +1362,11 @@ let pp_module mp =
     (* we update the visible environment *)
     let s = List.hd ls in
     add_visible (Mod, s) l;
-    s
+    plain [s]
   | _ -> pp_ocaml_gen Mod mp (List.rev ls) None
+
+(** {!resolve_module} as text. *)
+let pp_module mp = resolved_string (resolve_module mp)
 
 (** Compute the C++ name for a module label without registering it in the
     visible scope.  Use this instead of [pp_module] when the module produces a

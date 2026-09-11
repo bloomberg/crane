@@ -234,6 +234,27 @@ val push_visible : ModPath.t -> ModPath.t list -> unit
 (** Pop the innermost visible layer. *)
 val pop_visible : unit -> unit
 
+(** A name as name resolution settled it, before it is flattened to text: the
+    qualifier components that reach it, and whether it was reached through a
+    {!add_duplicate} [Coq__N] wrapper.  Callers that need either fact should
+    ask here rather than inspect the printed string. *)
+type resolved = {rn_parts : string list; rn_via_duplicate : bool}
+
+(** The resolved name as text. *)
+val resolved_string : resolved -> string
+
+(** Whether the resolved name comes out carrying a [::] qualifier. *)
+val resolved_is_qualified : resolved -> bool
+
+(** The resolved name split at its last [::], as (qualifier, final component).
+    [None] when the name comes out unqualified. *)
+val resolved_split : resolved -> (string * string) option
+
+(** Resolve a module path to its name.  Registers the name in the visible
+    scope, so call it once per occurrence; {!pp_module} is this plus
+    {!resolved_string}. *)
+val resolve_module : Names.ModPath.t -> resolved
+
 (** Get the duplicate wrapper name for a (module path, label) pair, if any. *)
 val get_duplicate : ModPath.t -> Label.t -> string option
 
