@@ -390,13 +390,9 @@ and cpp_expr =
   | CPPforward of cpp_type * cpp_expr
       (** std::forward<T> for perfect forwarding *)
   | CPPlambda of cpp_lambda  (** Lambda: see {!cpp_lambda}. *)
-  | CPPvisit  (** std::visit for variant pattern matching *)
   | CPPalloc of alloc_kind * cpp_type
       (** An allocation: see {!alloc_kind}.  Used as the callee of a
           {!CPPfun_call} whose arguments are the constructor arguments. *)
-  | CPPoverloaded of cpp_lambda list
-      (** Overloaded visitor set for variant matching.  An overload set is
-          lambdas and nothing else, so it is typed by {!cpp_lambda}. *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
       (** Struct construction via factory function *)
   | CPPstruct of GlobRef.t * cpp_type list * cpp_expr list
@@ -503,9 +499,7 @@ and cpp_expr =
       (** std::get_if<T>(&variant) — pointer-returning variant accessor.
           Uses [(sn()).get_if] for BDE compatibility. *)
 
-(** A lambda expression.  Named as a record because an overload set
-    ({!CPPoverloaded}) is a list of {e lambdas}: the elements' shape is part of
-    what an overload set is, so the type says it rather than a comment. *)
+(** A lambda expression. *)
 and cpp_lambda = {
   cl_params : (cpp_type * Id.t option) revd;
       (** Parameters, reversed -- see {!revd}.  Read them with
@@ -755,17 +749,6 @@ val mk_lambda :
   by_value:bool ->
   cpp_expr
 
-(** [lambda params ret body ~by_value] is {!mk_lambda} as a {!cpp_lambda}, for
-    the positions that take a lambda rather than an expression -- an element of
-    a {!CPPoverloaded} set.  Parameters are given in {e source} order.  A body
-    that only throws cannot reduce to {!CPPabort} here, there being no
-    expression position to reduce into. *)
-val lambda :
-  (cpp_type * Id.t option) list ->
-  cpp_type option ->
-  cpp_stmt list ->
-  by_value:bool ->
-  cpp_lambda
 
 (** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
     immediately, capturing by reference.  A body that only throws reduces to

@@ -31,7 +31,7 @@
     const/static/extern modifiers, constructors, methods, enum classes, and raw
     C++ escape hatches. The MiniML-to-MiniCpp translation resolves how each
     functional programming pattern maps to C++ idioms (e.g. MLcase becomes
-    std::visit with an overloaded visitor, MLcons becomes a factory function
+    an if/else-if chain over the variant, MLcons becomes a factory function
     returning shared_ptr, modules become structs, module types become concepts).
 
     Attempting to go directly from Rocq CIC to MiniCpp would require combining
@@ -335,11 +335,7 @@ and cpp_expr =
   | CPPmove of cpp_expr
   | CPPforward of cpp_type * cpp_expr
   | CPPlambda of cpp_lambda
-  | CPPvisit
   | CPPalloc of alloc_kind * cpp_type
-  | CPPoverloaded of cpp_lambda list
-    (* An overload set is lambdas and nothing else, which is why it is typed
-       by {!cpp_lambda} rather than by [cpp_expr] plus a comment. *)
   | CPPstructmk of GlobRef.t * cpp_type list * cpp_expr list
   | CPPstruct of
       GlobRef.t
@@ -440,10 +436,7 @@ and cpp_expr =
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
        [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
 
-(** A lambda expression.  Named as a record because an overload set
-    ({!CPPoverloaded}) is a list of {e lambdas}: the elements' shape is part of
-    what an overload set is, so it is stated in the type rather than checked at
-    the one constructor that happens to build one. *)
+(** A lambda expression. *)
 and cpp_lambda = {
   cl_params : (cpp_type * Id.t option) revd;
       (** Parameters, reversed -- see {!revd}.  Read them with
@@ -818,9 +811,7 @@ let map_expr
   | CPPmove e' -> CPPmove (fe e')
   | CPPforward (ty, e') -> CPPforward (ft ty, fe e')
   | CPPlambda l -> CPPlambda (map_lambda fs ft l)
-  | CPPvisit -> e
   | CPPalloc (k, ty) -> CPPalloc (k, ft ty)
-  | CPPoverloaded ls -> CPPoverloaded (List.map (map_lambda fs ft) ls)
   | CPPstructmk (r, tys, args) ->
     CPPstructmk (r, List.map ft tys, List.map fe args)
   | CPPstruct (r, tys, args) -> CPPstruct (r, List.map ft tys, List.map fe args)
@@ -946,7 +937,7 @@ let map_stmt
     constructor in {!cpp_expr}. *)
 let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
@@ -966,7 +957,6 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
     on_expr e'
   | CPPlambda l -> on_stmts l.cl_body
-  | CPPoverloaded ls -> List.iter (fun l -> on_stmts l.cl_body) ls
   | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
     List.iter on_expr es
@@ -1026,7 +1016,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
     ~(on_stmts : 'a -> cpp_stmt list -> 'a) (acc : 'a) (e : cpp_expr) : 'a =
   let fe acc e = on_expr acc e in
   match e with
-  | CPPvar _ | CPPglob _ | CPPvisit | CPPalloc _
+  | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
@@ -1035,8 +1025,6 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPbool _ | CPPint _
   | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> acc
   | CPPlambda l -> on_stmts acc l.cl_body
-  | CPPoverloaded ls ->
-    List.fold_left (fun acc l -> on_stmts acc l.cl_body) acc ls
   | CPPfun_call (_, fn, args) -> List.fold_left fe (fe acc fn) args.rev
   | CPPconverting_ctor (_, args) -> List.fold_left fe acc args
   | CPPbox (_, e') -> fe acc e'

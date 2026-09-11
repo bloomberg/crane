@@ -52,8 +52,9 @@
        - {!decompose_double_call} for 2 recursive calls
        - {!decompose_all_calls} for N recursive calls
 
-    4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN], etc.)
-       and dispatch loop with [std::visit(Overloaded\{...\}, frame)]
+    4. {b Frame Generation}: Create typed frame structs ([_Enter], [_ResumeN],
+       etc.) and a dispatch loop that tests the popped frame with
+       [std::holds_alternative] in an if/else-if chain
 
     {2 Decltype Rewriting}
 
@@ -193,7 +194,7 @@ let map3_exn ~what f l1 l2 l3 =
     automatically makes it visible to every predicate here. *)
 
 (** Return [true] when [pred] holds for [e] or any sub-expression reachable
-    from [e], including inside lambda bodies and [std::visit] overloaded sets.
+    from [e], including inside lambda bodies.
 
     Short-circuits on the first match via an exception to avoid traversing
     the entire tree when only an existence check is needed.
@@ -711,8 +712,6 @@ let rec collect_expr (check : call_checker) expr =
     collect_expr check obj @ List.concat_map (collect_expr check) args
   | CPPmove e | CPPderef e | CPPforward (_, e) | CPPnamespace (_, e) ->
     collect_expr check e
-  | CPPoverloaded ls ->
-    List.concat_map (fun l -> collect_expr check (CPPlambda l)) ls
   | CPPlambda {cl_body = stmts; _} ->
     (* Calls inside lambdas found via collect_expr are NOT tail calls of the
        outer function — they're returns from the lambda, whose result is used in
@@ -745,7 +744,6 @@ let rec collect_expr (check : call_checker) expr =
   | CPPstd_get_if (_, _, e) -> collect_expr check e
   | CPPvar _
    |CPPglob _
-   |CPPvisit
    |CPPalloc _
    |CPPthis
    |CPPshared_from_this _
@@ -833,13 +831,7 @@ and collect_stmt check ~in_visitor = function
       in
       {cs with cs_is_tail = true} :: nested
     | None ->
-    match e with
-    | CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]}) ->
-      collect_expr check scrut
-      @ List.concat_map
-          (fun l -> collect_stmts check ~in_visitor:true l.cl_body)
-          lambdas
-    | _ -> collect_expr check e )
+    collect_expr check e )
   | Sreturn None -> []
   | Sexpr e -> collect_expr check e
   | Sasgn (_, _, e) -> collect_expr check e
@@ -886,14 +878,6 @@ and collect_stmt check ~in_visitor = function
   | Sdecl _ | Sthrow _ | Sassert _ | Sraw _ | Scomment _ | Sstruct_def _
   | Susing _ | Sdecl_init _ | Scontinue | Sbreak -> []
 
-(** Whether any branch of a visitor's overload set makes a recursive call.  A
-    visit whose branches all return outright is a plain expression as far as
-    loopification is concerned, and is left alone. *)
-let visit_branch_recurses check lambdas =
-  List.exists
-    (fun l -> collect_stmts check ~in_visitor:true l.cl_body <> [])
-    lambdas
-
 (** Count recursive calls in an expression (not descending into lambdas). *)
 let rec count_calls_expr (check : call_checker) expr =
   match check expr with
@@ -922,9 +906,6 @@ let rec count_calls_expr (check : call_checker) expr =
     List.fold_left (fun acc a -> acc + count_calls_expr check a) 0 args
   | CPPshared_ptr_ctor (_, e) ->
     count_calls_expr check e
-  | CPPoverloaded ls ->
-    List.fold_left
-      (fun acc l -> acc + count_calls_expr check (CPPlambda l)) 0 ls
   | _ -> 0
 
 (** Count recursive calls in a statement list. *)
@@ -1152,26 +1133,6 @@ let filter_by_mask mask lst =
   List.combine mask lst
   |> List.filter_map (fun (keep, x) -> if keep then Some x else None)
 
-(** Build a [std::visit(Overloaded\{...\}, scrut)] expression. *)
-let make_visit_expr scrut lambdas =
-  CPPfun_call (call_opaque, CPPvisit, of_reversed ([scrut; CPPoverloaded lambdas]))
-
-(** Wrap a [std::visit] dispatch into a single-statement list. *)
-let make_visit_stmt scrut lambdas =
-  [Sexpr (make_visit_expr scrut lambdas)]
-
-(** Rewrite each lambda body in a visitor and set its return type.
-    @param ret_ty   New return type for each lambda
-    @param rewrite  [lparams -> body -> new_body] transformation *)
-let map_visit_lambdas ~ret_ty ~rewrite lambdas =
-  List.map
-    (fun l ->
-      { l with
-        cl_ret = ret_ty;
-        cl_body = rewrite l.cl_params l.cl_body;
-        cl_by_value = false } )
-    lambdas
-
 (** {2 This→_self substitution for method loopification} *)
 
 (** True when an expression refers to the method receiver ([CPPthis]).
@@ -1229,22 +1190,21 @@ and subst_stmt subs s =
 
 (** {2 Tail recursion transformation}
 
-    For std::visit-based bodies, we use a [_continue] flag in the while
-    condition. Visit lambdas are void-returning: base cases assign to [_result]
-    and set [_continue = false] to exit the loop; recursive cases just update
-    shadow params (the flag stays [true]).
+    A [_continue] flag drives the while condition.  Each dispatch arm either
+    assigns [_result] and clears the flag, which leaves the loop, or updates
+    the shadow parameters and leaves the flag set.
 
     {[
       RetType _result\{\};
       auto _loop_x = x; auto _loop_l = l;
       bool _continue = true;
       while (_continue) \{
-        std::visit(Overloaded\{
-          [&](Base _args) \{ _result = base_val; _continue = false; \},
-          [&](Rec _args) \{
-            _loop_x = new_x; _loop_l = new_l;
-          \}
-        \}, _loop_l->v());
+        auto &&_sv = _loop_l->v();
+        if (std::holds_alternative<Base>(_sv)) \{
+          _result = base_val; _continue = false;
+        \} else \{
+          _loop_x = new_x; _loop_l = new_l;
+        \}
       \}
       return _result;
     ]} *)
@@ -1709,13 +1669,13 @@ let make_shadow_updates shadow_params args =
 (** {2 Generic return-statement rewriter}
 
     The tail-recursion and TMC loopification passes share the same structural
-    traversal of [Sif], [Scustom_case], [Smatch], [Sblock], and nested
-    [std::visit] lambdas.  They differ only in how they handle [Sreturn]:
+    traversal of [Sif], [Scustom_case], [Smatch] and [Sblock].  They differ
+    only in how they handle [Sreturn]:
     tail recursion assigns [_result] and breaks, while TMC patches a write
     pointer or allocates cells with holes.
 
     We factor out the shared traversal into a pair of generic rewriters —
-    {!generic_rewrite_lambda_return} for visitor-lambda bodies and
+    {!generic_rewrite_lambda_return} for match-branch bodies and
     {!generic_rewrite_stmt}/{!generic_rewrite_stmts} for top-level
     statements — parameterised by a {!loop_rewrite_config} record that
     captures the behavioural differences. *)
@@ -1761,11 +1721,10 @@ type loop_rewrite_config = {
 }
 
 (** Top-level rewrite configuration.  Combines a {!loop_rewrite_config}
-    (used for visitor-lambda bodies) with top-level-specific behaviour. *)
+    (used for match-branch bodies) with top-level-specific behaviour. *)
 type top_rewrite_config = {
   trc_inner : loop_rewrite_config;
-  (** Inner-lambda config for rewriting [std::visit] lambda bodies inside
-      top-level [Sreturn] statements. *)
+  (** Inner config for rewriting match-branch bodies. *)
 
   trc_tail_suffix : cpp_stmt list;
   (** Statements appended after tail-call shadow updates at the top level.
@@ -1790,7 +1749,7 @@ type top_rewrite_config = {
 (** Generic inner-lambda return rewriter.
 
     Walks the structure of a single statement, descending into [Sif],
-    [Scustom_case], [Smatch], [Sblock], and nested [std::visit] lambdas.
+    [Scustom_case], [Smatch] and [Sblock].
     Returns a list of statements because the rewritten form may expand one
     statement into several (e.g. a return becomes multiple shadow-variable
     assignments).
@@ -1798,22 +1757,8 @@ type top_rewrite_config = {
     For [Sreturn (Some e)]:
     - If [rc_check e] identifies a recursive call, emits shadow-variable
       updates via {!make_shadow_updates}.
-    - Otherwise, delegates to [rc_on_other_return].
-
-    Visit-in-return (a return whose value is a [std::visit] call with
-    recursive lambdas) is detected and the visit lambdas are recursively
-    rewritten, but only when at least one lambda contains recursive calls —
-    if none do, the visit is treated as a plain base-case expression. *)
+    - Otherwise, delegates to [rc_on_other_return]. *)
 let rec generic_rewrite_lambda_return rc = function
-  | Sreturn (Some (CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})))
-    when count_calls_expr rc.rc_check scrut = 0
-         && visit_branch_recurses rc.rc_check lambdas ->
-    let rw = generic_rewrite_lambda_return rc in
-    let new_lambdas =
-      map_visit_lambdas ~ret_ty:None
-        ~rewrite:(fun _ body -> List.concat_map rw body) lambdas
-    in
-    make_visit_stmt scrut new_lambdas
   | Sreturn (Some e) ->
     ( match rc.rc_check e with
     | Some cs ->
@@ -1848,8 +1793,6 @@ let rec generic_rewrite_lambda_return rc = function
     Similar to {!generic_rewrite_lambda_return} but operates at the
     top level of the loop body rather than inside visitor lambdas:
     - Returns a single [cpp_stmt] (wrapping in [Sblock] as needed).
-    - Detects [std::visit] calls inside the non-tail branch of [Sreturn]
-      and rewrites their lambdas using {!generic_rewrite_lambda_return}.
     - Handles [Sswitch] (only present at the top level of visitor bodies).
     - Uses {!generic_rewrite_stmts} for list-level recursion, which
       optionally detects the void tail-call pattern. *)
@@ -1861,17 +1804,7 @@ let rec generic_rewrite_stmt trc = function
         (make_shadow_updates trc.trc_inner.rc_shadow_params
            (filter_by_mask trc.trc_inner.rc_varying cs.cs_args)
          @ trc.trc_tail_suffix)
-    | None ->
-    match e with
-    | CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]}) ->
-      let rw = generic_rewrite_lambda_return trc.trc_inner in
-      let new_lambdas =
-        map_visit_lambdas ~ret_ty:None
-          ~rewrite:(fun _ body -> List.concat_map rw body)
-          lambdas
-      in
-      Sexpr (make_visit_expr scrut new_lambdas)
-    | _ -> trc.trc_on_other e )
+    | None -> trc.trc_on_other e )
   | Sif (cond, then_br, else_br) ->
     let rw = generic_rewrite_stmts trc in
     Sif (cond, rw then_br, rw else_br)
@@ -3067,7 +3000,7 @@ let rec try_tmc_decompose check expr =
     | _ -> None (* Multiple direct calls — not TMC *) )
 
 (** Classify an entire function body for TMC eligibility.  Walks all return
-    positions (including inside [std::visit] lambda bodies) and checks that:
+    positions (including inside match branches) and checks that:
     - Every return is either a tail call, a base case (0 recursive calls), or a
       TMC-eligible constructor wrapping
     - All TMC branches use the {e same} constructor name and recursive field
@@ -3090,12 +3023,9 @@ let try_tmc_classify check body =
         else (branches, false)
   in
   (* Walk all return positions in statements, scanning each for TMC
-     eligibility.  Handles nested visits by descending into lambda bodies. *)
+     eligibility. *)
   let rec scan_stmts acc stmts = List.fold_left scan_stmt acc stmts
   and scan_stmt acc = function
-    | Sreturn (Some (CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})))
-      when count_calls_expr check scrut = 0 ->
-      List.fold_left (fun acc l -> scan_stmts acc l.cl_body) acc lambdas
     | Sreturn (Some e) -> scan_return_expr acc e
     | Sif (_, then_br, else_br) ->
       scan_stmts (scan_stmts acc then_br) else_br
@@ -4085,8 +4015,6 @@ let rec free_vars_expr = function
    |CPPstruct_id (_, _, args)
    |CPPnew (_, args) -> List.concat_map free_vars_expr args
   | CPPshared_ptr_ctor (_, e) -> free_vars_expr e
-  | CPPoverloaded ls ->
-    List.concat_map (fun l -> free_vars_expr (CPPlambda l)) ls
   | CPPlambda {cl_params = params; cl_body = body; _} ->
     let bound = List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed params) in
     let body_fv = free_vars_body body in
@@ -4201,29 +4129,6 @@ let collect_branch_free_vars branches =
       let all_vars = List.concat_map free_vars_stmt body in
       List.filter (fun id -> not (List.exists (Id.equal id) pat_bound)) all_vars )
     branches
-  |> List.sort_uniq Id.compare
-
-(** Collect free variables from visit (pattern-match) lambda bodies, excluding
-    lambda-bound parameters. The result is deduplicated.
-
-    Each lambda in [lambdas] is a [CPPlambda] whose parameters bind pattern
-    variables. This function extracts the free variables of each body, filters
-    out those bound by the lambda parameters, and returns a single deduplicated
-    list. Used when lowering visit expressions that contain recursive calls in
-    their lambda branches (visit-with-scrutinee-call handling).
-
-    @param lambdas The branches of a [CPPoverloaded] visit
-    @return Deduplicated list of [Id.t] free variables across all lambda bodies *)
-let collect_visit_free_vars lambdas =
-  List.concat_map
-    (fun l ->
-      let pat_bound =
-        List.filter_map (fun (_, id_opt) -> id_opt) (to_reversed l.cl_params)
-      in
-      List.filter
-        (fun id -> not (List.exists (Id.equal id) pat_bound))
-        (free_vars_body l.cl_body) )
-    lambdas
   |> List.sort_uniq Id.compare
 
 (** Rewrite a Scustom_case branch's returns to assign to _result instead. *)
@@ -4681,26 +4586,6 @@ let search_in_args search_fn args =
   in
   try_args [] args
 
-(** Find a visit subexpression with recursive calls inside a larger expression.
-    Returns [Some (scrut, lambdas, rebuild)] where [rebuild result] reconstructs
-    the original expression with the visit replaced by [result]. Returns [None]
-    if no such visit is found. *)
-let rec find_inner_visit check = function
-  | CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})
-    when count_calls_expr check scrut = 0
-         && visit_branch_recurses check lambdas -> Some (scrut, lambdas, Fun.id)
-  | CPPfun_call (res, f, args) ->
-    ( match search_in_args (find_inner_visit check) (to_reversed args) with
-    | Some ((scrut, lambdas, rebuild), mk_args) ->
-      Some (scrut, lambdas, fun x -> CPPfun_call (res, f, of_reversed (mk_args (rebuild x))))
-    | None -> None )
-  | CPPmove e ->
-    ( match find_inner_visit check e with
-    | Some (scrut, lambdas, rebuild) ->
-      Some (scrut, lambdas, fun x -> CPPmove (rebuild x))
-    | None -> None )
-  | _ -> None
-
 (** Find an immediately-invoked lambda expression (IIFE) containing recursive
     calls. Returns [(body, ret_ty, rebuild)] where [rebuild] wraps a result
     expression back into the surrounding context. *)
@@ -4735,27 +4620,19 @@ let rec find_inner_iife check = function
   | _ -> None
 
 (** Handle a base-case expression (0 direct recursive calls) that may contain
-    recursive calls hidden inside a nested [std::visit] or IIFE.
+    recursive calls hidden inside a nested IIFE.
 
-    When [find_inner_visit] finds a visit with recursive lambda bodies, each
-    lambda's [Sreturn (Some result)] is wrapped with [rebuild] so the
-    surrounding expression context is preserved, then the body is rewritten
-    via [rewrite_visit_body].
-
-    When [find_inner_iife] finds an immediately-invoked lambda, the same
-    return-wrapping and rewriting is applied via [rewrite_iife_body].
-
-    If neither pattern matches, falls back to [base_case e].
+    When {!find_inner_iife} finds an immediately-invoked lambda, each of its
+    [Sreturn (Some result)] statements is wrapped with [rebuild] so the
+    surrounding expression context is preserved, then the body is rewritten via
+    [rewrite_iife_body].  Otherwise this falls back to [base_case e].
 
     @param check              Call checker identifying recursive calls
     @param e                  Expression with 0 direct calls to check
-    @param rewrite_visit_body Rewriter for visit-lambda bodies:
-                              [(lparams, extended_body) -> rewritten_body]
     @param rewrite_iife_body  Rewriter for IIFE bodies:
                               [extended_body -> rewritten_body]
     @param base_case          Fallback for true base cases (no inner calls) *)
-let rewrite_base_with_inner_calls check e ~rewrite_visit_body ~rewrite_iife_body
-    ~base_case =
+let rewrite_base_with_inner_calls check e ~rewrite_iife_body ~base_case =
   let rec wrap_returns_with rebuild body =
     List.map
       (fun stmt ->
@@ -4783,16 +4660,6 @@ let rewrite_base_with_inner_calls check e ~rewrite_visit_body ~rewrite_iife_body
         | s -> s )
       body
   in
-  match find_inner_visit check e with
-  | Some (scrut, lambdas, rebuild) ->
-    let new_lambdas =
-      map_visit_lambdas ~ret_ty:(Some Tvoid)
-        ~rewrite:(fun lparams body ->
-          rewrite_visit_body lparams (wrap_returns_with rebuild body) )
-        lambdas
-    in
-    make_visit_stmt scrut new_lambdas
-  | None ->
   match find_inner_iife check e with
   | Some (iife_body, _iife_ret_ty, rebuild) ->
     let extended_body = wrap_returns_with rebuild iife_body in
@@ -5369,7 +5236,6 @@ let emit_double_call_frames ctx dd ~extra_saved ~extra_types ~make_final_handler
     - {b N calls}: Decompose via {!decompose_all_calls}, push N frames
 
     Special cases handled:
-    - [std::visit] with recursive scrutinee (decompose scrutinee first)
     - IIFEs ([CPPfun_call(CPPlambda(...))] containing recursive calls
     - Nested recursive calls (e.g., [f(x, f(y, z))])
     - Recursive calls in saved frame expressions
@@ -5386,78 +5252,10 @@ let rec rewrite_enter_lambda_return ctx stmt =
         er_seen_frame_names = seen } = ctx
   in
   match stmt with
-  | Sreturn (Some (CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})))
-    when count_calls_expr check scrut >= 1 ->
-    (* Visit with recursive call in scrutinee, and possibly recursive branches.
-       Decompose scrutinee, create Call frame, handler does visit on _result.
-       Lambda bodies are rewritten with rewrite_enter_stmts to handle both
-       recursive and non-recursive branches. *)
-    ( match decompose_single_call check scrut with
-    | Some d ->
-      let call_name = make_call_frame_name "_Resume" call_counter seen ?branch_ctx () in
-      let lambda_fvs = collect_visit_free_vars lambdas in
-      let lambda_saved = List.map (fun id -> CPPvar id) lambda_fvs in
-      let lambda_types = infer_saved_types tparams env lambda_saved in
-      let all_saved = d.d_saved @ lambda_saved in
-      let all_types = infer_saved_types tparams env d.d_saved @ lambda_types in
-      let n_d = List.length d.d_saved in
-      let all_saved_conv = move_for_frame_list all_types all_saved in
-      let all_field_names = derive_field_names all_saved_conv in
-      let handler =
-        let rebuild_vars = frame_fields_named all_field_names n_d in
-        let rebuilt_scrut =
-          d.d_rebuild rebuild_vars (CPPvar (id_result))
-        in
-        let bindings =
-          List.mapi
-            (fun i id ->
-              let ty = List.nth lambda_types i in
-              let tgt =
-                if ty = Tunresolved then Declare Tauto else Declare ty
-              in
-              Sasgn (id, tgt,
-                     frame_field_named all_field_names (n_d + i)))
-            lambda_fvs
-        in
-        let new_lambdas =
-          map_visit_lambdas ~ret_ty:(Some Tvoid)
-            ~rewrite:(fun lparams body ->
-              let lenv = build_lambda_env (to_reversed lparams) body env in
-              rewrite_enter_stmts { ctx with er_env = lenv } body)
-            lambdas
-        in
-        bindings @ [Sexpr (make_visit_expr rebuilt_scrut new_lambdas)]
-      in
-      register_frame frames_ref ~name:call_name ~saved_types:all_types
-        ~saved_exprs:all_saved_conv ~env ~handler;
-      [
-        make_stack_push (CPPstruct_id (Id.of_string call_name, [], all_saved_conv));
-        make_stack_push
-          (CPPstruct_id
-             (id_enter, [], filter_by_mask varying d.d_rec_args) );
-      ]
-    | None ->
-      (* Cannot decompose scrutinee — execute inline *)
-      assign_result (make_visit_expr scrut lambdas) )
-  | Sreturn (Some (CPPfun_call (_, CPPvisit, {rev = [scrut; CPPoverloaded lambdas]})))
-    when count_calls_expr check scrut = 0
-         && visit_branch_recurses check lambdas ->
-    (* Lower nested visit — recurse into each lambda body *)
-    let new_lambdas =
-      map_visit_lambdas ~ret_ty:(Some Tvoid)
-        ~rewrite:(fun lparams body ->
-          let lenv = build_lambda_env (to_reversed lparams) body env in
-          rewrite_enter_stmts { ctx with er_env = lenv } body)
-        lambdas
-    in
-    make_visit_stmt scrut new_lambdas
   | Sreturn (Some e) ->
     let n_calls = count_calls_expr check e in
     if n_calls = 0 then
       rewrite_base_with_inner_calls check e
-        ~rewrite_visit_body:(fun lparams extended_body ->
-          let lenv = build_lambda_env (to_reversed lparams) extended_body env in
-          rewrite_enter_stmts { ctx with er_env = lenv } extended_body)
         ~rewrite_iife_body:(fun extended_body ->
           let lenv = collect_type_env extended_body @ env in
           rewrite_enter_stmts { ctx with er_env = lenv } extended_body)
@@ -7069,17 +6867,19 @@ let fix_handler_bindings field_names cf_ps handler =
       _stack.emplace_back(_Enter{x_init});
       T _result;
       while (!_stack.empty()) {
-        std::visit(Overloaded{
-          [&](_Enter _f) {
-            if (base(_f.x)) { _result = result; }
-            else {
-              _stack.emplace_back(_Call1{_f.x});      // save x
-              _stack.emplace_back(_Enter{next(_f.x)});  // recurse
-            }
-          },
-          [&](_Call1 _f) { _result = combine(_f._s0, _result); }
-        }, _stack.back());
+        _Frame _frame = std::move(_stack.back());
         _stack.pop_back();
+        if (std::holds_alternative<_Enter>(_frame)) {
+          auto _f = std::move(std::get<_Enter>(_frame));
+          if (base(_f.x)) { _result = result; }
+          else {
+            _stack.emplace_back(_Call1{_f.x});        // save x
+            _stack.emplace_back(_Enter{next(_f.x)});  // recurse
+          }
+        } else {
+          auto _f = std::move(std::get<_Call1>(_frame));
+          _result = combine(_f._s0, _result);
+        }
       }
       return _result;
     v}
@@ -7093,7 +6893,7 @@ let fix_handler_bindings field_names cf_ps handler =
     2. Rewrites [_Enter] handler: returns → frame pushes
     3. Collects [_CallN] frame info during rewriting
     4. Generates frame struct definitions
-    5. Generates dispatch loop with [std::visit]
+    5. Generates the dispatch loop as an if/else-if chain over the frame
 
     @param fn_name  Optional function name used to annotate the generated
                     [while] loop comment (aids readability of the emitted C++)
@@ -7633,8 +7433,6 @@ let try_inline_mutual_into names body =
       | None -> find_callee_in_expr e2 )
     | CPPmove e | CPPderef e | CPPnamespace (_, e) -> find_callee_in_expr e
     | CPPlambda {cl_body = stmts; _} -> find_callee_in_stmts stmts
-    | CPPoverloaded ls ->
-      List.find_map (fun l -> find_callee_in_stmts l.cl_body) ls
     | _ -> None
   and find_callee_in_stmts stmts = List.find_map find_callee_in_stmt stmts
   and find_callee_in_stmt = function
@@ -7807,7 +7605,7 @@ let lambda_checker (lambda_name : Id.t) : call_checker =
     their bodies are recursively scanned for nested lambdas.
 
     Also descends into all nested statement structures (if/else, while loops,
-    [std::visit] lambdas, switch, blocks) and into lambda expressions within
+    match branches, switch, blocks) and into lambda expressions within
     assignments and returns, to find recursive lambda patterns at any depth.
 
     @param tparams  Type parameters of the enclosing function
@@ -8057,7 +7855,6 @@ let loopify_inner_lambdas ~tparams body =
   and process_expr expr =
     match expr with
     | CPPlambda l -> CPPlambda (process_lambda l)
-    | CPPoverloaded ls -> CPPoverloaded (List.map process_lambda ls)
     | CPPfun_call (res, f, args) ->
       CPPfun_call (res, process_expr f, map_args process_expr args)
     | _ -> map_expr process_expr process_stmt Fun.id expr

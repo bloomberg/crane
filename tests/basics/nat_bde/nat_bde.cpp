@@ -1,6 +1,5 @@
 #include "nat_bde.h"
 
-#include <bdlf_overloaded.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>

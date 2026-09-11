@@ -214,8 +214,8 @@ val register_method_returns_any : t -> GlobRef.t -> unit
       to [this->field].
     - Passing the first argument to another function: [MLapp(f, [arg])]
       translates to [f(this)].
-    - Pattern matching on the first argument: [MLcase(arg, ...)] translates to a
-      [std::visit] on [this->v()].
+    - Pattern matching on the first argument: [MLcase(arg, ...)] translates to
+      an if/else-if chain over [this->v()].
     - Wrapping the argument in a constructor: [MLcons(C, [arg])] produces a new
       value.
 

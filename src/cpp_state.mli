@@ -216,12 +216,10 @@ val eponymous_record :
 type std_names = {
   shared_ptr : string;
   make_shared : string;
-  visit : string;
   move : string;
   forward : string;
   any_cast : string;
   logic_error : string;
-  overloaded : string;
   ns : string;
   str_suffix : string;
   same_as : string;
@@ -233,7 +231,7 @@ type std_names = {
   enable_from_this : string;
 }
 
-(** The plain [std::] flavor of {!std_names} (with ["Overloaded"] and the ["s"]
+(** The plain [std::] flavor of {!std_names} (with the ["s"]
     string-literal suffix). *)
 val default_std_names : std_names
 
@@ -242,7 +240,7 @@ val default_std_names : std_names
 val std_names : std_names ref
 
 (** Build a name set for a namespace prefix. ["bsl::"] yields the BDE flavor
-    (with [bdlf::Overloaded] and the ["_s"] suffix); any other prefix yields
+    (with the ["_s"] suffix); any other prefix yields
     [default_std_names]. *)
 val mk_std_names : string -> std_names
 

@@ -663,7 +663,6 @@ let needed_std_headers () =
 (** BDE-flavored standard headers using [bsl_*] naming. *)
 let header_imports_bsl =
   [
-    "bdlf_overloaded.h";
     "bsl_concepts.h";
     "bsl_functional.h";
     "bsl_iostream.h";

@@ -131,7 +131,8 @@ val gen_expr : ?expected_ty:cpp_type -> ?slot:slot -> env -> ml_ast -> cpp_expr
     hands back a [std::any] however concrete its ML type looks. *)
 val recover_boxed_component : cpp_type -> cpp_expr -> cpp_expr
 
-(** Generate pattern matching as a C++ expression using std::visit. *)
+(** Generate pattern matching as a C++ expression: an if/else-if chain over
+    the scrutinee's variant, wrapped in an immediately-invoked lambda. *)
 val gen_cpp_case : ml_type -> ml_ast -> env -> ml_branch array -> cpp_expr
 
 (** Generate C++ statements from an ML AST. The continuation [k] transforms the

@@ -5,7 +5,6 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_cstdint.h>

@@ -30,7 +30,7 @@ let chunk_depth = 32
     its own names, and a conditional's branches are not both evaluated, so
     neither can have a piece lifted out ahead of it. *)
 let descendable = function
-  | CPPlambda _ | CPPoverloaded _ | CPPcond _ -> false
+  | CPPlambda _ | CPPcond _ -> false
   | _ -> true
 
 (** The expression's nesting, counting only what {!descendable} admits: what

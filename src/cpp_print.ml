@@ -1849,9 +1849,6 @@ and pp_cpp_expr env args t =
       ++ body_s
       ++ fnl ()
       ++ str "}" )
-  | CPPvisit ->
-    require_header "variant";
-    str (sn ()).visit
   | CPPalloc (Alloc_heap, t) ->
     require_header "memory";
     cpp_angle (sn ()).make_shared (pp_cpp_type false [] t)
@@ -1875,11 +1872,6 @@ and pp_cpp_expr env args t =
       Table.mark_needs_arena ();
       cpp_angle Crane_rt.arena_make_shared inner
     end
-  | CPPoverloaded ls ->
-    let ls_s =
-      pp_list_newline (fun l -> pp_cpp_expr env args (CPPlambda l)) ls
-    in
-    str (sn ()).overloaded ++ str " {" ++ fnl () ++ ls_s ++ fnl () ++ str "}"
   | CPPstructmk (id, tys, es) | CPPstruct (id, tys, es) as e ->
     let suffix = match e with CPPstructmk _ -> "::make(" | _ -> "{" in
     let closing = match e with CPPstructmk _ -> str ")" | _ -> str "}" in

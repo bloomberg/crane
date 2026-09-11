@@ -415,12 +415,10 @@ let eponymous_record :
 type std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
-  visit : string; (* "std::visit" or "bsl::visit" *)
   move : string; (* "std::move" or "bsl::move" *)
   forward : string; (* "std::forward" or "bsl::forward" *)
   any_cast : string; (* "std::any_cast" or "bsl::any_cast" *)
   logic_error : string; (* "std::logic_error" or "bsl::logic_error" *)
-  overloaded : string; (* "Overloaded" or "bdlf::Overloaded" *)
   ns : string; (* "std" or "bsl" — general prefix *)
   str_suffix : string; (* "s" or "_s" — string literal suffix *)
   same_as : string; (* "std::same_as" or "same_as" *)
@@ -436,12 +434,10 @@ let default_std_names =
   {
     shared_ptr = "std::shared_ptr";
     make_shared = "std::make_shared";
-    visit = "std::visit";
     move = "std::move";
     forward = "std::forward";
     any_cast = "std::any_cast";
     logic_error = "std::logic_error";
-    overloaded = "Overloaded";
     ns = "std";
     str_suffix = "s";
     same_as = "std::same_as";
@@ -461,9 +457,9 @@ let mk_std_names prefix =
   | "bsl::" ->
     let p = prefix in
     { shared_ptr = p ^ "shared_ptr"; make_shared = p ^ "make_shared";
-      visit = p ^ "visit"; move = p ^ "move"; forward = p ^ "forward";
+      move = p ^ "move"; forward = p ^ "forward";
       any_cast = p ^ "any_cast"; logic_error = p ^ "logic_error";
-      overloaded = "bdlf::Overloaded"; ns = "bsl"; str_suffix = "_s";
+      ns = "bsl"; str_suffix = "_s";
       same_as = "same_as"; declval = p ^ "declval";
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";

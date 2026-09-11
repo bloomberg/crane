@@ -1514,7 +1514,6 @@ let return_captures_by_value stmts =
     | CPPderef e -> CPPderef (expr e)
     | CPPmove e -> CPPmove (expr e)
     | CPPforward (ty, e) -> CPPforward (ty, expr e)
-    | CPPoverloaded ls -> CPPoverloaded (List.map by_value ls)
     | CPPstruct (id, tys, es) -> CPPstruct (id, tys, List.map expr es)
     | CPPstruct_id (id, tys, es) -> CPPstruct_id (id, tys, List.map expr es)
     | CPPstructmk (id, tys, es) -> CPPstructmk (id, tys, List.map expr es)
@@ -10476,7 +10475,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       mk_iife iife_ret_opt [Smatch (branches, wildcard)] )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
-    Wraps the body in a lambda with pattern-bound variables for std::visit. *)
+    Wraps the body in a lambda with pattern-bound variables. *)
 and collect_recursive_ns ml_ty =
   (* Collect self-recursive inductive types that appear *nested inside* ml_ty
      and return them as a namespace set so convert_ml_type_to_cpp_type wraps
@@ -12194,7 +12193,6 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           | CPPderef e' -> CPPderef (sub e')
           | CPPmove e' -> CPPmove (sub e')
           | CPPlambda l -> CPPlambda (sub_lambda l)
-          | CPPoverloaded cases -> CPPoverloaded (List.map sub_lambda cases)
           | CPPstructmk (id', tys, args) ->
             CPPstructmk (id', tys, List.map sub args)
           | CPPstruct (id', tys, args) -> CPPstruct (id', tys, List.map sub args)

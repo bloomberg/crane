@@ -1,7 +1,6 @@
 #ifndef INCLUDED_SKIPLIST_BDE
 #define INCLUDED_SKIPLIST_BDE
 
-#include <bdlf_overloaded.h>
 #include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>

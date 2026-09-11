@@ -3495,9 +3495,6 @@ let rec replace_return_this_expr inner_ty = function
     CPPfun_call
       (call_opaque, replace_return_this_expr inner_ty f,
         map_args (replace_return_this_expr inner_ty) args )
-  | CPPoverloaded ls ->
-    CPPoverloaded
-      (List.map (map_lambda (replace_return_this_stmt inner_ty) Fun.id) ls)
   | e -> e
 
 (** Statement-level counterpart of {!replace_return_this_expr}: recurses into
@@ -3550,8 +3547,6 @@ let rec deref_return_this_expr = function
   | CPPfun_call (_, f, args) ->
     CPPfun_call (call_opaque, deref_return_this_expr f,
                  map_args deref_return_this_expr args)
-  | CPPoverloaded ls ->
-    CPPoverloaded (List.map (map_lambda deref_return_this_stmt Fun.id) ls)
   | e -> e
 
 and deref_return_this_stmt s =
@@ -3684,8 +3679,6 @@ let rec expr_has_shared_from_this = function
   | CPPlambda {cl_body = body; _} -> List.exists stmt_has_shared_from_this body
   | CPPfun_call (_, f, args) ->
     expr_has_shared_from_this f || List.exists expr_has_shared_from_this (to_reversed args)
-  | CPPoverloaded ls ->
-    List.exists (fun l -> List.exists stmt_has_shared_from_this l.cl_body) ls
   | _ -> false
 
 (** Statement-level counterpart of {!expr_has_shared_from_this}: checks whether
