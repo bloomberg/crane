@@ -414,8 +414,8 @@ and pp_concept_ref kn =
   | MPdot (mp0, l') ->
     if get_force_qualified_capitalization () then begin
       (* Separate extraction: pp_modname produces visibility-aware names. *)
-      let name = pp_modname kn in
-      let name_str = Pp.string_of_ppcmds name in
+      let resolved = Common.resolve_module kn in
+      let name = str (Common.resolved_string resolved) in
       (* Self-qualify when the concept is a top-level module type from a
          different file: its namespace and concept share a name, so from
          outside [ConceptName] refers to the namespace — we need
@@ -432,7 +432,7 @@ and pp_concept_ref kn =
       let current_file_mp = get_file_mp (top_visible_mp ()) in
       if (match mp0 with MPfile _ -> true | _ -> false)
          && not (ModPath.equal mp0 current_file_mp)
-         && not (is_qualified_name name_str) then
+         && not (Common.resolved_is_qualified resolved) then
         name ++ str "::" ++ pp_concept_name l'
       else
         name
@@ -1434,27 +1434,17 @@ let rec pp_structure_elem ~is_header f = function
           mt ()
         else
           body
-      | MEident _ ->
+      | MEident target ->
         if not is_header then
           mt ()
         else
           (* Register MEident module aliases in functor_app_sources so that
              is_accessor can resolve alias chains to find registered accessors. *)
-          let () = match m.ml_mod_expr with
-          | MEident fmp -> Hashtbl.replace functor_app_sources mp fmp
-          | _ -> () in
-          (* [MEident] is the only shape here, so the target resolves to a
-             name that says for itself whether it came out qualified. *)
-          let resolved =
-            match m.ml_mod_expr with
-            | MEident target -> Some (Common.resolve_module target)
-            | _ -> None
-          in
-          let body =
-            match resolved with
-            | Some r -> str (Common.resolved_string r)
-            | None -> pp_module_expr ~is_header f [] m.ml_mod_expr
-          in
+          let () = Hashtbl.replace functor_app_sources mp target in
+          (* The target is a module path, so it resolves to a name that says
+             for itself whether it came out qualified. *)
+          let resolved = Common.resolve_module target in
+          let body = str (Common.resolved_string resolved) in
           (* Check whether this alias is itself a functor (i.e., the module
              type has MTfunsig parameters).  This happens when Rocq's
              extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
@@ -1482,12 +1472,10 @@ let rec pp_structure_elem ~is_header f = function
               mt ()
             else
               let body_with_typename =
-                let qualified =
-                  match resolved with
-                  | Some r -> Common.resolved_is_qualified r
-                  | None -> is_qualified_name (Pp.string_of_ppcmds body)
-                in
-                if (!render_ctx).rc_in_template && qualified then
+                if
+                  (!render_ctx).rc_in_template
+                  && Common.resolved_is_qualified resolved
+                then
                   str "typename " ++ body
                 else body
               in
@@ -1565,6 +1553,58 @@ let rec pp_structure_elem ~is_header f = function
       in
       str "template<typename M>" ++ fnl () ++ concept_pp
 
+(** Render a functor application, and say whether the result comes out with a
+    [::] qualifier.
+
+    Qualification is a property of the name at the application's head, not of
+    the whole rendering: [F<A::B>] needs no [typename], [A::F<B>] does.  The
+    question used to be put to the rendered text, which cannot tell those two
+    apart.  Returning the head's resolution alongside the document lets a
+    nested application answer for itself, and resolves each name exactly once.
+
+    The head is never itself an application -- the argument collection below
+    flattens those -- and a struct or functor abstraction has no name to
+    qualify, hence the [None]. *)
+and pp_module_app ~is_header f me me' =
+  let rec collect_args acc = function
+    | MEapply (g, arg) -> collect_args (arg :: acc) g
+    | base -> (base, acc)
+  in
+  let base, args = collect_args [me'] me in
+  let render me =
+    match me with
+    | MEident mp ->
+      let r = Common.resolve_module mp in
+      (str (Common.resolved_string r), Some r)
+    | MEapply (g, g') -> pp_module_app ~is_header f g g'
+    | _ -> (pp_module_expr ~is_header f [] me, None)
+  in
+  let is_qualified = function
+    | Some r -> Common.resolved_is_qualified r
+    | None -> false
+  in
+  let base_pp, base_resolved = render base in
+  let pp_module_arg arg =
+    let arg_pp, arg_resolved = render arg in
+    if (!render_ctx).rc_in_template && is_qualified arg_resolved then
+      str "typename " ++ arg_pp
+    else arg_pp
+  in
+  let args_pp = prlist_with_sep (fun () -> str ", ") pp_module_arg args in
+  let head_pp =
+    if (!render_ctx).rc_in_template && is_qualified base_resolved then
+      (* [A::B<...>] must be spelled [A::template B<...>] inside a template. *)
+      match
+        match base_resolved with
+        | Some r -> Common.resolved_split r
+        | None -> None
+      with
+      | Some (qual, last) -> str qual ++ str "::template " ++ str last
+      | None -> base_pp
+    else base_pp
+  in
+  (head_pp ++ str "<" ++ args_pp ++ str ">", base_resolved)
+
 (** Pretty-print a module expression (MEident, MEapply, MEfunctor, MEstruct).
 
     @param is_header  Controls header vs. implementation rendering (see
@@ -1579,55 +1619,7 @@ let rec pp_structure_elem ~is_header f = function
             instantiation; for [MEstruct] the indented body of declarations. *)
 and pp_module_expr ~is_header f params = function
   | MEident mp -> pp_modname mp
-  | MEapply (me, me') ->
-    let rec collect_args acc = function
-      | MEapply (f, arg) -> collect_args (arg :: acc) f
-      | base -> (base, acc)
-    in
-    let base, args = collect_args [me'] me in
-    (* A module path resolves to a name that already knows whether it came out
-       qualified; only the expressions that have no single resolved name (a
-       nested application, a struct) still have to be asked as text. *)
-    let qualified_pp me =
-      match me with
-      | MEident mp ->
-        let r = Common.resolve_module mp in
-        (str (Common.resolved_string r), Common.resolved_is_qualified r, Some r)
-      | _ ->
-        let pp = pp_module_expr ~is_header f [] me in
-        (pp, is_qualified_name (Pp.string_of_ppcmds pp), None)
-    in
-    let pp_module_arg arg =
-      let arg_pp, qualified, _ = qualified_pp arg in
-      if (!render_ctx).rc_in_template && qualified then
-        str "typename " ++ arg_pp
-      else arg_pp
-    in
-    let base_pp, base_qualified, base_resolved = qualified_pp base in
-    let args_pp =
-      prlist_with_sep (fun () -> str ", ") pp_module_arg args
-    in
-    let base_pp =
-      if (!render_ctx).rc_in_template && base_qualified then
-        (* [A::B<...>] must be spelled [A::template B<...>] inside a template. *)
-        let split =
-          match base_resolved with
-          | Some r -> Common.resolved_split r
-          | None ->
-            let s = Pp.string_of_ppcmds base_pp in
-            ( match String.rindex_opt s ':' with
-            | Some i when i > 0 && s.[i - 1] = ':' ->
-              Some
-                ( String.sub s 0 (i - 1),
-                  String.sub s (i + 1) (String.length s - i - 1) )
-            | _ -> None )
-        in
-        match split with
-        | Some (qual, last) -> str qual ++ str "::template " ++ str last
-        | None -> base_pp
-      else base_pp
-    in
-    base_pp ++ str "<" ++ args_pp ++ str ">"
+  | MEapply (me, me') -> fst (pp_module_app ~is_header f me me')
   | MEfunctor (mbid, mt, me) ->
     pp_module_expr ~is_header f (MPbound mbid :: params) me
   | MEstruct (mp, sel) ->
