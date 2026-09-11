@@ -561,23 +561,33 @@ let rec prlist_with_doc_safe_sep sep = function
     reference to the named concept [C].  Without this helper,
     [pp_module_type] would inline the concept body into the template
     parameter list, producing garbled C++. *)
-let rec get_concept_name_from_mt = function
-  | MTident kn -> Some (pp_concept_ref kn)
-  | MTwith (mt, _) -> get_concept_name_from_mt mt
-  | MTfunsig (_, _, mt') -> get_concept_name_from_mt mt'
+let rec concept_of_mt = function
+  | MTident kn -> Some (kn, pp_concept_ref kn)
+  | MTwith (mt, _) -> concept_of_mt mt
+  | MTfunsig (_, _, mt') -> concept_of_mt mt'
   | MTsig _ -> None
 
-(** Concept names whose definition the struct being rendered has to hold back,
-    because their [requires] clause spells the struct's own types.  A nested
+(** The concept name a module type refers to, when it refers to one. *)
+and get_concept_name_from_mt mt = Option.map snd (concept_of_mt mt)
+
+(** Module types whose concept the struct being rendered has to hold back,
+    because its [requires] clause spells the struct's own types.  A nested
     module constrained by one of these cannot assert its conformance from
-    inside the struct. *)
-let held_back_concepts : string list ref = ref []
+    inside the struct.
+
+    Identified by module path rather than by the concept's C++ name: two
+    unrelated module types can be emitted under the same short name, and a
+    held-back concept must not silence an assertion that is not about it. *)
+let held_back_concepts : ModPath.t list ref = ref []
+
+(** Whether a module type is one the current frame is holding back. *)
+let is_held_back_in held_back mp = List.exists (ModPath.equal mp) held_back
 
 (** Assertions deferred out of the struct being rendered.  Each entry is the
-    concept's name and the asserted struct's, the latter qualified as far as
-    the frames it has passed through; the frame that held the concept back
-    emits it. *)
-let deferred_concept_asserts : (string * Pp.t * Pp.t) list ref = ref []
+    module type held back, its concept's name and the asserted struct's, the
+    latter qualified as far as the frames it has passed through; the frame that
+    held the concept back emits it. *)
+let deferred_concept_asserts : (ModPath.t * Pp.t * Pp.t) list ref = ref []
 
 (** The one spelling of "this struct satisfies this concept".  Both the
     immediate assertion and the deferred one go through here, so the two cannot
@@ -589,14 +599,13 @@ let pp_concept_assert concept subject =
     its module type [mty].  When that concept is one the enclosing struct holds
     back, so is the assertion: the concept is not declared yet. *)
 let concept_assert_pp name mty =
-  match get_concept_name_from_mt mty with
+  match concept_of_mt mty with
   | None -> mt ()
-  | Some concept_name ->
-    let cn = Pp.string_of_ppcmds concept_name in
-    if (!render_ctx).rc_in_struct && List.exists (String.equal cn) !held_back_concepts
+  | Some (mt_mp, concept_name) ->
+    if (!render_ctx).rc_in_struct && is_held_back_in !held_back_concepts mt_mp
     then (
       deferred_concept_asserts :=
-        (cn, concept_name, name) :: !deferred_concept_asserts;
+        (mt_mp, concept_name, name) :: !deferred_concept_asserts;
       mt () )
     else pp_concept_assert concept_name name
 
@@ -1060,7 +1069,7 @@ let rec pp_structure_elem ~is_header f = function
                       let all = List.append hoisted [main_concept] in
                       prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
                   in
-                  Some (modtype_name, concept_pp, mentions_outer)
+                  Some (MPdot (mp, l), concept_pp, mentions_outer)
                 | _ -> None )
               sel
           else
@@ -1076,9 +1085,7 @@ let rec pp_structure_elem ~is_header f = function
             modtype_concepts
         in
         let this_held_back =
-          List.map
-            (fun (n, _, _) -> Pp.string_of_ppcmds n)
-            modtype_concepts_after
+          List.map (fun (mt_mp, _, _) -> mt_mp) modtype_concepts_after
         in
         let concepts_group_pp concepts =
           if concepts = [] then
@@ -1227,7 +1234,7 @@ let rec pp_structure_elem ~is_header f = function
                travel further out, qualified by this struct on the way. *)
             let mine, passed_out =
               List.partition
-                (fun (cn, _, _) -> List.exists (String.equal cn) this_held_back)
+                (fun (mt_mp, _, _) -> is_held_back_in this_held_back mt_mp)
                 (List.rev !deferred_concept_asserts)
             in
             let deferred_asserts_pp =
@@ -1239,8 +1246,8 @@ let rec pp_structure_elem ~is_header f = function
             deferred_concept_asserts :=
               List.rev_append
                 (List.map
-                   (fun (cn, concept, sub) ->
-                     (cn, concept, name ++ str "::" ++ sub) )
+                   (fun (mt_mp, concept, sub) ->
+                     (mt_mp, concept, name ++ str "::" ++ sub) )
                    passed_out )
                 outer_deferred_asserts;
             (body, deferred_asserts_pp, !method_candidates) )
