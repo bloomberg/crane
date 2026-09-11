@@ -131,6 +131,44 @@ let concept_name_of_label l =
 (** {!concept_name_of_label} as a document. *)
 let pp_concept_name l = str (concept_name_of_label l)
 
+(** What a module type contributes where a concept body is expected.
+
+    [MTident] and its refinements name a concept that already exists; only an
+    anonymous signature has requirements of its own, and those are a list of
+    lines rather than one blob, so "does this concept ask for anything" is a
+    question about the list and not about the rendered text. *)
+type module_constraint = MCname of Pp.t | MCrequirements of Pp.t list
+
+(** A module type's contribution as one document. *)
+let module_constraint_pp = function
+  | MCname n -> n
+  | MCrequirements reqs -> prlist identity reqs
+
+(** The body of a [concept N = ...] declaration for a module type, or [None]
+    when the module type asks for nothing and the concept is just [true]. *)
+let concept_body_pp = function
+  | MCrequirements [] -> None
+  | mc -> Some (module_constraint_pp mc)
+
+(** [concept N = requires { ... };], or [concept N = true;] when the module
+    type asks for nothing.  The one spelling of a module type's concept, minus
+    the [template<typename M>] line that introduces it. *)
+let pp_concept_clause name = function
+  | None -> hov 1 (str "concept " ++ name ++ str " = true;")
+  | Some body ->
+    hov
+      1
+      ( str "concept "
+      ++ name
+      ++ str " = requires {"
+      ++ fnl ()
+      ++ body
+      ++ str "};" )
+
+(** {!pp_concept_clause} with its [template<typename M>] introduction. *)
+let pp_concept_def name body =
+  str "template<typename M>" ++ fnl () ++ pp_concept_clause name body
+
 (** Pretty-print a structure signature element (module spec). *)
 let rec pp_specif = function
   | _, Spec (Sval _ as s) -> pp_decls (spec_decls s)
@@ -139,14 +177,14 @@ let rec pp_specif = function
     | None -> pp_decls (spec_decls s)
     | Some ren -> pp_decls (spec_decls s) )
   | l, Smodule mt ->
-    let def = pp_module_type [] mt in
+    let def = module_constraint_pp (pp_module_type [] mt) in
     def
     ++
     ( match Common.get_duplicate (top_visible_mp ()) l with
     | None -> Pp.mt ()
     | Some ren -> fnl () )
   | l, Smodtype mt ->
-    let def = pp_module_type [] mt in
+    let def = module_constraint_pp (pp_module_type [] mt) in
     let name = pp_modname (MPdot (top_visible_mp (), l)) in
     hov 1 (str "module type " ++ name ++ str " =" ++ fnl () ++ def)
     ++
@@ -417,11 +455,10 @@ and pp_concept_ref kn =
                    by enclosing [MTfunsig] binders.  These are pushed onto the
                    visibility stack when an [MTsig] body is entered so that
                    functor-parameter references resolve correctly.
-    @return Pretty-printer document containing the [requires { … }] body, a
-            bare concept name (for [MTident]), or [mt ()] when the module type
-            carries no extractable constraints. *)
+    @return The concept name the module type refers to, or the requirement
+            lines an anonymous signature contributes. *)
 and pp_module_type params = function
-  | MTident kn -> pp_modname kn
+  | MTident kn -> MCname (pp_modname kn)
   | MTfunsig (mbid, mt, mt') -> pp_module_type (MPbound mbid :: params) mt'
   | MTsig (mp, sign) ->
     push_visible mp params;
@@ -452,35 +489,16 @@ and pp_module_type params = function
         | MTfunsig _ -> mt ()
         | _ -> mt () )
       | Smodtype nested_mt ->
-        let def = pp_module_type [] nested_mt in
+        let def = concept_body_pp (pp_module_type [] nested_mt) in
         let modtype_name = pp_concept_name label in
-        let concept_pp =
-          if Pp.ismt def then
-            str "template<typename M>"
-            ++ fnl ()
-            ++ hov 1 (str "concept " ++ modtype_name ++ str " = true;")
-          else
-            str "template<typename M>"
-            ++ fnl ()
-            ++ hov
-                 1
-                 ( str "concept "
-                 ++ modtype_name
-                 ++ str " = requires {"
-                 ++ fnl ()
-                 ++ def
-                 ++ str "};" )
-        in
+        let concept_pp = pp_concept_def modtype_name def in
         hoisted_concept_defs := concept_pp :: !hoisted_concept_defs;
         mt ()
     in
     let reqs = List.map pp_req sign in
     let reqs = List.filter (fun p -> not (Pp.ismt p)) reqs in
     pop_visible ();
-    if List.is_empty reqs then
-      mt ()
-    else
-      prlist identity reqs
+    MCrequirements reqs
   | MTwith (mt, ML_With_type (idl, vl, typ)) -> pp_module_type [] mt
   | MTwith (mt, ML_With_module (idl, mp)) -> pp_module_type [] mt
 
@@ -646,7 +664,7 @@ let pp_template_param (mbid, mt) =
   | None ->
     (* Rendered for its side effects: nested module types are hoisted out of
        the signature as concepts of their own. *)
-    ignore (pp_module_type [] mt : Pp.t);
+    ignore (pp_module_type [] mt : module_constraint);
     str "typename " ++ param_name
 
 (** Key identifying a lifted lambda helper, used to emit it only once. *)
@@ -1041,28 +1059,10 @@ let rec pp_structure_elem ~is_header f = function
                     | None ->
                       let old_hoisted = !hoisted_concept_defs in
                       hoisted_concept_defs := [];
-                      let def = pp_module_type [] m in
+                      let def = concept_body_pp (pp_module_type [] m) in
                       let hoisted = List.rev !hoisted_concept_defs in
                       hoisted_concept_defs := old_hoisted;
-                      let main_concept =
-                        if Pp.ismt def then
-                          str "template<typename M>"
-                          ++ fnl ()
-                          ++ hov
-                               1
-                               (str "concept " ++ modtype_name ++ str " = true;")
-                        else
-                          str "template<typename M>"
-                          ++ fnl ()
-                          ++ hov
-                               1
-                               ( str "concept "
-                               ++ modtype_name
-                               ++ str " = requires {"
-                               ++ fnl ()
-                               ++ def
-                               ++ str "};" )
-                      in
+                      let main_concept = pp_concept_def modtype_name def in
                       let all = List.append hoisted [main_concept] in
                       prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
                   in
@@ -1573,7 +1573,7 @@ let rec pp_structure_elem ~is_header f = function
         | None ->
           let old_hoisted = !hoisted_concept_defs in
           hoisted_concept_defs := [];
-          let def = pp_module_type [] m in
+          let def = concept_body_pp (pp_module_type [] m) in
           let hoisted = List.rev !hoisted_concept_defs in
           hoisted_concept_defs := old_hoisted;
           let hoisted_pp =
@@ -1582,19 +1582,7 @@ let rec pp_structure_elem ~is_header f = function
             else
               prlist_with_sep fnl identity hoisted ++ fnl () ++ fnl ()
           in
-          let body =
-            if Pp.ismt def then
-              hov 1 (str "concept " ++ name ++ str " = true;")
-            else
-              hov
-                1
-                ( str "concept "
-                ++ name
-                ++ str " = requires {"
-                ++ fnl ()
-                ++ def
-                ++ str "};" )
-          in
+          let body = pp_concept_clause name def in
           hoisted_pp ++ body
       in
       str "template<typename M>"
