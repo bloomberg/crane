@@ -635,27 +635,19 @@ let collect_with_refinements mt =
     Strategy:
     - If a named concept can be extracted from the module type via
       {!get_concept_name_from_mt}, emit [ConceptName param_name].
-    - If the module type has no constraints (empty concept body), emit
-      [typename param_name] (unconstrained type parameter).
-    - If the concept body is complex (multi-line or >40 chars) — typically
-      from [MEapply] expansion of a parameterised module type — fall back to
-      [typename param_name] rather than inlining the unreadable requires
-      body.
-    - Otherwise use the simple concept body as a constraint. *)
+    - Otherwise emit [typename param_name] (unconstrained type parameter).
+      {!get_concept_name_from_mt} declines only for [MTsig], and an anonymous
+      signature's requirement lines are not a constraint expression: they
+      belong inside a named concept, not in a template parameter list. *)
 let pp_template_param (mbid, mt) =
   let param_name = pp_modname (MPbound mbid) in
   match get_concept_name_from_mt mt with
   | Some cname -> cname ++ str " " ++ param_name
   | None ->
-    let concept_body = pp_module_type [] mt in
-    if Pp.ismt concept_body then
-      str "typename " ++ param_name
-    else
-      let body_str = Pp.string_of_ppcmds concept_body in
-      if String.contains body_str '\n' || String.length body_str > 40 then
-        str "typename " ++ param_name
-      else
-        concept_body ++ str " " ++ param_name
+    (* Rendered for its side effects: nested module types are hoisted out of
+       the signature as concepts of their own. *)
+    ignore (pp_module_type [] mt : Pp.t);
+    str "typename " ++ param_name
 
 (** Key identifying a lifted lambda helper, used to emit it only once. *)
 let lifted_decl_key = function
