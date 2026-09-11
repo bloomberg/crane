@@ -216,11 +216,11 @@ let lambda_needs_capture
         List.fold_left collect_from_expr (refs, decls) args
       in
       (refs', IdSet.add id decls')
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
+      let refs, decls = collect_from_expr (refs, decls) scrut.sc_expr in
       let acc =
         List.fold_left
           (fun acc br ->
-            let acc = collect_from_expr acc br.smb_scrutinee in
             let acc =
               List.fold_left collect_from_expr acc br.smb_extra_conds
             in
@@ -1500,7 +1500,7 @@ and pp_cpp_expr env args t =
   | CPPfun_call
       (_,  CPPlambda
         { cl_params = {rev = []};
-          cl_body = [Smatch (branches, wildcard)];
+          cl_body = [Smatch (scrut, branches, wildcard)];
           cl_by_value = false;
           _ },
         {rev = []} )
@@ -1529,7 +1529,7 @@ and pp_cpp_expr env args t =
         let cond =
           str (sn ()).holds_alternative ++ str "<"
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
-          ++ pp br1.smb_scrutinee ++ str ")"
+          ++ pp scrut.sc_expr ++ str ")"
         in
         let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
           | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
@@ -1540,7 +1540,7 @@ and pp_cpp_expr env args t =
         let cond =
           str (sn ()).holds_alternative ++ str "<"
           ++ pp_cpp_type false [] br1.smb_ctor_type ++ str ">("
-          ++ pp br1.smb_scrutinee ++ str ")"
+          ++ pp scrut.sc_expr ++ str ")"
         in
         let e1 = match br1.smb_body with [Sreturn (Some e)] -> e
           | _ -> CErrors.anomaly (Pp.str "ternary: expected single Sreturn in branch") in
@@ -2440,7 +2440,7 @@ and pp_cpp_stmt env args = function
       []
       []
       cmds
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     require_header "variant";
     (* Print an if/else-if chain using [std::holds_alternative] for
        discrimination, then structured bindings via [std::get]:
@@ -2516,9 +2516,9 @@ and pp_cpp_stmt env args = function
               Id.Set.add bname !current_any_typed_params
         ) br.smb_field_bindings;
         let binding_qual =
-          if br.smb_is_owned then "auto& [" else "const auto& ["
+          if scrut.sc_owned then "auto& [" else "const auto& ["
         in
-        if br.smb_is_flat then
+        if scrut.sc_flat then
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
                (fun (bname, _ty, _used) -> Id.print bname)
@@ -2535,7 +2535,7 @@ and pp_cpp_stmt env args = function
       | [] ->
         ( match br.smb_var with
         | Some var_id ->
-          if br.smb_is_owned then
+          if scrut.sc_owned then
             str "auto " ++ Id.print var_id
             ++ str " = std::move(" ++ str (sn ()).get ++ str "<"
             ++ pp_cpp_type false [] br.smb_ctor_type ++ str ">("
@@ -2553,13 +2553,8 @@ and pp_cpp_stmt env args = function
        and [CPPfun_call(CPPaccess (Adot, obj, "v"), [])] (value: [obj.v()]).
        Bind temporaries with [auto&&] to extend lifetime, then reconstruct
        the accessor. *)
-    let first_br =
-      match branches with
-      | br :: _ -> br
-      | [] -> CErrors.anomaly (Pp.str "Smatch with empty branch list")
-    in
-    let first_scrut = first_br.smb_scrutinee in
-    let is_value_type = first_br.smb_is_value_type in
+    let first_scrut = scrut.sc_expr in
+    let is_value_type = scrut.sc_access = Adot in
     let scrut_obj_opt =
       match first_scrut with
       | CPPaccess_call (Aarrow, obj, v_id, []) when Id.to_string v_id = "v" ->
@@ -2574,7 +2569,7 @@ and pp_cpp_stmt env args = function
       | _ -> false
     in
     let is_owned =
-      first_br.smb_is_owned
+      scrut.sc_owned
       &&
       match scrut_obj_opt with
       | Some obj -> not (is_receiver_obj obj)

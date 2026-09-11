@@ -583,11 +583,11 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
       List.iter
         (fun (binders, _, _) -> List.iter (fun (id, _) -> classify ok id) binders)
         branches
-    | Smatch (branches, _) ->
+    | Smatch (scrut, branches, _) ->
       (* Structured bindings alias the matched object. *)
+      let ok = denotes_stable scrut.sc_expr in
       List.iter
         (fun br ->
-          let ok = denotes_stable br.smb_scrutinee in
           Option.iter (classify ok) br.smb_var;
           List.iter (fun (id, _, _) -> classify ok id) br.smb_field_bindings)
         branches
@@ -863,11 +863,11 @@ and collect_stmt check ~in_visitor = function
         branches
   | Sblock_custom (_, _, _, _, args, _) ->
     List.concat_map (collect_expr check) args
-  | Smatch (branches, default) ->
-    List.concat_map
+  | Smatch (scrut, branches, default) ->
+    collect_expr check scrut.sc_expr
+    @ List.concat_map
       (fun br ->
-        collect_expr check br.smb_scrutinee
-        @ List.concat_map (collect_expr check) br.smb_extra_conds
+        List.concat_map (collect_expr check) br.smb_extra_conds
         @ collect_stmts check ~in_visitor:true br.smb_body)
       branches
     @ ( match default with
@@ -932,10 +932,11 @@ let rec count_calls_stmts (check : call_checker) stmts =
             (fun acc (_, _, body) -> acc + count_calls_stmts check body)
             0
             branches
-      | Smatch (branches, default) ->
-        List.fold_left
+      | Smatch (scrut, branches, default) ->
+        count_calls_expr check scrut.sc_expr
+        + List.fold_left
           (fun acc br ->
-            acc + count_calls_expr check br.smb_scrutinee
+            acc
             + List.fold_left (fun a c -> a + count_calls_expr check c) 0 br.smb_extra_conds
             + count_calls_stmts check br.smb_body )
           0 branches
@@ -1003,7 +1004,7 @@ and has_recursive_branch_dependency check stmts =
         (List.length branches > 1
          && expr_has_call_or_branch_dep check scrut)
         || List.exists (has_recursive_branch_dependency check) branch_bodies
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         (* Same reasoning as {!Scustom_case}: a single-branch [Smatch] with no
            default is an irrefutable destructure (no branch selection), so a
            recursive call in its scrutinee is safe.  Genuine dispatch — more
@@ -1011,12 +1012,12 @@ and has_recursive_branch_dependency check stmts =
         let is_irrefutable_destructure =
           List.length branches = 1 && default = None
         in
-        let branch_has_recursive_scrut br =
-          (not is_irrefutable_destructure
-           && expr_has_call_or_branch_dep check br.smb_scrutinee)
-          || List.exists (expr_has_call_or_branch_dep check) br.smb_extra_conds
-        in
-        List.exists branch_has_recursive_scrut branches
+        ( (not is_irrefutable_destructure)
+          && expr_has_call_or_branch_dep check scrut.sc_expr )
+        || List.exists
+             (fun br ->
+               List.exists (expr_has_call_or_branch_dep check) br.smb_extra_conds)
+             branches
         || List.exists
              (fun br -> has_recursive_branch_dependency check br.smb_body)
              branches
@@ -1148,17 +1149,19 @@ let rec this_to_self_expr (self_id : Id.t) (e : cpp_expr) : cpp_expr =
 (** Replace [CPPthis] with [CPPvar self_id] throughout a statement. *)
 and this_to_self_stmt (self_id : Id.t) (s : cpp_stmt) : cpp_stmt =
   match s with
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
+    (* Matching on the receiver: [self] is a borrowed reference, so the
+       payload must not be taken by [auto&] out of [v_mut()]. *)
+    let receiver_match = expr_contains_this scrut.sc_expr in
     Smatch
-      ( List.map
+      ( { scrut with
+          sc_expr = this_to_self_expr self_id scrut.sc_expr;
+          sc_owned = (not receiver_match) && scrut.sc_owned },
+        List.map
           (fun br ->
-            let receiver_match = expr_contains_this br.smb_scrutinee in
             { br with
-              smb_scrutinee = this_to_self_expr self_id br.smb_scrutinee;
               smb_extra_conds =
                 List.map (this_to_self_expr self_id) br.smb_extra_conds;
-              smb_is_owned =
-                if receiver_match then false else br.smb_is_owned;
               smb_body = List.map (this_to_self_stmt self_id) br.smb_body })
           branches,
         Option.map (List.map (this_to_self_stmt self_id)) default )
@@ -1363,10 +1366,10 @@ let compute_binder_provenance params body =
   let rec walk_stmt s =
     match s with
     | Sasgn (id, _, e) -> record id (prov_of e)
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
+      let root = prov_of scrut.sc_expr in
       List.iter
         (fun br ->
-          let root = prov_of br.smb_scrutinee in
           Option.iter (fun v -> record v root) br.smb_var;
           List.iter (fun (fid, _, _) -> record fid root) br.smb_field_bindings;
           List.iter walk_stmt br.smb_body)
@@ -1471,18 +1474,19 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
       (* Assignment to a pointer shadow: keep the LHS as a raw pointer
          (don't dereference it), only rewrite the RHS. *)
       Sexpr (CPPbinop (Bassign, CPPvar id, expr rhs))
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
+      (* A scrutinee already reached through a pointer shadow keeps its own
+         spelling, and is a pointer rather than a value. *)
+      let ptr_scrutinee = expr_mentions_ptr_shadow scrut.sc_expr in
       Smatch
-        ( List.map
+        ( { scrut with
+            sc_expr =
+              (if ptr_scrutinee then scrut.sc_expr else expr scrut.sc_expr);
+            sc_access = (if ptr_scrutinee then Aarrow else scrut.sc_access) },
+          List.map
             (fun br ->
-              let ptr_scrutinee = expr_mentions_ptr_shadow br.smb_scrutinee in
               { br with
-                smb_scrutinee =
-                  (if ptr_scrutinee then br.smb_scrutinee
-                   else expr br.smb_scrutinee);
                 smb_extra_conds = List.map expr br.smb_extra_conds;
-                smb_is_value_type =
-                  if ptr_scrutinee then false else br.smb_is_value_type;
                 smb_body = List.map stmt br.smb_body })
             branches,
           Option.map (List.map stmt) default )
@@ -1773,9 +1777,10 @@ let rec generic_rewrite_lambda_return rc = function
        List.map
          (fun (ps, ret_ty, body) -> (ps, ret_ty, List.concat_map rw body))
          branches, err)]
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     let rw = generic_rewrite_lambda_return rc in
     [Smatch (
+       scrut,
        List.map
          (fun br ->
            let br' = rc.rc_rewrite_match_branch br in
@@ -1815,9 +1820,10 @@ let rec generic_rewrite_stmt trc = function
     Scustom_case (ty, scrut, tyargs,
       List.map (fun (ps, ret_ty, body) -> (ps, ret_ty, rw body))
         branches, err)
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     let rw = generic_rewrite_stmts trc in
     Smatch (
+      scrut,
       List.map
         (fun br ->
           let br' = trc.trc_rewrite_branch br in
@@ -1952,9 +1958,10 @@ and strip_loopify_stmt = function
           (fun (ps, ret_ty, body) -> (ps, ret_ty, strip_unnecessary_blocks body))
           branches,
         err )
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     Smatch
-      ( List.map
+      ( scrut,
+        List.map
           (fun br -> { br with smb_body = strip_unnecessary_blocks br.smb_body })
           branches,
         Option.map strip_unnecessary_blocks default )
@@ -2129,8 +2136,9 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
     match stmt with
     | Sif (cond, then_, else_) ->
       Sif (cond, process then_, process else_)
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
       Smatch (
+        scrut,
         List.map (fun br -> { br with smb_body = process br.smb_body }) branches,
         Option.map process default)
     | Sblock body -> Sblock (process body)
@@ -3031,7 +3039,7 @@ let try_tmc_classify check body =
       List.fold_left (fun acc (_, _, body) -> scan_stmts acc body) acc branches
     | Sswitch (_, _, branches, _) ->
       List.fold_left (fun acc (_, body) -> scan_stmts acc body) acc branches
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
       let acc =
         List.fold_left (fun acc br -> scan_stmts acc br.smb_body) acc branches in
       (match default with Some ss -> scan_stmts acc ss | None -> acc)
@@ -3236,18 +3244,19 @@ let borrow_matches_on ids stmts =
     List.map stmt
   in
   let rec stmt = function
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
+      let through_shadow = mentions_ptr_shadow scrut.sc_expr in
       Smatch
-        ( List.map
+        ( { scrut with sc_owned = scrut.sc_owned && not through_shadow },
+          List.map
             (fun br ->
-              if not (mentions_ptr_shadow br.smb_scrutinee) then
+              if not through_shadow then
                 { br with smb_body = List.map stmt br.smb_body }
               else
                 let bound =
                   List.map (fun (id, _, _) -> id) br.smb_field_bindings
                 in
                 { br with
-                  smb_is_owned = false;
                   smb_body = strip_moves bound (List.map stmt br.smb_body) })
             branches,
           Option.map (List.map stmt) default )
@@ -3771,7 +3780,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
           branches
       | Sif (_, then_br, else_br) ->
         collect_type_env then_br @ collect_type_env else_br
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         List.concat_map
           (fun br ->
             (* Register structured-binding field types so that
@@ -3807,7 +3816,7 @@ let rec collect_binding_env (stmts : cpp_stmt list) : (Id.t * cpp_expr) list =
     (fun s ->
       match s with
       | Sasgn (id, _, expr) -> [(id, expr)]
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         List.concat_map (fun br -> collect_binding_env br.smb_body) branches
         @ (match default with Some ss -> collect_binding_env ss | None -> [])
       | Sif (_, then_br, else_br) ->
@@ -4042,11 +4051,12 @@ and free_vars_stmt = function
   | Sswitch (s, _, bs, _) ->
     free_vars_expr s
     @ List.concat_map (fun (_, b) -> free_vars_body b) bs
-  | Smatch (branches, default) ->
-    List.concat_map
+  | Smatch (scrut, branches, default) ->
+    free_vars_expr scrut.sc_expr
+    @ List.concat_map
       (fun br ->
-        let fv = free_vars_expr br.smb_scrutinee
-          @ List.concat_map free_vars_expr br.smb_extra_conds
+        let fv =
+          List.concat_map free_vars_expr br.smb_extra_conds
           @ free_vars_body br.smb_body in
         (* Filter out variables bound by this branch: structured-binding
            field names and/or the aggregate binding variable. *)
@@ -4162,10 +4172,11 @@ let rec rewrite_returns_to_result = function
             branches,
           default );
     ]
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     [
       Smatch
-        ( List.map
+        ( scrut,
+          List.map
             (fun br ->
               { br with smb_body = List.concat_map rewrite_returns_to_result br.smb_body })
             branches,
@@ -4463,11 +4474,11 @@ and stmt_has_unique_owner_decomposition check tparams env = function
          (fun (_, _, body) ->
            body_has_unique_owner_decomposition check tparams env body)
          branches
-  | Smatch (branches, default) ->
-    List.exists
+  | Smatch (scrut, branches, default) ->
+    expr_has_unique_owner_decomposition check tparams env scrut.sc_expr
+    || List.exists
       (fun br ->
-        expr_has_unique_owner_decomposition check tparams env br.smb_scrutinee
-        || List.exists
+        List.exists
              (expr_has_unique_owner_decomposition check tparams env)
              br.smb_extra_conds
         || body_has_unique_owner_decomposition check tparams env br.smb_body)
@@ -4642,8 +4653,9 @@ let rewrite_base_with_inner_calls check e ~rewrite_iife_body ~base_case =
           Sswitch (scrut, r,
             List.map (fun (lbl, b) -> (lbl, wrap_returns_with rebuild b)) branches,
             Option.map (wrap_returns_with rebuild) default)
-        | Smatch (branches, default) ->
+        | Smatch (scrut, branches, default) ->
           Smatch (
+            scrut,
             List.map (fun br -> { br with smb_body = wrap_returns_with rebuild br.smb_body }) branches,
             Option.map (wrap_returns_with rebuild) default)
         | Scustom_case (ty, scrut, tyargs, branches, err) ->
@@ -5567,7 +5579,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
               branches,
             err );
       ] )
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     (* Augment the env with each branch's binding variable types so that
        [infer_saved_types] resolves field types correctly per-branch. *)
     let rw_branch br =
@@ -5591,7 +5603,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       { br with smb_body = rw br.smb_body }
     in
     let rw_default = rewrite_enter_stmts { ctx with er_branch_ctx = None } in
-    [Smatch (List.map rw_branch branches, Option.map rw_default default)]
+    [Smatch (scrut, List.map rw_branch branches, Option.map rw_default default)]
   | Sblock stmts ->
     [Sblock (rewrite_enter_stmts ctx stmts)]
   | Sasgn (id, tgt, e) when count_calls_expr check e >= 1 ->
@@ -5923,7 +5935,7 @@ and rewrite_enter_stmts ctx stmts =
     rewrite_enter_lambda_return ctx
       (Scustom_case (ty, scrut, tyargs, merged, err))
 
-  | Smatch (branches, default) :: rest
+  | Smatch (scrut, branches, default) :: rest
       when rest <> []
         && List.exists
              (fun br -> count_calls_stmts check br.smb_body > 0)
@@ -5937,7 +5949,7 @@ and rewrite_enter_stmts ctx stmts =
     in
     let merged_default = Option.map (fun d -> d @ rest) default in
     rewrite_enter_lambda_return ctx
-      (Smatch (merged_brs, merged_default))
+      (Smatch (scrut, merged_brs, merged_default))
 
   | stmt :: rest ->
     (* Extend the environment with any variable bound by this statement so
@@ -6321,7 +6333,7 @@ let adjust_frame_push_args ?(binding_env = []) ?(frame_sptr = []) frame_pointer_
     List.map on_stmt stmts
 
 (** Rewrite [Smatch] nodes in [stmts] whose scrutinee is a value-type accessor
-    [param.v()] for any [param] in [owned_names], setting [smb_is_owned = true]
+    [param.v()] for any [param] in [owned_names], marking the scrutinee owned
     so that the printer emits [param.v_mut()] and [auto& [...]] structured
     bindings.  This enables [std::move] of child [shared_ptr] fields when the
     parameter was moved into the handler (not borrowed).
@@ -6332,31 +6344,22 @@ let make_owned_param_matches owned_names stmts =
   let rec rewrite_stmts ss = List.map rewrite_stmt ss
   and rewrite_stmt s =
     match s with
-    | Smatch (branches, default) -> (
-      match branches with
-      | br :: _ ->
-        let is_owned_param =
-          (* Value-type inductives:
-             scrutinee = CPPfun_call (CPPaccess (Adot, id, "v"), []) *)
-          match br.smb_scrutinee with
-          | CPPfun_call (_, CPPaccess (Adot, CPPvar id, v_id), {rev = []})
-            when Id.equal v_id id_v ->
-            List.exists (Id.equal id) owned_names
-          | _ -> false
-        in
-        let branches' =
+    | Smatch (scrut, branches, default) ->
+      let is_owned_param =
+        (* Value-type inductives:
+           scrutinee = CPPfun_call (CPPaccess (Adot, id, "v"), []) *)
+        match scrut.sc_expr with
+        | CPPfun_call (_, CPPaccess (Adot, CPPvar id, v_id), {rev = []})
+          when Id.equal v_id id_v ->
+          List.exists (Id.equal id) owned_names
+        | _ -> false
+      in
+      Smatch
+        ( { scrut with sc_owned = scrut.sc_owned || is_owned_param },
           List.map
-            (fun br ->
-              let body' = rewrite_stmts br.smb_body in
-              if is_owned_param then
-                { br with smb_is_owned = true; smb_body = body' }
-              else
-                { br with smb_body = body' })
-            branches
-        in
-        let default' = Option.map rewrite_stmts default in
-        Smatch (branches', default')
-      | [] -> s )
+            (fun br -> { br with smb_body = rewrite_stmts br.smb_body })
+            branches,
+          Option.map rewrite_stmts default )
     | s ->
       (* Recurse into statement-level nesting.  [Fun.id] for the expression
          mapper ensures we never descend into [CPPlambda] bodies. *)
@@ -6407,8 +6410,8 @@ let optimize_frame_push_args frame_field_types stmts =
       else
         args
     in
-    let owned_bindings_of_branch br =
-      if br.smb_is_owned then
+    let owned_bindings_of_branch ~owned br =
+      if owned then
         List.filter_map
           (fun (id, ty, _used) ->
             match ty with
@@ -6506,11 +6509,13 @@ let optimize_frame_push_args frame_field_types stmts =
                   [CPPstruct_id (name, targs,
                     adjust_args ~is_enter ~owned_vars types args)]))
         | None -> map_stmt Fun.id (on_stmt ~decl_owned match_owned) Fun.id s )
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         let branches' =
           List.map
             (fun br ->
-              let new_owned = owned_bindings_of_branch br in
+              let new_owned =
+                owned_bindings_of_branch ~owned:scrut.sc_owned br
+              in
               { br with smb_body =
                 on_stmts ~decl_owned:[] (new_owned @ match_owned) br.smb_body })
             branches
@@ -6518,7 +6523,7 @@ let optimize_frame_push_args frame_field_types stmts =
         let default' =
           Option.map (on_stmts ~decl_owned:[] match_owned) default
         in
-        Smatch (branches', default')
+        Smatch (scrut, branches', default')
       | Sif (cond, then_body, else_body) ->
         Sif (cond,
           on_stmts ~decl_owned match_owned then_body,
@@ -6544,17 +6549,21 @@ let optimize_frame_push_args frame_field_types stmts =
 
     @param frame_name Name of the frame struct (e.g. ["_Enter"], ["_Call1"])
     @param body       Handler body statements
-    @return An [smatch_branch] for use in [Smatch (branches, None)] *)
+    @return An [smatch_branch] for use under {!frame_scrutinee} *)
 let make_frame_branch frame_name body =
-  { smb_scrutinee = CPPvar (id_frame);
-    smb_ctor_type = Tid_external (frame_name, []);
+  { smb_ctor_type = Tid_external (frame_name, []);
     smb_var = Some (id_f);
     smb_field_bindings = [];
     smb_extra_conds = [];
-    smb_is_value_type = false;
-    smb_is_owned = true;
-    smb_is_flat = false;
     smb_body = body }
+
+(** The scrutinee of the frame-dispatch match: the loop variable [_frame],
+    owned (it was moved off the stack) and held as a variant. *)
+let frame_scrutinee =
+  { sc_expr = CPPvar id_frame;
+    sc_access = Aarrow;
+    sc_owned = true;
+    sc_flat = false }
 
 (** Generate the while-loop body and surrounding boilerplate for the
     frame-dispatch loop.  Each iteration moves the top frame into a local,
@@ -6581,9 +6590,9 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   in
   let stack_id = id_stack in
   let stack_decl = Sdecl (stack_id, vector_ty) in
-  (* [Smatch (branches, None)] = exhaustive if/else-if chain; no wildcard needed
-     since the variant can only hold the listed frame types. *)
-  let dispatch_stmt = Smatch (branches, None) in
+  (* An exhaustive if/else-if chain; no wildcard needed, since the variant can
+     only hold the listed frame types. *)
+  let dispatch_stmt = Smatch (frame_scrutinee, branches, None) in
   let loop_body =
     [
       Sasgn (id_frame, Declare frame_ty,
@@ -7287,9 +7296,10 @@ and generic_inline_stmt spec = function
   | Sassign_expr (lhs, e) ->
     [Sassign_expr (generic_inline_expr spec lhs, generic_inline_expr spec e)]
   | Sexpr e -> [Sexpr (generic_inline_expr spec e)]
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     [ Smatch
-        ( List.map (fun br ->
+        ( scrut,
+          List.map (fun br ->
             { br with smb_body = generic_inline_stmts spec br.smb_body })
             branches,
           Option.map (generic_inline_stmts spec) default ) ]
@@ -7440,7 +7450,7 @@ let try_inline_mutual_into names body =
       | Some _ as r -> r
       | None -> List.find_map (fun (_, _, b) -> find_callee_in_stmts b) branches
       )
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
       ( match List.find_map (fun br -> find_callee_in_stmts br.smb_body) branches with
       | Some _ as r -> r
       | None -> match default with Some ss -> find_callee_in_stmts ss | None -> None )
@@ -7458,7 +7468,7 @@ let try_inline_mutual_into names body =
     and collect_local_ids_stmt = function
       | Sdecl (id, _) | Sdecl_init (id, _) -> [id]
       | Sasgn (id, Declare _, _) -> [id]
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         List.concat_map (fun br ->
           let var_ids = match br.smb_var with Some id -> [id] | None -> [] in
           let field_ids = List.map (fun (id, _, _) -> id) br.smb_field_bindings in
@@ -7502,19 +7512,16 @@ let try_inline_mutual_into names body =
       match s with
       | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, rename_expr e)
       | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
-      | Smatch (branches, default) ->
+      | Smatch (scrut, branches, default) ->
         Smatch (
+          { scrut with sc_expr = rename_expr scrut.sc_expr },
           List.map (fun br ->
-            { smb_scrutinee = rename_expr br.smb_scrutinee;
-              smb_ctor_type = br.smb_ctor_type;
+            { smb_ctor_type = br.smb_ctor_type;
               smb_var = Option.map rename_var br.smb_var;
               smb_field_bindings =
                 List.map (fun (id, ty, u) -> (rename_var id, ty, u))
                   br.smb_field_bindings;
               smb_extra_conds = List.map rename_expr br.smb_extra_conds;
-              smb_is_value_type = br.smb_is_value_type;
-              smb_is_owned = br.smb_is_owned;
-              smb_is_flat = br.smb_is_flat;
               smb_body = List.map rename_stmt br.smb_body })
             branches,
           Option.map (List.map rename_stmt) default)
@@ -7870,12 +7877,12 @@ let loopify_inner_lambdas ~tparams body =
           r,
           List.map (fun (id, body) -> (id, process_stmts body)) branches,
           default )
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
       Smatch
-        ( List.map
+        ( { scrut with sc_expr = process_expr scrut.sc_expr },
+          List.map
             (fun br ->
               { br with
-                smb_scrutinee = process_expr br.smb_scrutinee;
                 smb_extra_conds = List.map process_expr br.smb_extra_conds;
                 smb_body = process_stmts br.smb_body })
             branches,
@@ -8209,7 +8216,7 @@ let try_inline_functional_into names body =
           ( match s with
           | Sdecl (id, _) | Sdecl_init (id, _) | Sasgn (id, Declare _, _) ->
             add id
-          | Smatch (branches, _) ->
+          | Smatch (scrut, branches, _) ->
             List.iter
               (fun br ->
                 Option.iter add br.smb_var;
@@ -8246,12 +8253,12 @@ let try_inline_functional_into names body =
           match s with
           | Sasgn (id, ty, e) -> Sasgn (rename_var id, ty, ren_expr e)
           | Sdecl (id, ty) -> Sdecl (rename_var id, ty)
-          | Smatch (branches, default) ->
+          | Smatch (scrut, branches, default) ->
             Smatch
-              ( List.map
+              ( { scrut with sc_expr = ren_expr scrut.sc_expr },
+                List.map
                   (fun br ->
                     { br with
-                      smb_scrutinee = ren_expr br.smb_scrutinee;
                       smb_var = Option.map rename_var br.smb_var;
                       smb_field_bindings =
                         List.map
@@ -8416,28 +8423,16 @@ let hoist_rec_conditions (check : call_checker)
               ( ty, scrut', tyargs,
                 List.map (fun (ps, rty, b) -> (ps, rty, hs b)) branches,
                 err ) ]
-      | Smatch (branches, default) ->
-        (* All branches of one match share the scrutinee; hoist a recursive
-           call out of it once (e.g. [let (a,b) := f m in ...] destructuring a
-           recursive result) and thread the temporary through every branch. *)
-        ( match branches with
-        | br0 :: _ -> (
-          let binds, scrut' = hoist_cond br0.smb_scrutinee in
-          match binds with
-          | [] ->
-            [ Smatch
-                ( List.map (fun br -> {br with smb_body = hs br.smb_body})
-                    branches,
-                  Option.map hs default ) ]
-          | _ ->
-            binds_to_stmts binds
-            @ [ Smatch
-                  ( List.map
-                      (fun br ->
-                        {br with smb_scrutinee = scrut'; smb_body = hs br.smb_body})
-                      branches,
-                    Option.map hs default ) ] )
-        | [] -> [Smatch (branches, Option.map hs default)] )
+      | Smatch (scrut, branches, default) ->
+        (* Hoist a recursive call out of the scrutinee (e.g. [let (a,b) := f m
+           in ...] destructuring a recursive result). *)
+        let binds, scrut_expr' = hoist_cond scrut.sc_expr in
+        binds_to_stmts binds
+        @ [ Smatch
+              ( { scrut with sc_expr = scrut_expr' },
+                List.map (fun br -> {br with smb_body = hs br.smb_body})
+                  branches,
+                Option.map hs default ) ]
       | _ -> [s]
     in
     hs stmts

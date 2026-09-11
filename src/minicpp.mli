@@ -227,24 +227,37 @@ and cpp_stmt =
       * cpp_type list
       (** Block template expansion: multi-statement inline custom that
           substitutes [%result] with the bind target variable name. *)
-  | Smatch of smatch_branch list * cpp_stmt list option
+  | Smatch of smatch_scrutinee * smatch_branch list * cpp_stmt list option
       (** If/else-if pattern match chain using [std::holds_alternative] and
           [std::get].  Branches are checked in order.  The optional else
           body is [Some stmts] for a wildcard/default case, or [None] to
           emit [std::unreachable()]. *)
 
-(** A branch in an {!Smatch} if/else-if pattern match chain.
+(** The value an {!Smatch} dispatches on.
 
-    Each branch stores its own scrutinee expression because type refinement
-    may yield different scrutinee expressions per branch (e.g., after
-    inlining or CSE).  The printer extracts the common scrutinee from the
-    first branch for the shared [auto&&] binding. *)
+    Every branch of a match tests and destructures {e one} value, so how that
+    value is reached -- the accessor expression, [.] versus [->], borrowed
+    versus owned, flat versus variant -- belongs to the match.  Held per
+    branch, as it once was, the branches could disagree, and the printer had
+    to pick the first branch's answer and hope. *)
+and smatch_scrutinee = {
+  sc_expr : cpp_expr;
+      (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()]. *)
+  sc_access : obj_access;
+      (** Whether the object under the accessor is reached with [.] or [->]:
+          a value type reads [scrut.v()], a [shared_ptr] reads [scrut->v()]. *)
+  sc_owned : bool;
+      (** When [true], the scrutinee is owned (last use or explicit move), so
+          the payload is taken from [v_mut()] by [auto&] and its fields may be
+          moved out.  A borrowed scrutinee reads [v()] through [const auto&]. *)
+  sc_flat : bool;
+      (** When [true], a flat single-constructor inductive with no variant
+          wrapper: bind directly from the scrutinee, with neither [std::get]
+          nor [std::holds_alternative]. *)
+}
+
+(** A branch in an {!Smatch} if/else-if pattern match chain. *)
 and smatch_branch = {
-  smb_scrutinee : cpp_expr;
-      (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()].
-          Stored per-branch intentionally: branches may have different
-          scrutinee expressions after type refinement; the printer extracts
-          the common scrutinee from the first branch. *)
   smb_ctor_type : cpp_type;
       (** Constructor struct type for the template argument of
           [std::holds_alternative<T>] / [std::get<T>]. *)
@@ -261,14 +274,6 @@ and smatch_branch = {
           Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
       (** Additional [&&]-joined conditions. *)
-  smb_is_value_type : bool;
-      (** When [true], the scrutinee is a value type (not shared_ptr). *)
-  smb_is_owned : bool;
-      (** When [true], the scrutinee is owned.  Owned value types use
-          [auto [...] = std::move(std::get<T>(scrut.v_mut()))]. *)
-  smb_is_flat : bool;
-      (** When [true], flat single-constructor type: bind directly from
-          scrutinee, no [std::get] and no [holds_alternative]. *)
   smb_body : cpp_stmt list;
       (** Branch body statements. *)
 }

@@ -207,17 +207,30 @@ and cpp_stmt =
       * cpp_type list (* type args for %t0, %t1, ... *)
     (* Block template expansion: multi-statement inline custom that
        substitutes %result with the bind target variable name. *)
-  | Smatch of smatch_branch list * cpp_stmt list option
+  | Smatch of smatch_scrutinee * smatch_branch list * cpp_stmt list option
     (* If/else-if pattern match chain using std::holds_alternative and std::get.
        Branches are checked in order. The optional else body is [Some stmts] for
        a wildcard/default case, or [None] to emit std::unreachable(). *)
 
+(** The value an [Smatch] dispatches on, and how its payload is reached. *)
+and smatch_scrutinee = {
+  sc_expr : cpp_expr;
+    (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()]. *)
+  sc_access : obj_access;
+    (** Whether the object under the accessor is reached with [.] or [->]. *)
+  sc_owned : bool;
+    (** When [true], the scrutinee is owned (last use or explicit move), so the
+        payload is taken from [v_mut()] by [auto&] and its fields may be moved
+        out.  A borrowed scrutinee reads [v()] through [const auto&]. *)
+  sc_flat : bool;
+    (** When [true], the type is a flat single-constructor inductive (no variant
+        wrapper). The binding uses [const auto& [...] = scrut] directly instead
+        of [std::get<Ctor>(scrut.v())]. No [holds_alternative] check is
+        emitted. *)
+}
+
 (** A branch in an [Smatch] if/else-if pattern match chain. *)
 and smatch_branch = {
-  smb_scrutinee : cpp_expr;
-    (** Variant accessor expression, e.g. [scrut->v()] or [scrut.v()].
-        Each branch carries its own scrutinee so that multi-match branches
-        can reference different scrutinees. *)
   smb_ctor_type : cpp_type;
     (** Constructor struct type for the [std::holds_alternative] /
         [std::get] template argument. *)
@@ -234,18 +247,6 @@ and smatch_branch = {
         Empty when no fields are used or for frame-dispatch branches. *)
   smb_extra_conds : cpp_expr list;
     (** Additional [&&]-joined conditions after the primary check. *)
-  smb_is_value_type : bool;
-    (** When [true], the scrutinee is a value type (not shared_ptr).
-        Affects binding style: value types use [.v()] / [.v_mut()],
-        pointer types use [->v()] / [->v_mut()]. *)
-  smb_is_owned : bool;
-    (** When [true], the scrutinee is owned (last use or explicit move).
-        Affects binding: owned value types use [auto [...] = std::move(std::get<T>(scrut.v_mut()))],
-        borrowed value types use [const auto& [...] = std::get<T>(scrut.v())]. *)
-  smb_is_flat : bool;
-    (** When [true], the type is a flat single-constructor inductive (no variant
-        wrapper). The binding uses [const auto& [...] = scrut] directly instead
-        of [std::get<Ctor>(scrut.v())]. No [holds_alternative] check is emitted. *)
   smb_body : cpp_stmt list;
     (** Branch body statements.  When {!smb_field_bindings} is non-empty,
         field accesses use direct [CPPvar binding_name] references. *)
@@ -911,19 +912,16 @@ let map_stmt
   | Sbreak -> s
   | Sblock_custom (r, tmpl, id, ty, args, tys) ->
     Sblock_custom (r, tmpl, id, ft ty, List.map fe args, List.map ft tys)
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     Smatch
-      ( List.map
+      ( { scrut with sc_expr = fe scrut.sc_expr },
+        List.map
           (fun br ->
-            { smb_scrutinee = fe br.smb_scrutinee;
-              smb_ctor_type = ft br.smb_ctor_type;
+            { smb_ctor_type = ft br.smb_ctor_type;
               smb_var = br.smb_var;
               smb_field_bindings =
                 List.map (fun (id, ty, u) -> (id, ft ty, u)) br.smb_field_bindings;
               smb_extra_conds = List.map fe br.smb_extra_conds;
-              smb_is_value_type = br.smb_is_value_type;
-              smb_is_owned = br.smb_is_owned;
-              smb_is_flat = br.smb_is_flat;
               smb_body = List.map fs br.smb_body })
           branches,
         Option.map (List.map fs) default )
@@ -994,9 +992,9 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
   | Swhile (cond, body) -> on_expr cond; on_stmts body
   | Sblock stmts -> on_stmts stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.iter on_expr args
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
+    on_expr scrut.sc_expr;
     List.iter (fun br ->
-      on_expr br.smb_scrutinee;
       List.iter on_expr br.smb_extra_conds;
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
@@ -1070,10 +1068,10 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
   | Swhile (cond, body) -> on_stmts (on_expr acc cond) body
   | Sblock stmts -> on_stmts acc stmts
   | Sblock_custom (_, _, _, _, args, _) -> List.fold_left on_expr acc args
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
+    let acc = on_expr acc scrut.sc_expr in
     let acc =
       List.fold_left (fun a br ->
-        let a = on_expr a br.smb_scrutinee in
         let a = List.fold_left on_expr a br.smb_extra_conds in
         on_stmts a br.smb_body) acc branches
     in

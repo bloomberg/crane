@@ -2827,9 +2827,10 @@ let gen_dfun n b cty ty temps =
               Sif (c, List.map void_return_to_zero t,
                       List.map void_return_to_zero e)
             | Sblock ss -> Sblock (List.map void_return_to_zero ss)
-            | Smatch (branches, default) ->
+            | Smatch (scrut, branches, default) ->
               Smatch
-                ( List.map
+                ( scrut,
+                  List.map
                     (fun br ->
                       { br with smb_body = List.map void_return_to_zero br.smb_body })
                     branches,
@@ -3525,9 +3526,10 @@ and replace_return_this_stmt inner_ty = function
             (ctor, List.map (replace_return_this_stmt inner_ty) stmts) )
           brs,
         Option.map (List.map (replace_return_this_stmt inner_ty)) default )
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     Smatch
-      ( List.map
+      ( scrut,
+        List.map
           (fun br ->
             { br with
               smb_body =
@@ -3568,8 +3570,8 @@ and deref_return_this_stmt s =
       List.map (fun (ctor, stmts) ->
         (ctor, List.map deref_return_this_stmt stmts)) brs,
       Option.map (List.map deref_return_this_stmt) default)
-  | Smatch (branches, default) ->
-    Smatch (List.map (fun br ->
+  | Smatch (scrut, branches, default) ->
+    Smatch (scrut, List.map (fun br ->
         { br with smb_body = List.map deref_return_this_stmt br.smb_body })
       branches,
       Option.map (List.map deref_return_this_stmt) default)
@@ -3698,7 +3700,7 @@ and stmt_has_shared_from_this = function
       (fun (_, stmts) -> List.exists stmt_has_shared_from_this stmts)
       brs
     || (match default with Some stmts -> List.exists stmt_has_shared_from_this stmts | None -> false)
-  | Smatch (branches, default) ->
+  | Smatch (scrut, branches, default) ->
     List.exists
       (fun br -> List.exists stmt_has_shared_from_this br.smb_body)
       branches

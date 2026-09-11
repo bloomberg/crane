@@ -1540,13 +1540,11 @@ let return_captures_by_value stmts =
           ind,
           List.map (fun (id, body) -> (id, List.map stmt body)) branches,
           Option.map (List.map stmt) default )
-    | Smatch (branches, default) ->
+    | Smatch (scrut, branches, default) ->
       Smatch
-        ( List.map
-            (fun br ->
-              { br with
-                smb_scrutinee = expr br.smb_scrutinee;
-                smb_body = List.map stmt br.smb_body })
+        ( { scrut with sc_expr = expr scrut.sc_expr },
+          List.map
+            (fun br -> { br with smb_body = List.map stmt br.smb_body })
             branches,
           Option.map (List.map stmt) default )
     | Scustom_case (ty, e, tys, branches, err) ->
@@ -9513,9 +9511,10 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
     @param body     the branch body AST
     @param sname    scrutinee expression name (for structured binding access)
     @param match_i  nesting level counter for name suffixing
-    @param scrut_v  the [scrut->v()] or [scrut.v()] accessor expression *)
+    @param scrut    the value being matched, shared by every branch *)
 and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
-    match_i scrut_v ~is_value_type ~is_owned ~scrut_db ~is_flat =
+    match_i (scrut : smatch_scrutinee) ~scrut_db =
+  let is_owned = scrut.sc_owned in
   let ctor_type = ctor_type_of_match env typ cname in
   let ctor_name = ctor_struct_id_of_ref cname in
   let ctor_struct_name = Id.to_string ctor_name in
@@ -9823,11 +9822,10 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
       || (match default with
           | Some body -> List.exists stmt_has_lambda body
           | None -> false)
-    | Smatch (branches, default) ->
-      List.exists
-        (fun br ->
-          expr_has_lambda br.smb_scrutinee
-          || List.exists stmt_has_lambda br.smb_body)
+    | Smatch (scrut, branches, default) ->
+      expr_has_lambda scrut.sc_expr
+      || List.exists
+        (fun br -> List.exists stmt_has_lambda br.smb_body)
         branches
       || (match default with
           | Some body -> List.exists stmt_has_lambda body
@@ -10002,17 +10000,13 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
   (* Use std::get (smb_var = Some) when any constructor field is actually used;
      otherwise use holds_alternative only (smb_var = None). *)
   let has_used_fields = List.exists Fun.id dummies in
-  { smb_scrutinee = scrut_v;
-    smb_ctor_type = ctor_type;
+  { smb_ctor_type = ctor_type;
     smb_var = (if has_used_fields then Some sname else None);
     smb_field_bindings =
       (if has_used_fields then
          List.map (fun (n, ty, _is_uptr, used) -> (n, ty, used)) field_bindings
        else []);
     smb_extra_conds = [];
-    smb_is_value_type = is_value_type;
-    smb_is_owned = is_owned;
-    smb_is_flat = is_flat;
     smb_body = body_stmts }
 
 (** Whether an [MLmagic] node says its subterm is physically inside a
@@ -10255,6 +10249,12 @@ and gen_cpp_case (typ : ml_type) t env pv =
       else
         mk_call (CPPaccess (Adot, scrut_expr, Id.of_string "v")) []
     in
+    let scrut =
+      { sc_expr = scrut_v;
+        sc_access = Adot;
+        sc_owned = scrut_is_owned;
+        sc_flat = is_flat_match }
+    in
     (* Push renamed pattern variables into the environment, register their
        types in [env_types], and compute a dummies mask (true = non-Dummy).
        The caller is responsible for saving/restoring env_types. *)
@@ -10285,11 +10285,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
           gen_match_branch env' typ rty r ids' dummies body sname
-            match_i scrut_v
-            ~is_value_type:true
-            ~is_owned:scrut_is_owned
-            ~scrut_db
-            ~is_flat:is_flat_match
+            match_i scrut ~scrut_db
         in
         tctx := { !tctx with env_types = saved_env_types };
         restore_erased_env saved_erased;
@@ -10307,7 +10303,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       match iife_void_return env typ pv with
       | Some _ as v -> v
       | None ->
-        iife_closure_return env typ pv [Smatch (branches, wildcard)]
+        iife_closure_return env typ pv [Smatch (scrut, branches, wildcard)]
     in
     (* Perceus reuse (Crane Reuse): when the matched constructor's single
        recursive child is uniquely owned at runtime, rebuild a same-inductive
@@ -10468,11 +10464,11 @@ and gen_cpp_case (typ : ml_type) t env pv =
             mk_call (CPPaccess (Adot, scrut_v, Id.of_string "index")) [],
             CPPint branch_idx )
       in
-      let normal = [Smatch (branches, wildcard)] in
+      let normal = [Smatch (scrut, branches, wildcard)] in
       mk_iife iife_ret_opt
         [Sif (index_cond, [Sif (use_count_cond, reuse_body, normal)], normal)]
     | None ->
-      mk_iife iife_ret_opt [Smatch (branches, wildcard)] )
+      mk_iife iife_ret_opt [Smatch (scrut, branches, wildcard)] )
 
 (** Generate a custom match body using user-provided custom extraction syntax.
     Wraps the body in a lambda with pattern-bound variables. *)
@@ -11194,7 +11190,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
             (fun (args, bty, stmts) ->
               Option.map (fun stmts' -> (args, bty, stmts')) (replace_last_return stmts))
             branches)
-      | [Smatch (branches, default)] ->
+      | [Smatch (scrut, branches, default)] ->
         let default' =
           match default with
           | Some stmts -> Option.map (fun s -> Some s) (replace_last_return stmts)
@@ -11206,7 +11202,7 @@ and inline_iife (k : cpp_expr -> cpp_stmt) = function
             branches, default')
         with
         | Some branches', Some default' ->
-          Some [Smatch (branches', default')]
+          Some [Smatch (scrut, branches', default')]
         | _ -> None )
       | stmt :: rest when rest <> [] ->
         Option.map (fun rest' -> stmt :: rest') (replace_last_return rest)
