@@ -1301,8 +1301,8 @@ let pp_type_name_capitalized r =
   List.hd (mp_renaming mp)
 
 (** Resolve a module path to its name, registering it in the visible scope.
-    Has the side effects of {!add_visible} and, through {!pp_duplicate}, of
-    {!add_duplicate}, so it must be called once per occurrence. *)
+    Has the side effect of {!add_visible}, so it must be called once per
+    occurrence. *)
 let resolve_module mp =
   let ls = mp_renaming mp in
   match mp with

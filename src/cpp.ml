@@ -1895,32 +1895,40 @@ let do_struct_with_decl_tracking ~is_header f s =
         ((mi.modpath, mi.sels), mi.wrapper_name) )
       analysis.sorted_modules
   in
-  let deferred_defs_acc = ref (mt ()) in
-  let deferred_lifted_acc = ref (mt ()) in
-  List.iter
-    (fun ((mp, sel), wrapper_name) ->
-      match wrapper_name with
-      | Some name ->
-        push_visible mp [];
-        let func_sels = List.filter is_func_decl sel in
-        let old_decls = !current_structure_decls in
-        current_structure_decls := sel;
-        let p_specs, p_defs, p_lifted =
-          pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
-        in
-        current_structure_decls := old_decls;
-        if not (Pp.ismt p_specs) then (
-          Hashtbl.replace pending_wrapper_decls name p_specs;
-          Hashtbl.replace unmerged_wrappers name () );
-        if not (Pp.ismt p_defs) then
-          deferred_defs_acc := !deferred_defs_acc ++ cut2 () ++ p_defs;
-        if not (Pp.ismt p_lifted) then
-          deferred_lifted_acc := !deferred_lifted_acc ++ cut2 () ++ p_lifted;
-        pop_visible ()
-      | None -> () )
-    wrapper_names;
-  let deferred_defs = !deferred_defs_acc in
-  let deferred_lifted = !deferred_lifted_acc in
+  (* Each wrapper module contributes up to three fragments: declarations that
+     merge into the struct, and definitions and lifted helpers that must follow
+     it.  The latter two are collected as lists and joined once, rather than
+     grown in place. *)
+  let wrapper_parts =
+    List.filter_map
+      (fun ((mp, sel), wrapper_name) ->
+        match wrapper_name with
+        | None -> None
+        | Some name ->
+          push_visible mp [];
+          let func_sels = List.filter is_func_decl sel in
+          let old_decls = !current_structure_decls in
+          current_structure_decls := sel;
+          let p_specs, p_defs, p_lifted =
+            pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
+          in
+          current_structure_decls := old_decls;
+          if not (Pp.ismt p_specs) then (
+            Hashtbl.replace pending_wrapper_decls name p_specs;
+            Hashtbl.replace unmerged_wrappers name () );
+          pop_visible ();
+          Some (p_defs, p_lifted) )
+      wrapper_names
+  in
+  let joined pick =
+    prlist
+      (fun part ->
+        let pp = pick part in
+        if Pp.ismt pp then mt () else cut2 () ++ pp )
+      wrapper_parts
+  in
+  let deferred_defs = joined fst in
+  let deferred_lifted = joined snd in
   name_cache :=
     Some
       (Name_resolution.create
@@ -2235,13 +2243,6 @@ let do_struct_with_decl_tracking ~is_header f s =
     ++ deferred_defs )
   ++ fnl ()
 
-(** Simple structure renderer without wrapper module handling. Used for
-    signature rendering.
-
-    @param f  Callback applied to each [(label, structure_elem)] pair to
-              produce its pretty-printer document.
-    @param s  Extraction structure (list of [(module_path, elem list)] pairs).
-    @return Pretty-printer document for the rendered signature. *)
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =
   do_struct_with_decl_tracking
