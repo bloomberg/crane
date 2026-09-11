@@ -2219,22 +2219,23 @@ let do_struct_with_decl_tracking ~is_header f s =
           Some (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp)))
         | _ -> None
       in
+      (* A lifted helper that names a type of the main module's struct cannot
+         precede it.  Which ones those are is a question about the references
+         each helper resolves, so it is asked while they are rendered. *)
       let rendered_lifted =
-        List.map (fun d -> pp_cpp_decl (empty_env ()) d) pass2_lifted
+        List.map
+          (fun d ->
+            let render () = pp_cpp_decl (empty_env ()) d in
+            match main_module_name with
+            | Some name -> watching_for_reference_to name render
+            | None -> (render (), false) )
+          pass2_lifted
       in
       let pre, post =
-        List.partition
-          (fun pp ->
-            match main_module_name with
-            | Some name ->
-              not
-                (Common.contains_substring
-                   (Pp.string_of_ppcmds pp)
-                   (name ^ "::") )
-            | None -> false )
+        List.partition (fun (_, mentions_main) -> not mentions_main)
           rendered_lifted
       in
-      let join lst = prlist_sep_nonempty cut2 (fun x -> x) lst in
+      let join lst = prlist_sep_nonempty cut2 fst lst in
       (join pre, join post)
     else
       (mt (), mt ())
