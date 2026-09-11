@@ -371,7 +371,7 @@ type unsafe_needs = {
     {!ml_signature} for one concrete output language. It bundles the reserved
     [keywords], source-file conventions ([file_suffix], [file_naming],
     [preamble]) and printers ([pp_struct], [pp_hstruct]), the optional
-    interface-file conventions ([sig_suffix], [sig_preamble], [pp_sig]), and
+    interface-file conventions ([sig_suffix], [sig_preamble]), and
     [pp_decl] for printing one declaration in isolation. *)
 type language_descr = {
   keywords : Id.Set.t;
@@ -386,7 +386,6 @@ type language_descr = {
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)
   sig_preamble : Id.t -> Pp.t option -> ModPath.t list -> unsafe_needs -> Pp.t;
-  pp_sig : ml_signature -> Pp.t;
   (* for an isolated declaration print *)
   pp_decl : ml_decl -> Pp.t;
 }

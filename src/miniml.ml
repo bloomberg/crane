@@ -286,7 +286,6 @@ type language_descr = {
   sig_suffix : string option;
   (* the second argument is a comment to add to the preamble *)
   sig_preamble : Id.t -> Pp.t option -> ModPath.t list -> unsafe_needs -> Pp.t;
-  pp_sig : ml_signature -> Pp.t;
   (* for an isolated declaration print *)
   pp_decl : ml_decl -> Pp.t;
 }

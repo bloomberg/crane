@@ -9,7 +9,7 @@
 
    - the source-file family ([ind_cpp_decls], [impl_decls]) gives the full
      definitions that go into the generated [.cpp]; and
-   - the header family ([ind_header_decls], [header_decls], [spec_decls])
+   - the header family ([ind_header_decls], [header_decls])
      gives the declarations that go into the generated [.h].
 
    Each answer pairs a declaration with the name environment its
@@ -36,5 +36,3 @@ val impl_decls : Miniml.ml_decl -> rendered
 (** The header declarations for one MiniML declaration. *)
 val header_decls : Miniml.ml_decl -> rendered
 
-(** The header declarations for one module-signature element. *)
-val spec_decls : Miniml.ml_spec -> rendered

@@ -15,7 +15,6 @@
     This module contains:
     - ind_cpp_decls / ind_header_decls — inductive types
     - impl_decls / header_decls — dispatch for the .cpp and the .h
-    - spec_decls — module signatures
 
     Every entry point answers with declarations rather than with rendered
     text; {!pp_decls} is where they are printed. *)
@@ -639,18 +638,3 @@ let header_decls d =
     else
       List.map (fun (ds, env) -> (env, ds)) (gen_dfuns_header (rv, defs, typs))
 
-(** The declarations a module signature element becomes: module signatures
-    become C++ concepts (for module types) or struct declarations.
-    @param s miniml module signature element to render
-    @return the C++ declarations, empty when the element is an inline custom
-            or an erased type alias *)
-let spec_decls = function
-  | Sval (r, _, _) when is_inline_custom r -> []
-  | Stype (r, _, _) when is_inline_custom r -> []
-  | Sind (kn, i) -> ind_header_decls kn i
-  | Sval (r, b, t) ->
-    let ds, env = gen_spec r b t in
-    [(env, ds)]
-  | Stype (_, _, Some (Miniml.Tdummy Miniml.Ktype)) ->
-    [] (* Skip erased Type aliases *)
-  | Stype (r, vl, ot) -> [(empty_env (), gen_type_alias r vl ot)]

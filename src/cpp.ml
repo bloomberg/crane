@@ -191,15 +191,6 @@ let watching_for_reference_to outer f =
   in
   (result, !seen)
 
-(** Pretty-print a structure signature element (module spec). *)
-let rec pp_specif = function
-  | _, Spec s -> pp_decls (spec_decls s)
-  | _, Smodule mt -> module_constraint_pp (pp_module_type [] mt)
-  | l, Smodtype mt ->
-    let def = module_constraint_pp (pp_module_type [] mt) in
-    let name = pp_modname (MPdot (top_visible_mp (), l)) in
-    hov 1 (str "module type " ++ name ++ str " =" ++ fnl () ++ def)
-
 (** Convert a signature spec element to a C++20 [requires] clause requirement.
     Used for module type -> concept conversion.
 
@@ -224,7 +215,7 @@ let rec pp_specif = function
     @return Pretty-printer document for the single requirement line, or [mt ()]
             if the spec should be suppressed (e.g. inline-custom, polymorphic
             value). *)
-and pp_spec_as_requirement modtype_mp modtype_refs = function
+let rec pp_spec_as_requirement modtype_mp modtype_refs = function
   | Sval (r, _, _) when is_inline_custom r -> mt ()
   | Stype (r, _, _) when is_inline_custom r -> mt ()
   | Sind (kn, i) ->
@@ -2251,18 +2242,6 @@ let do_struct_with_decl_tracking ~is_header f s =
               produce its pretty-printer document.
     @param s  Extraction structure (list of [(module_path, elem list)] pairs).
     @return Pretty-printer document for the rendered signature. *)
-let do_struct f s =
-  let ppl (mp, sel) =
-    push_visible mp [];
-    let p = prlist_sep_nonempty cut2 f sel in
-    if modular () then pop_visible ();
-    p
-  in
-  let p = prlist_sep_nonempty cut2 ppl s in
-  if not (modular ()) then
-    repeat (List.length s) pop_visible ();
-  v 0 p ++ fnl ()
-
 (** Main entry point: render structure to C++ implementation file. *)
 let pp_struct s =
   do_struct_with_decl_tracking
@@ -2277,10 +2256,6 @@ let pp_hstruct s =
     (pp_structure_elem ~is_header:true header_decls)
     s
 
-(** Render module signature (for .mli-style files, unused in current
-    extraction). *)
-let pp_signature s = do_struct pp_specif s
-
 (** Language descriptor for C++ extraction. *)
 let cpp_descr =
   {
@@ -2292,6 +2267,5 @@ let cpp_descr =
     pp_hstruct;
     sig_suffix = Some ".h";
     sig_preamble;
-    pp_sig = pp_signature;
     pp_decl = (fun d -> pp_decls (impl_decls d));
   }
