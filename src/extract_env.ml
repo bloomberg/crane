@@ -1208,21 +1208,33 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      leak into a later file of a separate extraction. *)
   Table.reset_demands ();
   if has_custom_string_arg then Table.mark_needs_string_literals ();
-  (* A dry run, for computing objects to rename or duplicate -- and the only
-     chance to discover what the preamble must provide, since the preamble is
-     written before the body that demands it.  Everything raised from here on
-     is already too late, which [freeze_demands] is there to catch. *)
-  set_phase Pre;
-  ignore (d.pp_struct struc);
-  ignore (d.pp_hstruct struc);
-  Table.freeze_demands ();
-  let opened = List.filter !opened_filter (opened_libraries ()) in
   (* In separate extraction, force fully qualified cross-module references
      (e.g. Datatypes::List instead of bare List). *)
   ( match namespace with
-  | Some _ ->
-    Common.set_force_cross_file_qualification ()
+  | Some _ -> Common.set_force_cross_file_qualification ()
   | None -> () );
+  (* Discovery: renaming and duplication decisions, and the registrations that
+     rendering a declaration leaves behind for its uses -- flatness, merged
+     wrappers, promoted inductives -- have to be complete before any of them is
+     consulted, and a use can precede its declaration.  Only a whole pass
+     establishes that, so this one's output is discarded.  See the note in
+     [module-ir-blocked-on-name-resolution]. *)
+  set_phase Pre;
+  ignore (d.pp_struct struc);
+  ignore (d.pp_hstruct struc);
+  (* Both bodies are rendered before either file is opened.  A preamble has to
+     say what the body it precedes demands -- which headers it includes, which
+     unsafe features it uses -- and the body is the only thing that knows.
+     Rendering first and writing after lets the preamble follow from the body
+     that is actually written, rather than from the dry run above.  Everything
+     raised after this point is too late, which [freeze_demands] is there to
+     catch. *)
+  set_phase Impl;
+  let body_impl = d.pp_struct struc in
+  set_phase Intf;
+  let body_hstruct = d.pp_hstruct struc in
+  Table.freeze_demands ();
+  let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with
     | Some ns -> str ("namespace " ^ ns ^ " {") ++ fnl2 ()
@@ -1239,11 +1251,10 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   let comment = get_comment () in
   ( try
       (* The real printing of the implementation *)
-      set_phase Impl;
       pp_with ft (header fn ());
       pp_with ft (d.preamble mo comment opened unsafe_needs);
       pp_with ft ns_open;
-      pp_with ft (d.pp_struct struc);
+      pp_with ft body_impl;
       pp_with ft ns_close;
       (* If a [main] function returning a monad was found, it was renamed to
          [_main].  Generate a [main()] wrapper.  In reified mode the wrapper
@@ -1287,11 +1298,10 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
       let cout = open_out si in
       let ft = formatter false (Some cout) in
       ( try
-          set_phase Intf;
           pp_with ft (spec_header (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
           pp_with ft ns_open;
-          pp_with ft (d.pp_hstruct struc);
+          pp_with ft body_hstruct;
           pp_with ft ns_close;
           pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ();
@@ -1310,11 +1320,10 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
     let ft = formatter false None in
     try
       pp_with ft (fnl2 () ++ str "/* Signature (.h) */" ++ fnl ());
-      set_phase Intf;
       pp_with ft (spec_header None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
       pp_with ft ns_open;
-      pp_with ft (d.pp_hstruct struc);
+      pp_with ft body_hstruct;
       pp_with ft ns_close;
       Format.pp_print_flush ft ()
     with reraise ->
