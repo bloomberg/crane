@@ -628,16 +628,6 @@ let is_non_output_module mp =
 
 let clear_non_output_modules () = Hashtbl.clear valid_output_module_set
 
-(** List of module parameters that we should alpha-rename *)
-
-let params_ren_add, params_ren_mem =
-  let m = ref MPset.empty in
-  let add mp = m := MPset.add mp !m
-  and mem mp = MPset.mem mp !m
-  and clear () = m := MPset.empty in
-  register_cleanup clear;
-  (add, mem)
-
 (** Table indicating the visible horizon at a precise moment, i.e. the stack of
     structures we are inside.
 
@@ -875,12 +865,11 @@ let rec mp_renaming_fun full_mp =
     let name = Table.escape_reserved_struct_name name in
     name :: lmp
   | MPbound mbid ->
-    let s = modular_rename Mod (MBId.to_id mbid) in
-    if not (params_ren_mem full_mp) then
-      [s]
-    else
-      let i, _, _ = MBId.repr mbid in
-      [s ^ "__" ^ string_of_int i]
+    (* A functor parameter keeps its own name even when an enclosing scope
+       already uses it.  OCaml had to alpha-rename it to [M__3], because a
+       shadowed name there is unreachable; in C++ the template parameter simply
+       shadows, and the outer name stays reachable by qualifying it. *)
+    [modular_rename Mod (MBId.to_id mbid)]
   | MPfile _ ->
     assert (modular ());
     (* see [at_toplevel] above *)
@@ -1046,23 +1035,11 @@ let mpfiles_clash mp0 ks =
     ks
     (List.rev (mpfiles_list ()))
 
-(** Check if a module path matches a functor parameter, registering alpha-rename
-    candidates as a side effect.
+(** Check if a module path is one of the current layer's functor parameters.
     @param mp0    The module path of the reference being printed
-    @param ks     The [(kind, name)] pair being looked up
     @param params The functor parameter list of the current visible layer
     @return [true] iff [mp0] is one of the functor parameters *)
-let rec params_lookup mp0 ks = function
-  | [] -> false
-  | param :: _ when ModPath.equal mp0 param -> true
-  | param :: params ->
-    let () =
-      match ks with
-      | Mod, mp when String.equal (List.hd (mp_renaming param)) mp ->
-        params_ren_add param
-      | _ -> ()
-    in
-    params_lookup mp0 ks params
+let params_lookup mp0 params = List.exists (ModPath.equal mp0) params
 
 (** Check if a name clashes with a visible module's content.
     @param mp0 The defining module path (search stops when this is reached)
@@ -1073,15 +1050,12 @@ let visible_clash mp0 ks =
     | [] -> false
     | v :: _ when ModPath.equal v.mp mp0 -> false
     | v :: vis ->
-      let b = KMap.mem ks v.content in
-      if b && not (is_mp_bound mp0) then
+      if KMap.mem ks v.content && not (is_mp_bound mp0) then
         true
-      else (
-        if b then params_ren_add mp0;
-        if params_lookup mp0 ks v.params then
-          false
-        else
-          clash vis )
+      else if params_lookup mp0 v.params then
+        false
+      else
+        clash vis
   in
   clash (get_visible ())
 
@@ -1098,7 +1072,7 @@ let visible_clash_dbg mp0 ks =
     | v :: vis ->
     try Some (v.mp, KMap.find ks v.content)
     with Not_found ->
-      if params_lookup mp0 ks v.params then
+      if params_lookup mp0 v.params then
         None
       else
         clash vis
@@ -1166,17 +1140,6 @@ let pp_ocaml_local k prefix mp rls olab =
        wrapper module; Crane has no need of that. *)
     plain rls
 
-(** Print a reference from a bound module parameter. [pp_ocaml_bound] : [mp]
-    starts with a [MPbound], and we are not inside (i.e. we are not printing the
-    type of the module parameter).
-    @param base The [MPbound] base of the module path
-    @param rls  Full renaming list (outermost component first)
-    @return The dotted qualified name; clash detection is deferred to renaming *)
-let pp_ocaml_bound base rls =
-  (* clash with a MPbound will be detected and fixed by renaming this MPbound *)
-  if get_phase () == Pre then ignore (visible_clash base (Mod, List.hd rls));
-  plain rls
-
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
     it is defined in another [MPfile].
     @param k    Kind of the reference
@@ -1218,7 +1181,10 @@ let pp_ocaml_gen k mp rls olab =
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
-      pp_ocaml_bound base rls
+      (* Reached through a functor parameter: the template parameter's own name
+         is the whole answer, since it shadows anything an enclosing scope
+         spells the same way. *)
+      plain rls
     else
       pp_ocaml_extern k base rls
 
@@ -1235,7 +1201,7 @@ let pp_cpp_gen k mp rls olab =
   | None ->
     let base = base_mp mp in
     if is_mp_bound base then
-      pp_ocaml_bound base rls
+      plain rls
     else if is_non_output_module base then
       plain [unquote (last rls)]
     else
