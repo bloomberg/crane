@@ -899,9 +899,13 @@ type cpp_decl =
       (** Concept definition (template params from outer Dtemplate) *)
   | Dstatic_assert of cpp_expr * string option
       (** Static assertion with optional message *)
-  | Dusing of GlobRef.t * cpp_type
-      (** [using name = ty;]: a second spelling of a type that already exists,
-          as when a definition is nothing but another instance's name. *)
+  | Dusing of dusing
+      (** [template <...> using name = ty;]: a second spelling of a type that
+          already exists, as when a definition is nothing but another
+          instance's name. *)
+  | Dstruct_fwd of (template_type * Id.t) list * GlobRef.t
+      (** [template <...> struct N;]: introduces a name whose definition comes
+          later in the same file, as mutually recursive inductives require. *)
   | Denum of {
       de_ref : GlobRef.t;  (** Enum reference *)
       de_ctors : Id.t list;  (** Constructor names *)
@@ -909,6 +913,22 @@ type cpp_decl =
           (** Original Rocq constructor names for doc comment lookup *)
       de_tparams : (template_type * Id.t) list;  (** Template parameters *)
     }
+
+(** A type alias declaration.
+
+    The three ways an alias can fail to be a plain [using name = ty;] are all
+    spelled here rather than by the caller handing the printer a finished
+    string: a signature entry may name a type without defining it
+    ([du_rhs = None]), an axiom's placeholder realisation carries a trailing
+    comment ([du_note]), and a parameterised alias carries its own template
+    parameters, whose names are also the scope the right-hand side's type
+    variables are read in. *)
+and dusing = {
+  du_tparams : (template_type * Id.t) list;
+  du_name : GlobRef.t;
+  du_rhs : cpp_type option;
+  du_note : string option;
+}
 
 (** What a {!Dfun} node holds beyond its signature.
 

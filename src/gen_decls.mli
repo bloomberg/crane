@@ -151,6 +151,13 @@ val gen_instance_struct :
     that [tys] applies to arguments is declared [template <typename> class],
     and its position is registered so that uses of [r] pass a bare template
     name; see {!Table.is_hkt_ind_param}. *)
+(** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
+
+    [ot] is [None] for a signature entry that names a type without defining
+    it; an axiom and a custom extraction each get the right-hand side they
+    need, expressed in the IR rather than as rendered text. *)
+val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_decl
+
 val hkt_templates :
   GlobRef.t -> Id.t list -> ml_type list -> (Minicpp.template_type * Id.t) list
 

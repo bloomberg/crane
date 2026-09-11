@@ -3236,6 +3236,12 @@ let pp_template_param (tt, id) =
     ++ pp_type default_ty
   | _ -> pp_template_type tt ++ spc () ++ Id.print id
 
+(** [template <...> ] prefix for a declaration, or nothing when the parameter
+    list is empty. *)
+let pp_template_header = function
+  | [] -> mt ()
+  | tparams -> str "template <" ++ pp_list pp_template_param tparams ++ str "> "
+
 (** Print a template parameter for a re-declaration: same kind, but without the
     default argument, which C++ allows to appear only once per parameter. *)
 let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.print id
@@ -4137,8 +4143,27 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str " = "
       ++ pp_cpp_expr env [] cstr
       ++ str ";" )
-  | Dusing (r, ty) ->
-    h (str "using " ++ pp_global Type r ++ str " = " ++ pp_type ty ++ str ";")
+  | Dusing u ->
+    (* The template parameter names are also the scope the right-hand side's
+       type variables are read in: a parameterised alias names them once. *)
+    let vl = List.map snd u.du_tparams in
+    let def =
+      match u.du_rhs with
+      | None -> mt ()
+      | Some ty -> str " =" ++ spc () ++ pp_cpp_type false vl ty
+    in
+    let note =
+      match u.du_note with None -> mt () | Some s -> str (" /* " ^ s ^ " */")
+    in
+    hov 2
+      ( pp_template_header u.du_tparams
+      ++ str "using "
+      ++ pp_global Type u.du_name
+      ++ def
+      ++ note
+      ++ str ";" )
+  | Dstruct_fwd (tparams, r) ->
+    h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
   | Dstatic_assert (e, so) ->
     ( match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")

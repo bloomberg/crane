@@ -237,22 +237,15 @@ let pp_cpp_ind_header kn ind =
                  colon) are erased. *)
               let (raw_pvars, _) = Table.ind_param_vars ind p in
               let param_vars = List.map Common.tparam_name raw_pvars in
-              (* Use the same name as the struct definition (see Dstruct
-                 printing below) so forward declarations match their
-                 definitions. *)
-              let name = pp_global Type names.(i) in
-              let tmpl =
-                match param_vars with
-                | [] -> mt ()
-                | vars ->
-                  str "template <"
-                  ++ prlist_with_sep
-                       (fun () -> str ", ")
-                       (fun v -> str "typename " ++ Id.print v)
-                       vars
-                  ++ str "> "
+              (* The forward declaration carries the same name and the same
+                 template parameters as the full definition below; both are
+                 built from [param_vars] and printed by the same node. *)
+              let tparams =
+                List.map (fun v -> (TTtypename, v)) param_vars
               in
-              tmpl ++ str "struct " ++ name ++ str ";" ++ fnl () ++ fwd (i + 1)
+              pp_cpp_decl (empty_env ()) (Dstruct_fwd (tparams, names.(i)))
+              ++ fnl ()
+              ++ fwd (i + 1)
         in
         fwd 0
       else
@@ -601,24 +594,7 @@ let pp_hdecl d =
   | Dind (kn, i) -> pp_cpp_ind_header kn i
   | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
     mt () (* Skip erased Type aliases *)
-  | Dtype (r, l, t) ->
-    let name = pp_global Type r in
-    let l = rename_tvars keywords l in
-    let ids, def =
-      with_method_ns_for_locals @@ fun () ->
-      match find_type_custom_opt r with
-      | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
-      | None ->
-        ( pp_parameters l,
-          if t == Taxiom then (
-            register_axiom_type r;
-            Table.add_erased_type_const r;
-            require_header "any";
-            str " = std::any /* AXIOM TO BE REALIZED */" )
-          else
-            str " =" ++ spc () ++ pp_type false l t )
-    in
-    pp_tydef (Gen_decls.hkt_templates r l [t]) name def
+  | Dtype (r, l, t) -> pp_cpp_decl (empty_env ()) (gen_type_alias r l (Some t))
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
       gen_dfuns_header
@@ -725,24 +701,7 @@ let pp_hdecl_spec_only = function
   | Dind (kn, i) -> pp_cpp_ind_header kn i
   | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
     mt () (* Skip erased Type aliases *)
-  | Dtype (r, l, t) ->
-    let name = pp_global Type r in
-    let l = rename_tvars keywords l in
-    let ids, def =
-      with_method_ns_for_locals @@ fun () ->
-      match find_type_custom_opt r with
-      | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
-      | None ->
-        ( pp_parameters l,
-          if t == Taxiom then (
-            register_axiom_type r;
-            Table.add_erased_type_const r;
-            require_header "any";
-            str " = std::any /* AXIOM TO BE REALIZED */" )
-          else
-            str " =" ++ spc () ++ pp_type false l t )
-    in
-    pp_tydef (Gen_decls.hkt_templates r l [t]) name def
+  | Dtype (r, l, t) -> pp_cpp_decl (empty_env ()) (gen_type_alias r l (Some t))
   | Dterm (r, _, _)
     when List.exists
            (fun (r', _, _, _) -> globref_equal r r')
@@ -790,24 +749,4 @@ let pp_spec = function
     pp_cpp_decl env ds
   | Stype (_, _, Some (Miniml.Tdummy Miniml.Ktype)) ->
     mt () (* Skip erased Type aliases *)
-  | Stype (r, vl, ot) ->
-    let name = pp_global_name Type r in
-    let l = rename_tvars keywords vl in
-    let ids, def =
-      with_method_ns_for_locals @@ fun () ->
-      match find_type_custom_opt r with
-      | Some (ids, s) -> (pp_string_parameters ids, str " =" ++ spc () ++ str s)
-      | None ->
-        let ids = pp_parameters l in
-        ( match ot with
-        | None -> (ids, mt ())
-        | Some Taxiom ->
-          register_axiom_type r;
-          Table.add_erased_type_const r;
-          require_header "any";
-          (ids, str " = std::any /* AXIOM TO BE REALIZED */")
-        | Some t -> (ids, str " =" ++ spc () ++ pp_type false l t) )
-    in
-    pp_tydef
-      (Gen_decls.hkt_templates r l (match ot with Some t -> [t] | None -> []))
-      name def
+  | Stype (r, vl, ot) -> pp_cpp_decl (empty_env ()) (gen_type_alias r vl ot)

@@ -1114,14 +1114,32 @@ type cpp_decl =
       GlobRef.t
       * cpp_expr (* template params are provided by an outer Dtemplate *)
   | Dstatic_assert of cpp_expr * string option
-  | Dusing of GlobRef.t * cpp_type
-      (* [using name = ty;] -- a second spelling of an existing type *)
+  | Dusing of dusing
+  | Dstruct_fwd of (template_type * Id.t) list * GlobRef.t
+      (* [template <...> struct N;] -- introduces a name whose definition
+         comes later *)
   | Denum of {
       de_ref : GlobRef.t;
       de_ctors : Id.t list;
       de_ctor_rocq_names : string list;
       de_tparams : (template_type * Id.t) list;
     }
+
+(** A type alias declaration.
+
+    The three ways an alias can fail to be a plain [using name = ty;] are all
+    spelled here rather than by the caller handing the printer a finished
+    string: a signature entry may name a type without defining it
+    ([du_rhs = None]), an axiom's placeholder realisation carries a trailing
+    comment ([du_note]), and a parameterised alias carries its own template
+    parameters, whose names are also the scope the right-hand side's type
+    variables are read in. *)
+and dusing = {
+  du_tparams : (template_type * Id.t) list;
+  du_name : GlobRef.t;
+  du_rhs : cpp_type option;
+  du_note : string option;
+}
 
 (** What a {!Dfun} node holds beyond its signature.
 
@@ -1202,5 +1220,6 @@ let rec map_decl
   | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
-  | Dusing (r, ty) -> Dusing (r, ft ty)
+  | Dusing u -> Dusing {u with du_rhs = Option.map ft u.du_rhs}
+  | Dstruct_fwd _ -> d
   | Denum _ -> d

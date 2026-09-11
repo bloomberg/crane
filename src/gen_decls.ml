@@ -1489,7 +1489,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
          declared at all. *)
-      (Some (Dusing (name, Tglob (other, [], []))), Some class_ref, type_args)
+      ( Some
+          (Dusing
+             { du_tparams = [];
+               du_name = name;
+               du_rhs = Some (Tglob (other, [], []));
+               du_note = None } ),
+        Some class_ref,
+        type_args )
     | _ -> (None, Some class_ref, type_args) )
   | _ -> (None, None, [])
 
@@ -1576,6 +1583,34 @@ let hkt_templates r vars tys =
        (fun (i, (tt, _)) -> match tt with TTtemplate _ -> Some i | _ -> None)
        (List.mapi (fun i t -> (i, t)) temps) );
   temps
+
+(** Build the [using] declaration for a type alias.
+
+    [ot] is [None] for a signature entry that names a type without defining it.
+    The three irregular right-hand sides -- a custom extraction's verbatim
+    spelling, an axiom's [std::any] placeholder, and an absent definition --
+    are all expressed as {!Minicpp.dusing} fields rather than as a rendered
+    string handed to the printer. *)
+let gen_type_alias r vars ot =
+  let vars = rename_tvars Cpp_state.keywords vars in
+  let du_rhs, du_note =
+    with_method_ns_for_locals @@ fun () ->
+    match Cpp_state.find_type_custom_opt r with
+    | Some (_ids, s) -> (Some (Tid_external (s, [])), None)
+    | None -> (
+      match ot with
+      | None -> (None, None)
+      | Some Taxiom ->
+        Cpp_erasure.register_axiom_type r;
+        Table.add_erased_type_const r;
+        require_header "any";
+        (Some (Tid_external ("std::any", [])), Some "AXIOM TO BE REALIZED")
+      | Some t -> (Some (convert_ml_type_to_cpp_type (empty_env ()) [] t), None) )
+  in
+  let du_tparams =
+    hkt_templates r vars (match ot with Some t -> [t] | None -> [])
+  in
+  Dusing {du_tparams; du_name = r; du_rhs; du_note}
 
 (** Relax a signature whose return type applies a template template parameter
     (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
