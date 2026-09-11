@@ -4164,6 +4164,16 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
     h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
+  | Dfields ds ->
+    let struct_name =
+      str (String.capitalize_ascii (str_global Type ds.ds_ref))
+    in
+    with_render_ctx
+      (fun c ->
+        { c with
+          rc_in_struct = true;
+          rc_in_template = c.rc_in_template || ds.ds_tparams <> [] } )
+      (fun () -> pp_cpp_fields_with_vis ~struct_name env ds.ds_fields)
   | Dstatic_assert (e, so) ->
     ( match so with
     | None -> h (str "static_assert(" ++ pp_cpp_expr env [] e ++ str ");")

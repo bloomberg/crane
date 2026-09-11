@@ -8938,6 +8938,12 @@ let rec transform_decl ?(tparams = []) = function
             (transform_field ~tparams ~self_ty)
             fields;
       }
+  | Dfields ds ->
+    (* A promoted inductive's members are transformed exactly as they would be
+       inside their own struct; only the wrapper differs. *)
+    ( match transform_decl ~tparams (Dstruct ds) with
+    | Dstruct ds' -> Dfields ds'
+    | d -> d )
   | Dnspace (r, decls) ->
     (* Pre-register all functions for mutual recursion detection before
        transforming *)

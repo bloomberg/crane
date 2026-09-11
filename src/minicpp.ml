@@ -1100,15 +1100,7 @@ type cpp_decl =
       * cpp_type
       * bool (* no_pure: suppress __attribute__((pure)) / constexpr *)
       * dfun_shape
-  | Dstruct of {
-      ds_ref : GlobRef.t;
-      ds_fields : (cpp_field * cpp_visibility * section_tag) list;
-      ds_tparams : (template_type * Id.t) list;
-          (* [] for non-template structs *)
-      ds_constraint : cpp_constraint option; (* template constraint, if any *)
-      ds_needs_shared_from_this : bool;
-          (* inherit enable_shared_from_this when a method returns this *)
-    }
+  | Dstruct of dstruct
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
   | Dconcept of
       GlobRef.t
@@ -1118,12 +1110,29 @@ type cpp_decl =
   | Dstruct_fwd of (template_type * Id.t) list * GlobRef.t
       (* [template <...> struct N;] -- introduces a name whose definition
          comes later *)
+  | Dfields of dstruct
+      (* the members a promoted inductive contributes to the struct it was
+         merged into: it has no struct of its own *)
   | Denum of {
       de_ref : GlobRef.t;
       de_ctors : Id.t list;
       de_ctor_rocq_names : string list;
       de_tparams : (template_type * Id.t) list;
     }
+
+(** A struct: its members, and everything the [struct] line itself says.
+
+    {!Dstruct} writes the wrapper as well as the members; {!Dfields} writes
+    only the members, into a wrapper that already exists.  Sharing one payload
+    is what says that the two differ in nothing else. *)
+and dstruct = {
+  ds_ref : GlobRef.t;
+  ds_fields : (cpp_field * cpp_visibility * section_tag) list;
+  ds_tparams : (template_type * Id.t) list;  (** [] for non-template structs *)
+  ds_constraint : cpp_constraint option;  (** template constraint, if any *)
+  ds_needs_shared_from_this : bool;
+      (** inherit [enable_shared_from_this] when a method returns [this] *)
+}
 
 (** A type alias declaration.
 
@@ -1191,6 +1200,13 @@ let rec map_field
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested
     declarations ({!Dtemplate}, {!Dnspace}) recurse. *)
+(** [map_dstruct fe fs ft s] maps a struct's members, whether it is written
+    with a wrapper ({!Dstruct}) or without one ({!Dfields}). *)
+let map_dstruct fe fs ft s =
+  { s with
+    ds_fields = List.map (map_field fe fs ft) s.ds_fields;
+    ds_constraint = Option.map fe s.ds_constraint }
+
 let rec map_decl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
@@ -1212,14 +1228,11 @@ let rec map_decl
         ft ret,
         no_pure,
         shape' )
-  | Dstruct s ->
-    Dstruct
-      { s with
-        ds_fields = List.map (map_field fe fs ft) s.ds_fields;
-        ds_constraint = Option.map fe s.ds_constraint }
+  | Dstruct s -> Dstruct (map_dstruct fe fs ft s)
   | Dasgn (r, ty, e) -> Dasgn (r, ft ty, fe e)
   | Dconcept (r, e) -> Dconcept (r, fe e)
   | Dstatic_assert (e, msg) -> Dstatic_assert (fe e, msg)
   | Dusing u -> Dusing {u with du_rhs = Option.map ft u.du_rhs}
   | Dstruct_fwd _ -> d
+  | Dfields s -> Dfields (map_dstruct fe fs ft s)
   | Denum _ -> d

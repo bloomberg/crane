@@ -882,17 +882,7 @@ type cpp_decl =
       (** Function: names with type args, return type, a flag suppressing
           pure/constexpr (monadic functions, axiom stubs), and either a
           definition or a forward declaration. *)
-  | Dstruct of {
-      ds_ref : GlobRef.t;  (** Struct reference *)
-      ds_fields : (cpp_field * cpp_visibility * section_tag) list;
-          (** Fields with visibility *)
-      ds_tparams : (template_type * Id.t) list;
-          (** Template parameters (empty for non-templates) *)
-      ds_constraint : cpp_constraint option;
-          (** Optional template constraint *)
-      ds_needs_shared_from_this : bool;
-          (** True if inherits enable_shared_from_this *)
-    }
+  | Dstruct of dstruct
   | Dasgn of GlobRef.t * cpp_type * cpp_expr
       (** Global variable definition with initializer *)
   | Dconcept of GlobRef.t * cpp_expr
@@ -906,6 +896,9 @@ type cpp_decl =
   | Dstruct_fwd of (template_type * Id.t) list * GlobRef.t
       (** [template <...> struct N;]: introduces a name whose definition comes
           later in the same file, as mutually recursive inductives require. *)
+  | Dfields of dstruct
+      (** The members a promoted inductive contributes to the struct it was
+          merged into. *)
   | Denum of {
       de_ref : GlobRef.t;  (** Enum reference *)
       de_ctors : Id.t list;  (** Constructor names *)
@@ -913,6 +906,20 @@ type cpp_decl =
           (** Original Rocq constructor names for doc comment lookup *)
       de_tparams : (template_type * Id.t) list;  (** Template parameters *)
     }
+
+(** A struct: its members, and everything the [struct] line itself says.
+
+    {!Dstruct} writes the wrapper as well as the members; {!Dfields} writes
+    only the members, into a wrapper that already exists.  Sharing one payload
+    is what says that the two differ in nothing else. *)
+and dstruct = {
+  ds_ref : GlobRef.t;
+  ds_fields : (cpp_field * cpp_visibility * section_tag) list;
+  ds_tparams : (template_type * Id.t) list;  (** [] for non-template structs *)
+  ds_constraint : cpp_constraint option;  (** template constraint, if any *)
+  ds_needs_shared_from_this : bool;
+      (** inherit [enable_shared_from_this] when a method returns [this] *)
+}
 
 (** A type alias declaration.
 

@@ -520,37 +520,13 @@ let pp_cpp_ind_header kn ind =
             | None -> false
           in
           if is_promoted then
-            (* A promoted struct renders its fields directly via
-               [pp_cpp_fields_with_vis] and so never reaches
-               {!Cpp_print.pp_cpp_decl}, where the other paths cross the
-               passes between translation and printing.  Run them here
-               instead, from the same place, rather than a second spelling of
-               the sequence that can drift from the first. *)
-            let decl =
-              (* [Table.loopify ()], not {!Cpp_pipeline.should_loopify}: a
-                 promoted inductive's methods have never been loopified by
-                 default the way the same methods are on an unpromoted one,
-                 and turning that on here is a change to what Crane emits
-                 rather than to how it is organised. *)
-              ( Cpp_pipeline.finish ~loopify:(Table.loopify ()) decl
-                :> cpp_decl )
-            in
+            (* A promoted inductive has no struct of its own: the module
+               struct it was merged into is its wrapper, so it contributes
+               members rather than a nested type. *)
             match decl with
-            | Dstruct {ds_fields; ds_needs_shared_from_this; ds_tparams; _} ->
-              eponymous_promote_sft := ds_needs_shared_from_this;
-              let struct_name =
-                str (String.capitalize_ascii (str_global Type names.(i)))
-              in
-              let f_s =
-                with_render_ctx
-                  (fun c ->
-                    { c with
-                      rc_in_struct = true;
-                      rc_in_template = c.rc_in_template || ds_tparams <> [] } )
-                  (fun () ->
-                    pp_cpp_fields_with_vis ~struct_name (empty_env ()) ds_fields )
-              in
-              f_s ++ pp (i + 1)
+            | Dstruct ds ->
+              eponymous_promote_sft := ds.ds_needs_shared_from_this;
+              pp_cpp_decl (empty_env ()) (Dfields ds) ++ pp (i + 1)
             | _ ->
               (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
               pp_cpp_decl (empty_env ()) decl ++ pp (i + 1)
