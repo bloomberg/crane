@@ -133,11 +133,11 @@ let pp_concept_name l = str (concept_name_of_label l)
 
 (** Pretty-print a structure signature element (module spec). *)
 let rec pp_specif = function
-  | _, Spec (Sval _ as s) -> pp_spec s
+  | _, Spec (Sval _ as s) -> pp_decls (spec_decls s)
   | l, Spec s ->
     ( match Common.get_duplicate (top_visible_mp ()) l with
-    | None -> pp_spec s
-    | Some ren -> pp_spec s )
+    | None -> pp_decls (spec_decls s)
+    | Some ren -> pp_decls (spec_decls s) )
   | l, Smodule mt ->
     let def = pp_module_type [] mt in
     def
@@ -685,7 +685,7 @@ let emitted_member_lifted : (string, unit) Hashtbl.t = Hashtbl.create 16
                       emit implementation-mode output (out-of-line function
                       bodies, skipping header-only constructs).
     @param f          Callback used to pretty-print individual {!Miniml.ml_decl}
-                      nodes; typically [pp_decl] or [pp_hdecl].
+                      nodes; typically [impl_decls] or [header_decls].
     @return Pretty-printer document for the element, or [mt ()] if the element
             produces no output in the current pass. *)
 let rec pp_structure_elem ~is_header f = function
@@ -699,7 +699,7 @@ let rec pp_structure_elem ~is_header f = function
        right before the declaration that produced it instead; helpers produced
        elsewhere keep their file-scope placement. *)
     ignore (Translation.take_lifted_decls ());
-    let body = f d in
+    let body = pp_decls (f d) in
     let member_lifted =
       if not is_header then mt ()
       else
@@ -1862,7 +1862,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
                       concept declarations, inline specs); when [false] render
                       the implementation pass (out-of-line function bodies).
     @param f          Structure-element callback, typically
-                      [pp_structure_elem ~is_header pp_decl] or the [pp_hdecl]
+                      [pp_structure_elem ~is_header impl_decls] or the [header_decls]
                       variant; called for each [(label, ml_structure_elem)] pair.
     @param s          The flat extraction structure: a list of
                       [(module_path, structure_elem list)] pairs produced by the
@@ -2284,14 +2284,14 @@ let do_struct f s =
 let pp_struct s =
   do_struct_with_decl_tracking
     ~is_header:false
-    (pp_structure_elem ~is_header:false pp_decl)
+    (pp_structure_elem ~is_header:false impl_decls)
     s
 
 (** Main entry point: render structure to C++ header file. *)
 let pp_hstruct s =
   do_struct_with_decl_tracking
     ~is_header:true
-    (pp_structure_elem ~is_header:true pp_hdecl)
+    (pp_structure_elem ~is_header:true header_decls)
     s
 
 (** Render module signature (for .mli-style files, unused in current
@@ -2310,5 +2310,5 @@ let cpp_descr =
     sig_suffix = Some ".h";
     sig_preamble;
     pp_sig = pp_signature;
-    pp_decl;
+    pp_decl = (fun d -> pp_decls (impl_decls d));
   }

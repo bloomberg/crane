@@ -10,14 +10,15 @@
 (*         *     (see LICENSE file for the text of the license)         *)
 (************************************************************************)
 
-(** Inductive type rendering and declaration-level dispatch functions.
+(** Which C++ declarations a MiniML declaration becomes.
 
     This module contains:
-    - pp_cpp_ind / pp_cpp_ind_header — rendering inductive types to C++
-    - pp_decl / pp_hdecl / pp_hdecl_spec_only — dispatch for .cpp / .h /
-      spec-only
-    - pp_spec — printing module signatures
-    - pp_tydef — type alias definitions *)
+    - ind_cpp_decls / ind_header_decls — inductive types
+    - impl_decls / header_decls — dispatch for the .cpp and the .h
+    - spec_decls — module signatures
+
+    Every entry point answers with declarations rather than with rendered
+    text; {!pp_decls} is where they are printed. *)
 
 open Pp
 open Util
@@ -39,7 +40,7 @@ open Cpp_print
     @param ind miniml representation of the mutual inductive type block
     @return pretty-printed C++ implementation fragment, or [mt ()] when nothing
             needs to be emitted for this block *)
-let pp_cpp_ind kn ind =
+let ind_cpp_decls kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
   let cnames =
     Array.mapi
@@ -48,11 +49,11 @@ let pp_cpp_ind kn ind =
       ind.ind_packets
   in
   match ind.ind_kind with
-  | Record fields | TypeClass fields -> mt ()
+  | Record fields | TypeClass fields -> []
   | _ ->
     let rec pp i =
       if i >= Array.length ind.ind_packets then
-        mt ()
+        []
       else
         let ip = (kn, i) in
         let p = ind.ind_packets.(i) in
@@ -63,51 +64,41 @@ let pp_cpp_ind kn ind =
         else
           let (raw_pvars, _) = Table.ind_param_vars ind p in
           let param_vars = List.map Common.tparam_name raw_pvars in
-          pp_cpp_decl
-            (empty_env ())
-            (gen_ind_cpp ~consarg_names:p.ip_consarg_names
-               param_vars names.(i) cnames.(i) p.ip_types)
-          ++ pp (i + 1)
+          ( empty_env (),
+            gen_ind_cpp ~consarg_names:p.ip_consarg_names param_vars names.(i)
+              cnames.(i) p.ip_types )
+          :: pp (i + 1)
     in
     pp 0
 
-(** Render a type alias definition (using declaration).
-    @param ids list of type parameter identifiers
-    @param name rendered name for the type
-    @param def rendered definition (e.g., "= std::vector<int>") *)
-let pp_tydef temps name def =
-  let templates =
-    match temps with
-    | [] -> mt ()
-    | _ ->
-      str "template <"
-      ++ prlist_with_sep (fun () -> str ", ") pp_template_param temps
-      ++ str "> "
-  in
+(** A declaration together with the name environment it is printed in. *)
+type rendered = (Common.env * Minicpp.cpp_decl) list
 
-  hov 2 (templates ++ str "using " ++ name ++ def ++ str ";")
+(** Print the declarations an entry point answered with.  Everything above
+    this line builds declarations; nothing above it renders. *)
+let pp_decls ds = pp_list_stmt (fun (env, d) -> pp_cpp_decl env d) ds
 
 (** Dispatch for .cpp file rendering. Filters out inline customs, eponymous
     record projections, suppressed projections, method candidates, registered
     methods, and typeclass instances.
     @param d miniml declaration to render
-    @return pretty-printed C++ implementation fragment, or [mt ()] when the
+    @return the C++ declarations for the implementation file, empty when the
             declaration is handled in headers or suppressed *)
-let pp_decl = function
-  | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
-  | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
+let impl_decls = function
+  | Dtype (r, _, _) when is_any_inline_custom r -> []
+  | Dterm (r, _, _) when is_any_inline_custom r -> []
   | Dterm (r, _, _) when is_eponymous_record_projection r ->
     (* Skip - this is a projection for an eponymous record merged into module
        struct *)
-    mt ()
-  | Dterm (r, _, _) when is_suppressed_projection r -> mt ()
-  | Dind (kn, i) -> mt () (* Inductives are fully defined in headers *)
+    []
+  | Dterm (r, _, _) when is_suppressed_projection r -> []
+  | Dind (kn, i) -> [] (* Inductives are fully defined in headers *)
   | Dtype (r, _, t) ->
     if t == Taxiom then begin
       register_axiom_type r;
       Table.add_erased_type_const r
     end;
-    mt ()
+    []
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
       List.filter
@@ -117,28 +108,28 @@ let pp_decl = function
              Array.of_list [a],
              Array.of_list [Miniml.Tglob (ty, args, e)] ) )
     in
-    pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs
+    List.map (fun (ds, env, _) -> (env, ds)) defs
   | Dterm (r, _, _)
     when List.exists
            (fun (r', _, _, _) -> globref_equal r r')
            !method_candidates ->
     (* Skip - this function is generated as a method on the eponymous type *)
-    mt ()
+    []
   | Dterm (r, _, _) when is_registered_method r <> None ->
     (* Skip - this function is registered as a method in another module *)
-    mt ()
+    []
   | Dterm (r, a, t) when is_typeclass_instance a t ->
     (* Type class instances: fully defined in header, skip in implementation *)
-    mt ()
+    []
   | Dterm (r, a, t) ->
     let ds, env, tvars = gen_decl_for_pp r a t in
     ( match (ds, tvars) with
-    | Some ds, [] -> pp_cpp_decl env ds
-    | _, _ -> mt () )
+    | Some ds, [] -> [(env, ds)]
+    | _, _ -> [] )
   | Dfix (rv, defs, typs) ->
     let rv, defs, typs = filter_dfix rv defs typs in
     if Array.length rv = 0 then
-      mt ()
+      []
     else
       let defs =
         List.filter (fun (_, _, l) -> l == []) (gen_dfuns (rv, defs, typs))
@@ -156,7 +147,7 @@ let pp_decl = function
             Loopify.register_fundef names ret_ty params body
           | _ -> () )
         defs;
-      pp_list_stmt (fun (ds, env, _) -> pp_cpp_decl env ds) defs
+      List.map (fun (ds, env, _) -> (env, ds)) defs
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
@@ -188,7 +179,7 @@ let pp_decl = function
     full definition; a plain [struct tree;] followed by
     [template <typename A> struct tree { ... }] is a C++ error
     ("redefinition as different kind of symbol"). *)
-let pp_cpp_ind_header kn ind =
+let ind_header_decls kn ind =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.ind_packets in
   let cnames =
     Array.mapi
@@ -201,29 +192,25 @@ let pp_cpp_ind_header kn ind =
     (* Type classes become C++ concepts *)
     (* Skip if concepts have been hoisted or we're inside a struct *)
     if (!render_ctx).rc_in_struct || (!render_ctx).rc_concepts_hoisted then
-      mt ()
+      []
     else
-      pp_cpp_decl
-        (empty_env ())
-        (gen_typeclass_cpp names.(0) fields ind.ind_packets.(0))
+      [(empty_env (), gen_typeclass_cpp names.(0) fields ind.ind_packets.(0))]
   | Record fields ->
     (* Check if this is an eponymous record being merged into module struct *)
     let ind_ref = names.(0) in
     ( match !eponymous_record with
     | Some (epon_ref, _, _)
       when globref_equal ind_ref epon_ref ->
-      mt () (* Skip - merged into module struct *)
-    | _ ->
-      pp_cpp_decl
-        (empty_env ())
-        (gen_record_cpp names.(0) fields ind.ind_packets.(0)) )
+      [] (* Skip - merged into module struct *)
+    | _ -> [(empty_env (), gen_record_cpp names.(0) fields ind.ind_packets.(0))]
+    )
   | _ ->
     let is_mutual = Array.length ind.ind_packets > 1 in
     let forward_decls =
       if is_mutual then
         let rec fwd i =
           if i >= Array.length ind.ind_packets then
-            mt ()
+            []
           else
             let ip = (kn, i) in
             if is_custom (GlobRef.IndRef ip)
@@ -243,13 +230,11 @@ let pp_cpp_ind_header kn ind =
               let tparams =
                 List.map (fun v -> (TTtypename, v)) param_vars
               in
-              pp_cpp_decl (empty_env ()) (Dstruct_fwd (tparams, names.(i)))
-              ++ fnl ()
-              ++ fwd (i + 1)
+              (empty_env (), Dstruct_fwd (tparams, names.(i))) :: fwd (i + 1)
         in
         fwd 0
       else
-        mt ()
+        []
     in
     (* Helper to find method candidates from current_structure_decls for a given
        inductive. IMPORTANT: Skip functions whose signatures reference type
@@ -327,7 +312,7 @@ let pp_cpp_ind_header kn ind =
     in
     let rec pp i =
       if i >= Array.length ind.ind_packets then
-        mt ()
+        []
       else
         let ip = (kn, i) in
         let p = ind.ind_packets.(i) in
@@ -526,10 +511,10 @@ let pp_cpp_ind_header kn ind =
             match decl with
             | Dstruct ds ->
               eponymous_promote_sft := ds.ds_needs_shared_from_this;
-              pp_cpp_decl (empty_env ()) (Dfields ds) ++ pp (i + 1)
+              (empty_env (), Dfields ds) :: pp (i + 1)
             | _ ->
               (* Non-Dstruct promoted inductive (shouldn't happen normally) *)
-              pp_cpp_decl (empty_env ()) decl ++ pp (i + 1)
+              (empty_env (), decl) :: pp (i + 1)
           else
             (* DESIGN: Contextual wrapping for inductive definitions - If inside
                a struct/module: generate the inductive directly (no namespace
@@ -547,30 +532,30 @@ let pp_cpp_ind_header kn ind =
                 else
                   Dnspace (Some names.(i), [decl])
             in
-            pp_cpp_decl (empty_env ()) wrapped_decl ++ pp (i + 1)
+            (empty_env (), wrapped_decl) :: pp (i + 1)
     in
-    forward_decls ++ pp 0
+    forward_decls @ pp 0
 
 (** Dispatch for .h file rendering. Similar to pp_decl but generates header
     declarations instead of implementations. For template functions, generates
     full definitions inline (required by C++). For non-template functions,
     generates forward declarations.
     @param d miniml declaration to render as a header entry
-    @return pretty-printed C++ header fragment, or [mt ()] when the
-            declaration is suppressed *)
-let pp_hdecl d =
+    @return the C++ declarations for the header, empty when the declaration is
+            suppressed *)
+let header_decls d =
   match d with
-  | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
-  | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
+  | Dtype (r, _, _) when is_any_inline_custom r -> []
+  | Dterm (r, _, _) when is_any_inline_custom r -> []
   | Dterm (r, _, _) when is_eponymous_record_projection r ->
     (* Skip - this is a projection for an eponymous record merged into module
        struct *)
-    mt ()
-  | Dterm (r, _, _) when is_suppressed_projection r -> mt ()
-  | Dind (kn, i) -> pp_cpp_ind_header kn i
+    []
+  | Dterm (r, _, _) when is_suppressed_projection r -> []
+  | Dind (kn, i) -> ind_header_decls kn i
   | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
-    mt () (* Skip erased Type aliases *)
-  | Dtype (r, l, t) -> pp_cpp_decl (empty_env ()) (gen_type_alias r l (Some t))
+    [] (* Skip erased Type aliases *)
+  | Dtype (r, l, t) -> [(empty_env (), gen_type_alias r l (Some t))]
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =
       gen_dfuns_header
@@ -578,27 +563,25 @@ let pp_hdecl d =
           Array.of_list [a],
           Array.of_list [Miniml.Tglob (ty, args, e)] )
     in
-    pp_list_stmt (fun (ds, env) -> pp_cpp_decl env ds) defs
+    List.map (fun (ds, env) -> (env, ds)) defs
   | Dterm (r, _, _)
     when List.exists
            (fun (r', _, _, _) -> globref_equal r r')
            !method_candidates ->
     (* Skip - this function will be generated as a method on the eponymous
        type *)
-    mt ()
+    []
   | Dterm (r, _, _) when is_registered_method r <> None ->
     (* Skip - this function is registered as a method in another module *)
-    mt ()
+    []
   | Dterm (r, a, t) when is_typeclass_instance a t ->
     (* Type class instances: generate struct with static methods and
        static_assert *)
     let ds_opt, class_ref_opt, type_args =
       Gen_decls.gen_instance_struct r a t
     in
-    let struct_pp =
-      match ds_opt with
-      | Some ds -> pp_cpp_decl (empty_env ()) ds
-      | None -> mt ()
+    let struct_decl =
+      match ds_opt with Some ds -> [(empty_env (), ds)] | None -> []
     in
     (* Generate static_assert to verify the instance satisfies the concept. Skip
        for template instances (Dtemplate or Dstruct with tparams) — we can't
@@ -609,7 +592,7 @@ let pp_hdecl d =
       | Some (Dstruct {ds_tparams = _ :: _; _}) -> true
       | _ -> false
     in
-    let static_assert_pp =
+    let static_assert_decl =
       match class_ref_opt with
       | Some class_ref when not is_template ->
         let tys =
@@ -617,13 +600,11 @@ let pp_hdecl d =
             (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
             type_args
         in
-        fnl ()
-        ++ pp_cpp_decl
-             (empty_env ())
-             (Dstatic_assert (CPPconcept_app (class_ref, r, tys), None))
-      | _ -> mt ()
+        [ ( empty_env (),
+            Dstatic_assert (CPPconcept_app (class_ref, r, tys), None) ) ]
+      | _ -> []
     in
-    struct_pp ++ static_assert_pp
+    struct_decl @ static_assert_decl
   | Dterm (r, a, t) ->
     let ds, env, tvars = gen_decl_for_pp r a t in
     ( match (ds, tvars) with
@@ -631,98 +612,45 @@ let pp_hdecl d =
       (* For template structs, use full definitions instead of specs *)
       if (!render_ctx).rc_in_template then
         let ds, env, _ = gen_decl r a t in
-        pp_cpp_decl env ds
+        [(env, ds)]
       else
         (* Use decl_to_spec on the result from gen_decl_for_pp to produce a
            forward declaration. This correctly handles axiom values, whose body is
            dropped. *)
-        pp_cpp_decl env (decl_to_spec ds)
-    | Some ds, _ :: _ -> pp_cpp_decl env ds
+        [(env, decl_to_spec ds)]
+    | Some ds, _ :: _ -> [(env, ds)]
     | None, _ ->
       if (!render_ctx).rc_in_template then
         let ds, env, _ = gen_decl r a t in
-        pp_cpp_decl env ds
+        [(env, ds)]
       else
         let ds, env = gen_spec r a t in
-        pp_cpp_decl env ds )
+        [(env, ds)] )
   | Dfix (rv, defs, typs) ->
     let rv, defs, typs = filter_dfix rv defs typs in
     if Array.length rv = 0 then
-      mt ()
+      []
     else if
       (* For template structs, generate full definitions inline, not just
          declarations *)
       (!render_ctx).rc_in_template
     then
-      pp_list_stmt
-        (fun (ds, env, _) -> pp_cpp_decl env ds)
-        (gen_dfuns (rv, defs, typs))
+      List.map (fun (ds, env, _) -> (env, ds)) (gen_dfuns (rv, defs, typs))
     else
-      pp_list_stmt
-        (fun (ds, env) -> pp_cpp_decl env ds)
-        (gen_dfuns_header (rv, defs, typs))
+      List.map (fun (ds, env) -> (env, ds)) (gen_dfuns_header (rv, defs, typs))
 
-(** Like pp_hdecl but always generates forward declarations (specs), even for
-    template functions. Used for wrapper struct injection into Dnspace structs
-    where the full definitions are emitted later to avoid forward reference
-    issues.
-    @param d miniml declaration to render as a forward declaration only
-    @return pretty-printed C++ forward-declaration fragment, or [mt ()] when
-            the declaration is suppressed or does not require a spec *)
-let pp_hdecl_spec_only = function
-  | Dtype (r, _, _) when is_any_inline_custom r -> mt ()
-  | Dterm (r, _, _) when is_any_inline_custom r -> mt ()
-  | Dterm (r, _, _) when is_eponymous_record_projection r -> mt ()
-  | Dterm (r, _, _) when is_suppressed_projection r -> mt ()
-  | Dind (kn, i) -> pp_cpp_ind_header kn i
-  | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
-    mt () (* Skip erased Type aliases *)
-  | Dtype (r, l, t) -> pp_cpp_decl (empty_env ()) (gen_type_alias r l (Some t))
-  | Dterm (r, _, _)
-    when List.exists
-           (fun (r', _, _, _) -> globref_equal r r')
-           !method_candidates -> mt ()
-  | Dterm (r, _, _) when is_registered_method r <> None -> mt ()
-  | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
-    mt () (* skip monadic for spec *)
-  | Dterm (r, a, t) when is_typeclass_instance a t ->
-    mt () (* skip typeclasses for spec *)
-  | Dterm (r, a, t) ->
-    (* Use gen_decl_for_pp to get the same signature as the full definition,
-       then convert to a spec. This ensures forward declarations match
-       out-of-line definitions, including concept-constrained template
-       params. *)
-    let ds, env, tvars = gen_decl_for_pp r a t in
-    ( match (ds, tvars) with
-    | Some ds, _ :: _ -> pp_cpp_decl env (Gen_decls.decl_to_spec ds)
-    | Some ds, [] -> pp_cpp_decl env (Gen_decls.decl_to_spec ds)
-    | None, _ ->
-      let ds, env = gen_spec r a t in
-      pp_cpp_decl env ds )
-  | Dfix (rv, defs, typs) ->
-    let rv, defs, typs = filter_dfix rv defs typs in
-    if Array.length rv = 0 then
-      mt ()
-    else
-      (* Generate specs derived from the full definition signatures
-         (gen_dfuns_spec) to ensure forward declarations match the out-of-line
-         definitions, including concept-constrained template parameters. *)
-      pp_list_stmt
-        (fun (ds, env) -> pp_cpp_decl env ds)
-        (gen_dfuns_spec (rv, defs, typs))
-
-(** Render a module signature element (spec). Module signatures become C++
-    concepts (for module types) or struct declarations.
+(** The declarations a module signature element becomes: module signatures
+    become C++ concepts (for module types) or struct declarations.
     @param s miniml module signature element to render
-    @return pretty-printed C++ declaration fragment, or [mt ()] when the
-            element is an inline custom or an erased type alias *)
-let pp_spec = function
-  | Sval (r, _, _) when is_inline_custom r -> mt ()
-  | Stype (r, _, _) when is_inline_custom r -> mt ()
-  | Sind (kn, i) -> pp_cpp_ind_header kn i
+    @return the C++ declarations, empty when the element is an inline custom
+            or an erased type alias *)
+let spec_decls = function
+  | Sval (r, _, _) when is_inline_custom r -> []
+  | Stype (r, _, _) when is_inline_custom r -> []
+  | Sind (kn, i) -> ind_header_decls kn i
   | Sval (r, b, t) ->
     let ds, env = gen_spec r b t in
-    pp_cpp_decl env ds
+    [(env, ds)]
   | Stype (_, _, Some (Miniml.Tdummy Miniml.Ktype)) ->
-    mt () (* Skip erased Type aliases *)
-  | Stype (r, vl, ot) -> pp_cpp_decl (empty_env ()) (gen_type_alias r vl ot)
+    [] (* Skip erased Type aliases *)
+  | Stype (r, vl, ot) -> [(empty_env (), gen_type_alias r vl ot)]

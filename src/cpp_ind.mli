@@ -1,41 +1,40 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Pretty-printing of inductive-type and top-level declarations to C++.
+(** Which C++ declarations a MiniML declaration becomes.
 
-   This module renders MiniML inductives ([ml_ind]) and declarations
-   ([ml_decl]/[ml_spec]) into their C++ surface syntax. It has two families of
-   entry points:
+   This module turns MiniML inductives ([ml_ind]) and declarations
+   ([ml_decl]/[ml_spec]) into {!Minicpp.cpp_decl} values.  It has two families
+   of entry points:
 
-   - the source-file family ([pp_cpp_ind], [pp_decl], [pp_tydef]) emits the full
+   - the source-file family ([ind_cpp_decls], [impl_decls]) gives the full
      definitions that go into the generated [.cpp]; and
-   - the header family ([pp_cpp_ind_header], [pp_hdecl], [pp_hdecl_spec_only],
-     [pp_spec]) emits the declarations/specs that go into the generated [.h].
+   - the header family ([ind_header_decls], [header_decls], [spec_decls])
+     gives the declarations that go into the generated [.h].
+
+   Each answer pairs a declaration with the name environment its
+   sub-expressions are printed in; {!pp_decls} prints them.
 
    Everything else in the implementation is an internal helper and is
    deliberately hidden by this interface. *)
 
-(** Render a mutual inductive block to its full C++ definition. *)
-val pp_cpp_ind : Names.MutInd.t -> Miniml.ml_ind -> Pp.t
+(** A declaration together with the name environment it is printed in. *)
+type rendered = (Common.env * Minicpp.cpp_decl) list
 
-(** [pp_tydef temps name def] renders a C++ type alias/definition
-    [name = def] parameterised over the template parameters [temps]. *)
-val pp_tydef :
-  (Minicpp.template_type * Names.variable) list -> Pp.t -> Pp.t -> Pp.t
+(** Print the declarations an entry point answered with. *)
+val pp_decls : rendered -> Pp.t
 
-(** Render a top-level declaration (function, type, term) to its C++ definition. *)
-val pp_decl : Miniml.ml_decl -> Pp.t
+(** The full C++ definition of a mutual inductive block. *)
+val ind_cpp_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
-(** Header counterpart of {!pp_cpp_ind}: render a mutual inductive block's
-    declarations for the generated [.h]. *)
-val pp_cpp_ind_header : Names.MutInd.t -> Miniml.ml_ind -> Pp.t
+(** Header counterpart of {!ind_cpp_decls}. *)
+val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
-(** Header counterpart of {!pp_decl}: render a declaration for the generated
-    [.h]. *)
-val pp_hdecl : Miniml.ml_decl -> Pp.t
+(** The implementation-file declarations for one MiniML declaration. *)
+val impl_decls : Miniml.ml_decl -> rendered
 
-(** Like {!pp_hdecl} but emits only the specification (no inline definition). *)
-val pp_hdecl_spec_only : Miniml.ml_decl -> Pp.t
+(** The header declarations for one MiniML declaration. *)
+val header_decls : Miniml.ml_decl -> rendered
 
-(** Render an [ml_spec] (module-signature element) to its C++ header form. *)
-val pp_spec : Miniml.ml_spec -> Pp.t
+(** The header declarations for one module-signature element. *)
+val spec_decls : Miniml.ml_spec -> rendered
