@@ -169,10 +169,14 @@ val template_static_accessor_kns : (Names.KerName.t, unit) Hashtbl.t
 val non_accessor_labels : (Names.Label.t, unit) Hashtbl.t
 
 (** Record the definition at the given module path and label as a template
-    static accessor (Meyers singleton), by prepending it to
-    [template_static_accessors]. *)
+    static accessor (Meyers singleton), by adding it to
+    [template_static_accessors].  Idempotent. *)
 val register_template_static_accessor :
   Names.module_path -> Names.Label.t -> unit
+
+(** {!register_template_static_accessor} for a global reference, which also
+    records the constant's kername for cross-functor matching. *)
+val register_template_static_accessor_ref : Names.GlobRef.t -> unit
 
 (** Map from functor-application module paths to their source module. *)
 val functor_app_sources : (Names.module_path, Names.module_path) Hashtbl.t

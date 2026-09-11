@@ -36,20 +36,38 @@ module RefsetCan = GlobRef.Set
 module StringMap = HMap.Make (String)
 module StringSet = StringMap.Set
 
+(** Every table that records a decision about the code being generated, paired
+    with a way to size it.  A table names itself here when it is created, and
+    {!census} reports the lot.
+
+    The point of measuring sizes is to find the facts that are discovered while
+    output is generated rather than before it: those are the ones that force a
+    declaration to be rendered before its uses can be, and so force the whole
+    discarded first pass.  See the census comparison in [extract_env.ml]. *)
+let census_entries : (string * (unit -> int)) list ref = ref []
+
+(** Enrol a table in the census under [name]. *)
+let register_census name size = census_entries := (name, size) :: !census_entries
+
+(** Every enrolled table's current size, in registration order. *)
+let census () = List.rev_map (fun (name, size) -> (name, size ())) !census_entries
+
 (* Create a ref-based membership set with init/add/mem interface. *)
-let make_refset () =
+let make_refset ~name () =
   let tbl = ref Refset'.empty in
   let init () = tbl := Refset'.empty in
   let add r = tbl := Refset'.add r !tbl in
   let mem r = Refset'.mem r !tbl in
+  register_census name (fun () -> Refset'.cardinal !tbl);
   (init, add, mem)
 
 (* Create a canonical-key ref-based set (for cross-functor identity). *)
-let make_refset_can () =
+let make_refset_can ~name () =
   let tbl = ref RefsetCan.empty in
   let init () = tbl := RefsetCan.empty in
   let add r = tbl := RefsetCan.add r !tbl in
   let mem r = RefsetCan.mem r !tbl in
+  register_census name (fun () -> RefsetCan.cardinal !tbl);
   (init, add, mem)
 
 (** {1 Utilities about [module_path] and [kernel_names] and [global_reference]}
@@ -339,6 +357,9 @@ let mark_demand (d : string) =
                   not reach the code that raised it." );
     raised_demands := CString.Set.add d !raised_demands
   end
+
+let () =
+  register_census "demands" (fun () -> CString.Set.cardinal !raised_demands)
 
 (** Whether [d] has been demanded for the file being generated. *)
 let demanded (d : string) = CString.Set.mem d !raised_demands
@@ -653,7 +674,7 @@ let rec is_typeclass_type_cpp = function
 (** {2 Flat inductives table} *)
 
 let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
-  make_refset_can ()
+  make_refset_can ~name:"flat_inductives" ()
 
 (** {2 Higher-kinded inductive parameters} *)
 
@@ -666,6 +687,8 @@ let (init_flat_inductives, add_flat_inductive, is_flat_inductive_registered) =
 let hkt_ind_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
 
 let init_hkt_ind_params () = Hashtbl.reset hkt_ind_params
+
+let () = register_census "hkt_ind_params" (fun () -> Hashtbl.length hkt_ind_params)
 
 let add_hkt_ind_params r positions =
   if positions <> [] then Hashtbl.replace hkt_ind_params r positions
@@ -736,7 +759,7 @@ let is_flat_inductive r =
 (** {2 Enum inductives table} *)
 
 let (init_enum_inductives, add_enum_inductive, is_enum_inductive_registered) =
-  make_refset ()
+  make_refset ~name:"enum_inductives" ()
 
 (** Check if an inductive packet qualifies as an enum: all constructors nullary,
     no kept type parameters, at least one constructor. *)
@@ -1002,7 +1025,7 @@ let promoted_type_var_name r = GlobRef.Map.find_opt r !promoted_type_vars
     including promoted record fields (simple [Type]-valued like [Obj]) and concrete
     type aliases (standalone definitions like [Force := list Unit]). *)
 let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
-  make_refset ()
+  make_refset ~name:"erased_type_consts" ()
 
 (** Like {!make_refset_can}, but a reference rooted at a functor parameter
     ([MPbound]) also matches by label alone, not just by canonical kername.
@@ -1014,8 +1037,8 @@ let (init_erased_type_consts, add_erased_type_const, is_erased_type_const) =
     matches uses of the member through the parameter, which is the case we
     actually care about; falling back to a same-label check for [MPbound]
     references bridges that gap. *)
-let make_refset_can_with_functor_fallback () =
-  let (init_can, add_can, mem_can) = make_refset_can () in
+let make_refset_can_with_functor_fallback ~name () =
+  let (init_can, add_can, mem_can) = make_refset_can ~name () in
   let labels = ref StringSet.empty in
   let init () =
     init_can ();
@@ -1044,7 +1067,7 @@ let make_refset_can_with_functor_fallback () =
     matching needs the label fallback. *)
 let (init_value_dep_type_schemes, add_value_dep_type_scheme, is_value_dep_type_scheme)
   =
-  make_refset_can_with_functor_fallback ()
+  make_refset_can_with_functor_fallback ~name:"value_dep_type_schemes" ()
 
 (* Table of promoted type bindings for typeclass instances. Maps an instance
    ConstRef (e.g., nat_magma) to its promoted type variable bindings [(carrier,
@@ -1055,6 +1078,10 @@ let instance_promoted_types =
 
 let init_instance_promoted_types () =
   instance_promoted_types := GlobRef.Map.empty
+
+let () =
+  register_census "instance_promoted_types" (fun () ->
+      GlobRef.Map.cardinal !instance_promoted_types )
 
 let add_instance_promoted_types r bindings =
   instance_promoted_types := GlobRef.Map.add r bindings !instance_promoted_types
@@ -1069,7 +1096,7 @@ let get_instance_promoted_types r =
    don't need standalone C++ function definitions. *)
 let (init_higher_order_projections, mark_higher_order_projection,
      is_higher_order_projection) =
-  make_refset ()
+  make_refset ~name:"higher_order_projections" ()
 
 (** {2 Phantom type variables table} *)
 
@@ -2692,6 +2719,10 @@ let find_custom_drain_opt r = Refmap'.find_opt r !custom_drains
    incomplete at a container-naming site and must be boxed everywhere. Not
    persisted: recomputed within each extraction run. *)
 let boxed_recursive_inds = Summary.ref Refset'.empty ~name:"CraneExtrBoxedRec"
+
+let () =
+  register_census "boxed_recursive_inds" (fun () ->
+      Refset'.cardinal !boxed_recursive_inds )
 
 let add_boxed_recursive_ind r =
   boxed_recursive_inds := Refset'.add r !boxed_recursive_inds

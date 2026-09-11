@@ -923,6 +923,36 @@ let print_one_decl struc mp decl =
   pop_visible ();
   v 0 ans
 
+(** Check that generating output decided nothing.
+
+    Every decision about the shape of the code -- a name, a field, whether a
+    wrapper merged -- is taken during discovery, and generating output only
+    reads them.  That is what makes discovery a different kind of pass from
+    emission rather than the same pass run twice, and it is measured here
+    rather than assumed: a table that has grown since discovery ended holds a
+    decision that emission made, and a decision emission makes is one an
+    earlier use of the same declaration could not have seen.
+
+    The corpus satisfies this today.  Reported under [CRANE_CHECK_IR], like
+    {!Table.mark_demand}'s late demands, rather than left to surface as C++
+    that does not compile. *)
+let check_no_late_decisions before =
+  if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    let after = Table.census () in
+    List.iter
+      (fun (name, n_before) ->
+        match List.assoc_opt name after with
+        | Some n_after when n_after > n_before ->
+          CErrors.user_err
+            Pp.(
+              str "Crane: " ++ int (n_after - n_before) ++ str " entries were \
+                   added to '" ++ str name
+              ++ str "' while output was being generated.  Decisions belong to \
+                      discovery; a use rendered before this one could not have \
+                      seen them." )
+        | _ -> () )
+      before
+
 (** {2 Extraction of a ml struct to a file} *)
 
 (** For Recursive Extraction, writing directly on stdout won't work with
@@ -1222,6 +1252,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   set_phase Pre;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
+  let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
      unsafe features it uses -- and the body is the only thing that knows.
@@ -1234,6 +1265,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   set_phase Intf;
   let body_hstruct = d.pp_hstruct struc in
   Table.freeze_demands ();
+  check_no_late_decisions census_after_discovery;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   let ns_open =
     match namespace with
@@ -1638,15 +1670,7 @@ let separate_extraction ~opaque_access lr =
       | SEdecl (Dterm (r, _body, ty)) ->
         let is_function = match ty with Tarr _ -> true | _ -> false in
         if in_template && not is_function then begin
-          let mp = Table.modpath_of_r r in
-          let lbl = Table.label_of_r r in
-          Cpp_state.template_static_accessors :=
-            (mp, lbl) :: !Cpp_state.template_static_accessors;
-          (match r with
-           | GlobRef.ConstRef c ->
-             Hashtbl.replace Cpp_state.template_static_accessor_kns
-               (Constant.canonical c) ()
-           | _ -> ())
+          Cpp_state.register_template_static_accessor_ref r
         end else if not in_template && not is_function then begin
           let lbl = Table.label_of_r r in
           Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
@@ -1655,15 +1679,7 @@ let separate_extraction ~opaque_access lr =
         Array.iteri (fun i r ->
           let is_function = match tys.(i) with Tarr _ -> true | _ -> false in
           if in_template && not is_function then begin
-            let mp = Table.modpath_of_r r in
-            let lbl = Table.label_of_r r in
-            Cpp_state.template_static_accessors :=
-              (mp, lbl) :: !Cpp_state.template_static_accessors;
-            (match r with
-             | GlobRef.ConstRef c ->
-               Hashtbl.replace Cpp_state.template_static_accessor_kns
-                 (Constant.canonical c) ()
-             | _ -> ())
+            Cpp_state.register_template_static_accessor_ref r
           end else if not in_template && not is_function then begin
             let lbl = Table.label_of_r r in
             Hashtbl.replace Cpp_state.non_accessor_labels lbl ()
@@ -1682,15 +1698,13 @@ let separate_extraction ~opaque_access lr =
               | Spec (Sval (r, _, ty)) ->
                 let is_function = match ty with Tarr _ -> true | _ -> false in
                 if not is_function then begin
-                  let mp = Table.modpath_of_r r in
                   let lbl = Table.label_of_r r in
-                  Cpp_state.template_static_accessors :=
-                    (mp, lbl) :: !Cpp_state.template_static_accessors;
-                  (match param_mp with
-                   | Some pmp ->
-                     Cpp_state.template_static_accessors :=
-                       (pmp, lbl) :: !Cpp_state.template_static_accessors
-                   | None -> ())
+                  Cpp_state.register_template_static_accessor
+                    (Table.modpath_of_r r) lbl;
+                  Option.iter
+                    (fun pmp ->
+                      Cpp_state.register_template_static_accessor pmp lbl )
+                    param_mp
                 end
               | Smodule mt ->
                 let sub_param_mp = match param_mp with

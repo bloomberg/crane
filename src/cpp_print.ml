@@ -3707,9 +3707,7 @@ and pp_cpp_fields_with_vis ?(struct_name : Pp.t option) env fields =
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton env id ty expr_pp =
-  (let mp = modpath_of_r id in
-   let lbl = label_of_r id in
-   template_static_accessors := (mp, lbl) :: !template_static_accessors );
+  register_template_static_accessor (modpath_of_r id) (label_of_r id);
   let bare_ty =
     match ty with
     | Tconst inner -> inner

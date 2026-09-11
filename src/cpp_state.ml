@@ -362,10 +362,25 @@ let non_accessor_labels : (Label.t, unit) Hashtbl.t = Hashtbl.create 16
 (** Record a definition as a template static accessor (Meyers singleton).
     Definitions rendered this way are emitted as inline functions rather than
     static inline variables to avoid template static init ordering issues.
+
+    Idempotent: the same definition is offered by the pre-scan over the ML
+    structure and again when it is rendered, and the list is searched linearly
+    on every call site's behalf.
     @param mp module path containing the definition
     @param lbl label (name) of the definition within the module *)
 let register_template_static_accessor mp lbl =
-  template_static_accessors := (mp, lbl) :: !template_static_accessors
+  let known (mp', lbl') = ModPath.equal mp mp' && Label.equal lbl lbl' in
+  if not (List.exists known !template_static_accessors) then
+    template_static_accessors := (mp, lbl) :: !template_static_accessors
+
+(** {!register_template_static_accessor} for a global reference, which also
+    records the constant's kername for cross-functor matching. *)
+let register_template_static_accessor_ref r =
+  register_template_static_accessor (Table.modpath_of_r r) (Table.label_of_r r);
+  match r with
+  | GlobRef.ConstRef c ->
+    Hashtbl.replace template_static_accessor_kns (Constant.canonical c) ()
+  | _ -> ()
 
 (** Maps applied module paths to their functor source modpaths. E.g.,
     NatWrapper's modpath -> Wrapper's modpath. Populated when processing
@@ -780,6 +795,31 @@ let get_containing_eponymous_struct (r : GlobRef.t) : GlobRef.t option =
     scan sibling declarations (like app) that are from the same Rocq module. *)
 let current_structure_decls : (Label.t * Miniml.ml_structure_elem) list ref =
   ref []
+
+(** Enrol this module's tables in {!Table.census}.  Kept beside
+    {!reset_cpp_state}, which is the other place that has to name them all. *)
+let () =
+  let tbl name t = Table.register_census name (fun () -> Hashtbl.length t) in
+  let lst name r = Table.register_census name (fun () -> List.length !r) in
+  tbl "promoted_inductives" promoted_inductives;
+  tbl "global_eponymous_record_registry" global_eponymous_record_registry;
+  tbl "eponymous_record_by_modpath" eponymous_record_by_modpath;
+  tbl "wrapper_module_table" wrapper_module_table;
+  tbl "collision_wrapper_table" collision_wrapper_table;
+  tbl "global_scope_enum_table" global_scope_enum_table;
+  tbl "global_scope_type_alias_table" global_scope_type_alias_table;
+  tbl "pending_wrapper_decls" pending_wrapper_decls;
+  tbl "unmerged_wrappers" unmerged_wrappers;
+  tbl "nested_struct_names" nested_struct_names;
+  tbl "global_inductive_names" global_inductive_names;
+  tbl "global_unmerged_wrappers" global_unmerged_wrappers;
+  tbl "template_static_accessor_kns" template_static_accessor_kns;
+  tbl "non_accessor_labels" non_accessor_labels;
+  tbl "functor_app_sources" functor_app_sources;
+  lst "template_static_accessors" template_static_accessors;
+  lst "hoisted_concept_defs" hoisted_concept_defs;
+  lst "file_scope_concepts" file_scope_concepts;
+  lst "method_candidates" method_candidates
 
 (** Reset ALL global state - must be called between extractions to avoid
     pollution. This prevents state from one extraction affecting another when

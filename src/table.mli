@@ -247,6 +247,18 @@ val is_coinductive_type : ml_type -> bool
     generates the whole file and discards it so that every demand is in before
     a byte is written. *)
 
+(** Enrol a table in the census under [name]: [size] reports how many decisions
+    it currently holds. *)
+val register_census : string -> (unit -> int) -> unit
+
+(** Every enrolled table's current size.
+
+    Comparing a census taken before output is generated with one taken after it
+    says which decisions are still being made *by* generating output.  Those are
+    what force a declaration to be rendered before its uses can be, and so force
+    the discarded first pass; see the comparison in [extract_env.ml]. *)
+val census : unit -> (string * int) list
+
 (** [mark_demand d] records that the file being generated needs [d]. Standard
     headers are demanded by their own names via [Common.require_header]. *)
 val mark_demand : string -> unit

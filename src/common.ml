@@ -1553,6 +1553,13 @@ let lookup_ctor_bind_name ~owner ctor_name field_idx =
   | Some id -> id
   | None -> field_param_id field_idx
 
+(** Enrol the constructor-name tables in the census; see {!Table.census}. *)
+let () =
+  let tbl name t = Table.register_census name (fun () -> Hashtbl.length t) in
+  tbl "ctor_field_names" ctor_field_names;
+  tbl "ctor_bind_names" ctor_bind_names;
+  tbl "ctor_name_owners" ctor_name_owners
+
 (** Clear the field name registry.  Must be called between extraction
     passes to avoid stale names from one module leaking into another. *)
 let reset_ctor_field_names () =
