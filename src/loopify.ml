@@ -8439,7 +8439,7 @@ let hoist_rec_conditions (check : call_checker)
 
 (** Transform a top-level function definition by loopifying its body.
 
-    This is the main entry point for loopifying a [Dfundef]. The transformation
+    This is the main entry point for loopifying a [Dfun]. The transformation
     proceeds in four steps:
 
     + Register the function in {!mutual_fn_table} so that other functions can
@@ -8467,8 +8467,8 @@ let hoist_rec_conditions (check : call_checker)
     @param params    Parameter list [(Id.t * cpp_type)]
     @param body      Original function body (statement list)
     @param no_pure   Whether the function is marked [no_pure] (passed through
-                     to the [Dfundef] node unchanged)
-    @return A [Dfundef] declaration with the loopified body *)
+                     to the [Dfun] node unchanged)
+    @return A [Dfun] declaration with the loopified body *)
 let transform_fundef_exn ~tparams names ret_ty params body no_pure =
   (* Register this function for mutual recursion detection *)
   register_fundef names ret_ty params body;
@@ -8534,7 +8534,7 @@ let transform_fundef_exn ~tparams names ret_ty params body no_pure =
        | None -> pending_decline := None; body
        | Some s -> report_outcome ~name ~check ~strategy:s body)
   in
-  Dfundef (names, ret_ty, params, body, no_pure)
+  Dfun (names, ret_ty, no_pure, Ddef (params, body))
 
 (** {!transform_fundef_exn}, but a {!Not_linearisable} raised anywhere inside a
     transform is turned into a decline for this one function: the original body
@@ -8546,7 +8546,7 @@ let transform_fundef ~tparams names ret_ty params body no_pure =
       no_pure
   with Not_linearisable reason ->
     ignore (decline reason body);
-    Dfundef (names, ret_ty, params, body, no_pure)
+    Dfun (names, ret_ty, no_pure, Ddef (params, body))
 
 (** Transform a struct method by loopifying its body.
 
@@ -8892,7 +8892,7 @@ let rec transform_decl ?(tparams = []) = function
   | Dtemplate (tparams, constraint_opt, inner) ->
     Dtemplate
       (tparams, constraint_opt, transform_decl ~tparams inner)
-  | Dfundef (names, ret_ty, params, body, no_pure) ->
+  | Dfun (names, ret_ty, no_pure, Ddef (params, body)) ->
     transform_fundef ~tparams names ret_ty params body no_pure
   | Dstruct ds ->
     (* Name the struct's own template arguments: inside a nested inductive the
@@ -8943,9 +8943,9 @@ let rec transform_decl ?(tparams = []) = function
        transforming *)
     List.iter
       (function
-        | Dfundef (names, ret_ty, params, body, _) ->
+        | Dfun (names, ret_ty, _, Ddef (params, body)) ->
           register_fundef names ret_ty params body
-        | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+        | Dtemplate (_, _, Dfun (names, ret_ty, _, Ddef (params, body))) ->
           register_fundef names ret_ty params body
         | _ -> () )
       decls;

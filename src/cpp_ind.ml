@@ -150,9 +150,9 @@ let pp_decl = function
       List.iter
         (fun (ds, _env, _) ->
           match ds with
-          | Dfundef (names, ret_ty, params, body, _) ->
+          | Dfun (names, ret_ty, _, Ddef (params, body)) ->
             Loopify.register_fundef names ret_ty params body
-          | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+          | Dtemplate (_, _, Dfun (names, ret_ty, _, Ddef (params, body))) ->
             Loopify.register_fundef names ret_ty params body
           | _ -> () )
         defs;
@@ -682,8 +682,8 @@ let pp_hdecl d =
         pp_cpp_decl env ds
       else
         (* Use decl_to_spec on the result from gen_decl_for_pp to produce a
-           forward declaration. This correctly handles axiom values (Dfundef ->
-           Dfundecl). *)
+           forward declaration. This correctly handles axiom values, whose body is
+           dropped. *)
         pp_cpp_decl env (decl_to_spec ds)
     | Some ds, _ :: _ -> pp_cpp_decl env ds
     | None, _ ->

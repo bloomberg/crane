@@ -11673,7 +11673,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                      f )
                  funs ) )
       in
-      (* Build a lifted Dfundef for each fixpoint function (usually just one) *)
+      (* Build a lifted definition for each fixpoint function (usually just one) *)
       let n_fix = Array.length funs in
       List.iteri
         (fun i ((renamed_id, fix_ty), params, body) ->
@@ -11710,7 +11710,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
-          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body, false) in
+          let inner = Dfun ([(lifted_ref, [])], cod, false, Ddef (cpp_params, body)) in
           let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
           add_lifted_decl lifted_decl )
         funs_compiled;
@@ -12343,7 +12343,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
 
         (* 9. Build and register the lifted declaration *)
         let inner =
-          Dfundef ([(lifted_ref, [])], cod, cpp_params, compiled_body, false)
+          Dfun ([(lifted_ref, [])], cod, false, Ddef (cpp_params, compiled_body))
         in
         let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
         add_lifted_decl lifted_decl;
@@ -12774,7 +12774,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
-          let inner = Dfundef ([(lifted_ref, [])], cod, cpp_params, body, false) in
+          let inner = Dfun ([(lifted_ref, [])], cod, false, Ddef (cpp_params, body)) in
           let lifted_decl = Dtemplate (all_temps_with_funs, None, inner) in
           add_lifted_decl lifted_decl )
         funs_compiled;

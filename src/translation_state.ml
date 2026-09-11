@@ -297,8 +297,8 @@ let clear_current_param_types () =
 (** The defining [GlobRef.t] of a lifted declaration, if it has one.
     Used by {!add_lifted_decl} to deduplicate identical hoisted helpers. *)
 let lifted_decl_ref = function
-  | Dtemplate (_, _, Dfundef ((r, _) :: _, _, _, _, _)) -> Some r
-  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
+  | Dtemplate (_, _, Dfun ((r, _) :: _, _, _, _)) -> Some r
+  | Dfun ((r, _) :: _, _, _, _) -> Some r
   | _ -> None
 
 (** Enqueue a declaration to be lifted to the enclosing scope.

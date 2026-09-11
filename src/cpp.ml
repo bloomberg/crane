@@ -659,9 +659,9 @@ let pp_template_param (mbid, mt) =
 
 (** Key identifying a lifted lambda helper, used to emit it only once. *)
 let lifted_decl_key = function
-  | Dtemplate (_, _, Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _)) ->
+  | Dtemplate (_, _, Dfun ([(GlobRef.VarRef v, _)], _, _, _)) ->
     Some (Id.to_string v)
-  | Dfundef ([(GlobRef.VarRef v, _)], _, _, _, _) -> Some (Id.to_string v)
+  | Dfun ([(GlobRef.VarRef v, _)], _, _, _) -> Some (Id.to_string v)
   | _ -> None
 
 let dedup_lifted_decls ds =
@@ -1805,9 +1805,9 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       List.iter
         (fun (ds, _env) ->
           match ds with
-          | Dfundef (names, ret_ty, params, body, _) ->
+          | Dfun (names, ret_ty, _, Ddef (params, body)) ->
             Loopify.register_fundef names ret_ty params body
-          | Dtemplate (_, _, Dfundef (names, ret_ty, params, body, _)) ->
+          | Dtemplate (_, _, Dfun (names, ret_ty, _, Ddef (params, body))) ->
             Loopify.register_fundef names ret_ty params body
           | _ -> () )
         defs )

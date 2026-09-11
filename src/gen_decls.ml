@@ -71,18 +71,20 @@ let gen_ind_cpp ?(consarg_names = [||]) vars name cnames tys =
            in
            let ty_vars = List.mapi (fun i x -> Tvar (i, Some x)) vars in
            let make =
-             Dfundef
+             Dfun
                ( [(c, []); (GlobRef.VarRef (Id.of_string "make"), [])],
                  Tshared_ptr (Tglob (name, ty_vars, [])),
-                 List.rev constr,
-                 [
-                   Sreturn
-                     (Some
-                        (mk_call
-                           (CPPalloc (Alloc_heap, Tglob (name, ty_vars, [])))
-                           [CPPstruct (c, ty_vars, make_args)] ) );
-                 ],
-                 false )
+                 false,
+                 Ddef
+                   ( List.rev constr,
+                     [
+                       Sreturn
+                         (Some
+                            (mk_call
+                               (CPPalloc
+                                  (Alloc_heap, Tglob (name, ty_vars, [])))
+                               [CPPstruct (c, ty_vars, make_args)] ) );
+                     ] ) )
            in
            (ty_vars == [], make) )
          tys )
@@ -1588,7 +1590,7 @@ let relax_applied_return temps decl =
     exists_cpp_type (function Tapply (Tvar _, _) -> true | _ -> false) t
   in
   match decl with
-  | Dfundef (ns, cod0, params, body, flags) when applies_tvar cod0 ->
+  | Dfun (ns, cod0, flags, Ddef (params, body)) when applies_tvar cod0 ->
     (* The head of a tvar is not always resolved to its parameter name, so a
        tvar answers to either spelling; cf. {!applied_tvar_arities}. *)
     let is_tvar id = function
@@ -1636,7 +1638,7 @@ let relax_applied_return temps decl =
         temps
       @ computed
     in
-    (temps, Dfundef (ns, cod0, params, body, flags))
+    (temps, Dfun (ns, cod0, flags, Ddef (params, body)))
   | _ -> (temps, decl)
 
 (** Build template parameter list with phantom detection.
@@ -2706,13 +2708,14 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef
+      Dfun
         ( [(n, [])],
           cod,
-          ids,
-          dead_unit_returns_to_abort cod
-            (erase_returned_fn_values cod (guard @ sigma_asserts @ b)),
-          no_pure ) )
+          no_pure,
+          Ddef
+            ( ids,
+              dead_unit_returns_to_abort cod
+                (erase_returned_fn_values cod (guard @ sigma_asserts @ b)) ) ) )
     else
       (* Eta-expansion: the body 'b' references original params starting at
          MLrel 1. After adding k=|missing| new params to the environment, the
@@ -2759,13 +2762,14 @@ let gen_dfun n b cty ty temps =
       in
       clear_current_type_vars ();
       clear_current_param_types ();
-      Dfundef
+      Dfun
         ( [(n, [])],
           cod,
-          ids,
-          dead_unit_returns_to_abort cod
-            (erase_returned_fn_values cod (guard @ sigma_asserts @ b)),
-          no_pure )
+          no_pure,
+          Ddef
+            ( ids,
+              dead_unit_returns_to_abort cod
+                (erase_returned_fn_values cod (guard @ sigma_asserts @ b)) ) )
   in
   tctx := { !tctx with current_cpp_return_type = saved_return_type };
   tctx := { !tctx with current_outer_function_name = saved_outer_name };
@@ -2838,8 +2842,8 @@ let gen_dfun n b cty ty temps =
             | s -> s
           in
           ( match inner with
-          | Dfundef (names, _cod, params, body, flags) ->
-            Dfundef (names, int_ty, params, List.map void_return_to_zero body, flags)
+          | Dfun (names, _cod, flags, Ddef (params, body)) ->
+            Dfun (names, int_ty, flags, Ddef (params, List.map void_return_to_zero body))
           | d -> d )
         | None, true ->
           (* Case 3: top-level reified — rename to [_main], register for
@@ -2848,8 +2852,8 @@ let gen_dfun n b cty ty temps =
           let new_n = GlobRef.ConstRef (Constant.make2 (Constant.modpath c) new_label) in
           Table.set_main_function (Id.of_string "_main") (ml_codomain ty) None needs_run;
           ( match inner with
-          | Dfundef (_, cod, params, body, flags) ->
-            Dfundef ([(new_n, [])], cod, params, body, flags)
+          | Dfun (_, cod, flags, Ddef (params, body)) ->
+            Dfun ([(new_n, [])], cod, flags, Ddef (params, body))
           | d -> d )
       end else
         inner
@@ -2917,7 +2921,7 @@ let gen_sfun n b dom cod temps =
     else
       ids
   in
-  let inner = Dfundecl ([(n, [])], cod, params, false) in
+  let inner = Dfun ([(n, [])], cod, false, Ddecl params) in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
@@ -3082,7 +3086,7 @@ let gen_decl__inner n b ty =
          happens when the value is asked for rather than during static
          initialisation (which terminates the program before main). *)
       let body_expr = gen_expr (empty_env ()) b in
-      let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
+      let inner = Dfun ([(n, [])], cty, false, Ddef ([], [Sreturn (Some body_expr)])) in
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
@@ -3179,7 +3183,7 @@ let gen_decl_for_pp__inner n b ty =
     (* A body that only throws: a zero-arg function, so it throws when called
        and not at static init time. *)
     let body_expr = gen_expr (empty_env ()) b in
-    let inner = Dfundef ([(n, [])], cty, [], [Sreturn (Some body_expr)], false) in
+    let inner = Dfun ([(n, [])], cty, false, Ddef ([], [Sreturn (Some body_expr)])) in
     let ds =
       match temps with
       | [] -> inner
@@ -3274,7 +3278,7 @@ let gen_spec__inner n b ty =
     match b with
     | _ when only_throws b ->
       (* Throws when called, so: a zero-arg function declaration. *)
-      let inner = Dfundef ([(n, [])], ty, [], [], false) in
+      let inner = Dfun ([(n, [])], ty, false, Ddef ([], [])) in
       ( match temps with
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
@@ -3390,20 +3394,20 @@ let gen_dfuns (ns, bs, tys) =
       [result] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
-(** Convert a Dfundef (definition with body) to a Dfundecl (declaration without
-    body). Recursively handles Dtemplate wrappers. Used to generate forward
+(** Convert a definition to a declaration by dropping its body. Recursively handles Dtemplate wrappers. Used to generate forward
     declarations that match the full definition's signature (including concept
     constraints). *)
 let rec decl_to_spec (d : cpp_decl) : cpp_decl =
   match d with
-  | Dfundef (ids, ret_ty, params, body, no_pure) ->
+  | Dfun (ids, ret_ty, no_pure, Ddef (params, body)) ->
     let no_pure = no_pure ||
       match body with
       | [Sreturn (Some (CPPabort _))] -> true
       | _ -> false
     in
-    Dfundecl
-      (ids, ret_ty, List.map (fun (id, ty) -> (Some id, ty)) params, no_pure)
+    Dfun
+      ( ids, ret_ty, no_pure,
+        Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params) )
   | Dtemplate (temps, cstr, inner) -> Dtemplate (temps, cstr, decl_to_spec inner)
   | _ -> d (* Already a declaration, return as-is *)
 
@@ -4640,7 +4644,13 @@ let gen_ind_header_v2
                          [CPPmove (CPPvar param_name)] ]
                  in
                  let init_list = [(vmn_id, init_expr)] in
-                 ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
+                 ( Fconstructor
+                     { fc_tparams = [];
+                       fc_params = [(param_name, param_ty)];
+                       fc_inits = init_list;
+                       fc_body = [];
+                       fc_explicit = true;
+                       fc_noexcept = false },
                    VPublic,
                    SCreators )
                else
@@ -4659,7 +4669,13 @@ let gen_ind_header_v2
                  let init_list =
                    [(vmn_id, init_v)]
                  in
-                 ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
+                 ( Fconstructor
+                     { fc_tparams = [];
+                       fc_params = [(param_name, param_ty)];
+                       fc_inits = init_list;
+                       fc_body = [];
+                       fc_explicit = true;
+                       fc_noexcept = false },
                    VPublic,
                    SCreators ) )
              cnames )
@@ -4670,7 +4686,13 @@ let gen_ind_header_v2
          loopify declare [T _result{};] for stack-based iteration. *)
       let default_ctor =
         if not is_coinductive then
-          [( Fconstructor ([], [], false, false),
+          [( Fconstructor
+              { fc_tparams = [];
+                fc_params = [];
+                fc_inits = [];
+                fc_body = [];
+                fc_explicit = false;
+                fc_noexcept = false },
              VPublic,
              SCreators )]
         else
@@ -5608,7 +5630,13 @@ let gen_ind_header_v2
           in
           let init_list = [(vmn_id, init_expr)] in
           [
-            ( Fconstructor ([(param_name, param_ty)], init_list, true, false),
+            ( Fconstructor
+                     { fc_tparams = [];
+                       fc_params = [(param_name, param_ty)];
+                       fc_inits = init_list;
+                       fc_body = [];
+                       fc_explicit = true;
+                       fc_noexcept = false },
               VPublic,
               SCreators );
           ]
@@ -6107,8 +6135,14 @@ let gen_ind_header_v2
                  fail with "no viable conversion".  Element recovery is a guarded
                  per-element [any_cast], so allowing the implicit conversion is
                  safe for well-typed extracted code. *)
-              [(Ftemplate_ctor (tparams, false, ctor_params, body),
-                VPublic, SCreators)]
+              [( Fconstructor
+                   { fc_tparams = tparams;
+                     fc_params = ctor_params;
+                     fc_inits = [];
+                     fc_body = body;
+                     fc_explicit = false;
+                     fc_noexcept = false },
+                 VPublic, SCreators )]
           in
           converting_ctor
       in

@@ -12,7 +12,7 @@ open Names
 open Minicpp
 
 (** Transform a single top-level declaration. Recursion through [Dtemplate]
-    wrappers to find inner [Dfundef] nodes. Also transforms recursive methods
+    wrappers to find inner [Dfun] nodes. Also transforms recursive methods
     inside [Dstruct] fields ([Fmethod]). *)
 val transform_decl :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl

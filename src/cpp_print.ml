@@ -3491,30 +3491,43 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ fnl ()
     ++ body_s
     ++ str "}"
-  | Fconstructor (params, init_list, is_explicit, is_noexcept) ->
+  | Fconstructor
+      { fc_tparams; fc_params; fc_inits; fc_body; fc_explicit; fc_noexcept } ->
     let sname =
-      match struct_name with
-      | Some s -> s
-      | None -> str "UNKNOWN_STRUCT"
+      match struct_name with Some s -> s | None -> str "UNKNOWN_STRUCT"
+    in
+    let template_s =
+      match fc_tparams with
+      | [] -> mt ()
+      | _ ->
+        str "template <" ++ pp_list pp_template_param fc_tparams ++ str ">"
+        ++ fnl ()
     in
     let params_s =
-      pp_list
-        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
-        params
+      pp_list (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id) fc_params
     in
     let init_s =
-      match init_list with
+      match fc_inits with
       | [] -> mt ()
       | _ ->
         str " : "
         ++ pp_list
              (fun (member, expr) ->
                Id.print member ++ str "(" ++ pp_cpp_expr env [] expr ++ str ")" )
-             init_list
+             fc_inits
     in
-    let explicit_s = if is_explicit then str "explicit " else mt () in
-    let noexcept_s = if is_noexcept then str " noexcept" else mt () in
-    h (explicit_s ++ sname ++ pp_par true params_s ++ noexcept_s ++ init_s ++ str " {}")
+    let explicit_s = if fc_explicit then str "explicit " else mt () in
+    let noexcept_s = if fc_noexcept then str " noexcept" else mt () in
+    let head =
+      h (explicit_s ++ sname ++ pp_par true params_s ++ noexcept_s ++ init_s)
+    in
+    template_s
+    ++ ( match fc_body with
+       | [] -> head ++ str " {}"
+       | _ ->
+         head ++ str " {" ++ fnl ()
+         ++ pp_list_stmt (pp_cpp_stmt env []) fc_body
+         ++ str "}" )
   | Fdestructor body ->
     let sname =
       match struct_name with
@@ -3582,31 +3595,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
     ++ fnl ()
     ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
-  | Ftemplate_ctor (tparams, is_explicit, params, body) ->
-    let sname =
-      match struct_name with
-      | Some s -> s
-      | None -> str "UNKNOWN_STRUCT"
-    in
-    let template_s =
-      match tparams with
-      | [] -> mt ()
-      | _ ->
-        let args = pp_list pp_template_param tparams in
-        str "template <" ++ args ++ str ">" ++ fnl ()
-    in
-    let params_s =
-      pp_list
-        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
-        params
-    in
-    let explicit_s = if is_explicit then str "explicit " else mt () in
-    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-    template_s
-    ++ h (explicit_s ++ sname ++ pp_par true params_s ++ str " {")
-    ++ fnl ()
-    ++ body_s ++ str "}"
-
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
     section-tag comments (e.g. [// TYPES], [// DATA]).
@@ -3744,7 +3732,7 @@ let pp_meyers_singleton env id ty expr_pp =
     lists. *)
 let rec decl_body = function
   | Dtemplate (_, _, inner) -> decl_body inner
-  | Dfundef (_, _, params, body, _) -> (params, body)
+  | Dfun (_, _, _, Ddef (params, body)) -> (params, body)
   | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
 
@@ -3937,10 +3925,17 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ pending_fwd
       ++ fnl ()
       ++ str "};" )
-  | Dfundef (ids, ret_ty, params, body, no_pure) ->
-    let pp_fundef_name n =
+  | Dfun (ids, ret_ty, no_pure, shape) ->
+    (* A definition is either out-of-line in a .cpp file or inline in a
+       template struct; a declaration is always the forward declaration of an
+       out-of-line definition.  That is the whole difference between the two
+       shapes here: a declaration never names the enclosing struct, never
+       qualifies for [constexpr] (which needs the definition in the header),
+       and ends at the semicolon. *)
+    let is_def = match shape with Ddef _ -> true | Ddecl _ -> false in
+    let pp_fun_name n =
       match n with
-      | GlobRef.VarRef v -> str (Id.to_string v)
+      | GlobRef.VarRef v when is_def -> str (Id.to_string v)
       | _ -> pp_global Type n
     in
     let base_name =
@@ -3948,74 +3943,71 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
         (fun () -> str "::")
         (fun (n, tys) ->
           match tys with
-          | [] -> pp_fundef_name n
-          | _ ->
-            pp_fundef_name n
-            ++ str "<"
-            ++ pp_list (pp_type) tys
-            ++ str ">" )
+          | [] -> pp_fun_name n
+          | _ -> pp_fun_name n ++ str "<" ++ pp_list pp_type tys ++ str ">" )
         ids
     in
     let is_lifted =
-      match ids with
-      | (GlobRef.VarRef _, _) :: _ -> true
-      | _ -> false
+      match ids with (GlobRef.VarRef _, _) :: _ -> true | _ -> false
     in
     let name =
       match (!render_ctx).rc_struct_name with
-      | Some struct_name when (not (!render_ctx).rc_in_struct) && not is_lifted ->
+      | Some struct_name
+        when is_def && (not (!render_ctx).rc_in_struct) && not is_lifted ->
         struct_name ++ str "::" ++ base_name
       | _ -> base_name
     in
-    let saved_any_params = !current_any_typed_params in
-    current_any_typed_params :=
-      List.fold_left
-        (fun acc (id, ty) ->
-          if is_any_type ty then Id.Set.add id acc else acc)
-        Id.Set.empty params;
-    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-    current_any_typed_params := saved_any_params;
-    let mentioned = output_mentions body_s in
-    let params_s =
-      pp_list
-        (fun (id, ty) ->
-          if not (mentioned id) then pp_type ty
-          else pp_type ty ++ str " " ++ Id.print id)
-        (List.rev params)
-    in
     let is_qualified =
       List.length ids > 1
-      ||
-      match ids with
-      | [(_, tys)] when tys <> [] -> true
-      | _ -> false
+      || match ids with [(_, tys)] when tys <> [] -> true | _ -> false
     in
-    (* Check if qualified name (out-of-line definition) OR inside a struct
-       context *)
     let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
     let is_out_of_struct_def =
       match (!render_ctx).rc_struct_name with
       | Some _ -> not (!render_ctx).rc_in_struct
       | None -> false
     in
-    (* Add static for struct member functions *)
     let static_kw =
-      if is_struct_member && not is_out_of_struct_def then
+      if is_struct_member && ((not is_def) || not is_out_of_struct_def) then
         str "static "
-      else
-        mt ()
+      else mt ()
     in
-    (* Dfundef is the top-level definition form — it's either in a .cpp file
-       (out-of-line) or inline in a template struct (in-struct + in-template).
-       constexpr requires the definition visible in the header, so only use
-       it for inline template struct definitions. *)
-    let throws = body_is_throw body in
-    let qualifier =
-      fun_qualifier
-        ~can_constexpr:((!render_ctx).rc_in_struct && not is_out_of_struct_def)
-        ~throws
-        ~no_pure
-        ret_ty params
+    let params_s, qualifier, tail =
+      match shape with
+      | Ddef (params, body) ->
+        let saved_any_params = !current_any_typed_params in
+        current_any_typed_params :=
+          List.fold_left
+            (fun acc (id, ty) ->
+              if is_any_type ty then Id.Set.add id acc else acc)
+            Id.Set.empty params;
+        let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
+        current_any_typed_params := saved_any_params;
+        let mentioned = output_mentions body_s in
+        let params_s =
+          pp_list
+            (fun (id, ty) ->
+              if not (mentioned id) then pp_type ty
+              else pp_type ty ++ str " " ++ Id.print id)
+            (List.rev params)
+        in
+        let qualifier =
+          fun_qualifier
+            ~can_constexpr:
+              ((!render_ctx).rc_in_struct && not is_out_of_struct_def)
+            ~throws:(body_is_throw body) ~no_pure ret_ty params
+        in
+        (params_s, qualifier, str "{" ++ body_s ++ str "}")
+      | Ddecl params ->
+        let params_s =
+          pp_list
+            (fun (id, ty) ->
+              match id with
+              | Some id -> pp_type ty ++ str " " ++ Id.print id
+              | None -> pp_type ty )
+            (List.rev params)
+        in
+        (params_s, mt (), str ";")
     in
     h
       ( qualifier
@@ -4024,55 +4016,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str " "
       ++ name
       ++ pp_par true params_s )
-    ++ str "{"
-    ++ body_s
-    ++ str "}"
-  | Dfundecl (ids, ret_ty, params, no_pure) ->
-    let params_s =
-      pp_list
-        (fun (id, ty) ->
-          match id with
-          | Some id -> pp_type ty ++ str " " ++ Id.print id
-          | None -> pp_type ty )
-        (List.rev params)
-    in
-    let name =
-      prlist_with_sep
-        (fun () -> str "::")
-        (fun (n, tys) ->
-          match tys with
-          | [] -> pp_global Type n
-          | _ ->
-            pp_global Type n
-            ++ str "<"
-            ++ pp_list (pp_type) tys
-            ++ str ">" )
-        ids
-    in
-    let is_qualified =
-      List.length ids > 1
-      ||
-      match ids with
-      | [(_, tys)] when tys <> [] -> true
-      | _ -> false
-    in
-    let is_struct_member = is_qualified || (!render_ctx).rc_in_struct in
-    let static_kw = if is_struct_member then str "static " else mt () in
-    (* Dfundecl is always a forward declaration for an out-of-line .cpp
-       definition, so constexpr is never applicable here (it requires the
-       full definition to be visible in the header).  We don't use
-       {!fun_qualifier} because [can_constexpr] is unconditionally false
-       and the param list has a different shape ([Id.t option] vs [Id.t]). *)
-    let qualifier = mt () in
-    let ret_pp = pp_type ret_ty in
-    h
-      ( qualifier
-      ++ static_kw
-      ++ ret_pp
-      ++ str " "
-      ++ name
-      ++ pp_par true params_s )
-    ++ str ";"
+    ++ tail
   | Dstruct
       {
         ds_ref = id;

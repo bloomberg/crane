@@ -544,10 +544,7 @@ and cpp_field =
   | Fvar of Id.t * cpp_type  (** Field variable by local identifier *)
   | Fvar' of GlobRef.t * cpp_type  (** Field variable by global reference *)
   | Fmethod of method_field  (** Method with full descriptor *)
-  | Fconstructor of
-      (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool * bool
-      (** Constructor: parameters, member initializer list, explicit flag,
-          noexcept flag *)
+  | Fconstructor of ctor_field  (** Constructor *)
   | Fdestructor of cpp_stmt list  (** Destructor body for the enclosing struct *)
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
@@ -559,13 +556,21 @@ and cpp_field =
           would otherwise suppress the implicit move operations — turning every
           [std::move] of the value into a refcount-bumping copy and defeating
           move semantics (and Perceus reuse). *)
-  | Ftemplate_ctor of
-      (template_type * Id.t) list
-      * bool
-      * (Id.t * cpp_type) list
-      * cpp_stmt list
-      (** Template converting constructor: template params, explicit flag,
-          constructor params, body statements *)
+
+(** Constructor descriptor.
+
+    Template parameters, a member-initialiser list, [explicit] and [noexcept]
+    are independent of one another: a converting constructor that is also a
+    template used to be a separate field kind that silently had no way to
+    spell an initialiser list or [noexcept]. *)
+and ctor_field = {
+  fc_tparams : (template_type * Id.t) list;
+  fc_params : (Id.t * cpp_type) list;
+  fc_inits : (Id.t * cpp_expr) list;
+  fc_body : cpp_stmt list;
+  fc_explicit : bool;
+  fc_noexcept : bool;
+}
 
 (** Method descriptor record. *)
 and method_field = {
@@ -869,21 +874,14 @@ type cpp_decl =
           declaration *)
   | Dnspace of GlobRef.t option * cpp_decl list
       (** Namespace with optional reference and declarations *)
-  | Dfundef of
+  | Dfun of
       (GlobRef.t * cpp_type list) list
       * cpp_type
-      * (Id.t * cpp_type) list
-      * cpp_stmt list
       * bool
-      (** Function definition: names with type args, return type, parameters,
-          body. Bool suppresses pure/constexpr (for monadic functions). *)
-  | Dfundecl of
-      (GlobRef.t * cpp_type list) list
-      * cpp_type
-      * (Id.t option * cpp_type) list
-      * bool
-      (** Function declaration: names with type args, return type, parameters
-          (may be unnamed). Bool suppresses pure attribute (for axiom stubs). *)
+      * dfun_shape
+      (** Function: names with type args, return type, a flag suppressing
+          pure/constexpr (monadic functions, axiom stubs), and either a
+          definition or a forward declaration. *)
   | Dstruct of {
       ds_ref : GlobRef.t;  (** Struct reference *)
       ds_fields : (cpp_field * cpp_visibility * section_tag) list;
@@ -911,6 +909,18 @@ type cpp_decl =
           (** Original Rocq constructor names for doc comment lookup *)
       de_tparams : (template_type * Id.t) list;  (** Template parameters *)
     }
+
+(** What a {!Dfun} node holds beyond its signature.
+
+    A definition names every parameter -- it has a body that refers to them --
+    while a forward declaration may leave a parameter anonymous.  Keeping the
+    two shapes apart is what stops a definition from being built with unnamed
+    parameters, or a declaration from carrying a body. *)
+and dfun_shape =
+  | Ddef of (Id.t * cpp_type) list * cpp_stmt list
+      (** Definition: named parameters and a body. *)
+  | Ddecl of (Id.t option * cpp_type) list
+      (** Forward declaration: parameters, possibly anonymous. *)
 
 (** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a visibility-annotated field,

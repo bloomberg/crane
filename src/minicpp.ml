@@ -463,12 +463,7 @@ and cpp_field =
   | Fvar of Id.t * cpp_type
   | Fvar' of GlobRef.t * cpp_type
   | Fmethod of method_field
-  (* Private constructor: params, initializer list (as stmts for v_(x) style) *)
-  | Fconstructor of
-      (Id.t * cpp_type) list
-      * (Id.t * cpp_expr) list
-      * bool (* explicit *)
-      * bool (* noexcept *)
+  | Fconstructor of ctor_field
   | Fdestructor of cpp_stmt list
     (* Destructor body for the enclosing struct. *)
   (* Nested struct with its own visibility-annotated fields *)
@@ -484,13 +479,21 @@ and cpp_field =
      next to a user-declared destructor so the implicit move operations are not
      suppressed (which would make every std::move a refcount-bumping copy). *)
   | Fdefaulted_special_members
-  (* Template converting constructor: template params, explicit flag,
-     constructor params, body statements *)
-  | Ftemplate_ctor of
-      (template_type * Id.t) list
-      * bool (* explicit *)
-      * (Id.t * cpp_type) list
-      * cpp_stmt list
+
+(** Constructor descriptor.
+
+    Template parameters, a member-initialiser list, [explicit] and [noexcept]
+    are independent of one another: a converting constructor that is also a
+    template used to be a separate field kind that silently had no way to
+    spell an initialiser list or [noexcept]. *)
+and ctor_field = {
+  fc_tparams : (template_type * Id.t) list;
+  fc_params : (Id.t * cpp_type) list;
+  fc_inits : (Id.t * cpp_expr) list;
+  fc_body : cpp_stmt list;
+  fc_explicit : bool;
+  fc_noexcept : bool;
+}
 
 (** Method field descriptor for struct methods. *)
 and method_field = {
@@ -1092,17 +1095,11 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
 type cpp_decl =
   | Dtemplate of (template_type * Id.t) list * cpp_constraint option * cpp_decl
   | Dnspace of GlobRef.t option * cpp_decl list
-  | Dfundef of
+  | Dfun of
       (GlobRef.t * cpp_type list) list
       * cpp_type
-      * (Id.t * cpp_type) list
-      * cpp_stmt list
-      * bool (* no_pure: suppress __attribute__((pure)) for monadic functions *)
-  | Dfundecl of
-      (GlobRef.t * cpp_type list) list
-      * cpp_type
-      * (Id.t option * cpp_type) list
-      * bool (* suppress __attribute__((pure)) — e.g. axiom stubs that throw *)
+      * bool (* no_pure: suppress __attribute__((pure)) / constexpr *)
+      * dfun_shape
   | Dstruct of {
       ds_ref : GlobRef.t;
       ds_fields : (cpp_field * cpp_visibility * section_tag) list;
@@ -1126,6 +1123,18 @@ type cpp_decl =
       de_tparams : (template_type * Id.t) list;
     }
 
+(** What a {!Dfun} node holds beyond its signature.
+
+    A definition names every parameter -- it has a body that refers to them --
+    while a forward declaration may leave a parameter anonymous.  Keeping the
+    two shapes apart is what stops a definition from being built with unnamed
+    parameters, or a declaration from carrying a body. *)
+and dfun_shape =
+  | Ddef of (Id.t * cpp_type) list * cpp_stmt list
+      (** Definition: named parameters and a body. *)
+  | Ddecl of (Id.t option * cpp_type) list
+      (** Forward declaration: parameters, possibly anonymous. *)
+
 (** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a visibility-annotated field,
     performing one level of structural descent.  Nested structs recurse, so
@@ -1147,15 +1156,16 @@ let rec map_field
           mf_ret_type = ft m.mf_ret_type;
           mf_params = params m.mf_params;
           mf_body = List.map fs m.mf_body }
-    | Fconstructor (ps, inits, expl, noexc) ->
+    | Fconstructor c ->
       Fconstructor
-        (params ps, List.map (fun (id, e) -> (id, fe e)) inits, expl, noexc)
+        { c with
+          fc_params = params c.fc_params;
+          fc_inits = List.map (fun (id, e) -> (id, fe e)) c.fc_inits;
+          fc_body = List.map fs c.fc_body }
     | Fdestructor body -> Fdestructor (List.map fs body)
     | Fnested_struct (id, fields) ->
       Fnested_struct (id, List.map (map_field fe fs ft) fields)
     | Fnested_using (tps, id, ty) -> Fnested_using (tps, id, ft ty)
-    | Ftemplate_ctor (tps, expl, ps, body) ->
-      Ftemplate_ctor (tps, expl, params ps, List.map fs body)
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
   (f', vis, tag)
@@ -1172,19 +1182,18 @@ let rec map_decl
   | Dtemplate (tps, constr, inner) ->
     Dtemplate (tps, Option.map fe constr, map_decl fe fs ft inner)
   | Dnspace (r, decls) -> Dnspace (r, List.map (map_decl fe fs ft) decls)
-  | Dfundef (names, ret, ps, body, no_pure) ->
-    Dfundef
+  | Dfun (names, ret, no_pure, shape) ->
+    let shape' =
+      match shape with
+      | Ddef (ps, body) ->
+        Ddef (List.map (fun (id, ty) -> (id, ft ty)) ps, List.map fs body)
+      | Ddecl ps -> Ddecl (List.map (fun (id, ty) -> (id, ft ty)) ps)
+    in
+    Dfun
       ( List.map (fun (r, tys) -> (r, List.map ft tys)) names,
         ft ret,
-        List.map (fun (id, ty) -> (id, ft ty)) ps,
-        List.map fs body,
-        no_pure )
-  | Dfundecl (names, ret, ps, no_pure) ->
-    Dfundecl
-      ( List.map (fun (r, tys) -> (r, List.map ft tys)) names,
-        ft ret,
-        List.map (fun (id, ty) -> (id, ft ty)) ps,
-        no_pure )
+        no_pure,
+        shape' )
   | Dstruct s ->
     Dstruct
       { s with

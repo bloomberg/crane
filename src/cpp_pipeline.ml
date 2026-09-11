@@ -10,7 +10,7 @@ open Names
     what a [Crane Loopify] directive names. *)
 let rec decl_globref = function
   | Dtemplate (_, _, inner) -> decl_globref inner
-  | Dfundef ((r, _) :: _, _, _, _, _) -> Some r
+  | Dfun ((r, _) :: _, _, _, _) -> Some r
   | Dstruct ds -> Some ds.ds_ref
   | Dnspace (Some r, _) -> Some r
   | _ -> None

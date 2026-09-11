@@ -67,7 +67,7 @@ val gen_decl_for_pp_dual :
   ml_type ->
   (cpp_decl * env) option * (cpp_decl * env) option * variable list
 
-(** Convert a definition (Dfundef) to a declaration (Dfundecl) by stripping the
+(** Convert a definition to a declaration by stripping the
     body. *)
 val decl_to_spec : cpp_decl -> cpp_decl
 
