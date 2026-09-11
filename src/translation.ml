@@ -745,9 +745,9 @@ let build_guard_compare_stmts n ids =
             []
         | _ -> mk_cppglob ctor_ref []
       in
-      [ Sif_then
+      [ Sif
           ( CPPbinop (Beq, CPPunop (Uaddr, CPPvar p1), CPPunop (Uaddr, CPPvar p2)),
-            [Sreturn (Some ctor_expr)] ) ]
+            [Sreturn (Some ctor_expr)], [] ) ]
     | None -> [] )
 
 (** Post-processing pass: insert [std::move] for state-threading pattern.
@@ -10404,7 +10404,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
             let rf i =
               CPPaccess
                 ( Adot,
-                  CPPstd_get (scrut_cpp_ty, Some matched_alt, Some scrut_vmut),
+                  CPPstd_get (Tqualified (scrut_cpp_ty, matched_alt), Some scrut_vmut),
                   field_param_id i )
             in
             let token_expr = ref None in

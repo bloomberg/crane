@@ -184,14 +184,13 @@ and cpp_stmt =
   | Sassert of precondition
       (** A Rocq precondition, checked at run time or merely stated *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
-      (** Conditional: condition, then-branch, else-branch (used for reuse
-          optimization) *)
+      (** Conditional: condition, then-branch, else-branch.  An empty
+          else-branch is the [if] with no [else]; there is no second node for
+          that shape, so one C++ form has one encoding. *)
   | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
       (** [if constexpr (cond) { ... } else { ... }] -- a branch resolved when
           the enclosing template is instantiated, so only the taken side is
           required to compile. *)
-  | Sif_then of cpp_expr * cpp_stmt list
-      (** Conditional without an else branch *)
   | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
       (** C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
           The declaration doubles as the condition (pointer truthiness). *)
@@ -441,17 +440,21 @@ and cpp_expr =
       (** Enum class value: EnumType::Constructor *)
   | CPPnullptr  (** nullptr literal *)
   | CPPbraced of cpp_expr list  (** Braced initializer: {a, b, ...} *)
-  | CPPstd_get of cpp_type * Id.t option * cpp_expr option
-      (** [std::get<T>(expr)] or [std::get<typename T::Ctor>(expr)] *)
-  | CPPstd_holds_alternative of cpp_type * Id.t option
-      (** [std::holds_alternative<T>(...)] or
-          [std::holds_alternative<typename T::Ctor>(...)] *)
+  | CPPstd_get of cpp_type * cpp_expr option
+      (** [std::get<T>(expr)], or [std::get<T>] alone when the operand is
+          supplied by the enclosing call.  A variant alternative is named by
+          giving [T] as [Tqualified (variant, ctor)]: the alternative type is
+          spelled once, by the producer, and not re-derived here. *)
+  | CPPstd_holds_alternative of cpp_type
+      (** [std::holds_alternative<T>] -- see {!CPPstd_get} on naming an
+          alternative. *)
   | CPPdeclval of cpp_type  (** std::declval<T>() *)
   | CPPis_same of cpp_type * cpp_type
       (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
           only be asked inside an {!Sif_constexpr}. *)
-  | CPPtypename_qualified of cpp_type * Id.t
-      (** typename T::Nested *)
+  | CPPtype_name of cpp_type
+      (** A type named where an expression is expected: the head of an
+          aggregate initialisation, [typename T::Ctor{...}]. *)
   | CPPlit of cpp_type * string
       (** A literal rendered verbatim, at the type it has.
 
@@ -495,9 +498,10 @@ and cpp_expr =
           container (element type std::any) into a concrete-element container
           by std::any_cast-ing each element. The bool suppresses [%elem]
           boxing when rendering [Dst], for callees generic over the element. *)
-  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
-      (** std::get_if<T>(&variant) — pointer-returning variant accessor.
-          Uses [(sn()).get_if] for BDE compatibility. *)
+  | CPPstd_get_if of cpp_type * cpp_expr
+      (** [std::get_if<T>(&variant)] -- pointer-returning variant accessor.
+          Uses [(sn()).get_if] for BDE compatibility.  See {!CPPstd_get} on
+          naming an alternative. *)
 
 (** A lambda expression. *)
 and cpp_lambda = {

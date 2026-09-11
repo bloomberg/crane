@@ -5023,10 +5023,10 @@ let gen_ind_header_v2
              nobody else can see it.  The acquire fence follows the [use_count]
              test rather than preceding it; see {!unique_fence}. *)
           let sole_owner p body =
-            [Sif_then (
+            [Sif (
               CPPbinop (Band, p,
                 CPPbinop (Beq, dot0 p "use_count", CPPint 1)),
-              unique_fence @ body)]
+              unique_fence @ body, [])]
           in
           (* [_stack.push_back(make_shared<Self>(std::move(e)))] -- hand one
              discovered [Self] to the destructor's worklist. *)
@@ -5108,7 +5108,7 @@ let gen_ind_header_v2
                     | [a] ->
                       let body = harvest_val (fuel - 1) a (CPPderef e) in
                       if body = [] then []
-                      else [Sif_then (dot0 e "has_value", body)]
+                      else [Sif (dot0 e "has_value", body, [])]
                     | _ -> raise Harvest_bail)
                  | Some tmpl when starts_with "std::pair" tmpl ->
                    (match args with
@@ -5239,7 +5239,7 @@ let gen_ind_header_v2
                       [Sif_decl (
                          av, Tptr Tauto,
                          CPPstd_get_if (
-                           g_cpp, Some (Id.of_string_soft cname_str),
+                           Tqualified (g_cpp, Id.of_string_soft cname_str),
                            CPPunop (Uaddr, dot0 x "v_mut")),
                          inner, [])])
                   ctors
@@ -5267,11 +5267,11 @@ let gen_ind_header_v2
                    [ Sasgn (pv, Declare Tauto,
                        CPPmove (dot0 (CPPvar wl_id) "back"));
                      Sexpr (dot0 (CPPvar wl_id) "pop_back");
-                     Sif_then (
+                     Sif (
                        CPPbinop (Bor, CPPunop (Unot, CPPvar pv),
                          CPPbinop (Bneq, dot0 (CPPvar pv) "use_count",
                            CPPint 1)),
-                       [Scontinue]) ]
+                       [Scontinue], []) ]
                    @ unique_fence
                    @ [Sasgn (ev, Declare (Tref Tauto), CPPderef (CPPvar pv))]
                    @ body_for on_spine (CPPvar ev))]
@@ -5296,11 +5296,11 @@ let gen_ind_header_v2
               match cls with
               | `Stmts stmts -> stmts
               | `Direct ->
-                [Sif_then (fe,
+                [Sif (fe,
                   [Sexpr (CPPaccess_call (Adot, 
                      CPPvar _stack_id,
                      Id.of_string "push_back",
-                     [CPPmove fe]))])]
+                     [CPPmove fe]))], [])]
               | `Wrapper wfields ->
                 (* Reach through a uniquely-owned wrapper cell and move each
                    nested [Self] onto the worklist, then drop the cell. *)
@@ -5364,10 +5364,10 @@ let gen_ind_header_v2
                     [ Sasgn (lp, Declare Tauto, dot0 fe "get");
                       Swhile (
                         mk_call
-                          (CPPstd_holds_alternative (ls, Some cons_id))
+                          (CPPstd_holds_alternative (Tqualified (ls, cons_id)))
                           [arrow0 (CPPvar lp) "v"],
                         [ Sasgn (lc, Declare (Tref Tauto),
-                            CPPstd_get (ls, Some cons_id,
+                            CPPstd_get (Tqualified (ls, cons_id),
                               Some (arrow0 (CPPvar lp) "v_mut")));
                           push_self_stmt
                             (CPPaccess (Adot, CPPvar lc, elem_field));
@@ -5427,12 +5427,12 @@ let gen_ind_header_v2
                 ctor_struct_id_of_ref ~fallback_idx:i cnames_arr.(i)
               in
               let ctor_arg = match ctor_opt with
-                | None -> (Tid (ctor_id, []), None)
-                | Some _ -> (parent_ty, Some ctor_id)
+                | None -> Tid (ctor_id, [])
+                | Some _ -> Tqualified (parent_ty, ctor_id)
               in
               Some (Sif_decl (
                 _alt_id, Tptr Tauto,
-                CPPstd_get_if (fst ctor_arg, snd ctor_arg,
+                CPPstd_get_if (ctor_arg,
                   CPPunop (Uaddr, CPPvar variant_var)),
                 mk_classified_field_stmts classified_fields,
                 []))
@@ -5481,7 +5481,7 @@ let gen_ind_header_v2
                         Id.of_string "back", [])));
                     Sexpr (CPPaccess_call (Adot, CPPvar _stack_id,
                       Id.of_string "pop_back", []));
-                    Sif_then (
+                    Sif (
                       CPPbinop (Beq,
                         CPPaccess_call (Adot, CPPvar _cur_id,
                           Id.of_string "use_count", []),
@@ -5489,7 +5489,7 @@ let gen_ind_header_v2
                       unique_fence
                       @ [Sexpr (mk_call (CPPvar _drain_id)
                         [CPPaccess_call (Aarrow, CPPvar _cur_id,
-                          Id.of_string "v_mut", [])])])
+                          Id.of_string "v_mut", [])])], [])
                   ])
               ]
             in
@@ -5539,11 +5539,11 @@ let gen_ind_header_v2
                   CPPint 1))
             in
             let self_branch_body =
-              [Sif_then (sp_alive_and_unique,
+              [Sif (sp_alive_and_unique,
                 unique_fence
                 @ [Sexpr (mk_call (CPPvar _drain_self_id)
                   [CPPaccess_call (Aarrow, deref_sp,
-                    Id.of_string "v_mut", [])])])]
+                    Id.of_string "v_mut", [])])], [])]
             in
             let rec build_if_chain branches =
               match branches with
@@ -5551,11 +5551,11 @@ let gen_ind_header_v2
               | (partner_ty, partner_drains) :: rest ->
                 let inner = build_if_chain rest in
                 let partner_body =
-                  [Sif_then (sp_alive_and_unique,
+                  [Sif (sp_alive_and_unique,
                     Sasgn (_pv_id, Declare (Tref Tauto),
                       CPPaccess_call (Aarrow, deref_sp,
                         Id.of_string "v_mut", []))
-                    :: partner_drains)]
+                    :: partner_drains, [])]
                 in
                 [Sif_decl (_sp_id, Tptr Tauto,
                   Cpp_erasure.unbox (Tshared_ptr partner_ty)
@@ -6031,7 +6031,7 @@ let gen_ind_header_v2
                   in
                   (* Render the source constructor type through the same
                      printer the [std::holds_alternative] guard uses (via
-                     [CPPstd_holds_alternative] → [Tqualified]), so both
+                     [CPPstd_holds_alternative]), so both
                      spellings of [typename Ns::template t<_U>::Ctor] agree. *)
                   let source_ctor_s =
                     render_cpp_type_in_template
@@ -6066,7 +6066,8 @@ let gen_ind_header_v2
                       :: rest ->
                       let guard =
                         mk_call
-                          (CPPstd_holds_alternative (source_ty, Some cname_id))
+                          (CPPstd_holds_alternative
+                             (Tqualified (source_ty, cname_id)))
                           [other_v]
                       in
                       let body =

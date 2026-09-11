@@ -740,8 +740,8 @@ let rec collect_expr (check : call_checker) expr =
       (collect_expr check def)
       arr
   | CPPbraced args -> List.concat_map (collect_expr check) args
-  | CPPstd_get (_, _, Some e) -> collect_expr check e
-  | CPPstd_get_if (_, _, e) -> collect_expr check e
+  | CPPstd_get (_, Some e) -> collect_expr check e
+  | CPPstd_get_if (_, e) -> collect_expr check e
   | CPPvar _
    |CPPglob _
    |CPPalloc _
@@ -751,10 +751,10 @@ let rec collect_expr (check : call_checker) expr =
    |CPPabort _
    |CPPenum_val _
    |CPPnullptr
-   |CPPstd_get (_, _, None)
+   |CPPstd_get (_, None)
    |CPPstd_holds_alternative _
    |CPPdeclval _
-   |CPPtypename_qualified _
+   |CPPtype_name _
    |CPPlit _
    |CPPraw _
    |CPPrt _
@@ -848,8 +848,6 @@ and collect_stmt check ~in_visitor = function
     collect_expr check init
     @ collect_stmts check ~in_visitor then_br
     @ collect_stmts check ~in_visitor else_br
-  | Sif_then (cond, then_br) ->
-    collect_expr check cond @ collect_stmts check ~in_visitor then_br
   | Swhile (cond, body) | Sfor_range (_, cond, body) ->
     collect_expr check cond @ collect_stmts check ~in_visitor body
   | Sblock stmts -> collect_stmts check ~in_visitor stmts
@@ -1359,7 +1357,7 @@ let compute_binder_provenance params body =
     | CPPfun_call (_, CPPaccess (Adot, e, _), {rev = []})
      |CPPaccess_call (Aarrow, e, _, []) ->
       prov_of e
-    | CPPstd_get (_, _, Some e) -> prov_of e
+    | CPPstd_get (_, Some e) -> prov_of e
     | _ -> None
   in
   let rec walk_stmt s =
@@ -3103,7 +3101,7 @@ let try_tmc_classify check body =
 let cell_rec_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr =
   let field_idx = n_args - 1 - rec_field_idx in
   let v_mut = CPPaccess_call (Aarrow, ptr, id_v_mut, []) in
-  ( CPPstd_get (cell_ty, Some (Id.of_string ctor_name), Some v_mut),
+  ( CPPstd_get (Tqualified (cell_ty, Id.of_string ctor_name), Some v_mut),
     cell_field_name ~cell_ty ~ctor_name field_idx )
 
 let patch_cell_field ~cell_ty ~ctor_name ~n_args ~rec_field_idx ptr val_expr =
@@ -3202,7 +3200,7 @@ let build_cell_call ?token ~vt_ret cell =
     (* Direct struct construction wrapped in make_unique:
        std::make_unique<Type>(typename Type::Ctor{args...}) *)
     let struct_init =
-      CPPtypename_qualified (cell.tca_type, Id.of_string cell.tca_ctor_name)
+      CPPtype_name (Tqualified (cell.tca_type, Id.of_string cell.tca_ctor_name))
     in
     let cell_expr = CPPfun_call (call_opaque, struct_init, of_reversed (args)) in
     (match token with
@@ -4451,9 +4449,6 @@ and stmt_has_unique_owner_decomposition check tparams env = function
     expr_has_unique_owner_decomposition check tparams env init
     || body_has_unique_owner_decomposition check tparams env then_br
     || body_has_unique_owner_decomposition check tparams env else_br
-  | Sif_then (cond, then_br) ->
-    expr_has_unique_owner_decomposition check tparams env cond
-    || body_has_unique_owner_decomposition check tparams env then_br
   | Sswitch (scrut, _, branches, default) ->
     expr_has_unique_owner_decomposition check tparams env scrut
     || List.exists
@@ -4640,8 +4635,6 @@ let rewrite_base_with_inner_calls check e ~rewrite_iife_body ~base_case =
         | Sreturn (Some result) -> Sreturn (Some (rebuild result))
         | Sif (cond, t, e) ->
           Sif (cond, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
-        | Sif_then (cond, t) ->
-          Sif_then (cond, wrap_returns_with rebuild t)
         | Sif_decl (id, ty, init, t, e) ->
           Sif_decl (id, ty, init, wrap_returns_with rebuild t, wrap_returns_with rebuild e)
         | Sblock stmts -> Sblock (wrap_returns_with rebuild stmts)
@@ -8401,9 +8394,6 @@ let hoist_rec_conditions (check : call_checker)
       | Sif (cond, t, e) ->
         let binds, cond' = hoist_cond_as ty_bool cond in
         binds_to_stmts binds @ [Sif (cond', hs t, hs e)]
-      | Sif_then (cond, t) ->
-        let binds, cond' = hoist_cond_as ty_bool cond in
-        binds_to_stmts binds @ [Sif_then (cond', hs t)]
       | Sreturn (Some e) ->
         let binds, e' = hoist_expr e in
         binds_to_stmts binds @ [Sreturn (Some e')]

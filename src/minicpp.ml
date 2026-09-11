@@ -169,10 +169,8 @@ and cpp_stmt =
   | Sassert of precondition (* a Rocq precondition, checked or merely stated *)
   | Sif of cpp_expr * cpp_stmt list * cpp_stmt list
   | Sif_constexpr of cpp_expr * cpp_stmt list * cpp_stmt list
-    (* if-else: condition, then-branch, else-branch. Used for reuse
-       optimization's use_count() check. *)
-  | Sif_then of cpp_expr * cpp_stmt list
-    (* if without else: condition and then-branch. *)
+    (* if-else: condition, then-branch, else-branch. An empty else-branch
+       prints as an [if] with no [else]. *)
   | Sif_decl of Id.t * cpp_type * cpp_expr * cpp_stmt list * cpp_stmt list
     (* C++17 if-with-declaration: [if (type id = expr) { then } else { else }].
        The declaration doubles as the condition (e.g. pointer truthiness).
@@ -378,14 +376,14 @@ and cpp_expr =
       GlobRef.t * Id.t (* enum class value: EnumType::Constructor *)
   | CPPnullptr (* nullptr *)
   | CPPbraced of cpp_expr list (* braced initializer: {a, b, ...} *)
-  | CPPstd_get of cpp_type * Id.t option * cpp_expr option
+  | CPPstd_get of cpp_type * cpp_expr option
     (* std::get<T>(expr), std::get<typename T::Ctor>(expr), or bare *)
-  | CPPstd_holds_alternative of cpp_type * Id.t option
+  | CPPstd_holds_alternative of cpp_type
     (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
   | CPPdeclval of cpp_type
   | CPPis_same of cpp_type * cpp_type
     (* std::declval<T>() *)
-  | CPPtypename_qualified of cpp_type * Id.t
+  | CPPtype_name of cpp_type
     (* typename T::Nested, usable where a dependent nested struct name is
        required as an expression/type-name token. *)
   | CPPlit of cpp_type * string
@@ -431,7 +429,7 @@ and cpp_expr =
        boxes, since a bare type variable never recurses), so [Dst] must match
        that unboxed declaration rather than this call site's concrete,
        possibly-recursive substituted element type. *)
-  | CPPstd_get_if of cpp_type * Id.t option * cpp_expr
+  | CPPstd_get_if of cpp_type * cpp_expr
     (* std::get_if<T>(&variant) — pointer-returning variant accessor.
        Uses (sn()).get_if for BDE compatibility.  When [Id.t option] is
        [Some id], emits [std::get_if<typename T::Id>(&expr)]. *)
@@ -841,11 +839,11 @@ let map_expr
   | CPPenum_val _ -> e
   | CPPnullptr -> e
   | CPPbraced args -> CPPbraced (List.map fe args)
-  | CPPstd_get (ty, ctor, e_opt) -> CPPstd_get (ft ty, ctor, Option.map fe e_opt)
-  | CPPstd_holds_alternative (ty, ctor) -> CPPstd_holds_alternative (ft ty, ctor)
+  | CPPstd_get (ty, e_opt) -> CPPstd_get (ft ty, Option.map fe e_opt)
+  | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
-  | CPPtypename_qualified (ty, id) -> CPPtypename_qualified (ft ty, id)
+  | CPPtype_name ty -> CPPtype_name (ft ty)
   | CPPlit (ty, s) -> CPPlit (ft ty, s)
   | CPPraw _ | CPPrt _ -> e
   | CPPbinop (op, e1, e2) -> CPPbinop (op, fe e1, fe e2)
@@ -858,7 +856,7 @@ let map_expr
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
   | CPPfn_value e' -> CPPfn_value (fe e')
   | CPPcontainer_cast (ty, e', sb) -> CPPcontainer_cast (ft ty, fe e', sb)
-  | CPPstd_get_if (ty, ctor, e') -> CPPstd_get_if (ft ty, ctor, fe e')
+  | CPPstd_get_if (ty, e') -> CPPstd_get_if (ft ty, fe e')
 
 (** [map_stmt fe fs ft s] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -898,7 +896,6 @@ let map_stmt
     Sif_constexpr (fe cond, List.map fs then_br, List.map fs else_br)
   | Sif (cond, then_br, else_br) ->
     Sif (fe cond, List.map fs then_br, List.map fs else_br)
-  | Sif_then (cond, then_br) -> Sif_then (fe cond, List.map fs then_br)
   | Sif_decl (id, ty, init, then_br, else_br) ->
     Sif_decl (id, ft ty, fe init, List.map fs then_br, List.map fs else_br)
   | Sraw _ | Scomment _ -> s
@@ -941,7 +938,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
-  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
+  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> ()
@@ -954,7 +951,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
-  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     on_expr e'
   | CPPlambda l -> on_stmts l.cl_body
   | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
@@ -967,7 +964,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPbinop (_, l, r) -> on_expr l; on_expr r
   | CPPcond (c, t, f) -> on_expr c; on_expr t; on_expr f
   | CPPbraced args -> List.iter on_expr args
-  | CPPstd_get (_, _, e_opt) -> Option.iter on_expr e_opt
+  | CPPstd_get (_, e_opt) -> Option.iter on_expr e_opt
 
 (** Iterate over the immediate children of a [cpp_stmt], calling [on_expr]
     for child expressions and [on_stmts] for child statement lists.  Does
@@ -983,7 +980,6 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
     on_expr cond; on_stmts then_br; on_stmts else_br
   | Sif (cond, then_br, else_br) ->
     on_expr cond; on_stmts then_br; on_stmts else_br
-  | Sif_then (cond, then_br) -> on_expr cond; on_stmts then_br
   | Sif_decl (_, _, init, then_br, else_br) ->
     on_expr init; on_stmts then_br; on_stmts else_br
   | Sswitch (scrut, _, branches, default) ->
@@ -1020,7 +1016,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
   | CPPis_same _
-  | CPPdeclval _ | CPPtypename_qualified _ | CPPqualified_t _ | CPPlit _
+  | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
   | CPPconcept_app _ | CPPthis | CPPshared_from_this _ -> acc
@@ -1034,7 +1030,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPshared_ptr_ctor (_, e')
   | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
-  | CPPunop (_, e') | CPPstd_get_if (_, _, e') ->
+  | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     fe acc e'
   | CPPstructmk (_, _, es) | CPPstruct (_, _, es)
   | CPPstruct_id (_, _, es) | CPPnew (_, es) ->
@@ -1046,7 +1042,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPbinop (_, l, r) -> fe (fe acc l) r
   | CPPcond (c, t, f) -> fe (fe (fe acc c) t) f
   | CPPbraced args -> List.fold_left fe acc args
-  | CPPstd_get (_, _, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'
+  | CPPstd_get (_, e_opt) -> match e_opt with None -> acc | Some e' -> fe acc e'
 
 (** Fold over immediate children of a [cpp_stmt].  [on_expr] folds over
     child expressions; [on_stmts] folds over child statement lists. *)
@@ -1060,7 +1056,6 @@ let fold_stmt_children ~on_expr ~on_stmts (acc : 'a) (s : cpp_stmt) : 'a =
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
   | Sif (cond, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc cond) then_br) else_br
-  | Sif_then (cond, then_br) -> on_stmts (on_expr acc cond) then_br
   | Sif_decl (_, _, init, then_br, else_br) ->
     on_stmts (on_stmts (on_expr acc init) then_br) else_br
   | Sswitch (scrut, _, branches, default) ->

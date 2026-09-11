@@ -951,13 +951,6 @@ and expr_contains_string e =
       e;
     !found
 
-(** Render [typename <base>::<id>] with exactly one [typename] keyword.
-    Delegates to [Tqualified] rendering which handles suppression of
-    redundant [typename] prefixes on qualified base types while preserving
-    inner [typename] keywords for dependent type arguments. *)
-and pp_typename_member ty id =
-  pp_cpp_type false [] (Tqualified (ty, id))
-
 (** Render [ty] as the qualifier of a {e value} -- [T::member] -- rather than of
     a nested type.
 
@@ -2048,34 +2041,21 @@ and pp_cpp_expr env args t =
   | CPPnullptr -> str "nullptr"
   | CPPbraced es ->
     str "{" ++ pp_list (pp_cpp_expr env args) es ++ str "}"
-  | CPPstd_get (ty, ctor, None) ->
+  | CPPstd_get (ty, None) ->
     require_header "variant";
-    let targ = match ctor with
-      | None -> pp_cpp_type false [] ty
-      | Some id -> pp_typename_member ty id
-    in
-    str ((sn ()).get ^ "<") ++ targ ++ str ">"
-  | CPPstd_get (ty, ctor, Some e) ->
+    str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
+  | CPPstd_get (ty, Some e) ->
     require_header "variant";
-    let targ = match ctor with
-      | None -> pp_cpp_type false [] ty
-      | Some id -> pp_typename_member ty id
-    in
-    str ((sn ()).get ^ "<") ++ targ ++ str ">("
+    str ((sn ()).get ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
-  | CPPstd_holds_alternative (ty, ctor) ->
+  | CPPstd_holds_alternative ty ->
     require_header "variant";
-    let targ = match ctor with
-      | None -> pp_cpp_type false [] ty
-      | Some id -> pp_typename_member ty id
-    in
-    str ((sn ()).holds_alternative ^ "<") ++ targ ++ str ">"
+    str ((sn ()).holds_alternative ^ "<") ++ pp_cpp_type false [] ty ++ str ">"
   | CPPdeclval ty ->
     require_header "utility";
     str "std::declval<" ++ pp_cpp_type false [] ty ++ str ">()"
-  | CPPtypename_qualified (ty, id) ->
-    pp_typename_member ty id
+  | CPPtype_name ty -> pp_cpp_type false [] ty
   (* Low-level constructs for reuse optimization *)
   | CPPrt h -> str (Crane_rt.name h)
   | CPPlit (_, s) -> str s
@@ -2179,13 +2159,9 @@ and pp_cpp_expr env args t =
     ++ str ", "
     ++ pp_cpp_type false [] t2
     ++ str ">"
-  | CPPstd_get_if (ty, ctor, e) ->
+  | CPPstd_get_if (ty, e) ->
     require_header "variant";
-    let targ = match ctor with
-      | None -> pp_cpp_type false [] ty
-      | Some id -> pp_typename_member ty id
-    in
-    str ((sn ()).get_if ^ "<") ++ targ ++ str ">("
+    str ((sn ()).get_if ^ "<") ++ pp_cpp_type false [] ty ++ str ">("
     ++ pp_cpp_expr env args e ++ str ")"
 
 (** [pp_object env args e] prints [e] in the position a [.], [->] or member
@@ -2329,19 +2305,14 @@ and pp_cpp_stmt env args = function
     ++ fnl ()
     ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
     ++ fnl ()
-    ++ str "} else {"
-    ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
-    ++ fnl ()
-    ++ str "}"
-  | Sif_then (cond, then_stmts) ->
-    str "if ("
-    ++ pp_cpp_expr env args cond
-    ++ str ") {"
-    ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env args) then_stmts
-    ++ fnl ()
-    ++ str "}"
+    ++ ( match else_stmts with
+       | [] -> str "}"
+       | _ ->
+         str "} else {"
+         ++ fnl ()
+         ++ pp_list_stmt (pp_cpp_stmt env args) else_stmts
+         ++ fnl ()
+         ++ str "}" )
   | Sif_decl (id, ty, init, then_stmts, else_stmts) ->
     str "if ("
     ++ pp_cpp_type false [] ty ++ str " " ++ Id.print id
