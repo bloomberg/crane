@@ -59,7 +59,7 @@ let rec expand_ml_fun_alias ty =
 
 (** Unify a template [cpp_type] with a concrete [cpp_type] to extract type
     variable bindings. Recursively walks matching type constructors ([Tglob],
-    [Tfun], [Tref], [Tmod], [Tnamespace]) and collects [(id, concrete_ty)]
+    [Tfun], [Tref], [Tconst], [Tnamespace]) and collects [(id, concrete_ty)]
     pairs wherever [tmpl] has a [Tvar].
 
     @param tmpl  the template type (may contain [Tvar] holes)
@@ -77,7 +77,7 @@ let rec extract_tvar_map tmpl conc =
     List.concat (List.map2 extract_tvar_map args1 args2)
     @ extract_tvar_map ret1 ret2
   | Tref t1, Tref t2 -> extract_tvar_map t1 t2
-  | Tmod (_, t1), Tmod (_, t2) -> extract_tvar_map t1 t2
+  | Tconst t1, Tconst t2 -> extract_tvar_map t1 t2
   | Tnamespace (_, t1), Tnamespace (_, t2) -> extract_tvar_map t1 t2
   | _ -> []
 
@@ -289,11 +289,11 @@ let is_prod_global g =
   let n = Common.pp_global_name Type g in
   String.equal n "prod" || String.equal n "Prod"
 
-(** Structural equality on C++ types, ignoring [Tmod] const/static wrappers
+(** Structural equality on C++ types, ignoring [Tconst] wrappers
     and [Tvar] name annotations.  Used to match the state parameter type
     against the state component of a [pair<S,R>] return type. *)
 let rec cpp_ty_eq t1 t2 =
-  let rec strip = function Tmod (_, t) | Tnamespace (_, t) -> strip t | t -> t in
+  let rec strip = function Tconst t | Tnamespace (_, t) -> strip t | t -> t in
   match (strip t1, strip t2) with
   | Tglob (g1, ts1, _), Tglob (g2, ts2, _) ->
     GlobRef.CanOrd.equal g1 g2
@@ -347,7 +347,7 @@ let is_cpp_dummy_type = function
     what a type {i is} -- which inductive, at which instantiation -- are about
     the type inside the qualification, not the wrapper. *)
 let rec unqualify_ty = function
-  | Minicpp.Tmod (_, t) | Minicpp.Tnamespace (_, t) -> unqualify_ty t
+  | Minicpp.Tconst t | Minicpp.Tnamespace (_, t) -> unqualify_ty t
   | t -> t
 
 (** [prints_as_any t] — true if [t] is spelled [std::any] in the generated
@@ -665,7 +665,7 @@ let rec tvar_erase_type (ty : cpp_type) : cpp_type =
   | Tvar (_, Some _) -> ty (* Named Tvars are kept *)
   | Tglob (r, tys, args) -> Tglob (r, List.map tvar_erase_type tys, args)
   | Tfun (tys, ty) -> Tfun (List.map tvar_erase_type tys, tvar_erase_type ty)
-  | Tmod (m, ty) -> Tmod (m, tvar_erase_type ty)
+  | Tconst ty -> Tconst (tvar_erase_type ty)
   | Tnamespace (r, ty) -> Tnamespace (r, tvar_erase_type ty)
   | Tref ty -> Tref (tvar_erase_type ty)
   | Tvariant tys -> Tvariant (List.map tvar_erase_type tys)
@@ -718,7 +718,7 @@ let has_unnamed_tvar : cpp_type -> bool =
     proof erasure, not an unresolved type. *)
 let rec type_is_erased (ty : cpp_type) : bool =
   match ty with
-  | Tmod (_, inner) | Tnamespace (_, inner) -> type_is_erased inner
+  | Tconst inner | Tnamespace (_, inner) -> type_is_erased inner
   | t -> is_tany_node t
 
 (** Extract return type from a function type, stripping all Tarr layers. *)
@@ -749,7 +749,7 @@ let rec strip_tarr_n n ty =
     Unlike [Loopify.strip_ref_and_const_type] this is intentionally
     non-recursive: a double-ref [Tref (Tref t)] stays as [Tref t]. *)
 let strip_cpp_ref_const = function
-  | Tref t | Tmod (TMconst, t) -> t
+  | Tref t | Tconst t -> t
   | t -> t
 
 (** Count non-erased arguments in an ML application.
@@ -900,7 +900,7 @@ let get_tvars_indexed t =
         (i, get_name i n) :: l
     | Tglob (_, tys, _) -> List.fold_left aux l tys
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
-    | Tmod (_, ty) -> aux l ty
+    | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
     | Tref ty -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys
@@ -930,7 +930,7 @@ let get_rendered_tvar_indices t =
       in
       List.fold_left aux l tys_to_visit
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
-    | Tmod (_, ty) -> aux l ty
+    | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty
     | Tref ty -> aux l ty
     | Tvariant tys -> List.fold_left aux l tys

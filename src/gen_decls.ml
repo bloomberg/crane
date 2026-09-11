@@ -392,7 +392,7 @@ let gen_typeclass_cpp name fields ind =
     | Tvariant ts -> Tvariant (List.map subst_promoted_in_cpp_type ts)
     | Tid (id, ts) -> Tid (id, List.map subst_promoted_in_cpp_type ts)
     | Tid_external (id, ts) -> Tid_external (id, List.map subst_promoted_in_cpp_type ts)
-    | Tmod (m, t) -> Tmod (m, subst_promoted_in_cpp_type t)
+    | Tconst t -> Tconst (subst_promoted_in_cpp_type t)
     | t -> t
   in
   (* Check if a type is a bare promoted Tvar — a Tvar whose index is beyond the
@@ -2139,7 +2139,7 @@ let gen_dfun n b cty ty temps =
   in
   (* Detect which function-typed parameters are NOT simply forwarded at
      self-recursive call sites.  These are excluded from template-parameter
-     promotion below — they keep their [Tmod(TMconst, Tfun(dom, cod))] type
+     promotion below — they keep their [Tconst (Tfun(dom, cod))] type
      which prints as [const std::function<R(Args...)>].
 
      [detect_non_forwarded_params] returns source-order indices (param 0 =
@@ -2272,7 +2272,7 @@ let gen_dfun n b cty ty temps =
     | Tfun (doms, cod) ->
       Tfun (List.map resolve_promoted_in_type doms,
             resolve_promoted_in_type cod)
-    | Tmod (m, t) -> Tmod (m, resolve_promoted_in_type t)
+    | Tconst t -> Tconst (resolve_promoted_in_type t)
     | Tref t -> Tref (resolve_promoted_in_type t)
     | Tshared_ptr t -> Tshared_ptr (resolve_promoted_in_type t)
     | Tvariant ts -> Tvariant (List.map resolve_promoted_in_type ts)
@@ -2353,7 +2353,7 @@ let gen_dfun n b cty ty temps =
   in
   (* Promote forwarded function-typed parameters to C++ template parameters.
 
-     Function-typed parameters (those with C++ type [Tmod(TMconst, Tfun(...))])
+     Function-typed parameters (those with C++ type [Tconst (Tfun(...))])
      are normally promoted to template parameters with [std::is_invocable_v]
      requires-clause constraints.  This replaces [const std::function<R(Args...)>]
      with a template type variable [F&&], giving the compiler the exact lambda
@@ -2391,7 +2391,7 @@ let gen_dfun n b cty ty temps =
      type parameters that were filtered out as phantom by gen_decl_for_pp. *)
   let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 = function
-    | Tmod (TMconst, (Tfun _ as f)) -> Some f
+    | Tconst ((Tfun _ as f)) -> Some f
     | Tfun _ as f -> Some f
     | _ -> None
   in
@@ -2428,7 +2428,7 @@ let gen_dfun n b cty ty temps =
   in
   (* Replace the parameter type of promoted (forwarded) function params with the
      template type variable [F&&]. Non-forwarded params are left untouched — they
-     keep [Tmod(TMconst, Tfun(dom, cod))] which prints as [const
+     keep [Tconst (Tfun(dom, cod))] which prints as [const
      std::function<R(Args...)>]. This loop iterates [ids] which is in de Bruijn
      order, so we use [is_non_fwd_param_db] for the guard. *)
   let ids =
@@ -2461,7 +2461,7 @@ let gen_dfun n b cty ty temps =
     let rec mentions = function
       | Tglob (r, args, _) | Tnamespace (r, Tglob (_, args, _)) ->
         Table.is_non_uniform_inductive r || List.exists mentions args
-      | Tmod (_, t) | Tnamespace (_, t) | Tref t | Tshared_ptr t -> mentions t
+      | Tconst t | Tnamespace (_, t) | Tref t | Tshared_ptr t -> mentions t
       | Tfun (d, c) -> List.exists mentions d || mentions c
       | _ -> false
     in
@@ -2688,12 +2688,12 @@ let gen_dfun n b cty ty temps =
          state value is moved rather than deep-copied at each recursion level.
          This turns O(L * N) total copies into O(L) moves. *)
       let ids, b =
-        let rec strip_ns = function Tmod (_, t) | Tnamespace (_, t) -> strip_ns t | t -> t in
+        let rec strip_ns = function Tconst t | Tnamespace (_, t) -> strip_ns t | t -> t in
         match strip_ns cod with
         | Tglob (g, s_ty :: _, _) when is_prod_global g -> (
           match
             List.find_opt
-              (fun (_, ty) -> cpp_ty_eq (match ty with Tmod (TMconst, t) -> t | t -> t) s_ty)
+              (fun (_, ty) -> cpp_ty_eq (match ty with Tconst t -> t | t -> t) s_ty)
               ids
           with
           | Some (state_id, _) ->
@@ -3344,7 +3344,7 @@ let gen_spec__inner n b ty =
         if resolves_to_any_type ty then erase_fn_for_any_slot inner_body b_expr
         else b_expr
       in
-      let inner = Dasgn (n, Tmod (TMconst, ty), b_expr) in
+      let inner = Dasgn (n, Tconst ty, b_expr) in
       ( match temps with
       | [] -> (inner, empty_env ())
       | l -> (Dtemplate (l, None, inner), empty_env ()) )
@@ -3813,7 +3813,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     | Tfun (args, ret) ->
       Tfun (List.map strip_self_ptr args, strip_self_ptr ret)
     | Tref t -> Tref (strip_self_ptr t)
-    | Tmod (m, t) -> Tmod (m, strip_self_ptr t)
+    | Tconst t -> Tconst (strip_self_ptr t)
     | _ -> ty
   in
   let strip_top_level_self_ptr ty = strip_self_ptr ty in
@@ -4465,7 +4465,9 @@ let gen_ind_header_v2
         in
         let factory_body = [Sreturn (Some (CPPbraced factory_args))] in
         let factory_field =
-          ( Ffundef (factory_name, Tmod (TMstatic, self_ty), factory_params, factory_body),
+          ( Fmethod
+              (static_fun ~name:factory_name ~ret:self_ty
+                 ~params:factory_params ~body:factory_body),
             VPublic, SCreators )
         in
         let method_fields = List.map (gen_single_method name vars) method_candidates in
@@ -5710,7 +5712,7 @@ let gen_ind_header_v2
               let param_ty =
                 match storage_ty with
                 | Tshared_ptr _ ->
-                  if is_coinductive then Tref (Tmod (TMconst, api_ty))
+                  if is_coinductive then Tref (Tconst api_ty)
                   else api_ty
                 | _ -> api_ty
               in
@@ -5796,7 +5798,8 @@ let gen_ind_header_v2
         in
         let body = [Sreturn (Some (wrap_expr ctor_struct))] in
         let primary =
-          ( Ffundef (factory_name, Tmod (TMstatic, ret_ty), params, body),
+          ( Fmethod
+              (static_fun ~name:factory_name ~ret:ret_ty ~params ~body),
             VPublic,
             SCreators )
         in
@@ -5849,11 +5852,10 @@ let gen_ind_header_v2
                 CPPstruct_id (Id.of_string cname, [], reuse_ctor_args)
               in
               let reuse_body = [Sreturn (Some (wrap_expr reuse_struct))] in
-              [ ( Ffundef
-                    ( Id.of_string (fname ^ "__reuse"),
-                      Tmod (TMstatic, ret_ty),
-                      reuse_params,
-                      reuse_body ),
+              [ ( Fmethod
+                    (static_fun
+                       ~name:(Id.of_string (fname ^ "__reuse"))
+                       ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
                   VPublic,
                   SCreators ) ]
           else []
@@ -5916,7 +5918,7 @@ let gen_ind_header_v2
           in
           let body = [Sreturn (Some ctor_expr)] in
           [
-            ( Ffundef (lazy_name, Tmod (TMstatic, self_ty), params, body),
+            ( Fmethod (static_fun ~name:lazy_name ~ret:self_ty ~params ~body),
               VPublic,
               SCreators );
           ]
@@ -6096,7 +6098,7 @@ let gen_ind_header_v2
               in
               let ctor_params =
                 [(other_id,
-                  Tref (Tmod (TMconst, source_ty)))]
+                  Tref (Tconst source_ty))]
               in
               (* Non-explicit: erased grammar actions produce a [List<std::any>]
                  that must implicitly recover to the concrete-element list at
@@ -6121,7 +6123,7 @@ let gen_ind_header_v2
                 mf_name = Id.of_string "v";
                 mf_tparams = [];
                 mf_ret_type =
-                  Tmod (TMconst, Tref variant_alias_ty);
+                  Tconst (Tref variant_alias_ty);
                 mf_params = [];
                 mf_body =
                   [
@@ -6147,7 +6149,7 @@ let gen_ind_header_v2
                 mf_name = Id.of_string "v";
                 mf_tparams = [];
                 mf_ret_type =
-                  Tmod (TMconst, Tref variant_alias_ty);
+                  Tconst (Tref variant_alias_ty);
                 mf_params = [];
                 mf_body = [Sreturn (Some (CPPvar vmn_id))];
                 mf_is_const = true;

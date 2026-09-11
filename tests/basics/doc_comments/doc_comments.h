@@ -65,8 +65,10 @@ struct DocComments {
       }
     }
 
+    /// The empty list.
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
+    /// Cons cell: an element followed by the rest of the list.
     static mylist<A> mycons(A a, mylist<A> l) {
       return mylist<A>(
           Mycons{std::move(a), std::make_shared<mylist<A>>(std::move(l))});

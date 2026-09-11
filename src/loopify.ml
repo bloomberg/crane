@@ -250,7 +250,7 @@ let rec is_value_type_ret = function
 let rec is_trivially_copyable_type = function
   | Tvoid | Tauto | Tunresolved | Tany -> true
   | Tptr _ | Tref _ -> true
-  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) ->
+  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) ->
     is_trivially_copyable_type t
   | Tdecltype _ -> true
   | Tvar _ -> true
@@ -284,7 +284,7 @@ let rec worthwhile_move_type = function
   | Tvariant ts -> List.exists worthwhile_move_type ts
   | Tid (_, ts) | Tid_external (_, ts) ->
     List.exists worthwhile_move_type ts
-  | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
+  | Tconst t | Tnamespace (_, t) | Tqualified (t, _) | Tapply (t, _)
   | Tref t ->
     worthwhile_move_type t
   | Tvar _ | Tinstance _ | Tpromoted _ -> true
@@ -561,7 +561,7 @@ let unstable_locals ~(stable : Id.Set.t) (body : cpp_stmt list) : Id.Set.t =
      aliases and live as long as what they name. *)
   let rec is_alias_ty = function
     | Tref _ -> true
-    | Tmod (_, t) -> is_alias_ty t
+    | Tconst t -> is_alias_ty t
     | _ -> false
   in
   let copies_its_initialiser e ty =
@@ -1237,8 +1237,8 @@ let rec strip_ref_type = function
     [this] is [const T *] in a const method. *)
 let rec strip_ref_and_const_type = function
   | Tref t -> strip_ref_and_const_type t
-  | Tmod (TMconst, Tptr _) as t -> t
-  | Tmod (TMconst, t) -> strip_ref_and_const_type t
+  | Tconst (Tptr _) as t -> t
+  | Tconst t -> strip_ref_and_const_type t
   | t -> t
 
 (** Return [true] when a parameter type can be safely moved into a shadow
@@ -1247,7 +1247,7 @@ let rec strip_ref_and_const_type = function
     and falls back to copy anyway. *)
 let is_moveable_param_type = function
   | Tref _ -> false
-  | Tmod (TMconst, _) -> false
+  | Tconst _ -> false
   | _ -> true
 
 (** Extract the pointee type from a "borrowed value-type" parameter.
@@ -1269,8 +1269,8 @@ let is_moveable_param_type = function
 
     @return [Some pointee_type] when the parameter qualifies, [None] otherwise *)
 let borrowed_value_param_pointee = function
-  | Tref (Tmod (TMconst, t)) when is_value_type_ret t -> Some t
-  | Tmod (TMconst, Tref t) when is_value_type_ret t -> Some t
+  | Tref (Tconst t) when is_value_type_ret t -> Some t
+  | Tconst (Tref t) when is_value_type_ret t -> Some t
   | t when Table.reuse () && Table.non_atomic_rc () && is_value_type_ret t ->
     Some t
   | _ -> None
@@ -1283,7 +1283,7 @@ let borrowed_value_param_pointee = function
     type verbatim. *)
 let tail_shadow_type ~pointer_safe ty =
   match (pointer_safe, borrowed_value_param_pointee ty) with
-  | true, Some t -> Tptr (Tmod (TMconst, t))
+  | true, Some t -> Tptr (Tconst t)
   | _ -> ty
 
 (** Generate the initialiser expression for a shadow variable.
@@ -3289,7 +3289,7 @@ let borrow_frame_bound_matches stmts =
   let ids = ref [] in
   let rec scan s =
     ( match s with
-    | Sasgn (id, Declare (Tref (Tmod (TMconst, _)) | Tptr _), _) ->
+    | Sasgn (id, Declare (Tref (Tconst _) | Tptr _), _) ->
       ids := id :: !ids
     | _ -> () );
     ignore (map_stmt Fun.id (fun s -> scan s; s) Fun.id s)
@@ -3795,7 +3795,7 @@ let rec collect_type_env (stmts : cpp_stmt list) : (Id.t * cpp_type) list =
             let var_binding =
               match br.smb_var with
               | Some id when br.smb_field_bindings = [] ->
-                [(id, Tmod (TMconst, br.smb_ctor_type))]
+                [(id, Tconst (br.smb_ctor_type))]
               | _ -> []
             in
             field_type_bindings @ var_binding
@@ -3906,7 +3906,7 @@ let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
          pointer's type while the push and the handler both use it as a
          value. *)
       let rec pointee = function
-        | Tref t | Tmod (TMconst, t) -> pointee t
+        | Tref t | Tconst t -> pointee t
         | Tshared_ptr t | Tptr t -> t
         | t -> t
       in
@@ -4243,8 +4243,8 @@ let make_cont_bindings ~offset ~field_names cont_vars cont_types =
       match ty with
       | Tshared_ptr _ -> Sasgn (id, Declare ty, CPPmove field_expr)
       | Tunresolved -> Sasgn (id, Existing, field_expr)
-      | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
-        Sasgn (id, Declare (Tref (Tmod (TMconst, inner))), field_expr)
+      | Tconst inner when not (is_trivially_copyable_type inner) ->
+        Sasgn (id, Declare (Tref (Tconst inner)), field_expr)
       | t when not (is_trivially_copyable_type t) ->
         (* Move from frame field to avoid O(n) deep copy of owned value types
            (e.g. [List<T>]).  Safe because [_f] was obtained via
@@ -4337,7 +4337,7 @@ let move_for_frame ty expr =
     | CPPlambda _ -> expr
     | e when is_lvalue e -> CPPmove e
     | _ -> expr)
-  | Tmod (TMconst, _) -> expr
+  | Tconst _ -> expr
   | t when not (is_trivially_copyable_type t) ->
     (match expr with
     (* A bare variable is left alone (the caller may still need it), and a
@@ -4503,7 +4503,7 @@ let build_decompose_handler (d : decomposed) ~field_names ~saved_types n_saved =
     List.mapi (fun i ty ->
       let f = frame_field_named field_names i in
       match ty with
-      | Tmod (TMconst, _) -> f
+      | Tconst _ -> f
       | t when not (is_trivially_copyable_type t) -> CPPmove f
       | _ -> f)
     saved_types
@@ -4543,7 +4543,7 @@ let build_scrutinee_handler
         in
         (* Move shared_ptr fields out of the owned frame *)
         let rhs = match ty with
-          | Tmod (TMconst, _) -> field_expr
+          | Tconst _ -> field_expr
           | t when not (is_trivially_copyable_type t) -> CPPmove field_expr
           | _ -> field_expr
         in
@@ -5592,7 +5592,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
         let var_env =
           match br.smb_var with
           | Some id when br.smb_field_bindings = [] ->
-            [(id, Tmod (TMconst, br.smb_ctor_type))]
+            [(id, Tconst (br.smb_ctor_type))]
           | _ -> []
         in
         fb_env @ var_env @ env
@@ -6005,7 +6005,7 @@ let rewrite_enter_stmt ctx stmt =
 let make_stack_init ?(pointer_safe = []) varying_params =
   let move_if_needed ty v =
     match ty with
-    | Tmod (TMconst, _) | Tref _ -> v
+    | Tconst _ | Tref _ -> v
     | t when not (is_trivially_copyable_type t) -> CPPmove v
     | _ -> v
   in
@@ -6039,10 +6039,10 @@ let make_param_copies ?(pointer_safe = []) varying_params =
     let stripped = strip_ref_type ty in
     let f = CPPaccess (Adot, CPPvar (id_f), id) in
     match stripped with
-    | Tmod (TMconst, inner) when not (is_trivially_copyable_type inner) ->
+    | Tconst inner when not (is_trivially_copyable_type inner) ->
       (* Const-ref param stored in frame: bind by [const T&] reference, cheaper
          than cloning. *)
-      Sasgn (id, Declare (Tref (Tmod (TMconst, inner))), f)
+      Sasgn (id, Declare (Tref (Tconst inner)), f)
     | t when not (is_trivially_copyable_type t) ->
       (* Owned non-trivial type (e.g. [List<T>]): move from frame field to avoid
          an O(n) deep-copy.  [_f] was obtained via [std::move(std::get<...>(_frame))]
@@ -6067,7 +6067,7 @@ let make_param_copies ?(pointer_safe = []) varying_params =
         if safe then
           match borrowed_value_param_pointee ty with
           | Some t ->
-            Sasgn (id, Declare (Tref (Tmod (TMconst, t))),
+            Sasgn (id, Declare (Tref (Tconst t)),
                    CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
           | None ->
             let stripped = strip_ref_type ty in
@@ -6423,7 +6423,7 @@ let optimize_frame_push_args frame_field_types stmts =
     let is_owned_decl_type ty =
       let rec has_ref = function
         | Tref _ -> true
-        | Tmod (_, t) -> has_ref t
+        | Tconst t -> has_ref t
         | _ -> false
       in
       not (has_ref ty) && worthwhile_move_type (strip_ref_and_const_type ty)
@@ -6723,7 +6723,7 @@ let rec rewrite_field_access_for_decltype env expr =
       let base_ty = strip_ref_type ty in
       let struct_ty =
         match base_ty with
-        | Tmod (TMconst, t) -> t
+        | Tconst t -> t
         | t -> t
       in
       CPPaccess (Adot, CPPdeclval (Tref struct_ty), field)
@@ -6736,7 +6736,7 @@ let rec rewrite_field_access_for_decltype env expr =
       let base_ty = strip_ref_type ty in
       let pointee_ty =
         match base_ty with
-        | Tptr (Tmod (TMconst, t)) | Tptr t -> t
+        | Tptr (Tconst t) | Tptr t -> t
         | t -> t
       in
       CPPaccess (Adot, CPPdeclval (Tref pointee_ty), field)
@@ -6824,14 +6824,14 @@ let fix_handler_bindings field_names cf_ps handler =
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+            Sasgn (id, Declare (Tref (Tconst base_ty)), CPPderef e)
           | Sasgn (id, Declare orig_ty, e) when is_ps_field_access e ->
             let base_ty = match orig_ty with
               | Tshared_ptr inner -> inner
               | _ -> strip_ref_and_const_type orig_ty
             in
             remapped := id :: !remapped;
-            Sasgn (id, Declare (Tref (Tmod (TMconst, base_ty))), CPPderef e)
+            Sasgn (id, Declare (Tref (Tconst base_ty)), CPPderef e)
           | s -> s)
         handler
     in
@@ -6959,7 +6959,7 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
     List.map2
       (fun safe (id, ty) ->
         match safe, borrowed_value_param_pointee ty with
-        | true, Some t -> (id, Tptr (Tmod (TMconst, t)))
+        | true, Some t -> (id, Tptr (Tconst t))
         (* strip_ref_and_const_type: removes the [const T&] wrapper that
            e.g. a [const unsigned int &fuel] param carries.  Keeping [const]
            in the struct field would prevent the struct from being
@@ -7012,8 +7012,8 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
       (fun ps {ss_ty = ty; ss_expr = expr; _} ->
         if ps then
           match ty with
-          | Tshared_ptr inner -> Tptr (Tmod (TMconst, inner))
-          | _ -> Tptr (Tmod (TMconst, strip_ref_and_const_type ty))
+          | Tshared_ptr inner -> Tptr (Tconst inner)
+          | _ -> Tptr (Tconst (strip_ref_and_const_type ty))
         else
           match ty with
           | Tunresolved | Tauto ->
@@ -7110,7 +7110,7 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
         else
           let stripped = strip_ref_type ty in
           match stripped with
-          | Tmod (TMconst, _) -> None  (* const-ref bind: not owned *)
+          | Tconst _ -> None  (* const-ref bind: not owned *)
           | Tglob (r, _, _) when Table.is_coinductive r -> None
           | t when not (is_trivially_copyable_type t) -> Some id
           | _ -> None)
@@ -8336,7 +8336,7 @@ let hoist_rec_conditions (check : call_checker)
      pointers. That is the common case and not the dangerous one. *)
   let rec is_raw_ptr = function
     | Tptr _ -> true
-    | Tmod (_, t) | Tnamespace (_, t) | Tqualified (t, _) -> is_raw_ptr t
+    | Tconst t | Tnamespace (_, t) | Tqualified (t, _) -> is_raw_ptr t
     | _ -> false
   in
   if List.exists (fun (_, ty) -> is_raw_ptr ty) params then stmts
@@ -8568,7 +8568,7 @@ let transform_fundef ~tparams names ret_ty params body no_pure =
 
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g.,
-                          [Tmod (TMconst, Tptr (Tglob (...)))])
+                          [Tconst (Tptr (Tglob (...)))])
     @param mf             The method record to transform
     @return An [Fmethod] field with the loopified body *)
 let transform_method ~tparams ~self_ty mf =
@@ -8657,7 +8657,7 @@ let transform_method ~tparams ~self_ty mf =
          assignment happens first. *)
       let self_store_ty =
         let rec pointee = function
-          | Tref t | Tmod (TMconst, t) -> pointee t
+          | Tref t | Tconst t -> pointee t
           | Tptr t | Tshared_ptr t -> Some (strip_ref_and_const_type t)
           | _ -> None
         in
@@ -8791,7 +8791,7 @@ let transform_method ~tparams ~self_ty mf =
     [Fmethod] fields, delegates to {!transform_method}.
 
     @param tparams        Type parameters
-    @param self_ty        C++ type for the struct pointer (e.g., [Tmod (TMconst, Tptr (Tglob (...)))])
+    @param self_ty        C++ type for the struct pointer (e.g., [Tconst (Tptr (Tglob (...)))])
     @param (fld, vis, tag) The field, its visibility, and optional tag
     @return The (possibly transformed) field triple *)
 let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
@@ -8802,7 +8802,6 @@ let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
     let body =
       match fld with
       | Fmethod mf -> mf.mf_body
-      | Ffundef (_, _, _, body) -> body
       | _ -> []
     in
     ignore (decline reason body);
@@ -8812,33 +8811,6 @@ and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
   match fld with
   | Fmethod mf ->
     (transform_method ~tparams ~self_ty mf, vis, tag)
-  | Ffundef (name, ret_ty, params, body) ->
-    let check = lambda_checker name in
-    let kind = classify check body in
-    let dname = Id.to_string name in
-    let body', strategy =
-      match kind with
-      | No_recursion -> (body, None)
-      | Tail_recursion ->
-        (transform_tail check params ret_ty body, Some Lp_tail)
-      | Nontail_recursion ->
-        let body' =
-          fst (apply_nontail_loopification ~fn_name:dname check
-                 tparams params ret_ty body)
-        in
-        (body', Some !last_nontail_strategy)
-    in
-    (* As in {!transform_fundef}: the postcondition is only meaningful once
-       inner lambdas have been linearised too. *)
-    let pending = !pending_decline in
-    let body' = loopify_inner_lambdas ~tparams body' in
-    pending_decline := pending;
-    let body' =
-      match strategy with
-      | None -> pending_decline := None; body'
-      | Some s -> report_outcome ~name:dname ~check ~strategy:s body'
-    in
-    (Ffundef (name, ret_ty, params, body'), vis, tag)
   | Fnested_struct (id, fields) ->
     let fields' =
       List.map (transform_field ~tparams ~self_ty) fields
@@ -8853,20 +8825,17 @@ and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
     can be loopified normally. B remains unchanged — it calls the (now
     loopified) A. *)
 
-(** Try to inline mutual recursion among Ffundef fields in a struct. Returns the
-    modified field list.
+(** Try to inline mutual recursion among the method fields of a struct.
+    Returns the modified field list.
 
     Identifies mutually recursive pairs (A calls B and B calls A), then inlines
     B's body into A's call sites using {!generic_inline_stmts}.  After inlining,
     A becomes self-recursive and can be loopified normally. *)
 let try_inline_mutual_fields fields =
-  (* Extract Ffundef and Fmethod entries uniformly as (name, ret_ty, params, body) *)
   let fundefs =
     List.filter_map
       (fun (f, _, _) ->
         match f with
-        | Ffundef (name, ret_ty, params, body) ->
-          Some (name, ret_ty, params, body)
         | Fmethod mf ->
           Some (mf.mf_name, mf.mf_ret_type, mf.mf_params, mf.mf_body)
         | _ -> None )
@@ -8906,12 +8875,9 @@ let try_inline_mutual_fields fields =
       body = body_b;
       ret_ty = ret_ty_b;
     } in
-    (* Inline B into A — works for both Ffundef and Fmethod *)
     List.map
       (fun (f, vis, tag) ->
         match f with
-        | Ffundef (name, ret_ty, params, body) when Id.equal name name_a ->
-          (Ffundef (name, ret_ty, params, generic_inline_stmts spec body), vis, tag)
         | Fmethod mf when Id.equal mf.mf_name name_a ->
           (Fmethod { mf with mf_body = generic_inline_stmts spec mf.mf_body }, vis, tag)
         | _ -> (f, vis, tag) )
@@ -8937,7 +8903,7 @@ let rec transform_decl ?(tparams = []) = function
         (fun (_, id) -> Tvar (0, Some id))
         (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
     in
-    let self_ty = Tmod (TMconst, Tptr (Tglob (ds.ds_ref, self_args, []))) in
+    let self_ty = Tconst (Tptr (Tglob (ds.ds_ref, self_args, []))) in
     (* Try inlining mutual recursion among struct fields before transforms *)
     let fields = try_inline_mutual_fields ds.ds_fields in
     (* Collect smart-pointer field indices from variant structs for TMC *)

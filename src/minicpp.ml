@@ -78,11 +78,6 @@ type section_tag =
 
 (** {2 C++ type expressions} *)
 
-(** C++ type modifiers. *)
-type cpp_tymod =
-  | TMconst
-  | TMstatic
-
 type cpp_type =
   | Tvar of int * Id.t option
   | Tinstance of Id.t * GlobRef.t
@@ -104,7 +99,7 @@ type cpp_type =
        body.  The name is C++ text, emitted verbatim. *)
   | Tglob of GlobRef.t * cpp_type list * cpp_expr list
   | Tfun of cpp_type list * cpp_type
-  | Tmod of cpp_tymod * cpp_type
+  | Tconst of cpp_type
   | Tnamespace of GlobRef.t * cpp_type
   | Tqualified of
       cpp_type * Id.t (* typename Base<T>::nested - for nested struct access *)
@@ -467,7 +462,6 @@ and template_type =
 and cpp_field =
   | Fvar of Id.t * cpp_type
   | Fvar' of GlobRef.t * cpp_type
-  | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
   | Fmethod of method_field
   (* Private constructor: params, initializer list (as stmts for v_(x) style) *)
   | Fconstructor of
@@ -530,6 +524,23 @@ type cpp_schema = int * cpp_type
     copyable without deep-clone machinery. *)
 let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
 
+(** A plain static member function: no template parameters, no [this], and
+    none of the qualifiers a real method carries.  Factory functions are the
+    only producer -- they are methods with every flag off, so they are
+    spelled as methods rather than as a second, near-identical field kind. *)
+let static_fun ~name ~ret ~params ~body =
+  { mf_name = name;
+    mf_tparams = [];
+    mf_ret_type = ret;
+    mf_params = params;
+    mf_body = body;
+    mf_is_const = false;
+    mf_is_static = true;
+    mf_is_inline = false;
+    mf_this_pos = 0;
+    mf_no_pure = false;
+    mf_is_noexcept = false }
+
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
     pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)
 let rval_ref ty = Tref (Tref ty)
@@ -560,7 +571,7 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tid (id, tys) -> Tid (id, List.map (map_cpp_type f) tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map (map_cpp_type f) tys)
   | Tfun (dom, cod) -> Tfun (List.map (map_cpp_type f) dom, map_cpp_type f cod)
-  | Tmod (m, t) -> Tmod (m, map_cpp_type f t)
+  | Tconst t -> Tconst (map_cpp_type f t)
   | Tshared_ptr t -> Tshared_ptr (map_cpp_type f t)
   | Tref t -> Tref (map_cpp_type f t)
   | Tptr t -> Tptr (map_cpp_type f t)
@@ -624,7 +635,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tid (id, tys) -> Tid (id, List.map go tys)
   | Tid_external (id, tys) -> Tid_external (id, List.map go tys)
   | Tfun (dom, cod) -> Tfun (List.map go dom, go cod)
-  | Tmod (m, t) -> Tmod (m, go t)
+  | Tconst t -> Tconst (go t)
   | Tshared_ptr t -> Tshared_ptr (go t)
   | Tref t -> Tref (go t)
   | Tptr t -> Tptr (go t)
@@ -651,7 +662,7 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
     List.exists (exists_cpp_type p) tys
   | Tfun (dom, cod) ->
     List.exists (exists_cpp_type p) dom || exists_cpp_type p cod
-  | Tmod (_, t) | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
+  | Tconst t | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
   | Tqualified (t, _) | Tdecay t ->
     exists_cpp_type p t
   | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
@@ -741,7 +752,7 @@ let mk_apply ?yields ?params fn args =
     named no type. *)
 let lambda params ret body ~by_value =
   { cl_params = {rev = List.rev params};
-    cl_ret = (match ret with Some (Tmod (TMconst, t)) -> Some t | r -> r);
+    cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
     cl_body = body;
     cl_by_value = by_value }
 
@@ -1130,8 +1141,6 @@ let rec map_field
     match f with
     | Fvar (id, ty) -> Fvar (id, ft ty)
     | Fvar' (r, ty) -> Fvar' (r, ft ty)
-    | Ffundef (id, ret, ps, body) ->
-      Ffundef (id, ft ret, params ps, List.map fs body)
     | Fmethod m ->
       Fmethod
         { m with

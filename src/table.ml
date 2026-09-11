@@ -649,7 +649,7 @@ let is_typeclass_type = function
     modifiers. *)
 let rec is_typeclass_type_cpp = function
   | Minicpp.Tglob (r, _, _) -> is_typeclass r
-  | Minicpp.Tmod (_, t) ->
+  | Minicpp.Tconst t ->
     is_typeclass_type_cpp t (* Unwrap const/static/extern *)
   | Minicpp.Tref t -> is_typeclass_type_cpp t (* Unwrap references *)
   | Minicpp.Tshared_ptr t -> is_typeclass_type_cpp t (* Unwrap shared_ptr *)

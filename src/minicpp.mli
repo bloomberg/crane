@@ -68,9 +68,6 @@ type section_tag =
 (** {2 C++ type modifiers} *)
 
 (** Type modifiers (const, static, extern). *)
-type cpp_tymod =
-  | TMconst  (** Const qualifier *)
-  | TMstatic  (** Static storage class *)
 
 (** {2 C++ type expressions} *)
 
@@ -98,7 +95,7 @@ type cpp_type =
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type
       (** Function type: domain types and codomain *)
-  | Tmod of cpp_tymod * cpp_type
+  | Tconst of cpp_type  (** [const T] *)
       (** Type with modifier (const, static, extern) *)
   | Tnamespace of GlobRef.t * cpp_type
       (** Type qualified by namespace reference *)
@@ -546,8 +543,6 @@ and template_type =
 and cpp_field =
   | Fvar of Id.t * cpp_type  (** Field variable by local identifier *)
   | Fvar' of GlobRef.t * cpp_type  (** Field variable by global reference *)
-  | Ffundef of Id.t * cpp_type * (Id.t * cpp_type) list * cpp_stmt list
-      (** Member function definition: name, return type, parameters, body *)
   | Fmethod of method_field  (** Method with full descriptor *)
   | Fconstructor of
       (Id.t * cpp_type) list * (Id.t * cpp_expr) list * bool * bool
@@ -614,6 +609,16 @@ and custom_info = {
 (** {2 Type schemas} *)
 
 (** C++ type schema: number of type variables and the type expression. *)
+(** A plain static member function: no template parameters, no [this], and
+    none of the qualifiers a real method carries.  Factory functions are the
+    only producer. *)
+val static_fun :
+  name:Id.t ->
+  ret:cpp_type ->
+  params:(Id.t * cpp_type) list ->
+  body:cpp_stmt list ->
+  method_field
+
 type cpp_schema = int * cpp_type
 
 (** {2 Helper constructors} *)

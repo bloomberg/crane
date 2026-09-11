@@ -51,7 +51,7 @@ let any_type_aliases : Id.Set.t ref = ref Id.Set.empty
     [using] declaration, or because it is an axiom type. *)
 let rec is_any_shaped = function
   | Tany | Topaque -> true
-  | Tmod (_, inner) | Tref inner | Tnamespace (_, inner) -> is_any_shaped inner
+  | Tconst inner | Tref inner | Tnamespace (_, inner) -> is_any_shaped inner
   | Tid (id, []) -> Id.Set.mem id !any_type_aliases
   | Tglob (GlobRef.ConstRef c, _, _) ->
     is_axiom_type_ref (GlobRef.ConstRef c)
@@ -129,7 +129,7 @@ let returns_a_box = function
 let rec castable_to = function
   | Tvar _ -> false
   | Tunresolved | Tany | Topaque | Tauto -> false
-  | Tmod (_, inner) -> castable_to inner
+  | Tconst inner -> castable_to inner
   | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true
 

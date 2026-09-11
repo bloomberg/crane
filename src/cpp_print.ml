@@ -304,11 +304,6 @@ let spell_binop = function
 (** The C++ source spelling of a unary prefix operator. *)
 let spell_unop = function Unot -> "!" | Uaddr -> "&"
 
-(** Print a C++ type modifier keyword (const, static, extern). *)
-let pp_tymod = function
-  | TMconst -> str "const "
-  | TMstatic -> str "static "
-
 (** Print a qualified standard-library angle-bracket type: [std::label<s>].
 
     @param label  the identifier after [std::] (e.g. ["variant"], ["function"])
@@ -755,7 +750,7 @@ let rec pp_cpp_type par vl t =
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
     | Tref t -> pp_rec false t ++ str "&"
     | Tptr t -> pp_rec false t ++ str "*"
-    | Tmod (m, t) -> pp_tymod m ++ pp_rec false t
+    | Tconst t -> str "const " ++ pp_rec false t
     | Tnamespace (r, t) ->
       (* DESIGN: Namespace-qualified types for inductive types. Rocq's
          inductives live in wrapper structs (e.g., type 'list' in struct
@@ -2671,7 +2666,7 @@ and is_pure_return_type = function
   | Tshared_ptr _ -> false
   | Tvoid | Tvar _ | Tany | Topaque | Tauto | Tunresolved -> false
   | Tglob (r, _, _) when is_axiom_type_ref r -> false
-  | Tmod (_, t) | Tref t | Tptr t -> is_pure_return_type t
+  | Tconst t | Tref t | Tptr t -> is_pure_return_type t
   | _ -> true
 
 (** Check if a C++ type is a literal type eligible for [constexpr] context.
@@ -2700,7 +2695,7 @@ and is_constexpr_type ty =
        so the types are not literal.  Only enum inductives (generated as
        [enum class]) are literal types. *)
     Table.is_enum_inductive r && List.for_all is_constexpr_type tys
-  | Tmod (_, t) | Tref t | Tptr t -> is_constexpr_type t
+  | Tconst t | Tref t | Tptr t -> is_constexpr_type t
   | Tvariant tys -> List.for_all is_constexpr_type tys
   | Tglob (GlobRef.ConstRef _, [], _) -> false  (* defined constant with no type args — opaque alias *)
   | Tglob (_, tys, _) -> List.for_all is_constexpr_type tys
@@ -2751,7 +2746,7 @@ and fun_qualifier ~can_constexpr ~throws ~no_pure ret_ty params =
 and is_concrete_cpp_type = function
   | Tvar _ -> false
   | Tunresolved | Tany | Topaque | Tauto -> false
-  | Tmod (_, inner) -> is_concrete_cpp_type inner
+  | Tconst inner -> is_concrete_cpp_type inner
   | Tglob (GlobRef.ConstRef _, _, _) -> false
   | _ -> true
 
@@ -3428,34 +3423,6 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
     pp_doc_comment_for_name (Common.pp_global_name Type id)
     ++ h (pp_type ty ++ str " " ++ str (Common.pp_global_name Type id)
           ++ str ";")
-  | Ffundef (id, ret_ty, params, body) ->
-    let saved_any_params = !current_any_typed_params in
-    current_any_typed_params :=
-      List.fold_left
-        (fun acc (id, ty) ->
-          if is_any_type ty then Id.Set.add id acc else acc)
-        Id.Set.empty params;
-    let params_s =
-      pp_list
-        (fun (id, ty) -> pp_type ty ++ str " " ++ Id.print id)
-        params
-    in
-    let body_s = pp_list_stmt (pp_cpp_stmt env []) body in
-    let qualifier =
-      fun_qualifier ~can_constexpr:true ~throws:(body_is_throw body) ~no_pure:false
-        ret_ty params
-    in
-    current_any_typed_params := saved_any_params;
-    h
-      ( qualifier
-      ++ pp_type ret_ty
-      ++ str " "
-      ++ Id.print id
-      ++ pp_par true params_s
-      ++ str "{" )
-    ++ fnl ()
-    ++ body_s
-    ++ str "}"
   | Fmethod
       {
         mf_name;
@@ -3751,7 +3718,7 @@ let pp_meyers_singleton env id ty expr_pp =
    template_static_accessors := (mp, lbl) :: !template_static_accessors );
   let bare_ty =
     match ty with
-    | Tmod (TMconst, inner) -> inner
+    | Tconst inner -> inner
     | _ -> ty
   in
   h
@@ -3811,7 +3778,7 @@ and pp_initialiser env ty e =
     require_header "stdexcept";
     (* The lambda returns by value, so a top-level [const] on [ty] says
        nothing and [-Wignored-qualifiers] rejects it. *)
-    let ret_ty = match ty with Tmod (TMconst, t) -> t | t -> t in
+    let ret_ty = match ty with Tconst t -> t | t -> t in
     str "([]() -> "
     ++ pp_type ret_ty
     ++ str " { throw "

@@ -21,7 +21,7 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(
       _result = mylist::mnil();
     } else {
       auto &[a0] = std::get<typename Nat::S>(n.v_mut());
-      _result = mylist::mcons(n, [](Nat _inl_n) {
+      _result = mylist::mcons(n, [](Nat _inl_n) -> MutualTmcLoopify::mylist {
         if (std::holds_alternative<typename Nat::O>(_inl_n.v_mut())) {
           return mylist::mnil();
         } else {
