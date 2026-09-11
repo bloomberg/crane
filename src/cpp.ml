@@ -412,7 +412,7 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
 and pp_concept_ref kn =
   match kn with
   | MPdot (mp0, l') ->
-    if get_force_qualified_capitalization () then begin
+    if get_force_cross_file_qualification () then begin
       (* Separate extraction: pp_modname produces visibility-aware names. *)
       let resolved = Common.resolve_module kn in
       let name = str (Common.resolved_string resolved) in

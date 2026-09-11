@@ -1221,8 +1221,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      (e.g. Datatypes::List instead of bare List). *)
   ( match namespace with
   | Some _ ->
-    Common.mpfiles_clear ();
-    Common.set_force_qualified_capitalization ()
+    Common.set_force_cross_file_qualification ()
   | None -> () );
   let ns_open =
     match namespace with

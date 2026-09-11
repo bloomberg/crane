@@ -468,7 +468,7 @@ let resolve_indref_base ?(no_custom_inductives = Refset'.empty)
         (globref_equal r)
         (get_local_inductives ())
     then
-      if Common.get_force_qualified_capitalization ()
+      if Common.get_force_cross_file_qualification ()
       then String.capitalize_ascii (Common.pp_global_name Type r)
       else Common.pp_global Type r
     else cap
@@ -563,7 +563,7 @@ let rec render_cpp_type_simple ?(raw_inductives = Refset'.empty)
                (globref_equal g)
                (get_local_inductives ())
           then ""
-          else if not (Common.get_force_qualified_capitalization ())
+          else if not (Common.get_force_cross_file_qualification ())
           then ""
           else
             let parent =

@@ -582,8 +582,7 @@ let get_mpfiles_content mp =
 
 (** The list of external modules that will be opened initially *)
 
-let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear,
-    mpfiles_save, mpfiles_restore =
+let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_save, mpfiles_restore =
   let m = ref MPset.empty in
   let add mp = m := MPset.add mp !m
   and mem mp = MPset.mem mp !m
@@ -592,19 +591,20 @@ let mpfiles_add, mpfiles_mem, mpfiles_list, mpfiles_clear,
   and save () = !m
   and restore s = m := s in
   register_cleanup clear;
-  (add, mem, list, clear, save, restore)
+  (add, mem, list, save, restore)
 
-(** When [mpfiles_clear] is called (separate extraction mode), this flag is set
-    to indicate that cross-module references need full qualification.  Used by
-    the C++ printer to capitalize qualified type names correctly. *)
-let force_qualified_capitalization = ref false
+(** Separate extraction: every cross-file reference is spelled in full, since
+    each file is emitted into its own namespace and nothing is brought into
+    scope.  Qualifying is the primary effect; capitalizing the last component
+    of a qualified type name ([Datatypes::List]) follows from it. *)
+let force_cross_file_qualification = ref false
 
-let set_force_qualified_capitalization () =
-  force_qualified_capitalization := true
+let set_force_cross_file_qualification () =
+  force_cross_file_qualification := true
 
-let get_force_qualified_capitalization () = !force_qualified_capitalization
+let get_force_cross_file_qualification () = !force_cross_file_qualification
 
-let () = register_cleanup (fun () -> force_qualified_capitalization := false)
+let () = register_cleanup (fun () -> force_cross_file_qualification := false)
 
 (** Set of module paths that are included in the current extraction output.
     When non-empty, references to modules outside this set are rendered without
@@ -1085,22 +1085,12 @@ let opened_libraries () =
   if not (modular ()) then
     []
   else
-    let used_files = mpfiles_list () in
-    let used_ks = List.map (fun mp -> (Mod, string_of_modfile mp)) used_files in
-    (* By default, we open all used files. Ambiguities will be resolved later by
-       using qualified names. Nonetheless, we don't open any file A that
-       contains an immediate submodule A.B hiding another file B : otherwise,
-       after such an open, there's no unambiguous way to refer to objects of
-       B. *)
-    let to_open =
-      List.filter
-        (fun mp ->
-          not
-            (List.exists (fun k -> KMap.mem k (get_mpfiles_content mp)) used_ks) )
-        used_files
-    in
-    mpfiles_clear ();
-    List.iter mpfiles_add to_open;
+    (* Every file a reference reached into.  OCaml pruned this set before
+       opening it -- a file A with an immediate submodule A.B shadowing another
+       used file B could not be opened without making B unreachable -- but C++
+       has no [open]: this list becomes [#include] lines, and dropping one of
+       those would leave a referenced declaration undeclared.  Over the whole
+       test corpus the prune never removed anything. *)
     mpfiles_list ()
 
 (** On-the-fly qualification issues for both monolithic or modular extraction.
@@ -1154,7 +1144,9 @@ let pp_ocaml_extern k base rls =
     if
       (not (modular ())) (* Pseudo qualification with "" *)
       || List.is_empty rls' (* Case of a file A.v used as a module later *)
-      || (not (mpfiles_mem base)) (* Module not opened *)
+      || !force_cross_file_qualification
+         (* Separate extraction: nothing is in scope across files *)
+      || (not (mpfiles_mem base)) (* Module not referenced *)
       || mpfiles_clash base (fstlev_ks k rls') (* Conflict in opened files *)
       || visible_clash base (fstlev_ks k rls')
       (* Local conflict *)

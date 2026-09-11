@@ -772,7 +772,7 @@ let rec pp_cpp_type par vl t =
         (* Check eponymous record FIRST because they can also be local *)
         if is_eponymous_record_cached r' then
           let cap_name = Common.pp_type_name_capitalized r' in
-          if Common.get_force_qualified_capitalization () && not (is_local_inductive r')
+          if Common.get_force_cross_file_qualification () && not (is_local_inductive r')
           then str (cap_name ^ "::" ^ cap_name) ++ templates
           else str cap_name ++ templates
         else if is_enum_cached r' then
@@ -800,7 +800,7 @@ let rec pp_cpp_type par vl t =
           ++ templates
         else if is_qualified_name type_name_str then
           let cap =
-            if Common.get_force_qualified_capitalization ()
+            if Common.get_force_cross_file_qualification ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
           let cap =
@@ -1273,13 +1273,13 @@ and pp_cpp_expr env args t =
           str (Common.pp_type_name_capitalized x)
         else if Hashtbl.mem promoted_inductives x then
           let cap =
-            if Common.get_force_qualified_capitalization ()
+            if Common.get_force_cross_file_qualification ()
             then Common.capitalize_last_component type_name_str
             else String.capitalize_ascii type_name_str in
           str (dedup_qualified_tail cap)
         else if is_qualified_name type_name_str then
           let cap =
-            if Common.get_force_qualified_capitalization ()
+            if Common.get_force_cross_file_qualification ()
             then Common.capitalize_last_component type_name_str
             else type_name_str in
           let merged = is_merged_inductive_cached x in
@@ -1297,7 +1297,7 @@ and pp_cpp_expr env args t =
             ++ ns_name
           else (* Unmerged non-local inductive: Wrapper::inner *)
             ns_name ++ str "::" ++ str type_name_str
-        else if Common.get_force_qualified_capitalization () then
+        else if Common.get_force_cross_file_qualification () then
           str (String.capitalize_ascii type_name_str)
         else (* Local inductive: use original name directly *)
           str type_name_str
@@ -4038,7 +4038,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives id ->
         str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
-      | GlobRef.IndRef _ when Common.get_force_qualified_capitalization () ->
+      | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () ->
         str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ -> pp_global Type id
       | _ -> pp_global Type id
@@ -4101,7 +4101,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     let expr_pp = pp_initialiser env ty e in
     if (!render_ctx).rc_in_template
        || ((!render_ctx).rc_in_struct
-           && Common.get_force_qualified_capitalization ()) then
+           && Common.get_force_cross_file_qualification ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
          work for both template and non-template implementing modules. *)

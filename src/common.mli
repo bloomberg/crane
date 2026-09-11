@@ -139,24 +139,20 @@ val get_phase : unit -> phase
 (** Compute which libraries should be opened initially. *)
 val opened_libraries : unit -> ModPath.t list
 
-(** Clear the set of opened-module paths.  Used in separate extraction to
-    force fully qualified cross-module references. *)
-val mpfiles_clear : unit -> unit
-
 (** Save the current set of opened-module paths, for later restoration. *)
 val mpfiles_save : unit -> Names.MPset.t
 
 (** Restore a previously-saved set of opened-module paths. *)
 val mpfiles_restore : Names.MPset.t -> unit
 
-(** Activate "force qualified capitalization" mode: when set, qualified type
-    names like [Datatypes::list] have their last component capitalized to
-    match the C++ struct name ([Datatypes::List]).  Set after {!mpfiles_clear}
-    in separate extraction.  Cleared automatically on reset. *)
-val set_force_qualified_capitalization : unit -> unit
+(** Activate separate-extraction naming: every cross-file reference is spelled
+    in full, and the last component of a qualified type name is capitalized to
+    match the C++ struct name ([Datatypes::List]).  Cleared automatically on
+    reset. *)
+val set_force_cross_file_qualification : unit -> unit
 
-(** Check whether "force qualified capitalization" mode is active. *)
-val get_force_qualified_capitalization : unit -> bool
+(** Whether separate-extraction naming is active. *)
+val get_force_cross_file_qualification : unit -> bool
 
 (** Record which module paths belong to the current extraction output.
     References to any other module path will be treated as external by

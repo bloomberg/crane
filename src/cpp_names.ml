@@ -99,7 +99,7 @@ let is_merged_inductive (r : GlobRef.t) : bool =
   ||
   let base = str_global Type r in
   let wrapper_name =
-    if Common.get_force_qualified_capitalization ()
+    if Common.get_force_cross_file_qualification ()
     then Common.capitalize_last_component base
     else String.capitalize_ascii base in
   not (Hashtbl.mem unmerged_wrappers wrapper_name)
@@ -168,17 +168,17 @@ let inductive_name_info r =
     (str (Common.pp_type_name_capitalized r), false)
   | GlobRef.IndRef _ when Hashtbl.mem promoted_inductives r ->
     let s = str_global Type r in
-    let cap = if Common.get_force_qualified_capitalization ()
+    let cap = if Common.get_force_cross_file_qualification ()
               then Common.capitalize_last_component s
               else String.capitalize_ascii s in
     (str cap, false)
   | GlobRef.IndRef _ when is_local_inductive r ->
-    if Common.get_force_qualified_capitalization ()
+    if Common.get_force_cross_file_qualification ()
     then (str (String.capitalize_ascii (Common.pp_global_name Type r)), false)
     else (pp_global Type r, false)
   | GlobRef.IndRef _ ->
     let s = str_global Type r in
-    let cap = if Common.get_force_qualified_capitalization ()
+    let cap = if Common.get_force_cross_file_qualification ()
               then Common.capitalize_last_component s
               else String.capitalize_ascii s in
     (str cap, true)
@@ -294,7 +294,7 @@ let pp_inductive_type_name r =
     match r with
     | GlobRef.IndRef _ when is_eponymous_record_global r ->
       let cap_name = Common.pp_type_name_capitalized r in
-      if Common.get_force_qualified_capitalization () then
+      if Common.get_force_cross_file_qualification () then
         let base = str_global Type r in
         if is_qualified_name base then
           str (cap_name ^ "::" ^ cap_name)
@@ -316,7 +316,7 @@ let pp_inductive_type_name r =
         let base_name = Common.pp_global_name Type r in
         str (capitalize_enum_name base_name r)
     | GlobRef.IndRef _ when is_local_inductive r ->
-      if Common.get_force_qualified_capitalization () then
+      if Common.get_force_cross_file_qualification () then
         let s = str_global Type r in
         str (Common.capitalize_last_component s)
       else pp_global Type r
@@ -325,7 +325,7 @@ let pp_inductive_type_name r =
       let is_qual = is_qualified_name base in
       let is_merged = is_merged_inductive r in
       if is_qual then
-        if Common.get_force_qualified_capitalization () then
+        if Common.get_force_cross_file_qualification () then
           if is_merged then
             str (cpp_name_of_promoted base)
           else
