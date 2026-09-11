@@ -248,19 +248,16 @@ let dottify = qualify "::"
 
 (** A name as name resolution settled it, before it is flattened to text.
 
-    Callers used to recover these two facts by inspecting the printed string --
-    testing it for a [':'] to see whether it came out qualified, and for a
-    ["Coq__"] prefix to see whether it was reached through a duplicate wrapper.
-    Both are properties the resolver knows and the string only hints at, so the
-    resolver says them. *)
+    Callers used to recover facts about a name by inspecting the printed
+    string -- testing it for a [':'] to see whether it came out qualified, or
+    scanning back for the last ["::"] to split it.  Those are properties the
+    resolver knows and the string only hints at, so the resolver says them. *)
 type resolved = {
   rn_parts : string list;  (** components, outermost first; may contain [""] *)
-  rn_via_duplicate : bool;
-      (** the outermost component is a {!add_duplicate} [Coq__N] wrapper *)
 }
 
-(** A name that no duplicate wrapper was needed to reach. *)
-let plain rn_parts = {rn_parts; rn_via_duplicate = false}
+(** A resolved name, from its components. *)
+let plain rn_parts = {rn_parts}
 
 (** The name as text: exactly what {!dottify} makes of its components. *)
 let resolved_string r = dottify r.rn_parts
@@ -700,37 +697,6 @@ let add_visible ks l =
   let visible = top_visible () in
   visible.content <- KMap.add ks l visible.content
 
-(** Ordered comparison for (ModPath.t, Label.t) pairs. Table of local module
-    wrappers used to provide non-ambiguous names *)
-
-module DupOrd = struct
-  type t = ModPath.t * Label.t
-
-  let compare (mp1, l1) (mp2, l2) =
-    let c = Label.compare l1 l2 in
-    if Int.equal c 0 then ModPath.compare mp1 mp2 else c
-end
-
-(** Map keyed by DupOrd. *)
-module DupMap = Map.Make (DupOrd)
-
-(** Table of local module wrappers for non-ambiguous names. *)
-let add_duplicate, get_duplicate =
-  let index = ref 0
-  and dups = ref DupMap.empty in
-  register_cleanup (fun () ->
-    index := 0;
-    dups := DupMap.empty );
-  let add mp l =
-    incr index;
-    let ren = "Coq__" ^ string_of_int !index in
-    (* let ren = ModPath.to_string mp ^ "__" ^ string_of_int !index in *)
-    dups := DupMap.add (mp, l) ren !dups
-  and get mp l =
-    try Some (DupMap.find (mp, l) !dups) with Not_found -> None
-  in
-  (add, get)
-
 (** What to reset: all renaming tables, or also external file content. *)
 type reset_kind =
   | AllButExternal
@@ -1166,40 +1132,9 @@ let opened_libraries () =
 (** On-the-fly qualification issues for both monolithic or modular extraction.
 
     [pp_ocaml_gen] below is a function that factorize the printing of both
-    [global_reference] and module names for ocaml. When [k=Mod] then
-    [olab=None], otherwise it contains the label of the reference to print.
-    [rls] is the string list giving the qualified name, short name at the end.
-
-    In Rocq, we can qualify [M.t] even if we are inside [M], but in Ocaml we
-    cannot do that. So, if [t] gets hidden and we need a long name for it, we
-    duplicate the _definition_ of t in a Coq__XXX module, and similarly for a
-    sub-module [M.N] *)
-
-(** Print a reference using a duplicate wrapper module.
-    Looks up (or registers during the Pre phase) a ["Coq__N"] alias for the
-    part of [mp] below [prefix], then returns the dotted qualified name via
-    that alias.
-    @param k'     The kind of the reference ([Mod] or a term/type/cons kind)
-    @param prefix The largest visible common prefix of [mp]
-    @param mp     The full module path of the reference
-    @param rls    The renaming string list for the reference (head = short name)
-    @param olab   The label of the reference within its module, or [None] for
-                  module references *)
-let pp_duplicate k' prefix mp rls olab =
-  let rls', lbl =
-    if k' != Mod then
-      (* Here rls=[s], the ref to print is <prefix>.<s>, and olab<>None *)
-      (rls, Option.get olab)
-    else (* Here rls=s::rls', we search the label for s inside mp *)
-      (List.tl rls, get_nth_label_mp (mp_length mp - mp_length prefix) mp)
-  in
-  match get_duplicate prefix lbl with
-  | Some ren -> {rn_parts = ren :: rls'; rn_via_duplicate = true}
-  | None ->
-    assert (get_phase () == Pre);
-    (* otherwise it's too late *)
-    add_duplicate prefix lbl;
-    plain rls
+    [global_reference] and module names. When [k=Mod] then [olab=None],
+    otherwise it contains the label of the reference to print. [rls] is the
+    string list giving the qualified name, short name at the end. *)
 
 (** Extract the kind and name for first-level clash detection. *)
 let fstlev_ks k = function
@@ -1225,7 +1160,11 @@ let pp_ocaml_local k prefix mp rls olab =
   if not (visible_clash prefix k's) then
     plain rls'
   else
-    pp_duplicate (fst k's) prefix mp rls' olab
+    (* C++ lets a name be qualified from inside the scope that declares it, so
+       a local clash is resolved by spelling the name in full.  OCaml cannot,
+       and resolved it instead by duplicating the definition into a [Coq__N]
+       wrapper module; Crane has no need of that. *)
+    plain rls
 
 (** Print a reference from a bound module parameter. [pp_ocaml_bound] : [mp]
     starts with a [MPbound], and we are not inside (i.e. we are not printing the

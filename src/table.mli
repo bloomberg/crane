@@ -156,11 +156,6 @@ val prefixes_mp : ModPath.t -> MPset.t
     @return the first element of [mpl] that is a prefix of [mp0], or [None] *)
 val common_prefix_from_list : ModPath.t -> ModPath.t list -> ModPath.t option
 
-(** Get nth label from module path.
-    @param n  1-based index counting from the innermost [MPdot] label outward
-    @param mp the module path to index into *)
-val get_nth_label_mp : int -> ModPath.t -> Label.t
-
 (** Get labels of reference. *)
 val labels_of_ref : GlobRef.t -> ModPath.t * Label.t list
 

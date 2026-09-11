@@ -124,11 +124,6 @@ let rec prefixes_mp mp =
   | MPdot (mp', _) -> MPset.add mp (prefixes_mp mp')
   | _ -> MPset.singleton mp
 
-(** Get the nth label in a module path using 1-based indexing. *)
-let rec get_nth_label_mp n = function
-  | MPdot (mp, l) -> if Int.equal n 1 then l else get_nth_label_mp (n - 1) mp
-  | _ -> CErrors.anomaly (Pp.str "get_nth_label: not enough MPdot.")
-
 (** Find the common module path prefix between mp0 and a list of module paths.
 *)
 let common_prefix_from_list mp0 mpl =

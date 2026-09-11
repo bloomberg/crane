@@ -193,26 +193,12 @@ let watching_for_reference_to outer f =
 
 (** Pretty-print a structure signature element (module spec). *)
 let rec pp_specif = function
-  | _, Spec (Sval _ as s) -> pp_decls (spec_decls s)
-  | l, Spec s ->
-    ( match Common.get_duplicate (top_visible_mp ()) l with
-    | None -> pp_decls (spec_decls s)
-    | Some ren -> pp_decls (spec_decls s) )
-  | l, Smodule mt ->
-    let def = module_constraint_pp (pp_module_type [] mt) in
-    def
-    ++
-    ( match Common.get_duplicate (top_visible_mp ()) l with
-    | None -> Pp.mt ()
-    | Some ren -> fnl () )
+  | _, Spec s -> pp_decls (spec_decls s)
+  | _, Smodule mt -> module_constraint_pp (pp_module_type [] mt)
   | l, Smodtype mt ->
     let def = module_constraint_pp (pp_module_type [] mt) in
     let name = pp_modname (MPdot (top_visible_mp (), l)) in
     hov 1 (str "module type " ++ name ++ str " =" ++ fnl () ++ def)
-    ++
-    ( match Common.get_duplicate (top_visible_mp ()) l with
-    | None -> Pp.mt ()
-    | Some ren -> fnl () ++ str ("module type " ^ ren ^ " = ") ++ name )
 
 (** Convert a signature spec element to a C++20 [requires] clause requirement.
     Used for module type -> concept conversion.
@@ -770,14 +756,7 @@ let rec pp_structure_elem ~is_header f = function
     if Pp.ismt body then
       mt ()
     else
-      let doc = pp_doc_comment l in
-      ( match Common.get_duplicate (top_visible_mp ()) l with
-      | None -> doc ++ body
-      | Some ren ->
-        doc
-        ++ v 1 (str ("namespace " ^ ren ^ " {") ++ fnl () ++ body)
-        ++ fnl ()
-        ++ str "};" )
+      pp_doc_comment l ++ body
   | l, SEmodule m ->
     let mp = MPdot (top_visible_mp (), l) in
     let name =
@@ -1467,8 +1446,7 @@ let rec pp_structure_elem ~is_header f = function
           | MEident fmp -> Hashtbl.replace functor_app_sources mp fmp
           | _ -> () in
           (* [MEident] is the only shape here, so the target resolves to a
-             name that says for itself whether it was reached through a
-             duplicate wrapper and whether it came out qualified. *)
+             name that says for itself whether it came out qualified. *)
           let resolved =
             match m.ml_mod_expr with
             | MEident target -> Some (Common.resolve_module target)
@@ -1479,87 +1457,70 @@ let rec pp_structure_elem ~is_header f = function
             | Some r -> str (Common.resolved_string r)
             | None -> pp_module_expr ~is_header f [] m.ml_mod_expr
           in
-          (* Skip [using] aliases whose target is a [Coq__N] duplicate
-             wrapper.  These wrappers are an OCaml-specific qualification
-             mechanism from {!Common.add_duplicate}: when an OCaml name is
-             shadowed inside its own module, the definition is duplicated
-             into a [Coq__N] namespace so that external references can
-             still reach it.  In C++, scoped structs and namespaces handle
-             qualification differently, making these wrappers unnecessary.
-             Moreover, the wrapped namespace may never be emitted (e.g.
-             notation-only modules with no computational content), causing
-             the [using] alias to reference an undefined type. *)
-          if
-            match resolved with
-            | Some r -> r.Common.rn_via_duplicate
-            | None -> false
-          then
-            mt ()
-          else
-            (* Check whether this alias is itself a functor (i.e., the module
-               type has MTfunsig parameters).  This happens when Rocq's
-               extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
-               [MEident(WFacts)].  A bare [using Facts = WFacts;] is invalid
-               C++ when WFacts is a template struct; we need a template alias
-               [template<WS M> using Facts = WFacts<M>;] instead. *)
-            let rec collect_functor_params acc = function
-              | MTfunsig (mbid, mt, rest) ->
-                collect_functor_params ((mbid, mt) :: acc) rest
-              | _ -> List.rev acc
+          (* Check whether this alias is itself a functor (i.e., the module
+             type has MTfunsig parameters).  This happens when Rocq's
+             extraction eta-reduces [Module Facts (M:WS) := WFacts M.] to
+             [MEident(WFacts)].  A bare [using Facts = WFacts;] is invalid
+             C++ when WFacts is a template struct; we need a template alias
+             [template<WS M> using Facts = WFacts<M>;] instead. *)
+          let rec collect_functor_params acc = function
+            | MTfunsig (mbid, mt, rest) ->
+              collect_functor_params ((mbid, mt) :: acc) rest
+            | _ -> List.rev acc
+          in
+          let functor_params = collect_functor_params [] m.ml_mod_type in
+          if functor_params = [] then
+            (* Non-functor alias. File-level modules are rendered as C++
+               namespaces; a [using R = Namespace;] alias inside a struct
+               body is invalid C++, so we drop it.  Aliases whose target is
+               a sub-module (MPdot — rendered as a struct) are valid type
+               aliases inside a struct body and are kept. *)
+            let target_is_namespace =
+              match m.ml_mod_expr with
+              | MEident mp -> is_modfile mp
+              | _ -> false
             in
-            let functor_params = collect_functor_params [] m.ml_mod_type in
-            if functor_params = [] then
-              (* Non-functor alias. File-level modules are rendered as C++
-                 namespaces; a [using R = Namespace;] alias inside a struct
-                 body is invalid C++, so we drop it.  Aliases whose target is
-                 a sub-module (MPdot — rendered as a struct) are valid type
-                 aliases inside a struct body and are kept. *)
-              let target_is_namespace =
-                match m.ml_mod_expr with
-                | MEident mp -> is_modfile mp
-                | _ -> false
-              in
-              if target_is_namespace && (!render_ctx).rc_in_struct then
-                mt ()
-              else
-                let body_with_typename =
-                  let qualified =
-                    match resolved with
-                    | Some r -> Common.resolved_is_qualified r
-                    | None -> is_qualified_name (Pp.string_of_ppcmds body)
-                  in
-                  if (!render_ctx).rc_in_template && qualified then
-                    str "typename " ++ body
-                  else body
+            if target_is_namespace && (!render_ctx).rc_in_struct then
+              mt ()
+            else
+              let body_with_typename =
+                let qualified =
+                  match resolved with
+                  | Some r -> Common.resolved_is_qualified r
+                  | None -> is_qualified_name (Pp.string_of_ppcmds body)
                 in
-                str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
-            else begin
-              (* Functor alias: emit [template<...> using Name = Body<params>;].
-                 Re-uses {!pp_template_param} from the MEfunctor case. *)
-              let template_decl =
-                str "template<"
-                ++ prlist_with_sep
-                     (fun () -> str ", ")
-                     pp_template_param
-                     functor_params
-                ++ str ">"
+                if (!render_ctx).rc_in_template && qualified then
+                  str "typename " ++ body
+                else body
               in
-              let param_args =
-                prlist_with_sep
-                  (fun () -> str ", ")
-                  (fun (mbid, _) -> pp_modname (MPbound mbid))
-                  functor_params
-              in
-              template_decl
-              ++ fnl ()
-              ++ str "using "
-              ++ name
-              ++ str " = "
-              ++ body
-              ++ str "<"
-              ++ param_args
-              ++ str ">;"
-            end
+              str "using " ++ name ++ str " = " ++ body_with_typename ++ str ";"
+          else begin
+            (* Functor alias: emit [template<...> using Name = Body<params>;].
+               Re-uses {!pp_template_param} from the MEfunctor case. *)
+            let template_decl =
+              str "template<"
+              ++ prlist_with_sep
+                   (fun () -> str ", ")
+                   pp_template_param
+                   functor_params
+              ++ str ">"
+            in
+            let param_args =
+              prlist_with_sep
+                (fun () -> str ", ")
+                (fun (mbid, _) -> pp_modname (MPbound mbid))
+                functor_params
+            in
+            template_decl
+            ++ fnl ()
+            ++ str "using "
+            ++ name
+            ++ str " = "
+            ++ body
+            ++ str "<"
+            ++ param_args
+            ++ str ">;"
+          end
     in
     if Pp.ismt mod_pp then
       mt ()
@@ -1604,17 +1565,7 @@ let rec pp_structure_elem ~is_header f = function
           let body = pp_concept_clause name def in
           hoisted_pp ++ body
       in
-      str "template<typename M>"
-      ++ fnl ()
-      ++ concept_pp
-      ++
-      ( match Common.get_duplicate (top_visible_mp ()) l with
-      | None -> mt ()
-      | Some ren ->
-        fnl ()
-        ++ str ("template<typename M> concept " ^ ren ^ " = ")
-        ++ name
-        ++ str "<M>;" )
+      str "template<typename M>" ++ fnl () ++ concept_pp
 
 (** Pretty-print a module expression (MEident, MEapply, MEfunctor, MEstruct).
 
