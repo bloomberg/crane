@@ -250,6 +250,11 @@ val resolved_is_qualified : resolved -> bool
     [None] when the name comes out unqualified. *)
 val resolved_split : resolved -> (string * string) option
 
+(** Notified of every global reference resolved for printing.  A caller that
+    needs to know what a rendered fragment names can watch the resolutions
+    rather than read the fragment back as text. *)
+val on_resolved : (resolved -> unit) ref
+
 (** Resolve a module path to its name.  Registers the name in the visible
     scope, so call it once per occurrence; {!pp_module} is this plus
     {!resolved_string}. *)

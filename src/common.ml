@@ -270,6 +270,16 @@ let resolved_string r = dottify r.rn_parts
 let resolved_is_qualified r =
   List.length (List.filter (fun s -> s <> "") r.rn_parts) > 1
 
+(** Notified of every global reference resolved for printing.  A caller that
+    needs to know what a rendered fragment names can watch the resolutions
+    instead of reading the fragment back as text. *)
+let on_resolved : (resolved -> unit) ref = ref (fun _ -> ())
+
+(** Announce a resolution to {!on_resolved} and return it unchanged. *)
+let notify_resolved r =
+  !on_resolved r;
+  r
+
 (** The resolved name split at its last [::]: the qualifier and the final
     component.  [None] when the name comes out unqualified. *)
 let resolved_split r =
@@ -1319,7 +1329,7 @@ let pp_global_with_key k key r =
     let rls = List.rev ls in
     (* for what come next it's easier this way *)
     match lang () with
-    | Cpp -> resolved_string (pp_cpp_gen k mp rls (Some l))
+    | Cpp -> resolved_string (notify_resolved (pp_cpp_gen k mp rls (Some l)))
 
 (** Print a reference using its canonical kernel name.
     @param k The kind of the global reference

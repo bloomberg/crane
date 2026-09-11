@@ -169,6 +169,28 @@ let pp_concept_clause name = function
 let pp_concept_def name body =
   str "template<typename M>" ++ fnl () ++ pp_concept_clause name body
 
+(** Run [f] while watching which global references it resolves, and report
+    whether any came out qualified under [outer].
+
+    That is what "this concept's requirements name the enclosing struct's own
+    types" means.  It used to be asked of the finished text, by searching it
+    for ["Outer::"], which also matched any identifier merely ending in
+    [Outer]; asking the resolutions instead answers the question that was
+    meant. *)
+let watching_for_reference_to outer f =
+  let seen = ref false in
+  let saved = !Common.on_resolved in
+  Common.on_resolved :=
+    (fun r ->
+      saved r;
+      match List.filter (fun c -> c <> "") r.Common.rn_parts with
+      | first :: _ :: _ when String.equal first outer -> seen := true
+      | _ -> () );
+  let result =
+    Fun.protect ~finally:(fun () -> Common.on_resolved := saved) f
+  in
+  (result, !seen)
+
 (** Pretty-print a structure signature element (module spec). *)
 let rec pp_specif = function
   | _, Spec (Sval _ as s) -> pp_decls (spec_decls s)
@@ -1036,7 +1058,9 @@ let rec pp_structure_elem ~is_header f = function
                 match se with
                 | SEmodtype m ->
                   let modtype_name = pp_concept_name l in
-                  let concept_pp =
+                  let concept_pp, mentions_outer =
+                    watching_for_reference_to (Pp.string_of_ppcmds name)
+                    @@ fun () ->
                     match get_base_concept m with
                     | Some base_kn ->
                       let base_name = pp_concept_ref base_kn in
@@ -1066,7 +1090,7 @@ let rec pp_structure_elem ~is_header f = function
                       let all = List.append hoisted [main_concept] in
                       prlist_with_sep (fun () -> fnl () ++ fnl ()) identity all
                   in
-                  Some (modtype_name, concept_pp)
+                  Some (modtype_name, concept_pp, mentions_outer)
                 | _ -> None )
               sel
           else
@@ -1077,26 +1101,20 @@ let rec pp_structure_elem ~is_header f = function
            concept is held back and emitted after it instead; the others keep
            their place, since the struct's body may constrain a functor with
            them. *)
-        let self_qualifier = Pp.string_of_ppcmds name ^ "::" in
         let modtype_concepts, modtype_concepts_after =
-          List.partition
-            (fun (_, c) ->
-              not
-                (Common.contains_substring
-                   (Pp.string_of_ppcmds c)
-                   self_qualifier ) )
+          List.partition (fun (_, _, mentions_outer) -> not mentions_outer)
             modtype_concepts
         in
         let this_held_back =
           List.map
-            (fun (n, _) -> Pp.string_of_ppcmds n)
+            (fun (n, _, _) -> Pp.string_of_ppcmds n)
             modtype_concepts_after
         in
         let concepts_group_pp concepts =
           if concepts = [] then
             mt ()
           else
-            prlist_with_sep fnl (fun (_, c) -> c) concepts ++ fnl () ++ fnl ()
+            prlist_with_sep fnl (fun (_, c, _) -> c) concepts ++ fnl () ++ fnl ()
         in
         (* A concept cannot be declared inside a struct, so a module type
            belonging to a module that is itself nested travels to file scope,
@@ -1105,7 +1123,8 @@ let rec pp_structure_elem ~is_header f = function
           if old_context then (
             file_scope_concepts :=
               !file_scope_concepts
-              @ List.map snd (modtype_concepts @ modtype_concepts_after);
+              @ List.map (fun (_, c, _) -> c)
+                  (modtype_concepts @ modtype_concepts_after);
             ([], []) )
           else (modtype_concepts, modtype_concepts_after)
         in
