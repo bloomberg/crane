@@ -33,8 +33,52 @@ type t = {
   inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
   collision_wrappers : (ModPath.t * string) list;
+  functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
 }
+
+(** {2 Functor application sources} *)
+
+(** The module a module expression ultimately names, if any: an alias names it
+    directly, an application names the functor being applied, and a functor
+    names whatever its body names.  A [MEstruct] names nothing -- it {i is} the
+    module. *)
+let rec module_expr_source = function
+  | MEident mp -> Some mp
+  | MEapply (me, _) -> module_expr_source me
+  | MEfunctor (_, _, body) -> module_expr_source body
+  | MEstruct _ -> None
+
+(** The [MEstruct] body a module expression eventually reaches, past any
+    functor parameters. *)
+let rec module_expr_struct = function
+  | MEfunctor (_, _, body) -> module_expr_struct body
+  | MEstruct (_, sel) -> Some sel
+  | MEident _ | MEapply _ -> None
+
+(** [(modpath, source)] for every module that is an alias for, or an
+    application of, another module.  Rendering used to record these as it
+    emitted the [using] declarations, which put them out of reach of any use
+    rendered earlier; they are a property of the structure, so they are decided
+    here. *)
+let collect_functor_app_sources (s : ml_structure) :
+    (ModPath.t * ModPath.t) list =
+  let acc = ref [] in
+  let rec collect parent sel =
+    List.iter
+      (fun (l, se) ->
+        match se with
+        | SEmodule m ->
+          let mp = MPdot (parent, l) in
+          ( match module_expr_source m.ml_mod_expr with
+          | Some src -> acc := (mp, src) :: !acc
+          | None -> () );
+          Option.iter (collect mp) (module_expr_struct m.ml_mod_expr)
+        | _ -> () )
+      sel
+  in
+  List.iter (fun (mp, sel) -> collect mp sel) s;
+  List.rev !acc
 
 (** {2 Enum registration} *)
 
@@ -504,7 +548,7 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
 
 (** Perform all structure analysis in a single call.
 
-    This is called once from cpp.ml's [do_struct_with_decl_tracking],
+    This is called once per unit from cpp.ml's [prepare_structure],
     immediately after creating the Method_registry. The steps are:
 
     1. Register enum inductives across all modules (side-effect on Table). 2.
@@ -706,8 +750,11 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   let collision_wrappers = collect_collision_wrappers names sorted_modules in
   (* 6. Collect the eponymous records, for the same reason. *)
   let eponymous_records = collect_eponymous_records s in
+  (* 7. Collect the alias and functor-application targets, likewise. *)
+  let functor_app_sources = collect_functor_app_sources s in
   { sorted_modules;
     inductive_names;
     global_scope_enums;
     collision_wrappers;
+    functor_app_sources;
     eponymous_records }

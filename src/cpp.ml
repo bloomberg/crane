@@ -824,16 +824,6 @@ let rec pp_structure_elem ~is_header f = function
           in
           (match body with
           | MEapply _ ->
-            let () =
-              let rec get_base_fmp = function
-                | MEapply (f, _) -> get_base_fmp f
-                | MEident fmp -> Some fmp
-                | _ -> None
-              in
-              match get_base_fmp body with
-              | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
-              | None -> ()
-            in
             template_decl
             ++ fnl ()
             ++ str "struct "
@@ -854,14 +844,6 @@ let rec pp_structure_elem ~is_header f = function
         if not is_header then
           mt ()
         else
-          let rec get_base_functor_mp = function
-            | MEapply (f, _) -> get_base_functor_mp f
-            | MEident fmp -> Some fmp
-            | _ -> None
-          in
-          ( match get_base_functor_mp m.ml_mod_expr with
-          | Some fmp -> Hashtbl.replace functor_app_sources mp fmp
-          | None -> () );
           let body = pp_module_expr ~is_header f [] m.ml_mod_expr in
           let using_decl =
             str "using " ++ name ++ str " = " ++ body ++ str ";"
@@ -1438,9 +1420,6 @@ let rec pp_structure_elem ~is_header f = function
         if not is_header then
           mt ()
         else
-          (* Register MEident module aliases in functor_app_sources so that
-             is_accessor can resolve alias chains to find registered accessors. *)
-          let () = Hashtbl.replace functor_app_sources mp target in
           (* The target is a module path, so it resolves to a name that says
              for itself whether it came out qualified. *)
           let resolved = Common.resolve_module target in
@@ -1882,6 +1861,9 @@ let prepare_structure s =
       Hashtbl.replace collision_wrapper_table cmp () )
     analysis.collision_wrappers;
   List.iter register_eponymous_record analysis.eponymous_records;
+  List.iter
+    (fun (mp, src) -> Hashtbl.replace functor_app_sources mp src)
+    analysis.functor_app_sources;
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 

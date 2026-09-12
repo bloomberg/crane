@@ -106,6 +106,14 @@ type t = {
           name resolver is built from it before rendering begins, and a table
           the printer went on adding to would be one the resolver had already
           read. *)
+  functor_app_sources : (ModPath.t * ModPath.t) list;
+      (** [(modpath, source)] for every module that is an alias for, or an
+          application of, another module: [Module M := N] gives [(M, N)], and
+          [Module M := F X Y] gives [(M, F)].
+
+          Here rather than in the printer for the reason above: the printer
+          recorded these as it emitted each [using] declaration, so a use
+          rendered before that declaration could not resolve the alias. *)
   eponymous_records : GlobRef.t list;
       (** The record inductives whose name is, up to case, that of the module
           declaring them, and which are therefore flattened into that module's
@@ -119,9 +127,9 @@ type t = {
 
 (** Perform all structure analysis in a single pass.
 
-    This is the main entry point, called once from [cpp.ml] at the start of
-    [do_struct_with_decl_tracking], immediately after creating the
-    {!Method_registry}.
+    This is the main entry point, called once per unit from [cpp.ml]'s
+    [prepare_structure] -- the pass that renders nothing -- immediately after
+    creating the {!Method_registry}.
 
     Side effects:
     - Calls [Table.add_enum_inductive] for each detected enum.
