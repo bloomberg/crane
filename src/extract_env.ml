@@ -916,6 +916,7 @@ let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
   set_phase Pre;
+  d.prepare struc;
   ignore (d.pp_struct struc);
   set_phase Impl;
   push_visible mp [];
@@ -1250,6 +1251,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      establishes that, so this one's output is discarded.  See the note in
      [module-ir-blocked-on-name-resolution]. *)
   set_phase Pre;
+  d.prepare struc;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
   let census_after_discovery = Table.census () in

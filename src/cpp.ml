@@ -1823,6 +1823,68 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   in
   (specs_pp, defs_pp, lifted_pp)
 
+(** What analysing the structure concluded, for the passes that render it. *)
+let structure_analysis : Structure_analysis.t option ref = ref None
+
+(** The analysis of the structure being rendered.
+
+    Absent means a pass was started without {!prepare_structure}, which is a
+    bug in the caller rather than a structure with nothing to say. *)
+let get_structure_analysis () =
+  match !structure_analysis with
+  | Some a -> a
+  | None ->
+    CErrors.anomaly (Pp.str "cpp: rendering a structure that was never analysed")
+
+(** Decide everything about the structure that does not depend on which file is
+    being written, and record it for the passes that do.
+
+    {!Structure_analysis} describes itself as running before rendering, and the
+    tables it fills are read by both the header and the implementation; it was
+    nonetheless invoked from inside the renderer, so the same conclusions were
+    reached four times per unit and the last one silently won.  Reaching them
+    once, here, is what makes discovery a pass in its own right.
+
+    The visibility stack is pushed exactly as a rendering pass would push it:
+    the analysis is a function of the structure, but the helpers it calls read
+    the stack, and this is a relocation, not a re-derivation. *)
+let prepare_structure s =
+  let initial_mps =
+    List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s
+  in
+  List.iter (fun mp -> push_visible mp []) initial_mps;
+  Common.detect_sibling_module_inductive_collisions s;
+  method_registry :=
+    Some
+      ( match !global_method_registry with
+      | Some reg -> reg
+      | None ->
+        Method_registry.create
+          ~ret_is_erased:Translation.return_type_is_erased s );
+  let analysis = Structure_analysis.analyze (get_method_registry ()) s in
+  Hashtbl.clear global_inductive_names;
+  List.iter
+    (fun (name, mp) -> Hashtbl.replace global_inductive_names name mp)
+    analysis.inductive_names;
+  Hashtbl.clear global_scope_enum_table;
+  List.iter
+    (fun r -> Hashtbl.replace global_scope_enum_table r ())
+    analysis.global_scope_enums;
+  List.iter
+    (fun (mi : Structure_analysis.module_info) ->
+      match mi.wrapper_name with
+      | Some name -> Hashtbl.replace wrapper_module_table mi.modpath name
+      | None -> () )
+    analysis.sorted_modules;
+  List.iter
+    (fun (cmp, name) ->
+      Hashtbl.replace wrapper_module_table cmp name;
+      Hashtbl.replace collision_wrapper_table cmp () )
+    analysis.collision_wrappers;
+  List.iter register_eponymous_record analysis.eponymous_records;
+  List.iter (fun _ -> pop_visible ()) initial_mps;
+  structure_analysis := Some analysis
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Process all wrapper modules to populate pending_wrapper_decls. PASS
@@ -1859,32 +1921,7 @@ let do_struct_with_decl_tracking ~is_header f s =
       (fun (mp, _) -> if is_modfile mp then Some mp else None) s
   in
   List.iter (fun mp -> push_visible mp []) initial_mps;
-  Common.detect_sibling_module_inductive_collisions s;
-  method_registry := Some
-    ( match !global_method_registry with
-    | Some reg -> reg
-    | None -> Method_registry.create ~ret_is_erased:Translation.return_type_is_erased s );
-  let analysis = Structure_analysis.analyze (get_method_registry ()) s in
-  Hashtbl.clear global_inductive_names;
-  List.iter
-    (fun (name, mp) -> Hashtbl.replace global_inductive_names name mp)
-    analysis.inductive_names;
-  Hashtbl.clear global_scope_enum_table;
-  List.iter
-    (fun r -> Hashtbl.replace global_scope_enum_table r ())
-    analysis.global_scope_enums;
-  List.iter
-    (fun (mi : Structure_analysis.module_info) ->
-      match mi.wrapper_name with
-      | Some name -> Hashtbl.replace wrapper_module_table mi.modpath name
-      | None -> () )
-    analysis.sorted_modules;
-  List.iter
-    (fun (cmp, name) ->
-      Hashtbl.replace wrapper_module_table cmp name;
-      Hashtbl.replace collision_wrapper_table cmp () )
-    analysis.collision_wrappers;
-  List.iter register_eponymous_record analysis.eponymous_records;
+  let analysis = get_structure_analysis () in
   let is_func_decl (_, se) =
     match se with
     | SEdecl (Dterm _ | Dfix _) -> true
@@ -2254,6 +2291,7 @@ let cpp_descr =
     file_suffix = ".cpp";
     file_naming = file_of_modfile;
     preamble;
+    prepare = prepare_structure;
     pp_struct;
     pp_hstruct;
     sig_suffix = Some ".h";
