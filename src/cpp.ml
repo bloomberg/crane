@@ -36,76 +36,20 @@ open Cpp_names
 open Cpp_print
 open Cpp_ind
 
-(** Parse a custom type template string (e.g., "std::optional<%t0>",
-    "std::vector<%t0>", "std::pair<%t0,%t1>") and recursively qualify type
-    arguments using the provided qualify_type function.
+(** Render a custom type mapping (e.g. ["std::pair<%t0,%t1>"]) with each of
+    its type holes qualified by [qualify_type].
 
-    This allows any parametric custom type to have its inner type arguments
-    properly qualified with "typename M::" when used in module signature
-    requires clauses.
+    This is what lets a parametric custom type appear in a module signature's
+    [requires] clause: the arguments spliced into it need the same
+    ["typename M::"] qualification the surrounding concept gives everything
+    else.  A hole with no corresponding argument is left as written.
 
-    @param custom_str  The raw custom-type annotation string; [%t0], [%t1], …
-                       are placeholder tokens replaced by the corresponding
-                       elements of [args].
-    @param args        The ML type arguments to substitute for the [%tN]
-                       placeholders, in order.
-    @param qualify_type  Recursive callback that qualifies a single ML type
-                         (e.g. prepending ["typename M::"]) before splicing it
-                         into the output.
-    @return Pretty-printer document with all [%tN] placeholders replaced by
-            their qualified type renderings and surrounding literal text
-            preserved verbatim. *)
+    @param custom_str  The mapping as the user wrote it.
+    @param args        The C++ type arguments filling [%t0], [%t1], ….
+    @param qualify_type  Renders one argument, qualified. *)
 let qualify_custom_template custom_str args qualify_type =
-  let len = String.length custom_str in
-  (* [%elem]/[%elemN] placeholders (completeness-aware element wrapping, see
-     WRAP.md) are treated like [%t0]/[%tN] here: this path only qualifies
-     member types for module-signature concept checks, where the boxing
-     distinction is immaterial (immer::box converts implicitly to/from its
-     wrapped type). *)
-  let is_prefix p i =
-    i + String.length p <= len && String.sub custom_str i (String.length p) = p
-  in
-  let rec parse i result =
-    if i >= len then
-      result
-    else if is_prefix "%elem" i || (i <= len - 3 && custom_str.[i] = '%' && custom_str.[i + 1] = 't')
-    then
-      let digit_start = if is_prefix "%elem" i then i + 5 else i + 2 in
-      let rec find_digit_end j =
-        if j < len && custom_str.[j] >= '0' && custom_str.[j] <= '9' then
-          find_digit_end (j + 1)
-        else
-          j
-      in
-      let digit_end = find_digit_end digit_start in
-      if digit_end > digit_start || is_prefix "%elem" i then
-        let idx =
-          if digit_end > digit_start then
-            int_of_string
-              (String.sub custom_str digit_start (digit_end - digit_start))
-          else 0
-        in
-        if idx < List.length args then
-          parse digit_end (result ++ qualify_type (List.nth args idx))
-        else
-          parse
-            digit_end
-            (result ++ str (String.sub custom_str i (digit_end - i)))
-      else
-        parse (i + 1) (result ++ str (String.make 1 custom_str.[i]))
-    else
-      let rec find_next j =
-        if j >= len then
-          len
-        else if custom_str.[j] = '%' then
-          j
-        else
-          find_next (j + 1)
-      in
-      let next = find_next (i + 1) in
-      parse next (result ++ str (String.sub custom_str i (next - i)))
-  in
-  parse 0 (mt ())
+  render_type_template custom_str
+    ~hole:(fun i -> Option.map qualify_type (List.nth_opt args i))
 
 (** The template parameter every module-type concept is written over.
 

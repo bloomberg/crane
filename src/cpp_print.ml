@@ -519,26 +519,6 @@ let rec cpp_type_mentions_boxed_recursive t =
   | Tnamespace (_, t) -> cpp_type_mentions_boxed_recursive t
   | _ -> false
 
-(* Substitute [%t0] in a wrapper template (e.g. "immer::box<%t0>") with the
-   already-rendered element string. *)
-let subst_wrapper_t0 wrapper elem_str =
-  let buf = Buffer.create (String.length wrapper + String.length elem_str) in
-  let n = String.length wrapper in
-  let i = ref 0 in
-  while !i < n do
-    if !i + 2 < n && wrapper.[!i] = '%' && wrapper.[!i + 1] = 't'
-       && wrapper.[!i + 2] = '0'
-    then begin
-      Buffer.add_string buf elem_str;
-      i := !i + 3
-    end
-    else begin
-      Buffer.add_char buf wrapper.[!i];
-      incr i
-    end
-  done;
-  Buffer.contents buf
-
 (* Suppresses [%elem] boxing while rendering a [crane_container_cast] target
    type.  That cast reconstructs a concrete container type from an erased
    [std::any] representation to match a CALLEE's declared parameter type; when
@@ -562,6 +542,46 @@ let expand_custom_fixed esc cc = expand_custom_chunks (parse_custom_fixed esc cc
 let expand_elem_args cmds =
   let cmds = expand_numbered_args "elem" (fun i -> CCelem i) cmds in
   expand_custom_fixed "elem" (CCelem 0) cmds
+
+(** Parse a custom {e type} template: the [%t{i}] and [%elem{i}] holes of a
+    mapping such as ["std::pair<%t0,%t1>"].  This and {!parse_term_template}
+    are the only places that know the syntax; consumers fold over the tokens
+    rather than scanning the text again. *)
+let parse_type_template s =
+  expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
+
+(** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
+    holes that splice value arguments. *)
+let parse_term_template s =
+  expand_elem_args
+    (expand_numbered_args "t" (fun i -> CCty_arg i)
+       (parse_numbered_args "a" (fun i -> CCarg i) s))
+
+(** Render a custom type template, filling hole [i] with [hole i] and copying
+    the text between holes verbatim.  [hole] returns [None] for an index the
+    caller cannot fill, which is written back out as a placeholder of the same
+    index -- nothing here knows better than the template did. *)
+let render_type_template ~hole template =
+  prlist
+    (function
+      | CCstring lit -> str lit
+      | (CCty_arg i | CCelem i) as tok -> (
+        match hole i with
+        | Some pp -> pp
+        | None ->
+          str (Printf.sprintf "%%%s%d" (match tok with CCelem _ -> "elem" | _ -> "t") i) )
+      | _ ->
+        CErrors.anomaly
+          (Pp.str "render_type_template: a type template has only type holes"))
+    (parse_type_template template)
+
+(** Substitute the element hole of a wrapper template (e.g. ["immer::box<%t0>"])
+    with an already-rendered element string. *)
+let subst_wrapper_t0 wrapper elem_str =
+  Pp.string_of_ppcmds
+    (render_type_template
+       ~hole:(fun i -> if i = 0 then Some (str elem_str) else None)
+       wrapper)
 
 (** Flatten a command list that is known to contain only [CCstring] chunks
     back into a single string. *)
@@ -716,9 +736,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | _ ->
       match find_custom_opt r with
       | Some s when to_inline r ->
-        let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
-        let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
-        let cmds = expand_elem_args cmds in
+        let cmds = parse_term_template s in
         pp_custom
           ~container:r
           (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
@@ -912,14 +930,25 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       require_header "any";
       str "std::any"
     | Ttyctor t ->
-      (* A template template argument is the bare template name.  There is no
-         structural way to ask for "the head" of an arbitrary rendering --
-         a custom mapping is a free-form string like [std::optional<%1>] --
-         so the applied form is printed and its argument list cut off. *)
-      let s = Pp.string_of_ppcmds (pp_rec false t) in
-      str (match String.index_opt s '<' with
-           | Some i -> String.sub s 0 i
-           | None -> s)
+      (* A template template argument is the bare template name.  Ask the type
+         for its head rather than rendering it applied and cutting the result
+         back: an applied type is a head plus arguments, and for a custom
+         mapping the head is the template's own leading text. *)
+      let cut_at_argument_list str_of =
+        match String.index_opt str_of '<' with
+        | Some i -> String.sub str_of 0 i
+        | None -> str_of
+      in
+      ( match t with
+      | Tglob (r, _ :: _, _) -> (
+        match find_custom_opt r with
+        | Some template when String.contains template '%' -> (
+          match parse_type_template template with
+          | CCstring lit :: _ -> str (cut_at_argument_list lit)
+          | _ -> str (cut_at_argument_list template) )
+        | Some template -> str (cut_at_argument_list template)
+        | None -> pp_rec false (Tglob (r, [], [])) )
+      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) )
     | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
@@ -1069,9 +1098,7 @@ and pp_cpp_expr env args t =
       flatten_custom_strings
         (parse_custom_fixed "result" (CCstring result_str) custom)
     in
-    let cmds = parse_numbered_args "a" (fun i -> CCarg i) substituted in
-    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
-    let cmds = expand_elem_args cmds in
+    let cmds = parse_term_template substituted in
     let body_pp =
       pp_custom
         ~container:ref_name
@@ -1155,8 +1182,7 @@ and pp_cpp_expr env args t =
     if Common.contains_substring custom "%result" then
       gen_block_iife ?yields:ci.ci_yields x custom tys []
     else
-    let cmds = parse_numbered_args "t" (fun i -> CCty_arg i) custom in
-    let cmds = expand_elem_args cmds in
+    let cmds = parse_type_template custom in
     pp_custom
       ~container:x
       (Pp.string_of_ppcmds (GlobRef.print x) ^ " := " ^ custom)
@@ -1435,9 +1461,7 @@ and pp_cpp_expr env args t =
       let args_s = pp_list (pp_cpp_expr env args) (call_args ts) in
       str s ++ ty_args_s ++ str "(" ++ args_s ++ str ")"
     else
-      let cmds = parse_numbered_args "a" (fun i -> CCarg i) s in
-      let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
-      let cmds = expand_elem_args cmds in
+      let cmds = parse_term_template s in
       let arg_types =
         match res.cs_params with Ptypes ts -> ts | Punknown -> []
       in
@@ -2379,9 +2403,7 @@ and pp_cpp_stmt env args = function
       flatten_custom_strings
         (parse_custom_fixed "result" (CCstring result_str) tmpl)
     in
-    let cmds = parse_numbered_args "a" (fun i -> CCarg i) flat in
-    let cmds = expand_numbered_args "t" (fun i -> CCty_arg i) cmds in
-    let cmds = expand_elem_args cmds in
+    let cmds = parse_term_template flat in
     (* Render: type declaration + template body as statements *)
     let decl_pp =
       pp_cpp_type false [] result_ty
