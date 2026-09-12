@@ -1153,29 +1153,20 @@ let rec pp_structure_elem ~is_header f = function
           else
             None
         in
-        (* Save previous promotion state for the eponymous inductive, if any.
-           The same inductive may have been promoted when rendered standalone
-           but should not be promoted when rendered nested. *)
-        let was_previously_promoted =
-          match !eponymous_type_ref with
-          | Some r -> Hashtbl.mem promoted_inductives r
-          | None -> false
+        (* Set the promotion state the body will be rendered under.  A
+           promotion outlives this module -- every later mention of the
+           inductive spells it the promoted way -- whereas the demotion a
+           nested rendering needs lasts exactly as long as that rendering. *)
+        let with_promotion_scope =
+          if is_promoted then (
+            eponymous_promote_ref := !eponymous_type_ref;
+            Option.iter Table.promote_inductive !eponymous_type_ref;
+            eponymous_deferred := Pp.mt ();
+            eponymous_promote_sft := false;
+            fun body -> body () )
+          else
+            Table.with_demoted_inductive !eponymous_type_ref
         in
-        (* Set promotion state before body rendering. *)
-        if is_promoted then (
-          eponymous_promote_ref := !eponymous_type_ref;
-          Option.iter
-            (fun r -> Hashtbl.replace promoted_inductives r ())
-            !eponymous_type_ref;
-          eponymous_deferred := Pp.mt ();
-          eponymous_promote_sft := false )
-        else
-          (* When NOT promoted (e.g., nested context), ensure the eponymous
-             inductive is NOT marked as promoted. A previous standalone
-             rendering of the same module may have added it. *)
-          Option.iter
-            (fun r -> Hashtbl.remove promoted_inductives r)
-            !eponymous_type_ref;
         (* Where the body of this module is rendered: inside the struct when
            the header spells it out, qualified by it in the implementation. *)
         let enter_module c =
@@ -1204,6 +1195,7 @@ let rec pp_structure_elem ~is_header f = function
           else c
         in
         let body, deferred_asserts_pp, this_method_candidates =
+          with_promotion_scope @@ fun () ->
           with_render_ctx enter_module (fun () ->
             let outer_deferred_asserts = !deferred_concept_asserts in
             let outer_held_back = !held_back_concepts in
@@ -1237,12 +1229,6 @@ let rec pp_structure_elem ~is_header f = function
         eponymous_type_ref := old_eponymous;
         eponymous_record := old_eponymous_record;
         method_candidates := old_methods;
-        (* Restore promotion state for the eponymous inductive if it was
-           previously promoted (before this nested rendering removed it). *)
-        if (not is_promoted) && was_previously_promoted then
-          Option.iter
-            (fun r -> Hashtbl.replace promoted_inductives r ())
-            !eponymous_type_ref;
         (* Capture and clean up promotion state. *)
         let this_promoted = is_promoted in
         let this_deferred = !eponymous_deferred in

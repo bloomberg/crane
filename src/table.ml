@@ -2375,6 +2375,26 @@ let modfile_mps = ref MPmap.empty
     so it lives here to avoid a dependency cycle. *)
 let promoted_inductives : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 4
 
+(** Record that [r] is promoted.  A promotion outlives the rendering that
+    decided it: every later mention of the inductive has to spell it the
+    promoted way. *)
+let promote_inductive r = Hashtbl.replace promoted_inductives r ()
+
+(** Run [body] with [r] not promoted, putting its promotion back afterwards.
+
+    The same inductive is promoted when its module is rendered standalone but
+    not when that module is rendered nested inside another, and the nested
+    rendering must not leave its answer behind for everyone else. *)
+let with_demoted_inductive r body =
+  match r with
+  | None -> body ()
+  | Some r ->
+    let was_promoted = Hashtbl.mem promoted_inductives r in
+    Hashtbl.remove promoted_inductives r;
+    Fun.protect
+      ~finally:(fun () -> if was_promoted then promote_inductive r)
+      body
+
 let reset_modfile () =
   modfile_ids := !blacklist_table;
   modfile_mps := MPmap.empty
