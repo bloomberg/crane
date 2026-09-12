@@ -475,6 +475,7 @@ let set_keywords, get_keywords =
 let add_global_ids, get_global_ids =
   let ids = ref Id.Set.empty in
   register_cleanup (fun () -> ids := get_keywords ());
+  Table.register_census "global_ids" (fun () -> Id.Set.cardinal !ids);
   let add s = ids := Id.Set.add s !ids
   and get () = !ids in
   (add, get)
@@ -546,28 +547,39 @@ let empty_env () = ([], get_global_ids ())
     @return [(add, get, clear)] where [add k v] inserts a binding, [get k]
             retrieves one (raising [Not_found] if absent), and [clear ()] resets
             the table *)
-let mktable_id autoclean =
+let mktable_id ?census autoclean =
   let m = ref Id.Map.empty in
   let clear () = m := Id.Map.empty in
   if autoclean then register_cleanup clear;
+  Option.iter
+    (fun name -> Table.register_census name (fun () -> Id.Map.cardinal !m))
+    census;
   ((fun r v -> m := Id.Map.add r v !m), (fun r -> Id.Map.find r !m), clear)
 
 (** Create a mutable [Refmap']-backed table with optional auto-cleanup.
+    @param census Enrol the table under this name; see {!Table.census}
     @param autoclean Whether to register a cleanup hook
     @return [(add, get, clear)] triple — same contract as {!mktable_id} *)
-let mktable_ref autoclean =
+let mktable_ref ?census autoclean =
   let m = ref Refmap'.empty in
   let clear () = m := Refmap'.empty in
   if autoclean then register_cleanup clear;
+  Option.iter
+    (fun name -> Table.register_census name (fun () -> Refmap'.cardinal !m))
+    census;
   ((fun r v -> m := Refmap'.add r v !m), (fun r -> Refmap'.find r !m), clear)
 
 (** Create a mutable [MPmap]-backed table with optional auto-cleanup.
+    @param census Enrol the table under this name; see {!Table.census}
     @param autoclean Whether to register a cleanup hook
     @return [(add, get, clear)] triple — same contract as {!mktable_id} *)
-let mktable_modpath autoclean =
+let mktable_modpath ?census autoclean =
   let m = ref MPmap.empty in
   let clear () = m := MPmap.empty in
   if autoclean then register_cleanup clear;
+  Option.iter
+    (fun name -> Table.register_census name (fun () -> MPmap.cardinal !m))
+    census;
   ((fun r v -> m := MPmap.add r v !m), (fun r -> MPmap.find r !m), clear)
 
 (** Table recording first-level content of each MPfile. *)
@@ -828,7 +840,7 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
 
 (** Rename first-level module labels with unique numeric suffixes. *)
 let modfstlev_rename =
-  let add_index, get_index, _ = mktable_id true in
+  let add_index, get_index, _ = mktable_id ~census:"modfstlev_rename" true in
   fun l ->
     let id = Label.to_id l in
     try
@@ -888,7 +900,7 @@ let rec mp_renaming_fun full_mp =
 (** ... and its version using a cache *)
 
 and mp_renaming =
-  let add, get, _ = mktable_modpath true in
+  let add, get, _ = mktable_modpath ~census:"mp_renaming" true in
   fun x ->
     try
       if is_mp_bound (base_mp x) then raise Not_found;
@@ -1001,7 +1013,7 @@ let ref_renaming_fun (k, r) =
 
 (** Cached version of ref_renaming_fun. *)
 let ref_renaming =
-  let add, get, _ = mktable_ref true in
+  let add, get, _ = mktable_ref ~census:"ref_renaming" true in
   fun ((k, r) as x) ->
     try
       if is_mp_bound (base_mp (modpath_of_r r)) then raise Not_found;
