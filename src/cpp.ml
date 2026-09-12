@@ -1864,6 +1864,24 @@ let prepare_structure s =
   List.iter
     (fun (mp, src) -> Hashtbl.replace functor_app_sources mp src)
     analysis.functor_app_sources;
+  List.iter
+    (fun (mi : Structure_analysis.module_info) ->
+      match mi.wrapper_name with
+      | None -> ()
+      | Some _ ->
+        (* A wrapper module's type aliases are emitted at global C++ scope, as
+           [using T = ...;] rather than members of the wrapper struct, so
+           {!Cpp_names.struct_qualifier_for} must not qualify them in the .cpp
+           file.  Which module a declaration is emitted in is layout, so it is
+           settled here rather than while emitting it. *)
+        List.iter
+          (fun (_, se) ->
+            match se with
+            | SEdecl (Dtype (r, _, _)) ->
+              Cpp_state.register_global_scope_type_alias r
+            | _ -> () )
+          mi.sels )
+    analysis.sorted_modules;
   List.iter (fun _ -> pop_visible ()) initial_mps;
   structure_analysis := Some analysis
 
@@ -2002,21 +2020,6 @@ let do_struct_with_decl_tracking ~is_header f s =
             ++ str "};"
           | None -> mt ()
         else begin
-          (* Type aliases (Dtype) in type_sels are being rendered at global
-             C++ scope (as [using T = ...] declarations, not inside any struct).
-             Register them so [struct_qualifier_for] skips qualification in
-             the .cpp file.  This fixes imported-module aliases like [cell]
-             from [AliasSource.v] that appear at global scope in the header
-             but would otherwise be incorrectly qualified as [AliasSource::cell]
-             in the .cpp out-of-line function definitions. *)
-          if is_header && not (Pp.ismt type_pp) then
-            List.iter
-              (fun (_, se) ->
-                match se with
-                | SEdecl (Dtype (r, _, _)) ->
-                  Cpp_state.register_global_scope_type_alias r
-                | _ -> () )
-              type_sels;
           type_pp
         end
       | None ->
