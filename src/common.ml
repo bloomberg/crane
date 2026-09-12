@@ -455,15 +455,17 @@ let register_cleanup, do_cleanup =
   let funs = ref [] in
   ((fun f -> funs := f :: !funs), fun () -> List.iter (fun f -> f ()) !funs)
 
-(** Extraction phase: pre-scan, implementation, or interface. *)
+(** Which file an emission pass is writing. *)
+type file = Impl | Intf
+
+(** What a pass is for; see {!Common.phase} in the interface. *)
 type phase =
-  | Pre
-  | Impl
-  | Intf
+  | Discover
+  | Emit of file
 
 (** Get/set the current extraction phase. *)
 let set_phase, get_phase =
-  let ph = ref Impl in
+  let ph = ref (Emit Impl) in
   (( := ) ph, fun () -> !ph)
 
 (** Get/set the set of reserved keywords. *)
@@ -587,7 +589,7 @@ let add_mpfiles_content, get_mpfiles_content, clear_mpfiles_content =
   mktable_modpath false
 
 (** Retrieve module file content, returning an empty map when the module
-    has not been registered yet (e.g. during the Pre phase of Separate
+    has not been registered yet (e.g. during discovery of Separate
     Extraction where [pop_visible] has not yet populated the table). *)
 let get_mpfiles_content mp =
   try get_mpfiles_content mp with Not_found -> KMap.empty
@@ -672,7 +674,7 @@ let pop_visible, push_visible, get_visible =
     | v :: vl ->
       vis := vl;
       (* we save the 1st-level-content of MPfile for later use *)
-      if get_phase () == Impl && modular () && is_modfile v.mp then
+      if get_phase () = Emit Impl && modular () && is_modfile v.mp then
         add_mpfiles_content v.mp v.content
   and push mp mps = vis := {mp; params = mps; content = KMap.empty} :: !vis
   and get () = !vis in
@@ -885,7 +887,7 @@ let rec mp_renaming_fun full_mp =
   | MPfile _ ->
     assert (modular ());
     (* see [at_toplevel] above *)
-    assert (get_phase () == Pre);
+    assert (get_phase () = Discover);
     (* During Separate Extraction, the visibility stack may be empty when
        mp_renaming_fun is called before do_struct_with_decl_tracking has
        pushed the top-level module.  In that case we conservatively register

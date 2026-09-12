@@ -689,7 +689,7 @@ let include_guard_name s =
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
     are already included transitively via the component's own header (both
-    share the same accumulator during the Pre phase). *)
+    share the same accumulator during discovery). *)
 let header fn () =
   (* Component's own header must be first include (BDE Rule 5.5) *)
   let self_include =
@@ -911,14 +911,14 @@ let module_filename mp =
 (** {2 Extraction of one decl to stdout} *)
 
 (** Renders a single ML declaration to C++ output. Performs renaming and runs
-    both Pre and Impl phases. *)
+    both the discovery and the emission passes. *)
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
-  set_phase Pre;
+  set_phase Discover;
   d.prepare struc;
   ignore (d.pp_struct struc);
-  set_phase Impl;
+  set_phase (Emit Impl);
   push_visible mp [];
   let ans = d.pp_decl decl in
   pop_visible ();
@@ -1250,7 +1250,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      consulted, and a use can precede its declaration.  Only a whole pass
      establishes that, so this one's output is discarded.  See the note in
      [module-ir-blocked-on-name-resolution]. *)
-  set_phase Pre;
+  set_phase Discover;
   d.prepare struc;
   ignore (d.pp_struct struc);
   ignore (d.pp_hstruct struc);
@@ -1262,9 +1262,9 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
      that is actually written, rather than from the dry run above.  Everything
      raised after this point is too late, which [freeze_demands] is there to
      catch. *)
-  set_phase Impl;
+  set_phase (Emit Impl);
   let body_impl = d.pp_struct struc in
-  set_phase Intf;
+  set_phase (Emit Intf);
   let body_hstruct = d.pp_hstruct struc in
   Table.freeze_demands ();
   check_no_late_decisions census_after_discovery;
@@ -1768,7 +1768,7 @@ let separate_extraction ~opaque_access lr =
      The registry creation calls pp_global_name which has side effects on
      mpfiles (include tracking), so save/restore the mpfiles state. *)
   let saved_mpfiles = Common.mpfiles_save () in
-  set_phase Pre;
+  set_phase Discover;
   Cpp_state.set_global_method_registry (Method_registry.create ~ret_is_erased:Translation.return_type_is_erased struc);
   (* Generic traversal of ml_structure: walks MEstruct/MEfunctor/MEapply
      and calls [visit ~in_struct elem] on each structure element. *)
@@ -1816,7 +1816,7 @@ let separate_extraction ~opaque_access lr =
       ) refs
     | _ -> ()
   ) struc;
-  set_phase Impl;
+  set_phase (Emit Impl);
   Common.mpfiles_restore saved_mpfiles;
   List.iter print struc
 

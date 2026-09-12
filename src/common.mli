@@ -125,10 +125,18 @@ val get_db_name_opt : int -> env -> Names.Id.t option
 
 (** {2 Extraction phases and renaming} *)
 
+(** Which file an emission pass is writing. *)
+type file =
+  | Impl  (** the [.cpp] *)
+  | Intf  (** the [.h] *)
+
+(** What a pass is for.  The two are different kinds of pass, not the same pass
+    run repeatedly: {!Discover} is the one that decides -- the names it
+    allocates and the facts it records are what the emissions go on to read --
+    and its output is discarded.  An {!Emit} pass only reads. *)
 type phase =
-  | Pre
-  | Impl
-  | Intf  (** Extraction phase: pre-scan, implementation, or interface. *)
+  | Discover
+  | Emit of file
 
 (** Set the current extraction phase. *)
 val set_phase : phase -> unit
