@@ -138,13 +138,6 @@ type cpp_type =
   | Tdecltype of cpp_expr  (** decltype(expr) for deduced types *)
   | Tdecay of cpp_type  (** std::decay_t<T> - strips references/cv from template params *)
 
-(** Type metavariable for unification. *)
-and cpp_meta = {
-  id : int;  (** Unique identifier *)
-  mutable contents : cpp_type option;
-      (** Unification result, None if unresolved *)
-}
-
 (** {2 C++ statements} *)
 
 (** Whether an assignment also declares its target.  This used to be a

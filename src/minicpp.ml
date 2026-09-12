@@ -133,12 +133,6 @@ type cpp_type =
   | Tdecltype of cpp_expr (* decltype(expr) *)
   | Tdecay of cpp_type (* std::decay_t<T> - strips references/cv from template params *)
 
-(** C++ type meta-variable for unification. *)
-and cpp_meta = {
-  id : int;
-  mutable contents : cpp_type option;
-}
-
 (* Whether an assignment also declares its target: [Declare ty] prints
    [ty x = e;] (Tauto for [auto]), [Existing] prints [x = e;] for a variable
    already in scope. *)
