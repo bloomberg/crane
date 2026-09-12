@@ -3877,130 +3877,123 @@ let binop_yields_bool = function
   | Bassign -> false
 
 (** The raw-pointer type an owning or raw pointer decays to.  Both
-    [crane_raw(x)] and [x.get()] answer this way. *)
+    [crane_raw(x)] and [x.get()] answer this way.  [None] for anything that is
+    not a pointer, which has no raw form to decay to. *)
 let as_raw_ptr = function
-  | Tptr t | Tshared_ptr t -> Tptr t
-  | _ -> Tunresolved
+  | Tptr t | Tshared_ptr t -> Some (Tptr t)
+  | _ -> None
 
-(** Infer the C++ type of a saved CPP expression bottom-up.
-    Returns [Tunresolved] when the type cannot be determined.
+(** Infer the C++ type of a saved CPP expression bottom-up, or [None] when
+    there is nothing to go on.
+
+    Not knowing is an ordinary answer here, so it is one the type admits: this
+    walks expressions the loopifier saved into a frame, and a variable it never
+    saw bound, or a call through a global, simply cannot be typed from what is
+    in hand.  Callers that need a type anyway fall back at their own boundary
+    -- see {!infer_saved_types}.
+
     Handles the common cases: variable lookups, smart-pointer derefs,
     arithmetic inlined operators (detected by their format-string pattern),
     and lambdas (return type inferred from body [Sreturn] statements).
     Used by [compute_frame_field_types] to emit [std::function<R(Args...)>]
     instead of [decltype(lambda)] for closures in loopification frame structs. *)
 let rec infer_saved_type tparams (env : (Id.t * cpp_type) list) (e : cpp_expr) :
-    cpp_type =
-  let result =
-    match e with
-    | CPPvar id ->
-      ( match lookup_var_type env id with
-      | Some ty -> strip_ref_type ty
-      | None -> Tunresolved )
-    | CPPmove inner -> infer_saved_type tparams env inner
-    | CPPderef inner ->
-      (* Peel the qualifiers off the pointer before taking its pointee: the
-         loopified receiver [_self] has type [const T *], and
-         [strip_ref_and_const_type] deliberately keeps the [const] on such a
-         type.  Missing the pointee would give the saved frame field the
-         pointer's type while the push and the handler both use it as a
-         value. *)
-      let rec pointee = function
-        | Tref t | Tconst t -> pointee t
-        | Tshared_ptr t | Tptr t -> t
-        | t -> t
-      in
-      pointee (infer_saved_type tparams env inner)
-    | CPPbinop (op, _, _) when binop_yields_bool op -> ty_bool
-    | CPPbinop (_, lhs, rhs) ->
-      (* An arithmetic or assignment operator hands back an operand's type.
-         Try left first, fall back to right: this handles the common pattern
-         [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda param) is,
-         and the result type matches the param type. *)
-      let tl = infer_saved_type tparams env lhs in
-      if tl <> Tunresolved then tl
-      else infer_saved_type tparams env rhs
-    | CPPlit (ty, _) -> strip_ref_and_const_type ty
-    | CPPbool _ -> ty_bool
-    | CPPglob (_, _, Some {ci_yields = Some ty; _}) ->
-      (* Translation recorded what the reference evaluates to while the
-         global's ML type was in hand; nothing here can improve on it. *)
-      strip_ref_and_const_type ty
-    | CPPfun_call ({cs_yields = Ryields ty; _}, _, _) ->
-      (* The call says what it yields; nothing below can improve on that, and
-         a guess that disagreed with it would be a bug. *)
-      strip_ref_and_const_type ty
-    | CPPfun_call (_, CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
-      (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
-         already raw (arena mode).  Infer from the inner expression. *)
-      as_raw_ptr (infer_saved_type tparams env inner)
-    | CPPfun_call (_, CPPvar f, _) ->
-      ( match lookup_var_type env f with
-      | Some (Tfun (_, cod)) -> cod
-      | Some ty ->
-        (* f might be a template param with forwarding ref type *)
-        ( match extract_fwd_ref_tvar ty with
-        | Some tvar_id ->
-          ( match lookup_tparam_return_type tparams tvar_id with
-          | Some cod -> cod
-          | None -> Tunresolved )
-        | None -> Tunresolved )
-      | None -> Tunresolved )
-    | CPPfun_call (_, CPPnamespace (_, CPPvar f), _) ->
-      ( match lookup_var_type env f with
-      | Some (Tfun (_, cod)) -> cod
-      | _ -> Tunresolved )
-    | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, _) -> ret_ty
-    | CPPfun_call (_, CPPglob _, _) -> Tunresolved
-    | CPPfun_call (_, CPPaccess (Adot, inner, id), {rev = []})
-      when String.equal (Id.to_string id) "get" ->
-      (* shared_ptr::get() returns a raw pointer.
-         Infer from the inner expression. *)
-      as_raw_ptr (infer_saved_type tparams env inner)
-    | CPPfun_call _ -> Tunresolved
-    | CPPconverting_ctor (ty, _) | CPPbox (ty, _) ->
-      strip_ref_and_const_type ty
-    | CPPlambda {cl_params = params; cl_ret = ret_ty_opt; cl_body = body; _} ->
-      let param_types = List.map fst (to_reversed params) in
-      let ret_ty =
-        match ret_ty_opt with
-        | Some ty when ty <> Tvoid -> ty
-        | _ ->
-          (* No recorded return type.  Ten construction sites in
-             [translation.ml] still build a lambda without one, so the body's
-             [Sreturn] statements remain the only answer available here; each
-             site that learns to record its type retires a little more of
-             this. *)
-          let lam_env =
-            List.fold_left
-              (fun acc (ty, id_opt) ->
-                match id_opt with
-                | Some id -> (id, ty) :: acc
-                | None -> acc)
-              env (to_reversed params)
-          in
-          let rec find_return_type = function
-            | [] -> Tunresolved
-            | Sreturn (Some e) :: _ -> infer_saved_type tparams lam_env e
-            | Sif (_, then_body, else_body) :: rest ->
-              let t = find_return_type then_body in
-              if t <> Tunresolved then t
-              else
-                let t = find_return_type else_body in
-                if t <> Tunresolved then t else find_return_type rest
-            | Sblock stmts :: rest ->
-              let t = find_return_type stmts in
-              if t <> Tunresolved then t else find_return_type rest
-            | _ :: rest -> find_return_type rest
-          in
-          find_return_type body
-      in
-      if ret_ty = Tunresolved then Tunresolved
-      else Tfun (List.map strip_ref_and_const_type param_types,
-                 strip_ref_and_const_type ret_ty)
-    | _ -> Tunresolved
-  in
-  result
+    cpp_type option =
+  match e with
+  | CPPvar id -> Option.map strip_ref_type (lookup_var_type env id)
+  | CPPmove inner -> infer_saved_type tparams env inner
+  | CPPderef inner ->
+    (* Peel the qualifiers off the pointer before taking its pointee: the
+       loopified receiver [_self] has type [const T *], and
+       [strip_ref_and_const_type] deliberately keeps the [const] on such a
+       type.  Missing the pointee would give the saved frame field the
+       pointer's type while the push and the handler both use it as a
+       value. *)
+    let rec pointee = function
+      | Tref t | Tconst t -> pointee t
+      | Tshared_ptr t | Tptr t -> t
+      | t -> t
+    in
+    Option.map pointee (infer_saved_type tparams env inner)
+  | CPPbinop (op, _, _) when binop_yields_bool op -> Some ty_bool
+  | CPPbinop (_, lhs, rhs) ->
+    (* An arithmetic or assignment operator hands back an operand's type.
+       Try left first, fall back to right: this handles the common pattern
+       [(d_a1 + n)] where [d_a1] is not in env but [n] (a lambda param) is,
+       and the result type matches the param type. *)
+    ( match infer_saved_type tparams env lhs with
+    | Some _ as ty -> ty
+    | None -> infer_saved_type tparams env rhs )
+  | CPPlit (ty, _) -> Some (strip_ref_and_const_type ty)
+  | CPPbool _ -> Some ty_bool
+  | CPPglob (_, _, Some {ci_yields = Some ty; _}) ->
+    (* Translation recorded what the reference evaluates to while the
+       global's ML type was in hand; nothing here can improve on it. *)
+    Some (strip_ref_and_const_type ty)
+  | CPPfun_call ({cs_yields = Ryields ty; _}, _, _) ->
+    (* The call says what it yields; nothing below can improve on that, and
+       a guess that disagreed with it would be a bug. *)
+    Some (strip_ref_and_const_type ty)
+  | CPPfun_call (_, CPPvar id, {rev = [ inner ]}) when Id.equal id id_crane_raw ->
+    (* crane_raw(x) returns a raw pointer, whether [x] was a shared_ptr or
+       already raw (arena mode).  Infer from the inner expression. *)
+    Option.bind (infer_saved_type tparams env inner) as_raw_ptr
+  | CPPfun_call (_, CPPvar f, _) ->
+    ( match lookup_var_type env f with
+    | Some (Tfun (_, cod)) -> Some cod
+    | Some ty ->
+      (* f might be a template param with forwarding ref type *)
+      Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_return_type tparams)
+    | None -> None )
+  | CPPfun_call (_, CPPnamespace (_, CPPvar f), _) ->
+    ( match lookup_var_type env f with
+    | Some (Tfun (_, cod)) -> Some cod
+    | _ -> None )
+  | CPPfun_call (_, CPPlambda {cl_ret = Some ret_ty; _}, _) -> Some ret_ty
+  | CPPfun_call (_, CPPaccess (Adot, inner, id), {rev = []})
+    when String.equal (Id.to_string id) "get" ->
+    (* shared_ptr::get() returns a raw pointer.
+       Infer from the inner expression. *)
+    Option.bind (infer_saved_type tparams env inner) as_raw_ptr
+  | CPPfun_call _ -> None
+  | CPPconverting_ctor (ty, _) | CPPbox (ty, _) ->
+    Some (strip_ref_and_const_type ty)
+  | CPPlambda {cl_params = params; cl_ret = ret_ty_opt; cl_body = body; _} ->
+    let param_types = List.map fst (to_reversed params) in
+    let ret_ty =
+      match ret_ty_opt with
+      | Some ty when ty <> Tvoid -> Some ty
+      | _ ->
+        (* No recorded return type.  Ten construction sites in
+           [translation.ml] still build a lambda without one, so the body's
+           [Sreturn] statements remain the only answer available here; each
+           site that learns to record its type retires a little more of
+           this. *)
+        let lam_env =
+          List.fold_left
+            (fun acc (ty, id_opt) ->
+              match id_opt with
+              | Some id -> (id, ty) :: acc
+              | None -> acc)
+            env (to_reversed params)
+        in
+        (* The first [return] that can be typed answers for the whole body. *)
+        let rec of_stmt = function
+          | Sreturn (Some e) -> infer_saved_type tparams lam_env e
+          | Sif (_, then_body, else_body) ->
+            List.find_map of_stmt (then_body @ else_body)
+          | Sblock stmts -> List.find_map of_stmt stmts
+          | _ -> None
+        in
+        List.find_map of_stmt body
+    in
+    Option.map
+      (fun r ->
+        Tfun
+          ( List.map strip_ref_and_const_type param_types,
+            strip_ref_and_const_type r ) )
+      ret_ty
+  | _ -> None
 
 (** Collect free variables from an expression.
     Mutually recursive with [free_vars_stmt] and [free_vars_body]. *)
@@ -4398,9 +4391,16 @@ let make_enter_frame (args : cpp_expr list) : cpp_expr =
     @param tparams Template parameters context
     @param env Type environment for variable lookups
     @param exprs The expressions whose types to infer
-    @return A list of inferred [cpp_type] values, parallel to [exprs] *)
+    @return A list of inferred [cpp_type] values, parallel to [exprs]
+
+    This is the boundary where not knowing becomes {!Minicpp.Tunresolved}: a
+    frame field's declared type is a slot that has to hold something, and
+    [Tunresolved] is what the rest of the frame machinery reads as "not settled
+    yet". *)
 let infer_saved_types tparams env exprs =
-  List.map (infer_saved_type tparams env) exprs
+  List.map
+    (fun e -> Option.default Tunresolved (infer_saved_type tparams env e))
+    exprs
 
 (** Check whether any saved expression would decompose into a [shared_ptr]
     field in a frame struct.  Such fields drive the pointer-safe frame
@@ -7019,7 +7019,7 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
           | Tunresolved | Tauto ->
             let inferred = infer_saved_type tparams cf.cf_env expr in
             (match inferred with
-            | Tunresolved | Tauto ->
+            | None | Some Tauto ->
               (* For lambda expressions whose return type can't be inferred
                  (e.g., a method call like a1_value.length()), generate
                  std::function<decltype(body_ret_expr)(params)> instead of
@@ -7041,7 +7041,7 @@ let transform_nontail ?(fn_name : string option) check tparams params ret_ty
                     Tfun (param_types, Tdecltype rewritten)
                   | None -> make_decltype_ty cf.cf_env expr)
                | _ -> make_decltype_ty cf.cf_env expr)
-            | ty -> ty)
+            | Some ty -> ty)
           | _ ->
             let stripped = strip_ref_and_const_type ty in
             (match stripped with
