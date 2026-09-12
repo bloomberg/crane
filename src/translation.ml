@@ -1578,27 +1578,18 @@ let with_escape_analysis f =
      is right for a constructor's own arguments and wrong for the body of a
      lambda that merely happens to be one -- the lambda has its own binders
      and its own slots. *)
-  with_field
-    (fun c ->
-      ( c.current_letin_depth,
-        c.move_dead_after,
-        c.move_owned_vars,
-        c.move_n_params,
-        c.match_param_counter,
-        c.cs_counter ) )
-    (fun (depth, dead, owned, nparams, match_counter, cs) ->
-      tctx :=
-        { !tctx with
-          current_letin_depth = depth;
-          move_dead_after = dead;
-          move_owned_vars = owned;
-          move_n_params = nparams;
-          match_param_counter = match_counter;
-          cs_counter = cs } )
-    (0, Escape.IntSet.empty, Escape.IntSet.empty, 0, 0, 0)
-  @@ fun () ->
-  with_in_constructor_expr false @@ fun () ->
-  with_cpp_return_type inner_return_type f
+  with_scope @@ fun () ->
+  tctx :=
+    { !tctx with
+      current_letin_depth = 0;
+      move_dead_after = Escape.IntSet.empty;
+      move_owned_vars = Escape.IntSet.empty;
+      move_n_params = 0;
+      match_param_counter = 0;
+      cs_counter = 0;
+      in_constructor_expr = false;
+      current_cpp_return_type = inner_return_type };
+  f ()
 
 (** Bracket for an IIFE that stands in for a SUB-expression (a let-in, a
     fixpoint, or a record destructure in argument position).  The lambda
@@ -9674,12 +9665,7 @@ and gen_match_branch env (typ : ml_type) rty cname ids dummies body sname
         | Some Tvoid -> None
         | rt -> rt
       in
-      with_field
-        (fun c -> (c.match_param_counter, c.cs_counter))
-        (fun (m, cs) ->
-          tctx := { !tctx with match_param_counter = m; cs_counter = cs } )
-        ((!tctx).match_param_counter, (!tctx).cs_counter)
-      @@ fun () ->
+      with_scope @@ fun () ->
       with_cpp_return_type inner_ret (fun () ->
           populate_erased_field_env
             ?scrut_db:(Option.map (fun db -> db + n_pat_vars) scrut_db)

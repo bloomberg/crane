@@ -1,7 +1,6 @@
 #ifndef INCLUDED_TYPE_LEVEL_TUPLE_FIXPOINT
 #define INCLUDED_TYPE_LEVEL_TUPLE_FIXPOINT
 
-#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>

@@ -55,6 +55,7 @@ let find_type_opt (r : GlobRef.t) : ml_type option =
     All fields except {!local_inductives} (which has a different lifecycle
     and is exported to [cpp.ml]) live here. *)
 type translation_ctx = {
+  output : translation_output;  (** What the pass has produced; see below. *)
   (* Template type variables for the function currently being translated. *)
   current_type_vars : Id.t list;
   (* 1-indexed parameter types for the current function; used to recover
@@ -68,8 +69,6 @@ type translation_ctx = {
   current_cpp_return_type : cpp_type option;
   (* De Bruijn environment mapping variable indices to ML types. *)
   env_types : (Id.t * ml_type) list;
-  (* Declarations to be lifted to the enclosing scope (hoisted fixpoints). *)
-  pending_lifted_decls : cpp_decl list;
   (* Nesting depth of let ... in expressions; used for unique name
      generation in nested scopes. *)
   current_letin_depth : int;
@@ -124,10 +123,6 @@ type translation_ctx = {
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
   method_self_ns : Refset'.t;
-  (* Tracks which lifted function refs have already been emitted so that
-     the same helper (e.g. _index_eq_dec_F) appears only once per file.
-     Reset per-file via clear_seen_lifted_refs. *)
-  seen_lifted_refs : GlobRef.t list;
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
@@ -142,6 +137,25 @@ type translation_ctx = {
 
       Shifted by {!push_env_types} and cleared by {!reset_env_types}. *)
   cpp_binder_types : (cpp_type * binder_origin) IntMap.t;
+}
+
+(** What a translation pass has {e produced}, as opposed to the scope it was
+    producing it in.  Everything here outlives a nested scope: a declaration
+    lifted out of a lambda still has to be emitted, and a helper already
+    emitted must not be emitted again.
+
+    Its purpose is to be the one field {!with_scope} carries out of the scope
+    it restores.  Which state survives a scope is then settled by which record
+    it sits in -- a field added to either one does the right thing by default,
+    where a bracket that lists the fields it saves is one field away from
+    being wrong. *)
+and translation_output = {
+  (* Declarations to be lifted to the enclosing scope (hoisted fixpoints). *)
+  pending_lifted_decls : cpp_decl list;
+  (* Tracks which lifted function refs have already been emitted so that
+     the same helper (e.g. _index_eq_dec_F) appears only once per file.
+     Reset per-file via clear_seen_lifted_refs. *)
+  seen_lifted_refs : GlobRef.t list;
 }
 
 (** What decided a binder's C++ type, and so which answer wins when both are
@@ -166,12 +180,12 @@ and itree_extraction_mode =
 let tctx =
   ref
     {
+        output = {pending_lifted_decls = []; seen_lifted_refs = []};
         current_type_vars = [];
         current_param_types = [];
         current_outer_function_name = None;
         current_cpp_return_type = None;
         env_types = [];
-        pending_lifted_decls = [];
         current_letin_depth = 0;
         move_owned_vars = Escape.IntSet.empty;
         move_dead_after = Escape.IntSet.empty;
@@ -184,7 +198,6 @@ let tctx =
         cs_counter = 0;
         pending_reuse_token = None;
         method_self_ns = Refset'.empty;
-        seen_lifted_refs = [];
         cpp_binder_types = IntMap.empty;
     }
 
@@ -200,6 +213,11 @@ let tctx =
     Every dynamic-extent field gets a [with_*] built from this, so that no
     caller writes the save/set/restore by hand -- an omitted restore does not
     fail, it silently leaks the setting into whatever is translated next. *)
+(** Modify the produced-so-far half of the context.  Every writer goes through
+    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
+    field to carry across a scope boundary. *)
+let update_output f = tctx := { !tctx with output = f (!tctx).output }
+
 let with_field get set v f =
   let saved = get !tctx in
   set v;
@@ -310,26 +328,39 @@ let add_lifted_decl (d : cpp_decl) =
     match lifted_decl_ref d with
     | None -> false
     | Some r ->
-      List.exists (globref_equal r) (!tctx).seen_lifted_refs
+      List.exists (globref_equal r) (!tctx).output.seen_lifted_refs
   in
   if not is_dup then begin
     ( match lifted_decl_ref d with
     | Some r ->
-      tctx := { !tctx with seen_lifted_refs = r :: (!tctx).seen_lifted_refs }
+      update_output (fun o -> { o with seen_lifted_refs = r :: o.seen_lifted_refs })
     | None -> () );
-    tctx :=
-      { !tctx with pending_lifted_decls = d :: (!tctx).pending_lifted_decls }
+    update_output (fun o ->
+        { o with pending_lifted_decls = d :: o.pending_lifted_decls })
   end
 
 (** Drain and return the pending lifted declarations in definition order. *)
 let take_lifted_decls () =
-  let ds = List.rev (!tctx).pending_lifted_decls in
-  tctx := { !tctx with pending_lifted_decls = [] };
+  let ds = List.rev (!tctx).output.pending_lifted_decls in
+  update_output (fun o -> { o with pending_lifted_decls = [] });
   ds
 
 (** Reset the seen-lifted-refs deduplication set. Call at the start of each
     new output file so identical helpers in different files are not suppressed. *)
-let clear_seen_lifted_refs () = tctx := { !tctx with seen_lifted_refs = [] }
+let clear_seen_lifted_refs () =
+  update_output (fun o -> { o with seen_lifted_refs = [] })
+
+(** Run [f] with the whole translation scope restored afterwards, however [f]
+    leaves -- returning or raising -- while keeping everything [f] {e produced}.
+
+    This is the bracket to reach for at a scope boundary: it saves the context
+    wholesale and carries only {!translation_output} back out, so it cannot
+    forget a field the way an explicit list of fields can.  Use the single-field
+    {!with_field} brackets instead where the point is precisely that the rest of
+    the scope's effects must escape. *)
+let with_scope f =
+  let saved = !tctx in
+  Fun.protect ~finally:(fun () -> tctx := { saved with output = (!tctx).output }) f
 
 (** Prepend bindings to the de Bruijn environment type stack.
     Also shifts all indices in {!cpp_binder_types} upward by [n] to account
