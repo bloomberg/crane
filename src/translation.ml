@@ -3166,6 +3166,22 @@ and scrutinee_head_is_callable h =
 and binder_cpp_type i =
   Option.map fst (IntMap.find_opt i (!tctx).cpp_binder_types)
 
+(** The C++ type of the binder at de Bruijn index [i], for readers that have
+    to produce an answer for every binder: the assignment made where it was
+    bound, and failing that the conversion of its ML type under the current
+    scope.
+
+    The fallback is not a second opinion -- it is what the assignment
+    deliberately declines to record.  {!assign_binder_types} keeps no entry
+    when the conversion is [Topaque], a dummy, or fails outright, because
+    recording those would state a fact it does not have.  Prefer
+    {!binder_cpp_type} where [None] is a usable answer; this is for the
+    places where it is not. *)
+and binder_cpp_type_or_derive env i =
+  match binder_cpp_type i with
+  | Some _ as t -> t
+  | None -> Option.map (cpp_of_ml env) (get_env_type_opt i)
+
 (** The C++ type a pattern match pinned down for the binder at de Bruijn index
     [i], if this branch pinned one.  A binding-site assignment is not an
     answer here: it says what the binder's ML type converts to, which for a
@@ -8288,7 +8304,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              says: an argument that is already a box is left alone. *)
           let from =
             match ml_arg with
-            | MLrel j -> Option.map (cpp_of_ml env) (get_env_type_opt j)
+            | MLrel j -> binder_cpp_type_or_derive env j
             | _ -> None
           in
           coerce ~term:ml_arg ?from ~into:Tany expr
@@ -10505,7 +10521,17 @@ and collect_recursive_ns ml_ty =
 
 (** True when environment variable at de Bruijn index [i] has an erased C++
     type (i.e. [std::any] or a dummy type, arising from dependent-parameter
-    collapse).  Returns [false] if [i] is out of range. *)
+    collapse).  Returns [false] if [i] is out of range.
+
+    This deliberately converts the binder's ML type under [tvars] rather than
+    reading {!binder_cpp_type}, and it is not a re-derivation of the binding
+    site's answer: the two say different things, and callers pair them
+    precisely to tell those things apart.  A binder the assignment types
+    concretely, whose ML type is an out-of-scope variable, is a value held in
+    a box under a concrete static type -- exactly the one that has to be
+    unboxed.  Reading the assignment here would collapse the contrast and
+    drop the [any_cast] (measured: [existential_erased_apply_bad_cpp] and
+    [list_cons_erasure_bleed] stop casting). *)
 and is_env_var_erased env tvars i =
   match get_env_type_opt i with
   | Some ml_ty ->
