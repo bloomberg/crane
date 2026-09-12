@@ -908,6 +908,22 @@ let module_filename mp =
   let fimpl = Filename.concat (output_directory_for_module ()) fimpl_base in
   (Some fimpl, Option.map (( ^ ) f) d.sig_suffix, id)
 
+(** Run the discovery pass over [struc]: allocate every name and record every
+    fact the emissions will go on to read.  Its output is discarded -- the
+    point of it is the tables it leaves behind, which are complete only once a
+    whole traversal has run, because a use can be rendered before its
+    declaration.
+
+    Discover exactly the passes you will emit.  Each emission allocates names
+    the other does not -- measured: dropping either half renames binders in the
+    output and trips {!check_no_late_decisions} -- so [~interface:false] is for
+    callers that emit no interface at all. *)
+let discover ?(interface = true) d struc =
+  set_phase Discover;
+  d.prepare struc;
+  ignore (d.pp_struct struc);
+  if interface then ignore (d.pp_hstruct struc)
+
 (** {2 Extraction of one decl to stdout} *)
 
 (** Renders a single ML declaration to C++ output. Performs renaming and runs
@@ -915,9 +931,7 @@ let module_filename mp =
 let print_one_decl struc mp decl =
   let d = descr () in
   reset_renaming_tables AllButExternal;
-  set_phase Discover;
-  d.prepare struc;
-  ignore (d.pp_struct struc);
+  discover ~interface:false d struc;
   set_phase (Emit Impl);
   push_visible mp [];
   let ans = d.pp_decl decl in
@@ -1244,16 +1258,7 @@ let print_structure_to_file ?(namespace = None) (fn, si, mo) dry struc =
   ( match namespace with
   | Some _ -> Common.set_force_cross_file_qualification ()
   | None -> () );
-  (* Discovery: renaming and duplication decisions, and the registrations that
-     rendering a declaration leaves behind for its uses -- flatness, merged
-     wrappers, promoted inductives -- have to be complete before any of them is
-     consulted, and a use can precede its declaration.  Only a whole pass
-     establishes that, so this one's output is discarded.  See the note in
-     [module-ir-blocked-on-name-resolution]. *)
-  set_phase Discover;
-  d.prepare struc;
-  ignore (d.pp_struct struc);
-  ignore (d.pp_hstruct struc);
+  discover d struc;
   let census_after_discovery = Table.census () in
   (* Both bodies are rendered before either file is opened.  A preamble has to
      say what the body it precedes demands -- which headers it includes, which
