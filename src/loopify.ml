@@ -383,12 +383,13 @@ type recursion_kind =
     coverage unmeasurable.  The machinery below records, for every recursive
     function the pass sees, which strategy fired or why it declined.
 
-    Two mechanisms cooperate:
-    - {!decline} marks an explicit bail-out with a reason;
-    - {!report_outcome} additionally re-classifies the {e transformed} body, so
-      a strategy that silently left a self-call behind is still reported as a
-      decline.  This postcondition is what makes the report trustworthy: it
-      does not depend on every bail site remembering to announce itself. *)
+    A transform therefore returns {e what it did} alongside the body, rather
+    than only the body: a bail-out hands back the body it was given, so
+    "declined" is distinguishable from "transformed" only if the transform
+    says which.  {!report_outcome} then re-classifies the {e transformed}
+    body, so a strategy that silently left a self-call behind is reported as a
+    decline too.  This postcondition is what makes the report trustworthy: it
+    does not depend on every bail site remembering to announce itself. *)
 
 (** What the pass did with one recursive function. *)
 type loopify_outcome =
@@ -464,21 +465,17 @@ let report_outcomes ?(unit_name = "") () =
         | _ -> ())
       final
 
-(** The reason the innermost strategy declined, if it did.  Set by {!decline}
-    just before a bail-out returns the original body, and consumed by
-    {!report_outcome}. *)
-let pending_decline : string option ref = ref None
-
-(** Mark the current transformation as declined for [reason] and return [x]
-    (conventionally the untransformed body). *)
-let decline reason x =
-  pending_decline := Some reason;
-  x
-
-(** Which strategy {!apply_nontail_loopification} last settled on.  It picks
-    between TMC and the frame transform internally, so it reports its choice
-    here for the caller to pass to {!report_outcome}. *)
-let last_nontail_strategy : loopify_outcome ref = ref Lp_frame
+(** What {!apply_nontail_loopification} did with a body.  It chooses between
+    the TMC and frame transforms internally, so it reports the choice here
+    rather than leaving the caller to guess. *)
+type nontail_result = {
+  nt_body : cpp_stmt list;  (** The body to emit, transformed or original. *)
+  nt_outcome : loopify_outcome;  (** Which transform fired, or why none did. *)
+  nt_used_param_inits : bool;
+      (** [true] when [param_inits] were consumed by the transform (TMC uses
+          them for method-self initialisation), meaning the caller does not
+          need a separate initialiser statement. *)
+}
 
 (** {2 Call checker abstraction}
 
@@ -1054,24 +1051,23 @@ let classify check body =
     [strategy] is the outcome the pass {e believes} it achieved.  Before
     accepting it we re-run {!classify} on the transformed body: if a recursive
     call survived, the strategy did not actually linearise the function and the
-    outcome is downgraded to {!Lp_declined}.  A reason left behind by
-    {!decline} takes precedence, since it is more specific than "a self-call
+    outcome is downgraded to {!Lp_declined}.  A decline the transform reported
+    itself stands, since its reason is more specific than "a self-call
     remains".
 
     @param name     Display name of the function, for the report
     @param check    The same call checker the transform was driven by
-    @param strategy The outcome to record if the postcondition holds
+    @param strategy What the transform says it did
     @param body     The {e transformed} body
     @return [body], unchanged *)
 let report_outcome ~name ~check ~strategy body =
-  let residual = classify check body <> No_recursion in
   let outcome =
-    match (!pending_decline, residual, strategy) with
-    | Some why, _, _ -> Lp_declined why
-    | None, true, _ -> Lp_declined "a self-call survived the transform"
-    | None, false, s -> s
+    match strategy with
+    | Lp_declined _ -> strategy
+    | _ when classify check body <> No_recursion ->
+      Lp_declined "a self-call survived the transform"
+    | _ -> strategy
   in
-  pending_decline := None;
   record_outcome name outcome;
   body
 
@@ -8018,21 +8014,19 @@ let body_contains_lazy_factory body =
     @param params      Function parameters [(id, type)]
     @param ret_ty      Return type
     @param body        Function body statements
-    @return [(body', used_param_inits)] where [used_param_inits] is [true]
-    when [param_inits] were consumed by the transform (TMC uses them for
-    method-self initialisation), meaning the caller does not need a separate
-    initialiser statement. *)
+    @return what the transform did; see {!nontail_result}. *)
 let apply_nontail_loopification ?(param_inits = []) ?fn_name check
     tparams params ret_ty body =
-  last_nontail_strategy := Lp_frame;
+  let declined reason =
+    {nt_body = body; nt_outcome = Lp_declined reason; nt_used_param_inits = false}
+  in
   if has_recursive_branch_dependency check body then
-    (decline "recursive call in a branch condition or dispatch scrutinee" body,
-     false)
+    declined "recursive call in a branch condition or dispatch scrutinee"
   else
   let frame () =
-    last_nontail_strategy := Lp_frame;
-    ( transform_nontail ?fn_name check tparams params ret_ty body,
-      false )
+    { nt_body = transform_nontail ?fn_name check tparams params ret_ty body;
+      nt_outcome = Lp_frame;
+      nt_used_param_inits = false }
   in
   (* A transform may discover mid-flight that the body's shape has no
      per-parameter correspondence to linearise (see {!Not_linearisable}).  That
@@ -8049,13 +8043,11 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name check
        remove, so check the postcondition and fall back to the frame transform,
        which handles the scrutinising shape via a continuation frame. *)
     let tmc = transform_tmc ~param_inits check ti params ret_ty body in
-    if classify check tmc = No_recursion then begin
-      last_nontail_strategy := Lp_tmc;
-      (tmc, true)
-    end
+    if classify check tmc = No_recursion then
+      {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
     else frame ()
   | None -> frame ()
-  with Not_linearisable reason -> (decline reason body, false)
+  with Not_linearisable reason -> declined reason
 
 (** Inline an Equations-style "functional" into its knot-tying wrapper.
 
@@ -8437,6 +8429,21 @@ let hoist_rec_conditions (check : call_checker)
     in
     hs stmts
 
+(** The name to show for a [Dfun] in the loopification report: the label of
+    the first reference it defines, if it defines any. *)
+let fundef_display_name names =
+  match names with
+  | (r, _) :: _ ->
+    let label =
+      match r with
+      | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
+      | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
+      | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
+      | GlobRef.VarRef v -> v
+    in
+    Some (Id.to_string label)
+  | [] -> None
+
 (** Transform a top-level function definition by loopifying its body.
 
     This is the main entry point for loopifying a [Dfun]. The transformation
@@ -8490,17 +8497,7 @@ let transform_fundef_exn ~tparams names ret_ty params body no_pure =
      the full rationale).  We still run [loopify_inner_lambdas] to handle
      any nested [std::function] fixpoints inside the lazy thunk. *)
   let body =
-    let fn_name = match names with
-      | (r, _) :: _ ->
-        let label = match r with
-          | GlobRef.ConstRef c -> Label.to_id (Constant.label c)
-          | GlobRef.IndRef (ind, _) -> Label.to_id (MutInd.label ind)
-          | GlobRef.ConstructRef ((ind, _), _) -> Label.to_id (MutInd.label ind)
-          | GlobRef.VarRef v -> v
-        in
-        Some (Id.to_string label)
-      | [] -> None
-    in
+    let fn_name = fundef_display_name names in
     let name = match fn_name with Some s -> s | None -> "<anonymous>" in
     if has_lazy_body body || body_contains_lazy_factory body then begin
       if classify check body <> No_recursion then
@@ -8515,23 +8512,20 @@ let transform_fundef_exn ~tparams names ret_ty params body no_pure =
         | Tail_recursion ->
           (transform_tail check params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
-            let body' =
-              fst (apply_nontail_loopification ?fn_name check
-                     tparams params ret_ty body)
-            in
-            (body', Some !last_nontail_strategy)
+          let r =
+            apply_nontail_loopification ?fn_name check tparams params ret_ty
+              body
+          in
+          (r.nt_body, Some r.nt_outcome)
       in
       (* A self-call can sit inside an inner lambda, where the transforms above
          deliberately leave it alone; [loopify_inner_lambdas] is what removes
          it.  Judge the postcondition only once that has run, or every such
          function is reported as declined even though the emitted code holds no
-         self-call.  The inner pass records outcomes of its own, which clobbers
-         [pending_decline], so carry our reason across it. *)
-      let pending = !pending_decline in
+         self-call. *)
       let body = loopify_inner_lambdas ~tparams body in
-      pending_decline := pending;
       (match strategy with
-       | None -> pending_decline := None; body
+       | None -> body
        | Some s -> report_outcome ~name ~check ~strategy:s body)
   in
   Dfun (names, ret_ty, no_pure, Ddef (params, body))
@@ -8545,7 +8539,9 @@ let transform_fundef ~tparams names ret_ty params body no_pure =
     transform_fundef_exn ~tparams names ret_ty params body
       no_pure
   with Not_linearisable reason ->
-    ignore (decline reason body);
+    record_outcome
+      (Option.default "<anonymous>" (fundef_display_name names))
+      (Lp_declined reason);
     Dfun (names, ret_ty, no_pure, Ddef (params, body))
 
 (** Transform a struct method by loopifying its body.
@@ -8758,7 +8754,7 @@ let transform_method ~tparams ~self_ty mf =
             false )
         | Nontail_recursion ->
           let fn_name = Some name in
-          let (body', used_inits) =
+          let r =
             apply_nontail_loopification
               ~param_inits:[(self_id, CPPthis)]
               ?fn_name
@@ -8766,10 +8762,10 @@ let transform_method ~tparams ~self_ty mf =
               augmented_params mf.mf_ret_type body_with_self
           in
           let body' =
-            report_outcome ~name ~check:self_check
-              ~strategy:!last_nontail_strategy body'
+            report_outcome ~name ~check:self_check ~strategy:r.nt_outcome
+              r.nt_body
           in
-          (body', not used_inits)
+          (body', not r.nt_used_param_inits)
         | No_recursion -> CErrors.anomaly (Pp.str "loopify: No_recursion cannot appear here")
       in
       (* Declare the parking slot outside the loop so the pointer taken to it
@@ -8799,12 +8795,9 @@ let rec transform_field ~tparams ~self_ty (fld, vis, tag) =
      declines this one field instead of aborting the extraction. *)
   try transform_field_exn ~tparams ~self_ty (fld, vis, tag)
   with Not_linearisable reason ->
-    let body =
-      match fld with
-      | Fmethod mf -> mf.mf_body
-      | _ -> []
-    in
-    ignore (decline reason body);
+    ( match fld with
+    | Fmethod mf -> record_outcome (Id.to_string mf.mf_name) (Lp_declined reason)
+    | _ -> () );
     (fld, vis, tag)
 
 and transform_field_exn ~tparams ~self_ty (fld, vis, tag) =
