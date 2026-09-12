@@ -280,6 +280,15 @@ let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
     (fun b -> tctx := { !tctx with in_constructor_expr = b })
     b f
 
+(** [with_itree_mode m f] runs [f] extracting itree-typed terms in mode [m].
+    The mode is a property of the declaration being generated, so it has to be
+    put back when that declaration is done. *)
+let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.itree_mode)
+    (fun m -> tctx := { !tctx with itree_mode = m })
+    m f
+
 (** [with_move_suppress_tail b f] runs [f] with
     {!translation_ctx.move_suppress_tail} set to [b]. *)
 let with_move_suppress_tail (b : bool) (f : unit -> 'a) : 'a =

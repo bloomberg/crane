@@ -1906,6 +1906,21 @@ let sig_witness_expr name (ml_ty : ml_type) =
     @param ty    the original ML type (used for domain decomposition and type
                  inference)
     @param temps template type parameters *)
+(** Run [f] in the itree extraction mode that [ty]'s codomain calls for,
+    restoring the enclosing mode afterwards.  Reified mode preserves [itree E R]
+    as [shared_ptr<ITree<R>>]; sequential mode erases it to [R].  A codomain
+    with no monad leaves the mode alone.
+
+    Must wrap type conversion as well as body generation: void-ification and
+    [reify_monadic_param_type] (called from [convert_ml_type_to_cpp_type]) both
+    read the mode.  We detect reified by the monad template mentioning "ITree",
+    e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
+let with_itree_mode_for ty f =
+  match extract_monad_from_codomain ty with
+  | Some monad_ref ->
+    with_itree_mode (if is_monad_reified monad_ref then Reified else Sequential) f
+  | None -> f ()
+
 let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
@@ -1914,19 +1929,8 @@ let gen_dfun n b cty ty temps =
      monadic — these perform side effects even though the C++ return type
      may look pure after type erasure. *)
   let no_pure = is_monadic_ml_type (ml_codomain ty) || ast_may_throw b in
-  (* Determine itree extraction mode from the monad template string.
-     Reified mode preserves [itree E R] as [shared_ptr<ITree<R>>]; sequential
-     mode erases to [R].  We detect reified by checking whether the monad
-     template contains "ITree" (e.g. ["std::shared_ptr<ITree<%t1>>"]).
-     Must be set BEFORE void-ification so the mode is available. *)
-  let saved_mode = (!tctx).itree_mode in
-  ( match extract_monad_from_codomain ty with
-  | Some monad_ref ->
-    tctx :=
-      { !tctx with
-        itree_mode =
-          (if is_monad_reified monad_ref then Reified else Sequential) }
-  | None -> () );
+  let temps, inner, env =
+    with_itree_mode_for ty @@ fun () ->
   (* Void-ify unit codomain: unit as return type maps to C++ void.
      Check the ML result type (unwrapping monad if present) to determine
      if the function returns unit. Then recursively replace the unit enum
@@ -2894,8 +2898,8 @@ let gen_dfun n b cty ty temps =
         inner
     | _ -> inner
   in
-  (* Restore saved itree mode *)
-  tctx := { !tctx with itree_mode = saved_mode };
+    (temps, inner, env)
+  in
   let temps, inner = relax_applied_return temps inner in
   match temps with
   | [] -> (inner, env)
@@ -3094,23 +3098,12 @@ let get_erased_proj_map_from_type (ty : ml_type) : (GlobRef.t * int) list =
 
 (** Generate C++ declaration from ML definition (main entry point) *)
 let gen_decl__inner n b ty =
-  (* Set itree extraction mode early — before type conversion — so that
-     reify_monadic_param_type (called inside convert_ml_type_to_cpp_type)
-     can correctly voidify unit result types in ITree parameters. *)
-  let saved_mode = (!tctx).itree_mode in
-  ( match extract_monad_from_codomain ty with
-  | Some monad_ref ->
-    tctx :=
-      { !tctx with
-        itree_mode =
-          (if is_monad_reified monad_ref then Reified else Sequential) }
-  | None -> () );
+  with_itree_mode_for ty @@ fun () ->
   with_method_ns_for_locals @@ fun () ->
   let cty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars cty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
-  let result =
-    match cty with
+  match cty with
     | Tfun _ ->
       let f, env = gen_dfun n b cty ty temps in
       (f, env, tvars)
@@ -3151,9 +3144,6 @@ let gen_decl__inner n b ty =
       ( match temps with
       | [] -> (inner, empty_env (), tvars)
       | l -> (Dtemplate (l, None, inner), empty_env (), tvars) )
-  in
-  tctx := { !tctx with itree_mode = saved_mode };
-  result
 
 let gen_decl n b ty =
   Table.with_decl_ref n (fun () -> gen_decl__inner n b ty)
