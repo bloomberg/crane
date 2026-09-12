@@ -4228,8 +4228,6 @@ let cut2 () = brk (0, -100000) ++ brk (0, 0)
    context-sensitive printer (see [Translation.render_cpp_type_in_template]).
    The type is rendered as if inside a template body, which is where those raw
    strings are emitted. *)
-let () = Translation.set_method_this_pos_lookup lookup_method_this_pos
-let () = Translation.set_method_ind_tvars_lookup lookup_method_ind_tvar_positions
 
 let () =
   Translation.set_cpp_type_printer (fun ty ->

@@ -153,7 +153,7 @@ let is_record_inductive r =
     scope). Local inductives don't need namespace qualification (e.g.,
     List::list vs just list). *)
 let is_local_inductive r =
-  List.exists (globref_equal r) (Translation.get_local_inductives ())
+  List.exists (globref_equal r) (Translation_state.get_local_inductives ())
 
 (** Get the appropriate name for an inductive reference.
     - Local inductives: original name directly (e.g., "list", "EvenTree")

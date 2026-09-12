@@ -659,23 +659,9 @@ let cpp_type_printer : (cpp_type -> string) option ref = ref None
 
 let set_cpp_type_printer f = cpp_type_printer := Some f
 
-(** Whether a reference was methodified (spelled [x.f(...)] rather than
-    [f(x, ...)]).  The method registry lives above this module, so
-    {!Cpp_print} installs the predicate at load time, exactly as it does for
-    {!cpp_type_printer}. *)
-let method_this_pos_lookup : (GlobRef.t -> int option) ref = ref (fun _ -> None)
-
-let set_method_this_pos_lookup f = method_this_pos_lookup := f
-
-(** The positions, in a methodified function's type-variable list, of the type
-    variables the receiver already fixes.  A call spelled as a method must not
-    pass those explicitly.  Installed by {!Cpp_print} alongside
-    {!method_this_pos_lookup}. *)
-let method_ind_tvars_lookup : (GlobRef.t -> int list) ref = ref (fun _ -> [])
-
-let set_method_ind_tvars_lookup f = method_ind_tvars_lookup := f
-
-let is_methodified r = !method_this_pos_lookup r <> None
+(** Whether a reference was methodified: spelled [x.f(...)] rather than
+    [f(x, ...)]. *)
+let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
 
 (** Render [ty] as a string spelled exactly as the real printer would spell it
     inside a template body, falling back to {!render_cpp_type_for_raw_template}
@@ -5484,14 +5470,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | [] -> ""
               | tas -> "<" ^ String.concat ", " (List.map snd tas) ^ ">"
             in
-            match !method_this_pos_lookup r with
+            match Cpp_names.lookup_method_this_pos r with
             | Some pos when pos < List.length args ->
               let recv = List.nth args pos in
               let rest = List.filteri (fun i _ -> i <> pos) args in
               (* The receiver already fixes the inductive's own type
                  variables, so the method drops them from its template
                  parameter list; passing them here would misalign the rest. *)
-              let ind_tvars = !method_ind_tvars_lookup r in
+              let ind_tvars = Cpp_state.lookup_method_ind_tvar_positions r in
               let kept =
                 List.filter
                   (fun (i, _) ->
