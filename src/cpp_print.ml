@@ -646,8 +646,17 @@ let is_any_type = Cpp_erasure.is_any_shaped
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-let rec pp_cpp_type par vl t =
-  let rec pp_rec par = function
+let rec pp_cpp_type ?(lead = true) par vl t =
+  let rec pp_rec ?(lead = true) par t =
+    (* The [typename] a dependent qualifier needs, unless the caller is placing
+       this type somewhere the keyword would be wrong: as the base of a longer
+       qualified chain, which spells the single leading one itself, or in front
+       of a value.  Only this outermost type is affected -- every recursive
+       call below takes the default -- so the keywords inside template
+       arguments stay where they belong. *)
+    let typename_prefix_for n = if lead then typename_prefix_for n else mt () in
+    let leading_typename = if lead then str "typename " else mt () in
+    match t with
     | Tvar (i, None) -> print_cpp_type_var vl i
     | Tinstance (id, _) -> Id.print id
     | Tpromoted id ->
@@ -837,7 +846,7 @@ let rec pp_cpp_type par vl t =
             ++ templates
       | _ ->
         (* Fallback: generic namespace-qualified type *)
-        str "typename " ++ name ++ str "::" ++ pp_rec false t )
+        leading_typename ++ name ++ str "::" ++ pp_rec false t )
     | (Tqualified _ | Tapply (Tqualified _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
          higher-kinded class parameter, [typename I::template C<A>].  It is
@@ -866,21 +875,14 @@ let rec pp_cpp_type par vl t =
          where the [template] disambiguator goes -- then drop the [typename]
          it may prepend, since the enclosing [Tqualified] emits the single
          leading one. *)
-      let pp_chain_base ty =
-        let s = string_of_ppcmds (pp_rec false ty) in
-        let kw = "typename " in
-        if CString.is_prefix kw s then
-          str (String.sub s (String.length kw)
-                 (String.length s - String.length kw))
-        else str s
-      in
+      let pp_chain_base ty = pp_rec ~lead:false false ty in
       let rec pp_qualified_chain ty =
         match ty with
         | Tqualified (inner_ty, id) ->
           pp_qualified_chain inner_ty ++ str "::" ++ Id.print id
         | ty -> pp_chain_base ty
       in
-      str "typename "
+      leading_typename
       ++ pp_qualified_chain base_ty
       ++ str "::"
       ++ ( if targs = [] then Id.print nested_id
@@ -929,7 +931,7 @@ let rec pp_cpp_type par vl t =
       require_header "type_traits";
       str "std::decay_t<" ++ pp_rec false t ++ str ">"
   in
-  h (pp_rec par t)
+  h (pp_rec ~lead par t)
 
 (** Check if a C++ expression tree contains a string literal ([CPPstring]).
     Used to guard ternary simplification: ternary with string-literal branches
@@ -962,13 +964,7 @@ and pp_value_qualifier env ty =
     (* No [~yields]: a type qualifier is never a block in value position. *)
     pp_cpp_expr env [] (Translation_state.mk_cppglob r tys)
   | _ ->
-  let s = string_of_ppcmds (pp_cpp_type false [] ty) in
-  let kw = "typename " in
-  let n = String.length kw in
-  str
-    ( if String.length s >= n && String.sub s 0 n = kw then
-        String.sub s n (String.length s - n)
-      else s )
+  pp_cpp_type ~lead:false false [] ty
 
 (** Pretty-print a MiniCpp expression as C++ source.
 
