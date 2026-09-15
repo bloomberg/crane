@@ -277,6 +277,33 @@ val collect_module_type_aliases :
   extract_decl:('a -> Miniml.ml_decl option) ->
   Names.ModPath.t -> 'a list -> GlobRef.t list
 
+(** {2 Methods of a top-level inductive}
+
+    A top-level inductive is rendered at C++ global scope and its file's other
+    functions in the file's module struct, emitted after every global-scope
+    type, so an inline method body cannot call a function of its own file
+    that is a method of nothing.  The pre-scan and [Cpp_ind] both use these
+    to keep such functions out. *)
+
+(** [file_calls modpath decls body]: the functions defined by the file
+    [modpath] among [decls] that [body] refers to. *)
+val file_calls :
+  Names.ModPath.t -> Miniml.ml_module_structure -> Miniml.ml_ast ->
+  GlobRef.t list
+
+(** Keep a candidate only if every file function it calls ([calls]) is itself
+    kept, is already a method of some type ([already_method]), or is the
+    candidate; iterated to a fixpoint. *)
+val settle_file_calls :
+  already_method:(GlobRef.t -> bool) ->
+  calls:('a -> GlobRef.t list) ->
+  ref_of:('a -> GlobRef.t) ->
+  'a list -> 'a list
+
+(** Whether [try_register_method] would accept the function, without
+    registering anything. *)
+val would_register : GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> bool
+
 (** {2 Eponymous-type helpers}
 
     These helpers are also used by [cpp.ml] during rendering when it needs to

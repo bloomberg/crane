@@ -282,26 +282,45 @@ let ind_header_decls kn ind =
       in
       (* Check if function comes from the same Rocq module as the inductive *)
       let same_module r = ModPath.equal (modpath_of_r r) ind_modpath in
-      let methods = ref [] in
+      (* Collect the candidates first and register only those the rule about
+         calls keeps ([Method_registry.settle_file_calls]).  Registering is a
+         side effect: a function registered but then not rendered as a method
+         would be called with method syntax that nothing defines. *)
+      let eligible = ref [] in
+      let consider r body ty =
+        if
+          same_module r
+          && (not (refs_excluded ty))
+          && Method_registry.would_register ind_ref body ty
+        then eligible := (r, body, ty) :: !eligible
+      in
       List.iter
         (fun (_l, se) ->
           match se with
-          | SEdecl (Dterm (r, body, ty)) ->
-            if same_module r && not (refs_excluded ty) then
-              Option.iter
-                (fun c -> methods := c :: !methods)
-                (try_register_method ind_ref r body ty)
+          | SEdecl (Dterm (r, body, ty)) -> consider r body ty
           | SEdecl (Dfix (rv, defs, typs)) ->
-            Array.iteri
-              (fun i r ->
-                if same_module r && not (refs_excluded typs.(i)) then
-                  Option.iter
-                    (fun c -> methods := c :: !methods)
-                    (try_register_method ind_ref r defs.(i) typs.(i)))
-              rv
+            Array.iteri (fun i r -> consider r defs.(i) typs.(i)) rv
           | _ -> () )
         !current_structure_decls;
-      !methods
+      (* A call to a method of any type is rendered on its receiver, so only
+         a callee that is a method of nothing is left for the rule. *)
+      let already_method c =
+        Method_registry.lookup (get_method_registry ()) c <> None
+      in
+      let calls =
+        Method_registry.file_calls ind_modpath !current_structure_decls
+      in
+      let kept =
+        Method_registry.settle_file_calls ~already_method
+          ~calls:(fun (_, body, _) -> calls body)
+          ~ref_of:(fun (r, _, _) -> r)
+          (List.rev !eligible)
+      in
+      (* Newest first, as before. *)
+      List.rev
+        (List.filter_map
+           (fun (r, body, ty) -> try_register_method ind_ref r body ty)
+           kept)
     in
     let rec pp i =
       if i >= Array.length ind.ind_packets then

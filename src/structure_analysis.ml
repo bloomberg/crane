@@ -515,6 +515,17 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
             ind.ind_packets
         | _ -> () )
       ind_slots;
+    (* The module's type aliases.  A field typed through an alias -- a record
+       holding [list final_instruction], where [final_instruction] is
+       [instruction pc] -- needs the inductive the alias names just as much as
+       a field that names it directly. *)
+    let alias_body : (GlobRef.t, ml_type) Hashtbl.t = Hashtbl.create 8 in
+    List.iter
+      (fun (_l, se) ->
+        match se with
+        | SEdecl (Dtype (r, _, ty)) -> Hashtbl.replace alias_body r ty
+        | _ -> () )
+      sel;
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
     List.iter
       (fun i ->
@@ -524,13 +535,22 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
           | Some j when j <> i && not (List.mem j !acc) -> acc := j :: !acc
           | _ -> ()
         in
+        let seen_alias : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 8 in
+        let rec add_type_dep r =
+          add_dep r;
+          match Hashtbl.find_opt alias_body r with
+          | Some ty when not (Hashtbl.mem seen_alias r) ->
+            Hashtbl.replace seen_alias r ();
+            Modutil.type_iter_references add_type_dep ty
+          | _ -> ()
+        in
         (* A method body reaches the type it needs through the functions it
            calls -- [nat::div] calls [Nat::divmod], and it is [divmod] that
            returns a [Prod] -- so follow the call graph, not just the immediate
            references. *)
         let seen : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16 in
         let rec scan d =
-          Modutil.decl_iter_references (follow add_dep) add_dep add_dep d
+          Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
         and follow k r =
           k r;
           if not (Hashtbl.mem seen r) then begin
@@ -552,34 +572,31 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
         | _ -> () );
         Hashtbl.replace deps i !acc )
       ind_slots;
-    (* Kahn over the inductive slots, taking ready slots in their original
-       order so an unconstrained inductive does not move. *)
-    let remaining = ref ind_slots in
+    (* A stable topological order: each round places the FIRST remaining slot
+       whose dependencies have all been placed, so an inductive moves only
+       when a dependency forces it to.  Placing every ready slot at once (one
+       Kahn layer per round) pushes an inductive with any dependency behind
+       all the dependency-free ones, even when Rocq's order already satisfied
+       it: an [instruction] that needs the enums declared before it went
+       behind the [program] record that holds a list of instructions. *)
     let emitted : (int, unit) Hashtbl.t = Hashtbl.create 16 in
-    let order = ref [] in
-    let progress = ref true in
-    while !progress && !remaining <> [] do
-      let ready, blocked =
-        List.partition
-          (fun i ->
-            List.for_all
-              (fun j -> Hashtbl.mem emitted j)
-              (Option.default [] (Hashtbl.find_opt deps i)) )
-          !remaining
-      in
-      match ready with
-      | [] -> progress := false
-      | _ ->
-        List.iter (fun i -> Hashtbl.replace emitted i ()) ready;
-        order := !order @ ready;
-        remaining := blocked
-    done;
-    if List.length !order <> List.length ind_slots then
-      sel (* Cycle: leave the order as extraction produced it. *)
-    else begin
-      List.iter2 (fun slot src -> arr.(slot) <- List.nth sel src) ind_slots !order;
+    let ready i =
+      List.for_all
+        (fun j -> Hashtbl.mem emitted j)
+        (Option.default [] (Hashtbl.find_opt deps i))
+    in
+    let rec place order remaining =
+      match List.find_opt ready remaining with
+      | Some i ->
+        Hashtbl.replace emitted i ();
+        place (i :: order) (List.filter (fun k -> k <> i) remaining)
+      | None -> if remaining = [] then Some (List.rev order) else None
+    in
+    match place [] ind_slots with
+    | None -> sel (* Cycle: leave the order as extraction produced it. *)
+    | Some order ->
+      List.iter2 (fun slot src -> arr.(slot) <- List.nth sel src) ind_slots order;
       Array.to_list arr
-    end
 
 (** {2 Main analysis entry point} *)
 

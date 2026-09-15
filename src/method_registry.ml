@@ -394,6 +394,96 @@ let register_into
       param_cpp_types = None;
     }
 
+(** {2 Methods of a top-level inductive}
+
+    An inductive declared at the top level of a file is rendered at C++ global
+    scope, while the file's other functions go into the file's module struct,
+    which is emitted after every global-scope type.  An inline method body can
+    therefore name neither the file's type aliases nor those of its functions
+    that are not methods of the same type: both are declared further down.
+    [write_reg : regfile -> reg -> register_value -> ...], whose body calls
+    [replace_nth], hit both ([regfile] and [State::replace_nth] undeclared).
+
+    A call to a method of any type is fine: it is rendered on the receiver,
+    and [Structure_analysis] orders the receiver's struct before the caller's.
+    Only a call to a function that is a method of nothing reaches into the
+    file's struct.
+
+    Two places promote a top-level inductive's sibling functions, and both
+    apply the rule about calls with these helpers: the pre-scan
+    ([register_methods_for_epon ~top_level_siblings], settled in [create]
+    once every inductive's methods are known) and the render-time lookup in
+    [Cpp_ind].  Type aliases were already kept out at render time; the
+    pre-scan now does the same. *)
+
+(** [file_calls modpath decls body]: the functions defined by the file
+    [modpath] among [decls] that [body] refers to.  A function with inline
+    custom extraction is left out: it is spelled at the call site ([andb] as
+    [&&]) and never names the file's struct. *)
+let file_calls modpath decls =
+  let terms : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 16 in
+  let add r =
+    if
+      ModPath.equal (modpath_of_r r) modpath
+      && not (Table.is_any_inline_custom r)
+    then Hashtbl.replace terms r ()
+  in
+  List.iter
+    (fun (_l, se) ->
+      match se with
+      | SEdecl (Dterm (r, _, _)) -> add r
+      | SEdecl (Dfix (rv, _, _)) -> Array.iter add rv
+      | _ -> () )
+    decls;
+  fun body ->
+    let acc = ref [] in
+    Modutil.ast_iter_references
+      (fun r -> if Hashtbl.mem terms r then acc := r :: !acc)
+      (fun _ -> ())
+      (fun _ -> ())
+      body;
+    !acc
+
+(** Keep a candidate only if every file function it calls ([calls]) is itself
+    kept, is already a method of some type ([already_method]), or is the
+    candidate.  Dropping one candidate can strand another, hence the
+    fixpoint. *)
+let settle_file_calls ~already_method ~calls ~ref_of cands =
+  let rec settle kept =
+    let still_kept =
+      List.filter
+        (fun c ->
+          List.for_all
+            (fun callee ->
+              globref_equal callee (ref_of c)
+              || already_method callee
+              || List.exists (fun k -> globref_equal (ref_of k) callee) kept )
+            (calls c) )
+        kept
+    in
+    if List.length still_kept = List.length kept then kept
+    else settle still_kept
+  in
+  settle cands
+
+(** Whether [try_register_method] would accept the function, without
+    registering anything. *)
+let would_register epon_ref body ty =
+  match find_epon_arg_pos epon_ref ty with
+  | Some (pos, _) ->
+    body_safe_for_method ~this_pos:pos
+      ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
+      body
+  | None -> false
+
+(** Top-level sibling candidates, each with the file functions it calls and
+    the registration to run if it is kept.  Collected by
+    [register_methods_for_epon ~top_level_siblings] and settled in [create],
+    where every other method is already registered. *)
+let deferred_top_level :
+    (GlobRef.t * GlobRef.t list * (unit -> unit)) list ref =
+  ref []
+
 (** Register all eligible methods for a given eponymous type from a list of
     declarations.
 
@@ -420,6 +510,7 @@ let register_methods_for_epon
     cands
     ?(cross_module = false)
     ?(wrapper_module_name : string option = None)
+    ?(top_level_siblings = false)
     epon_ref
     decls =
   if is_custom epon_ref || Table.is_enum_inductive epon_ref then
@@ -472,15 +563,42 @@ let register_methods_for_epon
         | _ -> () )
       decls;
     let fwd_refs = !forward_inductives in
-    let rec refs_forward ty =
-      match ty with
-      | Miniml.Tglob (r, args, _) ->
-        List.exists (globref_equal r) fwd_refs
-        || List.exists refs_forward args
-      | Miniml.Tarr (t1, t2) -> refs_forward t1 || refs_forward t2
-      | Miniml.Tmeta {contents = Some t} -> refs_forward t
-      | _ -> false
+    let refs_any excluded =
+      let rec check ty =
+        match ty with
+        | Miniml.Tglob (r, args, _) ->
+          List.exists (globref_equal r) excluded || List.exists check args
+        | Miniml.Tarr (t1, t2) -> check t1 || check t2
+        | Miniml.Tmeta {contents = Some t} -> check t
+        | _ -> false
+      in
+      check
     in
+    let refs_forward = refs_any fwd_refs in
+    (* [~top_level_siblings]: the inductive is declared at the top level of a
+       file.  It is rendered at C++ global scope, while the file's other
+       functions go into the file's module struct, emitted after every
+       global-scope type.  An inline method body can therefore name neither
+       the file's type aliases nor its non-method functions: both are declared
+       further down.  [write_reg : regfile -> reg -> register_value -> ...],
+       whose body calls [replace_nth], hit both ([regfile] and
+       [State::replace_nth] undeclared).  The nested-module paths already keep
+       type aliases out ([register_methods_for_all_inductives], [Cpp_ind]);
+       this applies that rule here, and the rule about calls below. *)
+    let module_aliases =
+      if not top_level_siblings then []
+      else
+        List.filter_map
+          (fun (_l, se) ->
+            match se with
+            | SEdecl (Dtype (r, _, _))
+              when ModPath.equal (modpath_of_r r) epon_modpath
+                   && not (Table.is_any_inline_custom r) ->
+              Some r
+            | _ -> None )
+          decls
+    in
+    let refs_alias = refs_any module_aliases in
     (* Helper to add a candidate to both the method table and candidates
        table *)
     let add_candidate r body ty pos ind_tvar_positions =
@@ -497,34 +615,56 @@ let register_methods_for_epon
       then
         Hashtbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
     in
+    let pending = ref [] in
+    let consider r body ty pos ind_tvar_positions =
+      if top_level_siblings then
+        pending := (r, body, ty, pos, ind_tvar_positions) :: !pending
+      else add_candidate r body ty pos ind_tvar_positions
+    in
     List.iter
       (fun (_l, se) ->
         match se with
         | SEdecl (Dterm (r, body, ty)) ->
-          if same_module r && not (refs_forward ty) then (
+          if same_module r && not (refs_forward ty) && not (refs_alias ty)
+          then (
             match find_epon_arg_pos epon_ref ty with
             | Some (pos, ind_tvar_positions)
               when body_safe_for_method ~this_pos:pos
                      ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
                      body ->
-              add_candidate r body ty pos ind_tvar_positions
+              consider r body ty pos ind_tvar_positions
             | _ -> () )
         | SEdecl (Dfix (rv, defs, typs)) ->
           (* Mutual fixpoints: check each function in the fixpoint block. *)
           Array.iteri
             (fun i r ->
-              if same_module r && not (refs_forward typs.(i)) then
+              if
+                same_module r
+                && (not (refs_forward typs.(i)))
+                && not (refs_alias typs.(i))
+              then
                 match find_epon_arg_pos epon_ref typs.(i) with
                 | Some (pos, ind_tvar_positions)
                   when body_safe_for_method ~this_pos:pos
                          ~ret_has_shared_epon:
                            (ml_return_type_has_ref epon_ref typs.(i))
                          defs.(i) ->
-                  add_candidate r defs.(i) typs.(i) pos ind_tvar_positions
+                  consider r defs.(i) typs.(i) pos ind_tvar_positions
                 | _ -> () )
             rv
         | _ -> () )
-      decls
+      decls;
+    if top_level_siblings then begin
+      let calls = file_calls epon_modpath decls in
+      List.iter
+        (fun (r, body, ty, pos, ind_tvar_positions) ->
+          deferred_top_level :=
+            ( r,
+              calls body,
+              fun () -> add_candidate r body ty pos ind_tvar_positions )
+            :: !deferred_top_level )
+        (List.rev !pending)
+    end
 
 (** Register methods for ALL inductives in a module, assigning each function
     to its best-matching inductive based on type-signature occurrences.
@@ -695,7 +835,12 @@ let rec pre_register_methods_from_structure
               | TypeClass _ | Record _ -> ()
               | _ ->
                 (* Register methods from sibling declarations at this level. *)
-                register_methods_for_epon tbl cands ind_ref sel;
+                register_methods_for_epon
+                  tbl
+                  cands
+                  ~top_level_siblings:true
+                  ind_ref
+                  sel;
                 (* Also check parent-level declarations for wrapper module
                    functions (e.g. [ListAux.foo] taking a [list] argument). *)
                 let ind_name = Common.pp_global_name Type ind_ref in
@@ -703,6 +848,7 @@ let rec pre_register_methods_from_structure
                   tbl
                   cands
                   ~wrapper_module_name:(Some ind_name)
+                  ~top_level_siblings:true
                   ind_ref
                   parent_decls )
             ind.ind_packets
@@ -887,6 +1033,7 @@ let create ~ret_is_erased (s : ml_structure) : t =
      detection (e.g. a function at file scope that takes a type from a
      sub-module as its argument). *)
   let all_top_level_decls = List.concat_map snd s in
+  deferred_top_level := [];
   List.iter
     (fun (_mp, sel) ->
       pre_register_methods_from_structure
@@ -896,6 +1043,17 @@ let create ~ret_is_erased (s : ml_structure) : t =
         all_top_level_decls
         sel )
     s;
+  (* The rule about calls for top-level siblings, now that every inductive's
+     methods are registered: a callee that is a method of any type is fine. *)
+  let deferred = List.rev !deferred_top_level in
+  deferred_top_level := [];
+  List.iter
+    (fun (_, _, register) -> register ())
+    (settle_file_calls
+       ~already_method:(fun c -> Hashtbl.mem tbl c)
+       ~calls:(fun (_, callees, _) -> callees)
+       ~ref_of:(fun (r, _, _) -> r)
+       deferred);
   compute_returns_any ~ret_is_erased tbl s;
   {methods = tbl; candidates = cands}
 

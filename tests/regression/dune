@@ -9057,3 +9057,36 @@
   (alias runtest)
   (deps mutual_tmc_loopify.t.exe)
   (action (run ./mutual_tmc_loopify.t.exe))))
+
+(subdir decl_order_alias_record
+ (rule
+  (targets decl_order_alias_record.t.exe)
+  (deps InstrLib.vo DeclOrderAliasRecord.vo decl_order_alias_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_alias_record.t.exe decl_order_alias_record.cpp decl_order_alias_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decl_order_alias_record.t.exe)
+  (action (run ./decl_order_alias_record.t.exe))))
+
+(subdir decl_order_method_alias
+ (rule
+  (targets decl_order_method_alias.t.exe)
+  (deps RegFile.vo DeclOrderMethodAlias.vo decl_order_method_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_method_alias.t.exe decl_order_method_alias.cpp decl_order_method_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decl_order_method_alias.t.exe)
+  (action (run ./decl_order_method_alias.t.exe))))
+
+(subdir decl_order_method_call
+ (rule
+  (targets decl_order_method_call.t.exe)
+  (deps Regs.vo DeclOrderMethodCall.vo decl_order_method_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_method_call.t.exe decl_order_method_call.cpp decl_order_method_call.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps decl_order_method_call.t.exe)
+  (action (run ./decl_order_method_call.t.exe))))

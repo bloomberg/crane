@@ -10,8 +10,8 @@
 
 template <typename A, typename P> struct SigT;
 struct elt;
-enum class Nonterminal;
 struct rec;
+enum class Nonterminal;
 struct Symbol;
 
 template <typename A, typename P> struct SigT {
@@ -31,12 +31,12 @@ struct elt {
   uint64_t a;
   uint64_t b;
 };
-enum class Nonterminal { DOC, ITEMS };
 
 /// Record with a concrete-element list field, like ppm_value's triples.
 struct rec {
   std::deque<elt> items;
 };
+enum class Nonterminal { DOC, ITEMS };
 
 struct Symbol {
   // TYPES
