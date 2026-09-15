@@ -3026,13 +3026,29 @@ let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
    module, so both [Cpp_state.init_std_names] and the string-building sites in
    Translation/Gen_decls agree without a module cycle).  [Crane NonAtomicRc]
    selects the namespace-neutral [crane::rc]; otherwise the std/BDE flavor. *)
+(* [CRANE_COUNT_RC=1] swaps the shared pointer for the counting one in
+   count_rc.h, so a run reports its reference-count traffic.  It is an
+   environment variable rather than a vernacular flag because it is a property
+   of the measurement, not of the program: the same sources are extracted twice
+   and the two builds compared.
+
+   It measures the [std::shared_ptr] path only.  A unit that asked for
+   [Crane NonAtomicRc] keeps [crane::rc]: that flavour has its own
+   count-aware codegen (the in-place reuse helpers name [crane::rc]
+   outright), and substituting a different pointer under it would not
+   compile. *)
+let count_rc () =
+  Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc ())
+
 let shared_ptr_name () =
-  if non_atomic_rc () then Crane_rt.rc
+  if count_rc () then Crane_rt.counting_ptr
+  else if non_atomic_rc () then Crane_rt.rc
   else if std_lib () = "BDE" then "bsl::shared_ptr"
   else "std::shared_ptr"
 
 let make_shared_name () =
-  if non_atomic_rc () then Crane_rt.make_rc
+  if count_rc () then Crane_rt.make_counting
+  else if non_atomic_rc () then Crane_rt.make_rc
   else if std_lib () = "BDE" then "bsl::make_shared"
   else "std::make_shared"
 

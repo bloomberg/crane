@@ -58,13 +58,21 @@ CRANE_CPP_DIR   := ../../theories/cpp
 CRANE_EXT_DIR   := crane_extracted/Benchmarking
 # IMMER_NO_THREAD_SAFETY=1: the runners are effectively single-threaded (one
 # worker thread; main just joins), so switch immer to non-atomic refcounting.
+# CRANE_EXTRA_FLAGS is for measurement builds: -g -DCRANE_COUNT_RC_SITES to
+# attribute reference-count traffic to call sites (theories/cpp/count_rc.h).
+CRANE_EXTRA_FLAGS ?=
 CRANE_CXX_FLAGS := -O2 -std=c++23 -DIMMER_NO_THREAD_SAFETY=1 \
-                   -iquote $(CRANE_EXT_DIR) -I$(CRANE_CPP_DIR) -I$(IMMER)
+                   -iquote $(CRANE_EXT_DIR) -I$(CRANE_CPP_DIR) -I$(IMMER) \
+                   $(CRANE_EXTRA_FLAGS)
 CRANE_SRCS      := $(wildcard $(CRANE_EXT_DIR)/*.cpp)
+# Headers are prerequisites too: editing a runtime header and rebuilding must
+# not silently leave yesterday's binary in place, which is exactly the kind of
+# stale result a measurement run cannot afford.
+CRANE_HDRS      := $(wildcard $(CRANE_EXT_DIR)/*.h) $(wildcard $(CRANE_CPP_DIR)/*.h)
 
-_build/default/run_%_crane.exe: run_%_crane.cpp $(CRANE_SRCS)
+_build/default/run_%_crane.exe: run_%_crane.cpp $(CRANE_SRCS) $(CRANE_HDRS)
 	@mkdir -p _build/default
-	$(CRANE_CXX) $(CRANE_CXX_FLAGS) -o $@ $^
+	$(CRANE_CXX) $(CRANE_CXX_FLAGS) -o $@ $(filter %.cpp,$^)
 
 crane-build: crane-extract \
   _build/default/run_json_crane.exe \

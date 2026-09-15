@@ -59,6 +59,12 @@ val small_vector : string  (** [crane::small_vector<T>] *)
 
 val lazy_ : string  (** [crane::lazy<T>] *)
 
+val counting_ptr : string
+(** [crane::counting_ptr<T>] -- the measurement-only reference-count-counting
+    shared pointer of count_rc.h, selected by [CRANE_COUNT_RC]. *)
+
+val make_counting : string  (** [crane::make_counting<T>] *)
+
 (** {2 Helpers a MiniCpp expression may name} *)
 
 (** The runtime helpers that appear in the IR rather than only in the

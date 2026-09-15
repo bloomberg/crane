@@ -764,8 +764,13 @@ val check_non_atomic_rc_request : unit -> unit
     swaps the factory, never the pointer representation. *)
 val arena_enabled : unit -> bool
 
+val count_rc : unit -> bool
+(** Whether [CRANE_COUNT_RC=1] is set: spell every shared pointer
+    [crane::counting_ptr] (count_rc.h) so the run reports its reference-count
+    traffic. Measurement-only; never true in ordinary extraction. *)
+
 (** Resolved smart-pointer type/factory names for string-level codegen, honoring
-    [Crane NonAtomicRc] and the std/BDE flavor. *)
+    [CRANE_COUNT_RC], [Crane NonAtomicRc] and the std/BDE flavor. *)
 val shared_ptr_name : unit -> string
 
 (** Name of the smart-pointer factory function to emit: [crane::make_rc] under

@@ -645,7 +645,14 @@ let init_std_names () =
      single-threaded, non-atomic [crane::rc] (with a matching from-this base).
      Namespace-neutral, so it overrides both the std and BDE flavors. *)
   std_names :=
-    if Table.non_atomic_rc () then
+    (* [CRANE_COUNT_RC]: measurement build -- every shared pointer becomes the
+       counting one.  [enable_from_this] stays as it is: [shared_from_this ()]
+       hands back a [std::shared_ptr], which a [counting_ptr] adopts. *)
+    if Table.count_rc () then
+      { base with
+        shared_ptr = Crane_rt.counting_ptr;
+        make_shared = Crane_rt.make_counting }
+    else if Table.non_atomic_rc () then
       { base with
         shared_ptr = Crane_rt.rc;
         make_shared = Crane_rt.make_rc;

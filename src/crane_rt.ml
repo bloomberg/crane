@@ -16,6 +16,10 @@ let call_erased = "crane_call_erased"
 let small_vector = "crane::small_vector"
 let lazy_ = "crane::lazy"
 
+(* [CRANE_COUNT_RC]: the measurement-only counting shared pointer (count_rc.h). *)
+let counting_ptr = "crane::counting_ptr"
+let make_counting = "crane::make_counting"
+
 type helper =
   | Make_rc_reusing_unchecked
   | Reuse_step

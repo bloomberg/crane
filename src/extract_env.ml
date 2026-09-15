@@ -814,6 +814,16 @@ let spec_header ?(unit_includes = []) si () =
     else
       h
   in
+  (* [crane::counting_ptr] (the measurement-only reference-count-counting
+     shared pointer selected by [CRANE_COUNT_RC]) lives in count_rc.h. *)
+  let h =
+    if Table.count_rc ()
+       && not (List.exists (fun s -> String.equal s "count_rc.h") (himports @ imps))
+    then
+      h ++ mk_include_quoted "count_rc.h" ++ fnl ()
+    else
+      h
+  in
   (* [crane::small_vector] (the small-buffer-optimized destructor drain
      worklist) lives in small_vector.h. *)
   let h =
