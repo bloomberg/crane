@@ -375,6 +375,26 @@ let push_env_types (ids : (Id.t * ml_type) list) =
   tctx := { !tctx with cpp_binder_types = shift (!tctx).cpp_binder_types };
   tctx := { !tctx with env_types = ids @ (!tctx).env_types }
 
+(** Restore the de Bruijn environment type stack to a [saved] prefix, undoing
+    whatever {!push_env_types} did to {!cpp_binder_types} in between.
+
+    A caller that saves and restores [env_types] by hand is closing a scope,
+    and the binder types have to close with it: the entries for the binders
+    being dropped go away, and everything the pushes shifted upward comes back
+    down.  Leaving them shifted is worse than leaving them stale -- every
+    surviving binder's recorded type then describes some other binder, so a
+    concrete value can be read back as a box. *)
+let restore_env_types (saved : (Id.t * ml_type) list) =
+  let n = List.length (!tctx).env_types - List.length saved in
+  if n > 0 && not (IntMap.is_empty (!tctx).cpp_binder_types) then
+    tctx :=
+      { !tctx with
+        cpp_binder_types =
+          IntMap.fold
+            (fun k v acc -> if k > n then IntMap.add (k - n) v acc else acc)
+            (!tctx).cpp_binder_types IntMap.empty };
+  tctx := { !tctx with env_types = saved }
+
 (** Retrieve the ML type of the variable at de Bruijn index [i] (1-based). *)
 let get_env_type (i : int) : ml_type = snd (List.nth (!tctx).env_types (pred i))
 

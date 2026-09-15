@@ -5503,7 +5503,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            became [std::function<...>] instead of the plain return type). *)
         mk_lambda (List.rev cpp_args) None body_stmts ~by_value:true )
     in
-    tctx := { !tctx with env_types = saved_env_types };
+    restore_env_types saved_env_types;
     ( match filtered_args with
     | [] ->
       (* All lambda params are dummy (type abstractions). Skip the lambda
@@ -7611,7 +7611,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None -> e )
               value_args
           in
-          tctx := { !tctx with env_types = saved_env_types };
+          restore_env_types saved_env_types;
           restore_erased_env saved_erased;
           let callee =
             if not hkt_class then make_field_access (gen_expr env t) fld
@@ -10665,7 +10665,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           gen_match_branch env' typ rty r ids' dummies body sname
             match_i scrut ~scrut_db
         in
-        tctx := { !tctx with env_types = saved_env_types };
+        restore_env_types saved_env_types;
         restore_erased_env saved_erased;
         let rest, wild = gen_branches cs in
         (br :: rest, wild)
@@ -10813,7 +10813,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
                 with_reuse_token (Some (tok, tail_ctor)) (fun () ->
                     gen_stmts env' (fun x -> Sreturn (Some x)) body )
               in
-              tctx := { !tctx with env_types = saved_env_types };
+              restore_env_types saved_env_types;
               let use_count_cond =
                 CPPbinop
                   ( Beq,
@@ -10824,7 +10824,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
               in
               Some (branch_idx, extract @ body_stmts, use_count_cond)
             | None ->
-              tctx := { !tctx with env_types = saved_env_types };
+              restore_env_types saved_env_types;
               None)
           | _ -> None )
         in
@@ -11365,7 +11365,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
         with_shifted_move_tracking n_pat_vars ~add_owned_set:pat_owned (fun () ->
           gen_cpp_custom_body env' k rty ids' t scrut_ind_opt)
       in
-      tctx := { !tctx with env_types = saved_env_types };
+      restore_env_types saved_env_types;
       tctx := { !tctx with move_owned_vars = saved_owned };
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
          [std::any] at the binding site.  Pattern variables whose C++ type is
@@ -12646,7 +12646,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                  their original positions are accessible. We push only the lambda
                  params on top of the outer env. *)
               let lam_param_ids, lam_env = push_vars' param_ids env in
-              tctx := { !tctx with env_types = saved_env_types };
+              restore_env_types saved_env_types;
               push_binders env lam_param_ids;
               (* Lambda bodies have their own return type; clear the enclosing
                  function's void flag to avoid bare 'return;' inside the lambda. *)
@@ -12659,7 +12659,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 with_cpp_return_type ret (fun () ->
                     gen_stmts lam_env (fun x -> Sreturn (Some x)) body )
               in
-              tctx := { !tctx with env_types = saved_env_types };
+              restore_env_types saved_env_types;
               (free_var_params, lam_param_ids, lam_env, compiled_body) )
         in
 
@@ -13748,7 +13748,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let result =
     ((renamed_n, ty), ids, gen_stmts env (fun x -> Sreturn (Some x)) f)
   in
-  tctx := { !tctx with env_types = saved_env_types };
+  restore_env_types saved_env_types;
   tctx := { !tctx with move_dead_after = saved_dead };
   tctx := { !tctx with move_owned_vars = saved_owned };
   tctx := { !tctx with move_n_params = saved_nparams };
