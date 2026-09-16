@@ -1,5 +1,107 @@
 #include "binary_nums.h"
 
+Positive Coq_Pos::succ(const Positive &x) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return Positive::xo(succ(*a0));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xi(*a0);
+  } else {
+    return Positive::xo(Positive::xh());
+  }
+}
+
+Positive Coq_Pos::add(const Positive &x, const Positive &y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
+    } else {
+      return Positive::xo(succ(*a0));
+    }
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add(*a0, *a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add(*a0, *a00));
+    } else {
+      return Positive::xi(*a0);
+    }
+  } else {
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(succ(*a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(*a00);
+    } else {
+      return Positive::xo(Positive::xh());
+    }
+  }
+}
+
+Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(add_carry(*a0, *a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
+    } else {
+      return Positive::xi(succ(*a0));
+    }
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xo(add_carry(*a0, *a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xi(add(*a0, *a00));
+    } else {
+      return Positive::xo(succ(*a0));
+    }
+  } else {
+    if (std::holds_alternative<typename Positive::XI>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XI>(y.v());
+      return Positive::xi(succ(*a00));
+    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
+      const auto &[a00] = std::get<typename Positive::XO>(y.v());
+      return Positive::xo(succ(*a00));
+    } else {
+      return Positive::xi(Positive::xh());
+    }
+  }
+}
+
+Positive Coq_Pos::mul(const Positive &x, Positive y) {
+  if (std::holds_alternative<typename Positive::XI>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XI>(x.v());
+    return add(y, Positive::xo(mul(*a0, y)));
+  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
+    const auto &[a0] = std::get<typename Positive::XO>(x.v());
+    return Positive::xo(mul(*a0, std::move(y)));
+  } else {
+    return y;
+  }
+}
+
+uint64_t Coq_Pos::to_nat(const Positive &x) {
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
+}
+
 Positive Pos::succ(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
@@ -252,108 +354,6 @@ Comparison Pos::compare(const Positive &x0_, const Positive &x1_) {
 }
 
 uint64_t Pos::to_nat(const Positive &x) {
-  return iter_op<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
-      UINT64_C(1));
-}
-
-Positive Coq_Pos::succ(const Positive &x) {
-  if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(succ(*a0));
-  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*a0);
-  } else {
-    return Positive::xo(Positive::xh());
-  }
-}
-
-Positive Coq_Pos::add(const Positive &x, const Positive &y) {
-  if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*a0, *a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*a0, *a00));
-    } else {
-      return Positive::xo(succ(*a0));
-    }
-  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add(*a0, *a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add(*a0, *a00));
-    } else {
-      return Positive::xi(*a0);
-    }
-  } else {
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(succ(*a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*a00);
-    } else {
-      return Positive::xo(Positive::xh());
-    }
-  }
-}
-
-Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
-  if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(add_carry(*a0, *a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(add_carry(*a0, *a00));
-    } else {
-      return Positive::xi(succ(*a0));
-    }
-  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xo(add_carry(*a0, *a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(add(*a0, *a00));
-    } else {
-      return Positive::xo(succ(*a0));
-    }
-  } else {
-    if (std::holds_alternative<typename Positive::XI>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Positive::xi(succ(*a00));
-    } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
-      const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xo(succ(*a00));
-    } else {
-      return Positive::xi(Positive::xh());
-    }
-  }
-}
-
-Positive Coq_Pos::mul(const Positive &x, Positive y) {
-  if (std::holds_alternative<typename Positive::XI>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return add(y, Positive::xo(mul(*a0, y)));
-  } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
-    const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xo(mul(*a0, std::move(y)));
-  } else {
-    return y;
-  }
-}
-
-uint64_t Coq_Pos::to_nat(const Positive &x) {
   return iter_op<uint64_t>(
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
       UINT64_C(1));

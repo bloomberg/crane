@@ -331,14 +331,6 @@ struct Little {
   static Uint succ(const Uint &d);
 };
 
-struct NilEmpty {
-  static String string_of_uint(const Uint &d);
-};
-
-struct NilZero {
-  static String string_of_uint(const Uint &d);
-};
-
 struct Ascii {
   // DATA
   Bool0 a0;
@@ -441,6 +433,14 @@ public:
     }
     return std::move(*_head);
   }
+};
+
+struct NilEmpty {
+  static String string_of_uint(const Uint &d);
+};
+
+struct NilZero {
+  static String string_of_uint(const Uint &d);
 };
 
 struct EmptyInductiveDecimalUint {

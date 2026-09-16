@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From CraneTestsWIP Require cross_file_module_ref.Lib.
+From CraneTestsRegression Require cross_file_module_ref.Lib.
 
 Module Type S.
   Parameter t : Set.

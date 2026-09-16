@@ -1,15 +1,18 @@
-#ifndef INCLUDED_PRIMED_IDENTIFIER
-#define INCLUDED_PRIMED_IDENTIFIER
+#ifndef INCLUDED_CLASS_AS_VALUE_ARG
+#define INCLUDED_CLASS_AS_VALUE_ARG
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
-#include <functional>
+#include <concepts>
 #include <memory>
 #include <utility>
 #include <variant>
 
 struct Nat;
+struct memory_bit;
+struct Shw_memory_bit;
 
 struct Nat {
   // TYPES
@@ -91,20 +94,32 @@ public:
   }
 };
 
-template <typename t> using Sized = std::function<Nat(t)>;
-
-template <typename T1> Nat size(Sized<T1> sized, T1 x0_) {
-  return sized(std::move(x0_));
-}
-
-                                      const Sized<Nat> Sized_nat' = [](Nat
-n) {
-return Nat::s(n);
+template <typename I>
+concept Params = requires {
+  { I::width() } -> std::convertible_to<Nat>;
 };
 
-                                      Nat twice'(const Nat& n); struct
-                                          PrimedIdentifier {
-                                        static Nat use(const Nat &n);
-                                      };
+struct memory_bit {
+  Nat tag;
+};
 
-#endif // INCLUDED_PRIMED_IDENTIFIER
+template <typename I, typename T>
+concept Shw = requires {
+  { I::template shw<std::any>(std::declval<T>()) } -> std::convertible_to<Nat>;
+};
+
+struct Shw_memory_bit {
+  template <typename pa> static Nat shw(memory_bit b) {
+    return pa::width().add(std::move(b).tag);
+  }
+};
+
+static_assert(Shw<Shw_memory_bit, memory_bit>);
+
+struct ClassAsValueArg {
+  template <Params _tcI0> static Nat use(const memory_bit &b) {
+    return Shw_memory_bit::template shw<_tcI0>(b);
+  }
+};
+
+#endif // INCLUDED_CLASS_AS_VALUE_ARG

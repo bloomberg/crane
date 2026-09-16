@@ -94,7 +94,7 @@ public:
 
   explicit Request(Free _v) : v_(std::move(_v)) {}
 
-  static Request alloca(Nat size, Nat align, bool zeroed) {
+  static Request Alloca_(Nat size, Nat align, bool zeroed) {
     return Request(Alloca{std::move(size), std::move(align), zeroed});
   }
 
@@ -108,7 +108,7 @@ public:
 };
 
 struct CMacroName {
-  static inline const Request example = Request::alloca(
+  static inline const Request example = Request::Alloca_(
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
       Nat::s(Nat::o()), true);
 };

@@ -101,10 +101,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct Nat {};
-
-struct Z {};
-
 template <typename Err> struct ExceptE {
   // DATA
   Err a0;
@@ -119,6 +115,10 @@ template <typename Err> struct ExceptE {
 struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
+
+struct Nat {};
+
+struct Z {};
 
 struct Err {
   // DATA

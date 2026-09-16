@@ -1,22 +1,36 @@
-(** Crane bug: a typeclass instance built by *application* of another instance
-    is emitted as a call with too few arguments.
+(** Crane bug: an instance of a higher-kinded one-method class cannot be
+    instantiated in C++.
 
-    [TFunctor_pair] takes a [TFunctor box] instance.  Crane cannot pass it as a
-    template type argument (only constant instances get that treatment), so it
-    falls back to building the instance as a value, and emits
+    A one-method class is a synonym, so [TFunctor] is emitted as
 
-      TFunctor_pair([]() { return TFunctor_box(Endo_id<Nat>); }())
+      template <template <typename> class t>
+      using TFunctor = std::function<...>
 
-    where [TFunctor_box] is the 3-argument [ft_box] under a different name.
+    and its projection [tfmap] as a template over that [t].  Neither the
+    projection nor the instances can then be reached:
+
+      - [tfmap]'s [t] is a template template parameter, and the call site
+        deduces it from [t<T2> x0].  For [TFunctor_pair], whose carrier is the
+        anonymous [fun T => (T * box T)%type], there is no C++ name to deduce
+        to -- an alias template would not be deducible either, so the call
+        would have to spell [t] explicitly.
+
+      - The instance bodies erase their own type arguments, so [ft_box] and
+        [ft_pair] are called with a [T2] that appears only in the return type
+        and is left to deduction.
 
     Expected: extracted C++ compiles.
     Actual:   error: no matching function for call to 'ft_box'
-              note: candidate function template not viable: requires 3
-                    arguments, but 1 was provided
-              error: couldn't infer template argument 'T2'
+              note: couldn't infer template argument 'T2'
+              error: no matching function for call to 'tfmap'
+              note: could not match 'TFunctor<T1>' against '(lambda ...)'
 
-    Seen in Vellvm as "too few arguments to function call, expected 7, have 5"
-    (22 times), from the instances in [Syntax/Traversal.v]. *)
+    The reduction originally recorded here -- "too few arguments to function
+    call, expected 7, have 5", seen 22 times in Vellvm's
+    [Syntax/Traversal.v] -- is fixed: an instance's declaration and its call
+    sites now agree on how many arguments it takes, so the partial application
+    [TFunctor_box Endo_id] is eta-expanded into a closure rather than emitted
+    as a short call. *)
 
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.

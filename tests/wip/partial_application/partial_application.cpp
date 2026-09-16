@@ -15,7 +15,18 @@ std::pair<bool, Box<bool>>
 PartialApplication::convert(const std::pair<Nat, Box<Nat>> &p) {
   return tfmap(
       []() {
-        return TFunctor_pair([]() { return TFunctor_box(Endo_id<Nat>); }());
+        return [](std::function<std::any(std::any)> _x0,
+                  std::pair<std::any, Box<std::any>> _x1)
+                   -> std::pair<std::any, Box<std::any>> {
+          return TFunctor_pair(
+              []() {
+                return [](std::function<std::any(std::any)> _x0,
+                          Box<std::any> _x1) -> Box<std::any> {
+                  return TFunctor_box(Endo_id<Nat>, _x0, _x1);
+                };
+              }(),
+              _x0, _x1);
+        };
       }(),
       [](const Nat &n) { return n.eqb(Nat::o()); }, p);
 }

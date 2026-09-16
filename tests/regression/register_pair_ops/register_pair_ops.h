@@ -131,13 +131,13 @@ public:
   }
 };
 
-struct Nat {};
-
 struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
   template <typename T1>
   static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
+
+struct Nat {};
 
 struct RegisterPairOps {
   template <typename T1>

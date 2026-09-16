@@ -541,6 +541,13 @@ let gen_typeclass_cpp name fields ind =
           method_tvar_count
             name
             (recover_method_quantifier name field_ref field_ty)
+          (* A class-typed argument is a template parameter of the method, not
+             a value: the instance declares one per such argument, after its
+             own type variables. *)
+          + List.length
+              (List.filter
+                 Table.is_typeclass_type
+                 (fst (get_args_and_ret [] field_ty)) )
         in
         let callee =
           if ntv = 0 then
@@ -1005,21 +1012,27 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let declared_arg_tys =
             if method_tvars = [] then [||]
             else
+              (* A class-typed binder keeps its slot here: it still stands as a
+                 lambda in the body, and dropping it would misalign the
+                 declared types against the binders they retype. *)
               Array.of_list
                 (List.filter
-                   (fun t ->
-                     not (Table.is_typeclass_type t) && not (Mlutil.isTdummy t) )
+                   (fun t -> not (Mlutil.isTdummy t))
                    (fst (method_args_and_ret ())) )
           in
-          let rec extract_params n ml_acc cpp_acc body =
+          (* A class-typed argument is not a value in C++: the class is a
+             concept, and the instance satisfying it is a type.  Such a binder
+             becomes one of the method's own template parameters, which is
+             where its uses ([pa::width()]) already look for it. *)
+          let rec extract_params n ml_acc cpp_acc tc_acc body =
             match body with
             | MLlam (_id, ty, rest) when Mlutil.isTdummy ty ->
-              extract_params n ml_acc cpp_acc rest
+              extract_params n ml_acc cpp_acc tc_acc rest
             (* Past the declared arity the remaining binders are the value's
                own, not the accessor's: they stay in the body, which the
                return type spells as a [std::function]. *)
             | MLlam _ when n >= declared_arity ->
-              (List.rev ml_acc, List.rev cpp_acc, body)
+              (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
             | MLlam (id, ty, rest) ->
               let param_name = id_of_mlid id in
               let resolved_ty = subst_promoted_tvars ty in
@@ -1038,11 +1051,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 (n + 1)
                 ((param_name, resolved_ty) :: ml_acc)
                 ((param_name, param_cpp_ty) :: cpp_acc)
+                (Table.is_typeclass_type resolved_ty :: tc_acc)
                 rest
-            | _ -> (List.rev ml_acc, List.rev cpp_acc, body)
+            | _ -> (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
           in
-          let ml_params, cpp_params, inner_body =
-            extract_params 0 [] [] field_body
+          let ml_params, cpp_params, param_is_tc, inner_body =
+            extract_params 0 [] [] [] field_body
           in
           (* Determine return type: if type_subst resolved everything, use the
              substituted type. Otherwise, infer from the lambda binders. *)
@@ -1079,7 +1093,17 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              top-level function's body is: an expression whose C++ type is the
              erased [std::any] -- a call to a higher-rank callback, say -- is
              cast back to the concrete type the method declares. *)
-          let cpp_params, ret_ty, body_stmts =
+          (* Names for the class-typed arguments when the body does not bind
+             them itself.  Numbered as an instance parameter is, since that is
+             what they are. *)
+          let n_tc_args_names =
+            List.mapi
+              (fun i _ -> tc_instance_id i)
+              (List.filter
+                 Table.is_typeclass_type
+                 (fst (method_args_and_ret ())) )
+          in
+          let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
             if ml_params = [] then
               (* No lambdas in the body — either a function reference that needs
@@ -1097,7 +1121,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 let stmts =
                   gen_stmts base_env (fun x -> Sreturn (Some x)) inner_body
                 in
-                ([], method_ret_ty, stmts)
+                ([], method_ret_ty, stmts, [])
               else
                 (* Function reference — eta-expand.  Build C++ params only for
                    real args, but supply MLdummy for erased args in the ML
@@ -1219,7 +1243,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                     (List.rev renamed_eta)
                     (List.map (fun (name, _, cpp_ty) -> (name, cpp_ty)) params)
                 in
-                (cpp_params, method_ret_ty, stmts)
+                (* The eta path applied the class-typed arguments to
+                   [MLdummy], so nothing in the body names them; the template
+                   parameters are still declared, because the concept probe
+                   and every call site spell the same list. *)
+                (cpp_params, method_ret_ty, stmts, n_tc_args_names)
             else
               (* Normal case: we have lambdas.  push_vars' lowercases
                  and uniquifies names for the de Bruijn environment;
@@ -1227,12 +1255,22 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               let renamed_ml, env =
                 push_vars' (List.rev ml_params) base_env
               in
-              let cpp_params =
+              let named_params =
                 List.map2
                   (fun (new_name, _) (_, cpp_ty) -> (new_name, cpp_ty))
                   (List.rev renamed_ml)
                   cpp_params
               in
+              (* A class-typed binder leaves the value parameter list and
+                 joins the template one, under the name the body knows it
+                 by. *)
+              let keep, promoted =
+                List.partition
+                  (fun (i, _) -> not (List.nth param_is_tc i))
+                  (List.mapi (fun i p -> (i, p)) named_params)
+              in
+              let cpp_params = List.map snd keep in
+              let tc_tparams = List.map (fun (_, (n, _)) -> n) promoted in
               (* Record the instance-resolved parameter types: the ambient
                  environment still spells them with the class's type variable,
                  so call sites inside the body need this to tell a concrete
@@ -1242,7 +1280,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 with_method_env_types env renamed_ml (fun () ->
                   gen_stmts env (fun x -> Sreturn (Some x)) inner_body )
               in
-              (cpp_params, method_ret_ty, stmts)
+              (cpp_params, method_ret_ty, stmts, tc_tparams)
           in
           Some
             ( Fmethod
@@ -1253,7 +1291,15 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                      the concept probe at [std::any].  A default here would
                      let a call that fails to deduce silently fall back to
                      [std::any] instead of failing to compile. *)
-                  mf_tparams = List.map (fun p -> (TTtypename, p)) method_tvars;
+                  (* The class-typed arguments follow the method's own type
+                     variables: the concept probe supplies both lists, and it
+                     reads the declared signature in the same order.  They are
+                     left unconstrained, so that the probe can instantiate the
+                     declaration at [std::any] without satisfying the class. *)
+                  mf_tparams =
+                    List.map
+                      (fun p -> (TTtypename, p))
+                      (method_tvars @ tc_tparams);
                   mf_ret_type = ret_ty;
                   mf_params = cpp_params;
                   mf_body = body_stmts;
@@ -2330,7 +2376,7 @@ let gen_dfun n b cty ty temps =
               ( tt,
                 instance_name,
                 Some (class_ref, type_args),
-                remove_prime_id (id_of_mlid ml_id) )
+                cpp_id_of_id (id_of_mlid ml_id) )
             | _ ->
               (* Unreachable: this branch is guarded by
                  [Table.is_typeclass_type ty], which only holds for [Tglob]. *)
@@ -2344,7 +2390,7 @@ let gen_dfun n b cty ty temps =
              original name) *)
           (instance_name, ty) )
         else (* Regular param: keep original name *)
-          (remove_prime_id (id_of_mlid ml_id), ty) )
+          (cpp_id_of_id (id_of_mlid ml_id), ty) )
       all_params
   in
   let typeclass_temps = List.rev !typeclass_temps in
@@ -2998,7 +3044,7 @@ let gen_sfun n b dom cod temps =
   let ids, env =
     push_vars'
       (List.map
-         (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+         (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
          all_params )
       (empty_env ())
   in
@@ -3988,7 +4034,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let ids_converted =
     List.map
-      (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+      (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
       ids_with_types
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in

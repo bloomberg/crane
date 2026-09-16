@@ -256,6 +256,25 @@ let keywords =
       "size_t";
       "List";
       "persistent_array";
+      (* Macros the C standard headers define.  The preprocessor runs before
+         any scope, so a declaration spelled like one is rewritten before the
+         compiler sees it -- [static Request alloca(Nat, Nat, bool)] against
+         <alloca.h> is "too many arguments provided to function-like macro".
+         Only the spelling the header uses is reserved; the case-folded forms
+         are separate names to the preprocessor. *)
+      "alloca";
+      "TRUE";
+      "FALSE";
+      "NULL";
+      "EOF";
+      "DOMAIN";
+      "OVERFLOW";
+      "UNDERFLOW";
+      "HUGE_VAL";
+      "ERANGE";
+      "STDIN";
+      "STDOUT";
+      "STDERR";
     ]
     Id.Set.empty
 

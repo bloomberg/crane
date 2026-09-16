@@ -32,7 +32,7 @@ include Ml_type_util
 let factory_name_of_ctor ?(type_name = "") ctor_struct_name =
   let lc = String.lowercase_ascii ctor_struct_name in
   let collides =
-    Id.Set.mem (Id.of_string lc) (get_keywords ())
+    Common.is_reserved_cpp_name lc
     || lc = String.lowercase_ascii type_name
     || Id.Set.mem (Id.of_string lc) Common.inductive_generated_members
   in
@@ -120,7 +120,7 @@ let field_name_str_of_idx consarg_names k =
   | Some (Some id) -> (
     match sanitize_binder_name (Id.to_string id) with
     | Some sanitized ->
-      if Id.Set.mem (Id.of_string sanitized) (get_keywords ()) then
+      if Common.is_reserved_cpp_name sanitized then
         field_param_name k
       else
         if Table.std_lib () = "BDE" then "d_" ^ sanitized else sanitized
@@ -7466,7 +7466,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         try Some (List.nth non_erased_fields (n - i)) with _ -> None
       in
       let branch_binders =
-        List.rev_map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids
+        List.rev_map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids
       in
       let _, env' = push_vars' branch_binders env in
       ( match fld with
@@ -7551,7 +7551,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some ft ->
             List.filter_map
               (fun t ->
-                if isTdummy t then None else Some (erase_field_tvars t) )
+                if isTdummy t || Table.is_typeclass_type t then None
+                else Some (erase_field_tvars t) )
               (fst (get_args_and_ret [] ft))
           | None -> []
         in
@@ -7580,6 +7581,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             List.filteri
               (fun i a -> not (is_erased a) || not (isTdummy (List.nth doms i)))
               args
+        in
+        (* A class-typed argument is not a value: the concept is met by a type,
+           and the method declares it as a template parameter.  It leaves the
+           argument list for the callee's explicit template arguments, which is
+           the only place that parameter can be given. *)
+        let tc_args, value_args =
+          (* The arguments stand under the branch's binders, as [arg_exprs]
+             below generates them. *)
+          List.partition (is_typeclass_instance_arg env') value_args
         in
         let call =
           (* The arguments live under the branch's binders, so the ML type
@@ -7643,6 +7653,16 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                     Common.id_of_global Term fld,
                     targs )
           in
+          (* The class-typed arguments follow the method's own type variables,
+             which is the order the instance declares them in. *)
+          let callee =
+            match (tc_args, callee) with
+            | [], _ -> callee
+            | _, CPPscope (b, id, tys) ->
+              CPPscope
+                (b, id, tys @ List.map (ml_arg_to_template_type env') tc_args)
+            | _ -> callee
+          in
           (* A class method is a static member function of the instance
              struct, so its arity is the field's. *)
           mk_arity_call
@@ -7695,7 +7715,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let renamed_ids, env' =
         push_vars'
           (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
              ids )
           env
       in
@@ -7997,6 +8017,139 @@ and curry_to_expected env ?expected_ty ?(tys = []) x cglob =
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
+  (* Check if an ML arg is a type class instance (a reference to a struct that
+   implements a type class) *)
+  (* [MLmagic] is a transparent coercion — extraction inserts one around an
+   instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt]
+   with [Opt : Type -> Type]).  Look through it, or the instance is left in
+   value position and the generated call names the instance struct as if it
+   were a value. *)
+and is_typeclass_instance_arg env ml_arg =
+  match strip_magic ml_arg with
+  | MLglob (r, _) ->
+    (* An instance parameterised over types alone carries its parameters in
+       the [MLglob]'s type arguments, so its ML type is still an arrow --
+       [MList : forall A, Monoid (list A)].  Read the codomain, as the
+       application case below does, or such an instance is left in value
+       position and the call names the instance struct as if it were one. *)
+    ref_is_instance r
+  | MLrel i ->
+    (* An instance parameter is not a value argument.  Recognised by
+       identity: {!collect_typeclass_param_ids} mints this binder from a
+       typeclass-typed domain of the enclosing arrow, so it is Crane's own
+       and has no ML type of its own in [env_types]. *)
+    Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
+  | MLapp (MLglob (r, _), _) ->
+    (* Parameterized instance application, e.g. numList A H. Check if r's
+       return type (after stripping Tarr) is a typeclass type, or if it
+       returns a skipped type (e.g. ReSum instances where the Class is a
+       ConstRef not recognized by is_typeclass). *)
+    ref_is_instance r
+  | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
+    (* Single-branch case = record field projection.  If the projected
+       field's type is itself a typeclass, this is a typeclass instance
+       arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
+       field from a [PreStableCategory] record.
+       Look up the record's field types from the case type rather than
+       relying on branch binding types (which may be Tunresolved). *)
+    let (binds, _, _, br_body) = branches.(0) in
+    ( match br_body with
+    | MLrel j when j >= 1 && j <= List.length binds ->
+      let idx = List.length binds - j in
+      (* Try to get the field type from the record definition *)
+      let field_is_tc =
+        match case_ty with
+        | Tglob (r, _, _) when Table.is_typeclass r ->
+          let field_types = Table.record_field_types r in
+          let non_dummy =
+            filter_value_types field_types
+          in
+          ( try
+              let fty = List.nth non_dummy idx in
+              Table.is_typeclass_type fty
+            with _ -> false )
+        | _ -> false
+      in
+      field_is_tc
+    | _ -> false )
+  | _ -> false
+
+(* Convert type class instance args to template type arguments *)
+and ml_arg_to_template_type env ml_arg =
+  match strip_magic ml_arg with
+  | MLglob (r, ts) ->
+    if ref_returns_skipped r then
+      (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
+      Tvoid
+    else
+      (* Use the instance struct as a type - convert to Tglob *)
+      Tglob (r, build_template_params env [] ts, [])
+  | MLrel i ->
+    (* The instance is a lambda parameter - look up its name in the env and
+       create a Tvar reference to the template parameter *)
+    let db, _ = env in
+    let name = List.nth db (pred i) in
+    Tvar (0, Some name)
+  | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
+    (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
+       args are complex and cannot be converted to C++ template types.
+       Erase to void since these type args are never referenced. *)
+    Tvoid
+  | MLapp (MLglob (r, ts), inner_args) ->
+    (* Parameterized instance application, e.g. numList A H. Convert to
+       Tglob(r, template_args, []) where template_args are built from the
+       inner args. *)
+    let template_args =
+      List.filter_map
+        (fun arg ->
+          match arg with
+          | MLdummy _ -> None (* Erased type param — skip *)
+          | _ -> Some (ml_arg_to_template_type env arg) )
+        inner_args
+    in
+    (* Instance parameters come first in the generated struct's template
+       list ([template <typename _tcI0, typename T1>]), so the instance
+       arguments must precede the type arguments here too. *)
+    Tglob (r, template_args @ build_template_params env [] ts, [])
+  | MLcase (_, scrutinee, branches)
+    when Array.length branches = 1 ->
+    (* Record field projection — e.g., [base_category(PS)].
+       Resolve to [Tqualified(scrutinee_type, field_name)]. *)
+    let (binds, _, _, br_body) = branches.(0) in
+    let base_ty = ml_arg_to_template_type env scrutinee in
+    ( match br_body with
+    | MLrel j when j >= 1 && j <= List.length binds ->
+      let idx = List.length binds - j in
+      let (field_id, _) = List.nth binds idx in
+      ( match field_id with
+      | Id name | Tmp name -> Tqualified (base_ty, name)
+      | Dummy -> Tany )
+    | _ -> Tany )
+  | MLapp (f, args) ->
+    (* Parameterized instance application with non-glob head.
+       Resolve head, then add arg types. *)
+    let head_ty = ml_arg_to_template_type env f in
+    let arg_tys =
+      List.filter_map
+        (fun arg ->
+          match arg with
+          | MLdummy _ -> None
+          | _ -> ( try Some (ml_arg_to_template_type env arg)
+                    with _ -> None ) )
+        args
+    in
+    ( match head_ty with
+    | Tglob (r, existing, es) ->
+      Tglob (r, existing @ arg_tys, es)
+    | _ -> head_ty )
+  | MLdummy _ -> Tany (* Should not happen at top level, but be safe *)
+  | _ ->
+    CErrors.anomaly
+      (Pp.str
+         "ml_arg_to_template_type: unexpected ML term after \
+          is_typeclass_instance_arg filter" )
+
+
 and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
   let slot = {slot with expected_cpp_ty = expected_ty} in
 
@@ -8004,63 +8157,6 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     match (dom, args) with
     | _ :: dom, _ :: args -> get_eta_args dom args
     | _, _ -> dom
-  in
-  (* Check if an ML arg is a type class instance (a reference to a struct that
-     implements a type class) *)
-  (* [MLmagic] is a transparent coercion — extraction inserts one around an
-     instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt]
-     with [Opt : Type -> Type]).  Look through it, or the instance is left in
-     value position and the generated call names the instance struct as if it
-     were a value. *)
-  let is_typeclass_instance_arg ml_arg =
-    match strip_magic ml_arg with
-    | MLglob (r, _) ->
-      (* An instance parameterised over types alone carries its parameters in
-         the [MLglob]'s type arguments, so its ML type is still an arrow --
-         [MList : forall A, Monoid (list A)].  Read the codomain, as the
-         application case below does, or such an instance is left in value
-         position and the call names the instance struct as if it were one. *)
-      ref_is_instance r
-    | MLrel i ->
-      (* An instance parameter is not a value argument.  Recognised by
-         identity: {!collect_typeclass_param_ids} mints this binder from a
-         typeclass-typed domain of the enclosing arrow, so it is Crane's own
-         and has no ML type of its own in [env_types]. *)
-      Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
-    | MLapp (MLglob (r, _), _) ->
-      (* Parameterized instance application, e.g. numList A H. Check if r's
-         return type (after stripping Tarr) is a typeclass type, or if it
-         returns a skipped type (e.g. ReSum instances where the Class is a
-         ConstRef not recognized by is_typeclass). *)
-      ref_is_instance r
-    | MLcase (case_ty, _scrutinee, branches) when Array.length branches = 1 ->
-      (* Single-branch case = record field projection.  If the projected
-         field's type is itself a typeclass, this is a typeclass instance
-         arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
-         field from a [PreStableCategory] record.
-         Look up the record's field types from the case type rather than
-         relying on branch binding types (which may be Tunresolved). *)
-      let (binds, _, _, br_body) = branches.(0) in
-      ( match br_body with
-      | MLrel j when j >= 1 && j <= List.length binds ->
-        let idx = List.length binds - j in
-        (* Try to get the field type from the record definition *)
-        let field_is_tc =
-          match case_ty with
-          | Tglob (r, _, _) when Table.is_typeclass r ->
-            let field_types = Table.record_field_types r in
-            let non_dummy =
-              filter_value_types field_types
-            in
-            ( try
-                let fty = List.nth non_dummy idx in
-                Table.is_typeclass_type fty
-              with _ -> false )
-          | _ -> false
-        in
-        field_is_tc
-      | _ -> false )
-    | _ -> false
   in
   (* Save and clear the single-use closure flag so that nested eta_fun calls
      (from processing args) do not inherit it. The saved value is used when
@@ -8124,7 +8220,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     let primary_ml_args = args in
     (* Partition args into type class instances and regular args *)
     let typeclass_ml_args, regular_ml_args =
-      List.partition is_typeclass_instance_arg args
+      List.partition (is_typeclass_instance_arg env) args
     in
     (* Order the instance arguments the way the callee numbered its own
        [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
@@ -8137,83 +8233,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       if callee_is_instance_struct then typeclass_ml_args
       else List.rev typeclass_ml_args
     in
-    (* Convert type class instance args to template type arguments *)
-    let rec ml_arg_to_template_type ml_arg =
-      match strip_magic ml_arg with
-      | MLglob (r, ts) ->
-        if ref_returns_skipped r then
-          (* Skipped infrastructure (e.g. ReSum_id) — erase to void *)
-          Tvoid
-        else
-          (* Use the instance struct as a type - convert to Tglob *)
-          Tglob (r, build_template_params env [] ts, [])
-      | MLrel i ->
-        (* The instance is a lambda parameter - look up its name in the env and
-           create a Tvar reference to the template parameter *)
-        let db, _ = env in
-        let name = List.nth db (pred i) in
-        Tvar (0, Some name)
-      | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
-        (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
-           args are complex and cannot be converted to C++ template types.
-           Erase to void since these type args are never referenced. *)
-        Tvoid
-      | MLapp (MLglob (r, ts), inner_args) ->
-        (* Parameterized instance application, e.g. numList A H. Convert to
-           Tglob(r, template_args, []) where template_args are built from the
-           inner args. *)
-        let template_args =
-          List.filter_map
-            (fun arg ->
-              match arg with
-              | MLdummy _ -> None (* Erased type param — skip *)
-              | _ -> Some (ml_arg_to_template_type arg) )
-            inner_args
-        in
-        (* Instance parameters come first in the generated struct's template
-           list ([template <typename _tcI0, typename T1>]), so the instance
-           arguments must precede the type arguments here too. *)
-        Tglob (r, template_args @ build_template_params env [] ts, [])
-      | MLcase (_, scrutinee, branches)
-        when Array.length branches = 1 ->
-        (* Record field projection — e.g., [base_category(PS)].
-           Resolve to [Tqualified(scrutinee_type, field_name)]. *)
-        let (binds, _, _, br_body) = branches.(0) in
-        let base_ty = ml_arg_to_template_type scrutinee in
-        ( match br_body with
-        | MLrel j when j >= 1 && j <= List.length binds ->
-          let idx = List.length binds - j in
-          let (field_id, _) = List.nth binds idx in
-          ( match field_id with
-          | Id name | Tmp name -> Tqualified (base_ty, name)
-          | Dummy -> Tany )
-        | _ -> Tany )
-      | MLapp (f, args) ->
-        (* Parameterized instance application with non-glob head.
-           Resolve head, then add arg types. *)
-        let head_ty = ml_arg_to_template_type f in
-        let arg_tys =
-          List.filter_map
-            (fun arg ->
-              match arg with
-              | MLdummy _ -> None
-              | _ -> ( try Some (ml_arg_to_template_type arg)
-                        with _ -> None ) )
-            args
-        in
-        ( match head_ty with
-        | Tglob (r, existing, es) ->
-          Tglob (r, existing @ arg_tys, es)
-        | _ -> head_ty )
-      | MLdummy _ -> Tany (* Should not happen at top level, but be safe *)
-      | _ ->
-        CErrors.anomaly
-          (Pp.str
-             "ml_arg_to_template_type: unexpected ML term after \
-              is_typeclass_instance_arg filter" )
-    in
     let typeclass_type_args =
-      List.map ml_arg_to_template_type typeclass_ml_args
+      List.map (ml_arg_to_template_type env) typeclass_ml_args
     in
     (* Filter out MLdummy entries from regular args — these are erased proof
        arguments that would generate CPPabort "unreachable" expressions and
@@ -9539,10 +9560,27 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           | _ -> true )
         args
     in
+    (* A class-typed argument is not a value: the concept is met by a type, and
+       the method the callee projects declares it as a template parameter.  It
+       leaves the argument list for the callee's explicit template arguments,
+       which is the only place that parameter can be given. *)
+    let tc_args, args = List.partition (is_typeclass_instance_arg env) args in
+    let gen_callee () =
+      match (tc_args, gen_expr env f) with
+      | [], e -> e
+      | _, CPPscope (b, id, tys) ->
+        CPPscope (b, id, tys @ List.map (ml_arg_to_template_type env) tc_args)
+      | _, e -> e
+    in
     let callee_param_tys =
+      (* Erased and class-typed domains take no argument slot, so neither
+         takes a place in the list this indexes [args] by. *)
       let rec extract_params = function
         | Miniml.Tarr (t, rest) ->
-          (match resolve_tmeta t with Miniml.Tdummy _ -> extract_params rest | t -> t :: extract_params rest)
+          ( match resolve_tmeta t with
+          | Miniml.Tdummy _ -> extract_params rest
+          | t when Table.is_typeclass_type t -> extract_params rest
+          | t -> t :: extract_params rest )
         | Miniml.Tmeta {contents = Some t} -> extract_params t
         | _ -> []
       in
@@ -9713,14 +9751,15 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       | None -> List.length args
     in
     let n_args = List.length args in
-    if n_args = 0 then
+    (* Lifting every argument onto the template list still leaves a call. *)
+    if n_args = 0 && tc_args = [] then
       (* All args were erased (MLdummy): no function call, just the
          expression itself.  This arises when erased proof arguments
          (e.g. [le n 0] in [Function]-generated [_rect] bodies) are
          applied to a local variable — the proofs are filtered out,
          leaving an empty arg list.  Generating [f()] would be wrong
          because the C++ type has no 0-arg overload. *)
-      gen_expr env f
+      gen_callee ()
     else if n_args < n_value_dom && n_value_dom > 0 then
       (* Under-application (partial application due to proof erasure).
          The callee expects [n_value_dom] args but only [n_args] are
@@ -9753,7 +9792,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | _ -> []
       in
       if remaining_ml_tys <> [] then
-        let callee = gen_expr env f in
+        let callee = gen_callee () in
         let pa_params = List.mapi (fun j ml_ty ->
           let cpp_ty = cpp_of_ml env ml_ty in
           (cpp_ty, Some (Id.of_string (Printf.sprintf "_pa%d" j))) )
@@ -9765,13 +9804,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           [Sreturn (Some (mk_call callee (args @ pa_exprs)))]
           ~by_value:true
       else
-        mk_call (gen_expr env f) args
+        mk_call (gen_callee ()) args
     else if n_args > n_value_dom && n_value_dom > 0 then
       let primary = List.rev (safe_firstn n_value_dom args) in
       let excess = List.rev (List.skipn n_value_dom args) in
       CPPfun_call
         (call_opaque,
-          CPPfun_call (call_opaque, gen_expr env f, of_reversed primary),
+          CPPfun_call (call_opaque, gen_callee (), of_reversed primary),
           of_reversed excess )
     else
       (* When the callee is a local variable whose ML type is a bare type
@@ -9780,7 +9819,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          std::function type before calling.  Both arg and return types
          default to std::any since the original types are erased.
          The MLmagic wrapper is transparent — peel it to find the MLrel. *)
-      let callee_expr = gen_expr env f in
+      let callee_expr = gen_callee () in
       (* Check whether this call returns [std::any] (erased type) but the
          enclosing function expects a concrete type, requiring an
          [std::any_cast<T>] wrapper.  See [ml_codomain_erases_to_any].
@@ -10536,7 +10575,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
         let _ids', env' =
           push_vars'
             (List.rev_map
-               (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+               (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
                ids )
             env
         in
@@ -10640,7 +10679,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
       let ids', env' =
         push_vars'
           (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
              ids )
           env
       in
@@ -10731,7 +10770,7 @@ and gen_cpp_case (typ : ml_type) t env pv =
           let ids', env' =
             push_vars'
               (List.rev_map
-                 (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+                 (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
                  ids)
               env
           in
@@ -11264,7 +11303,7 @@ and gen_custom_cpp_case env k (typ : ml_type) t pv =
       let ids', env' =
         push_vars'
           (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
              ids )
           env
       in
@@ -12388,7 +12427,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               named_lams binders inner
         | _ -> a
       in
-      let x' = remove_prime_id (id_of_mlid x) in
+      let x' = cpp_id_of_id (id_of_mlid x) in
       let renamed_ids, env' = push_vars' [(x', t)] env in
       let x_renamed = fst (List.hd renamed_ids) in
       if x == Dummy then (
@@ -12447,7 +12486,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     else (* Lift the polymorphic lambda to a top-level template function. *)
       let params, body = collect_lams a in
       let n_params = List.length params in
-      let x' = remove_prime_id (id_of_mlid x) in
+      let x' = cpp_id_of_id (id_of_mlid x) in
 
       (* 1. Collect free variables in the lambda body *)
       let free_indices = collect_free_rels n_params body in
@@ -12610,7 +12649,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               (* Push lambda params into env for body compilation *)
               let param_ids =
                 List.map
-                  (fun (ml_id, ty) -> (remove_prime_id (id_of_mlid ml_id), ty))
+                  (fun (ml_id, ty) -> (cpp_id_of_id (id_of_mlid ml_id), ty))
                   params
               in
               (* For free variables, we need to adjust de Bruijn indices in the body.
@@ -12723,7 +12762,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           (subst_lifted_call_stmt x_lifted lifted_ref free_var_cpps)
           cont
   | MLletin (x, t, a, b) ->
-    let x' = remove_prime_id (id_of_mlid x) in
+    let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
     if x == Dummy then (
@@ -13312,7 +13351,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     in
     let ids, env =
       push_vars'
-        (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids')
+        (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids')
         env
     in
     push_binders env ids;
@@ -13530,7 +13569,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
       let renamed_ids, env' =
         push_vars'
           (List.rev_map
-             (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty))
+             (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
              ids )
           env
       in
@@ -13681,7 +13720,7 @@ and gen_fix env ?(all_fix_ids = []) ~fix_idx (n, ty) f =
   let ids, f = collect_lams f in
   let ids, _ =
     push_vars'
-      (List.map (fun (x, ty) -> (remove_prime_id (id_of_mlid x), ty)) ids)
+      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids)
       env
   in
   (* Push all mutual fixpoint names (or just (n,ty) for single fixpoints). For

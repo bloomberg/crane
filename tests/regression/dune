@@ -18,8 +18,6 @@
 
 ; Test rules - compile C++ and run tests
 
-
-
 (subdir anon_lift_name_collision
  (rule
   (targets anon_lift_name_collision.t.exe)
@@ -1387,7 +1385,6 @@
   (deps qualified_record_shadow.t.exe)
   (action (run ./qualified_record_shadow.t.exe))))
 
-
 (subdir binary_nums
  (rule
   (targets binary_nums.t.exe)
@@ -2421,7 +2418,6 @@
   (alias runtest)
   (deps separate_extraction.t.exe)
   (action (run ./separate_extraction.t.exe))))
-
 
 (subdir sep_ext_cross_module
  (rule
@@ -3995,7 +3991,6 @@
   (alias runtest)
   (deps double_invoke_move.t.exe)
   (action (run ./double_invoke_move.t.exe))))
-
 
 (subdir loopify_coind_colist
  (rule
@@ -5691,7 +5686,6 @@
   (deps mem_safety_probe26.t.exe)
   (action (run ./mem_safety_probe26.t.exe))))
 
-
 (subdir mem_safety_probe27
  (rule
   (targets mem_safety_probe27.t.exe)
@@ -5922,7 +5916,6 @@
   (alias runtest)
   (deps sep_ext_prop_erased_using.t.exe)
   (action (run ./sep_ext_prop_erased_using.t.exe))))
-
 
 (subdir sep_ext_this_in_free_fn
  (rule
@@ -6738,8 +6731,6 @@
   (deps wrapper_nested_recursion_no_drain.t.exe)
   (action (run ./wrapper_nested_recursion_no_drain.t.exe))))
 
-
-
 (subdir loopify_computed_scrutinee_temp
  (rule
   (targets loopify_computed_scrutinee_temp.t.exe)
@@ -6838,8 +6829,6 @@
   (alias runtest)
   (deps assoc_pair_list.t.exe)
   (action (run ./assoc_pair_list.t.exe))))
-
-
 
 (subdir double_option_nest
  (rule
@@ -6973,8 +6962,6 @@
   (deps user_option_wrapper.t.exe)
   (action (run ./user_option_wrapper.t.exe))))
 
-
-
 (subdir prod_fst_projection
  (rule
   (targets prod_fst_projection.t.exe)
@@ -6996,8 +6983,6 @@
   (alias runtest)
   (deps prod_snd_projection.t.exe)
   (action (run ./prod_snd_projection.t.exe))))
-
-
 
 (subdir inner_fix_captures_fn
  (rule
@@ -7032,8 +7017,6 @@
   (deps nested_fix_loopify.t.exe)
   (action (run ./nested_fix_loopify.t.exe))))
 
-
-
 (subdir mutual_loopify_acc
  (rule
   (targets mutual_loopify_acc.t.exe)
@@ -7045,8 +7028,6 @@
   (deps mutual_loopify_acc.t.exe)
   (action (run ./mutual_loopify_acc.t.exe))))
 
-
-
 (subdir sig_prop_comment
  (rule
   (targets sig_prop_comment.t.exe)
@@ -7057,8 +7038,6 @@
   (alias runtest)
   (deps sig_prop_comment.t.exe)
   (action (run ./sig_prop_comment.t.exe))))
-
-
 
 (subdir dep_match_unit_bool_idx
  (rule
@@ -7126,8 +7105,6 @@
   (deps dep_match_unit_vec.t.exe)
   (action (run ./dep_match_unit_vec.t.exe))))
 
-
-
 (subdir ident_named_uint64
  (rule
   (targets ident_named_uint64.t.exe)
@@ -7172,8 +7149,6 @@
   (deps module_named_std.t.exe)
   (action (run ./module_named_std.t.exe))))
 
-
-
 (subdir sig_curried_payload
  (rule
   (targets sig_curried_payload.t.exe)
@@ -7196,8 +7171,6 @@
   (deps sig_fun_payload.t.exe)
   (action (run ./sig_fun_payload.t.exe))))
 
-
-
 (subdir class_superclass_explicit
  (rule
   (targets class_superclass_explicit.t.exe)
@@ -7219,8 +7192,6 @@
   (alias runtest)
   (deps class_superclass_field.t.exe)
   (action (run ./class_superclass_field.t.exe))))
-
-
 
 (subdir lifted_lambda_forward_ref
  (rule
@@ -7255,8 +7226,6 @@
   (deps lifted_lambda_two_users.t.exe)
   (action (run ./lifted_lambda_two_users.t.exe))))
 
-
-
 (subdir non_uniform_list_nest
  (rule
   (targets non_uniform_list_nest.t.exe)
@@ -7279,8 +7248,6 @@
   (deps non_uniform_pair_nest.t.exe)
   (action (run ./non_uniform_pair_nest.t.exe))))
 
-
-
 (subdir loopify_wrapper_receiver
  (rule
   (targets loopify_wrapper_receiver.t.exe)
@@ -7291,8 +7258,6 @@
   (alias runtest)
   (deps loopify_wrapper_receiver.t.exe)
   (action (run ./loopify_wrapper_receiver.t.exe))))
-
-
 
 (subdir nested_tree_pair_literal
  (rule
@@ -7985,7 +7950,6 @@
   (deps type_alias_applied_ctor_param.t.exe)
   (action (run ./type_alias_applied_ctor_param.t.exe))))
 
-
 (subdir hkt_curried_pure_arity
  (rule
   (targets hkt_curried_pure_arity.t.exe)
@@ -7996,8 +7960,6 @@
   (alias runtest)
   (deps hkt_curried_pure_arity.t.exe)
   (action (run ./hkt_curried_pure_arity.t.exe))))
-
-
 
 (subdir ctor_case_collision
  (rule
@@ -8626,8 +8588,6 @@
   (deps factory_field_name_clash.t.exe)
   (action (run ./factory_field_name_clash.t.exe))))
 
-
-
 (subdir imported_module_type_prime
  (rule
   (targets imported_module_type_prime.t.exe)
@@ -8672,8 +8632,6 @@
   (deps nested_module_type_concept.t.exe)
   (action (run ./nested_module_type_concept.t.exe))))
 
-
-
 (subdir drain_option_pair_field
  (rule
   (targets drain_option_pair_field.t.exe)
@@ -8684,8 +8642,6 @@
   (alias runtest)
   (deps drain_option_pair_field.t.exe)
   (action (run ./drain_option_pair_field.t.exe))))
-
-
 
 (subdir class_method_partial_app
  (rule
@@ -8719,8 +8675,6 @@
   (alias runtest)
   (deps stdlib_byte.t.exe)
   (action (run ./stdlib_byte.t.exe))))
-
-
 
 (subdir dict_ctor_field
  (rule
@@ -8876,12 +8830,6 @@
   (deps hkt_record_dict.t.exe)
   (action (run ./hkt_record_dict.t.exe))))
 
-
-
-
-
-
-
 (subdir methodified_member_name_clash
  (rule
   (targets methodified_member_name_clash.t.exe)
@@ -8984,7 +8932,7 @@
 (subdir cross_unit_duplicate_symbol
  (rule
   (targets cross_unit_duplicate_symbol.t.exe)
-  (deps Use.vo Lib.vo cross_unit_duplicate_symbol.t.cpp (source_tree .))
+  (deps Lib.vo cross_unit_duplicate_symbol.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} cross_unit_duplicate_symbol.t.exe cross_unit_duplicate_symbol_lib.cpp cross_unit_duplicate_symbol.cpp cross_unit_duplicate_symbol.t.cpp)))
  (rule
@@ -9017,7 +8965,7 @@
 (subdir const_init_forward_ref
  (rule
   (targets const_init_forward_ref.t.exe)
-  (deps ConstInitForwardRef.vo Coord.vo Store.vo const_init_forward_ref.t.cpp (source_tree .))
+  (deps ConstInitForwardRef.vo const_init_forward_ref.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} const_init_forward_ref.t.exe const_init_forward_ref.cpp const_init_forward_ref.t.cpp)))
  (rule
@@ -9061,7 +9009,7 @@
 (subdir decl_order_alias_record
  (rule
   (targets decl_order_alias_record.t.exe)
-  (deps InstrLib.vo DeclOrderAliasRecord.vo decl_order_alias_record.t.cpp (source_tree .))
+  (deps DeclOrderAliasRecord.vo decl_order_alias_record.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_alias_record.t.exe decl_order_alias_record.cpp decl_order_alias_record.t.cpp)))
  (rule
@@ -9072,7 +9020,7 @@
 (subdir decl_order_method_alias
  (rule
   (targets decl_order_method_alias.t.exe)
-  (deps RegFile.vo DeclOrderMethodAlias.vo decl_order_method_alias.t.cpp (source_tree .))
+  (deps DeclOrderMethodAlias.vo decl_order_method_alias.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_method_alias.t.exe decl_order_method_alias.cpp decl_order_method_alias.t.cpp)))
  (rule
@@ -9083,10 +9031,76 @@
 (subdir decl_order_method_call
  (rule
   (targets decl_order_method_call.t.exe)
-  (deps Regs.vo DeclOrderMethodCall.vo decl_order_method_call.t.cpp (source_tree .))
+  (deps DeclOrderMethodCall.vo decl_order_method_call.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} decl_order_method_call.t.exe decl_order_method_call.cpp decl_order_method_call.t.cpp)))
  (rule
   (alias runtest)
   (deps decl_order_method_call.t.exe)
   (action (run ./decl_order_method_call.t.exe))))
+
+(subdir primed_identifier
+ (rule
+  (targets primed_identifier.t.exe)
+  (deps PrimedIdentifier.vo primed_identifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} primed_identifier.t.exe primed_identifier.cpp primed_identifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps primed_identifier.t.exe)
+  (action (run ./primed_identifier.t.exe))))
+
+(subdir c_macro_name
+ (rule
+  (targets c_macro_name.t.exe)
+  (deps CMacroName.vo c_macro_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} c_macro_name.t.exe c_macro_name.cpp c_macro_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps c_macro_name.t.exe)
+  (action (run ./c_macro_name.t.exe))))
+
+(subdir cross_file_module_ref
+ (rule
+  (targets cross_file_module_ref.t.exe)
+  (deps Use.vo cross_file_module_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cross_file_module_ref.t.exe cross_file_module_ref.cpp cross_file_module_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cross_file_module_ref.t.exe)
+  (action (run ./cross_file_module_ref.t.exe))))
+
+(subdir module_type_name_collision
+ (rule
+  (targets module_type_name_collision.t.exe)
+  (deps ModuleTypeNameCollision.vo module_type_name_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_name_collision.t.exe module_type_name_collision.cpp module_type_name_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_name_collision.t.exe)
+  (action (run ./module_type_name_collision.t.exe))))
+
+(subdir monad_instance_missing
+ (rule
+  (targets monad_instance_missing.t.exe)
+  (deps MonadInstanceMissing.vo monad_instance_missing.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_instance_missing.t.exe monad_instance_missing.cpp monad_instance_missing.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_instance_missing.t.exe)
+  (action (run ./monad_instance_missing.t.exe))))
+
+(subdir class_as_value_arg
+ (rule
+  (targets class_as_value_arg.t.exe)
+  (deps ClassAsValueArg.vo class_as_value_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_as_value_arg.t.exe class_as_value_arg.cpp class_as_value_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_as_value_arg.t.exe)
+  (action (run ./class_as_value_arg.t.exe))))

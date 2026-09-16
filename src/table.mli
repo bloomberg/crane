@@ -130,6 +130,11 @@ val is_modfile : ModPath.t -> bool
 (** Get string representation of module file. *)
 val string_of_modfile : ModPath.t -> string
 
+(** Claim a name against {!string_of_modfile}, so a file of that name is
+    emitted under a fresh one.  Must be called before the file is first
+    spelled. *)
+val reserve_modfile_name : string -> unit
+
 
 (** Get file name from module file. Escapes C standard header collisions. *)
 val file_of_modfile : ModPath.t -> string

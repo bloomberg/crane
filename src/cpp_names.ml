@@ -499,6 +499,16 @@ let struct_qualifier_for r name_str =
       with
       | Some Member -> struct_name ++ str "::"
       | Some Unrelated -> mt ()
+      (* A name declared in a module that encloses this struct is qualified by
+         that module, never by the struct -- and only when the module is
+         emitted as a struct of its own.  The extraction root is not: its
+         members sit at global scope, so the bare name is already right.  The
+         textual fallback below cannot tell the two apart, because the root
+         module and the struct are commonly named alike (a file
+         [MonadInstanceMissing.v] holding a [Module MonadInstanceMissing]), and
+         it reads that shared prefix as containment. *)
+      | Some Ancestor when not (Common.is_struct_module (modpath_of_r r)) ->
+        mt ()
       | Some Ancestor | None ->
       (* Default: qualify when the type's Rocq path nests under the struct,
          or when the type already carries a qualified C++ name whose Rocq path

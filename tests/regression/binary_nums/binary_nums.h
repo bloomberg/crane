@@ -167,6 +167,29 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+struct Coq_Pos {
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive mul(const Positive &x, Positive y);
+
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+  static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
+    if (std::holds_alternative<typename Positive::XI>(p.v())) {
+      const auto &[a0] = std::get<typename Positive::XI>(p.v());
+      return op(a, iter_op<T1>(op, *a0, op(a, a)));
+    } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
+      const auto &[a0] = std::get<typename Positive::XO>(p.v());
+      return iter_op<T1>(op, *a0, op(a, a));
+    } else {
+      return a;
+    }
+  }
+
+  static uint64_t to_nat(const Positive &x);
+};
+
 struct Pos {
   static Positive succ(const Positive &x);
   static Positive add(const Positive &x, const Positive &y);
@@ -222,29 +245,6 @@ struct Pos {
   static Comparison compare_cont(Comparison r, const Positive &x,
                                  const Positive &y);
   static Comparison compare(const Positive &x0_, const Positive &x1_);
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
-  static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
-    if (std::holds_alternative<typename Positive::XI>(p.v())) {
-      const auto &[a0] = std::get<typename Positive::XI>(p.v());
-      return op(a, iter_op<T1>(op, *a0, op(a, a)));
-    } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
-      const auto &[a0] = std::get<typename Positive::XO>(p.v());
-      return iter_op<T1>(op, *a0, op(a, a));
-    } else {
-      return a;
-    }
-  }
-
-  static uint64_t to_nat(const Positive &x);
-};
-
-struct Coq_Pos {
-  static Positive succ(const Positive &x);
-  static Positive add(const Positive &x, const Positive &y);
-  static Positive add_carry(const Positive &x, const Positive &y);
-  static Positive mul(const Positive &x, Positive y);
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>

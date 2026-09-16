@@ -92,6 +92,16 @@ public:
   }
 };
 
+struct Lib2 {
+  static Nat bump(Nat n);
+};
+
+struct Ord {
+  using t = Nat;
+  static inline const t zero = Nat::o();
+};
+
+Nat bump0(Nat n);
 template <typename M>
 concept S = requires {
   typename M::t;
@@ -113,17 +123,6 @@ template <S X> struct F {
 };
 
 using M = F<Ord>;
-
-struct Lib2 {
-  static Nat bump(Nat n);
-};
-
-struct Ord {
-  using t = Nat;
-  static inline const t zero = Nat::o();
-};
-
-Nat bump0(Nat n);
 
 struct CrossFileModuleRef {
   static inline const Nat use = M::twice(bump0).add(Lib2::bump(Nat::o()));

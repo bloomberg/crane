@@ -100,8 +100,8 @@ type env = Id.t list * Id.Set.t
 (** Create a fresh de Bruijn environment with current global ids. *)
 val empty_env : unit -> env
 
-(** Replace prime characters (') with underscores. *)
-val remove_prime_id : Id.t -> Id.t
+(** The C++ spelling of a Rocq identifier, as an [Id.t]. *)
+val cpp_id_of_id : Id.t -> Id.t
 
 (** Rename a list of variables to fresh lowercase names. *)
 val rename_vars : Id.Set.t -> Id.t list -> env
@@ -289,8 +289,19 @@ val reset_renaming_tables : reset_kind -> unit
 (** Set the set of reserved keywords for the target language. *)
 val set_keywords : Id.Set.t -> unit
 
+(** Whether [mp] is emitted as a C++ struct, and so is a scope a name can be
+    qualified by.  The extraction root is not one: its members go to global
+    scope, where they are spelled bare. *)
+val is_struct_module : ModPath.t -> bool
+
 (** Get the set of reserved keywords for the target language. *)
 val get_keywords : unit -> Id.Set.t
+
+(** Whether C++ refuses [s] as a name of Crane's choosing: a keyword, a name
+    the runtime headers already own, or a macro the preprocessor would expand.
+    Ask this of the spelling about to be emitted; each case-form of a name is a
+    different name to the preprocessor. *)
+val is_reserved_cpp_name : string -> bool
 
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are
@@ -440,13 +451,14 @@ val db_fallback_id : int -> Id.t
 val tparam_name : Id.t -> Id.t
 
 (** Compute the C++ enum constructor name for a single already-uppercased
-    string [s]: applies the BDE [e_] prefix or dangerous-macro escaping as
-    needed.  Does not perform collision avoidance; prefer
-    {!enum_ctor_names_of_packet} when the full sibling set is available. *)
+    string [s]: applies the BDE [e_] prefix, or escapes a spelling
+    {!is_reserved_cpp_name} rules out.  Does not perform collision avoidance;
+    prefer {!enum_ctor_names_of_packet} when the full sibling set is
+    available. *)
 val enum_ctor_name : string -> string
 
-(** Compute the C++ enum constructor name for a single constructor [Id.t],
-    applying prime-to-underscore escaping.  See {!enum_ctor_name}. *)
+(** Compute the C++ enum constructor name for a single constructor [Id.t].
+    See {!enum_ctor_name}. *)
 val enum_ctor_name_of_id : Id.t -> string
 
 (** Compute C++ enum constructor names for all constructors of an inductive

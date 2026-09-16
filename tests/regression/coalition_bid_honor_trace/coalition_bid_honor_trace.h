@@ -303,8 +303,6 @@ public:
   }
 };
 
-struct Nat {};
-
 struct Positive {
   // TYPES
   struct XI {
@@ -421,6 +419,13 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+struct ListDef {
+  template <typename T1>
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
+};
+
+struct Nat {};
+
 struct Pos {
   static Positive succ(const Positive &x);
   static Positive add(const Positive &x, const Positive &y);
@@ -436,11 +441,6 @@ struct BinInt {
   static Z pos_sub(const Positive &x, const Positive &y);
   static Z add(Z x, Z y);
   static bool eqb(const Z &x, const Z &y);
-};
-
-struct ListDef {
-  template <typename T1>
-  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
 
 struct CoalitionBidHonorTraceCase {

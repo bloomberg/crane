@@ -2581,6 +2581,21 @@ let extract_constant access env kn cb =
   in
   let mk_def c =
     let e, t = extract_std_constant env sg kn c typ in
+    (* [record_constant_type] registered the {i short} type, the one still
+       spelled with the abbreviations the user wrote.  Where the body's binders
+       reach past an abbreviation standing in the codomain -- an instance of a
+       one-method class, say, whose class is a synonym for a function type --
+       [extract_std_constant] unfolds it, and the declaration is emitted with
+       the parameters that uncovers.  A call site reads the registered type to
+       work out how many arguments the declaration takes, so when the two
+       disagree on that count the unfolded type is the one to keep. *)
+    ( match Table.find_type r with
+    | exception Not_found -> ()
+    | short ->
+      if
+        List.length (Ml_type_util.ml_value_domains short)
+        < List.length (Ml_type_util.ml_value_domains t)
+      then register_glob_def r t );
     (* A body that only raises returns no value, so it gets an axiom's
        treatment for an axiom's reason: a zero-argument function that throws
        when called, rather than a constant that throws at static

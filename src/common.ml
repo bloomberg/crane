@@ -106,15 +106,20 @@ and prepend_to_all sep = function
     out of this namespace. *)
 let crane_local_prefix = "_crane_"
 
-(** Convert an identifier to ASCII, warning on double underscores.  An
-    identifier that would land in the {!crane_local_prefix} namespace is moved
-    out of it. *)
+(** The C++ spelling of a Rocq identifier: ASCII, warning on double
+    underscores.  An identifier that would land in the {!crane_local_prefix}
+    namespace is moved out of it, and a prime -- which Rocq allows in a name
+    and C++ reads as an open character literal -- becomes an underscore.
+
+    This is the one place a Rocq name turns into a C++ one, so it is the only
+    place that has to know which characters C++ will accept. *)
 let ascii_of_id id =
   let s = Id.to_string id in
   for i = 0 to String.length s - 2 do
     if s.[i] == '_' && s.[i + 1] == '_' then warning_id s
   done;
   let s = Unicode.ascii_of_ident s in
+  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
   if String.starts_with ~prefix:crane_local_prefix s then "u" ^ s else s
 
 (** Test if a module path is a bound module parameter. *)
@@ -304,10 +309,8 @@ let uppercase_id id =
   else
     Id.of_string (String.capitalize_ascii s)
 
-(** Replace prime characters (') with underscores. *)
-let remove_prime_id id =
-  let s = String.map (fun c -> if c = '\'' then '_' else c) (ascii_of_id id) in
-  Id.of_string s
+(** {!ascii_of_id} as an [Id.t]. *)
+let cpp_id_of_id id = Id.of_string (ascii_of_id id)
 
 (** Kind of global identifier: term, type, constructor, or module. *)
 type kind =
@@ -357,7 +360,7 @@ type env = Id.t list * Id.Set.t
     @param avoid Set of identifiers already in use
     @return A fresh identifier not in [avoid], derived from [id] *)
 let rec rename_id id avoid =
-  let id = remove_prime_id id in
+  let id = cpp_id_of_id id in
   if Id.Set.mem id avoid then rename_id (increment_subscript id) avoid else id
 
 (** The C++ identifier a Rocq constructor is emitted under: constructors become
@@ -479,6 +482,13 @@ let set_keywords, get_keywords =
   let k = ref Id.Set.empty in
   (( := ) k, fun () -> !k)
 
+(** Whether C++ refuses [s] as a name of Crane's choosing: a keyword, a name
+    the runtime headers already own, or a macro the preprocessor would expand.
+    Ask this of the spelling about to be emitted -- a constructor's factory
+    method is lowercased and an enum constant uppercased before they get here,
+    and each case-form is a different name to the preprocessor. *)
+let is_reserved_cpp_name s = Id.Set.mem (Id.of_string s) (get_keywords ())
+
 (** Track globally used identifiers to avoid collisions. *)
 let add_global_ids, get_global_ids =
   let ids = ref Id.Set.empty in
@@ -536,6 +546,11 @@ let add_mp_sibling, get_mp_siblings =
 let struct_module_paths : (ModPath.t, unit) Hashtbl.t = Hashtbl.create 17
 
 let () = register_cleanup (fun () -> Hashtbl.clear struct_module_paths)
+
+(** Whether [mp] is emitted as a C++ struct, and so is a scope a name can be
+    qualified by.  The extraction root is not one: its members go to global
+    scope, where they are spelled bare. *)
+let is_struct_module mp = Hashtbl.mem struct_module_paths mp
 
 let sibling_collision_renames : (ModPath.t, string) Hashtbl.t =
   Hashtbl.create 8
@@ -751,18 +766,17 @@ let reset_renaming_tables flag =
     with previous [Coq_id] variable, these prefixes are duplicated if already
     existing. *)
 
-(** Returns (escaped_name, was_changed) where was_changed indicates whether
-    keyword escaping or prime replacement modified the identifier. *)
+(** Returns [(escaped_name, was_changed)], where [was_changed] says whether the
+    C++ spelling differs from the Rocq one -- because {!ascii_of_id} rewrote a
+    character, because a leading underscore was unreserved, or because the name
+    is a C++ keyword.  A changed name may have landed on one already taken, so
+    it is the caller's cue to look for a collision. *)
 let modular_rename_ex _k id =
   let s = ascii_of_id id in
-  let s' = Mlutil.unreserve_leading_underscore s in
-  let was_underscored = not (String.equal s s') in
-  let s = s' in
-  let is_kw = Id.Set.mem (Id.of_string s) (get_keywords ()) in
+  let s = Mlutil.unreserve_leading_underscore s in
+  let is_kw = is_reserved_cpp_name s in
   let s = if is_kw then s ^ "_" else s in
-  let has_prime = String.contains s '\'' in
-  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
-  (s, is_kw || has_prime || was_underscored)
+  (s, not (String.equal s (Id.to_string id)))
 
 (** Rename an identifier for modular extraction (keyword escaping, prime
     replacement). *)
@@ -776,6 +790,22 @@ let inductive_names_of_sel sel =
       (* A type class becomes a concept, which is hoisted to namespace scope
          rather than nested, so it never competes for a member name. *)
       | SEdecl (Dind (_kn, {ind_kind = TypeClass _; _})) -> []
+      | SEdecl (Dind (_kn, ind)) ->
+        Array.to_list
+          (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+      | _ -> [] )
+    sel
+
+(** C++ names declared directly in [sel] that a file of the same name cannot
+    live beside.  A file has no eponymous merge: an inductive it declares
+    becomes a member of the file's struct, and C++ forbids a member from
+    sharing its struct's name, while a type class becomes a concept hoisted
+    out beside the struct, into the very same scope.  Either way the two
+    names meet. *)
+let file_colliding_type_names sel =
+  List.concat_map
+    (fun (_l, se) ->
+      match se with
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
@@ -809,7 +839,11 @@ let unmergeable_inductive_names_of_sel sel =
     (fun (_l, se) ->
       match se with
       | SEdecl (Dind (kn, ind)) ->
-        let mergeable = match ind.ind_kind with Standard | Coinductive -> false | _ -> true in
+        let mergeable =
+          match ind.ind_kind with
+          | Standard | Coinductive -> false
+          | Record _ | TypeClass _ -> true
+        in
         List.filteri
           (fun i _ ->
             (not mergeable)
@@ -891,7 +925,23 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
         | _ -> () )
       sel
   in
-  List.iter (fun (mp, sel) -> scan_sel mp sel) s
+  List.iter
+    (fun (mp, sel) ->
+      (* A file becomes a struct as well, and a type it declares is emitted
+         beside that struct rather than inside it -- a file has no eponymous
+         merge to fold the two together -- so the two names meet in the same
+         scope.  The file is the side that gives way, by the same route
+         [Extraction Blacklist] would take. *)
+      ( match mp with
+      | MPfile dp ->
+        let name =
+          String.capitalize_ascii (Id.to_string (List.hd (DirPath.repr dp)))
+        in
+        if List.exists (String.equal name) (file_colliding_type_names sel) then
+          Table.reserve_modfile_name name
+      | _ -> () );
+      scan_sel mp sel )
+    s
 
 (** For monolithic extraction, first-level modules might have to be renamed with
     unique numbers *)
@@ -1014,7 +1064,7 @@ let ref_renaming_fun (k, r) =
             globs
         | _ -> globs
       in
-      let id = next_ident_away (kindcase_id k idg) globs in
+      let id = next_ident_away (kindcase_id k (cpp_id_of_id idg)) globs in
       Id.to_string id
     | _ ->
       let s, changed = modular_rename_ex k idg in
@@ -1710,24 +1760,18 @@ let tparam_name id =
   if Table.std_lib () = "BDE" then Id.of_string ("t_" ^ Id.to_string id)
   else id
 
-let dangerous_macros =
-  [ "TRUE"; "FALSE"; "NULL"; "EOF"; "DOMAIN"; "OVERFLOW"; "UNDERFLOW";
-    "HUGE_VAL"; "ERANGE"; "STDIN"; "STDOUT"; "STDERR" ]
-
 let enum_ctor_name s =
   let upper = String.uppercase_ascii s in
   if Table.std_lib () = "BDE" then "e_" ^ upper
-  else if List.mem upper dangerous_macros then upper ^ "_"
+  else if is_reserved_cpp_name upper then upper ^ "_"
   else upper
 
-(** Compute the C++ enum constructor name for a single constructor [Id.t],
-    applying prime-to-underscore escaping.  Does not perform collision
-    avoidance; use {!enum_ctor_names_of_packet} when the full sibling set is
-    available, or {!Table.enum_ctor_name_of_ref} when looking up by position. *)
+(** Compute the C++ enum constructor name for a single constructor [Id.t].
+    Does not perform collision avoidance; use {!enum_ctor_names_of_packet} when
+    the full sibling set is available, or {!Table.enum_ctor_name_of_ref} when
+    looking up by position. *)
 let enum_ctor_name_of_id id =
-  let s = ascii_of_id id in
-  let s = String.map (fun c -> if c = '\'' then '_' else c) s in
-  enum_ctor_name s
+  enum_ctor_name (ascii_of_id id)
 
 (** Compute collision-free C++ enum constructor names for all constructors of an
     inductive packet.  Each name is derived via {!enum_ctor_name_of_id}; when
@@ -1738,10 +1782,7 @@ let enum_ctor_name_of_id id =
 let enum_ctor_names_of_packet (consnames : Id.t array) : string array =
   let escaped =
     Array.map
-      (fun id ->
-        let s = ascii_of_id id in
-        let s = String.map (fun c -> if c = '\'' then '_' else c) s in
-        enum_ctor_name s)
+      (fun id -> enum_ctor_name (ascii_of_id id))
       consnames
   in
   let seen = Hashtbl.create (Array.length escaped) in

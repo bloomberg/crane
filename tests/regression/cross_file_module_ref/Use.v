@@ -22,9 +22,9 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
 
-From CraneTestsWIP Require cross_file_module_ref.Lib.
-From CraneTestsWIP Require cross_file_module_ref.Lib2.
-From CraneTestsWIP Require cross_file_module_ref.Lib3.
+From CraneTestsRegression Require cross_file_module_ref.Lib.
+From CraneTestsRegression Require cross_file_module_ref.Lib2.
+From CraneTestsRegression Require cross_file_module_ref.Lib3.
 
 Module CrossFileModuleRef.
 

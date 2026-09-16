@@ -347,30 +347,49 @@ let topological_sort
           ()
         else (* Collect unique dependencies for this module. *)
           let dep_set : (int, unit) Hashtbl.t = Hashtbl.create 8 in
+          (* The entry a module path belongs to.  A path may name a module
+             nested inside an entry -- [Lib.Ord] within [Lib] -- and it is the
+             entry that has a slot in the order, so walk out to it. *)
+          let rec entry_of_mp mp =
+            match Hashtbl.find_opt mp_to_idx mp with
+            | Some _ as found -> found
+            | None -> (
+              match mp with
+              | ModPath.MPdot (parent, _) -> entry_of_mp parent
+              | _ -> None )
+          in
+          let add_dep_mp mp =
+            match entry_of_mp mp with
+            | Some j when j <> i -> Hashtbl.replace dep_set j ()
+            | _ -> ()
+          in
           let add_dep r =
             (* Direct reference: check if [r] is defined in another module. *)
-            let rmp = modpath_of_r r in
-            ( match Hashtbl.find_opt mp_to_idx rmp with
-            | Some j when j <> i -> Hashtbl.replace dep_set j ()
-            | _ -> () );
+            add_dep_mp (modpath_of_r r);
             (* Method reference: if [r] is a registered method, its eponymous
                type lives in another module — add that as a dependency too. *)
             match Method_registry.is_registered_method reg r with
-            | Some (epon_ref, _pos) ->
-              let epon_mp = modpath_of_r epon_ref in
-              ( match Hashtbl.find_opt mp_to_idx epon_mp with
-              | Some j when j <> i -> Hashtbl.replace dep_set j ()
-              | _ -> () )
+            | Some (epon_ref, _pos) -> add_dep_mp (modpath_of_r epon_ref)
             | None -> ()
           in
-          (* Scan all declarations in this module for references. *)
-          List.iter
-            (fun (_l, se) ->
-              match se with
-              | SEdecl d ->
-                Modutil.decl_iter_references add_dep add_dep add_dep d
-              | _ -> () )
-            sel;
+          (* Everything this module names: the references in its declarations,
+             and the modules its submodules are built from.  [Module M := F X]
+             is emitted as [using M = F<X>], which no forward declaration
+             breaks the cycle of, so [X]'s module has to come first. *)
+          let rec scan_sel sel = List.iter (fun (_l, se) -> scan_elem se) sel
+          and scan_elem = function
+            | SEdecl d -> Modutil.decl_iter_references add_dep add_dep add_dep d
+            | SEmodule m -> scan_mexpr m.ml_mod_expr
+            | SEmodtype _ -> ()
+          and scan_mexpr = function
+            | MEident mp -> add_dep_mp mp
+            | MEapply (me, arg) ->
+              scan_mexpr me;
+              scan_mexpr arg
+            | MEfunctor (_, _, body) -> scan_mexpr body
+            | MEstruct (_, sel) -> scan_sel sel
+          in
+          scan_sel sel;
           let dep_list = Hashtbl.fold (fun k () acc -> k :: acc) dep_set [] in
           if dep_list <> [] then
             Hashtbl.replace deps i dep_list )

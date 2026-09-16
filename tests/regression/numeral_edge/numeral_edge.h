@@ -91,9 +91,9 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct N {};
-
 struct Z {};
+
+struct N {};
 
 struct NumeralEdge {
   /// 1. Zero

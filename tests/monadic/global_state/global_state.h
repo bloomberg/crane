@@ -97,8 +97,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct Nat {};
-
 template <typename Err> struct ExceptE {
   // DATA
   Err a0;
@@ -132,6 +130,8 @@ concept Ix = requires {
   { I::max(std::declval<T>(), std::declval<T>()) } -> std::convertible_to<T>;
   { I::zero() } -> std::convertible_to<T>;
 };
+
+struct Nat {};
 
 struct Err {
   // DATA

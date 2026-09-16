@@ -132,6 +132,11 @@ public:
 
 struct Nat {};
 
+struct ListDef {
+  template <typename T1>
+  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
+};
+
 struct Pos {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &>
@@ -148,18 +153,13 @@ struct Pos {
   }
 };
 
-struct Z {
-  static int64_t pow_pos(int64_t z, unsigned int x0_);
-};
-
-struct ListDef {
-  template <typename T1>
-  static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
-};
-
 struct Q {
   int64_t Qnum;
   unsigned int Qden;
+};
+
+struct Z {
+  static int64_t pow_pos(int64_t z, unsigned int x0_);
 };
 
 struct Rdefinitions {

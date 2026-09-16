@@ -2448,6 +2448,13 @@ let string_of_modfile mp =
     modfile_mps := MPmap.add mp s' !modfile_mps;
     s'
 
+(** Claim [s] against {!string_of_modfile}, so that a file of that name is
+    emitted under a fresh one.  This is the backend's own claim rather than the
+    user's {!extraction_blacklist}: something the file declares is already
+    emitted under [s], and the file has to give way. *)
+let reserve_modfile_name s =
+  modfile_ids := Id.Set.add (Id.of_string (String.capitalize_ascii s)) !modfile_ids
+
 let reserved_c_header_basenames =
   [ "string"; "locale"; "signal"; "complex"; "memory"; "random";
     "utility"; "limits"; "float"; "assert"; "errno"; "math";

@@ -189,8 +189,6 @@ public:
   }
 };
 
-struct Nat {};
-
 template <typename Err> struct ExceptE {
   // DATA
   Err a0;
@@ -224,6 +222,8 @@ concept Ix = requires {
 struct ListDef {
   static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
+
+struct Nat {};
 
 struct Err {
   // DATA
