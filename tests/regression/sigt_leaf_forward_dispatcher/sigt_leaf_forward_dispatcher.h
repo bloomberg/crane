@@ -108,11 +108,11 @@ struct Bool {
   static bool eqb(bool b1, bool b2);
 };
 
-struct Ascii {
+struct Ascii0 {
   static bool eqb0(char a, char b);
 };
 
-struct String {
+struct String0 {
   static bool eqb1(const std::string &s1, const std::string &s2);
 };
 

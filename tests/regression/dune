@@ -9104,3 +9104,75 @@
   (alias runtest)
   (deps class_as_value_arg.t.exe)
   (action (run ./class_as_value_arg.t.exe))))
+
+; --- Second round of Vellvm reductions, against Crane d77449c8.
+
+(subdir name_prefixed_by_file
+ (rule
+  (targets name_prefixed_by_file.t.exe)
+  (deps Use.vo name_prefixed_by_file.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} name_prefixed_by_file.t.exe name_prefixed_by_file.cpp name_prefixed_by_file.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps name_prefixed_by_file.t.exe)
+  (action (run ./name_prefixed_by_file.t.exe))))
+
+(subdir class_arg_in_method
+ (rule
+  (targets class_arg_in_method.t.exe)
+  (deps ClassArgInMethod.vo class_arg_in_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_arg_in_method.t.exe class_arg_in_method.cpp class_arg_in_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_arg_in_method.t.exe)
+  (action (run ./class_arg_in_method.t.exe))))
+
+(subdir erased_nested_type_args
+ (rule
+  (targets erased_nested_type_args.t.exe)
+  (deps ErasedNestedTypeArgs.vo erased_nested_type_args.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_nested_type_args.t.exe erased_nested_type_args.cpp erased_nested_type_args.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_nested_type_args.t.exe)
+  (action (run ./erased_nested_type_args.t.exe))))
+
+(subdir file_eponymous_with_alias
+ (rule
+  (targets file_eponymous_with_alias.t.exe)
+  (deps Use.vo file_eponymous_with_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_eponymous_with_alias.t.exe file_eponymous_with_alias.cpp file_eponymous_with_alias.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_eponymous_with_alias.t.exe)
+  (action (run ./file_eponymous_with_alias.t.exe))))
+
+(subdir nested_eponymous_type
+ (rule
+  (targets nested_eponymous_type.t.exe)
+  (deps Use.vo nested_eponymous_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_eponymous_type.t.exe nested_eponymous_type.cpp nested_eponymous_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_eponymous_type.t.exe)
+  (action (run ./nested_eponymous_type.t.exe))))
+
+(subdir case_insensitive_eponymy
+ (rule
+  (targets case_insensitive_eponymy.t.exe)
+  (deps Use.vo case_insensitive_eponymy.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_insensitive_eponymy.t.exe case_insensitive_eponymy.cpp case_insensitive_eponymy.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_insensitive_eponymy.t.exe)
+  (action (run ./case_insensitive_eponymy.t.exe))))
+
+
+
+

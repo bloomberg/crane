@@ -263,7 +263,7 @@ enum class Byte {
   XFF
 };
 
-struct Byte_Mod {
+struct Byte0 {
   static std::pair<
       bool,
       std::pair<
@@ -280,7 +280,7 @@ struct Bool {
   static bool eqb(bool b1, bool b2);
 };
 
-struct Byte0 {
+struct Byte1 {
   static bool eqb0(Byte a, Byte b0);
 };
 
@@ -289,7 +289,7 @@ struct Byte0 {
 /// then reaches into it with Byte::x41, so the two spellings disagree.
 struct StdlibByte {
   static inline const Byte b = Byte::X41;
-  static inline const bool isA = Byte0::eqb0(b, Byte::X41);
+  static inline const bool isA = Byte1::eqb0(b, Byte::X41);
 };
 
 #endif // INCLUDED_STDLIB_BYTE

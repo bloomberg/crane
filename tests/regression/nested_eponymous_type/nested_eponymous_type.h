@@ -1,16 +1,15 @@
-#ifndef INCLUDED_CLASS_ARG_IN_METHOD
-#define INCLUDED_CLASS_ARG_IN_METHOD
+#ifndef INCLUDED_NESTED_EPONYMOUS_TYPE
+#define INCLUDED_NESTED_EPONYMOUS_TYPE
 
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
-#include <concepts>
 #include <memory>
 #include <utility>
 #include <variant>
 
 struct Nat;
-struct Memory_bit;
+template <typename X> struct Compare;
 
 struct Nat {
   // TYPES
@@ -69,45 +68,38 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+  bool ltb(const Nat &m) const { return Nat::s(std::move(*this)).leb(m); }
+
+  bool leb(const Nat &m) const {
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
+    const Nat *_loop_m = &m;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
-        break;
+        return true;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
-        _loop_self = crane_raw(a0);
-        continue;
+        if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
+          return false;
+        } else {
+          const auto &[a00] = std::get<typename Nat::S>(_loop_m->v());
+          _loop_self = crane_raw(a0);
+          _loop_m = crane_raw(a00);
+        }
       }
     }
-    return std::move(*_head);
   }
 };
 
-template <typename I>
-concept Params = requires {
-  { I::width() } -> std::convertible_to<Nat>;
-};
-
-struct Memory_bit {
+template <typename X> struct Compare {
   // TYPES
-  struct Byte {
-    Nat b;
-  };
+  struct LT {};
 
-  struct Ptr {
-    Nat p;
-  };
+  struct EQ {};
 
-  using variant_t = std::variant<Byte, Ptr>;
+  struct GT {};
+
+  using variant_t = std::variant<LT, EQ, GT>;
 
 private:
   // DATA
@@ -115,15 +107,19 @@ private:
 
 public:
   // CREATORS
-  Memory_bit() {}
+  Compare() {}
 
-  explicit Memory_bit(Byte _v) : v_(std::move(_v)) {}
+  explicit Compare(LT _v) : v_(_v) {}
 
-  explicit Memory_bit(Ptr _v) : v_(std::move(_v)) {}
+  explicit Compare(EQ _v) : v_(_v) {}
 
-  static Memory_bit byte(Nat b) { return Memory_bit(Byte{std::move(b)}); }
+  explicit Compare(GT _v) : v_(_v) {}
 
-  static Memory_bit ptr(Nat p) { return Memory_bit(Ptr{std::move(p)}); }
+  static Compare<X> lt() { return Compare<X>(LT{}); }
+
+  static Compare<X> eq() { return Compare<X>(EQ{}); }
+
+  static Compare<X> gt() { return Compare<X>(GT{}); }
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }
@@ -131,21 +127,29 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat show_memory_bit(const Params &pa) const {
-    if (std::holds_alternative<typename Memory_bit::Byte>(this->v())) {
-      const auto &[b0] = std::get<typename Memory_bit::Byte>(this->v());
-      return b0.add(pa::width());
+  bool cmp_lt(const X &, const X &) const {
+    if (std::holds_alternative<typename Compare<X>::LT>(this->v())) {
+      return true;
     } else {
-      const auto &[p] = std::get<typename Memory_bit::Ptr>(this->v());
-      return p;
+      return false;
     }
   }
 };
 
-struct ClassArgInMethod {
-  template <Params _tcI0> static Nat use(const Memory_bit &x0_) {
-    return x0_.template show_memory_bit<_tcI0>();
+struct Other {
+  static bool is_lt(const Nat &n);
+};
+
+struct Compare_Mod {
+  static bool is_lt0(const Nat &n);
+};
+
+struct NestedEponymousType {
+  template <typename T1>
+  static bool use(const T1 &x, const T1 &y, const Compare<T1> &c) {
+    return (c.cmp_lt(x, y) && (Compare_Mod::is_lt0(Nat::s(Nat::o())) &&
+                               Other::is_lt(Nat::s(Nat::o()))));
   }
 };
 
-#endif // INCLUDED_CLASS_ARG_IN_METHOD
+#endif // INCLUDED_NESTED_EPONYMOUS_TYPE

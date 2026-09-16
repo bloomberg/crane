@@ -167,8 +167,9 @@ let register_enum_inductives (s : ml_structure) : unit =
 
 (** {2 Inductive name collection} *)
 
-(** Collect (capitalized_name, defining_modpath) for every inductive type in the
-    structure.
+(** Collect (name, defining_modpath) for every inductive type in the structure,
+    spelled as Rocq spells it -- callers that care about the name a type is
+    emitted under at global scope capitalise it themselves.
 
     This information is used by cpp.ml for name collision detection. When
     multiple modules define inductives with the same capitalized name, or when a
@@ -190,9 +191,7 @@ let collect_inductive_names (s : ml_structure) : (string * ModPath.t) list =
           if Table.is_custom ind_ref then
             acc
           else
-            ( String.capitalize_ascii (Common.pp_global_name Type ind_ref),
-              modpath_of_r ind_ref )
-            :: acc )
+            (Common.pp_global_name Type ind_ref, modpath_of_r ind_ref) :: acc )
         acc
         (element_inductives se) )
     s []
@@ -258,9 +257,9 @@ let is_func_decl (_, se) =
 
     The main module is excluded because its declarations are emitted directly at
     top level, not inside a wrapper struct. *)
-(** [taken] are names already spoken for at file scope by something a module
-    cannot be merged into. *)
-let classify_module ?(taken = []) ~main_mp (mp, sel) =
+(** [taken] says whether a name is already spoken for at file scope by
+    something this module cannot be merged into. *)
+let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
   let has_func = List.exists is_func_decl sel in
   let has_bare =
     List.exists
@@ -294,7 +293,7 @@ let classify_module ?(taken = []) ~main_mp (mp, sel) =
        type's own declaration.  An [enum class] has no body to hold them, so
        Rocq's [byte] and the [Byte] file wrapping its operations would collide
        as two spellings of one name; the type keeps it. *)
-    Some (if List.mem name taken then name ^ "_Mod" else name)
+    Some (if taken name then name ^ "_Mod" else name)
   else
     None
 
@@ -839,7 +838,14 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;
   (* 2. Collect inductive names for name collision detection. *)
-  let inductive_names = collect_inductive_names s in
+  let declared_inductive_names = collect_inductive_names s in
+  (* At global scope a type is emitted under a capitalised name, which is what
+     a module competes with. *)
+  let inductive_names =
+    List.map
+      (fun (n, mp) -> (String.capitalize_ascii n, mp))
+      declared_inductive_names
+  in
   (* 3. Collect global-scope enums (must run after enum registration). *)
   let global_scope_enums = collect_global_scope_enums s in
   (* 4. Classify each module and topologically sort. The main module is the last
@@ -849,15 +855,47 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     | (mp, _) :: _ -> Some mp
     | [] -> None
   in
-  let taken =
+  let enum_names =
     List.map
       (fun r -> String.capitalize_ascii (Common.pp_global_name Type r))
       global_scope_enums
+  in
+  (* A wrapper named after a type another module declares is merged into that
+     type: the file [List.v] of operations on [Datatypes.list] becomes
+     [List<A>::length()].  That only works for the operations the merge can
+     reach -- the ones taking the type -- so a module with even one function
+     left over cannot be merged, and its struct and the type would then be two
+     declarations of one name.  The module is the side that gives way; the name
+     of a type is what its users refer to.
+
+     The comparison is against the name Rocq gives the type, not the capitalised
+     one it takes at global scope: a module named [Nat] and a type named [nat]
+     are not two declarations of one name -- the type is emitted inside the
+     module's struct, as [Nat::nat], and nothing has to give way. *)
+  let unmergeable_into_foreign_type mp sel name =
+    List.exists
+      (fun (n, ind_mp) ->
+        String.equal n name && not (ModPath.equal ind_mp mp) )
+      declared_inductive_names
+    && not
+         (List.for_all
+            (fun (_l, se) ->
+              let methodified r =
+                Method_registry.is_registered_method reg r <> None
+              in
+              match se with
+              | SEdecl (Dterm (r, _, _)) -> methodified r
+              | SEdecl (Dfix (rv, _, _)) -> Array.for_all methodified rv
+              | _ -> true )
+            sel )
   in
   let entries =
     List.map
       (fun (mp, sel) ->
         let sel = sort_inductives_within_module reg s sel in
+        let taken name =
+          List.mem name enum_names || unmergeable_into_foreign_type mp sel name
+        in
         ((mp, sel), classify_module ~taken ~main_mp (mp, sel)) )
       s
   in

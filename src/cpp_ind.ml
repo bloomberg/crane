@@ -548,6 +548,40 @@ let ind_header_decls kn ind =
     in
     forward_decls @ pp 0
 
+(** What a type class instance becomes: the struct carrying its methods, and
+    the [static_assert] that checks the struct against the class's concept.
+
+    An instance is named from wherever the class is used, and a concept check
+    cannot be written for a struct that is still a template, so the assert is
+    only worth emitting for a ground instance.  Both declarations go to
+    namespace scope; an instance declared inside a module is lifted out of the
+    module's struct rather than emitted as a member of it. *)
+let instance_decls r a t =
+  let ds_opt, class_ref_opt, type_args = Gen_decls.gen_instance_struct r a t in
+  let struct_decl =
+    match ds_opt with
+    | Some ds -> [(empty_env (), ds)]
+    | None -> []
+  in
+  let is_template =
+    match ds_opt with
+    | Some (Dtemplate _) -> true
+    | Some (Dstruct {ds_tparams = _ :: _; _}) -> true
+    | _ -> false
+  in
+  let static_assert_decl =
+    match class_ref_opt with
+    | Some class_ref when not is_template ->
+      let tys =
+        List.map
+          (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
+          type_args
+      in
+      [(empty_env (), Dstatic_assert (CPPconcept_app (class_ref, r, tys), None))]
+    | _ -> []
+  in
+  struct_decl @ static_assert_decl
+
 (** Dispatch for .h file rendering. Similar to pp_decl but generates header
     declarations instead of implementations. For template functions, generates
     full definitions inline (required by C++). For non-template functions,
@@ -586,37 +620,7 @@ let header_decls d =
   | Dterm (r, _, _) when is_registered_method r <> None ->
     (* Skip - this function is registered as a method in another module *)
     []
-  | Dterm (r, a, t) when is_typeclass_instance a t ->
-    (* Type class instances: generate struct with static methods and
-       static_assert *)
-    let ds_opt, class_ref_opt, type_args =
-      Gen_decls.gen_instance_struct r a t
-    in
-    let struct_decl =
-      match ds_opt with Some ds -> [(empty_env (), ds)] | None -> []
-    in
-    (* Generate static_assert to verify the instance satisfies the concept. Skip
-       for template instances (Dtemplate or Dstruct with tparams) — we can't
-       instantiate a concept check without concrete types. *)
-    let is_template =
-      match ds_opt with
-      | Some (Dtemplate _) -> true
-      | Some (Dstruct {ds_tparams = _ :: _; _}) -> true
-      | _ -> false
-    in
-    let static_assert_decl =
-      match class_ref_opt with
-      | Some class_ref when not is_template ->
-        let tys =
-          List.map
-            (fun ty -> convert_ml_type_to_cpp_type (empty_env ()) [] ty)
-            type_args
-        in
-        [ ( empty_env (),
-            Dstatic_assert (CPPconcept_app (class_ref, r, tys), None) ) ]
-      | _ -> []
-    in
-    struct_decl @ static_assert_decl
+  | Dterm (r, a, t) when is_typeclass_instance a t -> instance_decls r a t
   | Dterm (r, a, t) ->
     let ds, env, tvars = gen_decl_for_pp r a t in
     ( match (ds, tvars) with

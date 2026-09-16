@@ -9885,7 +9885,18 @@ and ctor_type_of_match env (typ : ml_type) (cname : GlobRef.t) : cpp_type =
       match r with
       | GlobRef.IndRef (kn, _) ->
         ( match Table.get_ind_num_param_vars_opt kn with
-        | Some num_param_vars -> safe_firstn num_param_vars tys
+        | Some num_param_vars ->
+          (* A class template has to be spelled with all of its arguments.
+             The scrutinee's type can be short of them -- the body of an
+             instance method is extracted against the class's erased carrier,
+             so it carries none at all -- and what is missing is precisely
+             what erased: [std::any], which is what the method's own
+             signature spells for the same type. *)
+          let tys = safe_firstn num_param_vars tys in
+          tys
+          @ List.init
+              (max 0 (num_param_vars - List.length tys))
+              (fun _ -> Miniml.Tunknown)
         | None -> tys )
       | _ -> tys
     in

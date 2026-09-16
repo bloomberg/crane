@@ -16,6 +16,8 @@
 #include <utility>
 #include <variant>
 
+struct nat_ix;
+struct nat_ix_stref;
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
 struct Err;
@@ -197,5 +199,54 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 acc_test2_ext();
 std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 bankacc_test1_ext();
+
+struct nat_ix {
+  static List<uint64_t> range(uint64_t fp, uint64_t sp) {
+    return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
+                                  ? 0
+                                  : ((UINT64_C(1) + sp) - fp))));
+  }
+
+  static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+    if ((fp <= i && i <= sp)) {
+      return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
+    } else {
+      return std::optional<uint64_t>();
+    }
+  }
+
+  static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+    return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
+                 ? 0
+                 : ((UINT64_C(1) + sp) - fp)));
+  }
+
+  static uint64_t toNat(uint64_t n) { return n; }
+
+  static uint64_t fromNat(uint64_t n) { return n; }
+
+  static uint64_t suc(uint64_t x) { return (x + 1); }
+
+  static uint64_t sub(uint64_t a0, uint64_t a1) {
+    return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
+  }
+
+  static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+
+  static uint64_t zero() { return UINT64_C(0); }
+};
+
+static_assert(Ix<nat_ix, uint64_t>);
+
+struct nat_ix_stref {
+  static std::any mkSTRef(uint64_t x) { return STRefNat::mkstref(x); }
+
+  static uint64_t STRefToIx(std::any _p_a0) {
+    STRefNat a0 = std::any_cast<STRefNat>(_p_a0);
+    return a0.STRefToIxNat();
+  }
+};
+
+static_assert(STRefClass<nat_ix_stref, uint64_t>);
 
 #endif // INCLUDED_OBJECT_MODEL

@@ -797,11 +797,13 @@ let inductive_names_of_sel sel =
     sel
 
 (** C++ names declared directly in [sel] that a file of the same name cannot
-    live beside.  A file has no eponymous merge: an inductive it declares
-    becomes a member of the file's struct, and C++ forbids a member from
-    sharing its struct's name, while a type class becomes a concept hoisted
-    out beside the struct, into the very same scope.  Either way the two
-    names meet. *)
+    live beside.  A file has no eponymous merge: a type it declares becomes a
+    member of the file's struct, and C++ forbids a member from sharing its
+    struct's name, while a type class becomes a concept hoisted out beside the
+    struct, into the very same scope.  Either way the two names meet.
+
+    A [Definition] returning a type is in the same position as an inductive:
+    it is emitted as a [using] alias, at namespace scope, beside the struct. *)
 let file_colliding_type_names sel =
   List.concat_map
     (fun (_l, se) ->
@@ -809,6 +811,12 @@ let file_colliding_type_names sel =
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+      (* An erased or custom-extracted alias is never emitted, so it competes
+         for nothing. *)
+      | SEdecl (Dtype (_, _, Tdummy Ktype)) -> []
+      | SEdecl (Dtype (r, _, _)) when Table.is_any_inline_custom r -> []
+      | SEdecl (Dtype (GlobRef.ConstRef cst, _, _)) ->
+        [modular_rename Type (Label.to_id (Constant.label cst))]
       | _ -> [] )
     sel
 
@@ -931,13 +939,23 @@ let detect_sibling_module_inductive_collisions (s : ml_structure) =
          beside that struct rather than inside it -- a file has no eponymous
          merge to fold the two together -- so the two names meet in the same
          scope.  The file is the side that gives way, by the same route
-         [Extraction Blacklist] would take. *)
+         [Extraction Blacklist] would take.
+
+         The names are compared ignoring case, because the eponymous merge that
+         has to be kept from firing compares them that way -- Rocq's conventions
+         are not case-sensitive where C++ is, and a record is habitually spelled
+         [cfg] in a file called [CFG.v].  Renaming the file is what tells the
+         merge these two are no longer eponymous, so the merge's question is the
+         one to ask. *)
       ( match mp with
       | MPfile dp ->
+        let eponymous a b =
+          String.equal (String.lowercase_ascii a) (String.lowercase_ascii b)
+        in
         let name =
           String.capitalize_ascii (Id.to_string (List.hd (DirPath.repr dp)))
         in
-        if List.exists (String.equal name) (file_colliding_type_names sel) then
+        if List.exists (eponymous name) (file_colliding_type_names sel) then
           Table.reserve_modfile_name name
       | _ -> () );
       scan_sel mp sel )

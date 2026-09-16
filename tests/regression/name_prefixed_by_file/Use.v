@@ -1,7 +1,7 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
 From ExtLib Require Import Structures.Monads.
-From CraneTestsWIP Require name_prefixed_by_file.EOU.
+From CraneTestsRegression Require name_prefixed_by_file.EOU.
 
 Import MonadNotation.
 Open Scope monad.

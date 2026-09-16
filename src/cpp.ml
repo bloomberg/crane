@@ -1624,7 +1624,14 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       ([], [], [])
     | SEdecl (Dterm (r, _a, Tglob (ty, _args, _e))) when is_monad ty ->
       ([], [], [])
-    | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t -> ([], [], [])
+    (* An instance is a struct, and it is named from wherever its class is
+       used -- unqualified, because a concept's template argument is a type,
+       not a member of whatever module happened to declare it.  So it is
+       lifted out of the wrapper's struct to namespace scope, exactly as an
+       instance declared at the extraction root is emitted.  Dropping it here
+       left every use of it undeclared. *)
+    | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
+      ([], [], List.map snd (instance_decls r a t))
     | SEdecl (Dterm (r, a, t)) ->
       let spec_opt, def_opt, _tvars = gen_decl_for_pp_dual ~is_header r a t in
       let lifted = Translation.take_lifted_decls () in

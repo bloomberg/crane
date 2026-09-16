@@ -2059,6 +2059,61 @@ let with_itree_mode_for ty f =
     with_itree_mode (if is_monad_reified monad_ref then Reified else Sequential) f
   | None -> f ()
 
+(** A class-typed parameter is not a value in C++: the class is a concept, and
+    the instance satisfying it is a type.  Such a parameter therefore leaves the
+    value parameter list and becomes one of the function's own template
+    parameters, named as an instance parameter is -- which is the name every use
+    of it ([_tcI0::width()]) and every call site already spell.
+
+    Returns the parameters with the class-typed ones renamed in place, so that
+    de Bruijn indices still line up, together with what each takes as a template
+    parameter: its kind, its name, the class it instantiates, and the name the
+    Rocq binder had. *)
+let promote_typeclass_params (params : (Id.t * ml_type) list) =
+  let counter = ref 0 in
+  let temps = ref [] in
+  let params =
+    List.map
+      (fun (id, ty) ->
+        if not (Table.is_typeclass_type ty) then (id, ty)
+        else
+          let i = !counter in
+          counter := i + 1;
+          let instance_name = tc_instance_id i in
+          (* A unary concept can be written inline ([Params _tcI0]), so the
+             compiler enforces it.  A multi-parameter concept cannot: its extra
+             type arguments are not in scope where the template parameter is
+             declared. *)
+          let tt =
+            match ty with
+            | Miniml.Tglob (class_ref, type_args, _) ->
+              if Table.get_ind_nb_tparams class_ref = 0 then
+                TTconcept (class_ref, [])
+              else
+                TTconcept
+                  ( class_ref,
+                    List.map
+                      (fun t -> convert_ml_type_to_cpp_type (empty_env ()) [] t)
+                      (Table.drop_hkt_args class_ref type_args) )
+            | _ ->
+              (* Unreachable: [Table.is_typeclass_type] only holds of a
+                 [Tglob]. *)
+              CErrors.anomaly
+                (Pp.str
+                   "gen_decls: type-class instance parameter whose type is not \
+                    a global reference")
+          in
+          let class_info =
+            match ty with
+            | Miniml.Tglob (class_ref, type_args, _) -> Some (class_ref, type_args)
+            | _ -> None
+          in
+          temps := (tt, instance_name, class_info, id) :: !temps;
+          (instance_name, ty) )
+      params
+  in
+  (params, List.rev !temps)
+
 let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)
@@ -2341,59 +2396,12 @@ let gen_dfun n b cty ty temps =
      variable names like 'i', 'j', etc. - Other generated names in the same
      scope The original parameter order is preserved for correct de Bruijn
      indexing. *)
-  let typeclass_counter = ref 0 in
-  let typeclass_temps = ref [] in
-  let all_params_for_env =
-    List.map
-      (fun (ml_id, ty) ->
-        if Table.is_typeclass_type ty then (
-          let i = !typeclass_counter in
-          typeclass_counter := i + 1;
-          let instance_name = tc_instance_id i in
-          (* Build template param info.  Use [TTconcept] for unary
-             concepts (nb_sign_keeps = 0) so the C++ compiler enforces
-             concept satisfaction, e.g. [PreCategory _tcI0] instead of
-             [typename _tcI0]. Multi-parameter concepts cannot use inline
-             syntax because extra type args aren't available at the
-             template-param declaration site. *)
-          let temp_info =
-            match ty with
-            | Miniml.Tglob (class_ref, type_args, _) ->
-              let type_arg_cpp =
-                List.map
-                  (fun t ->
-                    convert_ml_type_to_cpp_type
-                      (empty_env ())
-                      []
-                      t )
-                  (Table.drop_hkt_args class_ref type_args)
-              in
-              let tt =
-                if Table.get_ind_nb_tparams class_ref = 0 then
-                  TTconcept (class_ref, [])
-                else TTconcept (class_ref, type_arg_cpp)
-              in
-              ( tt,
-                instance_name,
-                Some (class_ref, type_args),
-                cpp_id_of_id (id_of_mlid ml_id) )
-            | _ ->
-              (* Unreachable: this branch is guarded by
-                 [Table.is_typeclass_type ty], which only holds for [Tglob]. *)
-              CErrors.anomaly
-                (Pp.str
-                   "gen_decls: type-class instance parameter whose type is \
-                    not a global reference")
-          in
-          typeclass_temps := temp_info :: !typeclass_temps;
-          (* Return renamed param for env (use instance_name like 'i' instead of
-             original name) *)
-          (instance_name, ty) )
-        else (* Regular param: keep original name *)
-          (cpp_id_of_id (id_of_mlid ml_id), ty) )
-      all_params
+  let all_params_for_env, typeclass_temps =
+    promote_typeclass_params
+      (List.map
+         (fun (ml_id, ty) -> (cpp_id_of_id (id_of_mlid ml_id), ty))
+         all_params )
   in
-  let typeclass_temps = List.rev !typeclass_temps in
   (* Build a substitution map for PROMOTED TYPE VARIABLES: fields that were
      promoted from record values to type parameters during concept generation.
 
@@ -4032,10 +4040,9 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       in
       (missing @ ids_with_types, MLapp (lifted_b, args))
   in
-  let ids_converted =
-    List.map
-      (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty))
-      ids_with_types
+  let ids_converted, typeclass_temps =
+    promote_typeclass_params
+      (List.map (fun (x, ty) -> (cpp_id_of_id (id_of_mlid x), ty)) ids_with_types)
   in
   let all_ids, env = push_vars' ids_converted (empty_env ()) in
   reset_env_types ();
@@ -4061,7 +4068,10 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   in
   let this_arg_id = Option.map (fun (id, _, _) -> id) this_arg_id_opt in
   let param_ids_with_pos =
-    List.filter (fun (_, ty, _) -> not (ml_type_is_void ty)) param_ids_with_pos
+    List.filter
+      (fun (_, ty, _) ->
+        (not (ml_type_is_void ty)) && not (Table.is_typeclass_type ty) )
+      param_ids_with_pos
   in
 
   (* Build owned flag lookup for non-this params. ids_normal_order is
@@ -4111,7 +4121,13 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let fun_template_params =
     List.map (fun (_, tt, fname) -> (tt, fname)) fun_params
   in
-  let template_params = extra_type_params @ fun_template_params in
+  (* The instances come first, as they do for a free function: a call site
+     spells the same list in the same order. *)
+  let template_params =
+    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
+    @ extra_type_params
+    @ fun_template_params
+  in
 
   (* Build final params with proper wrapping. Use escape analysis to determine
      owned vs borrowed: owned params are passed by value (for move semantics),

@@ -1,12 +1,13 @@
-(** Crane bug: a definition whose name begins with the name of the file
-    declaring it is silently dropped.
+(** Crane bug: a type class instance declared in a file that is not the
+    extraction root is silently dropped.
 
-    [EOU.v] declares the type [EOU] and the instance [EOU_monad].  The module
-    is renamed to [EOU0], correctly, because the file is eponymous with a type
-    it declares.  But [EOU_monad] shares that same prefix, and the textual
-    fallback that decides what a name is contained in reads the shared prefix
-    as containment -- so the instance is emitted nowhere, while [option_ub],
-    which has no shared prefix, is emitted as [EOU0::option_ub].
+    [EOU.v] declares the type [EOU] and the instance [EOU_monad].  The file is
+    eponymous with a type it declares, so its module is renamed to [EOU0] and
+    emitted as a wrapper struct -- and the wrapper renderer had no case for an
+    instance.  An instance is a struct named from wherever its class is used,
+    so it cannot be a member of that wrapper anyway; it has to be lifted to
+    namespace scope, as an instance declared at the root already is.  Instead
+    it was dropped, while [option_ub] was emitted as [EOU0::option_ub].
 
     Nothing is reported at extraction time; the definition just vanishes, and
     the failure surfaces only at every use site.

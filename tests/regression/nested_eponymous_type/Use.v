@@ -1,8 +1,8 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import OrderedType.
-From CraneTestsWIP Require nested_eponymous_type.Compare.
-From CraneTestsWIP Require nested_eponymous_type.Other.
+From CraneTestsRegression Require nested_eponymous_type.Compare.
+From CraneTestsRegression Require nested_eponymous_type.Other.
 
 Module NestedEponymousType.
   Definition use {X : Type} {lt eq : X -> X -> Prop} {x y : X}

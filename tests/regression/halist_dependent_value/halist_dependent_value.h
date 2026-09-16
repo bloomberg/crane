@@ -201,7 +201,7 @@ struct Sumbool {
 
 template <typename k, typename v> using halist = List<SigT<k, v>>;
 
-struct HAList {
+struct HAList0 {
   template <typename T1, typename T2>
   static halist<T1, T2> halist_remove(EqDec<T1> eq, const T1 &k,
                                       const List<SigT<T1, T2>> &m);
@@ -282,8 +282,8 @@ struct HalistDependentValue {
   };
   static inline const halist<Key, vty> m0 = List<SigT<Key, std::any>>::nil();
   static inline const halist<Key, vty> m1 =
-      HAList::halist_add(keyEq, Key::KNAT, std::any(UINT64_C(7)), m0);
-  static inline const halist<Key, vty> m2 = HAList::halist_add(
+      HAList0::halist_add(keyEq, Key::KNAT, std::any(UINT64_C(7)), m0);
+  static inline const halist<Key, vty> m2 = HAList0::halist_add(
       keyEq, Key::KLIST,
       std::any(List<std::any>::cons(
           UINT64_C(1),
@@ -292,7 +292,7 @@ struct HalistDependentValue {
               List<std::any>::cons(UINT64_C(3), List<std::any>::nil())))),
       m1);
   static inline const uint64_t run = ([]() -> uint64_t {
-    auto _cs = HAList::halist_lookup(keyEq, Key::KNAT, m2);
+    auto _cs = HAList0::halist_lookup(keyEq, Key::KNAT, m2);
     if (_cs.has_value()) {
       const auto &n = *_cs;
       return std::any_cast<uint64_t>(n);
@@ -300,7 +300,7 @@ struct HalistDependentValue {
       return UINT64_C(0);
     }
   }() + []() -> uint64_t {
-    auto _cs1 = HAList::halist_lookup(keyEq, Key::KLIST, m2);
+    auto _cs1 = HAList0::halist_lookup(keyEq, Key::KLIST, m2);
     if (_cs1.has_value()) {
       const auto &l = *_cs1;
       return List<uint64_t>(std::any_cast<List<std::any>>(l)).length();
@@ -316,8 +316,8 @@ bool EquivDec::equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_) {
 }
 
 template <typename T1, typename T2>
-halist<T1, T2> HAList::halist_remove(EqDec<T1> eq, const T1 &k,
-                                     const List<SigT<T1, T2>> &m) {
+halist<T1, T2> HAList0::halist_remove(EqDec<T1> eq, const T1 &k,
+                                      const List<SigT<T1, T2>> &m) {
   return m.filter([=](const SigT<T1, T2> &k_v) mutable {
     return !([=]() mutable {
       const auto &_sv =
@@ -329,16 +329,16 @@ halist<T1, T2> HAList::halist_remove(EqDec<T1> eq, const T1 &k,
 }
 
 template <typename T1, typename T2>
-halist<T1, T2> HAList::halist_add(EqDec<T1> eq, T1 k, T2 v,
-                                  const List<SigT<T1, T2>> &m) {
+halist<T1, T2> HAList0::halist_add(EqDec<T1> eq, T1 k, T2 v,
+                                   const List<SigT<T1, T2>> &m) {
   return List<SigT<T1, T2>>::cons(
       SigT<T1, T2>::existt(k, std::move(v)),
-      HAList::template halist_remove<T1, T2>(std::move(eq), k, m));
+      HAList0::template halist_remove<T1, T2>(std::move(eq), k, m));
 }
 
 template <typename T1, typename T2>
-std::optional<T2> HAList::halist_lookup(EqDec<T1> eq, const T1 &k,
-                                        const List<SigT<T1, T2>> &l) {
+std::optional<T2> HAList0::halist_lookup(EqDec<T1> eq, const T1 &k,
+                                         const List<SigT<T1, T2>> &l) {
   if (std::holds_alternative<typename List<SigT<T1, T2>>::Nil>(l.v())) {
     return std::optional<T2>();
   } else {
@@ -347,7 +347,7 @@ std::optional<T2> HAList::halist_lookup(EqDec<T1> eq, const T1 &k,
     if (EquivDec::equiv_dec(eq, x0, k)) {
       return std::make_optional<T2>(a10);
     } else {
-      return HAList::template halist_lookup<T1, T2>(eq, k, *a1);
+      return HAList0::template halist_lookup<T1, T2>(eq, k, *a1);
     }
   }
 }

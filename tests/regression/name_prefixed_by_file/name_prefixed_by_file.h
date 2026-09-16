@@ -1,5 +1,5 @@
-#ifndef INCLUDED_ERASED_NESTED_TYPE_ARGS
-#define INCLUDED_ERASED_NESTED_TYPE_ARGS
+#ifndef INCLUDED_NAME_PREFIXED_BY_FILE
+#define INCLUDED_NAME_PREFIXED_BY_FILE
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -8,14 +8,14 @@
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
+struct EOU_monad;
 struct Nat;
 template <typename X> struct EOU;
-struct EOU_monad;
-struct Ops_nat;
 
 struct Nat {
   // TYPES
@@ -73,28 +73,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
-    const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
-        break;
-      } else {
-        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
-        _loop_self = crane_raw(a0);
-        continue;
-      }
-    }
-    return std::move(*_head);
-  }
 };
 
 template <typename I>
@@ -104,15 +82,20 @@ concept Monad = requires {
     I::template ret<std::any>(std::declval<std::any>())
   } -> std::convertible_to<typename I::template m<std::any>>;
   {
-    I::bind(std::declval<typename I::template m<std::any>>(),
-            std::declval<
-                std::function<typename I::template m<std::any>(std::any)>>())
+    I::template bind<std::any, std::any>(
+        std::declval<typename I::template m<std::any>>(),
+        std::declval<
+            std::function<typename I::template m<std::any>(std::any)>>())
   } -> std::convertible_to<typename I::template m<std::any>>;
 };
 
 struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
+  template <Monad _tcI0, typename T2, typename T3, typename F1>
+    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
+  static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
+                                             F1 &&x0);
 };
 
 template <typename X> struct EOU {
@@ -166,6 +149,15 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+struct EOU0 {
+  template <typename T1>
+  static EOU<T1> option_ub(Nat s, const std::optional<T1> &x);
+};
+
+struct NamePrefixedByFile {
+  static EOU<Nat> use(Nat n);
+};
+
 struct EOU_monad {
   template <typename _A0> using m = EOU<_A0>;
 
@@ -173,44 +165,40 @@ struct EOU_monad {
     return EOU<_A0>::raise_ret(std::move(_x));
   }
 
-  static EOU<std::any> bind(EOU<std::any> c,
-                            std::function<EOU<std::any>(std::any)> k) {
-    if (std::holds_alternative<typename EOU::Raise_error>(c.v())) {
-      const auto &[s0] = std::get<typename EOU::Raise_error>(c.v());
-      return EOU<std::any>::raise_error(s0);
+  template <typename _A0, typename _A1>
+  static EOU<_A1> bind(EOU<_A0> c, std::function<EOU<_A1>(_A0)> k) {
+    if (std::holds_alternative<typename EOU<_A0>::Raise_error>(c.v())) {
+      const auto &[s0] = std::get<typename EOU<_A0>::Raise_error>(c.v());
+      return EOU<_A1>::raise_error(s0);
     } else {
-      const auto &[x0] = std::get<typename EOU::Raise_ret>(c.v());
+      const auto &[x0] = std::get<typename EOU<_A0>::Raise_ret>(c.v());
       return k(x0);
     }
   }
 };
 
 static_assert(Monad<EOU_monad>);
-template <typename _Inst, typename I>
-concept Ops = requires {
-  {
-    _Inst::madd(std::declval<I>(), std::declval<I>())
-  } -> std::convertible_to<EOU<I>>;
-  { _Inst::mzero() } -> std::convertible_to<I>;
-};
-
-struct Ops_nat {
-  static EOU<Nat> madd(Nat x, Nat y) {
-    return Monad0::template ret<EOU_monad, Nat>(x.add(std::move(y)));
-  }
-
-  static Nat mzero() { return Nat::o(); }
-};
-
-static_assert(Ops<Ops_nat, Nat>);
-
-struct ErasedNestedTypeArgs {
-  static EOU<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
 
-#endif // INCLUDED_ERASED_NESTED_TYPE_ARGS
+template <Monad _tcI0, typename T2, typename T3, typename F1>
+  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
+typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
+                                            F1 &&x0) {
+  return _tcI0::template bind<T2, T3>(std::move(x), x0);
+}
+
+template <typename T1>
+EOU<T1> EOU0::option_ub(Nat s, const std::optional<T1> &x) {
+  if (x.has_value()) {
+    const T1 &v = *x;
+    return EOU<T1>::raise_ret(v);
+  } else {
+    return EOU<T1>::raise_error(std::move(s));
+  }
+}
+
+#endif // INCLUDED_NAME_PREFIXED_BY_FILE

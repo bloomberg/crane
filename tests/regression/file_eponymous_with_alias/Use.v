@@ -1,6 +1,6 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
-From CraneTestsWIP Require file_eponymous_with_alias.DList.
+From CraneTestsRegression Require file_eponymous_with_alias.DList.
 
 Module FileEponymousWithAlias.
   Definition use : list nat :=

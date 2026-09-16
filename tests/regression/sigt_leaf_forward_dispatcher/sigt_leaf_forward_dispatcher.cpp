@@ -19,7 +19,7 @@
 /// not synthesize out-of-scope template parameters when casting an erased
 /// field.  Both producer and consumer now agree on the deep-erased
 /// representation.
-bool wrap_string(const std::string &s) { return String::eqb1(s, s); }
+bool wrap_string(const std::string &s) { return String0::eqb1(s, s); }
 
 bool mk_action(uint64_t n, std::any tup) {
   if (n <= 0) {
@@ -84,7 +84,7 @@ bool Bool::eqb(bool b1, bool b2) {
   }
 }
 
-bool Ascii::eqb0(char a, char b) {
+bool Ascii0::eqb0(char a, char b) {
   bool a0 = a & 1;
   bool a1 = (a >> 1) & 1;
   bool a2 = (a >> 2) & 1;
@@ -117,7 +117,7 @@ bool Ascii::eqb0(char a, char b) {
   }
 }
 
-bool String::eqb1(const std::string &s1, const std::string &s2) {
+bool String0::eqb1(const std::string &s1, const std::string &s2) {
   if (s1.empty()) {
     if (s2.empty()) {
       return true;
@@ -134,8 +134,8 @@ bool String::eqb1(const std::string &s1, const std::string &s2) {
     } else {
       char c2 = s2[0];
       std::string s2_ = s2.substr(1);
-      if (Ascii::eqb0(c1, c2)) {
-        return String::eqb1(s1_, s2_);
+      if (Ascii0::eqb0(c1, c2)) {
+        return String0::eqb1(s1_, s2_);
       } else {
         return false;
       }

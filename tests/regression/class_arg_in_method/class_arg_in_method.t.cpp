@@ -19,9 +19,14 @@ static unsigned to_uint(const Nat &n) {
   return c;
 }
 
+// The class is a concept, so an instance of it is a type.
+struct Width8 {
+  static Nat width() { return nat_of(8); }
+};
+
 int main() {
   // Byte 3 under width 8 is 11.
-  assert(to_uint(ClassArgInMethod::use(Memory_bit::byte(nat_of(3)),
-                                       Params{nat_of(8)})) == 11);
+  assert(to_uint(ClassArgInMethod::use<Width8>(Memory_bit::byte(nat_of(3)))) ==
+         11);
   return 0;
 }

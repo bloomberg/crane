@@ -30,6 +30,13 @@ val ind_cpp_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 (** Header counterpart of {!ind_cpp_decls}. *)
 val ind_header_decls : Names.MutInd.t -> Miniml.ml_ind -> rendered
 
+(** What a type class instance becomes: the struct carrying its methods, and,
+    for a ground instance, the [static_assert] checking it against the class's
+    concept.  Both belong at namespace scope, wherever the instance was
+    declared. *)
+val instance_decls :
+  Names.GlobRef.t -> Miniml.ml_ast -> Miniml.ml_type -> rendered
+
 (** The implementation-file declarations for one MiniML declaration. *)
 val impl_decls : Miniml.ml_decl -> rendered
 
