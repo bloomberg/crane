@@ -81,3 +81,25 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
+
+(subdir file_module_eponymous_record
+ (rule
+  (targets file_module_eponymous_record.t.exe)
+  (deps Catalog.vo FileModuleEponymousRecord.vo file_module_eponymous_record.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_module_eponymous_record.t.exe file_module_eponymous_record.cpp file_module_eponymous_record.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_module_eponymous_record.t.exe)
+  (action (run ./file_module_eponymous_record.t.exe))))
+
+(subdir select_type_alias_clash
+ (rule
+  (targets select_type_alias_clash.t.exe)
+  (deps SelectTypeAliasClash.vo select_type_alias_clash.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} select_type_alias_clash.t.exe select_type_alias_clash.cpp select_type_alias_clash.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps select_type_alias_clash.t.exe)
+  (action (run ./select_type_alias_clash.t.exe))))
