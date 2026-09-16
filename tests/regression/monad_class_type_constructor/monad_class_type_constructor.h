@@ -37,7 +37,7 @@ struct MonadClassTypeConstructor {
     requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> mbind(typename _tcI0::template M<T2> x,
                                               F1 &&x0) {
-    return _tcI0::template mbind<T2, T3>(x, x0);
+    return _tcI0::template mbind<T2, T3>(std::move(x), x0);
   }
 
   template <typename a> using Opt = std::optional<a>;

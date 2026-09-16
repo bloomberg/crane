@@ -125,7 +125,7 @@ struct HktSingleCtorInstanceBody {
     template <typename _A0> using F = box<_A0>;
 
     template <typename _A0> static box<_A0> pnt(_A0 x) {
-      return box<_A0>::mkbox(x);
+      return box<_A0>::mkbox(std::move(x));
     }
   };
 

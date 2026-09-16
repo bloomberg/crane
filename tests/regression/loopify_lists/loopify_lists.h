@@ -553,7 +553,7 @@ struct LoopifyLists {
         *_write = std::move(_cell);
         _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_acc = new_acc;
+        _loop_acc = std::move(new_acc);
         continue;
       }
     }

@@ -47,7 +47,7 @@ struct RocqBug10757 {
       return Sig<T1>::exist(x0);
     }
     case Bool0::FALSE_: {
-      return iterate0(x_);
+      return iterate0(std::move(x_));
     }
     default:
       std::unreachable();
@@ -58,7 +58,7 @@ struct RocqBug10757 {
     requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
              std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1> iterate(F0 &&beq, F1 &&f, T1 x) {
-    return iterate_func(beq, f, Sig<T1>::exist(x));
+    return iterate_func(beq, f, Sig<T1>::exist(std::move(x)));
   }
 };
 

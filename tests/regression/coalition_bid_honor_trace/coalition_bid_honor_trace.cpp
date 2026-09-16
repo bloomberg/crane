@@ -490,7 +490,8 @@ CoalitionBidHonorTraceCase::update_coalition_force(
         c.v());
     if (idx <= 0) {
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
-          CoalitionMember{a0.cm_clan, a0.cm_commander, new_force}, *a1);
+          CoalitionMember{a0.cm_clan, a0.cm_commander, std::move(new_force)},
+          *a1);
     } else {
       uint64_t n = idx - 1;
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(

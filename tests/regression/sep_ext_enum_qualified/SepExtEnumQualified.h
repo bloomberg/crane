@@ -18,7 +18,7 @@ concept OrderedType = requires {
 
 template <OrderedType X> struct Make {
   static bool is_lt(typename X::t a, typename X::t b) {
-    switch (X::compare(a, b)) {
+    switch (X::compare(std::move(a), std::move(b))) {
     case Datatypes::Comparison::LT: {
       return true;
     }
@@ -29,7 +29,7 @@ template <OrderedType X> struct Make {
   }
 
   static bool is_eq(typename X::t a, typename X::t b) {
-    switch (X::compare(a, b)) {
+    switch (X::compare(std::move(a), std::move(b))) {
     case Datatypes::Comparison::EQ: {
       return true;
     }

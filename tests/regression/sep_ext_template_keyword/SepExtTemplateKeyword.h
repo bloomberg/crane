@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTTEMPLATEKEYWORD
 
 #include <concepts>
+#include <utility>
 #include <variant>
 
 #include "Datatypes.h"
@@ -27,7 +28,7 @@ concept RawSig = requires {
 template <RawSig Raw> struct MakeOps {
   static typename Datatypes::template List<typename Raw::elt>
   to_list(typename Raw::tree x0_) {
-    return Raw::elements(x0_);
+    return Raw::elements(std::move(x0_));
   }
 
   static bool is_empty(typename Raw::tree t) {

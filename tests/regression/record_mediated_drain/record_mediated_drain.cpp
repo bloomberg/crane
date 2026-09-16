@@ -2,5 +2,5 @@
 
 RecordMediatedDrain::t RecordMediatedDrain::wrap(uint64_t k,
                                                  RecordMediatedDrain::t acc) {
-  return t::more(cell<RecordMediatedDrain::t>{k, acc});
+  return t::more(cell<RecordMediatedDrain::t>{k, std::move(acc)});
 }

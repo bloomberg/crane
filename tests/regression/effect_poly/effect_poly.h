@@ -103,7 +103,7 @@ struct EffectPoly {
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 map_result(F0 &&f, const T1 &m) {
     T1 a = m;
-    return f(a);
+    return f(std::move(a));
   }
 
   static uint64_t test_map_result();
@@ -133,7 +133,7 @@ struct EffectPoly {
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(xs.v());
       T1 acc = f(init, a0);
-      return fold_m<T1, T2>(f, acc, *a1);
+      return fold_m<T1, T2>(f, std::move(acc), *a1);
     }
   }
 

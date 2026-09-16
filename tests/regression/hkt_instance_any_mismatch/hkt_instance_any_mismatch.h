@@ -145,14 +145,14 @@ struct HktInstanceAnyMismatch {
     requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> bind(typename _tcI0::template M<T2> x,
                                              F1 &&x0) {
-    return _tcI0::template bind<T2, T3>(x, x0);
+    return _tcI0::template bind<T2, T3>(std::move(x), x0);
   }
 
   struct optMon {
     template <typename _A0> using M = Option<_A0>;
 
     template <typename _A0> static Option<_A0> ret(_A0 a) {
-      return Option<_A0>::some(a);
+      return Option<_A0>::some(std::move(a));
     }
 
     template <typename _A0, typename _A1>

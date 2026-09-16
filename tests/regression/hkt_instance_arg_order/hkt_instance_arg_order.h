@@ -194,7 +194,7 @@ struct HktInstanceArgOrder {
     requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fm(F0 &&x,
                                            typename _tcI0::template F<T2> x0) {
-    return _tcI0::template fm<T2, T3>(x, x0);
+    return _tcI0::template fm<T2, T3>(x, std::move(x0));
   }
 
   struct optf {
@@ -219,7 +219,7 @@ struct HktInstanceArgOrder {
 
     template <typename _A0, typename _A1>
     static List<_A1> fm(std::function<_A1(_A0)> a0, List<_A0> a1) {
-      return a1.template map<_A1>(a0);
+      return a1.template map<_A1>(std::move(a0));
     }
   };
 
@@ -234,7 +234,7 @@ struct HktInstanceArgOrder {
               typename _tcI0::template F<T4>>(
         [=](typename _tcI0::template F<T3> _x0) mutable ->
         typename _tcI0::template F<T4> { return fm<_tcI0, T3, T4>(f, _x0); },
-        x);
+        std::move(x));
   }
 
   static inline const std::optional<List<Nat>> ex =

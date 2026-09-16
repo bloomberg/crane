@@ -84,9 +84,9 @@ PromOps::state10 PromOps::execute_wpm10(const PromOps::state10 &s) {
   } else {
     new_rom = s.rom10;
   }
-  return state10{s.regs10,      new_rom,       s.acc10,        s.pc10,
-                 s.stack10,     s.cur_bank10,  s.rom_ports10,  s.sel_rom10,
-                 s.prom_addr10, s.prom_data10, s.prom_enable10};
+  return state10{s.regs10,      std::move(new_rom), s.acc10,        s.pc10,
+                 s.stack10,     s.cur_bank10,       s.rom_ports10,  s.sel_rom10,
+                 s.prom_addr10, s.prom_data10,      s.prom_enable10};
 }
 
 PromOps::state11 PromOps::execute_wpm11(PromOps::state11 s) {

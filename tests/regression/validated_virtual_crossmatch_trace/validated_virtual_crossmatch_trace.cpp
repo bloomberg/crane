@@ -465,8 +465,9 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
     uint64_t sample_time, uint64_t current_time, uint64_t authorizer,
     bool is_emergency) {
   ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder order =
-      SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
-                           sample_time,  authorizer, is_emergency};
+      SafeTransfusionOrder{recipient_id,  product_id,  compat_result,
+                           std::move(xm), sample_time, authorizer,
+                           is_emergency};
   if (transfusion_order_authorized(order, current_time)) {
     return std::make_optional<
         ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>(

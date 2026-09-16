@@ -81,7 +81,7 @@ struct R {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-      return f0(a0, *a1, lst_rect<T1>(f, f0, *a1));
+      return f0(a0, *a1, lst_rect<T1>(std::move(f), f0, *a1));
     }
   }
 
@@ -92,7 +92,7 @@ struct R {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1>(f, f0, *a1));
+      return f0(a0, *a1, lst_rec<T1>(std::move(f), f0, *a1));
     }
   }
 

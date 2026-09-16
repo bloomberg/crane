@@ -23,5 +23,5 @@ ClosureInCtor::box ClosureInCtor::make_box_fix(uint64_t n) {
   auto add = [=](uint64_t x) mutable -> uint64_t {
     return add_impl(add_impl, x);
   };
-  return box::box0(add);
+  return box::box0(std::move(add));
 }

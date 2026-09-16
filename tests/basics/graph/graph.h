@@ -246,15 +246,16 @@ struct DirectedGraph {
   }
 
   static Directed<T1> add_node(Directed<T1> g, T1 n) {
-    return Directed<T1>{List<T1>::cons(n, g.directed_nodes), g.directed_edges};
+    return Directed<T1>{List<T1>::cons(std::move(n), g.directed_nodes),
+                        g.directed_edges};
   }
 
   static Directed<T1> add_edge(Directed<T1> g, DirectedEdge<T1> e) {
-    return Directed<T1>{g.directed_nodes,
-                        List<DirectedEdge<T1>>::cons(e, g.directed_edges)};
+    return Directed<T1>{g.directed_nodes, List<DirectedEdge<T1>>::cons(
+                                              std::move(e), g.directed_edges)};
   }
 
-  static List<T1> nodes(Directed<T1> g) { return g.directed_nodes; }
+  static List<T1> nodes(Directed<T1> g) { return std::move(g).directed_nodes; }
 
   static List<edge> edges(Directed<T1> g, T1 n) {
     return g.directed_edges.filter([=](DirectedEdge<T1> _x0) mutable -> bool {
@@ -291,16 +292,19 @@ struct UndirectedGraph {
   }
 
   static Undirected<T1> add_node(Undirected<T1> g, T1 n) {
-    return Undirected<T1>{List<T1>::cons(n, g.undirected_nodes),
+    return Undirected<T1>{List<T1>::cons(std::move(n), g.undirected_nodes),
                           g.undirected_edges};
   }
 
   static Undirected<T1> add_edge(Undirected<T1> g, UndirectedEdge<T1> e) {
-    return Undirected<T1>{g.undirected_nodes, List<UndirectedEdge<T1>>::cons(
-                                                  e, g.undirected_edges)};
+    return Undirected<T1>{
+        g.undirected_nodes,
+        List<UndirectedEdge<T1>>::cons(std::move(e), g.undirected_edges)};
   }
 
-  static List<T1> nodes(Undirected<T1> g) { return g.undirected_nodes; }
+  static List<T1> nodes(Undirected<T1> g) {
+    return std::move(g).undirected_nodes;
+  }
 
   static List<edge> edges(Undirected<T1> g, T1 n) {
     return g.undirected_edges.filter(
@@ -313,7 +317,9 @@ struct UndirectedGraph {
 bool nat_eqb(const Nat &n, const Nat &m);
 
 struct NatEq {
-  static bool eqb(Nat a0, Nat a1) { return nat_eqb(a0, a1); }
+  static bool eqb(Nat a0, Nat a1) {
+    return nat_eqb(std::move(a0), std::move(a1));
+  }
 };
 
 static_assert(Eq<NatEq, Nat>);

@@ -181,7 +181,7 @@ T2 Vector::fold_left(F0 &&f, T2 b, uint64_t, const T0<T1> &v0) {
     return b;
   } else {
     const auto &[h, n, a2] = std::get<typename T0<T1>::Cons>(v0.v());
-    return Vector::template fold_left<T1, T2>(f, f(b, h), n, *a2);
+    return Vector::template fold_left<T1, T2>(f, f(std::move(b), h), n, *a2);
   }
 }
 

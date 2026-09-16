@@ -20,7 +20,7 @@ struct ImplicitArgs {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply(F0 &&f, T1 x0_) {
-    return f(x0_);
+    return f(std::move(x0_));
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
@@ -116,7 +116,7 @@ struct ImplicitArgs {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rect<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, mylist_rect<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -127,7 +127,7 @@ struct ImplicitArgs {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
     }
   }
 

@@ -122,7 +122,7 @@ struct RecordCaseBody {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rect<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, list_rect<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -133,7 +133,7 @@ struct RecordCaseBody {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rec<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, list_rec<T1, T2>(std::move(f), f0, *a1));
     }
   }
 

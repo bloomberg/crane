@@ -178,7 +178,7 @@ struct R {
             std::move(_rs.token), typename lst::Cons(f(a0), nullptr));
         *_write = std::move(_cell);
         _write = &std::get<typename lst::Cons>((*_write)->v_mut()).a1;
-        _own = std::move(_rs.next);
+        _own = std::move(std::move(_rs.next));
         _loop_l = _own.get();
         continue;
       }

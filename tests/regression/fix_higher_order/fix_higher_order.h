@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 struct FixHigherOrder {
   /// A wrapper function that takes a function and stores it in Some.

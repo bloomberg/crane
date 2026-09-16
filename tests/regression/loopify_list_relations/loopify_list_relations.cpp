@@ -117,7 +117,7 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
     auto eq = [&](const List<uint64_t> &a, const List<uint64_t> &b) -> bool {
       return eq_impl(eq_impl, a, b);
     };
-    return eq(l1, suffix);
+    return eq(l1, std::move(suffix));
   }
 }
 

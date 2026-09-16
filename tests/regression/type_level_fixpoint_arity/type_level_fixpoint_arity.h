@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <any>
 #include <functional>
+#include <utility>
 
 struct TypeLevelFixpointArity {
   /// A type computed by a fixpoint over a nat loses its arity, so values

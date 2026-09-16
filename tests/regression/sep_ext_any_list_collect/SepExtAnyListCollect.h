@@ -64,7 +64,8 @@ template <SymTypes Ty> struct ListCollect {
       const typename Datatypes::template List<typename Ty::sym> &xs,
       const typename Datatypes::Nat &n, symbols_semty default_tuple,
       std::any default_val) {
-    return head_first(x, xs, collect(x, xs, n, default_tuple), default_val);
+    return head_first(x, xs, collect(x, xs, n, std::move(default_tuple)),
+                      default_val);
   }
 };
 

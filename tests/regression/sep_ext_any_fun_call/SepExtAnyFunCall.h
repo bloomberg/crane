@@ -35,7 +35,7 @@ template <SymTypes Ty> struct Actions {
   }
 
   static bool apply_entry(entry x0_, symbols_semty x1_) {
-    return x0_.projT2()(x1_);
+    return x0_.projT2()(std::move(x1_));
   }
 };
 

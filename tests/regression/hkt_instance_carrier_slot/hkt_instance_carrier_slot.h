@@ -169,7 +169,7 @@ concept Sizeable = requires {
 struct HktInstanceCarrierSlot {
   template <Sizeable _tcI0, typename T2>
   static Nat sz(typename _tcI0::template F<T2> x) {
-    return _tcI0::template sz<T2>(x);
+    return _tcI0::template sz<T2>(std::move(x));
   }
 
   template <typename T1> static Nat llen(const List<T1> &l) {
@@ -185,7 +185,7 @@ struct HktInstanceCarrierSlot {
     template <typename _A0> using F = List<_A0>;
 
     template <typename _A0> static Nat sz(List<_A0> a0) {
-      return llen<_A0>(a0);
+      return llen<_A0>(std::move(a0));
     }
   };
 

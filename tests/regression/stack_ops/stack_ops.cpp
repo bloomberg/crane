@@ -93,5 +93,5 @@ StackOps::state_basic StackOps::push_stack_cap(const StackOps::state_basic &s,
       }
     }
   }();
-  return state_basic{new_stack};
+  return state_basic{std::move(new_stack)};
 }

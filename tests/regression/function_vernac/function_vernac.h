@@ -338,7 +338,7 @@ struct FunctionVernac {
           return f2(n1, _pa0);
         };
         T1 hrec = div2_rect<T1>(f, f0, f1, n1);
-        return f5(hrec);
+        return f5(std::move(hrec));
       }
     }
   }
@@ -578,7 +578,7 @@ struct FunctionVernac {
         return f1(a0, a1_value, _pa0);
       };
       T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
-      return f3(hrec);
+      return f3(std::move(hrec));
     }
   }
 

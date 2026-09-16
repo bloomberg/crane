@@ -41,7 +41,7 @@ struct Currying {
   template <typename T1, typename T2, typename T3, typename F0>
     requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2> &>
   static T3 curry(F0 &&f, T1 a, T2 b) {
-    return f(pair<T1, T2>::pair0(a, b));
+    return f(pair<T1, T2>::pair0(std::move(a), std::move(b)));
   }
 
   template <typename T1, typename T2, typename T3, typename F0>

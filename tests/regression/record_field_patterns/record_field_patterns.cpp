@@ -77,9 +77,9 @@ RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
   RecordFieldPatterns::Point seg_start0 = s.seg_start;
   RecordFieldPatterns::Point seg_end0 = s.seg_end;
   uint64_t x1 = seg_start0.px;
-  uint64_t y1 = seg_start0.py;
+  uint64_t y1 = std::move(seg_start0).py;
   uint64_t x2 = seg_end0.px;
-  uint64_t y2 = seg_end0.py;
+  uint64_t y2 = std::move(seg_end0).py;
   uint64_t dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
   uint64_t dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
   return ((dx * dx) + (dy * dy));

@@ -204,7 +204,7 @@ struct UpdateNthBounds {
   template <typename T1>
   static List<T1> update_nth(uint64_t n, T1 x, List<T1> l) {
     if (n < l.length()) {
-      return l.firstn(n).app(List<T1>::cons(x, l.skipn((n + 1))));
+      return l.firstn(n).app(List<T1>::cons(std::move(x), l.skipn((n + 1))));
     } else {
       return l;
     }

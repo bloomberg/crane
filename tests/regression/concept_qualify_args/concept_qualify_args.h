@@ -106,7 +106,7 @@ concept HasElements = requires {
 struct ConceptQualifyArgs {
   template <HasElements E> struct UseElements {
     static typename E::t first_or_default(typename E::t x0_) {
-      return E::head_or(x0_);
+      return E::head_or(std::move(x0_));
     }
   };
 

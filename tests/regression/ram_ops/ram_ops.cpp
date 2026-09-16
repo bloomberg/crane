@@ -285,15 +285,15 @@ RamOps::write_status0(const RamOps::state_nested_bank &s, uint64_t v) {
   RamOps::chip_nested_bank c = get_chip0(b);
   RamOps::reg_nested_bank r = get_reg0(c);
   RamOps::reg_nested_bank r_ = reg_nested_bank{
-      update_nth_nested_bank<uint64_t>(UINT64_C(0), v, r.status_)};
+      update_nth_nested_bank<uint64_t>(UINT64_C(0), v, std::move(r).status_)};
   RamOps::chip_nested_bank c_ =
       chip_nested_bank{update_nth_nested_bank<RamOps::reg_nested_bank>(
-          UINT64_C(0), r_, c.regs_)};
+          UINT64_C(0), std::move(r_), std::move(c).regs_)};
   RamOps::bank_nested_bank b_ =
       bank_nested_bank{update_nth_nested_bank<RamOps::chip_nested_bank>(
-          UINT64_C(0), c_, b.chips_)};
+          UINT64_C(0), std::move(c_), std::move(b).chips_)};
   return state_nested_bank{update_nth_nested_bank<RamOps::bank_nested_bank>(
-      UINT64_C(0), b_, s.banks_)};
+      UINT64_C(0), std::move(b_), s.banks_)};
 }
 
 uint64_t RamOps::read_status0(const RamOps::state_nested_bank &s) {

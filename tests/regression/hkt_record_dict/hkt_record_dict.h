@@ -83,8 +83,8 @@ struct HktRecordDict {
   template <template <typename> class T1, typename T2, typename F1,
             typename T3 = std::invoke_result_t<F1 &, T2 &>>
   static T1<T3> fmd(const FnD<T1<std::any>> &f, F1 &&x, T1<T2> x0) {
-    return crane_container_cast<T1<T3>>(
-        f.fmd(crane_erase_fn(x), crane_container_cast<T1<std::any>>(x0)));
+    return crane_container_cast<T1<T3>>(f.fmd(
+        crane_erase_fn(x), crane_container_cast<T1<std::any>>(std::move(x0))));
   }
 
   static inline const FnD<std::optional<std::any>> optd =

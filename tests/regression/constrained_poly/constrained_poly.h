@@ -22,7 +22,7 @@ struct ConstrainedPoly {
 
   template <typename T1, typename T2>
   static UPair<T1, T2> wrap_pair(T1 a, T2 b) {
-    return UPair<T1, T2>{a, b};
+    return UPair<T1, T2>{std::move(a), std::move(b)};
   }
 
   template <typename A> struct UOption {

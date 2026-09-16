@@ -100,7 +100,7 @@ LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
       _write = &std::get<typename LoopifyReuseBoolQualified::lst::Cons>(
                     (*_write)->v_mut())
                     .a1;
-      _own = std::move(_rs.next);
+      _own = std::move(std::move(_rs.next));
       _loop_l = _own.get();
       continue;
     }

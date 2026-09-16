@@ -1970,6 +1970,16 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
 let {Goptions.get = non_atomic_rc_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 
+(* --- Last-use moves --------------------------------------------------- *)
+
+(* [Last_use] rewrites a local's final read as [std::move], removing a
+   refcount round-trip per hand-off.  On by default: it is a correctness-
+   preserving transform that every generated body wants, and the option is
+   here so that a body it gets wrong can be diagnosed by turning it off rather
+   than by rebuilding the plugin. *)
+let {Goptions.get = move_last_use} =
+  declare_bool_option_and_ref ~key:["Crane"; "MoveLastUse"] ~value:true ()
+
 (* --- Scoped-arena master switch -------------------------------------- *)
 
 (* [Set Crane Arena] turns on the runtime scoped-arena machinery for a whole

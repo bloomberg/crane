@@ -17,6 +17,13 @@ open Minicpp
 val transform_decl :
   ?tparams:(template_type * Id.t) list -> cpp_decl -> cpp_decl
 
+val worthwhile_move_type : cpp_type -> bool
+(** Whether a value of this type is expensive enough to copy that writing
+    [std::move] around it earns its keep: a reference count to bump, an
+    inductive to clone, or a type parameter that may be either.  Exported for
+    {!Last_use}, which asks the same question of a local as loopify asks of a
+    frame field. *)
+
 (** Pre-register a function definition for mutual recursion detection.
     Call this for all functions in a mutual fixpoint group before any of
     them are individually transformed, so that [transform_decl] can

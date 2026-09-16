@@ -2,6 +2,7 @@
 #define INCLUDED_SECTIONS_MODULES
 
 #include <concepts>
+#include <utility>
 
 template <typename M>
 concept Semigroup = requires {
@@ -53,7 +54,9 @@ struct SectionsModules {
   template <Semigroup M> struct MakeDoubleOp {
     static typename M::T double_(typename M::T x) { return M::op(x, x); }
 
-    static typename M::T quad(typename M::T x) { return double_(double_(x)); }
+    static typename M::T quad(typename M::T x) {
+      return double_(double_(std::move(x)));
+    }
   };
 
   using NatDoubleOp = MakeDoubleOp<NatMonoid>;

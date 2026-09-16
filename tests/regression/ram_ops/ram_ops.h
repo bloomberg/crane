@@ -122,7 +122,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -130,7 +130,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_main<T1>(n_, x, *a10));
+        return List<T1>::cons(a00, update_nth_main<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -198,7 +198,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -206,7 +206,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_port<T1>(n_, x, *a10));
+        return List<T1>::cons(a00, update_nth_port<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -260,7 +260,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -268,7 +268,8 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_status<T1>(n_, x, *a10));
+        return List<T1>::cons(a00,
+                              update_nth_status<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -460,7 +461,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -468,7 +469,8 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_frame<T1>(n_, x, *a10));
+        return List<T1>::cons(a00,
+                              update_nth_frame<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -545,7 +547,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -553,7 +555,8 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_preserve<T1>(n_, x, *a10));
+        return List<T1>::cons(a00,
+                              update_nth_preserve<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -616,7 +619,7 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -624,7 +627,8 @@ struct RamOps {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth_nested_bank<T1>(n_, x, *a10));
+        return List<T1>::cons(
+            a00, update_nth_nested_bank<T1>(n_, std::move(x), *a10));
       }
     }
   }
@@ -727,7 +731,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *a10, default0);
+      return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }
 }

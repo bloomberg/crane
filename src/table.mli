@@ -764,6 +764,11 @@ val check_non_atomic_rc_request : unit -> unit
     swaps the factory, never the pointer representation. *)
 val arena_enabled : unit -> bool
 
+val move_last_use : unit -> bool
+(** [Crane MoveLastUse], on by default: whether {!Last_use} rewrites a local's
+    final read as [std::move].  Unset it to rule the pass out when diagnosing a
+    generated body. *)
+
 val count_rc : unit -> bool
 (** Whether [CRANE_COUNT_RC=1] is set: spell every shared pointer
     [crane::counting_ptr] (count_rc.h) so the run reports its reference-count

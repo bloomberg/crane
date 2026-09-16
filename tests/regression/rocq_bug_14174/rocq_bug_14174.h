@@ -275,7 +275,7 @@ struct RocqBug14174 {
       }
 
       template <typename T1> T1 eq_sig_rect_exist_r(A v1, const T1 &f) const {
-        return this->eq_sig_rect(sig<A>::exist(v1), f);
+        return this->eq_sig_rect(sig<A>::exist(std::move(v1)), f);
       }
 
       template <typename T1> T1 eq_sig_rect_exist_l(A u1, const T1 &f) const {
@@ -332,7 +332,7 @@ struct RocqBug14174 {
       }
 
       template <typename T1> T1 eq_sig2_rect_exist2_r(A v1, const T1 &f) const {
-        return this->eq_sig2_rect(sig2<A>::exist2(v1), f);
+        return this->eq_sig2_rect(sig2<A>::exist2(std::move(v1)), f);
       }
 
       template <typename T1> T1 eq_sig2_rect_exist2_l(A u1, const T1 &f) const {
@@ -397,7 +397,8 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT_rect_existT_r(A v1, P v2, const T1 &f) const {
-        return this->eq_sigT_rect(sigT<A, P>::existt(v1, v2), f);
+        return this->eq_sigT_rect(
+            sigT<A, P>::existt(std::move(v1), std::move(v2)), f);
       }
 
       template <typename T1>
@@ -471,7 +472,10 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT2_rect_existT2_r(A v1, P v2, Q v3, const T1 &f) const {
-        return this->eq_sigT2_rect(sigT2<A, P, Q>::existt2(v1, v2, v3), f);
+        return this->eq_sigT2_rect(sigT2<A, P, Q>::existt2(std::move(v1),
+                                                           std::move(v2),
+                                                           std::move(v3)),
+                                   f);
       }
 
       template <typename T1>
@@ -553,26 +557,29 @@ struct RocqBug14174 {
     template <typename T1, typename T2, typename T3>
     static T3 eq_sigT_rect_existT(T1 u1, T2 u2, T1 v1, T2 v2, const T3 &f) {
       return sigT<T1, T2>::existt(u1, u2).template eq_sigT_rect<T3>(
-          sigT<T1, T2>::existt(v1, v2), f);
+          sigT<T1, T2>::existt(std::move(v1), std::move(v2)), f);
     }
 
     template <typename T1, typename T2>
     static T2 eq_sig_rect_exist(T1 u1, T1 v1, const T2 &f) {
-      return sig<T1>::exist(u1).template eq_sig_rect<T2>(sig<T1>::exist(v1), f);
+      return sig<T1>::exist(u1).template eq_sig_rect<T2>(
+          sig<T1>::exist(std::move(v1)), f);
     }
 
     template <typename T1, typename T2, typename T3, typename T4>
     static T4 eq_sigT2_rect_existT2(T1 u1, T2 u2, T3 u3, T1 v1, T2 v2, T3 v3,
                                     const T4 &f) {
       return sigT2<T1, T2, T3>::existt2(u1, u2, u3)
-          .template eq_sigT2_rect<T4>(sigT2<T1, T2, T3>::existt2(v1, v2, v3),
+          .template eq_sigT2_rect<T4>(sigT2<T1, T2, T3>::existt2(std::move(v1),
+                                                                 std::move(v2),
+                                                                 std::move(v3)),
                                       f);
     }
 
     template <typename T1, typename T2>
     static T2 eq_sig2_rect_exist2(T1 u1, T1 v1, const T2 &f) {
       return sig2<T1>::exist2(u1).template eq_sig2_rect<T2>(
-          sig2<T1>::exist2(v1), f);
+          sig2<T1>::exist2(std::move(v1)), f);
     }
     enum class Sumbool { LEFT, RIGHT };
 
@@ -722,13 +729,13 @@ struct RocqBug14174 {
         }
       };
       auto f = [=](Nat n) mutable -> T1 { return f_impl(f_impl, n); };
-      return sig<std::function<T1(Nat)>>::exist(f);
+      return sig<std::function<T1(Nat)>>::exist(std::move(f));
     }
 
     template <typename a> using Exc = Option<a>;
 
     template <typename T1> static Option<T1> value(T1 x) {
-      return Option<T1>::some(x);
+      return Option<T1>::some(std::move(x));
     }
 
     template <typename T1> static const Option<T1> &error() {

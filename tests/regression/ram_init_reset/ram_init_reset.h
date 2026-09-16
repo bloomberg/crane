@@ -102,7 +102,7 @@ struct RamInitReset {
         return List<T1>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(std::move(x), *a1);
       }
     } else {
       uint64_t n_ = n - 1;
@@ -110,7 +110,7 @@ struct RamInitReset {
         return List<T1>::nil();
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(a00, update_nth<T1>(n_, x, *a10));
+        return List<T1>::cons(a00, update_nth<T1>(n_, std::move(x), *a10));
       }
     }
   }

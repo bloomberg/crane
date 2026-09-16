@@ -150,7 +150,7 @@ struct AssocTypeFieldArgument {
     static List<uint64_t> empty() { return List<uint64_t>::nil(); }
 
     static List<uint64_t> insert(uint64_t x, List<uint64_t> c) {
-      return List<uint64_t>::cons(x, c);
+      return List<uint64_t>::cons(x, std::move(c));
     }
 
     static uint64_t size(List<uint64_t> a0) { return a0.length(); }
@@ -168,7 +168,7 @@ struct AssocTypeFieldArgument {
     static List<std::pair<uint64_t, uint64_t>>
     insert(std::pair<uint64_t, uint64_t> x,
            List<std::pair<uint64_t, uint64_t>> c) {
-      return List<std::pair<uint64_t, uint64_t>>::cons(x, c);
+      return List<std::pair<uint64_t, uint64_t>>::cons(x, std::move(c));
     }
 
     static uint64_t size(List<std::pair<uint64_t, uint64_t>> a0) {

@@ -138,7 +138,7 @@ struct ShadowRuntimeNat {
       return f;
     } else {
       const auto &[a0] = std::get<typename Nat::S2>(n.v());
-      return f0(*a0, Nat_rect<T1>(f, f0, *a0));
+      return f0(*a0, Nat_rect<T1>(std::move(f), f0, *a0));
     }
   }
 
@@ -149,7 +149,7 @@ struct ShadowRuntimeNat {
       return f;
     } else {
       const auto &[a0] = std::get<typename Nat::S2>(n.v());
-      return f0(*a0, Nat_rec<T1>(f, f0, *a0));
+      return f0(*a0, Nat_rec<T1>(std::move(f), f0, *a0));
     }
   }
 

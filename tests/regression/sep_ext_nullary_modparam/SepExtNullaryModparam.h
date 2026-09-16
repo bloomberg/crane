@@ -2,6 +2,7 @@
 #define INCLUDED_SEPEXTNULLARYMODPARAM
 
 #include <concepts>
+#include <utility>
 
 namespace SepExtNullaryModparam {
 
@@ -59,7 +60,7 @@ template <IntLike I> struct Counter {
   }
 
   static typename I::t step(typename I::t x) {
-    return I::add(x, [] {
+    return I::add(std::move(x), [] {
       if constexpr (requires { I::one(); })
         return I::one();
       else
@@ -68,7 +69,7 @@ template <IntLike I> struct Counter {
   }
 
   static bool is_zero(typename I::t x) {
-    return I::eqb(x, [] {
+    return I::eqb(std::move(x), [] {
       if constexpr (requires { I::zero(); })
         return I::zero();
       else

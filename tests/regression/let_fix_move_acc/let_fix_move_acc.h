@@ -119,7 +119,8 @@ struct LetFixMoveAcc {
     auto rev = [&](const List<T1> &xs, List<T1> acc) -> List<T1> {
       return rev_impl(rev_impl, xs, acc);
     };
-    return rev(rev(l, List<T1>::nil()), List<T1>::cons(x, List<T1>::nil()));
+    return rev(rev(l, List<T1>::nil()),
+               List<T1>::cons(std::move(x), List<T1>::nil()));
   }
 
   static inline const List<uint64_t> test_rev =

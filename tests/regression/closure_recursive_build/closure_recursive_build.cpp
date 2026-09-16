@@ -23,7 +23,7 @@ ClosureRecursiveBuild::fn_list ClosureRecursiveBuild::build_adders(uint64_t n) {
     auto adder = [=](uint64_t x) mutable -> uint64_t {
       return adder_impl(adder_impl, x);
     };
-    return fn_list::fcons(adder, build_adders(n_));
+    return fn_list::fcons(std::move(adder), build_adders(n_));
   }
 }
 

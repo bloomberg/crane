@@ -91,7 +91,7 @@ struct FixMoveCapture {
       return f0;
     } else {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(a0, *a1, mylist_rect<T1>(f0, f1, *a1));
+      return f1(a0, *a1, mylist_rect<T1>(std::move(f0), f1, *a1));
     }
   }
 
@@ -102,7 +102,7 @@ struct FixMoveCapture {
       return f0;
     } else {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f1(a0, *a1, mylist_rec<T1>(f0, f1, *a1));
+      return f1(a0, *a1, mylist_rec<T1>(std::move(f0), f1, *a1));
     }
   }
 

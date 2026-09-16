@@ -13,7 +13,7 @@ LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
   } else {
     new_rom = s.rom;
   }
-  return state{new_rom, s.prom_addr, s.prom_data, s.prom_enable};
+  return state{std::move(new_rom), s.prom_addr, s.prom_data, s.prom_enable};
 }
 
 LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
@@ -44,8 +44,8 @@ LoadProgram::execute_wpm_ext(const LoadProgram::state_extended &s) {
   } else {
     new_rom = s.rom_ext;
   }
-  return state_extended{s.regs_len,       new_rom,         s.pc,
-                        s.stack_len,      s.prom_addr_ext, s.prom_data_ext,
+  return state_extended{s.regs_len,       std::move(new_rom), s.pc,
+                        s.stack_len,      s.prom_addr_ext,    s.prom_data_ext,
                         s.prom_enable_ext};
 }
 

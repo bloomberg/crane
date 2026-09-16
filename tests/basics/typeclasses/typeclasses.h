@@ -151,7 +151,7 @@ struct Typeclasses {
       auto sum = [&](const List<T1> &l) -> uint64_t {
         return sum_impl(sum_impl, l);
       };
-      return sum(a0);
+      return sum(std::move(a0));
     }
   };
 

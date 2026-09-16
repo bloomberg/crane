@@ -211,7 +211,9 @@ struct MonoidClassArg {
   template <typename T1> struct MList {
     static List<T1> unit_() { return List<T1>::nil(); }
 
-    static List<T1> op(List<T1> a0, List<T1> a1) { return a0.app(a1); }
+    static List<T1> op(List<T1> a0, List<T1> a1) {
+      return a0.app(std::move(a1));
+    }
   };
 
   template <typename _tcI0, typename _tcI1, typename T1, typename T2>

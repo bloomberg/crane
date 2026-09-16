@@ -86,7 +86,7 @@ uint64_t RecordCaseBody::nested_record_match(const RecordCaseBody::RecRec &rr) {
   uint64_t n = rr.outer_field;
   uint64_t a = r.f1;
   uint64_t b = r.f2;
-  uint64_t c = r.f3;
+  uint64_t c = std::move(r).f3;
   return (((a + b) + c) + n);
 }
 

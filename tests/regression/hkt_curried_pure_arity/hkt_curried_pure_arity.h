@@ -104,7 +104,7 @@ struct HktCurriedPureArity {
   static typename _tcI0::template F<T3>
   ap(typename _tcI0::template F<std::function<T3(T2)>> x,
      typename _tcI0::template F<T2> x0) {
-    return _tcI0::template ap<T2, T3>(x, x0);
+    return _tcI0::template ap<T2, T3>(std::move(x), std::move(x0));
   }
 
   struct ApOpt {

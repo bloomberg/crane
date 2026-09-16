@@ -240,7 +240,8 @@ struct Matcher {
       return f4;
     } else {
       const auto &[r2] = std::get<typename regexp::Star>(r.v());
-      return f5(*r2, regexp_rect<T1>(f, f0, f1, f2, f3, f4, f5, *r2));
+      return f5(*r2, regexp_rect<T1>(std::move(f), f0, std::move(f1), f2, f3,
+                                     std::move(f4), f5, *r2));
     }
   }
 
@@ -270,7 +271,8 @@ struct Matcher {
       return f4;
     } else {
       const auto &[r2] = std::get<typename regexp::Star>(r.v());
-      return f5(*r2, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r2));
+      return f5(*r2, regexp_rec<T1>(std::move(f), f0, std::move(f1), f2, f3,
+                                    std::move(f4), f5, *r2));
     }
   }
 

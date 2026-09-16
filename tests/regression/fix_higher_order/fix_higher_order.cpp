@@ -19,7 +19,7 @@ FixHigherOrder::make_wrapped(uint64_t base) {
     }
   };
   auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
-  return wrap_fn(go);
+  return wrap_fn(std::move(go));
 }
 
 std::optional<std::optional<std::function<uint64_t(uint64_t)>>>
@@ -33,5 +33,5 @@ FixHigherOrder::make_double_wrapped(uint64_t base) {
     }
   };
   auto go = [=](uint64_t x) mutable -> uint64_t { return go_impl(go_impl, x); };
-  return double_wrap(go);
+  return double_wrap(std::move(go));
 }

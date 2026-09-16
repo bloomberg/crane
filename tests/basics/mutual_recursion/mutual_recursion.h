@@ -231,7 +231,7 @@ struct MutualRecursion {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename forest<T1>::Trees>(f1.v());
-      return f0(*a0, *a1, forest_rect<T1, T2>(f, f0, *a1));
+      return f0(*a0, *a1, forest_rect<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -242,7 +242,7 @@ struct MutualRecursion {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename forest<T1>::Trees>(f1.v());
-      return f0(*a0, *a1, forest_rec<T1, T2>(f, f0, *a1));
+      return f0(*a0, *a1, forest_rec<T1, T2>(std::move(f), f0, *a1));
     }
   }
 

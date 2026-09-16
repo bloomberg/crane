@@ -206,7 +206,7 @@ struct Sort {
       } else {
         const auto &[a00, a10] = std::get<typename List<T1>::Cons>(_sv0.v());
         return x2(a0, a00, *a10, x1(a0, a00),
-                  div_conq_pair<T1, T2>(x, x0, x1, x2, *a10));
+                  div_conq_pair<T1, T2>(std::move(x), x0, x1, x2, *a10));
       }
     }
   }

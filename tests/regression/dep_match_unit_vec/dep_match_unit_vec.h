@@ -99,7 +99,7 @@ struct DepMatchUnitVec {
       return f;
     } else {
       const auto &[n0, a1, a2] = std::get<typename vec<T1>::Vcons>(v.v());
-      return f0(n0, a1, *a2, vec_rect<T1, T2>(f, f0, n0, *a2));
+      return f0(n0, a1, *a2, vec_rect<T1, T2>(std::move(f), f0, n0, *a2));
     }
   }
 
@@ -110,7 +110,7 @@ struct DepMatchUnitVec {
       return f;
     } else {
       const auto &[n0, a1, a2] = std::get<typename vec<T1>::Vcons>(v.v());
-      return f0(n0, a1, *a2, vec_rec<T1, T2>(f, f0, n0, *a2));
+      return f0(n0, a1, *a2, vec_rec<T1, T2>(std::move(f), f0, n0, *a2));
     }
   }
 

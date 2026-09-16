@@ -8,5 +8,5 @@ Nat TodoMonadicGlobalAlias::alias() { return base(); }
 
 Nat TodoMonadicGlobalAlias::rebound() {
   Nat x = base();
-  return Nat::s(x);
+  return Nat::s(std::move(x));
 }

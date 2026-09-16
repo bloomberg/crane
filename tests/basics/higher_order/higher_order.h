@@ -97,7 +97,7 @@ struct HigherOrder {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rect<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, list_rect<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -108,7 +108,7 @@ struct HigherOrder {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rec<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, list_rec<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -133,7 +133,7 @@ struct HigherOrder {
       return z;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f(a0, foldr<T1, T2>(f, z, *a1));
+      return f(a0, foldr<T1, T2>(f, std::move(z), *a1));
     }
   }
 
@@ -146,7 +146,7 @@ struct HigherOrder {
       return z;
     } else {
       const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return foldl<T1, T2>(f, f(z, a0), *a1);
+      return foldl<T1, T2>(f, f(std::move(z), a0), *a1);
     }
   }
 
@@ -166,7 +166,7 @@ struct HigherOrder {
       return x;
     } else {
       uint64_t m = n - 1;
-      return f(iterate<T1>(m, f, x));
+      return f(iterate<T1>(m, f, std::move(x)));
     }
   }
 

@@ -203,7 +203,7 @@ struct ClassMethodFunctionPayload {
     requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> bind(typename _tcI0::template M<T2> x,
                                              F1 &&x0) {
-    return _tcI0::template bind<T2, T3>(x, x0);
+    return _tcI0::template bind<T2, T3>(std::move(x), x0);
   }
 
   struct MOpt {
@@ -231,12 +231,12 @@ struct ClassMethodFunctionPayload {
     template <typename _A0> using M = List<_A0>;
 
     template <typename _A0> static List<_A0> ret(_A0 x) {
-      return List<_A0>::cons(x, List<_A0>::nil());
+      return List<_A0>::cons(std::move(x), List<_A0>::nil());
     }
 
     template <typename _A0, typename _A1>
     static List<_A1> bind(List<_A0> m, std::function<List<_A1>(_A0)> f) {
-      return m.template flat_map<_A1>(f);
+      return m.template flat_map<_A1>(std::move(f));
     }
   };
 
@@ -246,7 +246,7 @@ struct ClassMethodFunctionPayload {
   static typename _tcI0::template M<std::function<uint64_t(uint64_t)>>
   adders(typename _tcI0::template M<uint64_t> x) {
     return bind<_tcI0, uint64_t, std::function<uint64_t(uint64_t)>>(
-        x, [](uint64_t n) {
+        std::move(x), [](uint64_t n) {
           return ret<_tcI0, std::function<uint64_t(uint64_t)>>(
               [=](uint64_t k) mutable { return (k + n); });
         });

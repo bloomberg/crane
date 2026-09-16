@@ -200,12 +200,12 @@ struct HktClassParam {
   template <Container _tcI0, typename T2>
   static typename _tcI0::template C<T2>
   insert(const T2 &x, typename _tcI0::template C<T2> x0) {
-    return _tcI0::template insert<T2>(x, x0);
+    return _tcI0::template insert<T2>(x, std::move(x0));
   }
 
   template <Container _tcI0, typename T2>
   static List<T2> toList(typename _tcI0::template C<T2> x) {
-    return _tcI0::template toList<T2>(x);
+    return _tcI0::template toList<T2>(std::move(x));
   }
 
   struct ListContainer {
@@ -216,7 +216,7 @@ struct HktClassParam {
     }
 
     template <typename _A0> static List<_A0> insert(_A0 x, List<_A0> xs) {
-      return List<_A0>::cons(x, xs);
+      return List<_A0>::cons(std::move(x), std::move(xs));
     }
 
     template <typename _A0> static List<_A0> toList(List<_A0> xs) { return xs; }

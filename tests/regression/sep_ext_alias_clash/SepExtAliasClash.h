@@ -1,6 +1,8 @@
 #ifndef INCLUDED_SEPEXTALIASCLASH
 #define INCLUDED_SEPEXTALIASCLASH
 
+#include <utility>
+
 namespace SepExtAliasClash {
 
 template <typename M>
@@ -13,7 +15,9 @@ template <Sig S> struct ImplFn {
 template <Sig ST> struct LemmasFn {
   using Impl = ImplFn<ST>;
 
-  static typename ST::t bar(typename ST::t x0_) { return Impl::foo(x0_); }
+  static typename ST::t bar(typename ST::t x0_) {
+    return Impl::foo(std::move(x0_));
+  }
 };
 
 struct MySig {

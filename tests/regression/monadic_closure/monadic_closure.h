@@ -110,7 +110,7 @@ struct MonadicClosure {
     requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static T2 apply_after_effect(F0 &&f, const T1 &m) {
     T1 x = m;
-    return f(x);
+    return f(std::move(x));
   }
 
   static int64_t test_apply_after();

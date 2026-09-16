@@ -375,7 +375,7 @@ ComprehensivePatterns::let_and_proj(const ComprehensivePatterns::R2 &r2) {
 std::pair<ComprehensivePatterns::R2, ComprehensivePatterns::R2>
 ComprehensivePatterns::multi_construct(ComprehensivePatterns::R1 r1) {
   ComprehensivePatterns::R2 r2a = R2{r1, UINT64_C(0)};
-  ComprehensivePatterns::R2 r2b = R2{r1, UINT64_C(1)};
+  ComprehensivePatterns::R2 r2b = R2{std::move(r1), UINT64_C(1)};
   return std::make_pair(std::move(r2a), std::move(r2b));
 }
 

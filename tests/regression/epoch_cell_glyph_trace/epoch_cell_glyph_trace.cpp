@@ -1034,7 +1034,8 @@ EpochCellGlyphTraceCase::build_epoch_reading(
     const Z &epoch_year, const Z &epoch_month,
     EpochCellGlyphTraceCase::HistoricalEclipse e) {
   Z cell = saros_cell(epoch_year, epoch_month, e);
-  return EpochReading{state_at_cell(cell), e, cell, glyph_at_cell(cell)};
+  return EpochReading{state_at_cell(cell), std::move(e), cell,
+                      glyph_at_cell(cell)};
 }
 
 bool EpochCellGlyphTraceCase::reading_matches(

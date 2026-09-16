@@ -181,12 +181,12 @@ struct HktNullaryMethodTyarg {
   template <Coll _tcI0, typename T2>
   static typename _tcI0::template C<T2>
   addc(const T2 &x, typename _tcI0::template C<T2> x0) {
-    return _tcI0::template addc<T2>(x, x0);
+    return _tcI0::template addc<T2>(x, std::move(x0));
   }
 
   template <Coll _tcI0, typename T2>
   static Nat sizec(typename _tcI0::template C<T2> x) {
-    return _tcI0::template sizec<T2>(x);
+    return _tcI0::template sizec<T2>(std::move(x));
   }
 
   template <typename T1> static Nat llen(const List<T1> &l) {
@@ -206,11 +206,11 @@ struct HktNullaryMethodTyarg {
     }
 
     template <typename _A0> static List<_A0> addc(_A0 x, List<_A0> l) {
-      return List<_A0>::cons(x, l);
+      return List<_A0>::cons(std::move(x), std::move(l));
     }
 
     template <typename _A0> static Nat sizec(List<_A0> a0) {
-      return llen<_A0>(a0);
+      return llen<_A0>(std::move(a0));
     }
   };
 

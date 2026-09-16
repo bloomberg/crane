@@ -111,7 +111,7 @@ struct ConceptNameWithPrime {
 
   template <Ord_ O> struct Use {
     static Bool0 same(typename O::t x0_, typename O::t x1_) {
-      return O::cmp(x0_, x1_);
+      return O::cmp(std::move(x0_), std::move(x1_));
     }
   };
 

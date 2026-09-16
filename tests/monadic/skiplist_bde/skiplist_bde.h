@@ -711,8 +711,8 @@ template <typename K, typename V> struct SkipList {
   static bsl::shared_ptr<SkipNode<T1, T2>>
   findPred(F0 &&ltK, bsl::shared_ptr<SkipNode<T1, T2>> curr, const T1 &target,
            unsigned int level) {
-    return SkipList<int, int>::template findPred_go<T1, T2>(ltK, 10000u, curr,
-                                                            target, level);
+    return SkipList<int, int>::template findPred_go<T1, T2>(
+        ltK, 10000u, bsl::move(curr), target, level);
   }
   template <typename T1, typename T2, typename F0>
     requires bsl::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
@@ -756,7 +756,7 @@ template <typename K, typename V> struct SkipList {
     unsigned int _loop_level = bsl::move(level);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
-      SkipList<int, int>::template linkAtLevel<T1, T2>(pred, newNode,
+      SkipList<int, int>::template linkAtLevel<T1, T2>(bsl::move(pred), newNode,
                                                        _loop_level);
       if (_loop_level <= 0) {
         return;
@@ -796,8 +796,8 @@ template <typename K, typename V> struct SkipList {
       return;
     } else {
       SkipList<int, int>::template extendPath_aux<T1, T2>(
-          path, head, (((needed - 1u) > needed ? 0 : (needed - 1u))),
-          (currentMax + 1u));
+          bsl::move(path), bsl::move(head),
+          (((needed - 1u) > needed ? 0 : (needed - 1u))), (currentMax + 1u));
       return;
     }
   }
@@ -806,7 +806,8 @@ template <typename K, typename V> struct SkipList {
                        bsl::shared_ptr<SkipNode<T1, T2>> head,
                        bsl::shared_ptr<SkipNode<T1, T2>> newNode) {
     unsigned int lvl = newNode->level;
-    SkipList<int, int>::template linkNode_aux<T1, T2>(path, head, newNode, lvl);
+    SkipList<int, int>::template linkNode_aux<T1, T2>(
+        bsl::move(path), bsl::move(head), newNode, lvl);
     return;
   }
   template <typename T1, typename T2>
@@ -827,8 +828,8 @@ template <typename K, typename V> struct SkipList {
     unsigned int _loop_level = bsl::move(level);
     while (true) {
       bsl::shared_ptr<SkipNode<T1, T2>> pred = path.get(_loop_level);
-      SkipList<int, int>::template unlinkAtLevel<T1, T2>(pred, target,
-                                                         _loop_level);
+      SkipList<int, int>::template unlinkAtLevel<T1, T2>(bsl::move(pred),
+                                                         target, _loop_level);
       if (_loop_level <= 0) {
         return;
       } else {
@@ -842,7 +843,8 @@ template <typename K, typename V> struct SkipList {
   static void unlinkNode(SkipPath<T1, T2> path,
                          bsl::shared_ptr<SkipNode<T1, T2>> target) {
     unsigned int lvl = target->level;
-    SkipList<int, int>::template unlinkNode_aux<T1, T2>(path, target, lvl);
+    SkipList<int, int>::template unlinkNode_aux<T1, T2>(bsl::move(path), target,
+                                                        lvl);
     return;
   }
   template <typename T1, typename T2, typename F0, typename F1>
@@ -1046,7 +1048,7 @@ template <typename K, typename V> struct SkipList {
                    bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>>>
   bde_next(bsl::shared_ptr<SkipNode<T1, T2>> pair) {
     bsl::optional<bsl::shared_ptr<SkipNode<T1, T2>>> nextOpt =
-        SkipList<int, int>::template next<T1, T2>(pair);
+        SkipList<int, int>::template next<T1, T2>(bsl::move(pair));
     if (nextOpt.has_value()) {
       bsl::shared_ptr<SkipNode<T1, T2>> node = *nextOpt;
       return bsl::make_pair(
@@ -1063,7 +1065,7 @@ template <typename K, typename V> struct SkipList {
         dummyKey, dummyVal, (((16u - 1u) > 16u ? 0 : (16u - 1u))));
     stm::TVar<unsigned int> lvlTV = stm::newTVar(0u);
     stm::TVar<unsigned int> lenTV = stm::newTVar(0u);
-    return SkipList<T1, T2>{headNode, 16u, lvlTV, lenTV};
+    return SkipList<T1, T2>{bsl::move(headNode), 16u, lvlTV, lenTV};
   }
   template <typename T1, typename T2>
   static SkipList<T1, T2> createIO(const T1 &dummyKey, const T2 &dummyVal) {

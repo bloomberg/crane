@@ -8,7 +8,7 @@ MemSafetyProbe12::wrap MemSafetyProbe12::pack_fn_let(uint64_t base) {
   std::function<uint64_t(uint64_t)> f = [=](uint64_t x) mutable {
     return (x + base);
   };
-  return wrap::wrap0(f);
+  return wrap::wrap0(std::move(f));
 }
 
 /// TEST 4: Pack a DIRECT lambda (no let-binding).

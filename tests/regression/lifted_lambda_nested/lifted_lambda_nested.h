@@ -75,7 +75,7 @@ struct LiftedLambdaNested {
       return f;
     } else {
       const auto &[a0] = std::get<typename t::N>(t0.v());
-      return f0(*a0, t_rect<T1>(f, f0, *a0));
+      return f0(*a0, t_rect<T1>(std::move(f), f0, *a0));
     }
   }
 
@@ -86,7 +86,7 @@ struct LiftedLambdaNested {
       return f;
     } else {
       const auto &[a0] = std::get<typename t::N>(t0.v());
-      return f0(*a0, t_rec<T1>(f, f0, *a0));
+      return f0(*a0, t_rec<T1>(std::move(f), f0, *a0));
     }
   }
 

@@ -81,7 +81,7 @@ struct ClosureRecursiveBuild {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(a0, *a1, fn_list_rect<T1>(f, f0, *a1));
+      return f0(a0, *a1, fn_list_rect<T1>(std::move(f), f0, *a1));
     }
   }
 
@@ -93,7 +93,7 @@ struct ClosureRecursiveBuild {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(a0, *a1, fn_list_rec<T1>(f, f0, *a1));
+      return f0(a0, *a1, fn_list_rec<T1>(std::move(f), f0, *a1));
     }
   }
 

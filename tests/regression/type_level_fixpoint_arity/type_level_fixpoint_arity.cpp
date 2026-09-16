@@ -13,12 +13,13 @@ TypeLevelFixpointArity::nfun TypeLevelFixpointArity::constN(uint64_t n,
 uint64_t TypeLevelFixpointArity::apply1(TypeLevelFixpointArity::nfun f,
                                         uint64_t x) {
   return std::any_cast<uint64_t>(
-      std::any_cast<std::function<std::any(std::any)>>(f)(x));
+      std::any_cast<std::function<std::any(std::any)>>(std::move(f))(x));
 }
 
 uint64_t TypeLevelFixpointArity::apply2(TypeLevelFixpointArity::nfun f,
                                         uint64_t x, uint64_t y) {
   return std::any_cast<uint64_t>(
       std::any_cast<std::function<std::any(std::any)>>(
-          std::any_cast<std::function<std::any(std::any)>>(f)(x))(y));
+          std::any_cast<std::function<std::any(std::any)>>(std::move(f))(x))(
+          y));
 }

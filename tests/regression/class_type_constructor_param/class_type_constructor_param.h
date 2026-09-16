@@ -33,7 +33,7 @@ struct ClassTypeConstructorParam {
     requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3>
   cmap(F0 &&x, typename _tcI0::template F<T2> x0) {
-    return _tcI0::template cmap<T2, T3>(x, x0);
+    return _tcI0::template cmap<T2, T3>(x, std::move(x0));
   }
 
   template <Container _tcI0, typename T2>
@@ -43,7 +43,7 @@ struct ClassTypeConstructorParam {
 
   template <Container _tcI0, typename T2>
   static T2 cout(typename _tcI0::template F<T2> x) {
-    return _tcI0::template cout<T2>(x);
+    return _tcI0::template cout<T2>(std::move(x));
   }
 
   struct IdC {
@@ -51,7 +51,7 @@ struct ClassTypeConstructorParam {
 
     template <typename _A0, typename _A1>
     static _A1 cmap(std::function<_A1(_A0)> f, _A0 a0) {
-      return f(a0);
+      return f(std::move(a0));
     }
 
     template <typename _A0> static _A0 cwrap(_A0 x) { return x; }

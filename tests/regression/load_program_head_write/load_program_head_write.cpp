@@ -35,7 +35,7 @@ LoadProgramHeadWrite::execute_wpm(const LoadProgramHeadWrite::state &s) {
   } else {
     new_rom = s.rom;
   }
-  return state{new_rom, s.prom_addr, s.prom_data, s.prom_enable};
+  return state{std::move(new_rom), s.prom_addr, s.prom_data, s.prom_enable};
 }
 
 LoadProgramHeadWrite::state

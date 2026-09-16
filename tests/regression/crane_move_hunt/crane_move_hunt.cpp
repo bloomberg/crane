@@ -80,7 +80,7 @@ CraneMoveHunt::state effect_frame(const CraneMoveHunt::state &s0) {
   tick(s1);
   tick(s1);
   CraneMoveHunt::state s2 = CraneMoveHunt::resolve_state(s1);
-  tick(s1);
+  tick(std::move(s1));
   tick(s2);
   return s2;
 }

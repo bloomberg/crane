@@ -189,7 +189,8 @@ MemSafetyProbe13::depth_fns(const MemSafetyProbe13::tree &t,
       auto _cell = std::make_shared<
           MemSafetyProbe13::mylist<std::function<uint64_t(uint64_t)>>>(
           typename MemSafetyProbe13::mylist<
-              std::function<uint64_t(uint64_t)>>::Mycons(f, nullptr));
+              std::function<uint64_t(uint64_t)>>::Mycons(std::move(f),
+                                                         nullptr));
       *_write = std::move(_cell);
       _write = &std::get<typename MemSafetyProbe13::mylist<
           std::function<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())

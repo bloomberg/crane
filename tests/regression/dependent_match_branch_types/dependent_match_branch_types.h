@@ -148,7 +148,7 @@ struct DependentMatchBranchTypes {
       return f;
     } else {
       const auto &[n1, a1, a2] = std::get<typename vec::Vcons>(v.v());
-      return f0(n1, a1, *a2, vec_rect<T1>(f, f0, n1, *a2));
+      return f0(n1, a1, *a2, vec_rect<T1>(std::move(f), f0, n1, *a2));
     }
   }
 
@@ -159,7 +159,7 @@ struct DependentMatchBranchTypes {
       return f;
     } else {
       const auto &[n1, a1, a2] = std::get<typename vec::Vcons>(v.v());
-      return f0(n1, a1, *a2, vec_rec<T1>(f, f0, n1, *a2));
+      return f0(n1, a1, *a2, vec_rec<T1>(std::move(f), f0, n1, *a2));
     }
   }
 

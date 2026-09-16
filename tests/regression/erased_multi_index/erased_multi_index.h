@@ -177,7 +177,7 @@ struct ErasedMultiIndex {
       using _Frame = std::variant<_Enter, _Resume_HCons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, f0});
+      _stack.emplace_back(_Enter{_self, std::move(f0)});
       /// Loopified hlist_rec: _Enter -> _Resume_HCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -192,7 +192,8 @@ struct ErasedMultiIndex {
           } else {
             const auto &[a0, a1] = std::get<typename hlist::HCons>(_sv.v());
             _stack.emplace_back(_Resume_HCons{f0, *a1, a0});
-            _stack.emplace_back(_Enter{crane_raw(a1), crane_erase_fn<T1>(f0)});
+            _stack.emplace_back(
+                _Enter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
           }
         } else {
           auto _f = std::move(std::get<_Resume_HCons>(_frame));
@@ -223,7 +224,7 @@ struct ErasedMultiIndex {
       using _Frame = std::variant<_Enter, _Resume_HCons>;
       T1 _result{};
       crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, f0});
+      _stack.emplace_back(_Enter{_self, std::move(f0)});
       /// Loopified hlist_rect: _Enter -> _Resume_HCons.
       while (!_stack.empty()) {
         _Frame _frame = std::move(_stack.back());
@@ -238,7 +239,8 @@ struct ErasedMultiIndex {
           } else {
             const auto &[a0, a1] = std::get<typename hlist::HCons>(_sv.v());
             _stack.emplace_back(_Resume_HCons{f0, *a1, a0});
-            _stack.emplace_back(_Enter{crane_raw(a1), crane_erase_fn<T1>(f0)});
+            _stack.emplace_back(
+                _Enter{crane_raw(a1), crane_erase_fn<T1>(std::move(f0))});
           }
         } else {
           auto _f = std::move(std::get<_Resume_HCons>(_frame));

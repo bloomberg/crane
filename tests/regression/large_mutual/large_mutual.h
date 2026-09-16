@@ -660,7 +660,7 @@ struct LargeMutual {
                 stmt_rect<T1>(f, f0, f1, f2, f3, *a2));
     } else if (std::holds_alternative<typename stmt::SWhile>(s.v())) {
       const auto &[a0, a1] = std::get<typename stmt::SWhile>(s.v());
-      return f2(*a0, *a1, stmt_rect<T1>(f, f0, f1, f2, f3, *a1));
+      return f2(*a0, *a1, stmt_rect<T1>(f, f0, f1, f2, std::move(f3), *a1));
     } else {
       return f3;
     }
@@ -686,7 +686,7 @@ struct LargeMutual {
                 stmt_rec<T1>(f, f0, f1, f2, f3, *a2));
     } else if (std::holds_alternative<typename stmt::SWhile>(s.v())) {
       const auto &[a0, a1] = std::get<typename stmt::SWhile>(s.v());
-      return f2(*a0, *a1, stmt_rec<T1>(f, f0, f1, f2, f3, *a1));
+      return f2(*a0, *a1, stmt_rec<T1>(f, f0, f1, f2, std::move(f3), *a1));
     } else {
       return f3;
     }
@@ -783,7 +783,8 @@ struct LargeMutual {
                 bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, *a1));
     } else {
       const auto &[a0] = std::get<typename bexpr::BNot>(b.v());
-      return f5(*a0, bexpr_rect<T1>(f, f0, f1, f2, f3, f4, f5, *a0));
+      return f5(*a0, bexpr_rect<T1>(std::move(f), std::move(f0), f1, f2, f3, f4,
+                                    f5, *a0));
     }
   }
 
@@ -816,7 +817,8 @@ struct LargeMutual {
                 bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, *a1));
     } else {
       const auto &[a0] = std::get<typename bexpr::BNot>(b.v());
-      return f5(*a0, bexpr_rec<T1>(f, f0, f1, f2, f3, f4, f5, *a0));
+      return f5(*a0, bexpr_rec<T1>(std::move(f), std::move(f0), f1, f2, f3, f4,
+                                   f5, *a0));
     }
   }
 

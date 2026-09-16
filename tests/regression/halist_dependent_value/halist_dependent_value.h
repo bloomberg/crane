@@ -312,7 +312,7 @@ struct HalistDependentValue {
 
 template <typename T1>
 bool EquivDec::equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_) {
-  return eqDec(x0_, x1_);
+  return eqDec(x0_, std::move(x1_));
 }
 
 template <typename T1, typename T2>
@@ -332,8 +332,8 @@ template <typename T1, typename T2>
 halist<T1, T2> HAList::halist_add(EqDec<T1> eq, T1 k, T2 v,
                                   const List<SigT<T1, T2>> &m) {
   return List<SigT<T1, T2>>::cons(
-      SigT<T1, T2>::existt(k, v),
-      HAList::template halist_remove<T1, T2>(eq, k, m));
+      SigT<T1, T2>::existt(k, std::move(v)),
+      HAList::template halist_remove<T1, T2>(std::move(eq), k, m));
 }
 
 template <typename T1, typename T2>

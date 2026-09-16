@@ -34,7 +34,7 @@ ClosureMapEscape::map_to_adders(const ClosureMapEscape::mylist<uint64_t> &l) {
       return add_impl(add_impl, x);
     };
     return mylist<std::function<uint64_t(uint64_t)>>::mycons(
-        add, map_to_adders(a1_value));
+        std::move(add), map_to_adders(a1_value));
   }
 }
 

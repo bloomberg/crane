@@ -71,6 +71,9 @@ let finish ~loopify decl =
   (* An initialiser nested deeper than a compiler will parse becomes a run of
      bindings; everything shallower is left as it stands. *)
   let decl = Cpp_depth.flatten decl in
+  (* With the frames and temporaries in their final places, a local's last
+     read is visible, and becomes a move. *)
+  let decl = if Table.move_last_use () then Last_use.transform_decl decl else decl in
   (* Writing a type down is what decides its representation, so settle the
      [Topaque] slots before anything reads the declaration as final.  Crossing
      this seam is what gives {!Cpp_erasure.settled}, the printer's input

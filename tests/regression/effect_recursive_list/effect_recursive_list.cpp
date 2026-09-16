@@ -9,7 +9,7 @@ List<std::string> EffectRecursiveList::read_n_lines(uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(line, rest);
+    return List<std::string>::cons(line, std::move(rest));
   }
 }
 
@@ -52,7 +52,7 @@ EffectRecursiveList::collect_envs(const List<std::string> &names) {
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     List<std::optional<std::string>> vals = collect_envs(*a1);
-    return List<std::optional<std::string>>::cons(val, vals);
+    return List<std::optional<std::string>>::cons(val, std::move(vals));
   }
 }
 
@@ -60,5 +60,5 @@ EffectRecursiveList::collect_envs(const List<std::string> &names) {
 List<std::string> EffectRecursiveList::read_and_prepend(List<std::string> xs) {
   std::string line;
   std::getline(std::cin, line);
-  return List<std::string>::cons(line, xs);
+  return List<std::string>::cons(line, std::move(xs));
 }

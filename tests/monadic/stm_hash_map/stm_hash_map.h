@@ -301,7 +301,7 @@ template <typename K, typename V> struct CHT {
       return CHT<T1, T2>{eqb, hash, v, 1, fb};
     } else {
       stm::TVar<List<std::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{eqb, hash, bs, n, b};
+      return CHT<T1, T2>{eqb, hash, bs, n, std::move(b)};
     }
   }
 };

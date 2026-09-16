@@ -84,11 +84,12 @@ struct DoubleOppositeWitnessesCase {
     using Obj = typename _tcI0::Obj;
 
     static std::any identity(Obj x) {
-      return crane_erase_fn(_tcI0::identity(x));
+      return crane_erase_fn(_tcI0::identity(std::move(x)));
     }
 
     static std::any compose(Obj x, Obj y, Obj z, std::any f, std::any g) {
-      return crane_erase_fn(_tcI0::compose(z, y, x, g, f));
+      return crane_erase_fn(
+          _tcI0::compose(std::move(z), std::move(y), std::move(x), g, f));
     }
   };
 

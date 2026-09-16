@@ -22,5 +22,5 @@ ExistentialClosureProbe::pack_composed(uint64_t a, uint64_t b) {
   std::function<uint64_t(uint64_t)> g = [=](uint64_t x) mutable {
     return (f(x) * b);
   };
-  return wrap::wrap0(g);
+  return wrap::wrap0(std::move(g));
 }

@@ -113,7 +113,7 @@ struct FoldClosureBuild {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rect<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, mylist_rect<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -124,7 +124,7 @@ struct FoldClosureBuild {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(f, f0, *a1));
+      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
     }
   }
 
@@ -136,7 +136,7 @@ struct FoldClosureBuild {
       return acc;
     } else {
       const auto &[a0, a1] = std::get<typename mylist<T2>::Mycons>(l.v());
-      return fold_left<T1, T2>(f, f(acc, a0), *a1);
+      return fold_left<T1, T2>(f, f(std::move(acc), a0), *a1);
     }
   }
 

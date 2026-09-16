@@ -73,7 +73,7 @@ public:
       return f;
     } else {
       const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, n1->template nat_rect<T1>(f, f0));
+      return f0(*n1, n1->template nat_rect<T1>(std::move(f), f0));
     }
   }
 
@@ -84,7 +84,7 @@ public:
       return f;
     } else {
       const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, n1->template nat_rec<T1>(f, f0));
+      return f0(*n1, n1->template nat_rec<T1>(std::move(f), f0));
     }
   }
 

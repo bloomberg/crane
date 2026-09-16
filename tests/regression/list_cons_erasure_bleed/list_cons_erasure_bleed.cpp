@@ -9,11 +9,12 @@ syms_semty concat_tuple_nil_case(const std::deque<Sym> &,
 syms_semty concat_tuple(const std::deque<Sym> &xs, const std::deque<Sym> &ys,
                         syms_semty vs, syms_semty vs_) {
   if (xs.empty()) {
-    return concat_tuple_nil_case(xs, ys, vs, vs_);
+    return concat_tuple_nil_case(xs, ys, std::move(vs), std::move(vs_));
   } else {
     const auto &x = xs.front();
     std::decay_t<decltype(xs)> xs_(xs.begin() + 1, xs.end());
-    return concat_tuple_rec_case(x, xs_, xs, ys, vs, vs_, concat_tuple);
+    return concat_tuple_rec_case(x, xs_, xs, ys, std::move(vs), std::move(vs_),
+                                 concat_tuple);
   }
 }
 
@@ -23,11 +24,11 @@ syms_semty rev_tuple_nil_case(const std::deque<Sym> &, syms_semty vs) {
 
 syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs) {
   if (xs.empty()) {
-    return rev_tuple_nil_case(xs, vs);
+    return rev_tuple_nil_case(xs, std::move(vs));
   } else {
     const auto &x = xs.front();
     std::decay_t<decltype(xs)> xs_(xs.begin() + 1, xs.end());
-    return rev_tuple_cons_case(xs, x, xs_, vs, rev_tuple);
+    return rev_tuple_cons_case(xs, x, xs_, std::move(vs), rev_tuple);
   }
 }
 

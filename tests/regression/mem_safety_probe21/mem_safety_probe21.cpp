@@ -106,7 +106,7 @@ uint64_t MemSafetyProbe21::double_grow(
         uint64_t n_ = n - 1;
         _stack.emplace_back(_Resume_n_{tree_sum(t)});
         _stack.emplace_back(
-            _Enter{n_, tree::node(t, UINT64_C(0), tree::leaf())});
+            _Enter{n_, tree::node(std::move(t), UINT64_C(0), tree::leaf())});
       }
     } else {
       auto _f = std::move(std::get<_Resume_n_>(_frame));

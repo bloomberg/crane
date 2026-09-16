@@ -20,7 +20,7 @@ struct HigherKinded {
                                    T1<std::any> &> &&
              std::is_invocable_r_v<T3, F1 &, T2 &>
   static T1<T3> hk_map(F0 &&map_f, F1 &&f, T1<T2> x) {
-    return map_f(f, x);
+    return map_f(f, std::move(x));
   }
 
   template <typename A> struct Tree {

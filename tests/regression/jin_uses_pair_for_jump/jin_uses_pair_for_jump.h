@@ -137,7 +137,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
       return default0;
     } else {
       const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
-      return ListDef::template nth<T1>(m, *a10, default0);
+      return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }
 }

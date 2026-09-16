@@ -250,7 +250,8 @@ struct FunctorComp {
   template <CONTAINER C> struct ContainerOps {
     static typename C::t push_list(const List<uint64_t> &l, typename C::t c) {
       return l.template fold_left<typename C::t>(
-          [](typename C::t acc, uint64_t x) { return C::push(x, acc); }, c);
+          [](typename C::t acc, uint64_t x) { return C::push(x, acc); },
+          std::move(c));
     }
 
     static List<uint64_t> to_list(typename C::t c) {

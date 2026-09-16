@@ -79,11 +79,11 @@ struct IndParam {
     }
 
     static result make_single(typename C::elem e) {
-      return result::ok(C::t::single(e));
+      return result::ok(C::t::single(std::move(e)));
     }
 
     static result make_pair(typename C::elem e1, typename C::elem e2) {
-      return result::ok(C::t::pair(e1, e2));
+      return result::ok(C::t::pair(std::move(e1), std::move(e2)));
     }
 
     static uint64_t get_size(const result &r) {

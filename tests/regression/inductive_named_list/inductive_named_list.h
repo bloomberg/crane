@@ -196,7 +196,7 @@ struct InductiveNamedList {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List_::LCons>(l.v());
-      return f0(a0, *a1, List_rect<T1>(f, f0, *a1));
+      return f0(a0, *a1, List_rect<T1>(std::move(f), f0, *a1));
     }
   }
 
@@ -207,7 +207,7 @@ struct InductiveNamedList {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename List_::LCons>(l.v());
-      return f0(a0, *a1, List_rec<T1>(f, f0, *a1));
+      return f0(a0, *a1, List_rec<T1>(std::move(f), f0, *a1));
     }
   }
 

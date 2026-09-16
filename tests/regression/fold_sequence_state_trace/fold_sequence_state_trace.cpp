@@ -67,9 +67,9 @@ FoldSequenceStateTraceCase::add_fold_to_state(
     const FoldSequenceStateTraceCase::ConstructionState &st,
     const FoldSequenceStateTraceCase::FoldStep &step) {
   FoldSequenceStateTraceCase::Line new_line = step.execute_fold_step();
-  return ConstructionState{
-      st.state_points,
-      List<FoldSequenceStateTraceCase::Line>::cons(new_line, st.state_lines)};
+  return ConstructionState{st.state_points,
+                           List<FoldSequenceStateTraceCase::Line>::cons(
+                               std::move(new_line), st.state_lines)};
 }
 
 FoldSequenceStateTraceCase::ConstructionState

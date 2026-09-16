@@ -342,7 +342,7 @@ struct Equations {
                   const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f4(x0_, x1_, x2_);
+    return f4(x0_, x1_, std::move(x2_));
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -423,7 +423,7 @@ struct Equations {
                   const gcd_clause_3_graph &g) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, _x2, g);
     };
-    return f5(x0_, x1_, x2_, x3_, x4_);
+    return f5(x0_, x1_, x2_, x3_, std::move(x4_));
   }
 
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
@@ -803,7 +803,7 @@ struct Equations {
                   const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c);
     };
-    return f4(x0_, x1_, x2_);
+    return f4(x0_, x1_, std::move(x2_));
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>
@@ -868,7 +868,7 @@ struct Equations {
                   const collatz_steps_clause_3_graph &c) -> T2 {
       return f5_impl(f4_impl, f5_impl, _x, _x0, _x1, c);
     };
-    return f5(x0_, x1_, x2_, x3_);
+    return f5(x0_, x1_, x2_, std::move(x3_));
   }
 
   template <typename T1, typename T2, typename F2, typename F3, typename F4>

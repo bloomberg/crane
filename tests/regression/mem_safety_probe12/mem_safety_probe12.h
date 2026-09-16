@@ -72,7 +72,7 @@ struct MemSafetyProbe12 {
     std::function<uint64_t(uint64_t)> g = [=](uint64_t x) mutable {
       return (f(x) + base);
     };
-    return wrap::wrap0(g);
+    return wrap::wrap0(std::move(g));
   }
 
   static inline const uint64_t test_pack_composed = []() {

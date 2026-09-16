@@ -408,7 +408,7 @@ STMonadTests::rep_list_nat(List<uint64_t> l,
 
 std::string STMonadTests::test_quicksort_ST(std::monostate) {
   List<uint64_t> out = quicksort_ST_mine(input_lst1);
-  return list_to_string(out);
+  return list_to_string(std::move(out));
 }
 
 std::string STMonadTests::test_quicksort_fun(std::monostate) {

@@ -91,7 +91,7 @@ struct HktPartialAppInstance {
     requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fm(F0 &&x,
                                            typename _tcI0::template F<T2> x0) {
-    return _tcI0::template fm<T2, T3>(x, x0);
+    return _tcI0::template fm<T2, T3>(x, std::move(x0));
   }
 
   template <typename T1> struct pf {
