@@ -67,9 +67,6 @@
   (deps fibst_cofix_repro.t.exe)
   (action (run ./fibst_cofix_repro.t.exe))))
 
-
-
-
 (subdir cps_continuation_copy
  (rule
   (targets cps_continuation_copy.t.exe)
@@ -80,7 +77,6 @@
   (alias runtest)
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
-
 
 (subdir file_module_eponymous_record
  (rule
@@ -103,3 +99,83 @@
   (alias runtest)
   (deps select_type_alias_clash.t.exe)
   (action (run ./select_type_alias_clash.t.exe))))
+
+; --- Reductions from extracting Vellvm (https://github.com/vellvm/vellvm).
+; Each of these currently fails; see the header comment in the .v file.
+
+(subdir module_type_name_collision
+ (rule
+  (targets module_type_name_collision.t.exe)
+  (deps ModuleTypeNameCollision.vo module_type_name_collision.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_type_name_collision.t.exe module_type_name_collision.cpp module_type_name_collision.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_type_name_collision.t.exe)
+  (action (run ./module_type_name_collision.t.exe))))
+
+(subdir monad_instance_missing
+ (rule
+  (targets monad_instance_missing.t.exe)
+  (deps MonadInstanceMissing.vo monad_instance_missing.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_instance_missing.t.exe monad_instance_missing.cpp monad_instance_missing.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_instance_missing.t.exe)
+  (action (run ./monad_instance_missing.t.exe))))
+
+(subdir class_as_value_arg
+ (rule
+  (targets class_as_value_arg.t.exe)
+  (deps ClassAsValueArg.vo class_as_value_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} class_as_value_arg.t.exe class_as_value_arg.cpp class_as_value_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps class_as_value_arg.t.exe)
+  (action (run ./class_as_value_arg.t.exe))))
+
+(subdir partial_application
+ (rule
+  (targets partial_application.t.exe)
+  (deps PartialApplication.vo partial_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_application.t.exe partial_application.cpp partial_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_application.t.exe)
+  (action (run ./partial_application.t.exe))))
+
+(subdir primed_identifier
+ (rule
+  (targets primed_identifier.t.exe)
+  (deps PrimedIdentifier.vo primed_identifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} primed_identifier.t.exe primed_identifier.cpp primed_identifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps primed_identifier.t.exe)
+  (action (run ./primed_identifier.t.exe))))
+
+(subdir c_macro_name
+ (rule
+  (targets c_macro_name.t.exe)
+  (deps CMacroName.vo c_macro_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} c_macro_name.t.exe c_macro_name.cpp c_macro_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps c_macro_name.t.exe)
+  (action (run ./c_macro_name.t.exe))))
+
+(subdir cross_file_module_ref
+ (rule
+  (targets cross_file_module_ref.t.exe)
+  (deps Use.vo cross_file_module_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cross_file_module_ref.t.exe cross_file_module_ref.cpp cross_file_module_ref.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps cross_file_module_ref.t.exe)
+  (action (run ./cross_file_module_ref.t.exe))))
