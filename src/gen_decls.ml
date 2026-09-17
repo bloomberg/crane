@@ -673,6 +673,26 @@ let rec count_leading_lams = function
   | MLlam (_, _, rest) -> 1 + count_leading_lams rest
   | _ -> 0
 
+(** What becomes of one of an instance method's binders in the C++ signature.
+
+    [`Value] is an ordinary parameter; [`Instance] is a class-typed binder,
+    which leaves the value list for the template one because the instance
+    satisfying a concept is a type; [`Erased] is a binder with no
+    computational content, which is no parameter at all but still occupies a
+    de Bruijn slot the body counts through. *)
+type binder_kind = [`Value | `Instance | `Erased]
+
+(** One binder an instance method's body opens with, as {!binder_kind}
+    classified it.  The ML type is the one the body spells it by and the C++
+    type the one the accessor declares: the three travel together, and reading
+    the kind of the [i]th binder out of a list beside them is how they come
+    apart. *)
+type method_binder = {
+  mb_name : Id.t;
+  mb_ml_ty : ml_type;
+  mb_cpp_ty : cpp_type;
+  mb_kind : binder_kind;
+}
 
 let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     cpp_decl option * GlobRef.t option * ml_type list =
@@ -1098,15 +1118,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              concept, and the instance satisfying it is a type.  Such a binder
              becomes one of the method's own template parameters, which is
              where its uses ([pa::width()]) already look for it. *)
-          let rec extract_params n rem ml_acc cpp_acc tc_acc body =
+          let rec extract_params n rem acc body =
             match body with
             (* Past the declared arity the remaining binders are the value's
                own, not the accessor's: they stay in the body, which the
                return type spells as a [std::function].  Checked before the
                erased case, since an erased binder past the arity is the
                value's too. *)
-            | MLlam _ when n >= declared_arity ->
-              (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
+            | MLlam _ when n >= declared_arity -> (List.rev acc, body)
             | MLlam (id, ty, rest)
               when is_erasable_binder_ty ty
                    && (rem > declared_arity - n
@@ -1124,39 +1143,43 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               extract_params
                 n
                 (rem - 1)
-                ((id_of_mlid id, ty) :: ml_acc)
-                ((id_of_mlid id, Tany) :: cpp_acc)
-                (`Erased :: tc_acc)
+                ( {
+                    mb_name = id_of_mlid id;
+                    mb_ml_ty = ty;
+                    mb_cpp_ty = Tany;
+                    mb_kind = `Erased;
+                  }
+                :: acc )
                 rest
             | MLlam (id, ty, rest) ->
-              let param_name = id_of_mlid id in
-              let resolved_ty = subst_promoted_tvars ty in
               let resolved_ty =
                 if n < Array.length declared_arg_tys then
                   declared_arg_tys.(n)
-                else resolved_ty
-              in
-              let param_cpp_ty =
-                convert_ml_type_to_cpp_type
-                  base_env
-                  type_var_names
-                  resolved_ty
+                else subst_promoted_tvars ty
               in
               extract_params
                 (n + 1)
                 (rem - 1)
-                ((param_name, resolved_ty) :: ml_acc)
-                ((param_name, param_cpp_ty) :: cpp_acc)
-                ( ( if Table.is_typeclass_type resolved_ty then
-                      `Instance
-                    else
-                      `Value )
-                :: tc_acc )
+                ( {
+                    mb_name = id_of_mlid id;
+                    mb_ml_ty = resolved_ty;
+                    mb_cpp_ty =
+                      convert_ml_type_to_cpp_type
+                        base_env
+                        type_var_names
+                        resolved_ty;
+                    mb_kind =
+                      ( if Table.is_typeclass_type resolved_ty then
+                          `Instance
+                        else
+                          `Value );
+                  }
+                :: acc )
                 rest
-            | _ -> (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
+            | _ -> (List.rev acc, body)
           in
-          let ml_params, cpp_params, param_kinds, inner_body =
-            extract_params 0 (count_leading_lams field_body) [] [] [] field_body
+          let binders, inner_body =
+            extract_params 0 (count_leading_lams field_body) [] field_body
           in
           (* Determine return type: if type_subst resolved everything, use the
              substituted type. Otherwise, infer from the lambda binders. *)
@@ -1168,12 +1191,12 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  the return type is one of its own parameters and is already
                  meaningful -- no need to guess it from the last binder. *)
               convert_ml_type_to_cpp_type base_env type_var_names ret
-            | (Miniml.Tvar (_, _)) when ml_params <> [] ->
+            | (Miniml.Tvar (_, _)) when binders <> [] ->
               (* Unsubstituted Tvar — infer from the last lambda binder's type.
                  For op : A -> A -> A with body MLlam(x, nat, MLlam(y, nat,
                  ...)), the return type is the same as the parameter type
                  (nat). *)
-              let last_param_ty = snd (List.hd (List.rev ml_params)) in
+              let last_param_ty = (List.hd (List.rev binders)).mb_ml_ty in
               convert_ml_type_to_cpp_type
                 base_env
                 type_var_names
@@ -1205,7 +1228,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
-            if List.for_all (fun k -> k = `Erased) param_kinds then
+            if List.for_all (fun b -> b.mb_kind = `Erased) binders then
               (* No lambdas the accessor can take its parameters from -- either
                  a function reference that needs eta-expansion, or a
                  non-function value field.  An erased binder is no parameter,
@@ -1355,29 +1378,33 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                  and uniquifies names for the de Bruijn environment;
                  sync cpp_params so the method signature matches. *)
               let renamed_ml, env =
-                push_vars' (List.rev ml_params) base_env
+                push_vars'
+                  (List.rev_map (fun b -> (b.mb_name, b.mb_ml_ty)) binders)
+                  base_env
               in
-              let named_params =
+              let binders =
                 List.map2
-                  (fun (new_name, _) (_, cpp_ty) -> (new_name, cpp_ty))
+                  (fun (new_name, _) b -> {b with mb_name = new_name})
                   (List.rev renamed_ml)
-                  cpp_params
+                  binders
               in
               (* A class-typed binder leaves the value parameter list and
                  joins the template one, under the name the body knows it
                  by. *)
-              let kind (i, _) = List.nth param_kinds i in
-              let indexed = List.mapi (fun i p -> (i, p)) named_params in
               let cpp_params =
                 List.filter_map
-                  (fun p -> if kind p = `Value then Some (snd p) else None)
-                  indexed
+                  (fun b ->
+                    if b.mb_kind = `Value then
+                      Some (b.mb_name, b.mb_cpp_ty)
+                    else
+                      None )
+                  binders
               in
               let tc_tparams =
                 List.filter_map
-                  (fun p ->
-                    if kind p = `Instance then Some (fst (snd p)) else None )
-                  indexed
+                  (fun b ->
+                    if b.mb_kind = `Instance then Some b.mb_name else None )
+                  binders
               in
               (* Record the instance-resolved parameter types: the ambient
                  environment still spells them with the class's type variable,
