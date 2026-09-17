@@ -117,16 +117,3 @@
   (alias runtest)
   (deps undeducible_tt_return.t.exe)
   (action (run ./undeducible_tt_return.t.exe))))
-
-; --- Mutually-recursive inductives whose cycle runs through a container (#130).
-
-(subdir mutual_list_cycle
- (rule
-  (targets mutual_list_cycle.t.exe)
-  (deps MutualListCycle.vo mutual_list_cycle.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_list_cycle.t.exe mutual_list_cycle.cpp mutual_list_cycle.t.cpp)))
- (rule
-  (alias runtest)
-  (deps mutual_list_cycle.t.exe)
-  (action (run ./mutual_list_cycle.t.exe))))

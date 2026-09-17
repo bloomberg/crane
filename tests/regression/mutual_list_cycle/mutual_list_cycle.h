@@ -174,17 +174,15 @@ public:
 /// A mutual inductive group whose cycle runs through a container.
 ///
 /// tree holds its children as a list branch, and branch holds a tree
-/// back.  Neither struct can be emitted whole before the other: Tree::leaf
+/// back.  Neither struct can be written whole before the other: Tree::leaf
 /// takes a List<Branch> by value, which instantiates List<Branch> and so
 /// needs Branch complete, while Branch::branch0 takes a Tree by value
-/// and needs Tree complete.  Crane emits each struct's layout and its
-/// methods together, one type at a time, and no order of the two satisfies
-/// both.
+/// and needs Tree complete.  The members that cross the cycle are written
+/// after the whole group, which is the order that exists.
 ///
-/// At the top level the methods are emitted where they are written, so the
-/// cycle bites.  Inside a module the same group compiles, because a nested
-/// class's member bodies are only parsed once the enclosing class is
-/// complete -- which is why this test is not wrapped in a Module.
+/// The group is at the top level on purpose: inside a module a nested class's
+/// member bodies are only compiled once the enclosing class is complete, so
+/// the cycle would not bite.
 ///
 /// Reported as bug #130.
 struct tree;
@@ -208,9 +206,7 @@ public:
 
   explicit Tree(Leaf _v) : v_(std::move(_v)) {}
 
-  static Tree leaf(List<Branch> a0) {
-    return Tree(Leaf{std::make_shared<List<Branch>>(std::move(a0))});
-  }
+  static Tree leaf(List<Branch> a0);
 
   // MANIPULATORS
   inline variant_t &v_mut() { return v_; }
@@ -218,25 +214,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat tree_size() const {
-    const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-    return Nat::s([&]() {
-      auto branches_size_impl = [](auto &_self_branches_size,
-                                   const List<Branch> &l) -> Nat {
-        if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
-          return Nat::o();
-        } else {
-          const auto &[a1, a2] = std::get<typename List<Branch>::Cons>(l.v());
-          return a1.branch_size().add(
-              _self_branches_size(_self_branches_size, *a2));
-        }
-      };
-      auto branches_size = [&](const List<Branch> &l) -> Nat {
-        return branches_size_impl(branches_size_impl, l);
-      };
-      return branches_size(*a0);
-    }());
-  }
+  Nat tree_size() const;
 };
 
 struct Branch {
@@ -258,59 +236,9 @@ public:
 
   explicit Branch(Branch0 _v) : v_(std::move(_v)) {}
 
-  static Branch branch0(Nat a0, Tree a1) {
-    return Branch(
-        Branch0{std::move(a0), std::make_shared<Tree>(std::move(a1))});
-  }
-
+  static Branch branch0(Nat a0, Tree a1);
   // MANIPULATORS
-  ~Branch() {
-    crane::small_vector<std::any> _stack = {};
-    auto _drain_self = [&](variant_t &_v) {
-      if (auto *_alt = std::get_if<Branch0>(&_v)) {
-        if (_alt->a1) {
-          _stack.push_back(std::move(_alt->a1));
-        }
-      }
-    };
-    _drain_self(v_mut());
-    while (!_stack.empty()) {
-      auto _cur = std::move(_stack.back());
-      _stack.pop_back();
-      if (auto *_sp = std::any_cast<std::shared_ptr<Branch>>(&_cur)) {
-        if (*_sp && (*_sp).use_count() == 1) {
-          std::atomic_thread_fence(std::memory_order_acquire);
-          _drain_self((*_sp)->v_mut());
-        }
-      } else {
-        if (auto *_sp = std::any_cast<std::shared_ptr<Tree>>(&_cur)) {
-          if (*_sp && (*_sp).use_count() == 1) {
-            auto &_pv = (*_sp)->v_mut();
-            if (auto *_alt = std::get_if<typename Tree::Leaf>(&_pv)) {
-              if (_alt->a0 && _alt->a0.use_count() == 1) {
-                std::atomic_thread_fence(std::memory_order_acquire);
-                auto _lp = _alt->a0.get();
-                while (std::holds_alternative<typename List<Branch>::Cons>(
-                    _lp->v())) {
-                  auto &_lc =
-                      std::get<typename List<Branch>::Cons>(_lp->v_mut());
-                  _stack.push_back(std::make_shared<Branch>(std::move(_lc.a)));
-                  if (_lc.l && _lc.l.use_count() == 1) {
-                    std::atomic_thread_fence(std::memory_order_acquire);
-                    _lp = _lc.l.get();
-                  } else {
-                    break;
-                  }
-                }
-                _alt->a0.reset();
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
+  ~Branch();
   Branch(const Branch &) = default;
   Branch &operator=(const Branch &) = default;
   Branch(Branch &&) noexcept = default;
@@ -321,10 +249,86 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Nat branch_size() const {
-    const auto &[a0, a1] = std::get<typename Branch::Branch0>(this->v());
-    return Nat::s(a1->tree_size());
-  }
+  Nat branch_size() const;
 };
+
+inline Tree Tree::leaf(List<Branch> a0) {
+  return Tree(Leaf{std::make_shared<List<Branch>>(std::move(a0))});
+}
+
+inline Nat Tree::tree_size() const {
+  const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
+  return Nat::s([&]() {
+    auto branches_size_impl = [](auto &_self_branches_size,
+                                 const List<Branch> &l) -> Nat {
+      if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
+        return Nat::o();
+      } else {
+        const auto &[a1, a2] = std::get<typename List<Branch>::Cons>(l.v());
+        return a1.branch_size().add(
+            _self_branches_size(_self_branches_size, *a2));
+      }
+    };
+    auto branches_size = [&](const List<Branch> &l) -> Nat {
+      return branches_size_impl(branches_size_impl, l);
+    };
+    return branches_size(*a0);
+  }());
+}
+
+inline Branch Branch::branch0(Nat a0, Tree a1) {
+  return Branch(Branch0{std::move(a0), std::make_shared<Tree>(std::move(a1))});
+}
+
+inline Branch::~Branch() {
+  crane::small_vector<std::any> _stack = {};
+  auto _drain_self = [&](variant_t &_v) {
+    if (auto *_alt = std::get_if<Branch0>(&_v)) {
+      if (_alt->a1) {
+        _stack.push_back(std::move(_alt->a1));
+      }
+    }
+  };
+  _drain_self(v_mut());
+  while (!_stack.empty()) {
+    auto _cur = std::move(_stack.back());
+    _stack.pop_back();
+    if (auto *_sp = std::any_cast<std::shared_ptr<Branch>>(&_cur)) {
+      if (*_sp && (*_sp).use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain_self((*_sp)->v_mut());
+      }
+    } else {
+      if (auto *_sp = std::any_cast<std::shared_ptr<Tree>>(&_cur)) {
+        if (*_sp && (*_sp).use_count() == 1) {
+          auto &_pv = (*_sp)->v_mut();
+          if (auto *_alt = std::get_if<typename Tree::Leaf>(&_pv)) {
+            if (_alt->a0 && _alt->a0.use_count() == 1) {
+              std::atomic_thread_fence(std::memory_order_acquire);
+              auto _lp = _alt->a0.get();
+              while (std::holds_alternative<typename List<Branch>::Cons>(
+                  _lp->v())) {
+                auto &_lc = std::get<typename List<Branch>::Cons>(_lp->v_mut());
+                _stack.push_back(std::make_shared<Branch>(std::move(_lc.a)));
+                if (_lc.l && _lc.l.use_count() == 1) {
+                  std::atomic_thread_fence(std::memory_order_acquire);
+                  _lp = _lc.l.get();
+                } else {
+                  break;
+                }
+              }
+              _alt->a0.reset();
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+inline Nat Branch::branch_size() const {
+  const auto &[a0, a1] = std::get<typename Branch::Branch0>(this->v());
+  return Nat::s(a1->tree_size());
+}
 
 #endif // INCLUDED_MUTUAL_LIST_CYCLE

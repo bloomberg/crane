@@ -480,6 +480,10 @@ and cpp_field =
      = List<A>;]), which is how an instance provides the carrier of a
      higher-kinded class parameter. *)
   | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type
+  (* A member written here without its body: the definition follows, out of
+     line, in a [Dmember_def].  Wrapping the member rather than flagging it
+     keeps the two halves one value, so they cannot drift apart. *)
+  | Fmember_decl of cpp_field
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
   (* Explicitly-defaulted copy/move ctors and assignment operators, emitted
@@ -1148,6 +1152,10 @@ type cpp_decl =
   | Dfields of dstruct
       (* the members a promoted inductive contributes to the struct it was
          merged into: it has no struct of its own *)
+  | Dmember_def of dmember_def
+      (* the body of a member the struct left as an [Fmember_decl], written
+         out of line so that it is compiled once the whole group of structs
+         it mentions is complete *)
   | Denum of {
       de_ref : GlobRef.t;
       de_ctors : Id.t list;
@@ -1167,6 +1175,17 @@ and dstruct = {
   ds_constraint : cpp_constraint option;  (** template constraint, if any *)
   ds_needs_shared_from_this : bool;
       (** inherit [enable_shared_from_this] when a method returns [this] *)
+}
+
+(** A member definition written outside the struct that declares it.
+
+    [dm_tparams] are the {e struct's} template parameters, not the member's:
+    they are what both the [template <...>] line and the [Owner<A>::]
+    qualifier are built from, so the two cannot disagree. *)
+and dmember_def = {
+  dm_owner : GlobRef.t;
+  dm_tparams : (template_type * Id.t) list;
+  dm_field : cpp_field;
 }
 
 (** A type alias declaration.
@@ -1236,6 +1255,7 @@ let rec decl_globref = function
   | Dtemplate (_, _, inner) -> decl_globref inner
   | Dfun f -> Some (fst f.df_path.dp_outer)
   | Dstruct ds -> Some ds.ds_ref
+  | Dmember_def m -> Some m.dm_owner
   | Dnspace (r, _) -> r
   | _ -> None
 
@@ -1290,6 +1310,9 @@ let rec map_field
     | Fnested_struct (id, fields) ->
       Fnested_struct (id, List.map (map_field fe fs ft) fields)
     | Fnested_using (tps, id, ty) -> Fnested_using (tps, id, ft ty)
+    | Fmember_decl inner ->
+      let inner', _, _ = map_field fe fs ft (inner, VPublic, SNoTag) in
+      Fmember_decl inner'
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
   (f', vis, tag)
@@ -1337,4 +1360,7 @@ let rec map_decl
   | Dusing u -> Dusing {u with du_rhs = Option.map ft u.du_rhs}
   | Dstruct_fwd _ -> d
   | Dfields s -> Dfields (map_dstruct fe fs ft s)
+  | Dmember_def m ->
+    let f, _, _ = map_field fe fs ft (m.dm_field, VPublic, SNoTag) in
+    Dmember_def {m with dm_field = f}
   | Denum _ -> d

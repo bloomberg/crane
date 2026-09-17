@@ -3513,12 +3513,30 @@ let pp_doc_comment_for_name ?(indent = "") name =
     let lines = Doc_comments.format_as_cpp_lines text in
     prlist_with_sep fnl (fun l -> str (indent ^ l)) lines ++ fnl ()
 
+(** Where a member is being written.
+
+    A member's signature is spelled the same in all three places, so one
+    printer serves them: what differs is the name it is written under, and
+    whether the body follows. *)
+type member_mode =
+  | Mm_inline  (** In the struct, with its body. *)
+  | Mm_declared  (** In the struct, without its body: ends at the [;]. *)
+  | Mm_defined of Pp.t * (template_type * Id.t) list
+      (** Out of line, under the given qualifier, for a struct with the given
+          template parameters. *)
+
+(** The [template <...>] line a struct's parameters call for, if any. *)
+let pp_owner_template = function
+  | [] -> mt ()
+  | tps -> h (str "template <" ++ pp_list pp_template_param tps ++ str ">") ++ fnl ()
+
 (** Pretty-print a single MiniCpp struct field as C++ source.
 
     @param struct_name  the enclosing struct's pretty-printed name, forwarded
                         to constructor and destructor printers that need it
     @param env          name environment for sub-expression pretty-printing *)
-let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
+let rec pp_cpp_field
+    ?(struct_name : Pp.t option) ?(mode = Mm_inline) env = function
   | Fvar (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
        names are fst) *)
@@ -3554,8 +3572,21 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       } ->
     let const_s = if mf_is_const then str " const" else mt () in
     let noexcept_s = if mf_is_noexcept then str " noexcept" else mt () in
-    let static_s = if mf_is_static then str "static " else mt () in
-    let inline_s = if mf_is_inline then str "inline " else mt () in
+    (* [static] belongs to the declaration alone, and an out-of-line
+       definition in a header needs [inline] unless a template already
+       exempts it from the one-definition rule. *)
+    let static_s =
+      match mode with
+      | Mm_defined _ -> mt ()
+      | Mm_inline | Mm_declared -> if mf_is_static then str "static " else mt ()
+    in
+    let inline_s =
+      match mode with
+      | Mm_inline -> if mf_is_inline then str "inline " else mt ()
+      | Mm_declared -> mt ()
+      | Mm_defined (_, owner_tps) ->
+        if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
+    in
     let saved_any_params = !current_any_typed_params in
     current_any_typed_params :=
       List.fold_left
@@ -3591,22 +3622,32 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       fun_qualifier ~can_constexpr:mf_is_static ~throws:false ~no_pure:mf_no_pure
         mf_ret_type mf_params
     in
+    let owner_template_s, qual_s =
+      match mode with
+      | Mm_defined (qual, owner_tps) ->
+        (pp_owner_template owner_tps, qual ++ str "::")
+      | Mm_inline | Mm_declared -> (mt (), mt ())
+    in
+    let head =
+      h
+        ( inline_s
+        ++ qualifier
+        ++ static_s
+        ++ pp_type mf_ret_type
+        ++ str " "
+        ++ qual_s
+        ++ Id.print mf_name
+        ++ pp_par true params_s
+        ++ const_s
+        ++ noexcept_s )
+    in
     doc_comment
+    ++ owner_template_s
     ++ template_s
-    ++ h
-         ( inline_s
-         ++ qualifier
-         ++ static_s
-         ++ pp_type mf_ret_type
-         ++ str " "
-         ++ Id.print mf_name
-         ++ pp_par true params_s
-         ++ const_s
-         ++ noexcept_s
-         ++ str " {" )
-    ++ fnl ()
-    ++ body_s
-    ++ str "}"
+    ++
+    ( match mode with
+    | Mm_declared -> head ++ str ";"
+    | Mm_inline | Mm_defined _ -> head ++ str " {" ++ fnl () ++ body_s ++ str "}" )
   | Fconstructor
       { fc_tparams; fc_params; fc_inits; fc_body; fc_explicit; fc_noexcept } ->
     let sname =
@@ -3650,11 +3691,23 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       | Some s -> s
       | None -> str "UNKNOWN_STRUCT"
     in
-    h (str "~" ++ sname ++ str "() {")
-    ++ fnl ()
-    ++ pp_list_stmt (pp_cpp_stmt env []) body
-    ++ fnl ()
-    ++ str "}"
+    ( match mode with
+    | Mm_declared -> h (str "~" ++ sname ++ str "();")
+    | Mm_inline ->
+      h (str "~" ++ sname ++ str "() {")
+      ++ fnl ()
+      ++ pp_list_stmt (pp_cpp_stmt env []) body
+      ++ fnl ()
+      ++ str "}"
+    | Mm_defined (qual, owner_tps) ->
+      pp_owner_template owner_tps
+      ++ h
+           ( (if owner_tps = [] then str "inline " else mt ())
+           ++ qual ++ str "::~" ++ sname ++ str "() {" )
+      ++ fnl ()
+      ++ pp_list_stmt (pp_cpp_stmt env []) body
+      ++ fnl ()
+      ++ str "}" )
   | Fnested_struct (id, fields) ->
     let fields_s =
       pp_cpp_fields_with_vis ~struct_name:(Id.print id) env fields
@@ -3687,6 +3740,7 @@ let rec pp_cpp_field ?(struct_name : Pp.t option) env = function
       ++ str " = "
       ++ pp_type ty
       ++ str ";" )
+  | Fmember_decl f -> pp_cpp_field ?struct_name ~mode:Mm_declared env f
   | Fdeleted_ctor ->
     let sname =
       match struct_name with
@@ -4275,6 +4329,22 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
     h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
+  | Dmember_def {dm_owner; dm_tparams; dm_field} ->
+    (* The struct is behind us, so its own name is no longer in scope: the
+       member is written under the qualifier that names it from outside. *)
+    let sname = str (String.capitalize_ascii (str_global Type dm_owner)) in
+    let qual =
+      match dm_tparams with
+      | [] -> sname
+      | tps ->
+        sname ++ str "<" ++ pp_list (fun (_, id) -> Id.print id) tps ++ str ">"
+    in
+    with_render_ctx
+      (fun c -> {c with rc_in_template = c.rc_in_template || dm_tparams <> []})
+      (fun () ->
+        pp_cpp_field ~struct_name:sname
+          ~mode:(Mm_defined (qual, dm_tparams))
+          env dm_field )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))

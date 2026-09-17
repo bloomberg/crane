@@ -546,7 +546,23 @@ let ind_header_decls kn ind =
             in
             (empty_env (), wrapped_decl) :: pp (i + 1)
     in
-    forward_decls @ pp 0
+    let group = pp 0 in
+    (* Inside a struct the cycle does not bite: a nested class's member bodies
+       are only compiled once the enclosing class is complete, which is after
+       every sibling has been written.  At namespace scope nothing defers
+       them, so the members that cross the cycle are written after the whole
+       group. *)
+    let group =
+      if is_mutual && not (!render_ctx).rc_in_struct then
+        let envs = List.map fst group in
+        let decls = Member_hoist.split_group (List.map snd group) in
+        List.map
+          (fun d ->
+            ((match envs with e :: _ -> e | [] -> empty_env ()), d) )
+          decls
+      else group
+    in
+    forward_decls @ group
 
 (** What a type class instance becomes: the struct carrying its methods, and
     the [static_assert] that checks the struct against the class's concept.

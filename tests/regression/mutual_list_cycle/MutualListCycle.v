@@ -3,17 +3,15 @@ From Crane Require Extraction.
 (** A mutual inductive group whose cycle runs through a container.
 
     [tree] holds its children as a [list branch], and [branch] holds a [tree]
-    back.  Neither struct can be emitted whole before the other: [Tree::leaf]
+    back.  Neither struct can be written whole before the other: [Tree::leaf]
     takes a [List<Branch>] by value, which instantiates [List<Branch>] and so
     needs [Branch] complete, while [Branch::branch0] takes a [Tree] by value
-    and needs [Tree] complete.  Crane emits each struct's layout and its
-    methods together, one type at a time, and no order of the two satisfies
-    both.
+    and needs [Tree] complete.  The members that cross the cycle are written
+    after the whole group, which is the order that exists.
 
-    At the top level the methods are emitted where they are written, so the
-    cycle bites.  Inside a module the same group compiles, because a nested
-    class's member bodies are only parsed once the enclosing class is
-    complete -- which is why this test is not wrapped in a [Module].
+    The group is at the top level on purpose: inside a module a nested class's
+    member bodies are only compiled once the enclosing class is complete, so
+    the cycle would not bite.
 
     Reported as bug #130. *)
 

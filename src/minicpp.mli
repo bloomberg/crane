@@ -556,6 +556,10 @@ and cpp_field =
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type  (** Nested using type alias declaration *)
+  | Fmember_decl of cpp_field
+      (** A member written without its body: the definition follows, out of
+          line, in a {!Dmember_def}.  Wrapping the member rather than flagging
+          it keeps the two halves one value, so they cannot drift apart. *)
   | Fdeleted_ctor  (** Deleted default constructor: ctor() = delete *)
   | Fdefaulted_special_members
       (** Explicitly-defaulted copy/move constructors and assignment operators.
@@ -909,6 +913,10 @@ type cpp_decl =
   | Dfields of dstruct
       (** The members a promoted inductive contributes to the struct it was
           merged into. *)
+  | Dmember_def of dmember_def
+      (** The body of a member its struct left as an {!Fmember_decl}, written
+          out of line so that it is compiled once every struct it mentions is
+          complete. *)
   | Denum of {
       de_ref : GlobRef.t;  (** Enum reference *)
       de_ctors : Id.t list;  (** Constructor names *)
@@ -929,6 +937,17 @@ and dstruct = {
   ds_constraint : cpp_constraint option;  (** template constraint, if any *)
   ds_needs_shared_from_this : bool;
       (** inherit [enable_shared_from_this] when a method returns [this] *)
+}
+
+(** A member definition written outside the struct that declares it.
+
+    [dm_tparams] are the {e struct's} template parameters, not the member's:
+    they are what both the [template <...>] line and the [Owner<A>::]
+    qualifier are built from, so the two cannot disagree. *)
+and dmember_def = {
+  dm_owner : GlobRef.t;
+  dm_tparams : (template_type * Id.t) list;
+  dm_field : cpp_field;
 }
 
 (** A type alias declaration.
