@@ -294,6 +294,14 @@ val set_keywords : Id.Set.t -> unit
     scope, where they are spelled bare. *)
 val is_struct_module : ModPath.t -> bool
 
+(** Record that [r]'s declaration is emitted at namespace scope whatever module
+    declared it -- a lifted type-class instance -- so that every use of it is
+    spelled bare.  Must be called before any [pp_global] for [r]. *)
+val register_namespace_scope_ref : GlobRef.t -> unit
+
+(** Whether [r] was registered by {!register_namespace_scope_ref}. *)
+val is_namespace_scope_ref : GlobRef.t -> bool
+
 (** Get the set of reserved keywords for the target language. *)
 val get_keywords : unit -> Id.Set.t
 

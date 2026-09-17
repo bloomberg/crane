@@ -131,6 +131,15 @@ type t = {
           Here for the same reason as {!collision_wrappers}: the name is read
           at every use of the concept, including ones rendered before the
           class itself. *)
+  lifted_instances : GlobRef.t list;
+      (** The type-class instances declared in a module that is emitted as a
+          wrapper struct.  An instance is a type, not a value: it is named from
+          wherever its class is used, as a concept's template argument, so it
+          is lifted out of the struct to namespace scope.
+
+          Here rather than in the printer because the lift changes how the
+          instance is {e spelled}, and a use of it can be rendered before the
+          declaration that lifts it. *)
 }
 
 (** Perform all structure analysis in a single pass.

@@ -1500,6 +1500,34 @@ let rec collect_tvars_set acc = function
 let collect_tvars acc ty =
   IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
 
+(** Whether [r] declares a C++ template parameter for the type argument at
+    (1-based) position [i].
+
+    A type argument standing for a higher-kinded class parameter is not one:
+    it is the instance's associated type, and it is always erased, which would
+    otherwise make [filter_erased_type_args] drop the real type arguments
+    alongside it.  Neither is a variable that does not occur in [r]'s type at
+    all ([mbind]'s [B] only ever appears under the carrier [M B]).
+
+    Asked both of a call's type arguments and of an instance's, which are the
+    same list read at the same positions. *)
+let keeps_type_arg_position r =
+  match find_type_opt r with
+  | None -> fun _ -> true
+  | Some ty -> (
+    match List.map (fun p -> p.htp_tvar) (hkt_tvar_positions_of_type ty) with
+    | [] -> fun _ -> true
+    | hkt ->
+      let occurring = collect_tvars_set IntSet.empty ty in
+      fun i ->
+        (not (List.mem i hkt))
+        && (IntSet.is_empty occurring || IntSet.mem i occurring) )
+
+(** [r]'s type arguments, less those {!keeps_type_arg_position} rules out. *)
+let kept_type_args r ts =
+  let keep = keeps_type_arg_position r in
+  List.filteri (fun i _ -> keep (i + 1)) ts
+
 (** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
     types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
@@ -8083,7 +8111,7 @@ and ml_arg_to_template_type env ml_arg =
       Tvoid
     else
       (* Use the instance struct as a type - convert to Tglob *)
-      Tglob (r, build_template_params env [] ts, [])
+      Tglob (r, build_template_params env [] (kept_type_args r ts), [])
   | MLrel i ->
     (* The instance is a lambda parameter - look up its name in the env and
        create a Tvar reference to the template parameter *)
@@ -8110,7 +8138,10 @@ and ml_arg_to_template_type env ml_arg =
     (* Instance parameters come first in the generated struct's template
        list ([template <typename _tcI0, typename T1>]), so the instance
        arguments must precede the type arguments here too. *)
-    Tglob (r, template_args @ build_template_params env [] ts, [])
+    Tglob
+      ( r,
+        template_args @ build_template_params env [] (kept_type_args r ts),
+        [] )
   | MLcase (_, scrutinee, branches)
     when Array.length branches = 1 ->
     (* Record field projection — e.g., [base_category(PS)].
@@ -8888,25 +8919,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          type), so it must not be passed — and it is always erased, which
          would otherwise make [filter_erased_type_args] drop the real type
          arguments alongside it. *)
-      let keep_position =
-        match find_type_opt id with
-        | None -> fun _ -> true
-        | Some callee_ty ->
-          ( match
-              List.map (fun p -> p.htp_tvar) (hkt_tvar_positions_of_type callee_ty)
-            with
-          | [] -> fun _ -> true
-          | hkt -> (
-          (* A variable that does not occur in the callee's type is not a
-             template parameter of it either ([mbind]'s [B] only ever appears
-             under the carrier [M B], which is the instance's associated
-             type). *)
-          let occurring = collect_tvars_set IntSet.empty callee_ty in
-          fun i ->
-            not (List.mem i hkt)
-            && (IntSet.is_empty occurring || IntSet.mem i occurring) ) )
-      in
-      List.filteri (fun i _ -> keep_position (i + 1)) tys
+      kept_type_args id tys
       |> List.map
            (fun ty ->
              let t = template_arg_of_ml_type env tvars ty in

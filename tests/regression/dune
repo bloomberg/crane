@@ -9173,6 +9173,35 @@
   (deps case_insensitive_eponymy.t.exe)
   (action (run ./case_insensitive_eponymy.t.exe))))
 
+(subdir fwd_decl_before_concept
+ (rule
+  (targets fwd_decl_before_concept.t.exe)
+  (deps Use.vo fwd_decl_before_concept.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fwd_decl_before_concept.t.exe fwd_decl_before_concept.cpp fwd_decl_before_concept.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fwd_decl_before_concept.t.exe)
+  (action (run ./fwd_decl_before_concept.t.exe))))
 
+(subdir instance_used_before_defined
+ (rule
+  (targets instance_used_before_defined.t.exe)
+  (deps Use.vo instance_used_before_defined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_used_before_defined.t.exe instance_used_before_defined.cpp instance_used_before_defined.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_used_before_defined.t.exe)
+  (action (run ./instance_used_before_defined.t.exe))))
 
-
+(subdir lifted_instance_qualified
+ (rule
+  (targets lifted_instance_qualified.t.exe)
+  (deps Use.vo lifted_instance_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_instance_qualified.t.exe lifted_instance_qualified.cpp lifted_instance_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_instance_qualified.t.exe)
+  (action (run ./lifted_instance_qualified.t.exe))))

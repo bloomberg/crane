@@ -752,6 +752,15 @@ let is_global_scope_type_alias r =
 let pending_wrapper_decls : (string, Pp.t) Hashtbl.t =
   owned_table "pending_wrapper_decls"
 
+(** Pending lifted declarations: maps a wrapper struct name to the namespace-
+    scope declarations lifted out of that module -- a typeclass instance, say,
+    which is a struct of its own rather than a member.  Keyed the same way as
+    {!pending_wrapper_decls} and consumed at the same point, so that a lifted
+    declaration lands at its module's place in the topological order instead
+    of after every module that uses it. *)
+let pending_wrapper_lifted : (string, Pp.t) Hashtbl.t =
+  owned_table "pending_wrapper_lifted"
+
 (** Set of wrapper struct names that have pending declarations and thus cannot
     be merged. Populated alongside pending_wrapper_decls during PASS 1. Used
     during type/expression rendering to decide between merged (List<A>) and
@@ -829,6 +838,9 @@ let global_inductive_names : (string, ModPath.t) Hashtbl.t =
 let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
   match r with
   | GlobRef.VarRef _ -> name (* Lifted declarations: never qualify *)
+  | _ when Common.is_namespace_scope_ref r ->
+    (* Lifted out of the wrapper's struct, so the struct is not its scope. *)
+    name
   | _ ->
     let mp = modpath_of_r r in
     ( match Hashtbl.find_opt wrapper_module_table mp with

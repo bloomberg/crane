@@ -36,6 +36,7 @@ type t = {
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
   concept_renames : (GlobRef.t * string) list;
+  lifted_instances : GlobRef.t list;
 }
 
 (** {2 Functor application sources} *)
@@ -834,6 +835,33 @@ let collect_concept_renames (s : ml_structure) : (GlobRef.t * string) list =
       else None )
     classes
 
+(** The instances a wrapper struct does not keep.  An instance is emitted as a
+    struct at namespace scope wherever it was declared, because it is named as
+    a concept's template argument -- a type, which no module owns -- so a use
+    of one declared in a wrapped module must not qualify it with the wrapper. *)
+let is_instance_type (ty : ml_type) : bool =
+  let rec return_type = function
+    | Tarr (_, rest) -> return_type rest
+    | t -> t
+  in
+  match return_type ty with
+  | Tglob (class_ref, _, _) -> Table.is_typeclass class_ref
+  | _ -> false
+
+let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
+  List.concat_map
+    (fun m ->
+      if Option.is_empty m.wrapper_name then []
+      else
+        List.filter_map
+          (fun (_l, se) ->
+            match se with
+            | SEdecl (Dterm (r, _a, t)) when is_instance_type t ->
+              Some r
+            | _ -> None )
+          m.sels )
+    modules
+
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;
@@ -928,4 +956,5 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     collision_wrappers;
     functor_app_sources;
     eponymous_records;
-    concept_renames }
+    concept_renames;
+    lifted_instances = collect_lifted_instances sorted_modules }

@@ -1,36 +1,33 @@
-(** Crane bug: a class over a *type constructor* is not promoted to a template
-    parameter when taken as an explicit argument, and the parameter it should
-    have become is left undeclared.
+(** Crane bug: a class over a *type constructor* reaches its uses with the
+    wrong number of template arguments.
 
-    [run] takes [iM : Iter M], where [M : Type -> Type].  Crane leaves it as a
-    value parameter spelled with a template parameter that is never declared:
+    [run] takes [iM : Iter M], where [M : Type -> Type].  Its own signature is
+    right -- the carrier resolves to the class parameter's alias template:
 
-      template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
-      ...
-      typename _tcI0::template F<T2> run(Iter<T1> x0_, F1 &&x1_, const T2 &x2_)
-                                              ^^ never declared
+      typename _tcI0::template F<T2> run(Iter<_tcI0::F> x0_, F1 &&x1_,
+                                         const T2 &x2_)
 
-    A class over a plain [Type] is promoted correctly -- that is
-    [class_arg_in_method], which passes as of 697c44518.  Only the
-    higher-kinded case is left.
+    What is left is the arity of that carrier everywhere else.  In [iter] the
+    erasure helper applies it to two arguments:
 
-    Expected: [run] takes [Iter] as a template parameter, as it would for a
-              class over a [Type].
-    Actual:   error: use of undeclared identifier 'T1'
-              error: too many template arguments for template template
+      T1<T2> iter(Iter<T1> iter0, F1 &&x, const T2 &x0) {
+        return iter0(crane_erase_fn<T1<std::any, std::any>>(x), x0);
+                                       ^^ [T1] takes one
+
+    and [run]'s call passes the carrier as a type rather than as the template
+    it is:
+
+      iter<typename _tcI0::F, T2>(...)
+           ^^ deduction is not allowed for an alias template member
+
+    Expected: [crane_erase_fn<std::function<T1<std::any>(std::any)>>] and a
+              template template argument [_tcI0::F].
+    Actual:   error: too many template arguments for template template
                      parameter 'T1'
+              error: template argument for template template parameter must be
+                     a class template or type alias template
 
-    The [too many template arguments] comes from the same confusion one level
-    down, in [iter]: [crane_erase_fn<T1<std::any, std::any>>] gives two
-    arguments to a [template <typename> class].
-
-    Seen in Vellvm on ITree's [interp] --
-
-      static typename _tcI0::template m<T3> interp(MonadIter<T2> iM, ...)
-
-    with [T2] undeclared in a list that declares [_tcI0, _tcI1, T1, T3, F1]:
-    14 "use of undeclared identifier 'T1'/'T2'" plus 3 "too many template
-    arguments for template template parameter".
+    Seen in Vellvm on ITree's [interp].
 
     This test also shows [fwd_decl_before_concept]; it is not isolated from
     it, because the instances here are concept-constrained by construction. *)

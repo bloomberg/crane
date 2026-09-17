@@ -955,7 +955,17 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         | Some i -> String.sub str_of 0 i
         | None -> str_of
       in
+      (* An applied type here is the eta-expansion of the constructor: its head
+         is what the position wants. *)
+      let t = match t with Tapply (head, _) -> head | t -> t in
       ( match t with
+      | Tqualified (base, id) ->
+        (* A dependent alias template -- the carrier of a higher-kinded class
+           parameter.  Here it names a template rather than a type, so the
+           leading [typename] a qualified type would take is wrong -- and so
+           is the [template] disambiguator, which announces an argument list
+           that a template template argument does not carry. *)
+        pp_rec ~lead:false false base ++ str "::" ++ Id.print id
       | Tglob (r, _ :: _, _) -> (
         match find_custom_opt r with
         | Some template when String.contains template '%' -> (
@@ -3452,10 +3462,19 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
     on the struct or implied by a concept-kinded parameter -- that the compiler
     does not reliably see as the same constraint. *)
 let register_forward_struct_decl ~name ~tparams ~cstr =
+  (* A concept-kinded parameter names its concept, which is declared with the
+     other concepts, after this prologue; re-declaring the template here would
+     spell a name that is not one yet. *)
+  let concept_kinded (tt, _) =
+    match tt with
+    | TTconcept _ -> true
+    | _ -> false
+  in
   if
     (not (!render_ctx).rc_in_struct)
     && cstr = None
     && pp_requires_of_tparams tparams = None
+    && not (List.exists concept_kinded tparams)
   then
     forward_struct_decls :=
       ( ( match tparams with

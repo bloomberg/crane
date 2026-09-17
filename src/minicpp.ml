@@ -675,7 +675,12 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tqualified (t, id) -> Tqualified (go t, id)
   | Tapply (t, ts) -> Tapply (go t, List.map go ts)
   | Tdecay t -> Tdecay (go t)
-  | Ttyctor _ | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
+  (* Unlike {!map_cpp_type}, this does reach inside a [Ttyctor]: substituting
+     a type variable for what it stands for -- the carrier of a higher-kinded
+     class parameter, say -- replaces one template name with another, and
+     leaves the position printable. *)
+  | Ttyctor t -> Ttyctor (go t)
+  | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
   | Tany | Topaque | Tauto -> ty
 
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type

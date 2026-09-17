@@ -152,6 +152,11 @@ let hkt_carrier_fixed_args arity ml_ty =
     let total = max arity (max given (Table.get_type_scheme_arity r)) in
     let fixed = max 0 (total - arity) in
     if given >= fixed then safe_firstn fixed args else []
+  | Miniml.Tapp (_, args) ->
+    (* A carrier that is a type variable ([Instance ... (M : Type -> Type)])
+       is eta-expanded the same way, but has no declared scheme to compare
+       against: what it applies beyond [arity] is what it fixed. *)
+    safe_firstn (max 0 (List.length args - arity)) args
   | _ -> []
 
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
@@ -174,6 +179,15 @@ let hkt_carrier_alias base arity ml_ty =
           kept
           @ List.init params (fun i -> Miniml.Tvar (Schematic, base + 1 + i)),
           es ) )
+  | Miniml.Tapp (j, args) ->
+    let kept = hkt_carrier_fixed_args arity ml_ty in
+    let params = max arity (List.length args) - List.length kept in
+    ( List.init params hkt_alias_param_name,
+      Miniml.Tapp
+        ( j,
+          kept
+          @ List.init params (fun i -> Miniml.Tvar (Schematic, base + 1 + i)) )
+    )
   | _ when arity = 1 ->
     (* An unnamed carrier is the identity constructor: [F<_A0> = _A0]. *)
     ([hkt_alias_param_name 0], Miniml.Tvar (Schematic, (base + 1)))
@@ -276,6 +290,18 @@ let apply_hkt_resolutions_stmts resolutions stmts =
     let rec fe e = Minicpp.map_expr fe fs ft e
     and fs s = Minicpp.map_stmt fe fs ft s in
     List.map fs stmts
+
+(** Rewrite those type variables throughout a whole declaration: an instance
+    struct resolves its carrier the same way a function does, but it has no
+    single signature to rewrite -- the variable turns up in its [using]
+    aliases, in every method's signature and in every method's body. *)
+let apply_hkt_resolutions_decl resolutions decl =
+  if resolutions = [] then decl
+  else
+    let ft = apply_hkt_resolutions resolutions in
+    let rec fe e = Minicpp.map_expr fe fs ft e
+    and fs s = Minicpp.map_stmt fe fs ft s in
+    Minicpp.map_decl fe fs ft decl
 
 
 (** Generate C++ struct for a record type.
@@ -636,6 +662,18 @@ let gen_typeclass_cpp name fields ind =
 
    Returns: (struct_decl option, class_ref option, type_args)
    The class_ref and type_args are used to generate static_assert in cpp.ml *)
+(** Whether a binder's recorded type says it carries nothing: extraction
+    writes an erased binder's type as [Tdummy], and one it could not type at
+    all as [Taxiom]. *)
+let is_erasable_binder_ty ty =
+  Mlutil.isTdummy ty || match ty with Miniml.Taxiom -> true | _ -> false
+
+(** The number of lambdas a term opens with. *)
+let rec count_leading_lams = function
+  | MLlam (_, _, rest) -> 1 + count_leading_lams rest
+  | _ -> 0
+
+
 let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     cpp_decl option * GlobRef.t option * ml_type list =
   (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
@@ -741,6 +779,16 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         | Tglob (_, ta, _) when ta <> [] -> ta
         | _ -> type_args
       in
+      (* How many type variables the instance itself binds.  Not the number of
+         template parameters it declares: a higher-kinded carrier ([Instance
+         ... (M : Type -> Type)]) is a variable the instance's arguments name,
+         but it becomes an associated type rather than a parameter. *)
+      let instance_tvar_count =
+        List.fold_left
+          (fun n t -> max n (Mlutil.type_maxvar t))
+          (List.length tv_temps)
+          type_args
+      in
       (* Register promoted type bindings for this instance so that call sites
          (eta_fun) can substitute promoted Tvars with concrete types. E.g., for
          nat_magma : Magma, register [(carrier, nat)] so pick_op<nat_magma>
@@ -829,6 +877,17 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                         (Table.get_ind_hkt_arity class_ref i)
                         t,
                       es )
+                | Miniml.Tapp (j, _ :: _) when Table.is_hkt_param class_ref i
+                  ->
+                  (* Same contraction for a carrier that is a type variable:
+                     what is left is the head the class applies. *)
+                  ( match
+                      hkt_carrier_fixed_args
+                        (Table.get_ind_hkt_arity class_ref i)
+                        t
+                    with
+                  | [] -> Miniml.Tvar (Schematic, j)
+                  | fixed -> Miniml.Tapp (j, fixed) )
                 | t -> t )
               (Ml_type_util.instance_type_args type_args)
           in
@@ -865,7 +924,8 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               let names = List.init n hkt_alias_param_name in
               let pad =
                 List.init
-                  (max 0 (ipv - List.length type_var_names))
+                  (max 0 (max ipv instance_tvar_count
+                          - List.length type_var_names))
                   (fun _ -> Id.of_string "_")
               in
               (names, type_var_names @ pad @ names)
@@ -873,23 +933,37 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           set_current_type_vars type_var_names;
           (* The declared signature numbers the method's own type variables
              after every parameter of the class, while the body -- extracted
-             on its own -- numbers them after the instance's parameters only.
-             A higher-kinded class parameter is not an instance parameter, so
-             the two disagree by exactly that many slots and the body would
-             name [A] where the class carrier sits.  Shift the body onto the
-             signature's numbering, which is the one [type_var_names] and the
-             substitutions below are built for. *)
+             on its own -- numbers them after the instance's own binders, and
+             need not have numbered them consecutively.  Read the body's
+             quantifiers off the body and map them, in order, onto the
+             positions [type_var_names] gives them; left alone the body would
+             name [A] where the class carrier sits. *)
           let field_body =
-            let ipv = List.length (Table.get_ind_ip_vars class_ref) in
-            let shift = ipv - List.length tv_temps in
-            if n_method_tvars = 0 || shift <= 0 then field_body
+            if n_method_tvars = 0 then field_body
             else
-              let base = List.length tv_temps in
-              let subst =
-                List.init n_method_tvars (fun k ->
-                    (base + k + 1, Miniml.Tvar (Schematic, (base + k + 1 + shift))))
+              let base =
+                max (List.length (Table.get_ind_ip_vars class_ref))
+                  instance_tvar_count
               in
-              Mlutil.ast_map_types (subst_tvars_type subst) field_body
+              let body_tvars =
+                let acc = ref [] in
+                ignore
+                  (Mlutil.ast_map_types
+                     (fun t ->
+                       acc := collect_tvars !acc t;
+                       t )
+                     field_body);
+                List.sort compare
+                  (List.filter (fun i -> i > instance_tvar_count) !acc)
+              in
+              let subst =
+                List.mapi
+                  (fun k i -> (i, Miniml.Tvar (Schematic, base + 1 + k)))
+                  (safe_firstn n_method_tvars body_tvars)
+              in
+              if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) subst
+              then field_body
+              else Mlutil.ast_map_types (subst_tvars_type subst) field_body
           in
           (* An instance method may have been eta-reduced below the arity its
              class field declares ([cmap A B f x := f x] extracts to
@@ -1024,15 +1098,36 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              concept, and the instance satisfying it is a type.  Such a binder
              becomes one of the method's own template parameters, which is
              where its uses ([pa::width()]) already look for it. *)
-          let rec extract_params n ml_acc cpp_acc tc_acc body =
+          let rec extract_params n rem ml_acc cpp_acc tc_acc body =
             match body with
-            | MLlam (_id, ty, rest) when Mlutil.isTdummy ty ->
-              extract_params n ml_acc cpp_acc tc_acc rest
             (* Past the declared arity the remaining binders are the value's
                own, not the accessor's: they stay in the body, which the
-               return type spells as a [std::function]. *)
+               return type spells as a [std::function].  Checked before the
+               erased case, since an erased binder past the arity is the
+               value's too. *)
             | MLlam _ when n >= declared_arity ->
               (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
+            | MLlam (id, ty, rest)
+              when is_erasable_binder_ty ty
+                   && (rem > declared_arity - n
+                      || not (Mlutil.ast_occurs 1 rest)) ->
+              (* An erased binder is no parameter, but it is still a binder:
+                 dropping it would shift every de Bruijn index the body uses
+                 to name the ones that remain.
+
+                 A binder may only be dropped while binders are left to
+                 spare, or while the body makes no use of it: extraction
+                 sometimes annotates a value binder as erased ([ret := @Some]
+                 extracts as [fun (_ : axiom) (x : dummy) => Some x]), and the
+                 declared arity is what says how many of them the concept is
+                 owed. *)
+              extract_params
+                n
+                (rem - 1)
+                ((id_of_mlid id, ty) :: ml_acc)
+                ((id_of_mlid id, Tany) :: cpp_acc)
+                (`Erased :: tc_acc)
+                rest
             | MLlam (id, ty, rest) ->
               let param_name = id_of_mlid id in
               let resolved_ty = subst_promoted_tvars ty in
@@ -1049,14 +1144,19 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               in
               extract_params
                 (n + 1)
+                (rem - 1)
                 ((param_name, resolved_ty) :: ml_acc)
                 ((param_name, param_cpp_ty) :: cpp_acc)
-                (Table.is_typeclass_type resolved_ty :: tc_acc)
+                ( ( if Table.is_typeclass_type resolved_ty then
+                      `Instance
+                    else
+                      `Value )
+                :: tc_acc )
                 rest
             | _ -> (List.rev ml_acc, List.rev cpp_acc, List.rev tc_acc, body)
           in
-          let ml_params, cpp_params, param_is_tc, inner_body =
-            extract_params 0 [] [] [] field_body
+          let ml_params, cpp_params, param_kinds, inner_body =
+            extract_params 0 (count_leading_lams field_body) [] [] [] field_body
           in
           (* Determine return type: if type_subst resolved everything, use the
              substituted type. Otherwise, infer from the lambda binders. *)
@@ -1105,9 +1205,11 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
             with_cpp_return_type (Some method_ret_ty) @@ fun () ->
-            if ml_params = [] then
-              (* No lambdas in the body — either a function reference that needs
-                 eta-expansion, or a non-function value field. *)
+            if List.for_all (fun k -> k = `Erased) param_kinds then
+              (* No lambdas the accessor can take its parameters from -- either
+                 a function reference that needs eta-expansion, or a
+                 non-function value field.  An erased binder is no parameter,
+                 so a body that opens with nothing else is this case too. *)
               let all_arg_types, _ret_type = method_args_and_ret () in
               (* Filter out type class instance and erased args *)
               let arg_types =
@@ -1264,13 +1366,19 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               (* A class-typed binder leaves the value parameter list and
                  joins the template one, under the name the body knows it
                  by. *)
-              let keep, promoted =
-                List.partition
-                  (fun (i, _) -> not (List.nth param_is_tc i))
-                  (List.mapi (fun i p -> (i, p)) named_params)
+              let kind (i, _) = List.nth param_kinds i in
+              let indexed = List.mapi (fun i p -> (i, p)) named_params in
+              let cpp_params =
+                List.filter_map
+                  (fun p -> if kind p = `Value then Some (snd p) else None)
+                  indexed
               in
-              let cpp_params = List.map snd keep in
-              let tc_tparams = List.map (fun (_, (n, _)) -> n) promoted in
+              let tc_tparams =
+                List.filter_map
+                  (fun p ->
+                    if kind p = `Instance then Some (fst (snd p)) else None )
+                  indexed
+              in
               (* Record the instance-resolved parameter types: the ambient
                  environment still spells them with the class's type variable,
                  so call sites inside the body need this to tell a concrete
@@ -1431,11 +1539,25 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
          ip_sign Keep count, not tv_temps which reflects the instance's own type
          variables). They become `using field = ConcreteType;` in the struct. *)
       let promoted_vars = class_promoted_vars class_ref in
-      let promoted_concrete_types =
-        class_promoted_concrete
-          ~tvar_base:(List.length type_var_names)
-          class_ref
+      (* The element parameters an alias template introduces are fresh type
+         variables, so they have to be numbered past every variable the
+         instance's arguments already use -- a carrier that is itself a
+         variable ([Instance ... (M : Type -> Type)]) is one of those, and it
+         is no template parameter, so [type_var_names] does not count it. *)
+      let alias_tvar_base =
+        List.fold_left
+          (fun n t -> max n (Mlutil.type_maxvar t))
+          (List.length type_var_names)
           type_args
+      in
+      let alias_tvar_names =
+        type_var_names
+        @ List.init
+            (alias_tvar_base - List.length type_var_names)
+            (fun _ -> Id.of_string "_")
+      in
+      let promoted_concrete_types =
+        class_promoted_concrete ~tvar_base:alias_tvar_base class_ref type_args
       in
       (* Is [cpp_ty] a self-referential promoted-var reference (e.g.,
          [Tvar(_, Some "Obj")] where "Obj" is a promoted var)?  Such
@@ -1530,7 +1652,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             let concrete_cpp_ty =
               convert_ml_type_to_cpp_type
                 base_env
-                (type_var_names @ alias_params)
+                (alias_tvar_names @ alias_params)
                 concrete_ml_ty
             in
             (var_name, alias_params, concrete_cpp_ty) )
@@ -1622,7 +1744,10 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
               ds_needs_shared_from_this = false;
             }
         in
-        (Some decl, Some class_ref, non_promoted_type_args)
+        ( Some
+            (apply_hkt_resolutions_decl (hkt_tvar_resolutions_of_type ty) decl),
+          Some class_ref,
+          non_promoted_type_args )
     | MLglob (other, _) ->
       (* The instance is nothing but another instance's name.  C++ has a
          spelling for exactly that, and without it the name is never
@@ -2466,6 +2591,7 @@ let gen_dfun n b cty ty temps =
     | Tqualified (b, id) -> Tqualified (resolve_promoted_in_type b, id)
     | Tapply (h, ts) ->
       Tapply (resolve_promoted_in_type h, List.map resolve_promoted_in_type ts)
+    | Ttyctor t -> Ttyctor (resolve_promoted_in_type t)
     | Tnamespace (r, t) -> Tnamespace (r, resolve_promoted_in_type t)
     | Tid (id, ts) -> Tid (id, List.map resolve_promoted_in_type ts)
     | Tid_external (id, ts) -> Tid_external (id, List.map resolve_promoted_in_type ts)

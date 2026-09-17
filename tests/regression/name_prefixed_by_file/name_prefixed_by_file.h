@@ -154,15 +154,11 @@ struct EOU0 {
   static EOU<T1> option_ub(Nat s, const std::optional<T1> &x);
 };
 
-struct NamePrefixedByFile {
-  static EOU<Nat> use(Nat n);
-};
-
 struct EOU_monad {
   template <typename _A0> using m = EOU<_A0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 _x) {
-    return EOU<_A0>::raise_ret(std::move(_x));
+  template <typename _A0> static EOU<_A0> ret(_A0 x) {
+    return EOU<_A0>::raise_ret(std::move(x));
   }
 
   template <typename _A0, typename _A1>
@@ -178,6 +174,10 @@ struct EOU_monad {
 };
 
 static_assert(Monad<EOU_monad>);
+
+struct NamePrefixedByFile {
+  static EOU<Nat> use(Nat n);
+};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

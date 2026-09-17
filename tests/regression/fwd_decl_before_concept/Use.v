@@ -1,7 +1,7 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
 From ExtLib Require Import Structures.Monads Structures.Functor Data.Monads.OptionMonad.
-From CraneTestsWIP Require fwd_decl_before_concept.Lib.
+From CraneTestsRegression Require fwd_decl_before_concept.Lib.
 
 Module FwdDeclBeforeConcept.
   Definition use (o : option nat) : option bool :=

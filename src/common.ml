@@ -552,6 +552,17 @@ let () = register_cleanup (fun () -> Hashtbl.clear struct_module_paths)
     scope, where they are spelled bare. *)
 let is_struct_module mp = Hashtbl.mem struct_module_paths mp
 
+(** The references whose declaration is emitted at namespace scope whatever
+    module declared them, and which are therefore spelled with no qualifier at
+    all.  Populated from the analysis, before any name is resolved. *)
+let namespace_scope_refs : (GlobRef.t, unit) Hashtbl.t = Hashtbl.create 17
+
+let () = register_cleanup (fun () -> Hashtbl.clear namespace_scope_refs)
+
+let register_namespace_scope_ref r = Hashtbl.replace namespace_scope_refs r ()
+
+let is_namespace_scope_ref r = Hashtbl.mem namespace_scope_refs r
+
 let sibling_collision_renames : (ModPath.t, string) Hashtbl.t =
   Hashtbl.create 8
 

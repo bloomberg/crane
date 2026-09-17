@@ -1,7 +1,7 @@
 #include "hk_class_arg_numbering.h"
 
 std::optional<Nat> HkClassArgNumbering::use(const Nat &n) {
-  return run<Functor_Monad<Monad_option, std::any>, Monad_option, Nat>(
+  return run<Functor_Monad<Monad_option>, Monad_option, Nat>(
       [](std::function<std::optional<std::any>(std::any)> _ec0, std::any _ec1) {
         return Iter_option(_ec0, _ec1);
       },

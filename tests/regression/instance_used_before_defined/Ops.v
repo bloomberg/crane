@@ -1,6 +1,6 @@
 From Crane Require Extraction.
 From ExtLib Require Import Structures.Monads.
-From CraneTestsWIP Require instance_used_before_defined.Lib.
+From CraneTestsRegression Require instance_used_before_defined.Lib.
 
 Import MonadNotation.
 Open Scope monad.

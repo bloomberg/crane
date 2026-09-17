@@ -1,5 +1,5 @@
-#ifndef INCLUDED_MONAD_INSTANCE_MISSING
-#define INCLUDED_MONAD_INSTANCE_MISSING
+#ifndef INCLUDED_INSTANCE_USED_BEFORE_DEFINED
+#define INCLUDED_INSTANCE_USED_BEFORE_DEFINED
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -12,9 +12,10 @@
 #include <utility>
 #include <variant>
 
+struct EOU_monad;
 struct Nat;
 template <typename X> struct EOU;
-struct EOU_monad;
+template <typename I> struct Arith;
 
 struct Nat {
   // TYPES
@@ -103,20 +104,15 @@ concept Monad = requires {
     I::template ret<std::any>(std::declval<std::any>())
   } -> std::convertible_to<typename I::template m<std::any>>;
   {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
+    I::bind(std::declval<typename I::template m<std::any>>(),
+            std::declval<
+                std::function<typename I::template m<std::any>(std::any)>>())
   } -> std::convertible_to<typename I::template m<std::any>>;
 };
 
 struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
-  template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
-  static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
-                                             F1 &&x0);
 };
 
 template <typename X> struct EOU {
@@ -177,22 +173,34 @@ struct EOU_monad {
     return EOU<_A0>::raise_ret(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static EOU<_A1> bind(EOU<_A0> c, std::function<EOU<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename EOU<_A0>::Raise_error>(c.v())) {
-      const auto &[s0] = std::get<typename EOU<_A0>::Raise_error>(c.v());
-      return EOU<_A1>::raise_error(s0);
+  static EOU<std::any> bind(EOU<std::any> c,
+                            std::function<EOU<std::any>(std::any)> k) {
+    if (std::holds_alternative<typename EOU<std::any>::Raise_error>(c.v())) {
+      const auto &[s0] = std::get<typename EOU<std::any>::Raise_error>(c.v());
+      return EOU<std::any>::raise_error(s0);
     } else {
-      const auto &[x0] = std::get<typename EOU<_A0>::Raise_ret>(c.v());
+      const auto &[x0] = std::get<typename EOU<std::any>::Raise_ret>(c.v());
       return k(x0);
     }
   }
 };
 
 static_assert(Monad<EOU_monad>);
-EOU<Nat> double0(const Nat &n);
 
-struct MonadInstanceMissing {
+template <typename I> struct Arith {
+  std::function<EOU<I>(I, I)> madd;
+  I mzero;
+};
+
+struct Ops {
+  static inline const Arith<Nat> Arith_nat =
+      Arith<Nat>{[](const Nat &x, const Nat &y) {
+                   return Monad0::template ret<EOU_monad, Nat>(x.add(y));
+                 },
+                 Nat::o()};
+};
+
+struct InstanceUsedBeforeDefined {
   static EOU<Nat> use(const Nat &n);
 };
 
@@ -201,11 +209,4 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
 
-template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
-typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
-                                            F1 &&x0) {
-  return _tcI0::template bind<T2, T3>(std::move(x), x0);
-}
-
-#endif // INCLUDED_MONAD_INSTANCE_MISSING
+#endif // INCLUDED_INSTANCE_USED_BEFORE_DEFINED

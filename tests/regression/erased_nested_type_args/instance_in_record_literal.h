@@ -169,8 +169,8 @@ public:
 struct EOU_monad {
   template <typename _A0> using m = EOU<_A0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 _x) {
-    return EOU<_A0>::raise_ret(std::move(_x));
+  template <typename _A0> static EOU<_A0> ret(_A0 x) {
+    return EOU<_A0>::raise_ret(std::move(x));
   }
 
   static EOU<std::any> bind(EOU<std::any> c,

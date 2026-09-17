@@ -1766,7 +1766,8 @@ let install_analysis
        collision_wrappers;
        functor_app_sources = app_sources;
        eponymous_records;
-       concept_renames } [@warning "@9"] :
+       concept_renames;
+       lifted_instances } [@warning "@9"] :
       Structure_analysis.t ) : unit =
   Hashtbl.reset global_inductive_names;
   List.iter
@@ -1783,6 +1784,7 @@ let install_analysis
     (fun (mp, src) -> Hashtbl.replace functor_app_sources mp src)
     app_sources;
   List.iter register_eponymous_record eponymous_records;
+  List.iter Common.register_namespace_scope_ref lifted_instances;
   List.iter
     (fun (mp, name) ->
       Hashtbl.replace wrapper_module_table mp name;
@@ -1900,8 +1902,10 @@ let do_struct_with_decl_tracking ~is_header f s =
           if not (Pp.ismt p_specs) then (
             Hashtbl.replace pending_wrapper_decls name p_specs;
             Hashtbl.replace unmerged_wrappers name () );
+          if not (Pp.ismt p_lifted) then
+            Hashtbl.replace pending_wrapper_lifted name p_lifted;
           pop_visible ();
-          Some (p_defs, p_lifted) )
+          Some (name, p_defs, p_lifted) )
       wrapper_names
   in
   let joined pick =
@@ -1911,8 +1915,13 @@ let do_struct_with_decl_tracking ~is_header f s =
         if Pp.ismt pp then mt () else cut2 () ++ pp )
       wrapper_parts
   in
-  let deferred_defs = joined fst in
-  let deferred_lifted = joined snd in
+  let deferred_defs = joined (fun (_, d, _) -> d) in
+  (* A lifted declaration [ppl] did not get to emit -- its module is not in the
+     rendered order -- still has to appear somewhere, so it goes at the end. *)
+  let deferred_lifted () =
+    joined (fun (name, _, l) ->
+        if Hashtbl.mem pending_wrapper_lifted name then l else mt () )
+  in
   name_cache :=
     Some
       (Name_resolution.create
@@ -1967,9 +1976,17 @@ let do_struct_with_decl_tracking ~is_header f s =
               pp_wrapper_struct name specs
             | None -> mt ()
         in
-        if Pp.ismt type_pp then wrapper_pp
-        else if Pp.ismt wrapper_pp then type_pp
-        else type_pp ++ cut2 () ++ wrapper_pp
+        (* A declaration lifted out of this module -- an instance struct -- is
+           due at the same point, and for the same reason: a later module's
+           constant may be initialised from it. *)
+        let lifted_pp =
+          match Hashtbl.find_opt pending_wrapper_lifted name with
+          | Some l ->
+            Hashtbl.remove pending_wrapper_lifted name;
+            l
+          | None -> mt ()
+        in
+        prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
       | None ->
         (* Which children a name collision forces inside a wrapper struct is
            layout, decided by {!Structure_analysis} before any rendering began;
@@ -2201,6 +2218,8 @@ let do_struct_with_decl_tracking ~is_header f s =
       ignore (Cpp_print.take_forward_struct_decls ());
       mt () )
   in
+  let deferred_lifted = deferred_lifted () in
+  Hashtbl.clear pending_wrapper_lifted;
   v 0
     ( forward_decls
     ++ hoisted_concepts

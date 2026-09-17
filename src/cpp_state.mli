@@ -336,6 +336,11 @@ val is_global_scope_type_alias : Names.GlobRef.t -> bool
     by struct name. Cleared by [reset_cpp_state]. *)
 val pending_wrapper_decls : (string, Pp.t) Hashtbl.t
 
+(** Namespace-scope declarations lifted out of a wrapper module (a typeclass
+    instance, say), keyed by that module's struct name and emitted at its place
+    in the topological order. Cleared by [reset_cpp_state]. *)
+val pending_wrapper_lifted : (string, Pp.t) Hashtbl.t
+
 (** Wrapper struct names that have pending declarations and therefore cannot be
     merged; consulted when choosing between the merged ([List<A>]) and unmerged
     ([List::list<A>]) name forms. Cleared by [reset_cpp_state]. *)
