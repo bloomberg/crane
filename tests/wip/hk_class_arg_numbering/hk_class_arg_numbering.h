@@ -144,8 +144,8 @@ template <template <typename> class m>
 using Iter =
     std::function<m<std::any>(std::function<m<std::any>(std::any)>, std::any)>;
 
-template <template <typename> class T1, typename T2, typename F1>
-T1<T2> iter(Iter<T1> iter0, F1 &&x, const T2 &x0) {
+template <typename T2, typename F1>
+std::invoke_result_t<F1 &, T2 &> iter(Iter<T1> iter0, F1 &&x, const T2 &x0) {
   return iter0(crane_erase_fn<T1<std::any, std::any>>(x), x0);
 }
 
@@ -157,7 +157,6 @@ typename _tcI0::template F<T2> run(Iter<_tcI0::template F> x0_, F1 &&x1_,
 }
 
 template <typename F0>
-  requires std::is_invocable_r_v<std::optional<std::any>, F0 &, std::any &>
 std::optional<std::any> Iter_option(F0 &&f, std::any x0_) {
   return f(x0_);
 }

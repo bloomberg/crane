@@ -2,13 +2,13 @@
 
 std::optional<Nat> UndeducibleTtReturn::use(const Sum1<ReqA, ReqB, Nat> &ab) {
   return Handler::case_(
-      [](const auto &e) {
+      []<typename _X>(const ReqA<_X> &e) {
         const auto &[x0] = e;
-        return std::make_optional<Nat>(x0);
+        return std::make_optional<_X>(_X(x0));
       },
-      [](const auto &b) {
+      []<typename _X>(const ReqB<_X> &b) {
         const auto &[x0] = b;
-        return std::make_optional<Nat>(x0);
+        return std::make_optional<_X>(_X(x0));
       },
       ab);
 }

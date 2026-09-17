@@ -163,16 +163,12 @@ struct ExistentialCtorErasedFn {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
   static T1 dynamic_rect(F0 &&f, const dynamic &d) {
     const auto &[a0, a1] = d;
     return std::any_cast<T1>(f(a0, a1));
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::any &,
-                                   std::function<uint64_t(std::any)> &>
   static T1 dynamic_rec(F0 &&f, const dynamic &d) {
     const auto &[a0, a1] = d;
     return std::any_cast<T1>(f(a0, a1));

@@ -517,6 +517,9 @@ and cpp_lambda = {
   cl_params : (cpp_type * Id.t option) revd;
       (** Parameters, reversed -- see {!revd}.  Read them with
           {!lambda_params}. *)
+  cl_tparams : Id.t list;
+      (** Template parameters, when this lambda is a polymorphic function
+          object: [[]<typename X>(...)].  Empty for an ordinary lambda. *)
   cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
   cl_body : cpp_stmt list;
   cl_by_value : bool;  (** A [\[=\]] capture rather than a [\[&\]] one. *)
@@ -781,8 +784,12 @@ val mk_apply :
 (** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
     in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
     A nullary lambda whose body only throws reduces to {!CPPabort}, carrying
-    [ret] -- or {!Tany} when [ret] is absent -- as the type it yields. *)
+    [ret] -- or {!Tany} when [ret] is absent -- as the type it yields.
+
+    [tparams] makes the lambda a polymorphic function object, written
+    [[]<typename X>(...)]. *)
 val mk_lambda :
+  ?tparams:Id.t list ->
   (cpp_type * Id.t option) list ->
   cpp_type option ->
   cpp_stmt list ->
@@ -813,6 +820,12 @@ val lambda_params :
     own, so there is no expression function to take. *)
 val map_lambda :
   (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) -> cpp_lambda -> cpp_lambda
+
+(** [monomorphise_lambda l] drops [l]'s own template parameters and spells
+    every use of them [std::any].  A polymorphic function object stands where
+    the slot deduces its type; a slot that writes its own signature has
+    already settled what the lambda is. *)
+val monomorphise_lambda : cpp_lambda -> cpp_lambda
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural

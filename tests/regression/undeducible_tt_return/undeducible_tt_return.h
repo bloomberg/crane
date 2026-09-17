@@ -6,7 +6,6 @@
 #include <atomic>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -131,10 +130,9 @@ public:
 
 struct Handler {
   template <template <typename> class T1, template <typename> class T2,
-            template <typename> class T3, typename T4, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3<std::any>, F0 &, T1<std::any> &> &&
-             std::is_invocable_r_v<T3<std::any>, F1 &, T2<std::any> &>
-  static T3<T4> case_(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab);
+            typename T4, typename F0, typename F1>
+  static std::invoke_result_t<F0 &, T1<T4> &> case_(F0 &&f, F1 &&g,
+                                                    const Sum1<T1, T2, T4> &ab);
 };
 
 template <typename X> struct ReqA {
@@ -164,10 +162,9 @@ struct UndeducibleTtReturn {
 };
 
 template <template <typename> class T1, template <typename> class T2,
-          template <typename> class T3, typename T4, typename F0, typename F1>
-  requires std::is_invocable_r_v<T3<std::any>, F0 &, T1<std::any> &> &&
-           std::is_invocable_r_v<T3<std::any>, F1 &, T2<std::any> &>
-T3<T4> Handler::case_(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab) {
+          typename T4, typename F0, typename F1>
+std::invoke_result_t<F0 &, T1<T4> &>
+Handler::case_(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab) {
   if (std::holds_alternative<typename Sum1<T1, T2, T4>::Inl1>(ab.v())) {
     const auto &[e0] = std::get<typename Sum1<T1, T2, T4>::Inl1>(ab.v());
     return f(e0);

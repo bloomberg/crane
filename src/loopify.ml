@@ -7222,6 +7222,7 @@ let rec rewrite_field_access_for_decltype env expr =
     CPPfun_call
       (call_opaque, CPPlambda
         { cl_params = of_reversed (extra @ to_reversed params);
+          cl_tparams = [];
           cl_ret = rt;
           cl_body = body;
           cl_by_value = false },
@@ -7261,21 +7262,13 @@ let rec rewrite_field_access_for_decltype env expr =
       in
       CPPaccess (Adot, CPPdeclval (Tref pointee_ty), field)
     | None -> expr )
-  | CPPlambda
-    { cl_params = params;
-      cl_ret = ret_ty;
-      cl_body = body;
-      cl_by_value = _capture } ->
+  | CPPlambda ({cl_body = body; _} as l) ->
     (* Rewrite variables inside the lambda body to use std::declval, and remove
        any capture-default so the lambda is valid inside decltype (which is an
        unevaluated context where capture-defaults are not allowed in C++23). *)
     let fe = rewrite_field_access_for_decltype env in
     let rec fs stmt = map_stmt fe fs Fun.id stmt in
-    CPPlambda
-      { cl_params = params;
-        cl_ret = ret_ty;
-        cl_body = List.map fs body;
-        cl_by_value = false }
+    CPPlambda {l with cl_body = List.map fs body; cl_by_value = false}
   | _ ->
     map_expr (rewrite_field_access_for_decltype env) Fun.id Fun.id expr
 
@@ -7916,6 +7909,7 @@ and generic_inline_expr spec expr =
       ( call_opaque,
         CPPlambda
           { cl_params = of_reversed lparams;
+            cl_tparams = [];
             cl_ret = Some spec.ret_ty;
             cl_body = spec.body;
             cl_by_value = true },
@@ -8323,6 +8317,7 @@ let loopify_inner_lambdas ~tparams body =
         Sdecl (id, decl_ty)
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })
@@ -8332,6 +8327,7 @@ let loopify_inner_lambdas ~tparams body =
         Sdecl (id, decl_ty)
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })
@@ -8351,6 +8347,7 @@ let loopify_inner_lambdas ~tparams body =
       | Some lbody' ->
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })
@@ -8359,6 +8356,7 @@ let loopify_inner_lambdas ~tparams body =
         let lbody' = process_stmts lbody in
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })
@@ -8394,6 +8392,7 @@ let loopify_inner_lambdas ~tparams body =
         Sdecl (id, func_ty)
         :: Sasgn (id, Existing, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = false })
@@ -8403,6 +8402,7 @@ let loopify_inner_lambdas ~tparams body =
         Sasgn (id, _ty_opt, init_expr)
         :: Sassign_expr (CPPderef (CPPvar id), CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })
@@ -8426,6 +8426,7 @@ let loopify_inner_lambdas ~tparams body =
         Sasgn
           (id, tgt, CPPlambda
             { cl_params = of_reversed lparams';
+            cl_tparams = [];
               cl_ret = ret_ty_opt;
               cl_body = lbody';
               cl_by_value = cap })
@@ -8434,6 +8435,7 @@ let loopify_inner_lambdas ~tparams body =
         let lbody' = process_stmts lbody in
         Sasgn (id, tgt, CPPlambda
           { cl_params = lparams;
+          cl_tparams = [];
             cl_ret = ret_ty_opt;
             cl_body = lbody';
             cl_by_value = cap })

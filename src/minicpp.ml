@@ -442,6 +442,9 @@ and cpp_lambda = {
   cl_params : (cpp_type * Id.t option) revd;
       (** Parameters, reversed -- see {!revd}.  Read them with
           {!lambda_params}. *)
+  cl_tparams : Id.t list;
+      (** Template parameters, when this lambda is a polymorphic function
+          object: [[]<typename X>(...)].  Empty for an ordinary lambda. *)
   cl_ret : cpp_type option;  (** Trailing return type, when one is written. *)
   cl_body : cpp_stmt list;
   cl_by_value : bool;  (** A [\[=\]] capture rather than a [\[&\]] one. *)
@@ -790,14 +793,15 @@ let mk_apply ?yields ?params fn args =
     [void] and could not stand where a value is expected; [Tany] is what an
     erased slot asks for, and is the only thing left to say when the caller
     named no type. *)
-let lambda params ret body ~by_value =
+let lambda ?(tparams = []) params ret body ~by_value =
   { cl_params = {rev = List.rev params};
+    cl_tparams = tparams;
     cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
     cl_body = body;
     cl_by_value = by_value }
 
-let mk_lambda params ret body ~by_value =
-  let l = lambda params ret body ~by_value in
+let mk_lambda ?tparams params ret body ~by_value =
+  let l = lambda ?tparams params ret body ~by_value in
   match (params, body) with
   | [], [Sthrow msg] ->
     CPPabort (msg, match l.cl_ret with Some t -> t | None -> Tany)
@@ -1316,6 +1320,26 @@ let rec map_field
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
   (f', vis, tag)
+
+(** [monomorphise_lambda l] drops [l]'s own template parameters and spells
+    every use of them [std::any].
+
+    A polymorphic function object stands where the slot deduces its type.  A
+    slot that writes its own signature -- a [std::function<Nat(std::any)>]
+    field, say -- has already settled what the lambda is, and a lambda with a
+    [template <typename>] of its own does not convert to it. *)
+let monomorphise_lambda l =
+  match l.cl_tparams with
+  | [] -> l
+  | ids ->
+    let ft =
+      map_cpp_type (function
+        | Tvar (_, Some n) when List.exists (Id.equal n) ids -> Tany
+        | t -> t )
+    in
+    let rec fs s = map_stmt fe fs ft s
+    and fe e = map_expr fe fs ft e in
+    {(map_lambda fs ft l) with cl_tparams = []}
 
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested

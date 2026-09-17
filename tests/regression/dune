@@ -9249,3 +9249,25 @@
   (alias runtest)
   (deps member_alias_as_tt_arg.t.exe)
   (action (run ./member_alias_as_tt_arg.t.exe))))
+
+(subdir rank3_handler
+ (rule
+  (targets rank3_handler.t.exe)
+  (deps Rank3Handler.vo rank3_handler.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rank3_handler.t.exe rank3_handler.cpp rank3_handler.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps rank3_handler.t.exe)
+  (action (run ./rank3_handler.t.exe))))
+
+(subdir undeducible_tt_return
+ (rule
+  (targets undeducible_tt_return.t.exe)
+  (deps UndeducibleTtReturn.vo undeducible_tt_return.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} undeducible_tt_return.t.exe undeducible_tt_return.cpp undeducible_tt_return.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps undeducible_tt_return.t.exe)
+  (action (run ./undeducible_tt_return.t.exe))))

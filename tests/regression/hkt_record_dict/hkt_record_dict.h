@@ -88,15 +88,16 @@ struct HktRecordDict {
   }
 
   static inline const FnD<std::optional<std::any>> optd =
-      FnD<std::optional<std::any>>{[](const auto &f, const auto &o) {
-        if (o.has_value()) {
-          const auto &x = *o;
-          return std::make_optional<std::any>(
-              std::any(crane_call_erased(f, x)));
-        } else {
-          return std::optional<std::any>();
-        }
-      }};
+      FnD<std::optional<std::any>>{
+          []<typename _X>(const std::function<_X(_X)> &f,
+                          const std::optional<_X> &o) {
+            if (o.has_value()) {
+              const auto &x = *o;
+              return std::make_optional<_X>(_X(crane_call_erased(f, x)));
+            } else {
+              return std::optional<_X>();
+            }
+          }};
   static inline const std::optional<Nat> ex = fmd(
       optd, [](Nat x) { return Nat::s(x); },
       std::make_optional<Nat>(Nat::s(Nat::o())));

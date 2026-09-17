@@ -104,9 +104,7 @@ struct EffectCrossModule {
     static std::string ask_name();
 
     /// Function taking a callback
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, std::string &>
-    static T1 with_greeting(F0 &&f) {
+    template <typename T1, typename F0> static T1 with_greeting(F0 &&f) {
       std::string name = ask_name();
       greet(name);
       return f(std::move(name));

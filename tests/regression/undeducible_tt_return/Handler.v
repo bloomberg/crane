@@ -1,5 +1,5 @@
 From Crane Require Extraction.
-From CraneTestsWIP Require undeducible_tt_return.Sum.
+From CraneTestsRegression Require undeducible_tt_return.Sum.
 
 Notation "E ~> F" := (forall X : Type, E X -> F X) (at level 99) : type_scope.
 
@@ -9,3 +9,4 @@ Notation "E ~> F" := (forall X : Type, E X -> F X) (at level 99) : type_scope.
 Definition case_ {E F M : Type -> Type} (f : E ~> M) (g : F ~> M)
   : (fun X => Sum.sum1 E F X) ~> M :=
   fun _ ab => match ab with Sum.inl1 e => f _ e | Sum.inr1 b => g _ b end.
+

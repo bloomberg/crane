@@ -1811,6 +1811,7 @@ and pp_cpp_expr env args t =
     ++ str ")"
   | CPPlambda
     { cl_params = params;
+      cl_tparams = tparams;
       cl_ret = ret_ty;
       cl_body = body;
       cl_by_value = capture_by_value } ->
@@ -1842,13 +1843,23 @@ and pp_cpp_expr env args t =
       capture_by_value
       && not body_derefs_var
     in
+    (* A polymorphic function object: the erased positions of a rank-2
+       argument are the lambda's own template parameters, so the body says
+       [X] where it would otherwise have to guess. *)
+    let tparams_str =
+      match tparams with
+      | [] -> mt ()
+      | ids ->
+        str "<"
+        ++ pp_list (fun id -> str "typename " ++ Id.print id) ids
+        ++ str ">"
+    in
     let capture_str =
-      if not needs_capture then
-        str "[]("
-      else if capture_by_value then
-        if uses_this then str "[=, this](" else str "[=]("
-      else
-        str "[&]("
+      ( if not needs_capture then str "[]"
+        else if capture_by_value then
+          if uses_this then str "[=, this]" else str "[=]"
+        else str "[&]" )
+      ++ tparams_str ++ str "("
     in
     (* [=] lambdas need 'mutable' so captured variables aren't const-qualified.
        Without it, forwarding-reference parameters (F0&&) captured by value
@@ -3417,6 +3428,21 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
            APPLIES keeps its constraint, erased argument positions included --
            there the [std::any] is exactly what it will be passed. *)
         | TTfun _ when stored id -> None
+        (* Nor has a rank-2 callback a result to claim: the body applies it at
+           a type of its own choosing, and the [std::any] standing in for that
+           type is not what comes back -- a handler for [forall X, E X -> M X]
+           returns [M nat] where the constraint would demand [M std::any].
+           The result is recovered where it is used, by
+           {!Gen_decls.relax_tt_applied_return} or by the deduction the call
+           itself performs. *)
+        | TTfun (dom, cod)
+          when List.exists
+                 (fun t ->
+                   exists_cpp_type
+                     (function Tany | Topaque -> true | _ -> false)
+                     t )
+                 (cod :: List.filter (function Tfun _ -> true | _ -> false) dom)
+          -> None
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in

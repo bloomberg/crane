@@ -1364,6 +1364,7 @@ let return_captures_by_value stmts =
           cl_by_value = false })) ->
         Sreturn (Some (CPPlambda
           { cl_params = args;
+            cl_tparams = [];
             cl_ret = ret;
             cl_body = body;
             cl_by_value = true }))
@@ -2385,6 +2386,13 @@ let empty_slot =
     in_ctor_arg = false;
     eta_keep_moves = false;
     expected_cpp_ty = None }
+
+(** The template parameter of the polymorphic function object currently being
+    generated, if any -- see the [rank2_carrier] of {!gen_expr}'s [MLlam] case.
+    Inside such a lambda every erased type denotes that one parameter, so a
+    producer that would otherwise have nothing to say about a type argument
+    ([std::any], or no argument at all) says the carrier instead. *)
+let rank2_carrier_scope : Id.t option ref = ref None
 
 (** Mark the template arguments of [g] that its declaration spells
     [template <typename> class].  Such a position takes a bare template name
@@ -4172,13 +4180,38 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           List.map (fun _ -> Tany) temps
         else temps
       in
+      (* Inside a polymorphic function object the erased type the annotation
+         withheld is the lambda's own template parameter; the empty list a
+         fully-erased annotation leaves behind would print [std::any] for a
+         value the parameter has already pinned down. *)
+      let temps =
+        match (!rank2_carrier_scope, temps, n) with
+        | Some x, [], GlobRef.IndRef (kn, _) ->
+          ( match Table.get_ind_num_param_vars_opt kn with
+          | Some k -> List.init k (fun _ -> Tvar (0, Some x))
+          | None -> temps )
+        | _ -> temps
+      in
       let value_ty = Tglob (n, temps, []) in
       app ~yields:value_ty (mk_cppglob ~yields:value_ty r temps)
     | _ ->
       (* Type is not a Tglob - no type args to pass.
          This case is rare for custom constructors, which typically have
-         Tglob types. Fall back to bare constructor reference. *)
-      app (mk_cppglob r [])
+         Tglob types. Fall back to bare constructor reference.
+
+         Inside a polymorphic function object the erased type the annotation
+         withheld is the lambda's own template parameter, and leaving the
+         list empty would print [std::any] for a value the parameter has
+         already pinned down. *)
+      let temps =
+        match (!rank2_carrier_scope, r) with
+        | Some x, GlobRef.ConstructRef ((kn, _), _) ->
+          ( match Table.get_ind_num_param_vars_opt kn with
+          | Some n -> List.init n (fun _ -> Tvar (0, Some x))
+          | None -> [] )
+        | _ -> []
+      in
+      app (mk_cppglob r temps)
   in
   tctx := { !tctx with in_constructor_expr = saved_in_ctor };
   (* Collapse identity inline customs (%a0) for constructors, matching
@@ -5326,6 +5359,60 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let filtered_args =
       List.map (fun (id, ty, _) -> (id, ty)) filtered_args_with_owned
     in
+    (* A lambda standing for a rank-2 argument -- [fun _ e => ...] for a
+       parameter of type [forall X, E X -> M X] -- is handed a type the caller
+       has not chosen yet.  Extraction leaves that type as [Tunknown], which
+       prints as [std::any], and a lambda written against [std::any] is a
+       claim the body cannot keep: it would have to name a concrete result
+       where only the caller knows one.
+
+       The honest spelling is a polymorphic function object: the erased
+       positions become the lambda's own template parameter, so the parameter
+       reads [const E<_X> &] and the body says [_X] where it would otherwise
+       guess.  The callee recovers the result with [std::invoke_result_t]; see
+       {!Gen_decls.relax_tt_applied_return}. *)
+    let rank2_carrier =
+      let rec has_unknown ty =
+        match resolve_tmeta ty with
+        | Miniml.Tunknown -> true
+        | Miniml.Tglob (_, args, _) -> List.exists has_unknown args
+        | Miniml.Tapp (_, args) -> List.exists has_unknown args
+        | Miniml.Tarr (a, b) -> has_unknown a || has_unknown b
+        | _ -> false
+      in
+      (* Only where the slot deduces the callback's type.  A slot that spells
+         its own signature -- a [std::function<Nat(std::any)>] field, say --
+         has already settled what the lambda is, and a polymorphic function
+         object does not convert to it. *)
+      let slot_declares_signature =
+        match Option.map (unfold_cpp_typedef env) expected_ty with
+        | Some (Tfun _) -> true
+        | _ -> false
+      in
+      if
+        (not slot_declares_signature)
+        && List.exists (fun (_, ty, _) -> has_unknown ty) filtered_args_with_owned
+      then Some (Id.of_string "_X")
+      else None
+    in
+    (* Every erased position inside such a lambda denotes that one parameter:
+       it is the type the rank-2 binder quantified over. *)
+    (* A parameter that is nothing but an erased position is a box being
+       passed through: naming it [_X] deduces [std::any] and says less than
+       [std::any] did.  The carrier is only worth naming inside a type. *)
+    let rec is_boxed_through = function
+      | Tconst t | Tref t -> is_boxed_through t
+      | Tany | Topaque -> true
+      | _ -> false
+    in
+    let at_carrier ty =
+      match rank2_carrier with
+      | None -> ty
+      | Some x ->
+        map_cpp_type
+          (function Topaque | Tany -> Tvar (0, Some x) | t -> t)
+          ty
+    in
     let f =
       with_escape_analysis (fun () ->
         let tvars = get_current_type_vars () in
@@ -5349,6 +5436,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               let param_cpp_ty =
                 match body_subst with
                 | Some _ -> Tref (Tconst stored_cpp_ty)
+                | None
+                  when rank2_carrier <> None
+                       && has_tany_in_type bare_cpp_ty
+                       && not (is_boxed_through bare_cpp_ty) ->
+                  Tref (Tconst (at_carrier bare_cpp_ty))
                 | None when has_tany_in_type bare_cpp_ty ->
                   (* The ML type contains erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
@@ -5363,6 +5455,20 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         in
         let cpp_args =
           List.map (fun (ty, id, _) -> (ty, id)) cpp_arg_info
+        in
+        (* A template parameter C++ cannot deduce is worse than the erasure
+           it replaces, so the function object is polymorphic only where the
+           carrier reaches a parameter: an erased position the body alone
+           mentions stays [std::any]. *)
+        let carrier =
+          let deduces x (ty, _) =
+            exists_cpp_type
+              (function Tvar (_, Some n) -> Id.equal n x | _ -> false)
+              ty
+          in
+          match rank2_carrier with
+          | Some x when List.exists (deduces x) cpp_args -> Some x
+          | _ -> None
         in
         (* The parameters' declared C++ types are only known here, after
            [cpp_arg_info]; correct the assignment made when their scope was
@@ -5440,14 +5546,40 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            body's own generation. *)
         let with_lam_return_type f =
           match Option.map (unfold_cpp_typedef env) expected_ty with
+          | _ when carrier <> None ->
+            (* A polymorphic function object returns at the type its own
+               parameter fixes, so the enclosing function's return type is
+               not merely unhelpful here -- it is the wrong answer, and the
+               body would spell it in place of the carrier.  What the body
+               does return is the lambda's own ML codomain read at the
+               carrier: the rank-2 variable is erased in that type, and the
+               carrier is the name the parameter gave it back. *)
+            let ret =
+              match body_expected_ml_ty with
+              | Some ml_ty ->
+                Some
+                  (at_carrier
+                     (convert_ml_type_to_cpp_type env (get_current_type_vars ())
+                        ml_ty))
+              | None -> None
+            in
+            with_cpp_return_type ret f
           | Some (Tfun (_, cod)) when cod <> Tvoid ->
             with_cpp_return_type (Some cod) f
           | _ -> f ()
         in
         let body_stmts =
-          with_lam_return_type (fun () ->
-            gen_stmts ~slot:{slot with expected_ml_ty = body_expected_ml_ty} env
-              (fun x -> Sreturn (Some x)) a )
+          let saved_carrier = !rank2_carrier_scope in
+          if carrier <> None then rank2_carrier_scope := carrier;
+          Fun.protect
+            ~finally:(fun () -> rank2_carrier_scope := saved_carrier)
+            (fun () ->
+              with_lam_return_type (fun () ->
+                gen_stmts
+                  ~slot:{slot with expected_ml_ty = body_expected_ml_ty}
+                  env
+                  (fun x -> Sreturn (Some x))
+                  a ) )
         in
         let body_stmts =
           List.fold_left
@@ -5529,7 +5661,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            struct field types.  Annotating here caused regressions for inner
            lambdas whose bodies return further closures (the inferred type
            became [std::function<...>] instead of the plain return type). *)
-        mk_lambda (List.rev cpp_args) None body_stmts ~by_value:true )
+        let body_stmts =
+          match carrier with
+          | None -> body_stmts
+          | Some _ ->
+            let rec st s = map_stmt ex st at_carrier s
+            and ex e = map_expr ex st at_carrier e in
+            List.map st body_stmts
+        in
+        mk_lambda
+          ?tparams:(Option.map (fun x -> [x]) carrier)
+          (List.rev cpp_args) None body_stmts ~by_value:true )
     in
     restore_env_types saved_env_types;
     ( match filtered_args with
@@ -6593,10 +6735,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                           | _ -> false) ->
               ( match expr with
               | CPPlambda
-                { cl_params = params;
-                  cl_ret = ret_ty_opt;
-                  cl_body = body_stmts;
-                  cl_by_value = cap } ->
+                ({ cl_params = params;
+                   cl_ret = ret_ty_opt;
+                   cl_body = body_stmts;
+                   cl_by_value = cap; _ } as lam) ->
                 let params = to_reversed params in
                 let n_params = List.length params in
                 let new_params = List.map (fun (orig_ty, orig_id) ->
@@ -6712,7 +6854,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
                 let new_lambda = CPPlambda
-                  { cl_params = of_reversed renamed_params;
+                  { (monomorphise_lambda lam) with
+                    cl_params = of_reversed renamed_params;
                     cl_ret = new_ret_ty;
                     cl_body = new_body;
                     cl_by_value = cap } in
@@ -6764,10 +6907,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Tfun (param_tys, ret_ty) when List.exists (fun t -> t = Tany) param_tys ->
               ( match expr with
               | CPPlambda
-                { cl_params = params;
-                  cl_ret = ret_ty_opt;
-                  cl_body = body_stmts;
-                  cl_by_value = cap } ->
+                ({ cl_params = params;
+                   cl_ret = ret_ty_opt;
+                   cl_body = body_stmts;
+                   cl_by_value = cap; _ } as lam) ->
                 let params = to_reversed params in
                 let n_params = List.length params in
                 let new_params = List.mapi (fun j (orig_ty, orig_id) ->
@@ -6873,7 +7016,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
                 let new_lambda = CPPlambda
-                  { cl_params = of_reversed renamed_params;
+                  { (monomorphise_lambda lam) with
+                    cl_params = of_reversed renamed_params;
                     cl_ret = new_ret_ty;
                     cl_body = new_body;
                     cl_by_value = cap } in
@@ -6935,10 +7079,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           ( match ft, expr with
           | Miniml.Tarr _, CPPlambda
-            { cl_params = params;
-              cl_ret = ret_ty_opt;
-              cl_body = body_stmts;
-              cl_by_value = cap }
+            ({ cl_params = params;
+               cl_ret = ret_ty_opt;
+               cl_body = body_stmts;
+               cl_by_value = cap; _ } as lam)
             when ft_has_erased_tvar ft ->
             let params = to_reversed params in
             let rec collect_tarr = function
@@ -7038,7 +7182,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
             in
             let new_lambda = CPPlambda
-              { cl_params = of_reversed new_params;
+              { (monomorphise_lambda lam) with
+                cl_params = of_reversed new_params;
                 cl_ret = new_ret_ty;
                 cl_body = new_body;
                 cl_by_value = cap } in
@@ -8023,6 +8168,19 @@ and curry_to_expected env ?expected_ty ?(tys = []) x cglob =
   | Some n_outer ->
     (* The two groups share one numbering, so they are named together and
        then split. *)
+    (* A function-typed parameter with erased positions in it takes a
+       polymorphic function object, not the [std::function] its erasure
+       spells: writing that type here would fix the very type argument the
+       callee leaves to the caller.  [auto &&] passes whatever arrives
+       through, which is all this adapter does with it. *)
+    let decl_dom =
+      List.map
+        (fun ty ->
+          match ty with
+          | Tfun _ when has_tany_in_type ty -> rval_ref Tauto
+          | _ -> ty )
+        decl_dom
+    in
     let params = adapter_params ~prefix:"_ec" decl_dom in
     let outer = List.filteri (fun i _ -> i < n_outer) params in
     let inner = List.filteri (fun i _ -> i >= n_outer) params in
@@ -8587,6 +8745,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             cl_by_value = cap } ->
           CPPlambda
             { cl_params = params;
+            cl_tparams = [];
               cl_ret = Some ret_ty;
               cl_body = body;
               cl_by_value = cap }
@@ -8611,6 +8770,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             in
             CPPlambda
               { cl_params = params;
+              cl_tparams = [];
                 cl_ret = Some (Tshared_ptr inner);
                 cl_body = List.map wrap_stmt body;
                 cl_by_value = cap }
@@ -11833,6 +11993,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             Declare Tauto,
             CPPlambda
               { cl_params = of_reversed (orig_params @ self_params);
+              cl_tparams = [];
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
                 cl_by_value = false } ))
@@ -11868,6 +12029,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
             Declare Tauto,
             CPPlambda
               { cl_params = of_reversed orig_params;
+              cl_tparams = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_by_value = false } ))
@@ -11941,7 +12103,8 @@ and gen_local_fix_shared_ptr env renamed_ids funs_with_params =
         Sassign_expr
           ( CPPderef (CPPvar id),
             CPPlambda
-              { cl_params =
+              { cl_tparams = [];
+                cl_params =
                   of_reversed
                     (List.map
                        (fun (id, ty) -> (cpp_of_ml env ty, Some id))
@@ -12046,7 +12209,8 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
           ( impl_id,
             Declare Tauto,
             CPPlambda
-              { cl_params = of_reversed (orig_params @ self_params);
+              { cl_tparams = [];
+                cl_params = of_reversed (orig_params @ self_params);
                 cl_ret = ret_ty fty;
                 cl_body = List.map rewrite_stmt body;
                 cl_by_value = true } ))
@@ -12079,6 +12243,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
             Declare Tauto,
             CPPlambda
               { cl_params = of_reversed orig_params;
+              cl_tparams = [];
                 cl_ret = rty;
                 cl_body = wrapper_body;
                 cl_by_value = true } ))
@@ -12630,6 +12795,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
               in
               CPPlambda
                 { cl_params = of_reversed wrapper_params;
+                cl_tparams = [];
                   cl_ret = None;
                   cl_body =
                     [ Sreturn

@@ -1902,6 +1902,24 @@ let gen_type_alias r vars ot =
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 
+(** Whether a type is the type variable named [id].  The head of a tvar is not
+    always resolved to its parameter name, so a tvar answers to either
+    spelling; cf. {!applied_tvar_arities}. *)
+let tvar_is id = function
+  | Tvar (i, name) ->
+    (match name with Some n -> Id.equal n id | None -> false)
+    || (i > 0 && Id.equal (tvar_id i) id)
+  | _ -> false
+
+(** Whether [ty] names the type variable [id] anywhere. *)
+let tvar_named id ty = exists_cpp_type (tvar_is id) ty
+
+(** The name a tvar goes by, whether or not its head was resolved. *)
+let tvar_name = function
+  | Tvar (_, Some n) -> Some n
+  | Tvar (i, None) when i > 0 -> Some (tvar_id i)
+  | _ -> None
+
 (** Relax a signature whose return type applies a template template parameter
     (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
     named only by the return type, and C++ deduces nothing from a return type,
@@ -1916,15 +1934,8 @@ let relax_applied_return temps decl =
   in
   match decl with
   | Dfun {df_ret = cod0; df_shape = Ddef (params, _); _} when applies_tvar cod0 ->
-    (* The head of a tvar is not always resolved to its parameter name, so a
-       tvar answers to either spelling; cf. {!applied_tvar_arities}. *)
-    let is_tvar id = function
-      | Tvar (i, name) ->
-        (match name with Some n -> Id.equal n id | None -> false)
-        || (i > 0 && Id.equal (tvar_id i) id)
-      | _ -> false
-    in
-    let names id ty = exists_cpp_type (is_tvar id) ty in
+    let is_tvar = tvar_is in
+    let names = tvar_named in
     let undeducible id = not (List.exists (fun (_, ty) -> names id ty) params) in
     (* The result of the callback whose declared codomain is [id], spelled so
        that C++ can compute it from the callback's deduced type. *)
@@ -1964,6 +1975,74 @@ let relax_applied_return temps decl =
       @ computed
     in
     (temps, decl)
+  | _ -> (temps, decl)
+
+(** Relax a signature whose return type applies a template template parameter
+    that nothing deduces.
+
+    [case_] returns [M X] for a caller-chosen [M : Type -> Type], and [M] is
+    named by no argument: [template <typename> class T3] with the return type
+    [T3<T4>] is a parameter the call site cannot supply and the compiler
+    cannot infer.  {!relax_applied_return} answers the same question for a
+    plain [typename] by giving it a default, but a [template <typename> class]
+    parameter takes a template as its default, not a type, so there is nothing
+    to default it to.
+
+    What does pin the answer is the callback that produces it.  The handler
+    [f] passed for [E ~> M] is a function object polymorphic in [X], so
+    [std::invoke_result_t<F0 &, T1<T4> &>] is [M X] at the very instantiation
+    this call needs.  The return type is rewritten to that, [T3] is dropped,
+    and the callbacks that named it in their [requires] drop the constraint --
+    [std::is_invocable_r_v<T3<std::any>, F0 &, T1<std::any> &>] was never a
+    claim about this call anyway, since [std::any] stands in for the [X] the
+    body chooses. *)
+let relax_tt_applied_return temps decl =
+  let kind_of id =
+    List.find_map (fun (tt, i) -> if Id.equal i id then Some tt else None) temps
+  in
+  match decl with
+  | Dfun ({df_ret = Tapply (head, [ret_arg]); df_shape = Ddef (params, _); _} as f)
+    -> (
+    match tvar_name head with
+    | Some id
+      when kind_of id = Some (TTtemplate 1)
+           && not (List.exists (fun (_, ty) -> tvar_named id ty) params) ->
+      (* The callback whose codomain is this application, and the argument it
+         is applied to there -- [T3<std::any>], whose [std::any] stands for
+         the [X] that the return type instantiates at [ret_arg]. *)
+      let producer =
+        List.find_map
+          (fun (tt, fid) ->
+            match tt with
+            | TTfun (doms, Tapply (h, [carrier])) when tvar_is id h ->
+              Some (fid, doms, carrier)
+            | _ -> None )
+          temps
+      in
+      ( match producer with
+      | None -> (temps, decl)
+      | Some (fid, doms, carrier) ->
+        let at_ret_arg t =
+          map_cpp_type (fun t -> if t = carrier then ret_arg else t) t
+        in
+        let ret =
+          Tid_external
+            ( "std::invoke_result_t",
+              Tref (Tid_external (Id.to_string fid, []))
+              :: List.map (fun d -> Tref (at_ret_arg d)) doms )
+        in
+        let temps =
+          List.filter_map
+            (fun (tt, i) ->
+              match tt with
+              | _ when Id.equal i id -> None
+              | TTfun (doms, cod) when List.exists (tvar_named id) (cod :: doms)
+                -> Some (TTtypename, i)
+              | _ -> Some (tt, i) )
+            temps
+        in
+        (temps, Dfun {f with df_ret = ret}) )
+    | _ -> (temps, decl) )
   | _ -> (temps, decl)
 
 (** Build template parameter list with phantom detection.
@@ -3194,6 +3273,7 @@ let gen_dfun n b cty ty temps =
     (temps, inner, env)
   in
   let temps, inner = relax_applied_return temps inner in
+  let temps, inner = relax_tt_applied_return temps inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
