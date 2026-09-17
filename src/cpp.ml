@@ -1833,6 +1833,24 @@ let prepare_structure s =
 let pp_wrapper_struct name specs =
   str "struct " ++ str name ++ str " {" ++ fnl () ++ specs ++ fnl () ++ str "};"
 
+(** What rendering one wrapper module produced, beyond the declarations that
+    merge into its struct.
+
+    [wr_defs] are the out-of-line definitions, which follow the whole file.
+    [wr_lifted] is a declaration lifted out of the module -- an instance struct,
+    whose concept argument is a type no module owns -- and is due at the
+    module's own place in the topological order, because a later module's
+    constant may be initialised from it.
+
+    A lifted declaration is emitted once: whoever emits it empties the field,
+    so what is left at the end of the file is exactly what no module's turn
+    came round to claim. *)
+type wrapper_render = {
+  wr_name : string;
+  wr_defs : Pp.t;
+  mutable wr_lifted : Pp.t option;
+}
+
 (** Main structure renderer with declaration tracking.
 
     PASS 1: Process all wrapper modules to populate pending_wrapper_decls. PASS
@@ -1883,8 +1901,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   in
   (* Each wrapper module contributes up to three fragments: declarations that
      merge into the struct, and definitions and lifted helpers that must follow
-     it.  The latter two are collected as lists and joined once, rather than
-     grown in place. *)
+     it.  The struct's declarations go into {!pending_wrapper_decls}, which
+     {!Cpp_print} reads when it finds an eponymous type to merge them into; the
+     other two stay here, where both producer and consumer are. *)
   let wrapper_parts =
     List.filter_map
       (fun ((mp, sel), wrapper_name) ->
@@ -1902,25 +1921,35 @@ let do_struct_with_decl_tracking ~is_header f s =
           if not (Pp.ismt p_specs) then (
             Hashtbl.replace pending_wrapper_decls name p_specs;
             Hashtbl.replace unmerged_wrappers name () );
-          if not (Pp.ismt p_lifted) then
-            Hashtbl.replace pending_wrapper_lifted name p_lifted;
           pop_visible ();
-          Some (name, p_defs, p_lifted) )
+          Some
+            {
+              wr_name = name;
+              wr_defs = p_defs;
+              wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
+            } )
       wrapper_names
   in
   let joined pick =
     prlist
       (fun part ->
-        let pp = pick part in
-        if Pp.ismt pp then mt () else cut2 () ++ pp )
+        match pick part with
+        | None -> mt ()
+        | Some pp -> if Pp.ismt pp then mt () else cut2 () ++ pp )
       wrapper_parts
   in
-  let deferred_defs = joined (fun (_, d, _) -> d) in
+  let deferred_defs = joined (fun w -> Some w.wr_defs) in
   (* A lifted declaration [ppl] did not get to emit -- its module is not in the
      rendered order -- still has to appear somewhere, so it goes at the end. *)
-  let deferred_lifted () =
-    joined (fun (name, _, l) ->
-        if Hashtbl.mem pending_wrapper_lifted name then l else mt () )
+  let deferred_lifted () = joined (fun w -> w.wr_lifted) in
+  (* [ppl] emits a module's lifted declaration when the module's turn comes,
+     and empties the field so the tail does not repeat it. *)
+  let claim_lifted name =
+    match List.find_opt (fun w -> String.equal w.wr_name name) wrapper_parts with
+    | Some ({wr_lifted = Some l; _} as w) ->
+      w.wr_lifted <- None;
+      l
+    | _ -> mt ()
   in
   name_cache :=
     Some
@@ -1979,13 +2008,7 @@ let do_struct_with_decl_tracking ~is_header f s =
         (* A declaration lifted out of this module -- an instance struct -- is
            due at the same point, and for the same reason: a later module's
            constant may be initialised from it. *)
-        let lifted_pp =
-          match Hashtbl.find_opt pending_wrapper_lifted name with
-          | Some l ->
-            Hashtbl.remove pending_wrapper_lifted name;
-            l
-          | None -> mt ()
-        in
+        let lifted_pp = claim_lifted name in
         prlist_sep_nonempty cut2 (fun x -> x) [type_pp; wrapper_pp; lifted_pp]
       | None ->
         (* Which children a name collision forces inside a wrapper struct is
@@ -2219,7 +2242,6 @@ let do_struct_with_decl_tracking ~is_header f s =
       mt () )
   in
   let deferred_lifted = deferred_lifted () in
-  Hashtbl.clear pending_wrapper_lifted;
   v 0
     ( forward_decls
     ++ hoisted_concepts

@@ -805,15 +805,6 @@ let is_global_scope_type_alias r =
 let pending_wrapper_decls : (string, Pp.t) Hashtbl.t =
   owned_table "pending_wrapper_decls"
 
-(** Pending lifted declarations: maps a wrapper struct name to the namespace-
-    scope declarations lifted out of that module -- a typeclass instance, say,
-    which is a struct of its own rather than a member.  Keyed the same way as
-    {!pending_wrapper_decls} and consumed at the same point, so that a lifted
-    declaration lands at its module's place in the topological order instead
-    of after every module that uses it. *)
-let pending_wrapper_lifted : (string, Pp.t) Hashtbl.t =
-  owned_table "pending_wrapper_lifted"
-
 (** Set of wrapper struct names that have pending declarations and thus cannot
     be merged. Populated alongside pending_wrapper_decls during PASS 1. Used
     during type/expression rendering to decide between merged (List<A>) and
