@@ -9227,3 +9227,14 @@
   (alias runtest)
   (deps select_type_alias_clash.t.exe)
   (action (run ./select_type_alias_clash.t.exe))))
+
+(subdir member_alias_as_tt_arg
+ (rule
+  (targets member_alias_as_tt_arg.t.exe)
+  (deps MemberAliasAsTtArg.vo member_alias_as_tt_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} member_alias_as_tt_arg.t.exe member_alias_as_tt_arg.cpp member_alias_as_tt_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps member_alias_as_tt_arg.t.exe)
+  (action (run ./member_alias_as_tt_arg.t.exe))))

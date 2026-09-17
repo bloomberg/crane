@@ -962,10 +962,12 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | Tqualified (base, id) ->
         (* A dependent alias template -- the carrier of a higher-kinded class
            parameter.  Here it names a template rather than a type, so the
-           leading [typename] a qualified type would take is wrong -- and so
-           is the [template] disambiguator, which announces an argument list
-           that a template template argument does not carry. *)
-        pp_rec ~lead:false false base ++ str "::" ++ Id.print id
+           leading [typename] a qualified type would take is wrong; what the
+           member needs is [template], which tells the parser the dependent
+           name is a template before any argument list is in sight
+           ([temp.names]/5).  Without it the name parses as a non-template
+           member and the position rejects it. *)
+        pp_rec ~lead:false false base ++ str "::template " ++ Id.print id
       | Tglob (r, _ :: _, _) -> (
         match find_custom_opt r with
         | Some template when String.contains template '%' -> (

@@ -151,7 +151,7 @@ T1<T2> iter(Iter<T1> iter0, F1 &&x, const T2 &x0) {
 
 template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
   requires std::is_invocable_r_v<typename _tcI0::template F<T2>, F1 &, T2 &>
-typename _tcI0::template F<T2> run(Iter<_tcI0::F> x0_, F1 &&x1_,
+typename _tcI0::template F<T2> run(Iter<_tcI0::template F> x0_, F1 &&x1_,
                                    const T2 &x2_) {
   return iter<typename _tcI0::F, T2>(std::move(x0_), x1_, x2_);
 }

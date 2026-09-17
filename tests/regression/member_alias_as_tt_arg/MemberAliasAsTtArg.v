@@ -1,24 +1,23 @@
-(** Crane bug: a dependent member alias used as a template template argument
-    is emitted without the [template] keyword, so it is parsed as a type.
+(** A dependent member alias passed as a template template argument keeps its
+    [template] disambiguator.
 
     [stateT S M A] is [S -> M (A * S)], i.e. a type constructor built out of
-    another one, and Crane correctly spells it as an alias template taking a
-    template template parameter:
+    another one, which Crane spells as an alias template taking a template
+    template parameter:
 
       template <typename S, template <typename> class M, typename A>
       using stateT = std::function<M<std::pair<A, S>>(S)>;
 
     [run] takes a [Monad M] instance, whose carrier reaches the body as the
-    member alias [_tcI0::m].  Passing that member into [stateT] needs the
-    [template] disambiguator, and Crane omits it:
+    member alias [_tcI0::m].  Passing that member into [stateT] must read
 
-      run(stateT<T2, _tcI0::m, Nat> step, const T2 &s)
-                     ^^ needs [_tcI0::template m]
+      run(stateT<T2, _tcI0::template m, Nat> step, const T2 &s)
 
-    Expected: [stateT<T2, typename _tcI0::template m, Nat>].
-    Actual:   error: template argument for template template parameter must be
-                     a class template or type alias template
-              error: no matching function for call to 'run'
+    because a dependent name is assumed not to be a template until [template]
+    says otherwise ([temp.names]/5) -- and an argument list, which would
+    normally settle it, is exactly what this position does not carry.  Without
+    the keyword clang rejects the argument as "not a class template or type
+    alias template" and no call to [run] resolves.
 
     Seen in Vellvm five times, all on [Monads::template stateT<T2, _tcI0::m,
     std::any, Sum<std::any, std::any>>] in the state-monad interpretation
