@@ -1,7 +1,7 @@
 From Crane Require Import Mapping.Std.
 Require Import Crane.Mapping.NatIntStd.
 From Crane Require Extraction.
-From CraneTestsWIP Require Import file_module_eponymous_record.Catalog.
+From CraneTestsRegression Require Import file_module_eponymous_record.Catalog.
 
 (**
   Bug: a record named like its file module loses its name.
