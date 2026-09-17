@@ -4960,6 +4960,20 @@ let rec decompose_all_calls check expr =
 
 (** {3 Enter-rewrite context} *)
 
+(** One parameter a frame carries, and how the frame holds it: [fp_pointer_safe]
+    says the caller's value outlives the frame, so the field is a pointer to it
+    rather than a copy.
+
+    The flag lives in the parameter because every reader needs the two
+    together -- the field's type, the push argument and the handler's binding
+    each depend on both -- and a mask beside the list is one more thing to keep
+    in step. *)
+type frame_param = {
+  fp_name : Id.t;
+  fp_ty : cpp_type;
+  fp_pointer_safe : bool;
+}
+
 (** One entry point of a frame machine.
 
     An entry is what a call needs in order to become a stack push: the
@@ -4996,16 +5010,15 @@ let entry_varying_params en = filter_by_mask en.en_varying en.en_params
 let entry_varying_types en = List.map snd (entry_varying_params en)
 
 (** Everything one entry point contributes to the emitted machine: the frame
-    struct its callers push, that struct's pointer-safe mask, the parameters it
-    carries, and the handler the dispatch loop runs on popping one.
+    struct its callers push, the parameters it carries and how it holds each
+    of them, and the handler the dispatch loop runs on popping one.
 
-    These five travel together -- a struct's fields, their types, their mask
+    These four travel together -- a struct's fields, their types, their mask
     and the handler that binds them all have to describe the same frame -- so
-    they are one record rather than five parallel lists indexed by position. *)
+    they are one record rather than parallel lists indexed by position. *)
 type entry_emission = {
   ee_id : Id.t;
-  ee_ps : bool list;
-  ee_params : (Id.t * cpp_type) list;
+  ee_params : frame_param list;
   ee_body : cpp_stmt list;
 }
 
@@ -5016,16 +5029,19 @@ type entry_emission = {
     function's own can borrow rather than own them. *)
 let entry_emission ?pointer_safe en body =
   let params = entry_varying_params en in
-  let ps =
+  let params =
     match pointer_safe with
-    | None -> List.map (fun _ -> false) params
+    | None ->
+      List.map
+        (fun (id, ty) -> {fp_name = id; fp_ty = ty; fp_pointer_safe = false})
+        params
     | Some ps ->
-      ignore
-        (map2_exn ~what:"an entry emission's pointer-safe mask"
-           (fun _ _ -> ()) ps params );
-      ps
+      map2_exn ~what:"an entry emission's pointer-safe mask"
+        (fun safe (id, ty) ->
+          {fp_name = id; fp_ty = ty; fp_pointer_safe = safe} )
+        ps params
   in
-  {ee_id = en.en_enter_id; ee_ps = ps; ee_params = params; ee_body = body}
+  {ee_id = en.en_enter_id; ee_params = params; ee_body = body}
 
 (** {3 Bodies the machine adopts as extra entry points} *)
 
@@ -6513,7 +6529,7 @@ let rewrite_enter_stmt ctx stmt =
 
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
-let make_stack_init ?(pointer_safe = []) varying_params =
+let make_stack_init varying_params =
   let move_if_needed ty v =
     match ty with
     | Tconst _ | Tref _ -> v
@@ -6524,15 +6540,12 @@ let make_stack_init ?(pointer_safe = []) varying_params =
     (CPPstruct_id
        ( id_enter,
          [],
-         if pointer_safe = [] then
-           List.map (fun (id, ty) -> move_if_needed ty (CPPvar id)) varying_params
-         else
-           List.map2
-             (fun safe (id, ty) ->
-               let v = CPPvar id in
-               if safe then CPPunop (Uaddr, v)
-               else move_if_needed ty v)
-             pointer_safe varying_params ))
+         List.map
+           (fun p ->
+             let v = CPPvar p.fp_name in
+             if p.fp_pointer_safe then CPPunop (Uaddr, v)
+             else move_if_needed p.fp_ty v )
+           varying_params ))
 
 (** Generate parameter bindings that read frame fields into locals.
     For trivially copyable types (scalars, pointers, enums), produces a copy.
@@ -6544,7 +6557,7 @@ let make_stack_init ?(pointer_safe = []) varying_params =
 
     @param varying_params The parameters to bind from the frame
     @return List of assignment statements *)
-let make_param_copies ?(pointer_safe = []) varying_params =
+let make_param_copies varying_params =
   (* Helper: choose the right binding expression for a frame field access. *)
   let bind_field id ty =
     let stripped = strip_ref_type ty in
@@ -6570,23 +6583,19 @@ let make_param_copies ?(pointer_safe = []) varying_params =
       (* Trivially copyable (scalar, pointer, enum): plain copy is fine. *)
       Sasgn (id, Declare stripped, f)
   in
-  if pointer_safe = [] then
-    List.map (fun (id, ty) -> bind_field id ty) varying_params
-  else
-    List.map2
-      (fun safe (id, ty) ->
-        if safe then
-          match borrowed_value_param_pointee ty with
-          | Some t ->
-            Sasgn (id, Declare (Tref (Tconst t)),
-                   CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
-          | None ->
-            let stripped = strip_ref_type ty in
-            Sasgn (id, Declare stripped,
-                   CPPaccess (Adot, CPPvar (id_f), id))
-        else
-          bind_field id ty)
-      pointer_safe varying_params
+  List.map
+    (fun {fp_name = id; fp_ty = ty; fp_pointer_safe} ->
+      if not fp_pointer_safe then bind_field id ty
+      else
+        match borrowed_value_param_pointee ty with
+        | Some t ->
+          Sasgn (id, Declare (Tref (Tconst t)),
+                 CPPderef (CPPaccess (Adot, CPPvar (id_f), id)))
+        | None ->
+          let stripped = strip_ref_type ty in
+          Sasgn (id, Declare stripped,
+                 CPPaccess (Adot, CPPvar (id_f), id)) )
+    varying_params
 
 (** Compute pointer-safe flags for each Call frame by analyzing which
     frame fields appear as [_Enter] push args at pointer-safe positions.
@@ -7526,7 +7535,11 @@ let transform_nontail ?(fn_name : string option) ?adopted check tparams
   in
   let ee_name ee = Id.to_string ee.ee_id in
   let all_frame_ps =
-    List.map (fun ee -> (ee_name ee, ee.ee_ps)) emissions @ frame_ps_map
+    List.map
+      (fun ee ->
+        (ee_name ee, List.map (fun p -> p.fp_pointer_safe) ee.ee_params) )
+      emissions
+    @ frame_ps_map
   in
   let frame_sptr =
     List.filter_map (fun cf ->
@@ -7536,16 +7549,16 @@ let transform_nontail ?(fn_name : string option) ?adopted check tparams
   in
   (* Build struct definitions *)
   let entry_fields ee =
-    List.map2
-      (fun safe (id, ty) ->
-        match safe, borrowed_value_param_pointee ty with
-        | true, Some t -> (id, Tptr (Tconst t))
+    List.map
+      (fun p ->
+        match p.fp_pointer_safe, borrowed_value_param_pointee p.fp_ty with
+        | true, Some t -> (p.fp_name, Tptr (Tconst t))
         (* strip_ref_and_const_type: removes the [const T&] wrapper that
            e.g. a [const unsigned int &fuel] param carries.  Keeping [const]
            in the struct field would prevent the struct from being
            move-assignable (breaks [std::variant] in some compilers). *)
-        | _ -> (id, strip_ref_and_const_type ty))
-      ee.ee_ps ee.ee_params
+        | _ -> (p.fp_name, strip_ref_and_const_type p.fp_ty) )
+      ee.ee_params
   in
   let frame_description cf =
     let field_names_str =
@@ -7674,7 +7687,7 @@ let transform_nontail ?(fn_name : string option) ?adopted check tparams
      caller made. *)
   let init_push =
     match emissions with
-    | ee :: _ -> make_stack_init ~pointer_safe:ee.ee_ps ee.ee_params
+    | ee :: _ -> make_stack_init ee.ee_params
     | [] -> CErrors.anomaly (Pp.str "loopify: frame machine with no entry point")
   in
   (* Identify varying params that are moved into the Enter handler (not passed
@@ -7686,21 +7699,16 @@ let transform_nontail ?(fn_name : string option) ?adopted check tparams
      (not [strip_ref_and_const_type]) so that [const T&] params (which are
      bound as [const T& id = _f.id], not moved) are excluded. *)
   let owned_varying_names ee =
-    let pairs =
-      if ee.ee_ps = [] then List.map (fun p -> (false, p)) ee.ee_params
-      else List.map2 (fun s p -> (s, p)) ee.ee_ps ee.ee_params
-    in
     List.filter_map
-      (fun (safe, (id, ty)) ->
-        if safe then None
+      (fun p ->
+        if p.fp_pointer_safe then None
         else
-          let stripped = strip_ref_type ty in
-          match stripped with
+          match strip_ref_type p.fp_ty with
           | Tconst _ -> None  (* const-ref bind: not owned *)
           | Tglob (r, _, _) when Table.is_coinductive r -> None
-          | t when not (is_trivially_copyable_type t) -> Some id
-          | _ -> None)
-      pairs
+          | t when not (is_trivially_copyable_type t) -> Some p.fp_name
+          | _ -> None )
+      ee.ee_params
   in
   (* Enter handler: copy frame fields to locals (only varying params; invariant
      params are captured directly from function scope) *)
@@ -7720,7 +7728,7 @@ let transform_nontail ?(fn_name : string option) ?adopted check tparams
       key = Id.to_string id_result || List.mem key field_keys
     in
     let handler =
-      make_param_copies ~pointer_safe:ee.ee_ps ee.ee_params
+      make_param_copies ee.ee_params
       @ adjust_frame_push_args ~binding_env ~frame_sptr all_frame_ps body
       |> optimize_frame_push_args frame_field_types
       |> optimize_last_use_moves
