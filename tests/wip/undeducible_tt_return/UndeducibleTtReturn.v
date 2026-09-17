@@ -31,6 +31,31 @@
     Seen in Vellvm wherever ITree's [case_] / [Handler] combinators are used;
     six call sites in the extracted interpreter fail this way.
 
+    Diagnosed 2026-09-17.  The root is the handler's own [forall X]: a rank-2
+    binder extraction cannot name, which it hands over as [Tunknown] and which
+    converts to [std::any].  Three layers then disagree about it, and all three
+    have to move together:
+
+    1. The call site cannot name [T3], because [E], [F] and [M] reach it as
+       [Tdummy Ktype] -- the [Kill Ktype] fallback in [extraction.ml] erases an
+       unapplied inductive that is custom or takes C++ template parameters, on
+       the grounds that its bare name is not a type.  Here that is precisely
+       backwards: an unapplied inductive with template parameters can only be
+       filling a [Type -> Type] position, where the bare name is the only valid
+       spelling.
+    2. [is_invocable_r_v<T3<std::any>, ...>] is not a weaker statement of the
+       handler's type but a false one -- the body applies [f] at the function's
+       own [X], and a generic lambda answers [T3<X>].
+    3. The caller's lambda body erases too, emitting
+       [std::make_optional<std::any>(std::any(x0))], so even with (1) and (2)
+       the handler answers [optional<any>] where [optional<Nat>] is wanted.
+       Fixing this needs the [Tunknown] positions inside a rank-2 argument to
+       be {e deduced} rather than spelled, and nothing records that [Tunknown]
+       and [T4] are the same variable.
+
+    Fixes for (1) and (2) alone regress [itree_reified], [embed_effect],
+    [higher_kinded] and [hkt_record_dict].
+
     Vellvm also shows a second, unreduced defect on the same combinator: the
     scrutinee's type is printed with no name at all,
 
