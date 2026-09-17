@@ -375,6 +375,9 @@ type unsafe_needs = {
     [pp_decl] for printing one declaration in isolation. *)
 type language_descr = {
   keywords : Id.Set.t;
+  global_scope_keywords : Id.Set.t;
+      (** Names refused only to a declaration the backend emits at global
+          scope, where the target's own libraries have already spent them. *)
   (* Concerning the source file *)
   file_suffix : string;
   file_naming : ModPath.t -> string;

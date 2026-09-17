@@ -278,6 +278,59 @@ let keywords =
     ]
     Id.Set.empty
 
+(** Names the C and POSIX libraries declare at global scope.
+
+    These are functions, so a Crane declaration of the same name is usually
+    just another overload beside them -- harmless, and far too common a
+    spelling to rewrite everywhere.  What the compiler refuses is a *different*
+    kind of entity under the name: [Definition select := nat] at the root of an
+    extraction becomes [using select = uint64_t;] beside the [::select] that
+    <sys/select.h> declares, which is "redefinition of 'select' as a different
+    kind of symbol".
+
+    So these are reserved only where a declaration reaches global scope, and
+    left alone inside a namespace or struct, where no C library name can reach
+    them.  See {!Common.is_reserved_at_global_scope}. *)
+let c_library_globals =
+  List.fold_right
+    (fun s -> Id.Set.add (Id.of_string s))
+    [
+      (* <cstdlib>, <cstring>, <cstdio>, <ctime>, <csignal> *)
+      "abort"; "abs"; "atexit"; "atof"; "atoi"; "atol"; "bsearch"; "calloc";
+      "div"; "exit"; "free"; "getenv"; "labs"; "ldiv"; "malloc"; "qsort";
+      "rand"; "realloc"; "srand"; "system";
+      "memchr"; "memcmp"; "memcpy"; "memmove"; "memset"; "strcat"; "strchr";
+      "strcmp"; "strcoll"; "strcpy"; "strcspn"; "strerror"; "strlen";
+      "strncat"; "strncmp"; "strncpy"; "strpbrk"; "strrchr"; "strspn";
+      "strstr"; "strtok"; "strxfrm";
+      "fclose"; "feof"; "ferror"; "fflush"; "fgetc"; "fgets"; "fopen";
+      "fprintf"; "fputc"; "fputs"; "fread"; "freopen"; "fscanf"; "fseek";
+      "ftell"; "fwrite"; "getc"; "getchar"; "perror"; "printf"; "putc";
+      "putchar"; "puts"; "remove"; "rename"; "rewind"; "scanf"; "setbuf";
+      "sprintf"; "sscanf"; "tmpfile"; "tmpnam"; "ungetc";
+      "asctime"; "clock"; "ctime"; "difftime"; "gmtime"; "localtime";
+      "mktime"; "strftime"; "time"; "timezone";
+      "raise"; "signal"; "longjmp"; "setjmp";
+      "isalnum"; "isalpha"; "iscntrl"; "isdigit"; "isgraph"; "islower";
+      "isprint"; "ispunct"; "isspace"; "isupper"; "isxdigit"; "tolower";
+      "toupper";
+      (* <cmath> *)
+      "acos"; "asin"; "atan"; "atan2"; "ceil"; "cos"; "cosh"; "exp"; "fabs";
+      "floor"; "fmod"; "frexp"; "ldexp"; "log"; "log10"; "modf"; "pow"; "sin";
+      "sinh"; "sqrt"; "tan"; "tanh"; "gamma"; "j0"; "j1"; "jn"; "y0"; "y1";
+      "yn";
+      (* POSIX headers the C++ standard headers pull in *)
+      "accept"; "access"; "alarm"; "bind"; "chdir"; "chmod"; "chown"; "close";
+      "connect"; "dup"; "dup2"; "execl"; "execv"; "fork"; "fstat"; "fsync";
+      "ftruncate"; "getcwd"; "getline"; "getpid"; "getuid"; "index"; "kill";
+      "link"; "listen"; "lseek"; "mkdir"; "open"; "pause"; "pclose"; "pipe";
+      "popen"; "random"; "read"; "readlink"; "recv"; "rindex"; "rmdir";
+      "select"; "send"; "setlocale"; "sleep"; "socket"; "srandom"; "stat";
+      "symlink"; "sync"; "times"; "truncate"; "unlink"; "usleep"; "wait";
+      "waitpid"; "write";
+    ]
+    Id.Set.empty
+
 (** Note: do not shorten [str "foo" ++ fnl ()] into [str "foo\n"], the '\n'
     character interacts badly with the Format boxing mechanism *)
 

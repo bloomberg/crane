@@ -1516,6 +1516,7 @@ let reset () =
 let init ?(compute = false) ?(inner = false) modular library =
   if not inner then check_inside_section ();
   set_keywords (descr ()).keywords;
+  set_global_scope_keywords (descr ()).global_scope_keywords;
   set_modular modular;
   set_library library;
   set_extrcompute compute;

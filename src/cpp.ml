@@ -2247,6 +2247,7 @@ let pp_hstruct s =
 let cpp_descr =
   {
     keywords;
+    global_scope_keywords = c_library_globals;
     file_suffix = ".cpp";
     file_naming = file_of_modfile;
     preamble;

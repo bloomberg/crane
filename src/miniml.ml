@@ -275,6 +275,8 @@ type unsafe_needs = {
 (** Language backend descriptor. *)
 type language_descr = {
   keywords : Id.Set.t;
+  (* names refused only where a declaration reaches global scope *)
+  global_scope_keywords : Id.Set.t;
   (* Concerning the source file *)
   file_suffix : string;
   file_naming : ModPath.t -> string;

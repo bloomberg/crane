@@ -489,6 +489,17 @@ let set_keywords, get_keywords =
     and each case-form is a different name to the preprocessor. *)
 let is_reserved_cpp_name s = Id.Set.mem (Id.of_string s) (get_keywords ())
 
+(** Get/set the names refused only at global scope. *)
+let set_global_scope_keywords, get_global_scope_keywords =
+  let k = ref Id.Set.empty in
+  (( := ) k, fun () -> !k)
+
+(** Whether C++ refuses [s] as the name of a declaration emitted at global
+    scope, where the C and POSIX libraries have already spent it.  A name
+    inside a namespace or struct is asked {!is_reserved_cpp_name} instead. *)
+let is_reserved_at_global_scope s =
+  Id.Set.mem (Id.of_string s) (get_global_scope_keywords ())
+
 (** Track globally used identifiers to avoid collisions. *)
 let add_global_ids, get_global_ids =
   let ids = ref Id.Set.empty in
@@ -782,10 +793,12 @@ let reset_renaming_tables flag =
     character, because a leading underscore was unreserved, or because the name
     is a C++ keyword.  A changed name may have landed on one already taken, so
     it is the caller's cue to look for a collision. *)
-let modular_rename_ex _k id =
+let modular_rename_ex ?(global_scope = false) _k id =
   let s = ascii_of_id id in
   let s = Mlutil.unreserve_leading_underscore s in
-  let is_kw = is_reserved_cpp_name s in
+  let is_kw =
+    is_reserved_cpp_name s || (global_scope && is_reserved_at_global_scope s)
+  in
   let s = if is_kw then s ^ "_" else s in
   (s, not (String.equal s (Id.to_string id)))
 
@@ -1076,7 +1089,15 @@ let ref_renaming_fun (k, r) =
     match l with
     | [""] ->
       (* this happens only at toplevel of the monolithic case *)
-      let globs = get_global_ids () in
+      let globs =
+        (* Only the module being extracted puts its declarations at global
+           scope; every other file becomes a struct of its own, which shields
+           what it declares from the C library's names. *)
+        if Table.is_toplevel mp then
+          Id.Set.union (get_global_scope_keywords ()) (get_global_ids ())
+        else
+          get_global_ids ()
+      in
       (* For constructors, also reserve the parent inductive type's name (and
          its capitalized form) so that eponymous constructors like Ascii.Ascii
          get renamed to avoid C++ struct name conflicts. *)
@@ -1096,7 +1117,10 @@ let ref_renaming_fun (k, r) =
       let id = next_ident_away (kindcase_id k (cpp_id_of_id idg)) globs in
       Id.to_string id
     | _ ->
-      let s, changed = modular_rename_ex k idg in
+      (* Only the module being extracted puts its declarations at global
+         scope, beside the C library's own names. *)
+      let global_scope = Table.is_toplevel mp in
+      let s, changed = modular_rename_ex ~global_scope k idg in
       let is_bound = is_mp_bound (base_mp mp) in
       (* Avoid collisions caused by keyword/prime escaping. For constructors,
          track per inductive type. For other globals, track per module path.

@@ -68,6 +68,12 @@ val find_type_custom_opt : Names.GlobRef.t -> (string list * string) option
 (** Reserved C++ keywords that identifiers must avoid. *)
 val keywords : Names.Id.Set.t
 
+(** C and POSIX library functions, refused only to a declaration that reaches
+    global scope: there a Crane name of another kind -- a type alias, a
+    variable, a struct -- redefines the library's rather than overloading it.
+    Inside a namespace or struct they are ordinary names. *)
+val c_library_globals : Names.Id.Set.t
+
 (** {2 Output modules} *)
 
 (** Set of module paths that are valid extraction outputs. *)

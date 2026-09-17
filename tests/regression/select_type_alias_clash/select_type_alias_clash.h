@@ -11,7 +11,7 @@
 ///
 /// Crane already escapes uint64_t, size_t and similar library names
 /// (Cpp_state.keywords); POSIX functions such as select are not covered.
-using select = uint64_t;
-const select answer = UINT64_C(42);
+using select0 = uint64_t;
+const select0 answer = UINT64_C(42);
 
 #endif // INCLUDED_SELECT_TYPE_ALIAS_CLASH

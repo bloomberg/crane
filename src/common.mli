@@ -311,6 +311,15 @@ val get_keywords : unit -> Id.Set.t
     different name to the preprocessor. *)
 val is_reserved_cpp_name : string -> bool
 
+(** Set the names reserved only where a declaration reaches global scope. *)
+val set_global_scope_keywords : Id.Set.t -> unit
+
+(** Whether C++ refuses [s] as the name of a declaration emitted at global
+    scope, because a C or POSIX library header already declares something else
+    under it.  A name inside a namespace or struct is asked
+    {!is_reserved_cpp_name} instead. *)
+val is_reserved_at_global_scope : string -> bool
+
 (** Special hack for constants of type Ascii.ascii : if an
     [Extract Inductive ascii => char] has been declared, then the constants are
     directly turned into chars *)
