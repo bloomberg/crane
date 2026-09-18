@@ -104,3 +104,40 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+; --- Fifth round of Vellvm reductions, against Crane eee81e8c3.  These three
+; are the reified ITree backend; each adds one Rocq construct to the one
+; before it.
+
+(subdir itree_ret_go
+ (rule
+  (targets itree_ret_go.t.exe)
+  (deps ItreeRetGo.vo itree_ret_go.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_ret_go.t.exe itree_ret_go.cpp itree_ret_go.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_ret_go.t.exe)
+  (action (run ./itree_ret_go.t.exe))))
+
+(subdir itree_poly_event_arg
+ (rule
+  (targets itree_poly_event_arg.t.exe)
+  (deps ItreePolyEventArg.vo itree_poly_event_arg.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_poly_event_arg.t.exe itree_poly_event_arg.cpp itree_poly_event_arg.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_poly_event_arg.t.exe)
+  (action (run ./itree_poly_event_arg.t.exe))))
+
+(subdir itree_nested_bind_instance
+ (rule
+  (targets itree_nested_bind_instance.t.exe)
+  (deps ItreeNestedBindInstance.vo itree_nested_bind_instance.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_nested_bind_instance.t.exe itree_nested_bind_instance.cpp itree_nested_bind_instance.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_nested_bind_instance.t.exe)
+  (action (run ./itree_nested_bind_instance.t.exe))))
