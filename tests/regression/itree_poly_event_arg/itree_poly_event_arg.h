@@ -1,8 +1,7 @@
-#ifndef INCLUDED_ITREE_RET_GO
-#define INCLUDED_ITREE_RET_GO
+#ifndef INCLUDED_ITREE_POLY_EVENT_ARG
+#define INCLUDED_ITREE_POLY_EVENT_ARG
 
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -69,8 +68,13 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct ItreeRetGo {
+template <typename T1>
+std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x) {
+  return itree_bind(x, [](Nat a) { return itree_ret(Nat::s(a)); });
+}
+
+struct ItreePolyEventArg {
   static std::shared_ptr<ITree<Nat>> use(Nat n);
 };
 
-#endif // INCLUDED_ITREE_RET_GO
+#endif // INCLUDED_ITREE_POLY_EVENT_ARG

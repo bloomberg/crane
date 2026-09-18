@@ -184,6 +184,20 @@ auto itree_bind(std::shared_ptr<ITree<void>> m, K &&k)
     return std::forward<K>(k)();
 }
 
+// Ret constructor with template argument deduction.  The result type is
+// decayed: the argument commonly arrives as an xvalue (`std::move(n)`), and
+// naming its `decltype` directly would ask for an `ITree<R&&>`.
+template<typename A>
+auto itree_ret(A &&value) {
+    return ITree<std::decay_t<A>>::ret(std::forward<A>(value));
+}
+
+// Tau constructor with template argument deduction.
+template<typename R>
+auto itree_tau(std::shared_ptr<ITree<R>> next) {
+    return ITree<R>::tau(std::move(next));
+}
+
 // Vis constructor with template argument deduction.  Deduces R from the
 // continuation's return type (shared_ptr<ITree<R>>).
 template<typename Effect, typename Cont>

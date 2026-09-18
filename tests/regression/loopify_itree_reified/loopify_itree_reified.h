@@ -30,10 +30,7 @@ struct LoopifyItreeReified {
     } else if (std::holds_alternative<typename ITree<T1>::Tau>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&ot);
       auto t_ = _itf.next;
-      return [&]() {
-        auto t = rec(t_);
-        return ITree<decltype(t->run())>::tau(t);
-      }();
+      return itree_tau(rec(t_));
     } else {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
       auto e = _itf.effect;

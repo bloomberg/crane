@@ -3,13 +3,9 @@
 
 #include "crane_fn.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
-#include <concepts>
 #include <crane_itree.h>
-#include <functional>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -95,52 +91,16 @@ public:
   }
 };
 
-template <typename I>
-concept Monad = requires {
-  typename I::template m<std::any>;
-  {
-    I::template ret<std::any>(std::declval<std::any>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-  {
-    I::template bind<std::any, std::any>(
-        std::declval<typename I::template m<std::any>>(),
-        std::declval<
-            std::function<typename I::template m<std::any>(std::any)>>())
-  } -> std::convertible_to<typename I::template m<std::any>>;
-};
-
-struct Monad0 {
-  template <Monad _tcI0, typename T2>
-  static typename _tcI0::template m<T2> ret(const T2 &x);
-  template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
-  static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
-                                             F1 &&x0);
-};
-
 template <typename T1>
 std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x) {
   return itree_bind(x, [=](const Nat &a) mutable {
-    return Monad0::template bind<, Nat, Nat>(x, [=](const Nat &b) mutable {
-      return Monad0::template ret<, Nat>(a.add(b));
-    });
+    return itree_bind(
+        x, [=](const Nat &b) mutable { return itree_ret(a.add(b)); });
   });
 }
 
 struct ItreeNestedBindInstance {
   static std::shared_ptr<ITree<Nat>> use(Nat n);
 };
-
-template <Monad _tcI0, typename T2>
-typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
-  return _tcI0::template ret<T2>(x);
-}
-
-template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
-typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
-                                            F1 &&x0) {
-  return _tcI0::template bind<T2, T3>(std::move(x), x0);
-}
 
 #endif // INCLUDED_ITREE_NESTED_BIND_INSTANCE

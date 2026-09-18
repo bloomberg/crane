@@ -1273,6 +1273,10 @@ let is_reified_monadic_var ml_expr =
     type is monadic.  Such calls already return a tree, so wrapping in
     [ITree::ret()] would incorrectly double-wrap.
 
+    Also covers a constructor of the monad type itself: [ITree]'s own node
+    constructors are extracted to expressions that build a tree, so a term
+    like [go (RetF x)] is already the tree and must not be wrapped again.
+
     Does {b not} return [true] for [MLapp(MLglob g, args)] because global
     inline extractions (e.g. [print_endline]) may produce direct C++
     expressions that genuinely need Ret wrapping. *)
@@ -1282,6 +1286,7 @@ let is_reified_monadic_expr ml_expr =
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
   | MLapp (MLrel i, _) ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type (ml_codomain ty) | None -> false)
+  | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false
 
 (** If [ml_expr] refers to a reified monadic variable, wrap [cpp_expr] in
@@ -3921,8 +3926,22 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           Ml_type_util.is_custom_list_global ind
         | _ -> false
       in
+      (* "A sibling field is erased" is a statement about fields, so only the
+         type arguments this constructor's fields actually stand at count.
+         [itreeF]'s event index erases -- no [E] has a C++ spelling -- and
+         [RetF]'s one field is an [R]; reading the erasure off the whole
+         argument list would box that field for a reason no field of [RetF]
+         has anything to do with. *)
+      let erased_arg_under_a_field =
+        let occupied =
+          List.fold_left collect_tvars [] field_types_for_wrap
+        in
+        List.exists
+          (fun j -> List.nth_opt draft_ctor_temps_for_wrap (j - 1) = Some Tany)
+          occupied
+      in
       let slot_is_deeply_erased =
-        List.mem Tany draft_ctor_temps_for_wrap
+        erased_arg_under_a_field
         || ((not is_list_cons_ctor)
             && match (!tctx).current_cpp_return_type with
                | Some t -> resolves_to_any_type t
