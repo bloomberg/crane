@@ -104,3 +104,27 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+; --- Sixth round of Vellvm reductions, against Crane 431e99723.
+
+(subdir subevent_instance_dropped
+ (rule
+  (targets subevent_instance_dropped.t.exe)
+  (deps SubeventInstanceDropped.vo subevent_instance_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subevent_instance_dropped.t.exe subevent_instance_dropped.cpp subevent_instance_dropped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps subevent_instance_dropped.t.exe)
+  (action (run ./subevent_instance_dropped.t.exe))))
+
+(subdir itree_mapping_hijacks_monad
+ (rule
+  (targets itree_mapping_hijacks_monad.t.exe)
+  (deps ItreeMappingHijacksMonad.vo itree_mapping_hijacks_monad.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_mapping_hijacks_monad.t.exe itree_mapping_hijacks_monad.cpp itree_mapping_hijacks_monad.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_mapping_hijacks_monad.t.exe)
+  (action (run ./itree_mapping_hijacks_monad.t.exe))))
