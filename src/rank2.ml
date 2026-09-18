@@ -16,7 +16,7 @@ let quantifies_erased_type ty =
   in
   go ty
 
-let carrier_type x = Tvar (0, Some x)
+let carrier_type = named_tvar
 
 let at_carrier x ty =
   map_cpp_type (function Topaque | Tany -> carrier_type x | t -> t) ty

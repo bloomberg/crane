@@ -438,7 +438,7 @@ let gen_typeclass_cpp name fields ind =
     | Tpromoted vname | Tvar (_, Some vname) -> (
       match List.find_opt (fun (n, _) -> Id.equal n vname) promoted_map with
       | Some (_, replacement) -> replacement
-      | None -> Tvar (0, Some vname) )
+      | None -> named_tvar vname )
     | Tfun (args, ret) ->
       Tfun
         ( List.map subst_promoted_in_cpp_type args,
@@ -1492,7 +1492,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
         | MLrel i -> (
           try
             let name = get_db_name i base_env in
-            Tvar (0, Some name)
+            named_tvar name
           with Failure _ -> Tany )
         | MLmagic (_, e) -> ml_expr_to_cpp_type e
         | MLcase (_, scrutinee, branches)
@@ -1619,7 +1619,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                     else
                       Tapply
                         ( qualified_ty,
-                          List.map (fun p -> Tvar (0, Some p)) params )
+                          List.map named_tvar params )
                   in
                   ( Fnested_using
                       ( List.map (fun p -> (TTtypename, p)) params,
@@ -1901,24 +1901,6 @@ let gen_type_alias r vars ot =
     hkt_templates r vars (match ot with Some t -> [t] | None -> [])
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
-
-(** Whether a type is the type variable named [id].  The head of a tvar is not
-    always resolved to its parameter name, so a tvar answers to either
-    spelling; cf. {!applied_tvar_arities}. *)
-let tvar_is id = function
-  | Tvar (i, name) ->
-    (match name with Some n -> Id.equal n id | None -> false)
-    || (i > 0 && Id.equal (tvar_id i) id)
-  | _ -> false
-
-(** Whether [ty] names the type variable [id] anywhere. *)
-let tvar_named id ty = exists_cpp_type (tvar_is id) ty
-
-(** The name a tvar goes by, whether or not its head was resolved. *)
-let tvar_name = function
-  | Tvar (_, Some n) -> Some n
-  | Tvar (i, None) when i > 0 -> Some (tvar_id i)
-  | _ -> None
 
 (** Relax a signature whose return type applies a template template parameter
     (see {!with_applied_tvars}).  In [F B fn(G g, F A x)] the variable [B] is
@@ -2858,7 +2840,7 @@ let gen_dfun n b cty ty temps =
           when (not (is_non_fwd_param_db i)) && not (is_erased_fun_param ty) ->
           ( x,
             Tref
-              (Tref (Tvar (0, Some (fun_tparam_id (List.length ids - i - 1)))))
+              (Tref (named_tvar (fun_tparam_id (List.length ids - i - 1))))
           )
         | _ -> (x, ty) )
       ids
@@ -2906,7 +2888,7 @@ let gen_dfun n b cty ty temps =
           temps
   in
   let rec_call =
-    mk_cppglob n (List.map (fun (_, id) -> Tvar (0, Some id)) rec_call_temps)
+    mk_cppglob n (List.map (fun (_, id) -> named_tvar id) rec_call_temps)
   in
   (* Combine all template params for function signature. Save the non-typeclass
      type params for Tvar index resolution below. *)
@@ -4378,7 +4360,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       (fun (id, cpp_ty, i, owned) ->
         let wrapped =
           match cpp_ty with
-          | Tfun _ -> Tref (Tref (Tvar (0, Some (fun_tparam_id i))))
+          | Tfun _ -> Tref (Tref (named_tvar (fun_tparam_id i)))
           | _ -> wrap_param_by_ownership ~is_owned:owned cpp_ty
         in
         (id, wrapped) )

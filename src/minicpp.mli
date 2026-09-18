@@ -559,7 +559,7 @@ and cpp_field =
   | Fnested_struct of Id.t * (cpp_field * cpp_visibility * section_tag) list
       (** Nested struct definition with visibility-annotated fields *)
   | Fnested_using of (template_type * Id.t) list * Id.t * cpp_type  (** Nested using type alias declaration *)
-  | Fmember_decl of cpp_field
+  | Fmember_decl of out_of_line_member
       (** A member written without its body: the definition follows, out of
           line, in a {!Dmember_def}.  Wrapping the member rather than flagging
           it keeps the two halves one value, so they cannot drift apart. *)
@@ -570,6 +570,19 @@ and cpp_field =
           would otherwise suppress the implicit move operations — turning every
           [std::move] of the value into a refcount-bumping copy and defeating
           move semantics (and Perceus reuse). *)
+
+(** A member that can be written in two halves: declared in the struct, then
+    defined after it.
+
+    Only these two kinds can be: a data member has no body to move, a nested
+    struct or alias is not a member function, and a constructor of a mutually
+    recursive inductive is a factory whose return type names the struct
+    itself, which out of line would have to be spelled before it is known.
+    Naming the two that can is what keeps a {!Fmember_decl} from wrapping one
+    that cannot. *)
+and out_of_line_member =
+  | OLmethod of method_field
+  | OLdestructor of cpp_stmt list
 
 (** Constructor descriptor.
 
@@ -817,6 +830,41 @@ val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
 
+(** The member as a field, to be written where a field is written. *)
+val field_of_member : out_of_line_member -> cpp_field
+
+(** [out_of_line_member f] is [f] as a member that can be split in two, or
+    [None] when it is a kind that cannot. *)
+val out_of_line_member : cpp_field -> out_of_line_member option
+
+(** [map_out_of_line fs ft m] applies [fs] to [m]'s statements and [ft] to its
+    types. *)
+val map_out_of_line :
+  (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) ->
+  out_of_line_member -> out_of_line_member
+
+(** [named_tvar x] is the type variable named [x] -- one that numbers against
+    no declaration's parameter list, and so is spelled by name alone. *)
+val named_tvar : Names.Id.t -> cpp_type
+
+(** [tvar_spelling i] is the name of the type variable at index [i] in a
+    declaration's parameter list; [tvar_id] is the same as an [Id.t].
+    Re-exported as {!Common.tvar_name} and {!Common.tvar_id}. *)
+val tvar_spelling : int -> string
+val tvar_id : int -> Names.Id.t
+
+(** [tvar_is id ty] is whether [ty] is the type variable [id].  A tvar whose
+    head was never resolved to its parameter name answers to the generated
+    spelling of its index as well. *)
+val tvar_is : Names.Id.t -> cpp_type -> bool
+
+(** [tvar_named id ty] is whether [ty] names the type variable [id] anywhere
+    inside it. *)
+val tvar_named : Names.Id.t -> cpp_type -> bool
+
+(** [tvar_name ty] is the name [ty] goes by if it is a type variable. *)
+val tvar_name : cpp_type -> Names.Id.t option
+
 (** [deduces_tparam x tys] is whether any of [tys] names the type variable
     [x], and so lets C++ deduce it from an argument. *)
 val deduces_tparam : Names.Id.t -> cpp_type list -> bool
@@ -827,11 +875,21 @@ val deduces_tparam : Names.Id.t -> cpp_type list -> bool
 val map_lambda :
   (cpp_stmt -> cpp_stmt) -> (cpp_type -> cpp_type) -> cpp_lambda -> cpp_lambda
 
-(** [monomorphise_lambda l] drops [l]'s own template parameters and spells
-    every use of them [std::any].  A polymorphic function object stands where
-    the slot deduces its type; a slot that writes its own signature has
-    already settled what the lambda is. *)
-val monomorphise_lambda : cpp_lambda -> cpp_lambda
+(** [erased_lambda l ~params ~ret ~body] is [l] rewritten to take [params] and
+    return [ret], with [body] doing whatever casting back the erasure of its
+    parameters now needs.
+
+    This is the one way to erase a lambda, because erasure is the one thing a
+    polymorphic function object cannot survive: it stands where a slot deduces
+    its type, and an erased slot has written its own signature down.  Its
+    template parameters are dropped and every use of them spelled
+    [std::any], so no caller has to know that rule. *)
+val erased_lambda :
+  cpp_lambda ->
+  params:(cpp_type * Names.Id.t option) revd ->
+  ret:cpp_type option ->
+  body:cpp_stmt list ->
+  cpp_expr
 
 (** [map_expr fe fs ft e] applies [fe] to sub-expressions, [fs] to
     sub-statements, [ft] to sub-types, performing one level of structural
@@ -966,7 +1024,7 @@ and dstruct = {
 and dmember_def = {
   dm_owner : GlobRef.t;
   dm_tparams : (template_type * Id.t) list;
-  dm_field : cpp_field;
+  dm_field : out_of_line_member;
 }
 
 (** A type alias declaration.

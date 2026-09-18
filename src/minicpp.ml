@@ -486,13 +486,26 @@ and cpp_field =
   (* A member written here without its body: the definition follows, out of
      line, in a [Dmember_def].  Wrapping the member rather than flagging it
      keeps the two halves one value, so they cannot drift apart. *)
-  | Fmember_decl of cpp_field
+  | Fmember_decl of out_of_line_member
   (* Deleted default constructor: ctor() = delete *)
   | Fdeleted_ctor
   (* Explicitly-defaulted copy/move ctors and assignment operators, emitted
      next to a user-declared destructor so the implicit move operations are not
      suppressed (which would make every std::move a refcount-bumping copy). *)
   | Fdefaulted_special_members
+
+(** A member that can be written in two halves: declared in the struct, then
+    defined after it.
+
+    Only these two kinds can be: a data member has no body to move, a nested
+    struct or alias is not a member function, and a constructor of a mutually
+    recursive inductive is a factory whose return type names the struct
+    itself, which out of line would have to be spelled before it is known.
+    Naming the two that can is what keeps a {!Fmember_decl} from wrapping one
+    that cannot. *)
+and out_of_line_member =
+  | OLmethod of method_field
+  | OLdestructor of cpp_stmt list
 
 (** Constructor descriptor.
 
@@ -793,13 +806,42 @@ let mk_apply ?yields ?params fn args =
     [void] and could not stand where a value is expected; [Tany] is what an
     erased slot asks for, and is the only thing left to say when the caller
     named no type. *)
+(** [named_tvar x] is the type variable named [x].  Its index is 0 because it
+    numbers against no declaration's parameter list -- a lambda's own template
+    parameter, a typeclass carrier, a function-typed parameter's [F] -- so the
+    name is the whole of it.  Written through here rather than as a literal so
+    that "index 0 means unnumbered" is stated once. *)
+let named_tvar x = Tvar (0, Some x)
+
+(** The spelling of the type variable at index [i] in a declaration's
+    parameter list.  The one place the convention is written down; re-exported
+    as {!Common.tvar_name}, alongside the other generated names. *)
+let tvar_spelling i = "T" ^ string_of_int i
+
+let tvar_id i = Id.of_string (tvar_spelling i)
+
+(** Whether a type is the type variable named [id].  The head of a tvar is not
+    always resolved to its parameter name, so a tvar answers to either
+    spelling; cf. {!Gen_decls.applied_tvar_arities}. *)
+let tvar_is id = function
+  | Tvar (i, name) ->
+    (match name with Some n -> Id.equal n id | None -> false)
+    || (i > 0 && Id.equal (tvar_id i) id)
+  | _ -> false
+
+(** Whether [ty] names the type variable [id] anywhere. *)
+let tvar_named id ty = exists_cpp_type (tvar_is id) ty
+
+(** The name a tvar goes by, whether or not its head was resolved. *)
+let tvar_name = function
+  | Tvar (_, Some n) -> Some n
+  | Tvar (i, None) when i > 0 -> Some (tvar_id i)
+  | _ -> None
+
 (** Whether any of [tys] names the type variable [x], and so lets C++ deduce
     it.  A template parameter the call site cannot supply and the compiler
     cannot infer is worse than the erasure it replaced. *)
-let deduces_tparam x tys =
-  List.exists
-    (exists_cpp_type (function Tvar (_, Some n) -> Id.equal n x | _ -> false))
-    tys
+let deduces_tparam x tys = List.exists (tvar_named x) tys
 
 let lambda ?(tparams = []) params ret body ~by_value =
   (* A lambda's template parameter has nothing but its own parameters to be
@@ -1204,7 +1246,7 @@ and dstruct = {
 and dmember_def = {
   dm_owner : GlobRef.t;
   dm_tparams : (template_type * Id.t) list;
-  dm_field : cpp_field;
+  dm_field : out_of_line_member;
 }
 
 (** A type alias declaration.
@@ -1302,6 +1344,27 @@ let mk_dfun ?inner ?(targs = []) ?(no_pure = false) ~ret r shape =
     df_shape = shape;
   }
 
+(** The member as a field, to be written where a field is written. *)
+let field_of_member = function
+  | OLmethod m -> Fmethod m
+  | OLdestructor body -> Fdestructor body
+
+(** [out_of_line_member f] is [f] as a member that can be split in two, or
+    [None] when it is a kind that cannot. *)
+let out_of_line_member = function
+  | Fmethod m -> Some (OLmethod m)
+  | Fdestructor body -> Some (OLdestructor body)
+  | _ -> None
+
+let map_out_of_line fs ft = function
+  | OLmethod m ->
+    OLmethod
+      { m with
+        mf_ret_type = ft m.mf_ret_type;
+        mf_params = List.map (fun (id, ty) -> (id, ft ty)) m.mf_params;
+        mf_body = List.map fs m.mf_body }
+  | OLdestructor body -> OLdestructor (List.map fs body)
+
 let rec map_field
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
@@ -1313,25 +1376,18 @@ let rec map_field
     match f with
     | Fvar (id, ty) -> Fvar (id, ft ty)
     | Fvar' (r, ty) -> Fvar' (r, ft ty)
-    | Fmethod m ->
-      Fmethod
-        { m with
-          mf_ret_type = ft m.mf_ret_type;
-          mf_params = params m.mf_params;
-          mf_body = List.map fs m.mf_body }
+    | Fmethod m -> field_of_member (map_out_of_line fs ft (OLmethod m))
     | Fconstructor c ->
       Fconstructor
         { c with
           fc_params = params c.fc_params;
           fc_inits = List.map (fun (id, e) -> (id, fe e)) c.fc_inits;
           fc_body = List.map fs c.fc_body }
-    | Fdestructor body -> Fdestructor (List.map fs body)
+    | Fdestructor body -> field_of_member (map_out_of_line fs ft (OLdestructor body))
     | Fnested_struct (id, fields) ->
       Fnested_struct (id, List.map (map_field fe fs ft) fields)
     | Fnested_using (tps, id, ty) -> Fnested_using (tps, id, ft ty)
-    | Fmember_decl inner ->
-      let inner', _, _ = map_field fe fs ft (inner, VPublic, SNoTag) in
-      Fmember_decl inner'
+    | Fmember_decl m -> Fmember_decl (map_out_of_line fs ft m)
     | Fdeleted_ctor | Fdefaulted_special_members -> f
   in
   (f', vis, tag)
@@ -1355,6 +1411,22 @@ let monomorphise_lambda l =
     let rec fs s = map_stmt fe fs ft s
     and fe e = map_expr fe fs ft e in
     {(map_lambda fs ft l) with cl_tparams = []}
+
+(** [erased_lambda l ~params ~ret ~body] is [l] rewritten to take [params] and
+    return [ret], with [body] doing whatever casting back the erasure of its
+    parameters now needs.
+
+    This is the one way to erase a lambda, because erasure is the one thing a
+    polymorphic function object cannot survive: it stands where a slot deduces
+    its type, and an erased slot has written its own signature down.  Dropping
+    the template parameters here is what keeps a caller from having to know
+    that. *)
+let erased_lambda l ~params ~ret ~body =
+  CPPlambda
+    {(monomorphise_lambda l) with
+      cl_params = params;
+      cl_ret = ret;
+      cl_body = body}
 
 (** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
     sub-statements and [ft] to sub-types of a declaration.  Nested
@@ -1399,7 +1471,5 @@ let rec map_decl
   | Dusing u -> Dusing {u with du_rhs = Option.map ft u.du_rhs}
   | Dstruct_fwd _ -> d
   | Dfields s -> Dfields (map_dstruct fe fs ft s)
-  | Dmember_def m ->
-    let f, _, _ = map_field fe fs ft (m.dm_field, VPublic, SNoTag) in
-    Dmember_def {m with dm_field = f}
+  | Dmember_def m -> Dmember_def {m with dm_field = map_out_of_line fs ft m.dm_field}
   | Denum _ -> d

@@ -9489,7 +9489,7 @@ let rec transform_decl ?(tparams = []) = function
        list<A>]), and the bare template name there is not a type. *)
     let self_args =
       List.map
-        (fun (_, id) -> Tvar (0, Some id))
+        (fun (_, id) -> named_tvar id)
         (if ds.ds_tparams = [] then tparams else ds.ds_tparams)
     in
     let self_ty = Tconst (Tptr (Tglob (ds.ds_ref, self_args, []))) in

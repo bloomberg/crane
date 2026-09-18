@@ -1943,7 +1943,7 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
       (fun j (x, ty) ->
         match unwrap_fun_ty ty with
         | Some (Tfun _) when not (is_non_fwd_db j) ->
-          (x, Tref (Tref (Tvar (0, Some (fun_tparam_id (n_params - j - 1))))))
+          (x, Tref (Tref (named_tvar (fun_tparam_id (n_params - j - 1)))))
         | _ -> (x, ty) )
       cpp_params
   in
@@ -2089,7 +2089,7 @@ let ref_is_instance r =
 let make_subst_extra_tvars num_ind_vars extra_tvar_map =
   let rec subst = function
     | Tvar (i, None) when List.mem_assoc i extra_tvar_map ->
-      Tvar (0, Some (List.assoc i extra_tvar_map))
+      named_tvar ((List.assoc i extra_tvar_map))
     | Tvar (i, None) when i >= 1 && i <= num_ind_vars ->
       (* Inductive's type var - keep as-is for tvar_subst_stmt *)
       Tvar (i, None)
@@ -6806,12 +6806,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | Some _ -> ret_ty_opt
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
-                let new_lambda = CPPlambda
-                  { (monomorphise_lambda lam) with
-                    cl_params = of_reversed renamed_params;
-                    cl_ret = new_ret_ty;
-                    cl_body = new_body;
-                    cl_by_value = cap } in
+                let new_lambda = erased_lambda lam
+                    ~params:(of_reversed renamed_params)
+                    ~ret:new_ret_ty
+                    ~body:new_body in
                 (* The field itself is fully erased, so the only signature a
                    consumer can cast back to is the canonical
                    [std::function<std::any(std::any...)>] -- the same one the
@@ -6968,12 +6966,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                   | Some _ -> ret_ty_opt
                   | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
                 in
-                let new_lambda = CPPlambda
-                  { (monomorphise_lambda lam) with
-                    cl_params = of_reversed renamed_params;
-                    cl_ret = new_ret_ty;
-                    cl_body = new_body;
-                    cl_by_value = cap } in
+                let new_lambda = erased_lambda lam
+                    ~params:(of_reversed renamed_params)
+                    ~ret:new_ret_ty
+                    ~body:new_body in
                 let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
                 Cpp_erasure.converting_ctor func_ty [new_lambda]
               (* A function value that is not a lambda literal (a reference to a
@@ -7134,12 +7130,10 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               | Some _ -> ret_ty_opt
               | None -> if erased_ret_ty <> Tany then Some erased_ret_ty else None
             in
-            let new_lambda = CPPlambda
-              { (monomorphise_lambda lam) with
-                cl_params = of_reversed new_params;
-                cl_ret = new_ret_ty;
-                cl_body = new_body;
-                cl_by_value = cap } in
+            let new_lambda = erased_lambda lam
+                ~params:(of_reversed new_params)
+                ~ret:new_ret_ty
+                ~body:new_body in
             let func_ty = Tfun (safe_firstn n_params erased_param_tys, erased_ret_ty) in
             Cpp_erasure.converting_ctor func_ty [new_lambda]
           (* The same erased-argument adaptation, for a function value that is
@@ -8228,7 +8222,7 @@ and ml_arg_to_template_type env ml_arg =
        create a Tvar reference to the template parameter *)
     let db, _ = env in
     let name = List.nth db (pred i) in
-    Tvar (0, Some name)
+    named_tvar name
   | MLapp (MLglob (r, _), _) when ref_returns_skipped r ->
     (* Skipped infrastructure (e.g. ReSum_inl applied to args) — the inner
        args are complex and cannot be converted to C++ template types.
@@ -12289,7 +12283,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let rec_call =
             mk_cppglob
               lifted_ref
-              (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
+              (List.map (fun id -> named_tvar id) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
           let inner = Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
@@ -12313,7 +12307,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             all_tvar_names
         in
         if extra_tvar_names = [] then
-          List.map (fun id -> Tvar (0, Some id)) outer_tvars
+          List.map (fun id -> named_tvar id) outer_tvars
         else
           let fix_ty = snd ids.(0) in
           let tmpl_cpp_ty =
@@ -12324,7 +12318,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | Tfun (_, cod) -> cod
             | t -> t
           in
-          let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
+          let outer_args = List.map (fun id -> named_tvar id) outer_tvars in
           let tvar_map =
             match (!tctx).current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
@@ -12340,7 +12334,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 | None ->
                   match (!tctx).current_cpp_return_type with
                   | Some ret_ty -> ret_ty
-                  | None -> Tvar (0, Some tvar_name) )
+                  | None -> named_tvar tvar_name )
               extra_tvar_names
           in
           let args = outer_args @ extra_args in
@@ -13305,7 +13299,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
           let rec_call =
             mk_cppglob
               lifted_ref
-              (List.map (fun id -> Tvar (0, Some id)) all_tvar_names)
+              (List.map (fun id -> named_tvar id) all_tvar_names)
           in
           let body = List.map (local_var_subst_stmt renamed_id rec_call) body in
           let inner = Dfun (mk_dfun ~ret:cod lifted_ref (Ddef (cpp_params, body))) in
@@ -13341,7 +13335,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
             | Tfun (_, cod) -> cod
             | t -> t
           in
-          let outer_args = List.map (fun id -> Tvar (0, Some id)) outer_tvars in
+          let outer_args = List.map (fun id -> named_tvar id) outer_tvars in
           let tvar_map =
             match (!tctx).current_cpp_return_type with
             | Some conc_ret -> extract_tvar_map tmpl_cod conc_ret
@@ -13357,7 +13351,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                 | None ->
                   match (!tctx).current_cpp_return_type with
                   | Some ret_ty -> ret_ty
-                  | None -> Tvar (0, Some tvar_name) )
+                  | None -> named_tvar tvar_name )
               extra_tvar_names
           in
           outer_args @ extra_args

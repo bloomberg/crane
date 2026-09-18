@@ -3766,7 +3766,8 @@ let rec pp_cpp_field
       ++ str " = "
       ++ pp_type ty
       ++ str ";" )
-  | Fmember_decl f -> pp_cpp_field ?struct_name ~mode:Mm_declared env f
+  | Fmember_decl m ->
+    pp_cpp_field ?struct_name ~mode:Mm_declared env (field_of_member m)
   | Fdeleted_ctor ->
     let sname =
       match struct_name with
@@ -4370,7 +4371,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       (fun () ->
         pp_cpp_field ~struct_name:sname
           ~mode:(Mm_defined (qual, dm_tparams))
-          env dm_field )
+          env (field_of_member dm_field) )
   | Dfields ds ->
     let struct_name =
       str (String.capitalize_ascii (str_global Type ds.ds_ref))

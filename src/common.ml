@@ -1641,9 +1641,11 @@ let sig_type_name = "core.sig.type"
 (** Synthetic name generators. Centralized here so that naming conventions are
     defined in one place. *)
 
-let tvar_name i = "T" ^ string_of_int i
+(* The numbered-parameter spelling lives in {!Minicpp}, which needs it to
+   recognise a tvar by name and cannot depend on this module. *)
+let tvar_name = Minicpp.tvar_spelling
 
-let tvar_id i = Id.of_string (tvar_name i)
+let tvar_id = Minicpp.tvar_id
 
 let anon_tvar_name i = "_tvar" ^ string_of_int i
 

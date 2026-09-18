@@ -64,14 +64,13 @@ let rec split_struct ~(group : GlobRef.Set.t) (d : cpp_decl) :
     let fields =
       List.map
         (fun (f, vis, tag) ->
-          match f with
-          | (Fmethod _ | Fdestructor _)
-            when field_names (fun r -> GlobRef.Set.mem r group) f ->
+          match out_of_line_member f with
+          | Some m when field_names (fun r -> GlobRef.Set.mem r group) f ->
             defs :=
               Dmember_def
-                {dm_owner = ds.ds_ref; dm_tparams = ds.ds_tparams; dm_field = f}
+                {dm_owner = ds.ds_ref; dm_tparams = ds.ds_tparams; dm_field = m}
               :: !defs;
-            (Fmember_decl f, vis, tag)
+            (Fmember_decl m, vis, tag)
           | _ -> (f, vis, tag) )
         ds.ds_fields
     in
