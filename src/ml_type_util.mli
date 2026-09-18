@@ -185,15 +185,15 @@ val is_cpp_dummy_type : Minicpp.cpp_type -> bool
     the type inside the qualification, not the wrapper. *)
 val unqualify_ty : Minicpp.cpp_type -> Minicpp.cpp_type
 
-(** Whether a C++ type is spelled [std::any] in the generated header.  A
-    question about syntax only — it says nothing about whether a value of the
-    type may be boxed or cast, for which see {!is_boxed_type}. *)
 (** [template_args t] is the type arguments [t] is applied to, for a [t] that
     names a template at all -- whichever node spells its head, and through the
     qualifications {!unqualify_ty} strips.  [None] means [t] names no
     template. *)
 val template_args : Minicpp.cpp_type -> Minicpp.cpp_type list option
 
+(** Whether a C++ type is spelled [std::any] in the generated header.  A
+    question about syntax only — it says nothing about whether a value of the
+    type may be boxed or cast, for which see {!is_boxed_type}. *)
 val prints_as_any : Minicpp.cpp_type -> bool
 
 (** What erasure did to a function type's domain, and -- where the domain

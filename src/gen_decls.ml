@@ -655,13 +655,6 @@ let gen_typeclass_cpp name fields ind =
   in
   Dtemplate (all_params, None, Dconcept (name, concept_body))
 
-(** Generate a C++ struct for a type class instance.
-   Type class instances become structs with static methods.
-   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
-   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
-
-   Returns: (struct_decl option, class_ref option, type_args)
-   The class_ref and type_args are used to generate static_assert in cpp.ml *)
 (** Whether a binder's recorded type says it carries nothing: extraction
     writes an erased binder's type as [Tdummy], and one it could not type at
     all as [Taxiom]. *)
@@ -694,6 +687,13 @@ type method_binder = {
   mb_kind : binder_kind;
 }
 
+(** Generate a C++ struct for a type class instance.
+   Type class instances become structs with static methods.
+   Example: Instance IntEq : Eq int := { eqb := Int.eqb }.
+   becomes: struct IntEq { static bool eqb(int a, int b) { ... } };
+
+   Returns: (struct_decl option, class_ref option, type_args)
+   The class_ref and type_args are used to generate static_assert in cpp.ml *)
 let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
     cpp_decl option * GlobRef.t option * ml_type list =
   (* For parameterized instances, strip Tarr/MLlam layers to get to the inner
@@ -2239,24 +2239,6 @@ let sig_witness_expr name (ml_ty : ml_type) =
         (name ^ "." ^ Id.to_string (Common.lookup_ctor_field_name ~owner:r cname 0))
   | _ -> None
 
-(** Generate a C++ function definition from an ML function body.
-
-    When the body has fewer lambda binders than the ML type's domain (i.e. it
-    is under-applied), missing parameters are eta-expanded by synthesising
-    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
-    they represent erased type parameters (e.g. [A : Type] in
-    [apply : forall A, A -> A]) that have no C++ runtime representation.
-    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
-    extra argument, causing [std::function] call sites to receive the wrong
-    number of arguments.
-
-    @param n     the global reference for the function being defined
-    @param b     the ML AST body
-    @param cty   the C++ type of the function (decomposed internally into domain
-                 and codomain)
-    @param ty    the original ML type (used for domain decomposition and type
-                 inference)
-    @param temps template type parameters *)
 (** Run [f] in the itree extraction mode that [ty]'s codomain calls for,
     restoring the enclosing mode afterwards.  Reified mode preserves [itree E R]
     as [shared_ptr<ITree<R>>]; sequential mode erases it to [R].  A codomain
@@ -2327,6 +2309,24 @@ let promote_typeclass_params (params : (Id.t * ml_type) list) =
   in
   (params, List.rev !temps)
 
+(** Generate a C++ function definition from an ML function body.
+
+    When the body has fewer lambda binders than the ML type's domain (i.e. it
+    is under-applied), missing parameters are eta-expanded by synthesising
+    [MLrel] arguments.  [Tdummy]-typed entries in the missing list are skipped:
+    they represent erased type parameters (e.g. [A : Type] in
+    [apply : forall A, A -> A]) that have no C++ runtime representation.
+    Including them would produce a spurious [CPPabort "unreachable"] IIFE as an
+    extra argument, causing [std::function] call sites to receive the wrong
+    number of arguments.
+
+    @param n     the global reference for the function being defined
+    @param b     the ML AST body
+    @param cty   the C++ type of the function (decomposed internally into domain
+                 and codomain)
+    @param ty    the original ML type (used for domain decomposition and type
+                 inference)
+    @param temps template type parameters *)
 let gen_dfun n b cty ty temps =
   let dom, cod =
     match cty with Tfun (d, c) -> (d, c) | t -> ([ Tvoid ], t)

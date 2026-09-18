@@ -668,6 +668,9 @@ let any_type_aliases = Cpp_erasure.any_type_aliases
 
 let is_any_type = Cpp_erasure.is_any_shaped
 
+(** The C++ token an {!Minicpp.obj_access} prints as. *)
+let pp_obj_access = function Adot -> "." | Aarrow -> "->"
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -676,9 +679,6 @@ let is_any_type = Cpp_erasure.is_any_shaped
     A {!Minicpp.Tpromoted} reaching the printer is one no resolution map
     claimed, so it is rendered as a member of the enclosing struct: the bare
     name inside a struct body, [StructName::id] outside one. *)
-(** The C++ token an {!Minicpp.obj_access} prints as. *)
-let pp_obj_access = function Adot -> "." | Aarrow -> "->"
-
 let rec pp_cpp_type ?(lead = true) par vl t =
   let rec pp_rec ?(lead = true) par t =
     (* The [typename] a dependent qualifier needs, unless the caller is placing
@@ -3792,6 +3792,7 @@ let rec pp_cpp_field
     ++ h (sname ++ str "(" ++ sname ++ str "&&) noexcept = default;")
     ++ fnl ()
     ++ h (sname ++ str "& operator=(" ++ sname ++ str "&&) noexcept = default;")
+
 (** Print the body of a struct: groups fields by [(visibility, section_tag)],
     emits [public:]/[private:] labels only when necessary, and inserts
     section-tag comments (e.g. [// TYPES], [// DATA]).
@@ -3944,11 +3945,6 @@ let rec pp_cpp_decl env decl =
   pp_cpp_decl_raw env
     (Cpp_pipeline.finish ~loopify:(Cpp_pipeline.should_loopify decl) decl)
 
-(** Inner declaration printer, called after loopification and after the
-    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
-    written out.
-
-    @param env  name environment for sub-expression and sub-type printers *)
 (** [pp_initialiser env ty e] prints [e] as the initialiser of something
     declared with type [ty].
 
@@ -3971,6 +3967,11 @@ and pp_initialiser env ty e =
     ++ str "\"); })()"
   | _ -> pp_cpp_expr env [] e
 
+(** Inner declaration printer, called after loopification and after the
+    {!Cpp_erasure.settled} seam: every type here is spelled the way it will be
+    written out.
+
+    @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
   let sub d = Cpp_erasure.settled_child ~parent:settled d in
   match (settled :> cpp_decl) with

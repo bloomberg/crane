@@ -9,7 +9,13 @@
                                     ; match opam package name.
  (synopsis "Rocq's extraction plugin") ; Synopsis, used in META generation.
 
- (flags :standard -rectypes -w -9-27+60-32-33 -warn-error -3-9-32-33-50) 
+ ; Every warning left enabled by `-w` is an error, and so is every alert: a
+ ; warning that only prints scrolls past in the next build's output and is
+ ; never fixed.  Disable a warning in `-w` if it is genuinely not worth acting
+ ; on; do not let one stand as a warning.  `-alert @all` covers deprecation,
+ ; which means a Rocq release retiring an API we call breaks the build rather
+ ; than logging at it.
+ (flags :standard -rectypes -w -9-27+60-32-33 -warn-error +a -alert @all)
 
  (libraries
    rocq-runtime.lib

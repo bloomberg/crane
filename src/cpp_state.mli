@@ -77,11 +77,11 @@ val c_library_globals : Names.Id.Set.t
 (** {2 Output modules} *)
 
 (** Set of module paths that are valid extraction outputs. *)
-val valid_output_modules : (Names.module_path, unit) Hashtbl.t
+val valid_output_modules : (Names.ModPath.t, unit) Hashtbl.t
 
 (** Replace the contents of [valid_output_modules] with the given module paths;
     afterwards only those modules yield [#include] lines from [pp_open]. *)
-val set_valid_output_modules : Names.module_path list -> unit
+val set_valid_output_modules : Names.ModPath.t list -> unit
 
 (** Empty [valid_output_modules], re-enabling [#include] emission for every
     module. *)
@@ -105,7 +105,7 @@ val clear_global_unmerged : unit -> unit
 (** {2 Preamble} *)
 
 (** Pretty-printers for includes, comments, and file preambles. *)
-val pp_open : Names.module_path -> Pp.t
+val pp_open : Names.ModPath.t -> Pp.t
 
 (** Wrap the given document in OCaml-style comment delimiters [(* ... *)]. *)
 val pp_comment : Pp.t -> Pp.t
@@ -120,11 +120,11 @@ val then_nl : Pp.t -> Pp.t
 (** Build the preamble of an implementation file: the optional header comment
     followed by one [pp_open] line per used module. The first and last
     arguments are ignored. *)
-val preamble : 'a -> Pp.t option -> Names.module_path list -> 'b -> Pp.t
+val preamble : 'a -> Pp.t option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** Build the preamble of a header/signature file; currently identical to
     [preamble]. *)
-val sig_preamble : 'a -> Pp.t option -> Names.module_path list -> 'b -> Pp.t
+val sig_preamble : 'a -> Pp.t option -> Names.ModPath.t list -> 'b -> Pp.t
 
 (** {2 Render context} *)
 
@@ -135,7 +135,7 @@ type render_ctx = {
   rc_in_struct : bool;
   rc_concepts_hoisted : bool;
   rc_struct_name : Pp.t option;
-  rc_struct_mp : Names.module_path option;
+  rc_struct_mp : Names.ModPath.t option;
   rc_in_template : bool;
 }
 
@@ -182,7 +182,7 @@ val with_render_ctx : (render_ctx -> render_ctx) -> (unit -> 'a) -> 'a
 (** {2 Template static accessors} *)
 
 (** Tracking for template static accessor labels and their kernel names. *)
-val template_static_accessors : (Names.module_path * Names.Label.t) list ref
+val template_static_accessors : (Names.ModPath.t * Names.Label.t) list ref
 
 (** Canonical kernel names of template static accessors, for cross-functor
     matching. Cleared by [reset_cpp_state]. *)
@@ -197,14 +197,14 @@ val non_accessor_labels : (Names.Label.t, unit) Hashtbl.t
     static accessor (Meyers singleton), by adding it to
     [template_static_accessors].  Idempotent. *)
 val register_template_static_accessor :
-  Names.module_path -> Names.Label.t -> unit
+  Names.ModPath.t -> Names.Label.t -> unit
 
 (** {!register_template_static_accessor} for a global reference, which also
     records the constant's kername for cross-functor matching. *)
 val register_template_static_accessor_ref : Names.GlobRef.t -> unit
 
 (** Map from functor-application module paths to their source module. *)
-val functor_app_sources : (Names.module_path, Names.module_path) Hashtbl.t
+val functor_app_sources : (Names.ModPath.t, Names.ModPath.t) Hashtbl.t
 
 (** {2 Eponymous records} *)
 
@@ -306,13 +306,13 @@ val is_typeclass_instance : 'a -> Miniml.ml_type -> bool
 (** {2 Wrapper and scope tables} *)
 
 (** Tables tracking wrapper modules, collisions, and global-scope entities. *)
-val wrapper_module_table : (Names.module_path, string) Hashtbl.t
+val wrapper_module_table : (Names.ModPath.t, string) Hashtbl.t
 
 (** Module paths that were collision-wrapped (a child module whose name clashes
     with a global inductive, folded into a parent struct); for these,
     [wrapper_qualify_name] strips the child qualifier. Cleared by
     [reset_cpp_state]. *)
-val collision_wrapper_table : (Names.module_path, unit) Hashtbl.t
+val collision_wrapper_table : (Names.ModPath.t, unit) Hashtbl.t
 
 (** The C++ concept name of each type class whose own name does not settle it,
     because another module declares a class of the same name and a concept is
@@ -369,7 +369,7 @@ val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
 (** Capitalized inductive names mapped to their module paths across all modules,
     used to detect module/inductive name collisions. Cleared by
     [reset_cpp_state]. *)
-val global_inductive_names : (string, Names.module_path) Hashtbl.t
+val global_inductive_names : (string, Names.ModPath.t) Hashtbl.t
 
 (** Qualify a C++ name with its wrapper struct when the reference's module path
     is a wrapper module. [VarRef] references (lifted declarations) are never
@@ -442,7 +442,7 @@ val global_eponymous_record_registry : (Names.GlobRef.t, unit) Hashtbl.t
     record declared in each module path (at most one per module). Kept in sync
     by [register_eponymous_record] and cleared by [reset_cpp_state]. *)
 val eponymous_record_by_modpath :
-  (Names.module_path, Names.GlobRef.t) Hashtbl.t
+  (Names.ModPath.t, Names.GlobRef.t) Hashtbl.t
 
 (** Register an inductive as an eponymous record, adding it to the global
     registry and, for [IndRef]s, to the by-module-path reverse index. *)

@@ -461,7 +461,7 @@ type held_concept =
 let held_concept_equal a b =
   match (a, b) with
   | HCmodtype x, HCmodtype y -> Names.ModPath.equal x y
-  | HCclass x, HCclass y -> Names.GlobRef.equal x y
+  | HCclass x, HCclass y -> globref_equal x y
   | _ -> false
 
 (** The concepts the struct now being rendered has held back: their

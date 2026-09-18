@@ -1118,19 +1118,6 @@ let mark_higher_order_projections struc =
   in
   Modutil.struct_iter scan_decl (fun _ -> ()) (fun _ -> ()) struc
 
-(** Demote a record classified as a type class back to a plain struct when the
-    structure uses it as a value.
-
-    A record with a [Type]-valued field models an algebraic structure -- a
-    [Monoid] whose carrier and operations are resolved statically -- and is
-    emitted as a C++ concept, which its instances satisfy as types.  But the
-    same record can also be packed as an existential and handled as data ([list
-    dyn]): a concept cannot be a list element, and the value carries its own
-    type, so it has to be a struct with the promoted field erased.
-
-    A type argument is the signal: an instance used statically appears as a
-    definition's parameter, which becomes a template parameter, and never
-    inside another type's arguments. *)
 (** Give a functor application's inductives the kind the functor's own body
     gave them.
 
@@ -1230,6 +1217,19 @@ let align_functor_instance_kinds struc =
     struc;
   List.iter (fun (_mp, sel) -> List.iter walk_elem sel) struc
 
+(** Demote a record classified as a type class back to a plain struct when the
+    structure uses it as a value.
+
+    A record with a [Type]-valued field models an algebraic structure -- a
+    [Monoid] whose carrier and operations are resolved statically -- and is
+    emitted as a C++ concept, which its instances satisfy as types.  But the
+    same record can also be packed as an existential and handled as data ([list
+    dyn]): a concept cannot be a list element, and the value carries its own
+    type, so it has to be a struct with the promoted field erased.
+
+    A type argument is the signal: an instance used statically appears as a
+    definition's parameter, which becomes a template parameter, and never
+    inside another type's arguments. *)
 let demote_value_typeclasses struc =
   let demoted = ref Mindmap_env.empty in
   let rec scan_arg t =

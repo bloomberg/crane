@@ -46,7 +46,7 @@ val globref_full_path_cache : (Names.GlobRef.t, string) Hashtbl.t
 val globref_full_path : Names.GlobRef.t -> string
 
 (** Pretty-print a module path. *)
-val pp_modname : Names.module_path -> Pp.t
+val pp_modname : Names.ModPath.t -> Pp.t
 
 (** {2 Inductive references} *)
 

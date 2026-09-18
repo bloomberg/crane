@@ -1738,18 +1738,6 @@ let get_structure_analysis () =
   | None ->
     CErrors.anomaly (Pp.str "cpp: rendering a structure that was never analysed")
 
-(** Decide everything about the structure that does not depend on which file is
-    being written, and record it for the passes that do.
-
-    {!Structure_analysis} describes itself as running before rendering, and the
-    tables it fills are read by both the header and the implementation; it was
-    nonetheless invoked from inside the renderer, so the same conclusions were
-    reached four times per unit and the last one silently won.  Reaching them
-    once, here, is what makes discovery a pass in its own right.
-
-    The visibility stack is pushed exactly as a rendering pass would push it:
-    the analysis is a function of the structure, but the helpers it calls read
-    the stack, and this is a relocation, not a re-derivation. *)
 (** Copy a structure analysis's decisions into the tables rendering reads them
     back from.
 
@@ -1810,6 +1798,18 @@ let install_analysis
           mi.sels )
     sorted_modules
 
+(** Decide everything about the structure that does not depend on which file is
+    being written, and record it for the passes that do.
+
+    {!Structure_analysis} describes itself as running before rendering, and the
+    tables it fills are read by both the header and the implementation; it was
+    nonetheless invoked from inside the renderer, so the same conclusions were
+    reached four times per unit and the last one silently won.  Reaching them
+    once, here, is what makes discovery a pass in its own right.
+
+    The visibility stack is pushed exactly as a rendering pass would push it:
+    the analysis is a function of the structure, but the helpers it calls read
+    the stack, and this is a relocation, not a re-derivation. *)
 let prepare_structure s =
   let initial_mps =
     List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s

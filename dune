@@ -2,6 +2,10 @@
 ; Tests are built on demand via their explicit `@tests/<cat>/<name>/runtest`
 ; aliases (see bin/test_runner and the Makefile test targets), so known-broken
 ; wip tests never break a plain `dune build` / `dune install`.
+; `rocq-crane.install` is listed as well as the package itself: the package
+; dep builds everything that would be installed, but not the .install file
+; `dune install` reads, so without it a bare `dune build && dune install`
+; fails with "the following <package>.install are missing".
 (alias
  (name default)
- (deps (package rocq-crane)))
+ (deps (package rocq-crane) rocq-crane.install))

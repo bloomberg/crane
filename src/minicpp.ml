@@ -283,7 +283,6 @@ and alloc_kind =
        cell in place when it is the sole owner, else allocates.  Only emitted
        under [Crane NonAtomicRc] (needs crane::rc's control block). *)
 
-(** C++ expressions. *)
 (** What translation knew about a call; see [minicpp.mli]. *)
 and call_sig = {
   cs_yields : call_result;
@@ -305,6 +304,7 @@ and obj_access =
   | Adot (** [obj.member] *)
   | Aarrow (** [obj->member] *)
 
+(** C++ expressions. *)
 and cpp_expr =
   | CPPvar of Id.t
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -790,22 +790,6 @@ let mk_call ?yields ?params fn args =
 let mk_apply ?yields ?params fn args =
   match args with [] -> fn | _ -> mk_call ?yields ?params fn args
 
-(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
-    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
-
-    A trailing return type is a by-value return, so a top-level [const] on it
-    says nothing and [-Wignored-qualifiers] rejects it.  Callers routinely
-    reach for the type of whatever the lambda stands in for -- a [const]
-    initialiser's own type, say -- so the qualifier is dropped here rather
-    than at each of them.  A [const] under a reference is a different claim
-    and is left alone.
-
-    A nullary lambda whose body only throws produces no value, so it is
-    {!CPPabort} instead: the same never-returning expression, and the one
-    spelling of it.  An un-annotated such lambda would otherwise deduce
-    [void] and could not stand where a value is expected; [Tany] is what an
-    erased slot asks for, and is the only thing left to say when the caller
-    named no type. *)
 (** [named_tvar x] is the type variable named [x].  Its index is 0 because it
     numbers against no declaration's parameter list -- a lambda's own template
     parameter, a typeclass carrier, a function-typed parameter's [F] -- so the
@@ -857,6 +841,22 @@ let lambda ?(tparams = []) params ret body ~by_value =
     cl_body = body;
     cl_by_value = by_value }
 
+(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
+
+    A trailing return type is a by-value return, so a top-level [const] on it
+    says nothing and [-Wignored-qualifiers] rejects it.  Callers routinely
+    reach for the type of whatever the lambda stands in for -- a [const]
+    initialiser's own type, say -- so the qualifier is dropped here rather
+    than at each of them.  A [const] under a reference is a different claim
+    and is left alone.
+
+    A nullary lambda whose body only throws produces no value, so it is
+    {!CPPabort} instead: the same never-returning expression, and the one
+    spelling of it.  An un-annotated such lambda would otherwise deduce
+    [void] and could not stand where a value is expected; [Tany] is what an
+    erased slot asks for, and is the only thing left to say when the caller
+    named no type. *)
 let mk_lambda ?tparams params ret body ~by_value =
   let l = lambda ?tparams params ret body ~by_value in
   match (params, body) with
@@ -1302,10 +1302,6 @@ and dfun_shape =
   | Ddecl of (Id.t option * cpp_type) list
       (** Forward declaration: parameters, possibly anonymous. *)
 
-(** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
-    sub-statements and [ft] to sub-types of a visibility-annotated field,
-    performing one level of structural descent.  Nested structs recurse, so
-    that a caller need only supply the three leaf functions. *)
 (** The [GlobRef.t] a declaration is about, if it has one: what a [Crane
     Loopify] directive names, and what tells two hoisted helpers apart.
 
@@ -1365,6 +1361,10 @@ let map_out_of_line fs ft = function
         mf_body = List.map fs m.mf_body }
   | OLdestructor body -> OLdestructor (List.map fs body)
 
+(** [map_field fe fs ft f] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a visibility-annotated field,
+    performing one level of structural descent.  Nested structs recurse, so
+    that a caller need only supply the three leaf functions. *)
 let rec map_field
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)
@@ -1428,9 +1428,6 @@ let erased_lambda l ~params ~ret ~body =
       cl_ret = ret;
       cl_body = body}
 
-(** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
-    sub-statements and [ft] to sub-types of a declaration.  Nested
-    declarations ({!Dtemplate}, {!Dnspace}) recurse. *)
 (** [map_dstruct fe fs ft s] maps a struct's members, whether it is written
     with a wrapper ({!Dstruct}) or without one ({!Dfields}). *)
 let map_dstruct fe fs ft s =
@@ -1438,6 +1435,9 @@ let map_dstruct fe fs ft s =
     ds_fields = List.map (map_field fe fs ft) s.ds_fields;
     ds_constraint = Option.map fe s.ds_constraint }
 
+(** [map_decl fe fs ft d] applies [fe] to sub-expressions, [fs] to
+    sub-statements and [ft] to sub-types of a declaration.  Nested
+    declarations ({!Dtemplate}, {!Dnspace}) recurse. *)
 let rec map_decl
     (fe : cpp_expr -> cpp_expr)
     (fs : cpp_stmt -> cpp_stmt)

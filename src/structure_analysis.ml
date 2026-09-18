@@ -257,8 +257,9 @@ let is_func_decl (_, se) =
     [None].
 
     The main module is excluded because its declarations are emitted directly at
-    top level, not inside a wrapper struct. *)
-(** [taken] says whether a name is already spoken for at file scope by
+    top level, not inside a wrapper struct.
+
+    [taken] says whether a name is already spoken for at file scope by
     something this module cannot be merged into. *)
 let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
   let has_func = List.exists is_func_decl sel in
@@ -619,18 +620,6 @@ let sort_inductives_within_module reg (s : ml_structure) sel =
 
 (** {2 Main analysis entry point} *)
 
-(** Perform all structure analysis in a single call.
-
-    This is called once per unit from cpp.ml's [prepare_structure],
-    immediately after creating the Method_registry. The steps are:
-
-    1. Register enum inductives across all modules (side-effect on Table). 2.
-    Collect inductive names for collision detection. 3. Collect global-scope
-    enums for early emission. 4. Classify modules as wrapper vs. non-wrapper. 5.
-    Topologically sort modules by cross-module dependencies.
-
-    The main module is identified as the last module in the input structure
-    (following Rocq's convention that the extracted module is listed last). *)
 (** Does the child module [se] itself define an inductive whose C++ name is
     [child_name]?  If it does, the name is the child's own and no wrapper is
     needed. *)
@@ -862,6 +851,18 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
           m.sels )
     modules
 
+(** Perform all structure analysis in a single call.
+
+    This is called once per unit from cpp.ml's [prepare_structure],
+    immediately after creating the Method_registry. The steps are:
+
+    1. Register enum inductives across all modules (side-effect on Table). 2.
+    Collect inductive names for collision detection. 3. Collect global-scope
+    enums for early emission. 4. Classify modules as wrapper vs. non-wrapper. 5.
+    Topologically sort modules by cross-module dependencies.
+
+    The main module is identified as the last module in the input structure
+    (following Rocq's convention that the extracted module is listed last). *)
 let analyze (reg : Method_registry.t) (s : ml_structure) : t =
   (* 1. Register enum inductives (side-effect: populates Table). *)
   register_enum_inductives s;

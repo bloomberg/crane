@@ -851,11 +851,11 @@ val implicits_of_global : GlobRef.t -> Int.Set.t
 (** UGLY HACK: registration of a function defined in [extraction.ml] *)
 val type_scheme_nb_args_hook : (Environ.env -> Constr.t -> int) Hook.t
 
-(** Check if reference has custom extraction. *)
 (** [same_mutual_block r1 r2] holds when both are inductive types from the
     same mutual block, which the backend generates into one enclosing scope. *)
 val same_mutual_block : GlobRef.t -> GlobRef.t -> bool
 
+(** Check if reference has custom extraction. *)
 val is_custom : GlobRef.t -> bool
 
 (** Check if reference has inline custom extraction. *)

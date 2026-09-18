@@ -205,6 +205,11 @@ let tctx =
         cpp_binder_types = IntMap.empty;
     }
 
+(** Modify the produced-so-far half of the context.  Every writer goes through
+    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
+    field to carry across a scope boundary. *)
+let update_output f = tctx := { !tctx with output = f (!tctx).output }
+
 (** [with_field get set v f] runs [f] with one context field set to [v], and
     puts the enclosing value back on the way out however [f] leaves --
     returning or raising.
@@ -217,11 +222,6 @@ let tctx =
     Every dynamic-extent field gets a [with_*] built from this, so that no
     caller writes the save/set/restore by hand -- an omitted restore does not
     fail, it silently leaks the setting into whatever is translated next. *)
-(** Modify the produced-so-far half of the context.  Every writer goes through
-    this rather than rebuilding [tctx] in place, so {!with_scope} has exactly one
-    field to carry across a scope boundary. *)
-let update_output f = tctx := { !tctx with output = f (!tctx).output }
-
 let with_field get set v f =
   let saved = get !tctx in
   set v;

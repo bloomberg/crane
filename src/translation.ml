@@ -4244,16 +4244,6 @@ and ml_expr_is_function_value e =
        fall back on the shape rather than on the failed inference. *)
     | None -> ( match other with MLlam _ -> true | _ -> false ) )
 
-(** [is_boxed_source t] -- whether a value whose C++ type is [t] is
-    physically inside a [std::any], and so may be read back out with an
-    [any_cast].
-
-    {!Ml_type_util.is_boxed_type} answers this structurally, which misses a
-    named alias for the box: a [Type]-valued definition is emitted as
-    [using sel = std::any], and only following the alias chain reveals that a
-    parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
-    excluded -- it prints as [std::any] without promising one, so nothing may
-    be cast out of it. *)
 (** [param_states_type_args x orig] -- whether the parameter whose Rocq type
     is [orig] constrains the type variables of the global [x] in a way that
     another argument's deduction can conflict with.
@@ -4356,6 +4346,16 @@ and classify_erasure = function
     structural, cannot see through. *)
 and spells_as_any t = prints_as_any t || resolves_to_any_type t
 
+(** [is_boxed_source t] -- whether a value whose C++ type is [t] is
+    physically inside a [std::any], and so may be read back out with an
+    [any_cast].
+
+    {!Ml_type_util.is_boxed_type} answers this structurally, which misses a
+    named alias for the box: a [Type]-valued definition is emitted as
+    [using sel = std::any], and only following the alias chain reveals that a
+    parameter of type [sel] is a box.  {!Minicpp.Topaque} is deliberately
+    excluded -- it prints as [std::any] without promising one, so nothing may
+    be cast out of it. *)
 and is_boxed_source t =
   is_boxed_type t
   || (match t with
@@ -4950,40 +4950,6 @@ and ml_expr_is_erased env (t : ml_ast) : bool =
       | _ -> false )
   | _ -> false
 
-(** Generate C++ expression from ML AST. Main expression compiler - handles
-    lambdas, applications, constructors, pattern matching, etc. Monadic
-    non-function globals are wrapped in CPPfun_call by the MLglob case below.
-
-    [deep_erase] says that [ml_e] flows into a slot that is really
-    [std::any], so any constructor it builds has to use the canonical erased
-    shape: every producer of the same Coq type must agree with the fixed
-    [any_cast] that reads it back.  A "cons" production keeping
-    [deque<Prod<Nat, Nat>>] where the matching "nil" erased to
-    [deque<Prod<any, any>>] is what [std::bad_any_cast] at the consumer looks
-    like.
-
-    Only constructors read it, but the slot is a property of the whole
-    subterm, so it is carried down every position whose value ends up in that
-    slot -- an argument, a coercion's operand, a branch result, a tail
-    expression, the body of a lambda that is itself the stored value.  A
-    position that opens a new slot (a let-bound right-hand side, a
-    non-tail statement) does not take it. *)
-(** [record_call_sig env callee_ty e] records what the callee's ML type says
-    about [e], when [e] is a call nothing has been recorded on yet.
-
-    The application site is where the answer is known; the {!CPPfun_call} node
-    is built further down, in {!eta_fun}, so the answer is stamped on here
-    rather than threaded through every intermediate that only forwards it.  A
-    callee with no ML type, or one that is not a call at all, keeps
-    {!call_opaque}: a consumer must defer to C++ deduction rather than invent
-    a type.
-
-    Both fields come off the {e same} instantiated type, so a consumer reading
-    one cannot be looking at a different callee than a consumer reading the
-    other.  The parameter list is kept only when it has one entry per
-    argument -- {!Minicpp.call_sig} enforces that -- since a partial
-    application, or a callee whose arrows an eta-expansion has rearranged,
-    would otherwise hand the printer a misaligned list. *)
 (** What a reference to global [x], instantiated at [tys], evaluates to as it
     is printed.
 
@@ -5012,6 +4978,22 @@ and glob_yields env x tys =
     try Some (cpp_of_ml env value_ty)
     with e when CErrors.noncritical e -> None )
 
+(** [record_call_sig env callee_ty e] records what the callee's ML type says
+    about [e], when [e] is a call nothing has been recorded on yet.
+
+    The application site is where the answer is known; the {!CPPfun_call} node
+    is built further down, in {!eta_fun}, so the answer is stamped on here
+    rather than threaded through every intermediate that only forwards it.  A
+    callee with no ML type, or one that is not a call at all, keeps
+    {!call_opaque}: a consumer must defer to C++ deduction rather than invent
+    a type.
+
+    Both fields come off the {e same} instantiated type, so a consumer reading
+    one cannot be looking at a different callee than a consumer reading the
+    other.  The parameter list is kept only when it has one entry per
+    argument -- {!Minicpp.call_sig} enforces that -- since a partial
+    application, or a callee whose arrows an eta-expansion has rearranged,
+    would otherwise hand the printer a misaligned list. *)
 and record_call_sig env callee_ty e =
   match (e, callee_ty) with
   | CPPfun_call ({cs_yields = Ropaque; cs_params = Punknown}, f, args),
@@ -5030,6 +5012,24 @@ and record_call_sig env callee_ty e =
       CPPfun_call (sg, f, args) )
   | _ -> e
 
+(** Generate C++ expression from ML AST. Main expression compiler - handles
+    lambdas, applications, constructors, pattern matching, etc. Monadic
+    non-function globals are wrapped in CPPfun_call by the MLglob case below.
+
+    [deep_erase] says that [ml_e] flows into a slot that is really
+    [std::any], so any constructor it builds has to use the canonical erased
+    shape: every producer of the same Coq type must agree with the fixed
+    [any_cast] that reads it back.  A "cons" production keeping
+    [deque<Prod<Nat, Nat>>] where the matching "nil" erased to
+    [deque<Prod<any, any>>] is what [std::bad_any_cast] at the consumer looks
+    like.
+
+    Only constructors read it, but the slot is a property of the whole
+    subterm, so it is carried down every position whose value ends up in that
+    slot -- an argument, a coercion's operand, a branch result, a tail
+    expression, the body of a lambda that is itself the stored value.  A
+    position that opens a new slot (a let-bound right-hand side, a
+    non-tail statement) does not take it. *)
 and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     (ml_e : ml_ast) : cpp_expr =
   let slot = {slot with expected_cpp_ty = expected_ty} in

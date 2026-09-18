@@ -95,8 +95,8 @@ type cpp_type =
       (** Global type reference with type and value arguments *)
   | Tfun of cpp_type list * cpp_type
       (** Function type: domain types and codomain *)
-  | Tconst of cpp_type  (** [const T] *)
-      (** Type with modifier (const, static, extern) *)
+  | Tconst of cpp_type
+      (** [const T] -- a type carrying a modifier (const, static, extern). *)
   | Tnamespace of GlobRef.t * cpp_type
       (** Type qualified by namespace reference *)
   | Tqualified of cpp_type * Id.t
@@ -270,7 +270,6 @@ and smatch_branch = {
 
 (** {2 C++ expressions} *)
 
-(** C++ expression representation. *)
 (** A precondition carried over from a Rocq annotation. Either it has a C++
     spelling and is checked at run time, or it has none and is only stated in a
     comment. There is no third state: no assertion goes out without saying what
@@ -359,6 +358,7 @@ and obj_access =
   | Adot (** [obj.member] *)
   | Aarrow (** [obj->member] *)
 
+(** C++ expression representation. *)
 and cpp_expr =
   | CPPvar of Id.t  (** Local variable reference *)
   | CPPglob of GlobRef.t * cpp_type list * custom_info option
@@ -640,7 +640,6 @@ and custom_info = {
 
 (** {2 Type schemas} *)
 
-(** C++ type schema: number of type variables and the type expression. *)
 (** A plain static member function: no template parameters, no [this], and
     none of the qualifiers a real method carries.  Factory functions are the
     only producer. *)
@@ -651,6 +650,7 @@ val static_fun :
   body:cpp_stmt list ->
   method_field
 
+(** C++ type schema: number of type variables and the type expression. *)
 type cpp_schema = int * cpp_type
 
 (** {2 Helper constructors} *)
