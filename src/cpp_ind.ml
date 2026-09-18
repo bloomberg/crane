@@ -554,12 +554,7 @@ let ind_header_decls kn ind =
        group. *)
     let group =
       if is_mutual && not (!render_ctx).rc_in_struct then
-        let envs = List.map fst group in
-        let decls = Member_hoist.split_group (List.map snd group) in
-        List.map
-          (fun d ->
-            ((match envs with e :: _ -> e | [] -> empty_env ()), d) )
-          decls
+        Member_hoist.split_group group
       else group
     in
     forward_decls @ group

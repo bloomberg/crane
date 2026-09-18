@@ -98,6 +98,12 @@ type translation_ctx = {
      promoted_var_map fall back to Tany (std::any) instead of keeping
      [Tpromoted] markers, because module-level aliases apply. *)
   in_constructor_expr : bool;
+  (* The template parameter of the polymorphic function object being
+     generated, if any.  Inside such a lambda every erased type denotes that
+     one parameter -- it is the type the rank-2 binder quantified over -- so a
+     producer with nothing else to say about a type argument says the carrier
+     instead of [std::any].  See {!Rank2}. *)
+  rank2_carrier : Id.t option;
   (* ITree extraction mode: controls whether itree types are erased
      (Sequential) or preserved as shared_ptr<ITree<R>> (Reified). *)
   itree_mode : itree_extraction_mode;
@@ -191,6 +197,7 @@ let tctx =
         match_param_counter = 0;
         promoted_var_map = [];
         in_constructor_expr = false;
+        rank2_carrier = None;
         itree_mode = Sequential;
         cs_counter = 0;
         pending_reuse_token = None;
@@ -276,6 +283,18 @@ let with_in_constructor_expr (b : bool) (f : unit -> 'a) : 'a =
     (fun c -> c.in_constructor_expr)
     (fun b -> tctx := { !tctx with in_constructor_expr = b })
     b f
+
+(** [with_rank2_carrier x f] runs [f] with [x] as the carrier of the
+    polymorphic function object being generated -- see {!Rank2}.  The extent
+    is the lambda's body, so it has to be put back when that body is done. *)
+let with_rank2_carrier (x : Id.t option) (f : unit -> 'a) : 'a =
+  with_field
+    (fun c -> c.rank2_carrier)
+    (fun x -> tctx := { !tctx with rank2_carrier = x })
+    x f
+
+(** The carrier of the polymorphic function object being generated, if any. *)
+let get_rank2_carrier () = (!tctx).rank2_carrier
 
 (** [with_itree_mode m f] runs [f] extracting itree-typed terms in mode [m].
     The mode is a property of the declaration being generated, so it has to be

@@ -12,5 +12,9 @@
 
 (** [split_group decls] is the group's structs, each with the members that
     name a sibling left as declarations, followed by those members'
-    definitions.  A member that names no sibling stays where it was. *)
-val split_group : Minicpp.cpp_decl list -> Minicpp.cpp_decl list
+    definitions.  A member that names no sibling stays where it was.
+
+    Each declaration carries a payload -- the environment it is rendered in --
+    and a hoisted definition inherits the payload of the struct it came out
+    of. *)
+val split_group : ('a * Minicpp.cpp_decl) list -> ('a * Minicpp.cpp_decl) list

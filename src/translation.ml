@@ -2387,13 +2387,6 @@ let empty_slot =
     eta_keep_moves = false;
     expected_cpp_ty = None }
 
-(** The template parameter of the polymorphic function object currently being
-    generated, if any -- see the [rank2_carrier] of {!gen_expr}'s [MLlam] case.
-    Inside such a lambda every erased type denotes that one parameter, so a
-    producer that would otherwise have nothing to say about a type argument
-    ([std::any], or no argument at all) says the carrier instead. *)
-let rank2_carrier_scope : Id.t option ref = ref None
-
 (** Mark the template arguments of [g] that its declaration spells
     [template <typename> class].  Such a position takes a bare template name
     ([wrapped<List, uint64_t>]), never an instantiation, so every site that
@@ -3621,6 +3614,15 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
      so that constructor type args match the function's declared return type.
      At module level, [promoted_var_map] is already empty, so the
      [in_constructor_expr] fallback handles it naturally. *)
+  (* Inside a polymorphic function object the erased type the ML annotation
+     withheld is the lambda's own template parameter, so a type-argument list
+     erasure left empty says the carrier rather than printing [std::any] for a
+     value the parameter has already pinned down.  See {!Rank2}. *)
+  let type_args_at_carrier r =
+    match get_rank2_carrier () with
+    | Some x -> Option.default [] (Rank2.type_args_at_carrier x r)
+    | None -> []
+  in
   let saved_in_ctor = (!tctx).in_constructor_expr in
   tctx := { !tctx with in_constructor_expr = true };
   (* Convert value arguments to C++ expressions.
@@ -4180,38 +4182,14 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
           List.map (fun _ -> Tany) temps
         else temps
       in
-      (* Inside a polymorphic function object the erased type the annotation
-         withheld is the lambda's own template parameter; the empty list a
-         fully-erased annotation leaves behind would print [std::any] for a
-         value the parameter has already pinned down. *)
-      let temps =
-        match (!rank2_carrier_scope, temps, n) with
-        | Some x, [], GlobRef.IndRef (kn, _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
-          | Some k -> List.init k (fun _ -> Tvar (0, Some x))
-          | None -> temps )
-        | _ -> temps
-      in
+      let temps = if temps = [] then type_args_at_carrier n else temps in
       let value_ty = Tglob (n, temps, []) in
       app ~yields:value_ty (mk_cppglob ~yields:value_ty r temps)
     | _ ->
       (* Type is not a Tglob - no type args to pass.
          This case is rare for custom constructors, which typically have
-         Tglob types. Fall back to bare constructor reference.
-
-         Inside a polymorphic function object the erased type the annotation
-         withheld is the lambda's own template parameter, and leaving the
-         list empty would print [std::any] for a value the parameter has
-         already pinned down. *)
-      let temps =
-        match (!rank2_carrier_scope, r) with
-        | Some x, GlobRef.ConstructRef ((kn, _), _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
-          | Some n -> List.init n (fun _ -> Tvar (0, Some x))
-          | None -> [] )
-        | _ -> []
-      in
-      app (mk_cppglob r temps)
+         Tglob types. Fall back to bare constructor reference. *)
+      app (mk_cppglob r (type_args_at_carrier r))
   in
   tctx := { !tctx with in_constructor_expr = saved_in_ctor };
   (* Collapse identity inline customs (%a0) for constructors, matching
@@ -5372,14 +5350,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
        guess.  The callee recovers the result with [std::invoke_result_t]; see
        {!Gen_decls.relax_tt_applied_return}. *)
     let rank2_carrier =
-      let rec has_unknown ty =
-        match resolve_tmeta ty with
-        | Miniml.Tunknown -> true
-        | Miniml.Tglob (_, args, _) -> List.exists has_unknown args
-        | Miniml.Tapp (_, args) -> List.exists has_unknown args
-        | Miniml.Tarr (a, b) -> has_unknown a || has_unknown b
-        | _ -> false
-      in
       (* Only where the slot deduces the callback's type.  A slot that spells
          its own signature -- a [std::function<Nat(std::any)>] field, say --
          has already settled what the lambda is, and a polymorphic function
@@ -5391,27 +5361,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       if
         (not slot_declares_signature)
-        && List.exists (fun (_, ty, _) -> has_unknown ty) filtered_args_with_owned
-      then Some (Id.of_string "_X")
+        && List.exists
+             (fun (_, ty, _) -> Rank2.quantifies_erased_type ty)
+             filtered_args_with_owned
+      then Some Rank2.carrier_name
       else None
     in
-    (* Every erased position inside such a lambda denotes that one parameter:
-       it is the type the rank-2 binder quantified over. *)
-    (* A parameter that is nothing but an erased position is a box being
-       passed through: naming it [_X] deduces [std::any] and says less than
-       [std::any] did.  The carrier is only worth naming inside a type. *)
-    let rec is_boxed_through = function
-      | Tconst t | Tref t -> is_boxed_through t
-      | Tany | Topaque -> true
-      | _ -> false
-    in
     let at_carrier ty =
-      match rank2_carrier with
-      | None -> ty
-      | Some x ->
-        map_cpp_type
-          (function Topaque | Tany -> Tvar (0, Some x) | t -> t)
-          ty
+      match rank2_carrier with None -> ty | Some x -> Rank2.at_carrier x ty
     in
     let f =
       with_escape_analysis (fun () ->
@@ -5439,7 +5396,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 | None
                   when rank2_carrier <> None
                        && has_tany_in_type bare_cpp_ty
-                       && not (is_boxed_through bare_cpp_ty) ->
+                       && not (Rank2.is_bare_box bare_cpp_ty) ->
                   Tref (Tconst (at_carrier bare_cpp_ty))
                 | None when has_tany_in_type bare_cpp_ty ->
                   (* The ML type contains erased positions (std::any).  Use
@@ -5459,15 +5416,12 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         (* A template parameter C++ cannot deduce is worse than the erasure
            it replaces, so the function object is polymorphic only where the
            carrier reaches a parameter: an erased position the body alone
-           mentions stays [std::any]. *)
+           mentions stays [std::any].  {!mk_lambda} is what enforces that;
+           asking it here keeps the body's generation in step with the
+           signature it will be given. *)
         let carrier =
-          let deduces x (ty, _) =
-            exists_cpp_type
-              (function Tvar (_, Some n) -> Id.equal n x | _ -> false)
-              ty
-          in
           match rank2_carrier with
-          | Some x when List.exists (deduces x) cpp_args -> Some x
+          | Some x when deduces_tparam x (List.map fst cpp_args) -> Some x
           | _ -> None
         in
         (* The parameters' declared C++ types are only known here, after
@@ -5569,10 +5523,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> f ()
         in
         let body_stmts =
-          let saved_carrier = !rank2_carrier_scope in
-          if carrier <> None then rank2_carrier_scope := carrier;
-          Fun.protect
-            ~finally:(fun () -> rank2_carrier_scope := saved_carrier)
+          (match carrier with
+           | None -> (fun f -> f ())
+           | Some _ -> with_rank2_carrier carrier)
             (fun () ->
               with_lam_return_type (fun () ->
                 gen_stmts

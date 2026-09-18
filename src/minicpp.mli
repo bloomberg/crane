@@ -787,7 +787,9 @@ val mk_apply :
     [ret] -- or {!Tany} when [ret] is absent -- as the type it yields.
 
     [tparams] makes the lambda a polymorphic function object, written
-    [[]<typename X>(...)]. *)
+    [[]<typename X>(...)].  A template parameter no parameter names is
+    dropped: a lambda's template parameters are deduced from its call, so one
+    that reaches no parameter could never be instantiated. *)
 val mk_lambda :
   ?tparams:Id.t list ->
   (cpp_type * Id.t option) list ->
@@ -814,6 +816,10 @@ val map_args : (cpp_expr -> cpp_expr) -> cpp_expr revd -> cpp_expr revd
 (** The parameters of a {!CPPlambda}, in source order. *)
 val lambda_params :
   (cpp_type * Id.t option) revd -> (cpp_type * Id.t option) list
+
+(** [deduces_tparam x tys] is whether any of [tys] names the type variable
+    [x], and so lets C++ deduce it from an argument. *)
+val deduces_tparam : Names.Id.t -> cpp_type list -> bool
 
 (** [map_lambda fs ft l] maps [ft] over the parameter and return types of [l]
     and [fs] over its body.  A lambda has no immediate sub-expression of its

@@ -793,7 +793,22 @@ let mk_apply ?yields ?params fn args =
     [void] and could not stand where a value is expected; [Tany] is what an
     erased slot asks for, and is the only thing left to say when the caller
     named no type. *)
+(** Whether any of [tys] names the type variable [x], and so lets C++ deduce
+    it.  A template parameter the call site cannot supply and the compiler
+    cannot infer is worse than the erasure it replaced. *)
+let deduces_tparam x tys =
+  List.exists
+    (exists_cpp_type (function Tvar (_, Some n) -> Id.equal n x | _ -> false))
+    tys
+
 let lambda ?(tparams = []) params ret body ~by_value =
+  (* A lambda's template parameter has nothing but its own parameters to be
+     deduced from, so one no parameter names could never be instantiated.
+     Dropping it here is what makes that state unreachable: no caller has to
+     remember the rule. *)
+  let tparams =
+    List.filter (fun x -> deduces_tparam x (List.map fst params)) tparams
+  in
   { cl_params = {rev = List.rev params};
     cl_tparams = tparams;
     cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);

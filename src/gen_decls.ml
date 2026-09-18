@@ -3272,8 +3272,15 @@ let gen_dfun n b cty ty temps =
   in
     (temps, inner, env)
   in
-  let temps, inner = relax_applied_return temps inner in
-  let temps, inner = relax_tt_applied_return temps inner in
+  (* The signature relaxations: each answers one way a template parameter can
+     be left with no value at the call site, and each is a no-op on a
+     signature that does not have that shape. *)
+  let temps, inner =
+    List.fold_left
+      (fun (temps, inner) relax -> relax temps inner)
+      (temps, inner)
+      [relax_applied_return; relax_tt_applied_return]
+  in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)
