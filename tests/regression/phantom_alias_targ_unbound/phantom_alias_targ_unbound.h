@@ -169,14 +169,14 @@ concept Params = requires {
 };
 template <typename e = void>
 using semantic_function = std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
-template <template <typename> class e>
+template <typename e = void>
 using intrinsic_definitions = List<std::pair<Nat, semantic_function<e>>>;
 
 template <Params _tcI0, typename T1> semantic_function<T1> one() {
   return [=](const List<Nat> &) mutable { return itree_ret(_tcI0::width()); };
 }
 
-template <Params _tcI0, typename T1 = void>
+template <Params _tcI0, typename T1>
 intrinsic_definitions<T1> defined_intrinsics() {
   return List<
       std::pair<Nat, std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>>>::

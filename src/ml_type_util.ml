@@ -1057,7 +1057,15 @@ let get_rendered_tvar_indices t =
         match custom_referenced_positions_opt g with
         | Some referenced ->
           List.filteri (fun i _ -> IntSet.mem i referenced) tys
-        | None -> tys
+        | None ->
+          (* A Crane-generated declaration says the same thing about itself: a
+             position it declared phantom is written nowhere in its expansion,
+             so a variable passed there is not rendered either.  Without this,
+             an alias over an alias disagrees with the one it wraps about the
+             kind of the same parameter -- [semantic_function] erases its
+             event, and [list (nat * semantic_function E)] would still count
+             [E] as spelled because the application is what it sees. *)
+          List.filteri (fun i _ -> not (Table.is_phantom_type_param g i)) tys
       in
       List.fold_left aux l tys_to_visit
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)

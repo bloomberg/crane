@@ -142,13 +142,24 @@
   (deps monad_itree_targ_unbound.t.exe)
   (action (run ./monad_itree_targ_unbound.t.exe))))
 
-(subdir phantom_alias_targ_unbound
+(subdir functor_record_proj_as_static
  (rule
-  (targets phantom_alias_targ_unbound.t.exe)
-  (deps PhantomAliasTargUnbound.vo phantom_alias_targ_unbound.t.cpp (source_tree .))
+  (targets functor_record_proj_as_static.t.exe)
+  (deps FunctorRecordProjAsStatic.vo functor_record_proj_as_static.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_alias_targ_unbound.t.exe phantom_alias_targ_unbound.cpp phantom_alias_targ_unbound.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_record_proj_as_static.t.exe functor_record_proj_as_static.cpp functor_record_proj_as_static.t.cpp)))
  (rule
   (alias runtest)
-  (deps phantom_alias_targ_unbound.t.exe)
-  (action (run ./phantom_alias_targ_unbound.t.exe))))
+  (deps functor_record_proj_as_static.t.exe)
+  (action (run ./functor_record_proj_as_static.t.exe))))
+
+(subdir eta_handler_event_as_template
+ (rule
+  (targets eta_handler_event_as_template.t.exe)
+  (deps EtaHandlerEventAsTemplate.vo eta_handler_event_as_template.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_handler_event_as_template.t.exe eta_handler_event_as_template.cpp eta_handler_event_as_template.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_handler_event_as_template.t.exe)
+  (action (run ./eta_handler_event_as_template.t.exe))))

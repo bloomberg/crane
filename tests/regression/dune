@@ -9424,3 +9424,15 @@
   (alias runtest)
   (deps translate_callee_has_no_name.t.exe)
   (action (run ./translate_callee_has_no_name.t.exe))))
+
+; --- Landed from wip: an alias over a phantom alias keeps the kind.
+(subdir phantom_alias_targ_unbound
+ (rule
+  (targets phantom_alias_targ_unbound.t.exe)
+  (deps PhantomAliasTargUnbound.vo phantom_alias_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_alias_targ_unbound.t.exe phantom_alias_targ_unbound.cpp phantom_alias_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps phantom_alias_targ_unbound.t.exe)
+  (action (run ./phantom_alias_targ_unbound.t.exe))))

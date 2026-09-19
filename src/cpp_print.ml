@@ -3950,6 +3950,54 @@ let pp_meyers_singleton env id ty expr_pp =
   ++ fnl ()
   ++ str "}"
 
+(** The templated declarations whose defaults have already been printed, and
+    the phase they were printed in.
+
+    A default argument may be given once per template parameter, and which
+    printing of a declaration is the one that gives it is not a property of
+    that printing: the same function can be declared in a struct and defined
+    after it, declared in the header and defined in the [.cpp], or written
+    out just once inline.  What the rule needs is only "has this one been
+    spelled yet", so that is what is recorded.  The phase is kept alongside so
+    that moving to another file -- or to the [.cpp], which repeats everything
+    the [.h] declared -- starts the question over rather than inheriting an
+    answer about a different translation unit. *)
+let templates_already_defaulted = ref ([] : Names.GlobRef.t list list)
+
+let templates_defaulted_phase = ref None
+
+(** Whether this printing of [decl] is the one that gives its defaults. *)
+let claim_template_defaults decl =
+  let phase = Common.get_phase () in
+  if !templates_defaulted_phase <> Some phase then begin
+    templates_defaulted_phase := Some phase;
+    templates_already_defaulted := []
+  end;
+  match phase with
+  | Common.Emit Common.Impl ->
+    (* The implementation file only ever repeats declarations the interface
+       file already made. *)
+    false
+  | _ ->
+    let rec key_of = function
+      | Dtemplate (_, _, inner) -> key_of inner
+      | Dfun f -> List.map fst (dfun_path_list f.df_path)
+      | d -> Option.cata (fun r -> [r]) [] (decl_globref d)
+    in
+    let key = key_of decl in
+    let same k =
+      List.length k = List.length key && List.for_all2 Common.globref_equal k key
+    in
+    (* A declaration with no reference cannot be recognised on its second
+       printing, so it is treated as a first one: a missing default is an
+       error at the use site, a repeated one only where there are two. *)
+    if key = [] then true
+    else if List.exists same !templates_already_defaulted then false
+    else begin
+      templates_already_defaulted := key :: !templates_already_defaulted;
+      true
+    end
+
 (** The parameters and statements of a declaration, for the traversals that
     need to see what a signature's body actually does with its parameters (see
     {!erased_into_storage_tparam}).  A declaration with no body gives empty
@@ -4017,14 +4065,11 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
-    (* A default may be given once per parameter, and the declaration in the
-       header is where it is given: an out-of-line definition repeating it is
-       a redefinition.  Everything the [.cpp] emits has already been declared
-       in the [.h] the same pass wrote. *)
+    (* A default may be given once per parameter, so only the first printing
+       of this declaration gives it -- see {!claim_template_defaults}. *)
     let pp_param =
-      match Common.get_phase () with
-      | Common.Emit Common.Impl -> pp_template_param_redecl
-      | _ -> pp_template_param
+      if claim_template_defaults decl then pp_template_param
+      else pp_template_param_redecl
     in
     let args = pp_list pp_param temps in
     let params, body = decl_body decl in
