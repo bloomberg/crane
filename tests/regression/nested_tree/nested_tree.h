@@ -209,7 +209,7 @@ struct NestedTree {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::any &, tree &, T1 &>
   static T1 tree_rect(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -221,7 +221,7 @@ struct NestedTree {
     }
   }
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, std::any &, tree &, T1 &>
   static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {

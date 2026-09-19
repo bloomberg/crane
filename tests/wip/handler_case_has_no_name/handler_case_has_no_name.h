@@ -171,37 +171,9 @@ struct Basics {
   static T1<T2> iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0);
 };
 
-struct Handler_Mod {
-  template <typename T1, typename T2, typename T3 = void, typename T4,
-            typename F0, typename F1, typename _P0, typename _P1>
-  static std::shared_ptr<ITree<T4>> case_(F0 &&f, F1 &&g,
-                                          const Sum1<_P0, _P1, T4> &ab) {
-    if (std::holds_alternative<typename Sum1<_P0, _P1, T4>::Inl1>(ab.v())) {
-      const auto &[a0] = std::get<typename Sum1<_P0, _P1, T4>::Inl1>(ab.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename Sum1<_P0, _P1, T4>::Inr1>(ab.v());
-      return g(a0);
-    }
-  }
-};
-template <template <typename> class e, typename f = void>
-using Handler = std::function<std::shared_ptr<ITree<std::any>>(e<std::any>)>;
-const<std::any, Handler<std::any, std::any>>
-    Case_sum1_Handler = std::any_cast << std::any,
-    Handler < std::any,
-    std::any >>>
-        ([=]<typename _X>(
-             const std::function<std::shared_ptr<ITree<_X>>(_X)> &x) mutable {
-          return [=](Sum1<T1<_X>, T2<_X>, T4> _x0) mutable
-                     -> std::shared_ptr<ITree<T4>> {
-            return Handler_Mod::case_(x, x0, _x0);
-          };
-        });
-
 struct Interp {
-  template <Monad _tcI0, Functor _tcI1, template <typename> class T1,
-            typename T3, typename F1>
+  template <Monad _tcI0, Functor _tcI1, typename T1 = void, typename T3,
+            typename F1>
   static typename _tcI0::template m<T3> interp(MonadIter<_tcI0::template m> iM,
                                                F1 &&h0,
                                                std::shared_ptr<ITree<T3>> x0_);
@@ -230,15 +202,14 @@ T1<T2> Basics::iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0) {
       monadIter(crane_erase_fn<T1<Sum<std::any, std::any>>>(x), x0));
 }
 
-template <Monad _tcI0, Functor _tcI1, template <typename> class T1, typename T3,
-          typename F1>
+template <Monad _tcI0, Functor _tcI1, typename T1, typename T3, typename F1>
 typename _tcI0::template m<T3> Interp::interp(MonadIter<_tcI0::template m> iM,
                                               F1 &&h0,
                                               std::shared_ptr<ITree<T3>> x0_) {
   return Basics::template iter<_tcI0::template m, T3,
                                std::shared_ptr<ITree<T3>>>(
       std::move(iM),
-      [=](const auto &t) mutable {
+      [=](const std::shared_ptr<ITree<T3>> &t) mutable {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);

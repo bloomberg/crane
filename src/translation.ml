@@ -5536,12 +5536,20 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        && has_tany_in_type bare_cpp_ty
                        && not (Rank2.is_bare_box bare_cpp_ty) ->
                   Tref (Tconst (at_carrier bare_cpp_ty))
-                | None when has_tany_in_type bare_cpp_ty ->
-                  (* The ML type contains erased positions (std::any).  Use
+                | None when Ml_type_util.has_tany_written bare_cpp_ty ->
+                  (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
                      type at the call site — explicit std::any in the param
                      type would block valid calls and prevent field accesses
-                     inside the body from resolving to the concrete type. *)
+                     inside the body from resolving to the concrete type.
+
+                     The erasure has to be one the spelling shows.  A type
+                     whose erased argument sits in a position its template
+                     never writes renders concretely, and a generic parameter
+                     there is a liability: a consumer that probes the callable
+                     with a [std::any] -- [crane_erase_fn] does -- instantiates
+                     the body at [std::any] and fails inside it, where no
+                     [requires] can catch it. *)
                   Tref (Tconst Tauto)
                 | None -> wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
               in
@@ -6678,16 +6686,17 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              spelling, not the one recomputed from this producer's own
              instantiation, is what the value has to be built at: two
              producers for one field otherwise disagree about how deeply the
-             field's type arguments are erased, and neither initialises it. *)
+             field's type arguments are erased, and neither initialises it.
+
+             It is the whole spelling that is taken, not only its erased
+             positions: a branch that builds the value at its own
+             instantiation and a branch that builds it at another are the same
+             disagreement, and the slot is what both are converting to. *)
           let temps =
             match Option.map Ml_type_util.unqualify_ty expected_ty with
             | Some (Tglob (n', args', _))
               when globref_equal n' n
-                   && List.length args' = List.length temps
-                   && List.for_all
-                        (fun a ->
-                          prints_as_any a || Ml_type_util.is_cpp_dummy_type a )
-                        args' ->
+                   && List.length args' = List.length temps ->
               args'
             | _ -> temps
           in
@@ -9616,13 +9625,26 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
            return-type arrows into the domain, inflating [dom_len] beyond the
            ML-level arity.  The excess args will be chained by [wrap_excess]
            below. *)
-        if missing_args == [] || excess_args <> [] then
-          if (id_is_typeclass_instance || is_inline_custom id) && args = [] then
-            (* Typeclass instance or zero-arg inline custom — return
-               the glob directly so the template renders as-is. *)
+        (* A mapping that writes no argument placeholder stands for a value,
+           not for a call that is short of arguments: it renders as-is, and
+           eta-expanding it would state an arity of our own invention.  Its own
+           arity is not even knowable here -- the domain a value parameter
+           erases to is filtered out of [dom] above, so a dictionary taking an
+           erased argument looks one arrow shorter than the parameter it is
+           passed as.  A mapping that does write placeholders is a call, and is
+           eta-expanded to fill them. *)
+        let written_bare =
+          args = []
+          && ( id_is_typeclass_instance
+             || (is_inline_custom id && inline_custom_arg_arity id = Some 0) )
+        in
+        if written_bare then cglob
+        else if missing_args == [] || excess_args <> [] then
+          if is_inline_custom id && args = [] then
+            (* Nothing is missing, so there is nothing to fill: the template
+               renders with what it was given. *)
             cglob
-          else
-            mk_call cglob args
+          else mk_call cglob args
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain

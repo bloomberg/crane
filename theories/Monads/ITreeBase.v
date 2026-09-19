@@ -62,14 +62,19 @@ Crane Extract Skip ITree.cat.
 Crane Extract Inlined Constant translate => "%a1" From "crane_itree.h".
 Crane Extract Skip translateF.
 
-Crane Extract Skip Functor_itree.
+Crane Extract Inlined Constant Functor_itree =>
+  "Functor_itree<%t0>" From "crane_itree.h".
 Crane Extract Skip Applicative_itree.
 (* Not skipped, unlike its siblings: a tree's [bind] and [ret] are named by
    their own mappings wherever they are written directly, but a generic
    definition constrained by [Monad] has a dictionary parameter that must be
    given a type -- [Monad_stateT<Monad_itree, S>].  The header supplies one. *)
 Crane Extract Inlined Constant Monad_itree => "Monad_itree<%t0>" From "crane_itree.h".
-Crane Extract Skip MonadIter_itree.
+(* Not skipped, for the reason [Monad_itree] is not: a definition that
+   iterates generically has a [MonadIter] dictionary parameter, and skipped
+   the instance left the argument with no value at all. *)
+Crane Extract Inlined Constant MonadIter_itree =>
+  "MonadIter_itree<%t0>" From "crane_itree.h".
 Crane Extract Inlined Constant idM => "%a0".
 
 Crane Extract Skip Cat.
@@ -110,6 +115,7 @@ Crane Extract Skip Id_IFun.
 Crane Extract Skip Cat_IFun.
 Crane Extract Skip Initial_void1.
 Crane Extract Skip Case_sum1.
+Crane Extract Skip Case_sum1_Handler.
 Crane Extract Skip Inl_sum1.
 Crane Extract Skip Inr_sum1.
 

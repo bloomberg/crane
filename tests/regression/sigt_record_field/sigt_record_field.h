@@ -119,7 +119,7 @@ struct SigtRecordField {
                 std::any(),
                 List<std::any>::cons(
                     UINT64_C(1),
-                    List<std::any>::cons(UINT64_C(2), List<std::any>::nil()))),
+                    List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))),
             UINT64_C(2)};
   static uint64_t peek(const boxed &b);
   static inline const uint64_t run = (peek(b1) + peek(b2));

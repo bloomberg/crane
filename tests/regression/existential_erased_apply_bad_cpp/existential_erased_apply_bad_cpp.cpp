@@ -24,9 +24,9 @@ ExistentialErasedApplyBadCpp::mk(uint64_t n) {
               })),
           List<ExistentialErasedApplyBadCpp::dyn>::cons(
               dyn::dyn0(List<std::any>::cons(
-                            n, List<std::any>::cons(
-                                   n, List<std::any>::cons(
-                                          n, List<std::any>::nil()))),
+                            n, List<uint64_t>::cons(
+                                   n, List<uint64_t>::cons(
+                                          n, List<uint64_t>::nil()))),
                         std::function<uint64_t(std::any)>(
                             [](const std::any &l) -> uint64_t {
                               return List<uint64_t>(

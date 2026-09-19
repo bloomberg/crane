@@ -1170,6 +1170,23 @@ let erased_into_storage_tparam ~params body =
       (fun (pid, ty) -> Id.Set.mem pid stored && exists_cpp_type names ty)
       params
 
+(** Whether a [TTfun] constraint states nothing the caller can be held to, and
+    so is dropped rather than printed.
+
+    A rank-2 callback has no result to claim: the body applies it at a type of
+    its own choosing, and the [std::any] standing in for that type is not what
+    comes back -- a handler for [forall X, E X -> M X] returns [M nat] where the
+    constraint would demand [M std::any].  The result is recovered where it is
+    used, by {!Gen_decls.relax_tt_applied_return} or by the deduction the call
+    itself performs.
+
+    Read by the printer, which drops such a clause, and by the relaxations,
+    which must not count a dropped clause as a use of the variables it names. *)
+let tt_constraint_is_vacuous dom cod =
+  List.exists
+    (fun t -> exists_cpp_type (function Tany | Topaque -> true | _ -> false) t)
+    (cod :: List.filter (function Tfun _ -> true | _ -> false) dom)
+
 (** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
     [typename] every [TTfun] parameter that types a callback [body] only erases
     into storage.

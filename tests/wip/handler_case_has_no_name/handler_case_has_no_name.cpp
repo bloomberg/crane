@@ -9,9 +9,7 @@ std::shared_ptr<ITree<std::any>> h(Sum1<AE, BE, std::any> x) {
 }
 
 std::shared_ptr<ITree<Nat>> HandlerCaseHasNoName::use(Nat n) {
-  return Interp::template interp<Monad_itree<std::any>>(
-      [](std::function<std::shared_ptr<ITree<Sum<std::any, std::any>>>(
-             std::any)>
-             _x0) -> std::shared_ptr<ITree<std::any>> { return <void>()(_x0); },
-      h, itree_ret(std::move(n)));
+  return Interp::template interp<Monad_itree<std::any>,
+                                 Functor_itree<std::any>>(
+      MonadIter_itree<void>, h, itree_ret(std::move(n)));
 }

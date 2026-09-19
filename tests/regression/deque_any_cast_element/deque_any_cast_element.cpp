@@ -5,7 +5,7 @@ apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e) {
   const auto &[x0, a1] = e;
   switch (x0) {
   case Tag::TAGA: {
-    return SigT<Tag, std::any>::existt(
+    return SigT<Tag, output_ty>::existt(
         Tag::TAGA,
         a1(std::make_pair(
             std::any(UINT64_C(10)),
@@ -23,7 +23,7 @@ apply_entry(const SigT<Tag, std::function<std::any(std::any)>> &e) {
                 std::any(UINT64_C(20)))))));
   }
   case Tag::TAGB: {
-    return SigT<Tag, std::any>::existt(Tag::TAGB, a1(UINT64_C(5)));
+    return SigT<Tag, output_ty>::existt(Tag::TAGB, a1(UINT64_C(5)));
   }
   default:
     std::unreachable();

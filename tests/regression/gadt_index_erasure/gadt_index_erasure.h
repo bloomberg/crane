@@ -217,7 +217,7 @@ struct GadtIndexErasure {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1> static std::any eval(const expr &e) {
+  template <typename T1 = void> static std::any eval(const expr &e) {
     if (std::holds_alternative<typename expr::Lit>(e.v())) {
       const auto &[a0] = std::get<typename expr::Lit>(e.v());
       return a0;
@@ -226,14 +226,15 @@ struct GadtIndexErasure {
       return a0;
     } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
       const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-      if (std::any_cast<bool>(eval<T1>(*a))) {
-        return eval<T1>(*a1);
+      if (std::any_cast<bool>(eval<std::any>(*a))) {
+        return eval<std::any>(*a1);
       } else {
-        return eval<T1>(*a2);
+        return eval<std::any>(*a2);
       }
     } else {
       const auto &[a0, b0] = std::get<typename expr::Pair>(e.v());
-      return std::make_pair(std::any(eval<T1>(*a0)), std::any(eval<T1>(*b0)));
+      return std::make_pair(std::any(eval<std::any>(*a0)),
+                            std::any(eval<std::any>(*b0)));
     }
   }
 

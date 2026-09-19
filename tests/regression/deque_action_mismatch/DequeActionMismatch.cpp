@@ -13,7 +13,7 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
     auto &[x2, a10] = v;
     switch (x2) {
     case Tag::TAGLIST: {
-      return Specif::template SigT<Tag, std::any>::existt(
+      return Specif::template SigT<Tag, sem_ty>::existt(
           Tag::TAGLIST, crane_call_erased(a1, a10));
     }
     case Tag::TAGNAT: {
@@ -31,7 +31,7 @@ apply_action(const Specif::SigT<Tag, std::function<std::any(std::any)>> &a,
       return v;
     }
     case Tag::TAGNAT: {
-      return Specif::template SigT<Tag, std::any>::existt(
+      return Specif::template SigT<Tag, sem_ty>::existt(
           Tag::TAGNAT, crane_call_erased(a1, a11));
     }
     default:

@@ -125,7 +125,7 @@ struct NonUniformListNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
              std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rect(F0 &&f, F1 &&f0, const n2 &n) {
@@ -139,7 +139,7 @@ struct NonUniformListNest {
     }
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
              std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
@@ -152,12 +152,12 @@ struct NonUniformListNest {
     }
   }
 
-  template <typename T1> static uint64_t depth(const n2 &x) {
+  template <typename T1 = void> static uint64_t depth(const n2 &x) {
     if (std::holds_alternative<typename n2::Z2>(x.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0] = std::get<typename n2::S2>(x.v());
-      return (depth<T1>(*a0) + 1);
+      return (depth<std::any>(*a0) + 1);
     }
   }
 

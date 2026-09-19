@@ -112,7 +112,7 @@ struct ErasedIndexFunType {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
@@ -124,7 +124,7 @@ struct ErasedIndexFunType {
     }
   }
 
-  template <typename T1, typename T2, typename F1>
+  template <typename T1, typename T2 = void, typename F1>
     requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
@@ -136,13 +136,13 @@ struct ErasedIndexFunType {
     }
   }
 
-  template <typename T1> static std::any dflt(const ty &t) {
+  template <typename T1 = void> static std::any dflt(const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return Nat::o();
     } else {
       const auto &[a, b0] = std::get<typename ty::TF>(t.v());
       return crane_erase_fn(
-          [=](const auto &) mutable { return dflt<T1>(*b0); });
+          [=](const auto &) mutable { return dflt<std::any>(*b0); });
     }
   }
 

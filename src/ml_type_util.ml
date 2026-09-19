@@ -1010,6 +1010,68 @@ let custom_referenced_positions_opt g =
   | Some _ as r -> r
   | None -> check_template (Table.find_custom_opt g)
 
+(** [refine_erased_by ~expected actual] takes, at every position where
+    [actual] erased and [expected] did not, the spelling [expected] gives.
+
+    A producer computes a type from its own instantiation, which knows nothing
+    of the positions the value is going to occupy; the slot the value flows
+    into has already written the type down.  Where the two disagree only in how
+    much they erased, the slot's spelling is the one both producers for that
+    slot will agree on, and the one the declaration states -- so it wins, and
+    the producer's concrete knowledge is kept everywhere else.
+
+    Only erasure is refined: a position where both are concrete keeps the
+    producer's, and a shape mismatch is left alone entirely. *)
+let rec refine_erased_by ~expected actual =
+  let erased t = prints_as_any t || is_cpp_dummy_type t in
+  if erased actual && not (erased expected) then expected
+  else
+    match (expected, actual) with
+    | Minicpp.Tglob (g, ea, _), Minicpp.Tglob (g', aa, x)
+      when globref_equal g g' && List.length ea = List.length aa ->
+      Minicpp.Tglob (g', List.map2 (fun e a -> refine_erased_by ~expected:e a) ea aa, x)
+    | Minicpp.Tfun (ed, ec), Minicpp.Tfun (ad, ac)
+      when List.length ed = List.length ad ->
+      Minicpp.Tfun
+        ( List.map2 (fun e a -> refine_erased_by ~expected:e a) ed ad,
+          refine_erased_by ~expected:ec ac )
+    | Minicpp.Tconst e, Minicpp.Tconst a -> Minicpp.Tconst (refine_erased_by ~expected:e a)
+    | Minicpp.Tref e, Minicpp.Tref a -> Minicpp.Tref (refine_erased_by ~expected:e a)
+    | Minicpp.Tptr e, Minicpp.Tptr a -> Minicpp.Tptr (refine_erased_by ~expected:e a)
+    | Minicpp.Tshared_ptr e, Minicpp.Tshared_ptr a ->
+      Minicpp.Tshared_ptr (refine_erased_by ~expected:e a)
+    | _ -> actual
+
+(** [written_type_args g tys] keeps only those of [g]'s type arguments that a
+    spelling of [g] actually writes.
+
+    A custom template writes the [%tN] it names and no others -- the reified
+    [ITree] carries its event family in the node rather than in the type, and
+    writes only the result -- and a Crane-generated declaration says the same
+    about a position it declared phantom.  What stands in an unwritten position
+    is not in the rendered type at all, so nothing there is deducible, erased,
+    or otherwise visible to C++. *)
+let type_arg_is_written g =
+  match custom_referenced_positions_opt g with
+  | Some referenced -> fun i -> IntSet.mem i referenced
+  | None -> fun i -> not (Table.is_phantom_type_param g i)
+
+let written_type_args g tys =
+  List.filteri (fun i _ -> type_arg_is_written g i) tys
+
+(** Replace every unwritten type argument (see {!written_type_args}) by
+    [Tvoid], so a predicate over the result reads the type as it is spelled. *)
+let prune_unwritten_args =
+  Minicpp.map_cpp_type (function
+    | Tglob (g, tys, es) ->
+      let written = type_arg_is_written g in
+      Tglob (g, List.mapi (fun i t -> if written i then t else Tvoid) tys, es)
+    | t -> t )
+
+(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
+    erased argument in a position nothing writes never reaches the C++. *)
+let has_tany_written t = has_tany_in_type (prune_unwritten_args t)
+
 (** Collect (index, name) pairs for all Tvar occurrences, sorted by index *)
 let get_tvars_indexed t =
   let get_name i n =
@@ -1053,21 +1115,7 @@ let get_rendered_tvar_indices t =
     | Tvar (i, _) ->
       if List.mem i l then l else i :: l
     | Tglob (g, tys, _) ->
-      let tys_to_visit =
-        match custom_referenced_positions_opt g with
-        | Some referenced ->
-          List.filteri (fun i _ -> IntSet.mem i referenced) tys
-        | None ->
-          (* A Crane-generated declaration says the same thing about itself: a
-             position it declared phantom is written nowhere in its expansion,
-             so a variable passed there is not rendered either.  Without this,
-             an alias over an alias disagrees with the one it wraps about the
-             kind of the same parameter -- [semantic_function] erases its
-             event, and [list (nat * semantic_function E)] would still count
-             [E] as spelled because the application is what it sees. *)
-          List.filteri (fun i _ -> not (Table.is_phantom_type_param g i)) tys
-      in
-      List.fold_left aux l tys_to_visit
+      List.fold_left aux l (written_type_args g tys)
     | Tfun (tys, ty) -> List.fold_left aux l (ty :: tys)
     | Tconst ty -> aux l ty
     | Tnamespace (_, ty) -> aux l ty

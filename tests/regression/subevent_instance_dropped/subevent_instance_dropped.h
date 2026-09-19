@@ -2,6 +2,7 @@
 #define INCLUDED_SUBEVENT_INSTANCE_DROPPED
 
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -86,13 +87,14 @@ struct FailE {
   static FailE fail(Nat a0) { return {std::move(a0)}; }
 };
 
-template <typename T1, typename T2 = void, typename T3, typename _P0>
+template <typename T1 = void, typename T2 = void, typename T3, typename _P0>
 std::shared_ptr<ITree<T3>> cast(_P0 e) {
   return itree_trigger(e);
 }
 
-template <typename T1, typename T2> std::shared_ptr<ITree<T2>> boom(Nat n) {
-  return itree_bind(cast<FailE, T1, Empty_set>(FailE::fail(std::move(n))),
+template <typename T1 = void, typename T2>
+std::shared_ptr<ITree<T2>> boom(Nat n) {
+  return itree_bind(cast<FailE, std::any, Empty_set>(FailE::fail(std::move(n))),
                     [](const auto &) -> std::shared_ptr<ITree<T2>> {
                       throw std::logic_error("absurd case");
                     });

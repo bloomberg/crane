@@ -252,6 +252,22 @@ struct Monad_itree {
     }
 };
 
+// The `Functor` half of the same story.  `interp` is constrained by all three
+// of `Functor`, `Monad` and `MonadIter`, and a constraint is discharged by
+// naming a type that satisfies the concept: skipped, the instance left the
+// template parameter with nothing to be, and it is not deducible from the
+// arguments either.
+template<typename E = void>
+struct Functor_itree {
+    template<typename A> using F = std::shared_ptr<ITree<A>>;
+
+    template<typename A, typename B>
+    static F<B> fmap(std::function<B(A)> f, F<A> t) {
+        return itree_bind(std::move(t),
+                          std::function<F<B>(A)>([f](A a) { return itree_ret(f(a)); }));
+    }
+};
+
 // Tau constructor with template argument deduction.
 template<typename R>
 auto itree_tau(std::shared_ptr<ITree<R>> next) {
@@ -290,6 +306,19 @@ auto itree_iter(Step step, I i)
                 return itree_ret(itree_iter_rhs(s));
             }));
 }
+
+// The dictionary a generic definition is given when it iterates in the tree
+// monad, the counterpart of `Monad_itree` for `MonadIter`.  Skipped, it left
+// an argument with no value at all -- `<void>()` -- because `ITree.iter`'s own
+// mapping only covers the places the constant is written directly, not the
+// places the dictionary is passed on to something else's `iter`.
+//
+// Parameterised by the event family, as the Rocq instance is, and unused here
+// for the same reason `Monad_itree`'s parameter is.
+template<typename E = void>
+inline constexpr auto MonadIter_itree = [](auto step, std::any i) {
+    return itree_iter(step, i);
+};
 
 // The result of a trigger: one Vis node whose continuation returns the
 // event's own response.

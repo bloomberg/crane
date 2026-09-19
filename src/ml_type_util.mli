@@ -429,6 +429,28 @@ val template_referenced_positions : string -> IntSet.t
     mentions, or [None] when it has no template (all positions count). *)
 val custom_referenced_positions_opt : Names.GlobRef.t -> IntSet.t option
 
+(** [refine_erased_by ~expected actual] takes, at every position where
+    [actual] erased and [expected] did not, the spelling [expected] gives: the
+    slot has already written the type down, and that is what every producer for
+    it has to agree on.  A position where both are concrete keeps [actual]'s
+    spelling, and a shape mismatch is left alone. *)
+val refine_erased_by : expected:Minicpp.cpp_type -> Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** [written_type_args g tys] keeps only those of [g]'s type arguments that a
+    spelling of [g] writes: a custom template writes the [%tN] it names and no
+    others, and a generated declaration writes no phantom position.  What
+    stands in an unwritten position is not in the rendered type at all. *)
+val written_type_args :
+  Names.GlobRef.t -> Minicpp.cpp_type list -> Minicpp.cpp_type list
+
+(** Replace every unwritten type argument (see {!written_type_args}) by
+    [Tvoid], so a predicate over the result reads the type as it is spelled. *)
+val prune_unwritten_args : Minicpp.cpp_type -> Minicpp.cpp_type
+
+(** Like {!has_tany_in_type}, but asking of the type as it is {e spelled}: an
+    erased argument in a position nothing writes never reaches the C++. *)
+val has_tany_written : Minicpp.cpp_type -> bool
+
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
 

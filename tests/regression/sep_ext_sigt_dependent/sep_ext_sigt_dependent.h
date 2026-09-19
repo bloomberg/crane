@@ -29,7 +29,7 @@ using tag_type = std::any;
 
 struct Packer {
   static inline const SigT<Tag, tag_type> pack_a =
-      SigT<Tag, std::any>::existt(Tag::TAGA, std::monostate{});
+      SigT<Tag, tag_type>::existt(Tag::TAGA, std::monostate{});
   static SigT<Tag, tag_type> pack_b(uint64_t n);
   static SigT<Tag, tag_type> pack_c(bool b);
   static Tag get_tag(const SigT<Tag, tag_type> &x0_);

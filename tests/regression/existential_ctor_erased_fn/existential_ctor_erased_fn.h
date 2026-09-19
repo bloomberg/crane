@@ -193,10 +193,10 @@ struct ExistentialCtorErasedFn {
               dynamic::dyn(
                   List<std::any>::cons(
                       UINT64_C(1),
-                      List<std::any>::cons(
+                      List<uint64_t>::cons(
                           UINT64_C(2),
-                          List<std::any>::cons(UINT64_C(3),
-                                               List<std::any>::nil()))),
+                          List<uint64_t>::cons(UINT64_C(3),
+                                               List<uint64_t>::nil()))),
                   crane_erase_fn<uint64_t>(
                       [](const List<std::any> &_x) { return _x.length(); })),
               List<dynamic>::nil())));

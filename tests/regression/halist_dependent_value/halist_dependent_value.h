@@ -287,9 +287,9 @@ struct HalistDependentValue {
       keyEq, Key::KLIST,
       std::any(List<std::any>::cons(
           UINT64_C(1),
-          List<std::any>::cons(
+          List<uint64_t>::cons(
               UINT64_C(2),
-              List<std::any>::cons(UINT64_C(3), List<std::any>::nil())))),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
       m1);
   static inline const uint64_t run = ([]() -> uint64_t {
     auto _cs = HAList0::halist_lookup(keyEq, Key::KNAT, m2);

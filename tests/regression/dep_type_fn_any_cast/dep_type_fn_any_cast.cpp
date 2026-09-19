@@ -7,11 +7,11 @@ DepTypeFnAnyCast::dt DepTypeFnAnyCast::mk(uint64_t n) {
     uint64_t _x = n - 1;
     return List<std::any>::cons(
         UINT64_C(1),
-        List<std::any>::cons(
+        List<uint64_t>::cons(
             UINT64_C(2),
-            List<std::any>::cons(
+            List<uint64_t>::cons(
                 UINT64_C(3),
-                List<std::any>::cons(UINT64_C(4), List<std::any>::nil()))));
+                List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))));
   }
 }
 

@@ -954,6 +954,13 @@ val erased_into_storage_ids : cpp_stmt list -> Id.Set.t
 val erased_into_storage_tparam :
   params:(Id.t * cpp_type) list -> cpp_stmt list -> Id.t -> bool
 
+(** Whether a [TTfun] constraint states nothing the caller can be held to, and
+    so is dropped rather than printed: a rank-2 callback's result is not the
+    [std::any] the constraint would demand.  Read by the printer, which drops
+    the clause, and by the signature relaxations, which must not count a
+    dropped clause as a use of the variables it names. *)
+val tt_constraint_is_vacuous : cpp_type list -> cpp_type -> bool
+
 (** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
     [typename] every [TTfun] parameter of [tparams] that types a callback
     [body] only erases into storage, so a declaration written without the body

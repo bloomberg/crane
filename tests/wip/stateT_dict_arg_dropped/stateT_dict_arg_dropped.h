@@ -131,20 +131,20 @@ struct FailE {
 
 using env = Nat;
 
-template <typename T1>
+template <typename T1 = void>
 stateT<env, std::shared_ptr<ITree<std::any>>, Nat> step(Nat n) {
   return stateT<Nat, std::shared_ptr<ITree<std::any>>, Nat>{
       [=](Nat s) mutable { return itree_ret(std::make_pair(n, s)); }};
 }
 
-template <typename T1>
+template <typename T1 = void>
 stateT<env, std::shared_ptr<ITree<std::any>>, Nat> twice(const Nat &n) {
-  return Monad_stateT<Monad_itree<T1>, env>::template bind<Nat, Nat>(
-      step<T1>(n), [](const Nat &a) {
-        return Monad_stateT<Monad_itree<T1>, env>::template bind<Nat, Nat>(
-            step<T1>(a), [](const auto &b) {
-              return Monad_stateT<Monad_itree<T1>, env>::template ret<Nat>(b);
-            });
+  return Monad_stateT<Monad_itree<std::any>, env>::template bind<Nat, Nat>(
+      step<std::any>(n), [](const Nat &a) {
+        return Monad_stateT<Monad_itree<std::any>, env>::template bind<
+            Nat, Nat>(step<std::any>(a), [](const auto &b) {
+          return Monad_stateT<Monad_itree<std::any>, env>::template ret<Nat>(b);
+        });
       });
 }
 

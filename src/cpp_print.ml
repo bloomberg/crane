@@ -3433,21 +3433,9 @@ let pp_requires_of_tparams ?(body = []) ?(params = []) tparams =
            APPLIES keeps its constraint, erased argument positions included --
            there the [std::any] is exactly what it will be passed. *)
         | TTfun _ when stored id -> None
-        (* Nor has a rank-2 callback a result to claim: the body applies it at
-           a type of its own choosing, and the [std::any] standing in for that
-           type is not what comes back -- a handler for [forall X, E X -> M X]
-           returns [M nat] where the constraint would demand [M std::any].
-           The result is recovered where it is used, by
-           {!Gen_decls.relax_tt_applied_return} or by the deduction the call
-           itself performs. *)
-        | TTfun (dom, cod)
-          when List.exists
-                 (fun t ->
-                   exists_cpp_type
-                     (function Tany | Topaque -> true | _ -> false)
-                     t )
-                 (cod :: List.filter (function Tfun _ -> true | _ -> false) dom)
-          -> None
+        (* Nor has a rank-2 callback a result to claim: see
+           {!Minicpp.tt_constraint_is_vacuous}. *)
+        | TTfun (dom, cod) when Minicpp.tt_constraint_is_vacuous dom cod -> None
         | TTfun (dom, cod) ->
           require_header "type_traits";
           let pp_ref ty = pp_type ty ++ str " &" in

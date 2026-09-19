@@ -2207,6 +2207,104 @@ let relax_applied_param temps decl =
     end
   | _ -> (temps, decl)
 
+(** Default every template parameter the signature that came out of the
+    relaxations no longer mentions.
+
+    A relaxation answers a template parameter the call site cannot supply by
+    spelling the position it appeared in differently -- a callback becomes an
+    [F], an application becomes a parameter of its own.  What it leaves behind
+    is the variable itself: declared, mentioned nowhere, and so neither
+    deducible nor, for a [template <typename> class], writable at all.  Given
+    a [void] default it costs the call site nothing.  It is defaulted rather
+    than dropped because a call site that spells template arguments spells
+    them by position.
+
+    A constraint counts as a mention, including a callback's.  It is not a use
+    the compiler can deduce from, but it is what states the arity and result a
+    callback must have, and a call site that spells its type arguments -- which
+    is the only way such a parameter is ever given a value -- is relying on it
+    to reject the ones that do not fit.  Defaulting the variable away would
+    take the check with it.  A clause the printer drops as vacuous is not a
+    mention, for the same reason: it is not there.
+
+    Only the signature is read.  The body can still carry the variable in a
+    type annotation the relaxation did not reach -- what it annotates is the
+    thing the signature stopped naming -- and a body is no help to deduction
+    anyway; those occurrences are erased to [std::any], which is what the
+    variable stood for once nothing was left to instantiate it with. *)
+let default_unmentioned_temps temps decl =
+  (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
+     index as well as to its name: a relaxation names its parameters [F1],
+     [_P0] without renumbering them, so a variable that kept index 1 would
+     otherwise answer for [T1] and no parameter would ever look unmentioned. *)
+  let is_tvar id = function
+    | Tvar (_, Some n) -> Id.equal n id
+    | Tvar (i, None) -> i > 0 && Id.equal (tvar_id i) id
+    | _ -> false
+  in
+  (* Only the arguments a type actually writes count: an argument in a
+     position nothing writes is no more deducible than one that is not there. *)
+  let prune = Ml_type_util.prune_unwritten_args in
+  let has_tvar id ty = exists_cpp_type (is_tvar id) (prune ty) in
+  let mentions id =
+    let has = has_tvar id in
+    (* A constraint on another parameter is a mention too: dropping the
+       variable out of the deduction would leave the clause naming it. *)
+    let in_temps =
+      List.exists
+        (fun (tt, _) ->
+          match tt with
+          | TTtypename_default d -> has d
+          | TTconcept (_, args) -> List.exists has args
+          | TTfun (dom, cod) ->
+            (not (Minicpp.tt_constraint_is_vacuous dom cod))
+            && (List.exists has dom || has cod)
+          | _ -> false )
+        temps
+    in
+    match decl with
+    | Dfun {df_ret; df_shape} ->
+      has df_ret || in_temps
+      || ( match df_shape with
+         | Ddef (params, _) -> List.exists (fun (_, t) -> has t) params
+         | Ddecl params -> List.exists (fun (_, t) -> has t) params )
+    | _ -> true
+  in
+  let unmentioned =
+    List.filter_map
+      (fun (tt, id) ->
+        match tt with
+        | (TTtypename | TTtemplate _) when not (mentions id) -> Some id
+        | _ -> None )
+      temps
+  in
+  if unmentioned = [] then (temps, decl)
+  else
+    let is_unmentioned t =
+      let head = match t with Ttyctor h | Tapply (h, _) -> h | h -> h in
+      List.exists (fun id -> is_tvar id head) unmentioned
+    in
+    let erase = map_cpp_type (fun t -> if is_unmentioned t then Tany else t) in
+    let decl =
+      match decl with
+      | Dfun ({df_shape = Ddef (params, body); _} as f) ->
+        let rec fe e = Minicpp.map_expr fe fs erase e
+        and fs s = Minicpp.map_stmt fe fs erase s in
+        Dfun {f with df_shape = Ddef (params, List.map fs body)}
+      | d -> d
+    in
+    let temps =
+      List.map
+        (fun (tt, id) ->
+          match tt with
+          | (TTtypename | TTtemplate _) when List.exists (Id.equal id) unmentioned
+            ->
+            (TTtypename_default Tvoid, id)
+          | _ -> (tt, id) )
+        temps
+    in
+    (temps, decl)
+
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
@@ -3447,7 +3545,10 @@ let gen_dfun n b cty ty temps =
     List.fold_left
       (fun (temps, inner) relax -> relax temps inner)
       (temps, inner)
-      [relax_applied_return; relax_tt_applied_return; relax_applied_param]
+      [ relax_applied_return;
+        relax_tt_applied_return;
+        relax_applied_param;
+        default_unmentioned_temps ]
   in
   match temps with
   | [] -> (inner, env)

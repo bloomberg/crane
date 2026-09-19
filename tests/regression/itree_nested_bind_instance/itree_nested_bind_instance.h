@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -91,12 +92,12 @@ public:
   }
 };
 
-template <typename T1>
+template <typename T1 = void>
 std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x) {
   return itree_bind(x, [=](const Nat &a) mutable {
-    return Monad_itree<T1>::template bind<Nat, Nat>(
+    return Monad_itree<std::any>::template bind<Nat, Nat>(
         x, [=](const Nat &b) mutable {
-          return Monad_itree<T1>::template ret<Nat>(a.add(b));
+          return Monad_itree<std::any>::template ret<Nat>(a.add(b));
         });
   });
 }

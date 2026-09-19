@@ -50,7 +50,7 @@ struct NestedTreePairLiteral {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
@@ -64,7 +64,7 @@ struct NestedTreePairLiteral {
     }
   }
 
-  template <typename T1, typename T2, typename F0, typename F1>
+  template <typename T1, typename T2 = void, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, std::any &> &&
              std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
@@ -78,12 +78,12 @@ struct NestedTreePairLiteral {
     }
   }
 
-  template <typename T1> static uint64_t size(const tree &t) {
+  template <typename T1 = void> static uint64_t size(const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       return UINT64_C(1);
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return (UINT64_C(2) * size<T1>(*a0));
+      return (UINT64_C(2) * size<std::any>(*a0));
     }
   }
 

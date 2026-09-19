@@ -37,7 +37,7 @@ void ITreeEffects::echo_loop(uint64_t n) {
       return _crane_acc;
     }(
         n,
-        [](const auto &acc) {
+        [](const std::monostate &acc) {
           std::string line;
           std::getline(std::cin, line);
           std::cout << line << '\n';

@@ -9,9 +9,9 @@ std::any DepReturnAnyCast::dep(bool b) {
     return UINT64_C(7);
   } else {
     return List<std::any>::cons(
-        UINT64_C(1), List<std::any>::cons(
-                         UINT64_C(2), List<std::any>::cons(
-                                          UINT64_C(3), List<std::any>::nil())));
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())));
   }
 }
 

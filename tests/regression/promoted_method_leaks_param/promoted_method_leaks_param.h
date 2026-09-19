@@ -174,9 +174,9 @@ struct FailE {
   }
 };
 
-template <typename T1, typename T2>
+template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<T2>> raise0(const Nat &) {
-  return FailE::Throw_(std::monostate{}).template cast_<T1, T2>();
+  return FailE::Throw_(std::monostate{}).template cast_<std::any, T2>();
 }
 
 struct PromotedMethodLeaksParam {

@@ -161,12 +161,12 @@ const std::deque<SigT<Sym, std::function<semty(Unit)>>> entries =
               return [](auto _a0, auto _a1) {
                 _a1.push_front(_a0);
                 return _a1;
-              }(std::any(Prod<std::any, std::any>::pair(
-                         Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())))),
+              }(std::any(Prod<Nat, Nat>::pair(Nat::s(Nat::o()),
+                                              Nat::s(Nat::s(Nat::o())))),
                      [](auto _a0, auto _a1) {
                        _a1.push_front(_a0);
                        return _a1;
-                     }(std::any(Prod<std::any, std::any>::pair(
+                     }(std::any(Prod<Nat, Nat>::pair(
                            Nat::s(Nat::s(Nat::s(Nat::o()))),
                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
                        std::deque<std::any>{}));
@@ -185,7 +185,7 @@ const std::deque<SigT<Sym, std::function<semty(Unit)>>> entries =
                   return [](auto _a0, auto _a1) {
                     _a1.push_front(_a0);
                     return _a1;
-                  }(std::any(Prod<std::any, std::any>::pair(
+                  }(std::any(Prod<Nat, Nat>::pair(
                              Nat::s(Nat::s(Nat::s(
                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
                              Nat::s(Nat::s(Nat::s(Nat::s(
