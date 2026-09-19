@@ -38,6 +38,9 @@
 
 template <typename R>
 struct ITree : public std::enable_shared_from_this<ITree<R>> {
+    // The tree's own result type, for helpers that have only the pointer.
+    using result_type = R;
+
     struct Ret { R value; };
     struct Tau { std::shared_ptr<ITree<R>> next; };
     struct Vis {
@@ -103,6 +106,8 @@ struct ITree : public std::enable_shared_from_this<ITree<R>> {
 // Void specialization (Ret holds nothing).
 template <>
 struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
+    using result_type = void;
+
     struct Ret { std::monostate value = {}; };
     struct Tau { std::shared_ptr<ITree<void>> next; };
     struct Vis {
@@ -224,10 +229,66 @@ auto itree_ret(A &&value) {
     return ITree<std::decay_t<A>>::ret(std::forward<A>(value));
 }
 
+// The dictionary the reified mode's monad presents when a generic definition
+// asks for one.  A tree's `bind` and `ret` are named by their own mappings
+// wherever they are written directly, so nothing here is reachable from
+// ordinary generated code; what needs it is a *constrained* template --
+// `Monad_stateT<Monad_itree, S>` -- whose parameter is spelled by the
+// generated `Monad` concept and so has to be satisfied by a real type.
+//
+// Parameterised by the event family, as the Rocq instance is; reified trees
+// carry their events at the node rather than in the tree's type, so the
+// parameter is unused here and defaulted for the erased spellings.
+template<typename E = void>
+struct Monad_itree {
+    template<typename A> using m = std::shared_ptr<ITree<A>>;
+
+    template<typename A>
+    static m<A> ret(A x) { return itree_ret(std::move(x)); }
+
+    template<typename A, typename B>
+    static m<B> bind(m<A> t, std::function<m<B>(A)> k) {
+        return itree_bind(std::move(t), std::move(k));
+    }
+};
+
 // Tau constructor with template argument deduction.
 template<typename R>
 auto itree_tau(std::shared_ptr<ITree<R>> next) {
     return ITree<R>::tau(std::move(next));
+}
+
+// `ITree.iter step i` calls `step` until it answers with the sum's right
+// injection.  The loop is written as a `Tau`-guarded self-call rather than a
+// C++ loop: the tree it builds is the tree Rocq's definition denotes, and an
+// iteration that never answers is then a divergent tree rather than a hang.
+//
+// The sum is whatever Crane generated for `I + R` in the caller's file, so it
+// is read through the shape every Crane variant has -- `v()`, a nested `Inl`
+// and `Inr` -- and its payloads through structured bindings, which do not
+// depend on the field's name.
+template<typename Sum>
+auto itree_iter_rhs(const Sum &s) {
+    const auto &[r] = *std::get_if<typename Sum::Inr>(&s.v());
+    return r;
+}
+
+template<typename Step, typename I>
+auto itree_iter(Step step, I i)
+    -> std::shared_ptr<ITree<decltype(itree_iter_rhs(
+        std::declval<typename decltype(step(i))::element_type::result_type>()))>> {
+    using Sum = typename decltype(step(i))::element_type::result_type;
+    using R = decltype(itree_iter_rhs(std::declval<Sum>()));
+    return itree_bind(
+        step(i),
+        std::function<std::shared_ptr<ITree<R>>(Sum)>(
+            [step](const Sum &s) -> std::shared_ptr<ITree<R>> {
+                if (std::holds_alternative<typename Sum::Inl>(s.v())) {
+                    const auto &[next] = *std::get_if<typename Sum::Inl>(&s.v());
+                    return itree_tau(itree_iter(step, next));
+                }
+                return itree_ret(itree_iter_rhs(s));
+            }));
 }
 
 // The result of a trigger: one Vis node whose continuation returns the

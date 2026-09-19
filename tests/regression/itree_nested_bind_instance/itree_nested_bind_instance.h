@@ -94,8 +94,10 @@ public:
 template <typename T1>
 std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x) {
   return itree_bind(x, [=](const Nat &a) mutable {
-    return itree_bind(
-        x, [=](const Nat &b) mutable { return itree_ret(a.add(b)); });
+    return Monad_itree<T1>::template bind<Nat, Nat>(
+        x, [=](const Nat &b) mutable {
+          return Monad_itree<T1>::template ret<Nat>(a.add(b));
+        });
   });
 }
 

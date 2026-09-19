@@ -45,7 +45,12 @@ Crane Extract Skip Embeddable_itree.
 Crane Extract Skip Embeddable_forall.
 
 Crane Extract Skip ITree.map.
-Crane Extract Skip ITree.iter.
+(* [iter] is not skipped: it is reached through [MonadIter], whose instance for
+   trees the mode skips, so a skipped [iter] leaves a call with no callee at
+   all -- [return <E, I, R>(...)].  The helper builds the same [Tau]-guarded
+   tree the Rocq definition denotes. *)
+Crane Extract Inlined Constant ITree.iter =>
+  "itree_iter(%a0, %a1)" From "crane_itree.h".
 Crane Extract Skip ITree.forever.
 Crane Extract Skip ITree.spin.
 Crane Extract Skip ITree.ignore.
@@ -55,7 +60,11 @@ Crane Extract Skip translateF.
 
 Crane Extract Skip Functor_itree.
 Crane Extract Skip Applicative_itree.
-Crane Extract Skip Monad_itree.
+(* Not skipped, unlike its siblings: a tree's [bind] and [ret] are named by
+   their own mappings wherever they are written directly, but a generic
+   definition constrained by [Monad] has a dictionary parameter that must be
+   given a type -- [Monad_stateT<Monad_itree, S>].  The header supplies one. *)
+Crane Extract Inlined Constant Monad_itree => "Monad_itree<%t0>" From "crane_itree.h".
 Crane Extract Skip MonadIter_itree.
 Crane Extract Inlined Constant idM => "%a0".
 

@@ -9389,3 +9389,14 @@
   (alias runtest)
   (deps erased_event_alias_targ.t.exe)
   (action (run ./erased_event_alias_targ.t.exe))))
+
+(subdir iter_callee_has_no_name
+ (rule
+  (targets iter_callee_has_no_name.t.exe)
+  (deps IterCalleeHasNoName.vo iter_callee_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} iter_callee_has_no_name.t.exe iter_callee_has_no_name.cpp iter_callee_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps iter_callee_has_no_name.t.exe)
+  (action (run ./iter_callee_has_no_name.t.exe))))
