@@ -9319,3 +9319,14 @@
   (alias runtest)
   (deps itree_mapping_hijacks_monad.t.exe)
   (action (run ./itree_mapping_hijacks_monad.t.exe))))
+
+(subdir subevent_instance_dropped
+ (rule
+  (targets subevent_instance_dropped.t.exe)
+  (deps SubeventInstanceDropped.vo subevent_instance_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subevent_instance_dropped.t.exe subevent_instance_dropped.cpp subevent_instance_dropped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps subevent_instance_dropped.t.exe)
+  (action (run ./subevent_instance_dropped.t.exe))))

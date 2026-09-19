@@ -1307,15 +1307,34 @@ let is_reified_monadic_var ml_expr =
     constructors are extracted to expressions that build a tree, so a term
     like [go (RetF x)] is already the tree and must not be wrapped again.
 
-    Does {b not} return [true] for [MLapp(MLglob g, args)] because global
-    inline extractions (e.g. [print_endline]) may produce direct C++
-    expressions that genuinely need Ret wrapping. *)
+    A call to a global counts too, but only where Crane itself wrote the
+    callee: a global with a mapping (e.g. [print_endline]) stands for a direct
+    C++ expression, which genuinely needs the wrap, and a void-ified one
+    returns nothing at all in C++ however monadic its Rocq type reads. *)
 let is_reified_monadic_expr ml_expr =
+  (* The result of applying [n] arguments to something of ML type [ty].  A
+     dummy domain is an erased type parameter, which the term does not pass, so
+     it is stepped over without spending an argument. *)
+  let rec ml_result_after n ty =
+    match Ml_type_util.resolve_tmeta ty with
+    | Miniml.Tarr (dom, res) when (match Ml_type_util.resolve_tmeta dom with
+            | Miniml.Tdummy _ -> true
+            | _ -> false) ->
+      ml_result_after n res
+    | Miniml.Tarr (_, res) when n > 0 -> ml_result_after (n - 1) res
+    | t -> t
+  in
   match ml_expr with
   | MLrel i ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
   | MLapp (MLrel i, _) ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type (ml_codomain ty) | None -> false)
+  | MLapp (MLglob (r, _), args) ->
+    (not (Table.is_inline_custom r))
+    && (not (is_void_ified_ref r))
+    && ( match find_type_opt r with
+       | Some ty -> is_monadic_ml_type (ml_result_after (List.length args) ty)
+       | None -> false )
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false
 
@@ -5659,9 +5678,21 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             and ex e = map_expr ex st at_carrier e in
             List.map st body_stmts
         in
+        (* ... except where the body does nothing but throw: a deduced return
+           type is [void] there, and no slot that asked for a value can take
+           it.  The slot's own codomain is what the throw stands in for, so
+           name that. *)
+        let ret_ann =
+          match body_stmts with
+          | [Sthrow _] | [Sreturn (Some (CPPabort _))] -> (
+            match Option.map strip_cpp_ref_const expected_ty with
+            | Some (Tfun (_, cod)) when cod <> Tvoid -> Some cod
+            | _ -> None )
+          | _ -> None
+        in
         mk_lambda
           ?tparams:(Option.map (fun x -> [x]) carrier)
-          (List.rev cpp_args) None body_stmts ~by_value:true )
+          (List.rev cpp_args) ret_ann body_stmts ~by_value:true )
     in
     restore_env_types saved_env_types;
     ( match filtered_args with

@@ -86,18 +86,16 @@ struct FailE {
   static FailE fail(Nat a0) { return {std::move(a0)}; }
 };
 
-template <template <typename> class T1, typename T2 = void, typename T3>
-std::shared_ptr<ITree<T3>> cast(T1<T3> e) {
+template <typename T1, typename T2 = void, typename T3, typename _P0>
+std::shared_ptr<ITree<T3>> cast(_P0 e) {
   return itree_trigger(e);
 }
 
 template <typename T1, typename T2> std::shared_ptr<ITree<T2>> boom(Nat n) {
-  return itree_bind(
-      [=]() mutable -> std::shared_ptr<ITree<Empty_set>> {
-        return ITree<Empty_set>::ret(
-            cast<FailE, T1, Empty_set>(FailE::fail(std::move(n))));
-      }(),
-      [](const auto &) { throw std::logic_error("absurd case"); });
+  return itree_bind(cast<FailE, T1, Empty_set>(FailE::fail(std::move(n))),
+                    [](const auto &) -> std::shared_ptr<ITree<T2>> {
+                      throw std::logic_error("absurd case");
+                    });
 }
 
 struct SubeventInstanceDropped {

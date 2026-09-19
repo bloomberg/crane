@@ -166,22 +166,54 @@ struct ITree<void> : public std::enable_shared_from_this<ITree<void>> {
 template<typename R>
 using itreeF_t = typename ITree<R>::variant_t;
 
-// Bind: run the first tree, feed its result to the continuation.
-// Uses generic callable K (not std::function) so lambdas participate
-// in template argument deduction.
+// Bind: graft the continuation onto every leaf of the first tree.
+//
+// A tree is data, so binding it performs no effect: a Ret hands its value to
+// the continuation, a Vis keeps its event and binds whatever its own
+// continuation yields, and a Tau keeps the step.  Only run() performs
+// anything, which is what lets a tree be built over an event nothing here
+// knows how to interpret.
+//
+// The continuation is taken by value, not by forwarding reference: a Vis
+// stores it in the node it returns, which outlives this call.  K stays a
+// generic callable (not a std::function) so lambdas deduce against it.
 template<typename A, typename K>
-auto itree_bind(std::shared_ptr<ITree<A>> m, K &&k)
+auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
     -> decltype(k(std::declval<A>())) {
-    A result = m->run();
-    return std::forward<K>(k)(std::move(result));
+    using tree_b = decltype(k(std::declval<A>()));
+    using node_b = typename tree_b::element_type;
+    if (!m)
+        throw std::invalid_argument("crane: itree_bind given a null tree");
+    if (auto *r = std::get_if<typename ITree<A>::Ret>(&m->node))
+        return k(r->value);
+    if (auto *t = std::get_if<typename ITree<A>::Tau>(&m->node))
+        return node_b::tau(itree_bind(t->next, k));
+    auto &v = std::get<typename ITree<A>::Vis>(m->node);
+    auto cont = v.cont;
+    return node_b::vis(
+        v.effect,
+        std::function<tree_b(std::any)>(
+            [cont, k](std::any x) { return itree_bind(cont(std::move(x)), k); }));
 }
 
 // Bind specialization for void first argument.
 template<typename K>
-auto itree_bind(std::shared_ptr<ITree<void>> m, K &&k)
+auto itree_bind(std::shared_ptr<ITree<void>> m, K k)
     -> decltype(k()) {
-    m->run();
-    return std::forward<K>(k)();
+    using tree_b = decltype(k());
+    using node_b = typename tree_b::element_type;
+    if (!m)
+        throw std::invalid_argument("crane: itree_bind given a null tree");
+    if (std::get_if<typename ITree<void>::Ret>(&m->node))
+        return k();
+    if (auto *t = std::get_if<typename ITree<void>::Tau>(&m->node))
+        return node_b::tau(itree_bind(t->next, k));
+    auto &v = std::get<typename ITree<void>::Vis>(m->node);
+    auto cont = v.cont;
+    return node_b::vis(
+        v.effect,
+        std::function<tree_b(std::any)>(
+            [cont, k](std::any x) { return itree_bind(cont(std::move(x)), k); }));
 }
 
 // Ret constructor with template argument deduction.  The result type is

@@ -2027,6 +2027,101 @@ let relax_tt_applied_return temps decl =
     | _ -> (temps, decl) )
   | _ -> (temps, decl)
 
+(** Relax a signature in which a parameter's type is the only place a template
+    template parameter is applied.
+
+    [cast (e : E Y)] makes [E] a [template <typename> class] because [E Y] is
+    the type of a parameter, and then nothing can supply it: an event family
+    like [FailE], whose index Crane erases, reaches C++ as a plain struct, and
+    a caller polymorphic in an [E] of its own passes a [typename].  Nor does
+    the signature need [E] applied -- the parameter has one type, and C++
+    deduces a type from the argument it is given.  So the parameter is given a
+    template parameter of its own and [E] goes back to being a [typename],
+    which is what its call sites spell.
+
+    Only a variable applied {e nowhere else} qualifies.  Where the return type
+    or a callback's [requires] also names it, the application is a claim about
+    the shape of the instantiation -- [hk_map] returns [T1<T3>] for the very
+    [T1] its argument came in at -- and a parameter deduced on its own would
+    not carry it. *)
+let relax_applied_param temps decl =
+  let occurrences p ty =
+    let n = ref 0 in
+    ignore (exists_cpp_type (fun t -> if p t then incr n; false) ty);
+    !n
+  in
+  let applies id = function Tapply (h, _) -> tvar_is id h | _ -> false in
+  match decl with
+  | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
+    let param_tys = List.map snd params in
+    (* A variable applied in the parameters and named nowhere else: not by the
+       return type, not by another template parameter's constraint, and not
+       bare among the parameters either. *)
+    let only_applied_in_params id =
+      let total = List.fold_left (fun a t -> a + occurrences (tvar_is id) t) 0 in
+      let applied =
+        List.fold_left (fun a t -> a + occurrences (applies id) t) 0
+      in
+      applied param_tys > 0
+      && total param_tys = applied param_tys
+      && (not (tvar_named id ret))
+      && not
+           (List.exists
+              (fun (tt, i) ->
+                (not (Id.equal i id))
+                &&
+                match tt with
+                | TTfun (doms, cod) -> List.exists (tvar_named id) (cod :: doms)
+                | TTtypename_default d -> tvar_named id d
+                | _ -> false )
+              temps )
+    in
+    let relaxed =
+      List.filter
+        (fun (tt, id) ->
+          match tt with
+          | TTtemplate _ -> only_applied_in_params id
+          | _ -> false )
+        temps
+    in
+    if relaxed = [] then (temps, decl)
+    else begin
+      (* One fresh parameter per application, named apart from the ones the
+         signature already has. *)
+      let taken = List.map snd temps in
+      let fresh = ref [] in
+      let next_name () =
+        let rec pick k =
+          let id = Id.of_string (Printf.sprintf "_P%d" k) in
+          if List.exists (Id.equal id) taken then pick (k + 1) else id
+        in
+        pick (List.length !fresh)
+      in
+      let deduce ty =
+        map_cpp_type
+          (fun t ->
+            if List.exists (fun (_, id) -> applies id t) relaxed then begin
+              let id = next_name () in
+              fresh := !fresh @ [(TTtypename, id)];
+              Tvar (0, Some id)
+            end
+            else t )
+          ty
+      in
+      let params = List.map (fun (n, ty) -> (n, deduce ty)) params in
+      let temps =
+        List.map
+          (fun (tt, id) ->
+            if List.exists (fun (_, i) -> Id.equal i id) relaxed then
+              (TTtypename, id)
+            else (tt, id) )
+          temps
+        @ !fresh
+      in
+      (temps, Dfun {f with df_shape = Ddef (params, body)})
+    end
+  | _ -> (temps, decl)
+
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
@@ -3261,7 +3356,7 @@ let gen_dfun n b cty ty temps =
     List.fold_left
       (fun (temps, inner) relax -> relax temps inner)
       (temps, inner)
-      [relax_applied_return; relax_tt_applied_return]
+      [relax_applied_return; relax_tt_applied_return; relax_applied_param]
   in
   match temps with
   | [] -> (inner, env)
