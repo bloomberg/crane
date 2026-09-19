@@ -69,7 +69,8 @@ public:
 };
 
 struct RocqBug13453 {
-  template <typename x> using array = std::any /* AXIOM TO BE REALIZED */;
+  template <typename x = void>
+  using array = std::any /* AXIOM TO BE REALIZED */;
   static inline const array<Nat> a = {Nat::o()};
 };
 

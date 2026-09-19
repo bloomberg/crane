@@ -697,6 +697,27 @@ let is_hkt_ind_param r i =
   | Some s -> List.mem i s
   | None -> false
 
+(* Positions (0-based) of a type alias's parameters that its right-hand side
+   never spells: an erased event family is the case in point.  Populated by
+   [Gen_decls.hkt_templates] alongside [hkt_ind_params], and read back when a
+   *use* of the alias is converted: such a position is a plain [typename]
+   there, so no instantiation may be written in it. *)
+let phantom_type_params : (GlobRef.t, int list) Hashtbl.t = Hashtbl.create 16
+
+let init_phantom_type_params () = Hashtbl.reset phantom_type_params
+
+let () =
+  register_census "phantom_type_params" (fun () ->
+      Hashtbl.length phantom_type_params )
+
+let add_phantom_type_params r positions =
+  if positions <> [] then Hashtbl.replace phantom_type_params r positions
+
+let is_phantom_type_param r i =
+  match Hashtbl.find_opt phantom_type_params r with
+  | Some s -> List.mem i s
+  | None -> false
+
 (** Check whether [ty] mentions the inductive [kn] (optionally restricted to a
     specific packet index [packet_idx]), either directly or nested inside type
     arguments (e.g. [list (tree A)] counts for [tree]).
@@ -3581,6 +3602,7 @@ let reset_tables () =
   init_inductive_kinds ();
   init_flat_inductives ();
   init_hkt_ind_params ();
+  init_phantom_type_params ();
   init_enum_inductives ();
   init_sigma_assertions ();
   init_recursors ();

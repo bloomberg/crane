@@ -155,8 +155,13 @@ val gen_type_alias : GlobRef.t -> Id.t list -> ml_type option -> Minicpp.cpp_dec
     inductive's constructor fields, or the body of a type alias.  A parameter
     that [tys] applies to arguments is declared [template <typename> class],
     and its position is registered so that uses of [r] pass a bare template
-    name; see {!Table.is_hkt_ind_param}. *)
+    name; see {!Table.is_hkt_ind_param}.
+
+    [applied] is the rendered C++ type, when there is one: a parameter it
+    never applies is a plain [typename] whatever its Rocq kind was, because
+    that is what a use site spells. *)
 val hkt_templates :
+  ?applied:Minicpp.cpp_type ->
   GlobRef.t -> Id.t list -> ml_type list -> (Minicpp.template_type * Id.t) list
 
 (** Check if a term is a type class instance (constructs a type class record).

@@ -182,11 +182,12 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 };
-template <template <typename> class e>
+
+template <typename e = void>
 using semantic_function = std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
-const semantic_function<T1> k = [](const List<Nat> &args) {
-  return itree_ret(args.length());
-};
+template <typename T1>
+const semantic_function<T1> k =
+    [](const List<Nat> &args) { return itree_ret(args.length()); };
 
 struct ErasedEventAliasTarg {
   static std::shared_ptr<ITree<Nat>> use(const List<Nat> &x0_);

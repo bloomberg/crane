@@ -8,7 +8,7 @@ struct RocqBug14100 {
   enum class NondetE { OR };
 
   struct Min {
-    template <typename x> using otherE = NondetE;
+    template <typename x = void> using otherE = NondetE;
   };
 
   static_assert(MinSIG<Min>);

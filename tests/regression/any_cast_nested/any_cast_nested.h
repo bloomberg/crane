@@ -20,7 +20,7 @@ template <typename A, typename P> struct SigT {
 };
 
 struct AnyCastNested {
-  template <typename a> using payload_ty = std::any;
+  template <typename a = void> using payload_ty = std::any;
 
   template <typename T1>
   static T1 extract_a(const SigT<uint64_t, payload_ty<T1>> &s) {

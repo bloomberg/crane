@@ -1858,20 +1858,37 @@ let applied_ml_tvar_arities tys =
     converted C++ ones because the parameter list has to be fixed before the
     types are converted.  Registers the template template positions so that
     {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
-let hkt_templates r vars tys =
+let hkt_templates ?applied r vars tys =
   let arities = applied_ml_tvar_arities tys in
+  (* A parameter the rendered type never spells is phantom, whatever its Rocq
+     kind was.  An erased event family is the case in point:
+     [semantic_function := list nat -> itree E nat] writes no [E] in C++ at
+     all, so declaring [E] a [template <typename> class] would demand a
+     template of every use site for a position that holds nothing.  It is a
+     plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
+     is what makes the use sites agree. *)
+  let rendered = Option.map Ml_type_util.get_rendered_tvar_indices applied in
+  let rendered_in_cpp i =
+    match rendered with None -> true | Some l -> List.mem i l
+  in
   let temps =
     List.mapi
       (fun i n ->
-        match Hashtbl.find_opt arities (i + 1) with
-        | Some arity -> (TTtemplate arity, n)
-        | None -> (TTtypename, n) )
+        if not (rendered_in_cpp (i + 1)) then (TTtypename_default Tvoid, n)
+        else
+          match Hashtbl.find_opt arities (i + 1) with
+          | Some arity -> (TTtemplate arity, n)
+          | None -> (TTtypename, n) )
       vars
   in
+  let positions_of p =
+    List.filteri (fun i _ -> p i) (List.mapi (fun i _ -> i) temps)
+  in
   Table.add_hkt_ind_params r
-    (List.filter_map
-       (fun (i, (tt, _)) -> match tt with TTtemplate _ -> Some i | _ -> None)
-       (List.mapi (fun i t -> (i, t)) temps) );
+    (positions_of (fun i ->
+         match List.nth temps i with TTtemplate _, _ -> true | _ -> false ));
+  Table.add_phantom_type_params r
+    (positions_of (fun i -> not (rendered_in_cpp (i + 1))));
   temps
 
 (** Build the [using] declaration for a type alias.
@@ -1898,7 +1915,8 @@ let gen_type_alias r vars ot =
       | Some t -> (Some (convert_ml_type_to_cpp_type (empty_env ()) [] t), None) )
   in
   let du_tparams =
-    hkt_templates r vars (match ot with Some t -> [t] | None -> [])
+    hkt_templates ?applied:du_rhs r vars
+      (match ot with Some t -> [t] | None -> [])
   in
   Dusing {du_tparams; du_name = r; du_rhs; du_note}
 

@@ -142,7 +142,7 @@ concept Coll = requires {
 };
 
 struct AssocTypeFieldArgument {
-  template <typename c> using elt = std::any;
+  template <typename c = void> using elt = std::any;
 
   struct CNat {
     using elt = uint64_t;

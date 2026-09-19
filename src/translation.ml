@@ -2417,7 +2417,19 @@ let empty_slot =
     spells an instantiation of [g] -- its type, its factory calls, and the
     constructor structs a match qualifies -- has to agree on this. *)
 let apply_hkt_tyctors g temps =
-  List.mapi (fun i t -> if Table.is_hkt_ind_param g i then Ttyctor t else t) temps
+  List.mapi
+    (fun i t ->
+      if Table.is_hkt_ind_param g i then Ttyctor t
+      else
+        match t with
+        | Tapply ((Tvar _ as head), _) when Table.is_phantom_type_param g i ->
+          (* A parameter the declaration never spells is a plain [typename]
+             there, so an instantiation cannot be written in its position --
+             and need not be: what the position holds is an erased family,
+             whose head alone says everything the declaration can use. *)
+          head
+        | _ -> t )
+    temps
 
 let rec convert_ml_type_to_cpp_type
     env

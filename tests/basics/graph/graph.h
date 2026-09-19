@@ -215,7 +215,7 @@ concept Graph = requires {
   } -> std::convertible_to<List<typename I::edge>>;
 };
 
-template <typename g, typename a> using edge = std::any;
+template <typename g = void, typename a = void> using edge = std::any;
 
 /// An edge in a directed graph, from edge_from to edge_to.
 template <typename A> struct DirectedEdge {

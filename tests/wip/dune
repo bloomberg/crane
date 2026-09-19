@@ -107,17 +107,6 @@
 
 ; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
 
-(subdir erased_event_alias_targ
- (rule
-  (targets erased_event_alias_targ.t.exe)
-  (deps ErasedEventAliasTarg.vo erased_event_alias_targ.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_event_alias_targ.t.exe erased_event_alias_targ.cpp erased_event_alias_targ.t.cpp)))
- (rule
-  (alias runtest)
-  (deps erased_event_alias_targ.t.exe)
-  (action (run ./erased_event_alias_targ.t.exe))))
-
 (subdir stateT_dict_arg_dropped
  (rule
   (targets stateT_dict_arg_dropped.t.exe)

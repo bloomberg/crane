@@ -179,7 +179,7 @@ std::shared_ptr<ITree<T2>> raise0(const Nat &) {
   return FailE::Throw_(std::monostate{}).template cast_<T1, T2>();
 }
 
-template <typename x> using E2 = Sum1<FailE, FailE, x>;
+template <typename x = void> using E2 = Sum1<FailE, FailE, x>;
 
 struct SumEventDropsResultTarg {
   static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const List<Nat> &l);

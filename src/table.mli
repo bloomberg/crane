@@ -440,6 +440,14 @@ val add_hkt_ind_params : GlobRef.t -> int list -> unit
     template name rather than an instantiation. *)
 val is_hkt_ind_param : GlobRef.t -> int -> bool
 
+(** [add_phantom_type_params r positions] records the 0-based positions of
+    [r]'s template parameters that its definition never spells. *)
+val add_phantom_type_params : GlobRef.t -> int list -> unit
+
+(** Whether position [i] of [r] is a parameter [r]'s definition never spells;
+    see {!add_phantom_type_params}. *)
+val is_phantom_type_param : GlobRef.t -> int -> bool
+
 (** Mark inductive as enum. *)
 val add_enum_inductive : GlobRef.t -> unit
 
