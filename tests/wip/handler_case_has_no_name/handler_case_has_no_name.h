@@ -9,7 +9,6 @@
 #include <crane_itree.h>
 #include <functional>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>

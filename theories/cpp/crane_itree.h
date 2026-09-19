@@ -346,6 +346,24 @@ struct Sum1 {
     static Sum1 inr1(F a0) { return {variant_t{Inr1{std::move(a0)}}}; }
 };
 
+// [case_ f g] -- the handler that reads which side of a [Sum1] an event came
+// from and passes it to the matching handler.
+//
+// The result is a callable rather than a rendered dispatch, because [case_] is
+// written both bare (as the handler an [interp] is given) and applied to an
+// event, and only a value can be both.  The sum is taken generically: what
+// arrives is whatever Crane generated for [E +' F] at the use site, read
+// through the shape every variant has.
+template<typename F, typename G>
+auto itree_case(F f, G g) {
+    return [f, g](const auto &ab) {
+        using Sum = std::decay_t<decltype(ab)>;
+        if (auto *l = std::get_if<typename Sum::Inl1>(&ab.v()))
+            return f(l->a0);
+        return g(std::get<typename Sum::Inr1>(ab.v()).a0);
+    };
+}
+
 // Injections into a sum whose other side the injection does not name.  The
 // proxy defers that to the use site, as [itree_trigger_t] defers the response
 // type of a trigger.

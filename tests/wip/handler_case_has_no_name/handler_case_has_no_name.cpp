@@ -5,9 +5,7 @@ std::shared_ptr<ITree<std::any>> e_trigger(AE e) { return itree_trigger(e); }
 std::shared_ptr<ITree<std::any>> b_trigger(BE e) { return itree_trigger(e); }
 
 std::shared_ptr<ITree<std::any>> h(Sum1<AE, BE, std::any, std::any> x) {
-  return <std::any, std::any>(
-      ([]() -> std::any { throw std::logic_error("unreachable"); })(),
-      e_trigger, b_trigger, std::move(x));
+  return itree_case(e_trigger, b_trigger)(std::move(x));
 }
 
 std::shared_ptr<ITree<Nat>> HandlerCaseHasNoName::use(Nat n) {

@@ -85,7 +85,14 @@ Crane Extract Inlined Constant cat => "".
 Crane Extract Inlined Constant id_ => "%a0".
 Crane Extract Inlined Constant inl_ => "%a0".
 Crane Extract Inlined Constant inr_ => "%a0".
-Crane Extract Inlined Constant case_ => "".
+(* [case_ f g] reads which side of a sum an event came from.  Skipped, it left
+   a call with no callee at all; and it cannot be spelled as a dispatch
+   written out here, because the same constant is written both bare -- as the
+   handler an [interp] is given -- and applied to an event.  The helper is a
+   value, so it is both: what the template does not name, the use site
+   applies it to. *)
+Crane Extract Inlined Constant case_ =>
+  "itree_case(%a1, %a2)" From "crane_itree.h".
 Crane Extract Inlined Constant resum => "%a0".
 
 Crane Extract Inlined Constant ReSum_id => "%a0".
