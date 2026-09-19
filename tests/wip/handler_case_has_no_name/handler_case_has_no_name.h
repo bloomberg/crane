@@ -176,14 +176,11 @@ struct Handler_Mod {
             typename F0, typename F1, typename _P0, typename _P1>
   static std::shared_ptr<ITree<T4>> case_(F0 &&f, F1 &&g,
                                           const Sum1<_P0, _P1, T4> &ab) {
-    if (std::holds_alternative<
-            typename Sum1<T1<std::any>, T2<std::any>, T4>::Inl1>(ab.v())) {
-      const auto &[a0] =
-          std::get<typename Sum1<T1<std::any>, T2<std::any>, T4>::Inl1>(ab.v());
+    if (std::holds_alternative<typename Sum1<_P0, _P1, T4>::Inl1>(ab.v())) {
+      const auto &[a0] = std::get<typename Sum1<_P0, _P1, T4>::Inl1>(ab.v());
       return f(a0);
     } else {
-      const auto &[a0] =
-          std::get<typename Sum1<T1<std::any>, T2<std::any>, T4>::Inr1>(ab.v());
+      const auto &[a0] = std::get<typename Sum1<_P0, _P1, T4>::Inr1>(ab.v());
       return g(a0);
     }
   }

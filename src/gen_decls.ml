@@ -2140,18 +2140,60 @@ let relax_applied_param temps decl =
         in
         pick (List.length !fresh)
       in
+      (* One name per distinct application, not per occurrence: two positions
+         spelled [T1<std::any>] came from the one ML type and denote the one
+         C++ type, and giving them separate deduced parameters would let a
+         call deduce them apart.  Sharing is also what lets the body be
+         rewritten: it spells the application the same way the parameter did,
+         and the name it must now use is the name that parameter took. *)
+      let seen = ref [] in
+      (* Keyed by the variable and the arguments it is applied to, not by the
+         type node: the same application is spelled with whatever [Tvar]
+         rigidity the position it was built in gave it. *)
+      let key t =
+        match t with
+        | Tapply (h, args) -> (
+          match List.find_opt (fun (_, id) -> tvar_is id h) relaxed with
+          | Some (_, id) -> Some (id, args)
+          | None -> None )
+        | _ -> None
+      in
+      let lookup t =
+        Option.bind (key t) (fun k -> List.assoc_opt k !seen)
+      in
+      let deduced t =
+        match key t with
+        | None -> None
+        | Some k -> (
+          match List.assoc_opt k !seen with
+          | Some id -> Some id
+          | None ->
+            let id = next_name () in
+            fresh := !fresh @ [(TTtypename, id)];
+            seen := (k, id) :: !seen;
+            Some id )
+      in
       let deduce ty =
         map_cpp_type
           (fun t ->
-            if List.exists (fun (_, id) -> applies id t) relaxed then begin
-              let id = next_name () in
-              fresh := !fresh @ [(TTtypename, id)];
-              Tvar (0, Some id)
-            end
-            else t )
+            match deduced t with Some id -> Tvar (0, Some id) | None -> t )
           ty
       in
       let params = List.map (fun (n, ty) -> (n, deduce ty)) params in
+      (* The body annotates the very types the parameters do -- a pattern
+         match names the scrutinee's constructor struct -- so a relaxation
+         that renames a parameter's type has to rename the body's too, or the
+         body goes on applying a variable the signature no longer declares as
+         a template. *)
+      let body =
+        let ft =
+          map_cpp_type (fun t ->
+              match lookup t with Some id -> Tvar (0, Some id) | None -> t )
+        in
+        let rec fe e = Minicpp.map_expr fe fs ft e
+        and fs st = Minicpp.map_stmt fe fs ft st in
+        List.map fs body
+      in
       let temps =
         List.map
           (fun (tt, id) ->
