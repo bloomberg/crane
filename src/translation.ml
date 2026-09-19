@@ -3463,8 +3463,14 @@ and inline_custom_arg_arity id =
 
 (** [phantom_prefix_args id] is the list of template arguments a call to [id]
     has to spell out because [id]'s generated signature does not represent
-    them: one [void] per leading phantom parameter, as counted by
+    them: one filler per leading phantom parameter, as counted by
     {!Ml_type_util.explicit_tvar_prefix} off [id]'s declared type.
+
+    The filler is [void] where the signature writes the parameter nowhere --
+    nothing can then disagree with it -- and [std::any] where it does.  A
+    return-only parameter is the second case: it is undeducible, so the call
+    must still spell it, but [void] there is not a filler but a claim, and
+    [ITree<void>] is one the body goes on to contradict.
 
     The declaration emitter counts the same run and leaves those parameters
     undefaulted, so the two stay in step without either recording anything for
@@ -3480,7 +3486,47 @@ and phantom_prefix_args id =
     let force_required = collect_ml_type_index_tvars ml_ty in
     List.init (explicit_tvar_prefix ~force_required cty) (fun _ -> Tvoid)
 
-(** Spell the erased arguments of [id]'s phantom prefix as [void].
+(** How many template parameters [id]'s declaration has room for.
+
+    A call can hold more type arguments than the callee has parameters: Rocq
+    counts every variable the definition quantified, C++ only those the
+    converted signature can mention.  A variable no converted type mentions
+    never became a parameter -- the erased [itree] index of [h AE AE nat] is
+    the case -- and an argument written for it overruns the list.  Recomputed
+    from [id]'s type rather than recorded, for the same reason
+    {!phantom_prefix_args} recomputes its own: a call can precede its callee's
+    declaration. *)
+and declared_tvar_count id =
+  match find_type_opt id with
+  | None -> None
+  | Some ml_ty -> Some (Mlutil.type_maxvar (type_simpl ml_ty))
+
+(** Make an explicit argument list as long as {!declared_tvar_count} says the
+    callee's parameter list is.
+
+    Extraction and C++ disagree at both ends.  A Rocq application can carry an
+    argument for a variable the declaration never got -- an erased index -- and
+    writing it overruns the list.  It can also be missing the leading ones,
+    which erasure dropped before the call was built; those are exactly the
+    positions {!phantom_prefix_args} has fillers for, and without them the
+    arguments that remain are read at the wrong positions.
+
+    An empty list is left empty: a call that writes nothing is asking for
+    deduction, and it is only a call already committed to writing its
+    arguments that has to get their count right. *)
+and fit_to_declared_tvars id targs =
+  match declared_tvar_count id with
+  | Some n when n < List.length targs ->
+    List.filteri (fun i _ -> i < n) targs
+  | Some n when targs <> [] && n > List.length targs ->
+    let missing = n - List.length targs in
+    let fillers = phantom_prefix_args id in
+    if List.length fillers < missing then targs
+    else List.filteri (fun i _ -> i < missing) fillers @ targs
+  | _ -> targs
+
+(** Spell the erased arguments of [id]'s phantom prefix with the fillers
+    {!phantom_prefix_args} gives them.
 
     An erased argument normally costs a call its whole explicit argument list:
     the positions are what give the others their meaning, so one that cannot be
@@ -3495,9 +3541,12 @@ and phantom_prefix_args id =
     spelling; without the filler, [raise]'s result type goes unwritten too, and
     it appears only in the return position, where nothing can deduce it. *)
 and fill_phantom_prefix id targs =
-  let n = List.length (phantom_prefix_args id) in
+  let fillers = phantom_prefix_args id in
   List.mapi
-    (fun i t -> if i < n && prints_as_any t then Tvoid else t)
+    (fun i t ->
+      match List.nth_opt fillers i with
+      | Some f when prints_as_any t -> f
+      | _ -> t )
     targs
 
 (** [template_arg_of_ml_type env tvars ty] converts [ty] for a template
@@ -9470,6 +9519,10 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       else
         filtered
     in
+    (* Whatever survived above is what the call writes, so it is here -- and
+       not before the erasure filters, which read the list at its Rocq length
+       -- that it has to be made to fit the callee's parameter list. *)
+    let regular_type_args = fit_to_declared_tvars id regular_type_args in
     (* Promoted type vars ([Tpromoted name]) are no longer separate
        template parameters — they're resolved through typeclass instance
        access (e.g. [typename _tcI0::Obj]) by [gen_dfun]'s promoted var

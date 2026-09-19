@@ -140,3 +140,14 @@
   (alias runtest)
   (deps eta_handler_event_as_template.t.exe)
   (action (run ./eta_handler_event_as_template.t.exe))))
+
+(subdir applied_typename_not_hk
+ (rule
+  (targets applied_typename_not_hk.t.exe)
+  (deps AppliedTypenameNotHk.vo applied_typename_not_hk.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} applied_typename_not_hk.t.exe applied_typename_not_hk.cpp applied_typename_not_hk.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps applied_typename_not_hk.t.exe)
+  (action (run ./applied_typename_not_hk.t.exe))))

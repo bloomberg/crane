@@ -2227,11 +2227,14 @@ let relax_applied_param temps decl =
     take the check with it.  A clause the printer drops as vacuous is not a
     mention, for the same reason: it is not there.
 
-    Only the signature is read.  The body can still carry the variable in a
-    type annotation the relaxation did not reach -- what it annotates is the
-    thing the signature stopped naming -- and a body is no help to deduction
-    anyway; those occurrences are erased to [std::any], which is what the
-    variable stood for once nothing was left to instantiate it with. *)
+    Only the signature is read, and what the reading skips it also rewrites.
+    A mention is counted in the arguments a type actually writes, so an
+    occurrence sitting where nothing is written does not save the variable --
+    and must not survive it either, or the declaration would default a
+    parameter it goes on to spell.  Every occurrence left anywhere, in the
+    signature or in a body annotation the relaxation did not reach, is erased
+    to [std::any]: what the variable stood for once nothing was left to
+    instantiate it with. *)
 let default_unmentioned_temps temps decl =
   (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],
@@ -2285,12 +2288,19 @@ let default_unmentioned_temps temps decl =
       List.exists (fun id -> is_tvar id head) unmentioned
     in
     let erase = map_cpp_type (fun t -> if is_unmentioned t then Tany else t) in
+    let erase_params l = List.map (fun (id, t) -> (id, erase t)) l in
     let decl =
       match decl with
-      | Dfun ({df_shape = Ddef (params, body); _} as f) ->
-        let rec fe e = Minicpp.map_expr fe fs erase e
-        and fs s = Minicpp.map_stmt fe fs erase s in
-        Dfun {f with df_shape = Ddef (params, List.map fs body)}
+      | Dfun ({df_shape; _} as f) ->
+        let df_shape =
+          match df_shape with
+          | Ddef (params, body) ->
+            let rec fe e = Minicpp.map_expr fe fs erase e
+            and fs s = Minicpp.map_stmt fe fs erase s in
+            Ddef (erase_params params, List.map fs body)
+          | Ddecl params -> Ddecl (erase_params params)
+        in
+        Dfun {f with df_ret = erase f.df_ret; df_shape}
       | d -> d
     in
     let temps =

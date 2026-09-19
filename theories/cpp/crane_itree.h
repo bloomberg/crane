@@ -452,18 +452,26 @@ auto itree_case(F f, G g) {
 // Injections into a sum whose other side the injection does not name.  The
 // proxy defers that to the use site, as [itree_trigger_t] defers the response
 // type of a trigger.
+//
+// The side the injection *does* name is deferred too, because a signature may
+// have erased it: a handler whose event family was a variable takes
+// [Sum1<std::any, ...>], and the event being injected still has to reach it.
+// Any target the event can be spelled at is accepted; the exact one is the
+// case where that spelling is the identity.
 template<typename E>
 struct sum1_inl_t {
     E a0;
-    template<typename F, typename X>
-    operator Sum1<E, F, X>() const { return Sum1<E, F, X>::inl1(a0); }
+    template<typename E2, typename F, typename X>
+        requires std::is_constructible_v<E2, const E &>
+    operator Sum1<E2, F, X>() const { return Sum1<E2, F, X>::inl1(E2(a0)); }
 };
 
 template<typename F>
 struct sum1_inr_t {
     F a0;
-    template<typename E, typename X>
-    operator Sum1<E, F, X>() const { return Sum1<E, F, X>::inr1(a0); }
+    template<typename E, typename F2, typename X>
+        requires std::is_constructible_v<F2, const F &>
+    operator Sum1<E, F2, X>() const { return Sum1<E, F2, X>::inr1(F2(a0)); }
 };
 
 template<typename E> sum1_inl_t<E> sum1_inl(E a0) { return {std::move(a0)}; }

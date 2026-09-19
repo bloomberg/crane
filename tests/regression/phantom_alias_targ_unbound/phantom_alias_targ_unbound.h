@@ -179,12 +179,12 @@ using semantic_function = std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
 template <typename e = void>
 using intrinsic_definitions = List<std::pair<Nat, semantic_function<e>>>;
 
-template <Params _tcI0, typename T1 = void> semantic_function<T1> one() {
+template <Params _tcI0, typename T1 = void> semantic_function<std::any> one() {
   return [=](const List<Nat> &) mutable { return itree_ret(_tcI0::width()); };
 }
 
 template <Params _tcI0, typename T1 = void>
-intrinsic_definitions<T1> defined_intrinsics() {
+intrinsic_definitions<std::any> defined_intrinsics() {
   return List<
       std::pair<Nat, std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>>>::
       cons(std::make_pair(Nat::o(), one<_tcI0, std::any>()),
