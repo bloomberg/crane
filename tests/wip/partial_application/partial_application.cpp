@@ -1,8 +1,8 @@
 #include "partial_application.h"
 
-Box<std::any> TFunctor_box(Endo<Nat>, std::function<std::any(std::any)> f,
-                           Box<std::any> x0_) {
-  return ft_box(std::move(f), std::move(x0_));
+Box<std::any> TFunctor_box(Endo<Nat>, std::function<std::any(std::any)> x0_,
+                           const Box<std::any> &x1_) {
+  return ft_box(std::move(x0_), x1_);
 }
 
 std::pair<std::any, Box<std::any>>

@@ -133,8 +133,8 @@ Box<T2> ft_box(F0 &&f, const Box<T1> &b) {
   return Box<T2>::mk(endo<Nat>(Endo_id<Nat>, tag), f(t0));
 }
 
-Box<std::any> TFunctor_box(Endo<Nat> _x, std::function<std::any(std::any)> f,
-                           Box<std::any> x0_);
+Box<std::any> TFunctor_box(Endo<Nat> _x, std::function<std::any(std::any)> x0_,
+                           const Box<std::any> &x1_);
 
 template <typename T1, typename T2, typename F1>
   requires std::is_invocable_r_v<T2, F1 &, T1 &>

@@ -214,7 +214,7 @@ enum class BE { B0 };
 template <typename x = void> using Eff = Sum1<AE, BE, x>;
 std::shared_ptr<ITree<std::any>> e_trigger(AE e);
 std::shared_ptr<ITree<std::any>> b_trigger(BE e);
-std::shared_ptr<ITree<std::any>> h(Sum1<AE, BE, std::any, std::any> x);
+std::shared_ptr<ITree<std::any>> h(Sum1<AE, BE, std::any> x);
 
 struct HandlerCaseHasNoName {
   static std::shared_ptr<ITree<Nat>> use(Nat n);

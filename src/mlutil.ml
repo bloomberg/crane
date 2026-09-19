@@ -122,6 +122,24 @@ let rec eq_ml_type t1 t2 =
 and eq_ml_meta m1 m2 =
   Int.equal m1.id m2.id && Option.equal eq_ml_type m1.contents m2.contents
 
+(** [fill_placeholders pre args] applies a head already carrying [pre] to
+    [args].
+
+    Extraction eta-expands a type constructor passed as an argument -- what
+    stands for [M] is [M _], and for [AE +' BE] it is [sum1 AE BE _], the last
+    argument a placeholder extraction could not name -- so applying such a head
+    to a real argument does not extend the application, it fills the
+    placeholder.  Appending instead would give the constructor one argument per
+    substitution it passes through: [m<std::any, A>] for an [m] that takes one,
+    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three. *)
+let fill_placeholders pre args =
+  let rec drop rpre n =
+    match (rpre, n) with
+    | Tunknown :: rest, n when n > 0 -> drop rest (n - 1)
+    | _ -> rpre
+  in
+  List.rev (drop (List.rev pre) (List.length args)) @ args
+
 (** Apply a type to [args], contracting the application when the head is
     known.  [Tapp] is a redex: its head is a type variable, so substituting
     that variable with a concrete type constructor reduces it.
@@ -134,24 +152,8 @@ let rec apply_ml_type head args =
   | _ -> (
     match head with
     | Tvar (_, j) -> Tapp (j, args)
-    | Tapp (j, pre) ->
-      (* The head is already applied.  Extraction eta-expands a carrier passed
-         as a type-constructor argument -- what stands for [M] is [M _], its
-         argument the placeholder extraction could not name -- so applying it
-         to a real argument does not extend the application, it fills the
-         placeholder.  Appending instead would give the constructor one
-         argument per substitution it passes through: [m<std::any, A>] for an
-         [m] that takes one. *)
-      let rec drop_placeholders rpre n =
-        match (rpre, n) with
-        | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
-        | _ -> rpre
-      in
-      let kept =
-        List.rev (drop_placeholders (List.rev pre) (List.length args))
-      in
-      Tapp (j, kept @ args)
-    | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
+    | Tapp (j, pre) -> Tapp (j, fill_placeholders pre args)
+    | Tglob (r, pre, es) -> Tglob (r, fill_placeholders pre args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
     | Tmeta ({contents = None; _} as m) -> (
       (* The head is not known yet, and a pending application of a
