@@ -309,6 +309,19 @@ val type_is_erased : Minicpp.cpp_type -> bool
 (** The final return type of a MiniML type. *)
 val ml_return_type : Miniml.ml_type -> Miniml.ml_type
 
+(** Whether a global was skipped -- [Crane Extract Skip] records it as an
+    inline custom whose C++ text is empty. *)
+val ref_is_skipped : Names.GlobRef.t -> bool
+
+(** Whether an ML type's result is a skipped type, such as a [ReSum]
+    instance. *)
+val ml_ret_is_skipped : Miniml.ml_type -> bool
+
+(** Whether a value of this ML type is a typeclass instance -- kept or
+    skipped.  An instance parameterised over types is still one, so the
+    question is put to the result. *)
+val ml_type_is_instance : Miniml.ml_type -> bool
+
 (** Split a MiniML type into its argument types and return type, given the
     already-known leading argument types. *)
 val get_args_and_ret :

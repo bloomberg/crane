@@ -4202,6 +4202,12 @@ and stmt_has_shared_from_this = function
     @param ty       ML type of the function
     @param this_pos 0-based index of the [this] argument in the parameter list *)
 let gen_single_method name vars (func_ref, body, ty, this_pos) =
+  (* Promotion moves a function into a struct; it does not change what the
+     function returns.  The mode is read off the codomain here exactly as it is
+     for a function left at top level -- otherwise an [itree] body reached as a
+     method would be desugared sequentially while the signature it is being
+     given says [shared_ptr<ITree<_>>]. *)
+  with_itree_mode_for ty @@ fun () ->
   let num_ind_vars = List.length vars in
   let func_name = Common.id_of_global Term func_ref in
 
@@ -4387,7 +4393,12 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let param_ids_with_pos =
     List.filter
       (fun (_, ty, _) ->
-        (not (ml_type_is_void ty)) && not (Table.is_typeclass_type ty) )
+        (* An instance is either promoted to a template parameter or skipped
+           outright; either way it is not among the arguments a call passes,
+           and {!Ml_type_util.ml_type_is_instance} is where both cases are
+           recognised -- a skipped class is a [ConstRef] mapped to the empty
+           string, which [is_typeclass_type] alone does not see. *)
+        (not (ml_type_is_void ty)) && not (Ml_type_util.ml_type_is_instance ty) )
       param_ids_with_pos
   in
 
@@ -4634,12 +4645,28 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   let extra_tvar_name_set =
     List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty extra_tvar_names
   in
+  (* The body counts too.  A tvar the signature never mentions is usually one
+     erasure killed outright, but a local binding can still be declared at it
+     -- the result of a trigger is an index of the event type, so it has no
+     spelling but the variable's own -- and dropping the parameter leaves the
+     body naming something that is no longer declared. *)
+  let stmt_has_tvar name stmts =
+    let found = ref false in
+    let rec on_type t =
+      if cpp_type_has_tvar name t then found := true;
+      t
+    and on_expr e = Minicpp.map_expr on_expr on_stmt on_type e
+    and on_stmt s = Minicpp.map_stmt on_expr on_stmt on_type s in
+    List.iter (fun s -> ignore (on_stmt s)) stmts;
+    !found
+  in
   let template_params =
     List.filter (fun (_tt, tname) ->
       if not (Id.Set.mem tname extra_tvar_name_set) then true
       else
         cpp_type_has_tvar tname ret_cpp
-        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params)
+        || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
+        || stmt_has_tvar tname stmts)
     template_params
   in
   let surviving_names =

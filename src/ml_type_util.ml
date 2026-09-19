@@ -824,6 +824,29 @@ let rec ml_return_type = function
   | Tarr (_, rest) -> ml_return_type rest
   | t -> t
 
+(** Whether a global was skipped -- [Crane Extract Skip] records it as an
+    inline custom whose C++ text is empty.  Skipped globals are
+    infrastructure, and nothing of them survives into C++. *)
+let ref_is_skipped r =
+  Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+
+(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
+    whose class extraction records as a [ConstRef] mapped to the empty string,
+    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
+    are infrastructure and are erased. *)
+let ml_ret_is_skipped ty =
+  match ml_return_type ty with
+  | Tglob (rr, _, _) -> ref_is_skipped rr
+  | _ -> false
+
+(** Whether a value of ML type [ty] is a typeclass instance.
+
+    The result is what decides it: an instance parameterised over types is
+    still an instance, and its type is an arrow -- [MList : forall A, Monoid
+    (list A)].  This is the one place that answer is worked out. *)
+let ml_type_is_instance ty =
+  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+
 (** Extract argument types and return type from a function type. *)
 let rec get_args_and_ret acc = function
   | Tarr (t, rest) -> get_args_and_ret (t :: acc) rest

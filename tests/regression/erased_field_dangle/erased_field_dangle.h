@@ -39,14 +39,14 @@ struct ErasedFieldDangle {
       return std::any_cast<T1>(a);
     }
 
-    template <typename T1, typename F0> T1 box_rec(F0 &&f) const {
+    template <typename T1, typename T2, typename F0> T1 box_rec(F0 &&f) const {
       const auto &[a0] = *this;
-      return crane_call_erased(f, a0);
+      return crane_call_erased(f, std::any_cast<T2>(a0));
     }
 
-    template <typename T1, typename F0> T1 box_rect(F0 &&f) const {
+    template <typename T1, typename T2, typename F0> T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
-      return crane_call_erased(f, a0);
+      return crane_call_erased(f, std::any_cast<T2>(a0));
     }
   };
 

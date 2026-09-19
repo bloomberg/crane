@@ -40,14 +40,18 @@ struct ErasedMultiIndex {
       return std::any_cast<T1>(k0);
     }
 
-    template <typename T1, typename F0> T1 tagged_rec(F0 &&f) const {
+    template <typename T1, typename T2, typename T3, typename F0>
+    T1 tagged_rec(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_call_erased(f, k0, v_1);
+      return crane_call_erased(f, std::any_cast<T2>(k0),
+                               std::any_cast<T3>(v_1));
     }
 
-    template <typename T1, typename F0> T1 tagged_rect(F0 &&f) const {
+    template <typename T1, typename T2, typename T3, typename F0>
+    T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_call_erased(f, k0, v_1);
+      return crane_call_erased(f, std::any_cast<T2>(k0),
+                               std::any_cast<T3>(v_1));
     }
   };
 

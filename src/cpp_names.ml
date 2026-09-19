@@ -662,13 +662,18 @@ let is_record_cached (r : GlobRef.t) : bool =
 
 (** Look up method info for a function reference. Checks both local
     method_candidates and global method_registry. Returns Some this_pos if the
-    function is a method, None otherwise. *)
+    function is a method, None otherwise.
+
+    The answer is in the numbering of the arguments a C++ call site writes,
+    not of the ML type's arrows: a candidate records the ML position, which is
+    what reading its body wants, and an erased argument -- a dictionary, a
+    [void] -- separates the two. *)
 let lookup_method_this_pos n =
   let local_result =
     List.find_map
-      (fun (r', _, _, pos) ->
+      (fun (r', _, ty, pos) ->
         if globref_equal n r' then
-          Some pos
+          Some (Method_registry.cpp_arg_pos ty pos)
         else
           None )
       !method_candidates

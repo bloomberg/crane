@@ -104,16 +104,3 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
-
-; --- Seventh round of Vellvm reductions, against Crane ca893418f.
-
-(subdir promoted_method_leaks_param
- (rule
-  (targets promoted_method_leaks_param.t.exe)
-  (deps PromotedMethodLeaksParam.vo promoted_method_leaks_param.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_method_leaks_param.t.exe promoted_method_leaks_param.cpp promoted_method_leaks_param.t.cpp)))
- (rule
-  (alias runtest)
-  (deps promoted_method_leaks_param.t.exe)
-  (action (run ./promoted_method_leaks_param.t.exe))))

@@ -261,6 +261,41 @@ itree_trigger_t itree_trigger(E e) {
         return {[e = std::move(e)]() -> std::any { return std::any(e); }};
 }
 
+// The single argument a non-generic callable takes.
+template<typename T> struct crane_fn_arg;
+template<typename C, typename R, typename A>
+struct crane_fn_arg<R (C::*)(A) const> { using type = std::decay_t<A>; };
+template<typename C, typename R, typename A>
+struct crane_fn_arg<R (C::*)(A)> { using type = std::decay_t<A>; };
+
+// Binding a trigger directly.
+//
+// [itree_trigger] defers naming the response type to the use site, and a bind
+// is a use site that cannot name it either: the continuation is where the
+// response goes, so the two have to agree, and here it is the continuation
+// that decides.  A continuation taking the response as a value of its own
+// names it, and the tree is converted at that type; one written generically
+// -- which is what an absurd response leaves -- is handed the boxed response
+// as it stands, with no type to recover it at.
+template<typename K>
+auto itree_bind(itree_trigger_t m, K k) {
+    if constexpr (std::is_invocable_v<K &>)
+        return itree_bind(
+            static_cast<std::shared_ptr<ITree<void>>>(m), std::move(k));
+    else if constexpr (requires { k(std::declval<std::any>()); }) {
+        using tree_b = decltype(k(std::declval<std::any>()));
+        using node_b = typename tree_b::element_type;
+        return node_b::vis(
+            m.effect,
+            std::function<tree_b(std::any)>(
+                [k](std::any x) { return k(std::move(x)); }));
+    } else {
+        using A = typename crane_fn_arg<decltype(&K::operator())>::type;
+        return itree_bind(
+            static_cast<std::shared_ptr<ITree<A>>>(m), std::move(k));
+    }
+}
+
 // Vis constructor with template argument deduction.  Deduces R from the
 // continuation's return type (shared_ptr<ITree<R>>).
 template<typename Effect, typename Cont>

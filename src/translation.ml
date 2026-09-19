@@ -265,30 +265,12 @@ let extract_monad_from_codomain ty =
     Some monad_ref
   | _ -> None
 
-(** Whether a global was skipped -- [Crane Extract Skip] records it as an
-    inline custom whose C++ text is empty.  Skipped globals are
-    infrastructure, and nothing of them survives into C++. *)
-let ref_is_skipped r =
-  Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+(* [ref_is_skipped] and [ml_ret_is_skipped] live in {!Ml_type_util}, which
+   {!Method_registry} also asks. *)
 
-(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
-    whose class extraction records as a [ConstRef] mapped to the empty string,
-    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
-    are infrastructure and are erased. *)
-let ml_ret_is_skipped ty =
-  match ml_return_type ty with
-  | Tglob (rr, _, _) -> ref_is_skipped rr
-  | _ -> false
-
-(** Whether a value of ML type [ty] is a typeclass instance.
-
-    The result is what decides it: an instance parameterised over types is
-    still an instance, and its type is an arrow -- [MList : forall A, Monoid
-    (list A)].  This is the one place that answer is worked out; a caller with
-    a global asks {!ref_is_instance} and one with a binder asks
-    {!binder_is_instance}. *)
-let ml_type_is_instance ty =
-  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+(* {!Ml_type_util.ml_type_is_instance} works the answer out; a caller with a
+   global asks {!ref_is_instance} and one with a binder asks
+   {!binder_is_instance}. *)
 
 (** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type.
 
@@ -1310,7 +1292,10 @@ let is_reified_monadic_var ml_expr =
     A call to a global counts too, but only where Crane itself wrote the
     callee: a global with a mapping (e.g. [print_endline]) stands for a direct
     C++ expression, which genuinely needs the wrap, and a void-ified one
-    returns nothing at all in C++ however monadic its Rocq type reads. *)
+    returns nothing at all in C++ however monadic its Rocq type reads.  The
+    exception is a mapping whose result is a {e reified} monad: that monad's
+    values are trees, so its mappings -- [itree_trigger], [itree_ret] -- are
+    spelled as expressions that build one, and wrapping would double it. *)
 let is_reified_monadic_expr ml_expr =
   (* The result of applying [n] arguments to something of ML type [ty].  A
      dummy domain is an erased type parameter, which the term does not pass, so
@@ -1330,10 +1315,15 @@ let is_reified_monadic_expr ml_expr =
   | MLapp (MLrel i, _) ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type (ml_codomain ty) | None -> false)
   | MLapp (MLglob (r, _), args) ->
-    (not (Table.is_inline_custom r))
-    && (not (is_void_ified_ref r))
+    (not (is_void_ified_ref r))
     && ( match find_type_opt r with
-       | Some ty -> is_monadic_ml_type (ml_result_after (List.length args) ty)
+       | Some ty ->
+         let res = ml_result_after (List.length args) ty in
+         is_monadic_ml_type res
+         && ( (not (Table.is_inline_custom r))
+            || match Ml_type_util.resolve_tmeta res with
+               | Miniml.Tglob (m, _, _) -> is_monad_reified m
+               | _ -> false )
        | None -> false )
   | MLcons (ty, _, _) -> is_monadic_ml_type ty
   | _ -> false

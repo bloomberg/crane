@@ -358,16 +358,33 @@ let find_best_inductive ind_refs ty =
 
 (** {2 Internal: registration helpers} *)
 
+(** Does an argument of this type reach C++ as a parameter?  An erased one
+    does not, a [void] one has nothing to pass, and an instance is either a
+    template parameter or skipped outright -- the three the method's own
+    parameter list filters out. *)
+let arg_reaches_cpp d =
+  (not (Mlutil.isTdummy d))
+  && (not (Ml_type_util.ml_type_is_void d))
+  && not (Ml_type_util.ml_type_is_instance d)
+
 (** Number of value parameters in a curried ML type: the arrows whose domain
-    survives extraction.  Erased ([Tdummy]) domains contribute no C++
-    parameter and so are not counted. *)
-let rec ml_value_arity = function
-  | Miniml.Tarr (t, rest) ->
-    (match t with
-     | Miniml.Tdummy _ -> ml_value_arity rest
-     | _ -> 1 + ml_value_arity rest)
-  | Miniml.Tmeta {contents = Some t} -> ml_value_arity t
-  | _ -> 0
+    reaches C++ as a parameter. *)
+let ml_value_arity ty =
+  List.length (List.filter arg_reaches_cpp (Ml_type_util.ml_domains ty))
+
+(** [pos] counted among the arguments C++ is given, rather than among all the
+    arrows of the ML type.
+
+    {!find_epon_arg_pos} answers in ML numbering, which is what reading the
+    body wants -- a de Bruijn index is an ML notion.  A call site is C++, and
+    the two numberings drift apart the moment an argument is erased: a helper
+    taking a [ReSum] dictionary and then its event has its receiver at ML
+    position 1 and at C++ position 0, and a printer told 1 reaches past the
+    receiver for it. *)
+let cpp_arg_pos ty pos =
+  let doms = Ml_type_util.ml_domains ty in
+  List.length
+    (List.filter arg_reaches_cpp (List.filteri (fun i _ -> i < pos) doms))
 
 (** Add a method entry to the hashtable. [returns_any] is initialized to [false]
     and computed in a separate pass after all methods are found. *)
@@ -602,7 +619,8 @@ let register_methods_for_epon
     (* Helper to add a candidate to both the method table and candidates
        table *)
     let add_candidate r body ty pos ind_tvar_positions =
-      register_into ~arity:(ml_value_arity ty) tbl r epon_ref pos ~ind_tvar_positions;
+      register_into ~arity:(ml_value_arity ty) tbl r epon_ref
+        (cpp_arg_pos ty pos) ~ind_tvar_positions;
       let existing =
         match Hashtbl.find_opt cands epon_ref with
         | Some l -> l
@@ -728,7 +746,8 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     in check ty
   in
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
-    register_into ~arity:(ml_value_arity ty) tbl r ind_ref pos ~ind_tvar_positions;
+    register_into ~arity:(ml_value_arity ty) tbl r ind_ref
+      (cpp_arg_pos ty pos) ~ind_tvar_positions;
     let existing = match Hashtbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
@@ -1142,7 +1161,8 @@ let try_register_method (reg : t) (epon_ref : GlobRef.t)
     when body_safe_for_method ~this_pos:pos
            ~ret_has_shared_epon:(ml_return_type_has_ref epon_ref ty)
            body ->
-    register_into ~arity:(ml_value_arity ty) reg.methods func_ref epon_ref pos
+    register_into ~arity:(ml_value_arity ty) reg.methods func_ref epon_ref
+      (cpp_arg_pos ty pos)
       ~ind_tvar_positions;
     let cand = (func_ref, body, ty, pos) in
     add_candidate reg epon_ref cand;
