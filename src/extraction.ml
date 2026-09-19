@@ -286,6 +286,52 @@ let db_from_sign s =
   in
   make 1 [] s
 
+(** Whether a Rocq type ultimately returns a [Type]/[Set] sort, stripping
+    products on the way: [Type] and [Type -> Type] do, [Type -> Prop] and
+    [nat] do not.  A binder at such a type is a type parameter -- the
+    higher-kinded case included -- and everything else is a value or a proof. *)
+let rec returns_type_sort c =
+  match Constr.kind c with
+  | Sort s -> (
+    match Sorts.family s with
+    | Sorts.InType | Sorts.InSet | Sorts.InQSort -> true
+    | Sorts.InProp | Sorts.InSProp -> false )
+  | Prod (_, _, body) -> returns_type_sort body
+  | _ -> false
+
+(** A db context read off the local context, for the places that have no
+    signature to read it off instead.
+
+    A [Tvar] is numbered among the {e type} binders in scope, outermost first,
+    exactly as {!db_from_sign} numbers them from a signature: a value binder
+    takes no number and contributes [0].  Numbering every binder alike would
+    name a variable no template head has -- [B] under [m], [M], [A], [f], [l],
+    [b] would come out as [Tvar 10] where the declaration calls it [T3].
+
+    A fixpoint's body re-binds the very parameters the declaration quantifies:
+    the context under [fix monad_fold_right A B f l b] holds a second [A] and
+    [B] shadowing the first.  MiniML has no type lambdas, so both spellings
+    are the one type variable, and a named binder therefore takes the number
+    its name already has. *)
+let db_from_rel_context env =
+  let outer_first = List.rev env.env_rel_context.env_rel_ctx in
+  let seen = ref [] in
+  snd
+    (List.fold_left
+       (fun (rank, acc) decl ->
+         if not (returns_type_sort (Context.Rel.Declaration.get_type decl)) then
+           (rank, 0 :: acc)
+         else
+           match Context.Rel.Declaration.get_name decl with
+           | Names.Name.Name id when List.mem_assoc id !seen ->
+             (rank, List.assoc id !seen :: acc)
+           | name ->
+             ( match name with
+             | Names.Name.Name id -> seen := (id, rank) :: !seen
+             | Names.Name.Anonymous -> () );
+             (rank + 1, rank :: acc) )
+       (1, []) outer_first )
+
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
 
@@ -1423,9 +1469,7 @@ and make_mlargs env sg e s args typs =
     @param orig_typs Original schema types from function signature
     @return List of ML types for the type arguments *)
 and make_tyargs env sg mle args typs ~orig_typs =
-  let db =
-    List.rev (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-  in
+  let db = db_from_rel_context env in
   let is_kprop = function Tdummy Kprop -> true | _ -> false in
   let is_tdummy = function Tdummy _ -> true | _ -> false in
   (* Recursive helper that processes args/typs/orig_typs in parallel.
@@ -1579,41 +1623,6 @@ and make_tyargs env sg mle args typs ~orig_typs =
                  [Tvar n'], else [Tdummy Ktype].
 
                  If the Rel is not a type parameter (proof or value), erase it. *)
-              (* Helper: Check if a Rocq type [c] ultimately returns a Type/Set sort.
-
-                 This recursively strips Prod constructors to examine the codomain.
-                  Returns [true] if the final codomain is a Type/Set sort, [false]
-                  if Prop/SProp or not a sort at all.
-
-                  Examples:
-                  - [Type] → true
-                  - [Type -> Type] → true (codomain is Type)
-                  - [Type -> Prop] → false (codomain is Prop)
-                  - [nat] → false (not a sort)
-
-                  @param c Rocq type to examine (in Constr form, not EConstr)
-                  @return [true] if codomain is Type/Set, [false] otherwise *)
-              let rec returns_type_sort c =
-                match Constr.kind c with
-                | Sort s ->
-                  (* Found a sort - check its family *)
-                  ( match Sorts.family s with
-                    | Sorts.InType | Sorts.InSet | Sorts.InQSort ->
-                      (* Type universe, Set, or QSort - informative type param *)
-                      true
-                    | Sorts.InProp | Sorts.InSProp ->
-                      (* Prop or SProp - proof, should be erased *)
-                      false )
-                | Prod (_, _, body) ->
-                  (* Function type - recurse into codomain.
-                     For [Type -> Type], this strips the domain and examines
-                     the final [Type] codomain. *)
-                  returns_type_sort body
-                | _ ->
-                  (* Other cases (App, Var, Const, etc.) - not a type parameter.
-                     This includes value types like [nat], [list nat], etc. *)
-                  false
-              in
               let is_type_param =
                 try
                   (* Look up the Rel's declaration in the environment *)
@@ -1834,10 +1843,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
     if lang () == Cpp then begin
       let la_now = List.length args in
       if params_nb > 0 && la_now >= params_nb then begin
-        let db =
-          List.rev
-            (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-        in
+        let db = db_from_rel_context env in
         let param_args = List.firstn params_nb args in
         let n_sign = List.length oi.ip_sign in
         let param_sign = List.firstn (min params_nb n_sign) oi.ip_sign in
@@ -1898,10 +1904,7 @@ and extract_cons_app env sg mle mlt ((((kn, i) as ip), j) as cp) args =
         (* ip_vars has more entries than ip_sign Keep count means there are
            promoted type variables from erased Type fields. Extract concrete
            types from the erased constructor args. *)
-        let db =
-          List.rev
-            (List.mapi (fun i _ -> i + 1) env.env_rel_context.env_rel_ctx)
-        in
+        let db = db_from_rel_context env in
         let la' = max 0 (la - params_nb) in
         let args' = List.lastn la' args in
         let rec extract_promoted s_rem args_rem acc =

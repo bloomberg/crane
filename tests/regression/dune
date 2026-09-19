@@ -9447,3 +9447,14 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+(subdir monad_method_targ_misnumbered
+ (rule
+  (targets monad_method_targ_misnumbered.t.exe)
+  (deps MonadMethodTargMisnumbered.vo monad_method_targ_misnumbered.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_method_targ_misnumbered.t.exe monad_method_targ_misnumbered.cpp monad_method_targ_misnumbered.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_method_targ_misnumbered.t.exe)
+  (action (run ./monad_method_targ_misnumbered.t.exe))))

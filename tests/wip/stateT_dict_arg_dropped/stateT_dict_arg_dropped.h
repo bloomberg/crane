@@ -111,7 +111,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
       return itree_bind(c1.runStateT(s), [=](const auto &vs) mutable {
         const auto &[v, s0] = std::any_cast<std::pair<std::any, std::any>>(vs);
         return crane_container_cast<
-            typename _tcI0::template m<std::pair<std::any, T1>>>(
+            typename _tcI0::template m<std::pair<_A1, T1>>>(
             crane_call_erased(c2, v).runStateT(s0));
       });
     }};
