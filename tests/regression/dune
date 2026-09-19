@@ -9330,3 +9330,14 @@
   (alias runtest)
   (deps subevent_instance_dropped.t.exe)
   (action (run ./subevent_instance_dropped.t.exe))))
+
+(subdir file_struct_empty_qualifier
+ (rule
+  (targets file_struct_empty_qualifier.t.exe)
+  (deps Helpers.vo FileStructEmptyQualifier.vo file_struct_empty_qualifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_struct_empty_qualifier.t.exe file_struct_empty_qualifier.cpp file_struct_empty_qualifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_struct_empty_qualifier.t.exe)
+  (action (run ./file_struct_empty_qualifier.t.exe))))

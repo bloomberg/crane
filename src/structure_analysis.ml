@@ -744,7 +744,15 @@ let collect_collision_wrappers
               | SEmodule {ml_mod_expr = MEident alias_mp; _} ->
                 add alias_mp parent_name
               | _ -> () )
-            colliding
+            colliding;
+          (* The wrapper is one struct, and the file's own top-level
+             declarations are emitted inside it beside the wrapped children --
+             so they are members too, and a reference to one has to say the
+             struct's name.  Registering only the children would leave the two
+             halves of a single struct spelled differently: [Helpers::length]
+             for the one that came from [Module N], a bare [map_monad] for the
+             one the file declared itself. *)
+          register_decl_modpaths sel
         end
       end )
     modules;
