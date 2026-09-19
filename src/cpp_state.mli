@@ -362,6 +362,9 @@ val nested_struct_names : (string, nested_struct_owner list) Hashtbl.t
     name. *)
 val add_nested_struct_name : string -> nested_struct_owner -> unit
 
+(** Whether the reference is itself emitted as a struct nested in another. *)
+val is_nested_struct_ref : Names.GlobRef.t -> bool
+
 (** Whether a reference rendered unqualified under the given name is shadowed
     by a nested struct of that name. False for the shadower itself. *)
 val is_shadowed_global_name : string -> Names.GlobRef.t -> bool

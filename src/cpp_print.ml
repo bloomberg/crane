@@ -886,7 +886,19 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           if needs_ns && Table.modular () then
             str (cap ^ "::" ^ cap) ++ templates
           else
-            global_scope_qualifier_for r' cap ++ str cap ++ templates
+            (* A file whose declarations were folded into a struct keeps its
+               inductives there too, so the struct is their scope -- the same
+               qualifier a call into that file already gets. *)
+            let qualified =
+              if Cpp_state.is_nested_struct_ref r' then
+                wrapper_qualify_name r' cap
+              else
+                cap
+            in
+            if qualified <> cap then
+              str qualified ++ templates
+            else
+              global_scope_qualifier_for r' cap ++ str cap ++ templates
         else
           if needs_ns then
             name ++ str "::" ++ str type_name_str ++ templates
@@ -4248,6 +4260,15 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
         str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ when is_record_cached id -> pp_global Type id
       | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () ->
+        str (String.capitalize_ascii (Common.pp_global_name Type id))
+      | GlobRef.IndRef _
+        when is_merged_inductive_cached id && not (is_local_inductive id) ->
+        (* An inductive written straight into an enclosing struct has no
+           namespace wrapper to be merged with, so nothing capitalised its
+           declaration -- but a reference to it, being neither local nor
+           behind an unmerged wrapper, spells the merged name.  One struct
+           cannot be declared [dval] and named [Dval]; the reference is what
+           every other file sees, so the declaration follows it. *)
         str (String.capitalize_ascii (Common.pp_global_name Type id))
       | GlobRef.IndRef _ -> pp_global Type id
       | _ -> pp_global Type id

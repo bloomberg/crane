@@ -21,7 +21,7 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import NArith.
-From CraneTestsWIP Require Import Helper.
+From CraneTestsRegression Require Import Helper.
 
 Module FoldedInductiveNotCapitalized.
   Definition go (n : nat) : dval := mk n.

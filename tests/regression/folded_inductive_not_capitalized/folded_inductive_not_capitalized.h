@@ -178,7 +178,7 @@ public:
 };
 
 struct Helper {
-  struct dval {
+  struct Dval {
     // DATA
     Nat n;
 
@@ -189,12 +189,12 @@ struct Helper {
     static Dval dv_nat(Nat n) { return {std::move(n)}; }
   };
 
-  static Dval mk(Nat n);
+  static Helper::Dval mk(Nat n);
   static inline const N two = N::npos(Positive::xo(Positive::xh()));
 };
 
 struct FoldedInductiveNotCapitalized {
-  static Dval go(const Nat &x0_);
+  static Helper::Dval go(const Nat &x0_);
   static inline const N m = Helper::two;
 };
 

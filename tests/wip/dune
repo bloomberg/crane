@@ -118,16 +118,15 @@
   (deps stateT_dict_arg_dropped.t.exe)
   (action (run ./stateT_dict_arg_dropped.t.exe))))
 
-; --- Tenth round of Vellvm reductions, against Crane a72a93535.
+; --- Eleventh round of Vellvm reductions, against Crane 1e85ca2d9.
 
-(subdir folded_inductive_not_capitalized
+(subdir handler_case_has_no_name
  (rule
-  (targets folded_inductive_not_capitalized.t.exe)
-  (deps Helper.vo FoldedInductiveNotCapitalized.vo folded_inductive_not_capitalized.t.cpp (source_tree .))
+  (targets handler_case_has_no_name.t.exe)
+  (deps HandlerCaseHasNoName.vo handler_case_has_no_name.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} folded_inductive_not_capitalized.t.exe folded_inductive_not_capitalized.cpp folded_inductive_not_capitalized.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_case_has_no_name.t.exe handler_case_has_no_name.cpp handler_case_has_no_name.t.cpp)))
  (rule
   (alias runtest)
-  (deps folded_inductive_not_capitalized.t.exe)
-  (action (run ./folded_inductive_not_capitalized.t.exe))))
-
+  (deps handler_case_has_no_name.t.exe)
+  (action (run ./handler_case_has_no_name.t.exe))))

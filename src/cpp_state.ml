@@ -851,6 +851,18 @@ let add_nested_struct_name name owner =
   if not (List.exists (nested_struct_owner_equal owner) prev) then
     Hashtbl.replace nested_struct_names name (owner :: prev)
 
+(** Whether [r] is itself emitted as a struct nested inside another one --
+    the case where its own name does not reach a use written outside that
+    struct, so the reference needs the enclosing struct's qualifier. *)
+let is_nested_struct_ref r =
+  Hashtbl.fold
+    (fun _name owners acc ->
+      acc
+      || List.exists
+           (function NSref r' -> Common.globref_equal r r' | _ -> false)
+           owners )
+    nested_struct_names false
+
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
     struct of the same name. A reference that is itself emitted as a nested
     struct is not shadowed: it is the shadower, and naming it [::name] would

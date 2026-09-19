@@ -9400,3 +9400,27 @@
   (alias runtest)
   (deps iter_callee_has_no_name.t.exe)
   (action (run ./iter_callee_has_no_name.t.exe))))
+
+; --- Landed from wip: folded inductive naming, and [translate] in reified mode.
+
+(subdir folded_inductive_not_capitalized
+ (rule
+  (targets folded_inductive_not_capitalized.t.exe)
+  (deps Helper.vo FoldedInductiveNotCapitalized.vo folded_inductive_not_capitalized.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} folded_inductive_not_capitalized.t.exe folded_inductive_not_capitalized.cpp folded_inductive_not_capitalized.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps folded_inductive_not_capitalized.t.exe)
+  (action (run ./folded_inductive_not_capitalized.t.exe))))
+
+(subdir translate_callee_has_no_name
+ (rule
+  (targets translate_callee_has_no_name.t.exe)
+  (deps TranslateCalleeHasNoName.vo translate_callee_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} translate_callee_has_no_name.t.exe translate_callee_has_no_name.cpp translate_callee_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps translate_callee_has_no_name.t.exe)
+  (action (run ./translate_callee_has_no_name.t.exe))))
