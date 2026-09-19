@@ -104,3 +104,16 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+; --- Eighth round of Vellvm reductions, against Crane 1a9066cef.
+
+(subdir sum_event_drops_result_targ
+ (rule
+  (targets sum_event_drops_result_targ.t.exe)
+  (deps SumEventDropsResultTarg.vo sum_event_drops_result_targ.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_event_drops_result_targ.t.exe sum_event_drops_result_targ.cpp sum_event_drops_result_targ.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_event_drops_result_targ.t.exe)
+  (action (run ./sum_event_drops_result_targ.t.exe))))
