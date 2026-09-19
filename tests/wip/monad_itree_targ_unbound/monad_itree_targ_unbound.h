@@ -17,6 +17,8 @@ struct Empty_set;
 struct Nat;
 struct FailE;
 enum class Ev;
+template <typename _CraneTcArg>
+using itree_tc = std::shared_ptr<ITree<_CraneTcArg>>;
 
 struct Empty_set {
   Empty_set() = delete;
@@ -192,14 +194,14 @@ concept Params = requires {
 using env = Nat;
 
 template <Params _tcI0, typename T1 = void>
-Monads::template stateT<env, std::shared_ptr, Nat> step(Nat n) {
+Monads::template stateT<env, itree_tc, Nat> step(Nat n) {
   return [=](Nat s) mutable {
     return itree_ret(std::make_pair(s, n.add(_tcI0::width())));
   };
 }
 
 template <typename T1 = void, typename T2>
-Monads::template stateT<env, std::shared_ptr, T2> handle(Ev) {
+Monads::template stateT<env, itree_tc, T2> handle(Ev) {
   return [](Nat s) {
     if (s.eqb(Nat::o())) {
       return itree_vis(FailE::Throw_(std::monostate{}), [](const auto &) {
@@ -212,7 +214,7 @@ Monads::template stateT<env, std::shared_ptr, T2> handle(Ev) {
 }
 
 template <Params _tcI0, typename T1 = void, typename T2>
-Monads::template stateT<env, std::shared_ptr, T2> twice(Ev e) {
+Monads::template stateT<env, itree_tc, T2> twice(Ev e) {
   return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
       T2, T2>(handle<T1, T2>(e), [](const auto &res) {
     return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<

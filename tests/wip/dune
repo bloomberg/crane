@@ -151,3 +151,14 @@
   (alias runtest)
   (deps applied_typename_not_hk.t.exe)
   (action (run ./applied_typename_not_hk.t.exe))))
+
+(subdir handler_lambda_targ_undeclared
+ (rule
+  (targets handler_lambda_targ_undeclared.t.exe)
+  (deps HandlerLambdaTargUndeclared.vo handler_lambda_targ_undeclared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_lambda_targ_undeclared.t.exe handler_lambda_targ_undeclared.cpp handler_lambda_targ_undeclared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_lambda_targ_undeclared.t.exe)
+  (action (run ./handler_lambda_targ_undeclared.t.exe))))

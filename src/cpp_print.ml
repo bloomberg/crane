@@ -685,6 +685,38 @@ let is_any_type = Cpp_erasure.is_any_shaped
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
+(** Alias templates standing in for custom-mapped type constructors that
+    cannot be named by cutting their application back to a head.
+
+    A custom mapping is a {e spelling}, not a template name: [itree] maps to
+    [std::shared_ptr<ITree<%t1>>], whose head is [std::shared_ptr] -- a
+    template that, applied to the element, gives something else entirely.  A
+    template template argument position needs a name that applies correctly,
+    so one is introduced: [template <typename _A> using ITree_tc =
+    std::shared_ptr<ITree<_A>>;], replayed in the header prologue by
+    {!take_forward_struct_decls}.  Keyed by the alias body, so a constructor
+    reached twice is declared once. *)
+let ctor_alias_decls : (string * string) list ref = ref []
+
+(** The type variable an alias template abstracts over, and the sentinel used
+    to find out whether one is needed at all: rendering the constructor
+    applied to it says whether the application is just a head plus this
+    argument. *)
+let ctor_alias_tvar = "_CraneTcArg"
+
+let ctor_alias_name_for ~base body =
+  match List.assoc_opt body !ctor_alias_decls with
+  | Some name -> name
+  | None ->
+    let taken name = List.exists (fun (_, n) -> String.equal n name) !ctor_alias_decls in
+    let rec fresh i =
+      let name = base ^ "_tc" ^ (if i = 0 then "" else string_of_int i) in
+      if taken name then fresh (i + 1) else name
+    in
+    let name = fresh 0 in
+    ctor_alias_decls := (body, name) :: !ctor_alias_decls;
+    name
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -986,7 +1018,34 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       (* An applied type here is the eta-expansion of the constructor: its head
          is what the position wants. *)
       let t = match t with Tapply (head, _) -> head | t -> t in
+      (* A custom mapping whose application is not its head plus the argument
+         -- [itree] is [std::shared_ptr<ITree<%t1>>] -- has no head to name.
+         Rendering it at a sentinel argument is the test and the alias body at
+         once. *)
+      let alias_for_custom r args =
+        match args with
+        | [] -> None
+        | _ ->
+          let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
+          let probe =
+            Tglob (r, fixed @ [Tid_external (ctor_alias_tvar, [])], [])
+          in
+          let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
+          if
+            String.equal rendered
+              (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+          then None
+          else
+            Some
+              (ctor_alias_name_for
+                 ~base:(Common.pp_global_name Type r)
+                 rendered)
+      in
       ( match t with
+      | Tglob (r, (_ :: _ as args), _)
+        when ( match find_custom_opt r with Some _ -> true | None -> false )
+             && alias_for_custom r args <> None ->
+        str (Option.get (alias_for_custom r args))
       | Tqualified (base, id) ->
         (* A dependent alias template -- the carrier of a higher-kinded class
            parameter.  Here it names a template rather than a type, so the
@@ -3388,7 +3447,20 @@ let forward_struct_decls = ref ([] : Pp.t list)
 
 (** Take and clear the forward declarations accumulated since the last call. *)
 let take_forward_struct_decls () =
-  let l = List.rev !forward_struct_decls in
+  let aliases =
+    List.rev_map
+      (fun (body, name) ->
+        str "template <typename "
+        ++ str ctor_alias_tvar
+        ++ str "> using "
+        ++ str name
+        ++ str " = "
+        ++ str body
+        ++ str ";")
+      !ctor_alias_decls
+  in
+  ctor_alias_decls := [];
+  let l = List.rev !forward_struct_decls @ aliases in
   forward_struct_decls := [];
   l
 
