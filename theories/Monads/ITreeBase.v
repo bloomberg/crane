@@ -39,7 +39,6 @@ Crane Extract Skip Embeddable_itree.
 Crane Extract Skip Embeddable_forall.
 
 Crane Extract Skip ITree.map.
-Crane Extract Skip ITree.trigger.
 Crane Extract Skip ITree.iter.
 Crane Extract Skip ITree.forever.
 Crane Extract Skip ITree.spin.

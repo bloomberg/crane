@@ -265,7 +265,37 @@ let extract_monad_from_codomain ty =
     Some monad_ref
   | _ -> None
 
-(** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type. *)
+(** Whether a global was skipped -- [Crane Extract Skip] records it as an
+    inline custom whose C++ text is empty.  Skipped globals are
+    infrastructure, and nothing of them survives into C++. *)
+let ref_is_skipped r =
+  Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+
+(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
+    whose class extraction records as a [ConstRef] mapped to the empty string,
+    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
+    are infrastructure and are erased. *)
+let ml_ret_is_skipped ty =
+  match ml_return_type ty with
+  | Tglob (rr, _, _) -> ref_is_skipped rr
+  | _ -> false
+
+(** Whether a value of ML type [ty] is a typeclass instance.
+
+    The result is what decides it: an instance parameterised over types is
+    still an instance, and its type is an arrow -- [MList : forall A, Monoid
+    (list A)].  This is the one place that answer is worked out; a caller with
+    a global asks {!ref_is_instance} and one with a binder asks
+    {!binder_is_instance}. *)
+let ml_type_is_instance ty =
+  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
+
+(** Collect [Id.t]s for typeclass-typed parameters in an ML arrow type.
+
+    Only a parameter whose class Crane kept: each becomes a concept-constrained
+    template parameter, and one whose class was skipped has nothing to be
+    constrained by.  A skipped instance still has to be recognised as one where
+    it is {e used} -- see {!binder_is_instance}. *)
 let collect_typeclass_param_ids ty =
   let rec aux acc i = function
     | Miniml.Tarr (t1, t2) ->
@@ -2045,26 +2075,6 @@ and tvar_instantiation callee_ty args =
         match Hashtbl.find_opt found (k + 1) with
         | Some t -> t
         | None -> Miniml.Tvar (Miniml.Schematic, k + 1) )
-
-(** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
-    whose class extraction records as a [ConstRef] mapped to the empty string,
-    so {!Table.is_typeclass_type} does not recognise it.  Values of such a type
-    are infrastructure and are erased. *)
-let ml_ret_is_skipped ty =
-  match ml_return_type ty with
-  | Tglob (rr, _, _) ->
-    Table.is_inline_custom rr && Table.find_custom_opt rr = Some ""
-  | _ -> false
-
-(** Whether a value of ML type [ty] is a typeclass instance.
-
-    The result is what decides it: an instance parameterised over types is
-    still an instance, and its type is an arrow -- [MList : forall A, Monoid
-    (list A)].  This is the one place that answer is worked out; a caller with
-    a global asks {!ref_is_instance} and one with a binder asks
-    {!binder_is_instance}. *)
-let ml_type_is_instance ty =
-  Table.is_typeclass_type (ml_return_type ty) || ml_ret_is_skipped ty
 
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
@@ -5217,6 +5227,14 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       | _ -> MLapp (body, lifted_outer)
     in
     gen_expr ~slot env (MLcase (typ, scrut, [|(ids, rty, pat, new_body)|]))
+  (* A class field is projected through the instance wherever the instance
+     survived, whatever mapping the field carries -- see
+     {!kept_instance_of_projection}. *)
+  | MLapp (MLglob (x, tys), args)
+    when Table.is_inline_custom x
+         && kept_instance_of_projection env x args <> None ->
+    let inst = Option.get (kept_instance_of_projection env x args) in
+    project_through_instance env x tys args inst
   | MLapp (f, args) ->
     (* A partial application is a callable this position may expect at a
        different currying than the callee's own arrows give it, so the slot's
@@ -7730,6 +7748,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
              below generates them. *)
           List.partition (is_typeclass_instance_arg env') value_args
         in
+        let tc_args =
+          List.filter (fun a -> not (instance_arg_is_erased env' a)) tc_args
+        in
         let call =
           (* The arguments live under the branch's binders, so the ML type
              environment must be pushed alongside [env'] for the erasure
@@ -8169,13 +8190,117 @@ and curry_to_expected env ?expected_ty ?(tys = []) x cglob =
     [Tdummy]-guarded [Tvar] codomain.  When such a call is made in a context
     where the enclosing function's return type is a concrete C++ type [T], the
     result is wrapped with [std::any_cast<T>].  See [ml_codomain_erases_to_any]. *)
-  (* Check if an ML arg is a type class instance (a reference to a struct that
-   implements a type class) *)
-  (* [MLmagic] is a transparent coercion — extraction inserts one around an
-   instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt]
-   with [Opt : Type -> Type]).  Look through it, or the instance is left in
-   value position and the generated call names the instance struct as if it
-   were a value. *)
+and binder_is_instance env i =
+  (* An instance parameter is not a value argument.  One Crane minted is
+     known by its name: {!promote_typeclass_params} renames a typeclass-typed
+     parameter to a {!Common.tc_instance_id}, and such a binder has no ML type
+     of its own.  One that came from Coq keeps its name -- [h : E -< F], whose
+     class [ReSum] is skipped, is never renamed -- and is known by its class
+     being skipped.  Skipped is the whole test there: a binder at a class
+     Crane {e kept} is an ordinary value wherever it was not renamed, and
+     reading it as an instance would take the argument away from the call.
+     The declaration drops both kinds; without the second the call sites went
+     on passing the one the declaration had dropped. *)
+  Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
+  || ( match get_env_type_opt i with
+     | Some ty -> ml_ret_is_skipped ty
+     | None -> false )
+
+(* The class an instance argument is an instance of, as an ML type. *)
+and instance_class_ty env ml_arg =
+  let of_ref r =
+    match Table.find_type r with
+    | ty -> ml_return_type ty
+    | exception Not_found -> Miniml.Tunknown
+  in
+  match strip_magic ml_arg with
+  | MLglob (r, _) | MLapp (MLglob (r, _), _) -> of_ref r
+  | MLrel i -> (
+    match get_env_type_opt i with
+    | Some ty -> ml_return_type ty
+    | None -> Miniml.Tunknown )
+  | _ -> Miniml.Tunknown
+
+(* Call class field [x] as a static member of the instance struct [inst].
+
+   Rocq hands a projection over already applied where the instance is
+   concrete, so the term is an ordinary application and not the single-branch
+   match a projection through an instance {e variable} extracts to; the C++ is
+   the same either way. *)
+and project_through_instance env x tys args inst =
+  let operands =
+    List.filter
+      (fun a ->
+        match a with
+        | MLdummy _ -> false
+        | _ -> not (is_typeclass_instance_arg env a) )
+      args
+  in
+  (* The instance declares each method as a member template over the method's
+     own type variables -- the class's carrier is the instance, not a parameter
+     of its methods -- so the call's type arguments minus the carrier are the
+     method's.  They are given explicitly rather than deduced: a method
+     declares its continuation as a [std::function], which a closure does not
+     deduce, and [ret] mentions its variable only in its result. *)
+  let targs =
+    match tys with [] -> [] | _ :: rest -> List.map (cpp_of_ml env) rest
+  in
+  mk_call
+    (CPPscope (gen_expr env inst, Common.id_of_global Term x, targs))
+    (List.map (fun a -> gen_expr env a) operands)
+
+(* The instance a projection call would project through, where Crane kept it.
+
+   A mapping on a class field is written for a mode that erases the class's
+   instances: with nothing left to project from, the field's C++ text has to
+   name the operation itself.  That text speaks for one particular carrier --
+   [Monad.bind] in reified ITree mode is [itree_bind] -- so it may only stand
+   where the instance it speaks for was the one erased.  An instance Crane kept
+   reached C++ as a struct or as a concept-constrained template parameter, and
+   names its own operations; projecting through it is both what the Rocq term
+   says and the only thing that can typecheck.
+
+   Requiring the field to belong to {e this} instance's class is what keeps the
+   rule from firing on an ordinary mapped constant that merely takes an
+   instance among its arguments. *)
+and kept_instance_of_projection env x args =
+  List.find_opt
+    (fun a ->
+      is_typeclass_instance_arg env a
+      && (not (instance_arg_is_erased env a))
+      && List.mem (Some x)
+           (record_fields_of_type (instance_class_ty env a)) )
+    args
+
+and instance_arg_is_erased env ml_arg =
+  (* An instance argument is not a value argument, but only one whose class
+     Crane kept is a template argument either: {!collect_typeclass_param_ids}
+     mints a concept-constrained parameter per kept class and none for a
+     skipped one, so an [E -< F] has no parameter of any kind to be passed at.
+     Passing it anyway put the instance in the callee's template argument
+     list, where it names no type. *)
+  match strip_magic ml_arg with
+  | MLglob (r, _) | MLapp (MLglob (r, _), _) ->
+    (* Either the instance's class is infrastructure Crane skips -- [E -< F],
+       whose [ReSum] is a [ConstRef] mapped to the empty string -- or the
+       instance itself is, as [Monad_itree] is in both ITree modes.  Skipping
+       the instance is how a mode says its carrier's operations are named by
+       their mappings and not by a dictionary. *)
+    ref_returns_skipped r || ref_is_skipped r
+  | MLrel i -> (
+    match get_env_type_opt i with
+    | Some ty -> ml_ret_is_skipped ty
+    | None -> false )
+  | _ -> false
+
+(* Check if an ML arg is a type class instance (a reference to a struct that
+   implements a type class).
+
+   [MLmagic] is a transparent coercion -- extraction inserts one around an
+   instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt] with
+   [Opt : Type -> Type]).  Look through it, or the instance is left in value
+   position and the generated call names the instance struct as if it were a
+   value. *)
 and is_typeclass_instance_arg env ml_arg =
   match strip_magic ml_arg with
   | MLglob (r, _) ->
@@ -8185,12 +8310,7 @@ and is_typeclass_instance_arg env ml_arg =
        application case below does, or such an instance is left in value
        position and the call names the instance struct as if it were one. *)
     ref_is_instance r
-  | MLrel i ->
-    (* An instance parameter is not a value argument.  Recognised by
-       identity: {!collect_typeclass_param_ids} mints this binder from a
-       typeclass-typed domain of the enclosing arrow, so it is Crane's own
-       and has no ML type of its own in [env_types]. *)
-    Option.cata Common.is_tc_instance_id false (Common.get_db_name_opt i env)
+  | MLrel i -> binder_is_instance env i
   | MLapp (MLglob (r, _), _) ->
     (* Parameterized instance application, e.g. numList A H. Check if r's
        return type (after stripping Tarr) is a typeclass type, or if it
@@ -8376,6 +8496,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     (* Partition args into type class instances and regular args *)
     let typeclass_ml_args, regular_ml_args =
       List.partition (is_typeclass_instance_arg env) args
+    in
+    let typeclass_ml_args =
+      List.filter (fun a -> not (instance_arg_is_erased env a)) typeclass_ml_args
     in
     (* Order the instance arguments the way the callee numbered its own
        [_tcI] parameters.  [Gen_decls.gen_dfun] iterates [collect_lams]
@@ -9704,6 +9827,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        leaves the argument list for the callee's explicit template arguments,
        which is the only place that parameter can be given. *)
     let tc_args, args = List.partition (is_typeclass_instance_arg env) args in
+    let tc_args =
+      List.filter (fun a -> not (instance_arg_is_erased env a)) tc_args
+    in
     let gen_callee () =
       match (tc_args, gen_expr env f) with
       | [], e -> e

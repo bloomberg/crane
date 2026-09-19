@@ -18,6 +18,12 @@ Crane Extract Inductive itree => "%t1" [ "%a0" ].
 Crane Extract Inductive itreeF => "" [ "%a0" "%a0" "" ].
 Crane Extract Inlined Constant observe => "".
 
+(** An event is performed where it is written, so the trigger around it has
+    nothing left to say.  Reified mode keeps the [Vis] node and so gives
+    [trigger] a spelling of its own; that is why this lives here rather than
+    in [ITreeBase.v]. *)
+Crane Extract Skip ITree.trigger.
+
 (** The ITree library defines [Ret] as a [Notation]. We shadow it with
     a [Definition] so Crane's monad registration can reference it as a
     global. Users still write [Ret x] — the Definition has the same

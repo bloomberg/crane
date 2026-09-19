@@ -198,6 +198,37 @@ auto itree_tau(std::shared_ptr<ITree<R>> next) {
     return ITree<R>::tau(std::move(next));
 }
 
+// The result of a trigger: one Vis node whose continuation returns the
+// event's own response.
+//
+// The response type is an index of the event type, so it has no C++ spelling
+// of its own and the tree cannot be named where the trigger is written.  The
+// conversion operator lets the use site name it instead, which the enclosing
+// signature always does.
+struct itree_trigger_t {
+    std::function<std::any()> effect;
+
+    template <typename R>
+    operator std::shared_ptr<ITree<R>>() const {
+        return ITree<R>::vis(effect,
+            std::function<std::shared_ptr<ITree<R>>(std::any)>(
+                [](std::any x) {
+                    return ITree<R>::ret(std::any_cast<R>(std::move(x)));
+                }));
+    }
+};
+
+// Trigger with template argument deduction.  An event given an effect
+// spelling is already the thunk [ITree::vis] wants; one that is plain data is
+// reified as the thunk that yields it, for a handler to interpret later.
+template<typename E>
+itree_trigger_t itree_trigger(E e) {
+    if constexpr (std::is_invocable_r_v<std::any, E &>)
+        return {std::function<std::any()>(std::move(e))};
+    else
+        return {[e = std::move(e)]() -> std::any { return std::any(e); }};
+}
+
 // Vis constructor with template argument deduction.  Deduces R from the
 // continuation's return type (shared_ptr<ITree<R>>).
 template<typename Effect, typename Cont>

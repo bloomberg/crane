@@ -117,14 +117,3 @@
   (alias runtest)
   (deps subevent_instance_dropped.t.exe)
   (action (run ./subevent_instance_dropped.t.exe))))
-
-(subdir itree_mapping_hijacks_monad
- (rule
-  (targets itree_mapping_hijacks_monad.t.exe)
-  (deps ItreeMappingHijacksMonad.vo itree_mapping_hijacks_monad.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_mapping_hijacks_monad.t.exe itree_mapping_hijacks_monad.cpp itree_mapping_hijacks_monad.t.cpp)))
- (rule
-  (alias runtest)
-  (deps itree_mapping_hijacks_monad.t.exe)
-  (action (run ./itree_mapping_hijacks_monad.t.exe))))

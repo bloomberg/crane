@@ -69,11 +69,24 @@ Crane Extract Inlined Constant ITree.bind =>
    [Monad_itree], which this mode skips, so the class projections reach C++
    with nothing to project from; in this mode they are the itree operations,
    and are spelled as such.  The erased instance argument is not among the
-   value arguments, so [%a0]/[%a1] are the operands. *)
+   value arguments, so [%a0]/[%a1] are the operands.
+
+   A mapping on a class field is written for the monad whose instance the mode
+   skipped, so it only applies where the instance {e was} skipped: a monad of
+   the user's own keeps its instance, and that instance names its own
+   operations. *)
 Crane Extract Inlined Constant Monad.bind =>
   "itree_bind(%a0, %a1)" From "crane_itree.h".
 Crane Extract Inlined Constant Monad.ret =>
   "itree_ret(%a0)" From "crane_itree.h".
+
+(* A reified tree keeps the node an event is triggered at, so [trigger] is a
+   real [Vis] here (the erased mode, which performs the event on the spot,
+   skips it).  The helper deduces the tree's result type at the use site: it is
+   an index of the event type and so has no spelling of its own where the
+   trigger is written. *)
+Crane Extract Inlined Constant ITree.trigger =>
+  "itree_trigger(%a0)" From "crane_itree.h".
 
 (* Extract observe as method call *)
 Crane Extract Inlined Constant observe =>
