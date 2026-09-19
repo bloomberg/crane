@@ -130,3 +130,25 @@
   (alias runtest)
   (deps handler_case_has_no_name.t.exe)
   (action (run ./handler_case_has_no_name.t.exe))))
+
+(subdir monad_itree_targ_unbound
+ (rule
+  (targets monad_itree_targ_unbound.t.exe)
+  (deps MonadItreeTargUnbound.vo monad_itree_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} monad_itree_targ_unbound.t.exe monad_itree_targ_unbound.cpp monad_itree_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps monad_itree_targ_unbound.t.exe)
+  (action (run ./monad_itree_targ_unbound.t.exe))))
+
+(subdir phantom_alias_targ_unbound
+ (rule
+  (targets phantom_alias_targ_unbound.t.exe)
+  (deps PhantomAliasTargUnbound.vo phantom_alias_targ_unbound.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} phantom_alias_targ_unbound.t.exe phantom_alias_targ_unbound.cpp phantom_alias_targ_unbound.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps phantom_alias_targ_unbound.t.exe)
+  (action (run ./phantom_alias_targ_unbound.t.exe))))

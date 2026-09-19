@@ -2189,7 +2189,8 @@ let relax_applied_param temps decl =
       [typename T]) even if they don't appear in the C++ function type.
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies. *)
-let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
+let phantom_aware_temps
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) cty tvars =
   (* The leading phantoms are spelled out at every call site
      ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
@@ -2210,11 +2211,16 @@ let phantom_aware_temps ?(force_required = IntSet.empty) cty tvars =
     let tvars_indexed = get_tvars_indexed cty in
     let primary = primary_tvar_indices dom cod in
     let primary = IntSet.union primary force_required in
+    (* [also_declared] is every variable the ML type has, which is not every
+       variable the C++ type spells: an erased one is written nowhere in the
+       signature, yet the body and the call sites still number their arguments
+       by the ML type.  Declared as a defaulted phantom, the numbering lines up
+       and nothing is demanded of a use site that supplies nothing. *)
     let extra =
       IntSet.fold (fun i acc ->
         if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
         else (i, tvar_id i) :: acc
-      ) force_required []
+      ) (IntSet.union force_required also_declared) []
     in
     let all_tvars_indexed =
       List.sort (fun (x, _) (y, _) -> Int.compare x y)
@@ -3695,7 +3701,10 @@ let gen_decl_for_pp__inner n b ty =
     |> List.rev
   in
   let tvars = tvars @ extra_index_tvars in
-  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
+  let temps =
+    phantom_aware_temps ~force_required:index_tvar_set
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) cty tvars
+  in
   let result = match cty with
   | Tfun (dom, _) ->
     let f, e = gen_dfun n b cty ty temps in
@@ -3756,7 +3765,10 @@ let gen_dfun_def__inner n b ty =
     |> List.rev
   in
   let tvars = tvars @ extra_index_tvars in
-  let temps = phantom_aware_temps ~force_required:index_tvar_set cty tvars in
+  let temps =
+    phantom_aware_temps ~force_required:index_tvar_set
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) cty tvars
+  in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the
      C++ type). We need tvars to be non-empty when typeclass params exist so

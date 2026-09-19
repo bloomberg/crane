@@ -453,6 +453,10 @@ val primary_tvar_indices :
     type, but function bodies may still need them for [any_cast]. *)
 val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
 
+(** Every type variable index the ML type mentions, in any position -- the
+    parameters a declaration has, as against the ones its C++ type spells. *)
+val collect_ml_tvars : Miniml.ml_type -> IntSet.t
+
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be
     a template parameter -- the branches return genuinely different types -- so

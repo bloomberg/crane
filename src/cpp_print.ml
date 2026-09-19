@@ -4017,7 +4017,16 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     ++ cstr_pp
     ++ pp_meyers_singleton env id ty expr_pp
   | Dtemplate (temps, cstr, decl) ->
-    let args = pp_list pp_template_param temps in
+    (* A default may be given once per parameter, and the declaration in the
+       header is where it is given: an out-of-line definition repeating it is
+       a redefinition.  Everything the [.cpp] emits has already been declared
+       in the [.h] the same pass wrote. *)
+    let pp_param =
+      match Common.get_phase () with
+      | Common.Emit Common.Impl -> pp_template_param_redecl
+      | _ -> pp_template_param
+    in
+    let args = pp_list pp_param temps in
     let params, body = decl_body decl in
     let req = pp_requires_of_tparams ~body ~params temps in
     let cstr_pp = match (req, cstr) with

@@ -7,7 +7,7 @@
 #include <utility>
 #include <variant>
 
-void bug_create(std::string title);
+template <typename T1 = void> void bug_create(std::string title);
 
 template <typename T1> int64_t bug_read() { return bug_read_impl(); }
 

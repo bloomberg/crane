@@ -1148,6 +1148,26 @@ let collect_ml_type_index_tvars ml_ty =
   walk ml_ty;
   !result
 
+(** Every type variable index the ML type mentions, in any position.
+
+    The C++ type is what decides which parameters a signature {e spells}, but
+    not how many it {e has}: erasure can drop a variable from the rendered type
+    while the body and the call sites still number their arguments by the ML
+    type.  A declaration that omitted such a variable would leave the body
+    naming something the head never bound. *)
+let collect_ml_tvars ml_ty =
+  let result = ref IntSet.empty in
+  let rec walk = function
+    | Miniml.Tvar (_, i) -> result := IntSet.add i !result
+    | Miniml.Tapp (i, ts) -> result := IntSet.add i !result; List.iter walk ts
+    | Miniml.Tarr (a, b) -> walk a; walk b
+    | Miniml.Tglob (_, ts, _) -> List.iter walk ts
+    | Miniml.Tmeta {contents = Some t} -> walk t
+    | _ -> ()
+  in
+  walk ml_ty;
+  !result
+
 (** Whether a function type returns a type variable that its arguments carry
     only as the type index of an inductive with several constructors.
 
