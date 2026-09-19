@@ -1176,6 +1176,25 @@ let collect_ml_tvars ml_ty =
   walk ml_ty;
   !result
 
+(** Arity of every type variable that [tys] applies to arguments, keyed by its
+    1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type] reaches
+    MiniML as the head of a {!Miniml.Tapp}, and a plain [typename] cannot be
+    applied: such a parameter is declared [template <typename> class], and an
+    explicit argument for it is a bare template name rather than a type. *)
+let applied_ml_tvar_arities tys =
+  let arities = Hashtbl.create 4 in
+  let rec scan = function
+    | Miniml.Tapp (i, args) ->
+      Hashtbl.replace arities i (List.length args);
+      List.iter scan args
+    | Miniml.Tglob (_, args, _) -> List.iter scan args
+    | Miniml.Tarr (a, b) -> scan a; scan b
+    | Miniml.Tmeta {contents = Some t} -> scan t
+    | _ -> ()
+  in
+  List.iter scan tys;
+  arities
+
 (** Whether a function type returns a type variable that its arguments carry
     only as the type index of an inductive with several constructors.
 

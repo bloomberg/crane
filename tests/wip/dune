@@ -92,18 +92,6 @@
   (deps partial_application.t.exe)
   (action (run ./partial_application.t.exe))))
 
-; --- Third round of Vellvm reductions, against Crane 697c44518.
-
-(subdir hk_class_arg_numbering
- (rule
-  (targets hk_class_arg_numbering.t.exe)
-  (deps HkClassArgNumbering.vo hk_class_arg_numbering.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_class_arg_numbering.t.exe hk_class_arg_numbering.cpp hk_class_arg_numbering.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hk_class_arg_numbering.t.exe)
-  (action (run ./hk_class_arg_numbering.t.exe))))
 
 ; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
 

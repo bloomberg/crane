@@ -1866,25 +1866,6 @@ let with_applied_tvars cty temps =
         | _ -> (tt, id) )
       temps
 
-(** Arity of every MiniML type variable that [tys] applies to arguments, keyed
-    by its 1-based de Bruijn index.  A Rocq parameter of kind [Type -> Type]
-    reaches MiniML as the head of a {!Miniml.Tapp}, and a plain [typename]
-    cannot be applied, so such a parameter has to be declared
-    [template <typename> class]. *)
-let applied_ml_tvar_arities tys =
-  let arities = Hashtbl.create 4 in
-  let rec scan = function
-    | Miniml.Tapp (i, args) ->
-      Hashtbl.replace arities i (List.length args);
-      List.iter scan args
-    | Miniml.Tglob (_, args, _) -> List.iter scan args
-    | Miniml.Tarr (a, b) -> scan a; scan b
-    | Miniml.Tmeta {contents = Some t} -> scan t
-    | _ -> ()
-  in
-  List.iter scan tys;
-  arities
-
 (** Template parameter list for a declaration whose parameters [vars] are used
     by the types [tys] -- an inductive's constructor fields, or the body of a
     type alias.  The arities are read off the ML types rather than the
@@ -1892,7 +1873,7 @@ let applied_ml_tvar_arities tys =
     types are converted.  Registers the template template positions so that
     {e uses} of [r] pass a bare template name; see {!Table.is_hkt_ind_param}. *)
 let hkt_templates ?applied r vars tys =
-  let arities = applied_ml_tvar_arities tys in
+  let arities = Ml_type_util.applied_ml_tvar_arities tys in
   (* A parameter the rendered type never spells is phantom, whatever its Rocq
      kind was.  An erased event family is the case in point:
      [semantic_function := list nat -> itree E nat] writes no [E] in C++ at
@@ -2108,6 +2089,16 @@ let relax_applied_param temps decl =
     (* A variable applied in the parameters and named nowhere else: not by the
        return type, not by another template parameter's constraint, and not
        bare among the parameters either. *)
+    (* A position that takes the variable as a bare template name --
+       [Sum1<T1, T2, T4>], whose first two arguments are templates -- states
+       its kind outright: what is supplied there {e is} a template, so the
+       parameter cannot be relaxed into a [typename] deduced from an
+       argument. *)
+    let passed_as_template id =
+      List.exists
+        (exists_cpp_type (function Ttyctor t -> tvar_named id t | _ -> false))
+        (ret :: param_tys)
+    in
     let only_applied_in_params id =
       let total = List.fold_left (fun a t -> a + occurrences (tvar_is id) t) 0 in
       let applied =
@@ -2115,6 +2106,7 @@ let relax_applied_param temps decl =
       in
       applied param_tys > 0
       && total param_tys = applied param_tys
+      && (not (passed_as_template id))
       && (not (tvar_named id ret))
       && not
            (List.exists

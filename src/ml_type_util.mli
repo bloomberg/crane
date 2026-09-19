@@ -457,6 +457,12 @@ val collect_ml_type_index_tvars : Miniml.ml_type -> IntSet.t
     parameters a declaration has, as against the ones its C++ type spells. *)
 val collect_ml_tvars : Miniml.ml_type -> IntSet.t
 
+(** Arity of every type variable the given types apply to arguments, keyed by
+    its 1-based de Bruijn index.  Such a variable is declared
+    [template <typename> class], so it is spelled -- wherever it is declared
+    and wherever a call supplies it -- as a bare template name. *)
+val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
+
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be
     a template parameter -- the branches return genuinely different types -- so

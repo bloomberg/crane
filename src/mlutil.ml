@@ -134,7 +134,23 @@ let rec apply_ml_type head args =
   | _ -> (
     match head with
     | Tvar (_, j) -> Tapp (j, args)
-    | Tapp (j, pre) -> Tapp (j, pre @ args)
+    | Tapp (j, pre) ->
+      (* The head is already applied.  Extraction eta-expands a carrier passed
+         as a type-constructor argument -- what stands for [M] is [M _], its
+         argument the placeholder extraction could not name -- so applying it
+         to a real argument does not extend the application, it fills the
+         placeholder.  Appending instead would give the constructor one
+         argument per substitution it passes through: [m<std::any, A>] for an
+         [m] that takes one. *)
+      let rec drop_placeholders rpre n =
+        match (rpre, n) with
+        | Tunknown :: rest, n when n > 0 -> drop_placeholders rest (n - 1)
+        | _ -> rpre
+      in
+      let kept =
+        List.rev (drop_placeholders (List.rev pre) (List.length args))
+      in
+      Tapp (j, kept @ args)
     | Tglob (r, pre, es) -> Tglob (r, pre @ args, es)
     | Tmeta {contents = Some u} -> apply_ml_type u args
     | Tmeta ({contents = None; _} as m) -> (

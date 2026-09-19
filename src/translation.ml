@@ -1573,6 +1573,41 @@ let kept_type_args r ts =
   let keep = keeps_type_arg_position r in
   List.filteri (fun i _ -> keep (i + 1)) ts
 
+(** [r]'s type arguments, with those standing for a parameter of kind
+    [Type -> Type] spelled as the bare template names they are.
+
+    Such a parameter is declared [template <typename> class], so an explicit
+    argument for it is a template, not a type: [iter<_tcI0::template F, R>].
+    Written as a type it reads [typename _tcI0::F], which names the alias's
+    result rather than the alias, and C++ rejects it outright.  Which
+    positions those are is read off [r]'s own type -- the same question its
+    declaration asked of it.
+
+    [ts] is the list {!kept_type_args} produced, so it is indexed by kept
+    position, not by de Bruijn index: the variables a class resolved away are
+    no longer in it.  The correspondence is rebuilt from the same predicate
+    that dropped them, and a list of some other length -- one a later pass
+    filtered or padded -- is left alone rather than guessed at. *)
+let hkt_spelled_type_args r ts =
+  match find_type_opt r with
+  | None -> ts
+  | Some ml_ty ->
+    let arities = Ml_type_util.applied_ml_tvar_arities [ml_ty] in
+    if Hashtbl.length arities = 0 then ts
+    else
+      let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
+      let keep = keeps_type_arg_position r in
+      let kept = List.filter keep (List.init n (fun i -> i + 1)) in
+      if List.length kept <> List.length ts then ts
+      else
+        List.map2
+          (fun i t ->
+            match t with
+            | Minicpp.Ttyctor _ -> t
+            | _ when Hashtbl.mem arities i -> Minicpp.Ttyctor t
+            | _ -> t )
+          kept ts
+
 (** Collect all Tvar indices from an ML AST, using collect_tvars on embedded
     types. Used to find all type variables referenced in a function body. *)
 let rec collect_tvars_ast acc = function
@@ -4636,6 +4671,31 @@ and recover_boxed_result ~boxed ~slot expr =
   | Some into when boxed -> coerce ~from:Tany ~into expr
   | _ -> expr
 
+(** [recover_carrier_result ~fun_ty ~n_args ~want expr] converts a call whose
+    declared result is a carrier applied to a type variable -- [M A], a
+    {!Miniml.Tapp} -- into the same carrier at the element the position means.
+
+    A dictionary stores its methods monomorphically, so such a result comes
+    back at the erased element whatever the call's own arguments were, and only
+    an elementwise conversion gets from [M<std::any>] to [M<Nat>].  [fun_ty] is
+    the callee's ML function type, or [None] where the caller knows the
+    question does not arise. *)
+and recover_carrier_result ~fun_ty ~n_args ~want expr =
+  let carrier_result =
+    match Option.map (ml_codomain_after n_args) fun_ty with
+    | Some (Some (Miniml.Tapp _)) -> true
+    | _ -> false
+  in
+  match want with
+  (* A reified monadic carrier is a [shared_ptr], not a container: it has no
+     elements to walk, and getting from one element type to another is the
+     reification path's business, not a cast's. *)
+  | Some (Tshared_ptr _) -> expr
+  | Some want when carrier_result && not (prints_as_any want) ->
+    Table.mark_needs_erase_fn ();
+    CPPcontainer_cast (want, expr, false)
+  | _ -> expr
+
 (** The C++ type a position is being generated into: what the slot states, and
     where it states nothing, the enclosing function's return type -- which a
     tail position lands in.  The one place that precedence is written down, so
@@ -6123,6 +6183,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | _ -> t )
         tys
     in
+    let tys_cpp = hkt_spelled_type_args x tys_cpp in
     let yields = glob_yields env x tys in
     let cglob =
       match filter_erased_type_args tys_cpp with
@@ -7893,26 +7954,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | None -> false
         in
         let call = recover_boxed_result ~boxed:erased_cod ~slot call in
-        (* A value dictionary stores its methods monomorphically, so a field
-           whose result is the record's own carrier applied to one of the
-           method's type variables ([F B]) hands back the carrier at the
-           erased element.  The position knows the element the caller means,
-           and only an elementwise conversion gets there. *)
-        let carrier_result =
-          match fld_ty_opt with
-          | Some ft ->
-            (not is_typeclass)
-            &&
-            ( match ml_codomain_after n_value_args ft with
-            | Some (Miniml.Tapp _) -> true
-            | _ -> false )
-          | None -> false
-        in
-        ( match expected_ty with
-        | Some want when carrier_result && not (prints_as_any want) ->
-          Table.mark_needs_erase_fn ();
-          CPPcontainer_cast (want, call, false)
-        | _ -> call )
+        recover_carrier_result
+          ~fun_ty:(if is_typeclass then None else fld_ty_opt)
+          ~n_args:n_value_args ~want:expected_ty call
       | _ -> CErrors.anomaly (Pp.str "record field index out of bounds") )
     | _ ->
       (* Destructure record fields into local variables, then evaluate the body
@@ -9372,7 +9416,9 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
       List.filter (fun t -> t <> Tvoid) typeclass_type_args
     in
     let all_type_args =
-      typeclass_type_args @ regular_type_args @ promoted_type_args
+      typeclass_type_args
+      @ hkt_spelled_type_args id regular_type_args
+      @ promoted_type_args
     in
     (* Nothing survived the erasure filters, so if the callee opens with
        parameters its signature never mentions, deduction has nothing to work
@@ -9891,19 +9937,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         CPPscope (b, id, tys @ List.map (ml_arg_to_template_type env) tc_args)
       | _, e -> e
     in
-    let callee_param_tys =
-      (* Erased and class-typed domains take no argument slot, so neither
-         takes a place in the list this indexes [args] by. *)
-      let rec extract_params = function
-        | Miniml.Tarr (t, rest) ->
-          ( match resolve_tmeta t with
-          | Miniml.Tdummy _ -> extract_params rest
-          | t when Table.is_typeclass_type t -> extract_params rest
-          | t -> t :: extract_params rest )
-        | Miniml.Tmeta {contents = Some t} -> extract_params t
-        | _ -> []
-      in
-      let fty_opt = match f with
+    (* The callee's own function type, with an alias standing for one expanded
+       -- a single-method class is its method, so [Iter M] {e is} the arrow the
+       call goes through. *)
+    let callee_fun_ml_ty =
+      match f with
         | MLglob (r, tys) when tys <> [] ->
           (match find_type_opt r with
            | Some ty -> Some (Mlutil.type_subst_list tys ty)
@@ -9927,8 +9965,20 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                 | _ -> None )
               | _ -> None )
             | _ -> None ) )
+    in
+    let callee_param_tys =
+      (* Erased and class-typed domains take no argument slot, so neither
+         takes a place in the list this indexes [args] by. *)
+      let rec extract_params = function
+        | Miniml.Tarr (t, rest) ->
+          ( match resolve_tmeta t with
+          | Miniml.Tdummy _ -> extract_params rest
+          | t when Table.is_typeclass_type t -> extract_params rest
+          | t -> t :: extract_params rest )
+        | Miniml.Tmeta {contents = Some t} -> extract_params t
+        | _ -> []
       in
-      match fty_opt with Some fty -> extract_params fty | None -> []
+      match callee_fun_ml_ty with Some fty -> extract_params fty | None -> []
     in
     let callee_rel_idx = match f with
       | MLrel i | MLmagic (_, MLrel i) -> Some i
@@ -10189,6 +10239,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         | _ -> false
       in
       recover_boxed_result ~boxed:erased_cod ~slot result
+      |> recover_carrier_result ~fun_ty:callee_fun_ml_ty ~n_args:n
+           ~want:(slot_cpp_ty slot)
 
 (** Build the qualified constructor struct type for a pattern match branch.
 

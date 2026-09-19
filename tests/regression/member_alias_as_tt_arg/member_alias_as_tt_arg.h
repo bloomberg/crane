@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MEMBER_ALIAS_AS_TT_ARG
 #define INCLUDED_MEMBER_ALIAS_AS_TT_ARG
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
@@ -110,8 +111,9 @@ using stateT = std::function<m<std::pair<a, s>>(s)>;
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<std::pair<Nat, T2>>
-run(stateT<T2, _tcI0::template m, Nat> step, const T2 &s) {
-  return step(s);
+run(stateT<T2, _tcI0::template m, Nat> step, T2 x0_) {
+  return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
+      step(std::move(x0_)));
 }
 
 struct MemberAliasAsTtArg {

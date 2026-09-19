@@ -149,7 +149,7 @@ struct Monads {
 
     template <typename _A0>
     static std::function<
-        typename _tcI0::template m<std::any, std::pair<_A0, std::any>>(_A0)>
+        typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
     ret(_A0 a) {
       return [=](const auto &s) mutable {
         return itree_ret(std::make_pair(std::any(s), std::any(a)));
@@ -158,13 +158,12 @@ struct Monads {
 
     template <typename _A0, typename _A1>
     static std::function<
-        typename _tcI0::template m<std::any, std::pair<_A0, std::any>>(_A0)>
+        typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
     bind(
-        std::function<
-            typename _tcI0::template m<std::any, std::pair<_A0, std::any>>(_A0)>
+        std::function<typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
             t,
-        std::function<typename _tcI0::template m<
-            std::any, std::pair<_A0, std::any>>(_A0, _A0)>
+        std::function<typename _tcI0::template m<std::pair<_A0, std::any>>(_A0,
+                                                                           _A0)>
             k) {
       return [=](const auto &s) mutable {
         return itree_bind(t(s), [=](const auto &sa) mutable {

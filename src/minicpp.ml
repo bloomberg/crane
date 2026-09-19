@@ -722,8 +722,14 @@ let rec exists_cpp_type (p : cpp_type -> bool) (ty : cpp_type) : bool =
   | Tqualified (t, _) | Tdecay t ->
     exists_cpp_type p t
   | Tapply (t, ts) -> exists_cpp_type p t || List.exists (exists_cpp_type p) ts
+  (* Unlike {!map_cpp_type}, this does look inside a [Ttyctor]: only the head
+     is printed, but the head is printed, so a parameter passed as a bare
+     template name does mention whatever names it -- and "is [T1] spelled in
+     this signature" has to say yes, or the declaration drops a parameter its
+     own arguments use. *)
+  | Ttyctor t -> exists_cpp_type p t
   | Tdecltype _ (* wraps a [CPPraw]: no sub-types *)
-  | Ttyctor _ | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
+  | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
   | Tany | Topaque | Tauto ->
     false
 

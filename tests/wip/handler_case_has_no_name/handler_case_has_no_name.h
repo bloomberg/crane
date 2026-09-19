@@ -167,9 +167,9 @@ using MonadIter = std::function<m<std::any>(
     std::function<m<Sum<std::any, std::any>>(std::any)>, std::any)>;
 
 struct Basics {
-  template <typename T2, typename T3, typename F1>
-  static std::invoke_result_t<F1 &, T3 &> iter(MonadIter<T1> monadIter, F1 &&x,
-                                               const T3 &x0);
+  template <template <typename> class T1, typename T2, typename T3, typename F1>
+    requires std::is_invocable_r_v<T1<Sum<T3, T2>>, F1 &, T3 &>
+  static T1<T2> iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0);
 };
 
 struct Handler {
@@ -228,11 +228,10 @@ Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
   return _tcI0::template fmap<T2, T3>(x, std::move(x0));
 }
 
-template <typename T2, typename T3, typename F1>
-std::invoke_result_t<F1 &, T3 &> Basics::iter(MonadIter<T1> monadIter, F1 &&x,
-                                              const T3 &x0) {
-  return monadIter(crane_erase_fn<T1<std::any, Sum<std::any, std::any>>>(x),
-                   x0);
+template <template <typename> class T1, typename T2, typename T3, typename F1>
+T1<T2> Basics::iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0) {
+  return crane_container_cast<T1<T2>>(
+      monadIter(crane_erase_fn<T1<Sum<std::any, std::any>>>(x), x0));
 }
 
 template <Monad _tcI0, Functor _tcI1, template <typename> class T1, typename T3,
@@ -240,7 +239,7 @@ template <Monad _tcI0, Functor _tcI1, template <typename> class T1, typename T3,
 typename _tcI0::template m<T3> Interp::interp(MonadIter<_tcI0::template m> iM,
                                               F1 &&h0,
                                               std::shared_ptr<ITree<T3>> x0_) {
-  return Basics::template iter<typename _tcI0::m, T3,
+  return Basics::template iter<_tcI0::template m, T3,
                                std::shared_ptr<ITree<T3>>>(
       std::move(iM),
       [=](const auto &t) mutable {
