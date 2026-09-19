@@ -104,3 +104,27 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+; --- Seventh round of Vellvm reductions, against Crane ca893418f.
+
+(subdir file_struct_empty_qualifier
+ (rule
+  (targets file_struct_empty_qualifier.t.exe)
+  (deps Helpers.vo FileStructEmptyQualifier.vo file_struct_empty_qualifier.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} file_struct_empty_qualifier.t.exe file_struct_empty_qualifier.cpp file_struct_empty_qualifier.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps file_struct_empty_qualifier.t.exe)
+  (action (run ./file_struct_empty_qualifier.t.exe))))
+
+(subdir promoted_method_leaks_param
+ (rule
+  (targets promoted_method_leaks_param.t.exe)
+  (deps PromotedMethodLeaksParam.vo promoted_method_leaks_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} promoted_method_leaks_param.t.exe promoted_method_leaks_param.cpp promoted_method_leaks_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps promoted_method_leaks_param.t.exe)
+  (action (run ./promoted_method_leaks_param.t.exe))))
