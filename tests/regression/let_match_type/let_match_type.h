@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LET_MATCH_TYPE
 #define INCLUDED_LET_MATCH_TYPE
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

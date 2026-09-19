@@ -2,6 +2,7 @@
 #define INCLUDED_THREAD
 
 #include <chrono>
+#include <crane_itree.h>
 #include <cstdint>
 #include <iostream>
 #include <string>

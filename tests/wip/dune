@@ -107,13 +107,24 @@
 
 ; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
 
-(subdir sum_event_match
+(subdir erased_event_alias_targ
  (rule
-  (targets sum_event_match.t.exe)
-  (deps SumEventMatch.vo sum_event_match.t.cpp (source_tree .))
+  (targets erased_event_alias_targ.t.exe)
+  (deps ErasedEventAliasTarg.vo erased_event_alias_targ.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_event_match.t.exe sum_event_match.cpp sum_event_match.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_event_alias_targ.t.exe erased_event_alias_targ.cpp erased_event_alias_targ.t.cpp)))
  (rule
   (alias runtest)
-  (deps sum_event_match.t.exe)
-  (action (run ./sum_event_match.t.exe))))
+  (deps erased_event_alias_targ.t.exe)
+  (action (run ./erased_event_alias_targ.t.exe))))
+
+(subdir stateT_dict_arg_dropped
+ (rule
+  (targets stateT_dict_arg_dropped.t.exe)
+  (deps StateTDictArgDropped.vo stateT_dict_arg_dropped.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stateT_dict_arg_dropped.t.exe stateT_dict_arg_dropped.cpp stateT_dict_arg_dropped.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps stateT_dict_arg_dropped.t.exe)
+  (action (run ./stateT_dict_arg_dropped.t.exe))))

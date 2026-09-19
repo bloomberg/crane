@@ -7,6 +7,7 @@
 #include <any>
 #include <atomic>
 #include <concepts>
+#include <crane_itree.h>
 #include <cstdint>
 #include <functional>
 #include <memory>

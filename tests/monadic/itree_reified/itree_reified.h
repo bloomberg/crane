@@ -32,24 +32,24 @@ struct ITreeReified {
       const auto &_itf = *std::get_if<typename ITree<T2>::Tau>(&ot);
       auto t_ = _itf.next;
       return itree_vis(
-          [&]() -> std::any {
+          sum1_inl([&]() -> std::any {
             std::cout << "[tau]"s << '\n';
             return std::any{};
-          },
+          }),
           [=](const auto &) mutable { return itree_tau(rec(t_)); });
     } else {
       const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
       auto e = _itf.effect;
       auto k = _itf.cont;
-      return itree_vis(
-          [&]() -> std::any {
-            std::cout << "[vis]"s << '\n';
-            return std::any{};
-          },
-          [=](const auto &) mutable {
-            return itree_vis(e,
+      return itree_vis(sum1_inl([&]() -> std::any {
+                         std::cout << "[vis]"s << '\n';
+                         return std::any{};
+                       }),
+                       [=](const auto &) mutable {
+                         return itree_vis(
+                             sum1_inr(e),
                              [=](const auto &x) mutable { return rec(k(x)); });
-          });
+                       });
     }
   }
 

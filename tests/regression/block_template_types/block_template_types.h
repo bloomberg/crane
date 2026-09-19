@@ -1,6 +1,7 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_TYPES
 #define INCLUDED_BLOCK_TEMPLATE_TYPES
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

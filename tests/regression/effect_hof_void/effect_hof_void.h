@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EFFECT_HOF_VOID
 #define INCLUDED_EFFECT_HOF_VOID
 
+#include <crane_itree.h>
 #include <cstdlib>
 #include <functional>
 #include <iostream>

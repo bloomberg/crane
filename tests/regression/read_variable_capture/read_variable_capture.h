@@ -1,6 +1,7 @@
 #ifndef INCLUDED_READ_VARIABLE_CAPTURE
 #define INCLUDED_READ_VARIABLE_CAPTURE
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

@@ -1,25 +1,20 @@
-#ifndef INCLUDED_SUM_EVENT_DROPS_RESULT_TARG
-#define INCLUDED_SUM_EVENT_DROPS_RESULT_TARG
+#ifndef INCLUDED_ERASED_EVENT_ALIAS_TARG
+#define INCLUDED_ERASED_EVENT_ALIAS_TARG
 
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <crane_itree.h>
+#include <functional>
 #include <memory>
-#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-struct Empty_set;
 struct Nat;
 template <typename A> struct List;
 struct FailE;
-
-struct Empty_set {
-  Empty_set() = delete;
-};
 
 struct Nat {
   // TYPES
@@ -154,6 +149,27 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+
+  Nat length() const {
+    std::shared_ptr<Nat> _head{};
+    std::shared_ptr<Nat> *_write = &_head;
+    const List<A> *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        *_write = std::make_shared<Nat>(Nat::o());
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
+        *_write = std::move(_cell);
+        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
+    }
+    return std::move(*_head);
+  }
 };
 
 struct FailE {
@@ -165,24 +181,15 @@ struct FailE {
 
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
-
-  template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const {
-    return itree_bind(itree_trigger(*this),
-                      [](const auto &) -> std::shared_ptr<ITree<T2>> {
-                        throw std::logic_error("absurd case");
-                      });
-  }
+};
+template <template <typename> class e>
+using semantic_function = std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
+const semantic_function<T1> k = [](const List<Nat> &args) {
+  return itree_ret(args.length());
 };
 
-template <typename T1, typename T2>
-std::shared_ptr<ITree<T2>> raise0(const Nat &) {
-  return FailE::Throw_(std::monostate{}).template cast_<T1, T2>();
-}
-
-template <typename x> using E2 = Sum1<FailE, FailE, x>;
-
-struct SumEventDropsResultTarg {
-  static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const List<Nat> &l);
+struct ErasedEventAliasTarg {
+  static std::shared_ptr<ITree<Nat>> use(const List<Nat> &x0_);
 };
 
-#endif // INCLUDED_SUM_EVENT_DROPS_RESULT_TARG
+#endif // INCLUDED_ERASED_EVENT_ALIAS_TARG

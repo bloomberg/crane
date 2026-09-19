@@ -1,6 +1,7 @@
 #ifndef INCLUDED_UNIT_VOID_EDGE2
 #define INCLUDED_UNIT_VOID_EDGE2
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

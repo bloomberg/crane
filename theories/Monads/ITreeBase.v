@@ -26,7 +26,13 @@ From ITree Require Export
 Export ITreeNotations.
 Open Scope itree_scope.
 
-Crane Extract Inductive sum1 => "" [ "%a0" "%a0" ].
+(* A sum of event families is a real type: a handler over [E +' F] matches on
+   which side the event came from, and the answer is not in the type.  The
+   index the families are applied at is erased, so the two parameters are the
+   event structs themselves. *)
+Crane Extract Inductive sum1 => "Sum1"
+  [ "sum1_inl(%a0)" "sum1_inr(%a0)" ]
+  From "crane_itree.h".
 Crane Extract Skip void1.
 Crane Extract Inlined Constant elim_void1 => "".
 Crane Extract Inlined Constant case_sum1 => "".

@@ -4,6 +4,7 @@
 #include "small_vector.h"
 #include <atomic>
 #include <chrono>
+#include <crane_itree.h>
 #include <iostream>
 #include <memory>
 #include <string>

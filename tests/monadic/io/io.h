@@ -1,6 +1,7 @@
 #ifndef INCLUDED_IO
 #define INCLUDED_IO
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

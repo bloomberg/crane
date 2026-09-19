@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EFFECT_MATCH_ARG
 #define INCLUDED_EFFECT_MATCH_ARG
 
+#include <crane_itree.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>

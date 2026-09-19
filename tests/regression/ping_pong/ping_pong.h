@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PING_PONG
 #define INCLUDED_PING_PONG
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

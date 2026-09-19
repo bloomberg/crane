@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EFFECT_BARE_VOID
 #define INCLUDED_EFFECT_BARE_VOID
 
+#include <crane_itree.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>

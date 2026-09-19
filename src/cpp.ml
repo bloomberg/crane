@@ -208,10 +208,9 @@ let rec pp_spec_as_requirement modtype_mp modtype_refs = function
       | Tglob (r, args, _) ->
         ( match find_custom_opt r with
         | Some custom_str ->
-          if String.contains custom_str '%' then
-            qualify_custom_template custom_str args qualify_type
-          else
-            str custom_str
+          qualify_custom_template
+            (custom_template_with_args custom_str (List.length args))
+            args qualify_type
         | None ->
           ( match args with
           | [] -> pp_cpp_type false [] (Tglob (r, [], []))

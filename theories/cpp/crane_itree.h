@@ -261,6 +261,50 @@ itree_trigger_t itree_trigger(E e) {
         return {[e = std::move(e)]() -> std::any { return std::any(e); }};
 }
 
+// A sum of event families: [E +' F].
+//
+// An event is erased wherever it is only carried -- the tree boxes it -- but a
+// handler takes one apart, and telling the two sides apart is a runtime
+// question.  The shape is the one Crane gives any variant, so the dispatch it
+// generates for a match over a sum needs nothing written for it here.
+//
+// The index the family is applied at is erased, so [E] and [F] are the event
+// structs themselves rather than the families.
+template<typename E, typename F, typename X = void>
+struct Sum1 {
+    struct Inl1 { E a0; };
+    struct Inr1 { F a0; };
+    using variant_t = std::variant<Inl1, Inr1>;
+
+    variant_t v_;
+
+    const variant_t &v() const { return v_; }
+    variant_t &v_mut() { return v_; }
+
+    static Sum1 inl1(E a0) { return {variant_t{Inl1{std::move(a0)}}}; }
+    static Sum1 inr1(F a0) { return {variant_t{Inr1{std::move(a0)}}}; }
+};
+
+// Injections into a sum whose other side the injection does not name.  The
+// proxy defers that to the use site, as [itree_trigger_t] defers the response
+// type of a trigger.
+template<typename E>
+struct sum1_inl_t {
+    E a0;
+    template<typename F, typename X>
+    operator Sum1<E, F, X>() const { return Sum1<E, F, X>::inl1(a0); }
+};
+
+template<typename F>
+struct sum1_inr_t {
+    F a0;
+    template<typename E, typename X>
+    operator Sum1<E, F, X>() const { return Sum1<E, F, X>::inr1(a0); }
+};
+
+template<typename E> sum1_inl_t<E> sum1_inl(E a0) { return {std::move(a0)}; }
+template<typename F> sum1_inr_t<F> sum1_inr(F a0) { return {std::move(a0)}; }
+
 // The single argument a non-generic callable takes.
 template<typename T> struct crane_fn_arg;
 template<typename C, typename R, typename A>

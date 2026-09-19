@@ -2,6 +2,7 @@
 #define INCLUDED_EFFECT_NESTED_IO
 
 #include <chrono>
+#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>

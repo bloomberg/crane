@@ -72,13 +72,14 @@ public:
 enum class AE { A0 };
 enum class BE { B0 };
 
-template <typename T1> std::shared_ptr<ITree<T1>> handle() {
-  if (std::holds_alternative<typename<AE, BE, T1>::Inl1>(e.v())) {
-    const auto &[a0] = std::get<typename<AE, BE, T1>::Inl1>(e.v());
-    return itree_trigger(a0);
+template <typename T1>
+std::shared_ptr<ITree<T1>> handle(const Sum1<AE, BE, T1> &e) {
+  if (std::holds_alternative<typename Sum1<AE, BE, T1>::Inl1>(e.v())) {
+    const auto &[a0] = std::get<typename Sum1<AE, BE, T1>::Inl1>(e.v());
+    return itree_trigger(sum1_inl(a0));
   } else {
-    const auto &[a0] = std::get<typename<AE, BE, T1>::Inr1>(e.v());
-    return itree_trigger(a0);
+    const auto &[a0] = std::get<typename Sum1<AE, BE, T1>::Inr1>(e.v());
+    return itree_trigger(sum1_inr(a0));
   }
 }
 

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SKIPLIST
 #define INCLUDED_SKIPLIST
 
+#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>

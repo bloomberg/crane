@@ -5,6 +5,7 @@
 #include "small_vector.h"
 #include <any>
 #include <atomic>
+#include <crane_itree.h>
 #include <cstdlib>
 #include <functional>
 #include <iostream>

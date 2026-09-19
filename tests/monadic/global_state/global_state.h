@@ -8,6 +8,7 @@
 #include <atomic>
 #include <concepts>
 #include <crane_globals.h>
+#include <crane_itree.h>
 #include <memory>
 #include <optional>
 #include <string>

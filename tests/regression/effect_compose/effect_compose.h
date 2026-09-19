@@ -1,6 +1,7 @@
 #ifndef INCLUDED_EFFECT_COMPOSE
 #define INCLUDED_EFFECT_COMPOSE
 
+#include <crane_itree.h>
 #include <functional>
 #include <future>
 #include <iostream>

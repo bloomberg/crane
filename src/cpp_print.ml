@@ -563,6 +563,20 @@ let expand_elem_args cmds =
 let parse_type_template s =
   expand_elem_args (parse_numbered_args "t" (fun i -> CCty_arg i) s)
 
+(** A custom mapping that names a template without saying where its arguments
+    go still takes them: ["Sum1"] applied to [E], [F] means ["Sum1<E, F>"],
+    exactly as a non-custom name would.  Normalising the mapping here, before
+    it is parsed, is what keeps every printer of a custom type spelling it the
+    same way -- a type spelled one way in a signature and another in a body is
+    two types. *)
+let custom_template_with_args s nargs =
+  if nargs = 0 || String.contains s '%' then s
+  else
+    s
+    ^ "<"
+    ^ String.concat ", " (List.init nargs (fun i -> Printf.sprintf "%%t%d" i))
+    ^ ">"
+
 (** Parse a custom {e term} template: {!parse_type_template} plus the [%a{i}]
     holes that splice value arguments. *)
 let parse_term_template s =
@@ -749,7 +763,9 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       | _ ->
       match find_custom_opt r with
       | Some s when to_inline r ->
-        let cmds = parse_term_template s in
+        let cmds =
+          parse_term_template (custom_template_with_args s (List.length tys))
+        in
         pp_custom
           ~container:r
           (Pp.string_of_ppcmds (GlobRef.print r) ^ " := " ^ s)
