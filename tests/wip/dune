@@ -104,3 +104,16 @@
   (alias runtest)
   (deps hk_class_arg_numbering.t.exe)
   (action (run ./hk_class_arg_numbering.t.exe))))
+
+; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
+
+(subdir sum_event_match
+ (rule
+  (targets sum_event_match.t.exe)
+  (deps SumEventMatch.vo sum_event_match.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_event_match.t.exe sum_event_match.cpp sum_event_match.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_event_match.t.exe)
+  (action (run ./sum_event_match.t.exe))))
