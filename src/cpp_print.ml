@@ -682,6 +682,41 @@ let any_type_aliases = Cpp_erasure.any_type_aliases
 
 let is_any_type = Cpp_erasure.is_any_shaped
 
+(** Type names introduced at file scope, recorded as they are emitted.
+
+    A definition written outside its struct ([Owner::f]) qualifies the plain
+    names in its signature with [Owner::], which is right for a member and
+    wrong for anything else.  An erased type-class field is a case of
+    "anything else": the class is at file scope, so its erased face is a
+    file-scope [using iptr = std::any;], and some unrelated struct's hoisted
+    body must resolve [iptr] to that alias rather than claim it as a member it
+    never declared.
+
+    The set is only consulted to {i withhold} the qualifier, so a name not yet
+    seen keeps the old behaviour; and a file-scope name that a struct also
+    declares as a member still resolves to the member, because the body of an
+    out-of-line definition is inside its class's scope. *)
+let file_scope_type_names : CString.Set.t ref = ref CString.Set.empty
+
+let is_file_scope_type id =
+  CString.Set.mem (Id.to_string id) !file_scope_type_names
+
+(** The type name a declaration introduces, if it introduces one. *)
+let rec decl_type_name = function
+  | Dtemplate (_, _, inner) -> decl_type_name inner
+  | Dusing u -> Some (Pp.string_of_ppcmds (pp_global Type u.du_name))
+  | Dstruct ds -> Some (String.capitalize_ascii (str_global Type ds.ds_ref))
+  | Dstruct_fwd (_, r) -> Some (String.capitalize_ascii (str_global Type r))
+  | Denum e -> Some (String.capitalize_ascii (str_global Type e.de_ref))
+  | Dnspace (Some r, _) -> Some (String.capitalize_ascii (str_global Type r))
+  | _ -> None
+
+let record_file_scope_type d =
+  if not (!render_ctx).rc_in_struct then
+    Option.iter
+      (fun n -> file_scope_type_names := CString.Set.add n !file_scope_type_names)
+      (decl_type_name d)
+
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
@@ -745,9 +780,15 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          struct.  Here it is a reference to that declaration:
 
            in struct:  using Obj = std::any;
-           in .cpp:    DepRecord::Obj my_var = ...; *)
+           in .cpp:    DepRecord::Obj my_var = ...;
+
+         The qualifier is only correct for a struct that declares the member.
+         An erased field also gets a file-scope [using] of the same name, and a
+         hoisted body whose owner is some other struct must resolve to that
+         one, not to a member that does not exist. *)
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tvar (_, Some id) -> Id.print id
@@ -757,12 +798,14 @@ let rec pp_cpp_type ?(lead = true) par vl t =
        out-of-struct definitions, prepend struct name. *)
     | Tid (id, []) ->
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name ++ str "::" ++ Id.print id
       | _ -> Id.print id )
     | Tid (id, args) ->
       ( match (!render_ctx).rc_struct_name with
-      | Some struct_name when not (!render_ctx).rc_in_struct ->
+      | Some struct_name
+        when (not (!render_ctx).rc_in_struct) && not (is_file_scope_type id) ->
         struct_name
         ++ str "::"
         ++ Id.print id
@@ -4094,6 +4137,7 @@ and pp_initialiser env ty e =
     @param env  name environment for sub-expression and sub-type printers *)
 and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
   let sub d = Cpp_erasure.settled_child ~parent:settled d in
+  record_file_scope_type (settled :> cpp_decl);
   match (settled :> cpp_decl) with
   | Dtemplate (temps, cstr, Dasgn (id, ty, e)) when (!render_ctx).rc_in_struct ->
     let args = pp_list pp_template_param temps in
