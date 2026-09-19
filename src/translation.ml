@@ -3421,6 +3421,26 @@ and phantom_prefix_args id =
     let force_required = collect_ml_type_index_tvars ml_ty in
     List.init (explicit_tvar_prefix ~force_required cty) (fun _ -> Tvoid)
 
+(** Spell the erased arguments of [id]'s phantom prefix as [void].
+
+    An erased argument normally costs a call its whole explicit argument list:
+    the positions are what give the others their meaning, so one that cannot be
+    written drops all of them ({!Ml_type_util.filter_erased_type_args}).  A
+    phantom position is the exception, because it has a filler that is right
+    whatever the argument was -- the signature does not mention the parameter,
+    so nothing can disagree with [void] -- and the arguments after it keep
+    their positions.
+
+    This is what an erased {e event} needs.  A single event family reaches C++
+    as its own struct and is written as itself, but a sum ([E +' F]) has no
+    spelling; without the filler, [raise]'s result type goes unwritten too, and
+    it appears only in the return position, where nothing can deduce it. *)
+and fill_phantom_prefix id targs =
+  let n = List.length (phantom_prefix_args id) in
+  List.mapi
+    (fun i t -> if i < n && prints_as_any t then Tvoid else t)
+    targs
+
 (** [template_arg_of_ml_type env tvars ty] converts [ty] for a template
     argument position, where a function type has to keep the currying the
     Rocq arrows had; see {!Minicpp.curry_fun_type}.
@@ -9196,6 +9216,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              if has_unnamed_tvar t then
                Tglob (GlobRef.VarRef (Id.of_string "dummy_type"), [], [])
              else t )
+      |> fill_phantom_prefix id
     in
     (* Recover erased type args that C++ cannot deduce. Two cases: (a) tys is
        non-empty but all entries were erased (Tdummy Ktype) →

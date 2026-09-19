@@ -824,11 +824,21 @@ let rec ml_return_type = function
   | Tarr (_, rest) -> ml_return_type rest
   | t -> t
 
+(** Whether a global has no C++ spelling: whatever mapped it mapped it to the
+    empty string.  [sum1] is one -- an event family that is a sum is still
+    erased, and there is nothing to write where it would go. *)
+let ref_has_no_spelling r = Table.find_custom_opt r = Some ""
+
 (** Whether a global was skipped -- [Crane Extract Skip] records it as an
     inline custom whose C++ text is empty.  Skipped globals are
     infrastructure, and nothing of them survives into C++. *)
-let ref_is_skipped r =
-  Table.is_inline_custom r && Table.find_custom_opt r = Some ""
+let ref_is_skipped r = Table.is_inline_custom r && ref_has_no_spelling r
+
+(** Whether an ML type has no C++ spelling, because its head has none. *)
+let ml_type_has_no_spelling ty =
+  match resolve_tmeta ty with
+  | Tglob (r, _, _) -> ref_has_no_spelling r
+  | _ -> false
 
 (** Whether an ML type's result is a skipped type -- a [ReSum] instance, say,
     whose class extraction records as a [ConstRef] mapped to the empty string,

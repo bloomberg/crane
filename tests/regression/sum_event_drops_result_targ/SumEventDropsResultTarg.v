@@ -1,21 +1,22 @@
-(* When the event family at a call site is a *sum* ([E +' F]), the reified
-   backend erases it to [void] -- and in doing so emits that erased event as
-   the function's *first and only* explicit template argument, dropping the
-   result type argument that follows it.  The callee needs both, and the
-   result type appears only in the return position, so it cannot be deduced.
+(* An event family that is a sum ([E +' F]) has no C++ spelling: [sum1] is
+   extracted to the empty string, because the event is erased wherever it
+   appears.  Two things followed from that, and both are fixed here.
 
-   Expected: [raise0<void, std::pair<Nat, Nat>>(Nat::o())]
-   Actual:   [raise0<void>(Nat::o())]
+   A call's explicit template arguments are all-or-nothing -- the positions are
+   what give them their meaning, so one that cannot be written drops the rest.
+   The event, though, is a phantom parameter, and a phantom position has a
+   filler that is right whatever the argument was.  Without it, [raise]'s
+   result type went unwritten too, and it appears only in the return position:
+
      error: no matching function for call to 'raise0'
      note: candidate template ignored: couldn't infer template argument 'T2'
 
-   Replacing [E2] with a single non-sum event ([FailE]) makes Crane emit both
-   arguments correctly, so the sum is the trigger.
+   And an abbreviation for an unspellable type is not written either:
+
+     template <typename x> using E2 = ;   error: expected a type
 
    In Vellvm this is 40 errors: [LLVMEvents::raise] 34 and [raiseUB] 6, from
-   rocq/Semantics/LLVMEvents.v:176-193.  Declaration at vellvm_bench.h:14591
-   is [template <typename T1, typename T2> ... LLVMEvents::raise(const String&)];
-   every call site spells it [LLVMEvents::template raise<void>(msg)]. *)
+   rocq/Semantics/LLVMEvents.v:176-193. *)
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
 From ITree Require Import ITree.

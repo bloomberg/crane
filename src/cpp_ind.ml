@@ -612,6 +612,12 @@ let header_decls d =
   | Dind (kn, i) -> ind_header_decls kn i
   | Dtype (_, _, Miniml.Tdummy Miniml.Ktype) ->
     [] (* Skip erased Type aliases *)
+  | Dtype (_, _, t) when Ml_type_util.ml_type_has_no_spelling t ->
+    (* An abbreviation for a type that is not written in C++ is not written
+       either: [Definition E2 := (FailE +' FailE)%type] would otherwise give a
+       [using E2 = ;].  What names the abbreviation was for -- an event family
+       -- is erased at every use, so nothing looks for it. *)
+    []
   | Dtype (r, l, t) -> [(empty_env (), gen_type_alias r l (Some t))]
   | Dterm (r, a, Tglob (ty, args, e)) when is_monad ty ->
     let defs =

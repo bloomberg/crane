@@ -309,9 +309,16 @@ val type_is_erased : Minicpp.cpp_type -> bool
 (** The final return type of a MiniML type. *)
 val ml_return_type : Miniml.ml_type -> Miniml.ml_type
 
+(** Whether a global has no C++ spelling: whatever mapped it mapped it to the
+    empty string. *)
+val ref_has_no_spelling : Names.GlobRef.t -> bool
+
 (** Whether a global was skipped -- [Crane Extract Skip] records it as an
     inline custom whose C++ text is empty. *)
 val ref_is_skipped : Names.GlobRef.t -> bool
+
+(** Whether an ML type has no C++ spelling, because its head has none. *)
+val ml_type_has_no_spelling : Miniml.ml_type -> bool
 
 (** Whether an ML type's result is a skipped type, such as a [ReSum]
     instance. *)
