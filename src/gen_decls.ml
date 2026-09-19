@@ -880,6 +880,35 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let field_ml_ty =
             recover_method_quantifier class_ref method_ref field_ml_ty
           in
+          (* The field numbers its own [forall A] right after the class's
+             parameters, and the instance numbers its binders from one as
+             well: [Monad_stateT]'s carrier [stateT S m] names the same
+             variable the method's [A] does, so substituting the carrier in
+             would spell [A] as the inner monad.  Move the method's variables
+             above every instance binder first -- the positions the
+             declaration binds them at anyway. *)
+          let method_tvar_base =
+            max (List.length (Table.get_ind_ip_vars class_ref))
+              instance_tvar_count
+          in
+          let n_method_tvars = method_tvar_count class_ref field_ml_ty in
+          let field_ml_ty =
+            let nclass = List.length (Table.get_ind_ip_vars class_ref) in
+            let own =
+              List.sort compare
+                (List.filter (fun i -> i > nclass)
+                   (collect_tvars [] field_ml_ty))
+            in
+            let sub =
+              List.mapi
+                (fun k i ->
+                  (i, Miniml.Tvar (Schematic, method_tvar_base + 1 + k)) )
+                own
+            in
+            if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) sub
+            then field_ml_ty
+            else subst_tvars_type sub field_ml_ty
+          in
           (* Extraction eta-expands a type-constructor argument, so the
              carrier arrives as [option<_>] rather than the bare [option] the
              application needs; contract it before substituting. *)
@@ -935,7 +964,6 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
              the class's, which [type_subst_list] has just replaced. *)
-          let n_method_tvars = method_tvar_count class_ref subst_ty in
           let method_tvars, type_var_names =
             match n_method_tvars with
             | 0 -> ([], type_var_names)
@@ -961,10 +989,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
           let field_body =
             if n_method_tvars = 0 then field_body
             else
-              let base =
-                max (List.length (Table.get_ind_ip_vars class_ref))
-                  instance_tvar_count
-              in
+              let base = method_tvar_base in
               let body_tvars =
                 let acc = ref [] in
                 ignore
@@ -980,6 +1005,14 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                 List.mapi
                   (fun k i -> (i, Miniml.Tvar (Schematic, base + 1 + k)))
                   (safe_firstn n_method_tvars body_tvars)
+                (* A body may name more variables than the field declares --
+                   an inner monad the mode erases leaves one behind.  The
+                   declaration binds what it declares and no more, so what is
+                   left over is spelled the way any type the declaration
+                   cannot name is: erased. *)
+                @ List.filteri
+                    (fun k _ -> k >= n_method_tvars)
+                    (List.map (fun i -> (i, Miniml.Tunknown)) body_tvars)
               in
               if List.for_all (fun (i, t) -> t = Miniml.Tvar (Schematic, i)) subst
               then field_body
