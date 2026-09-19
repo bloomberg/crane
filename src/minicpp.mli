@@ -941,6 +941,27 @@ val iter_stmt_children :
   on_expr:(cpp_expr -> unit) -> on_stmts:(cpp_stmt list -> unit) ->
   cpp_stmt -> unit
 
+(** [erased_into_storage_ids body] names the value parameters [body] only ever
+    hands to a representation-tolerant helper from [crane_fn.h] -- erased into
+    storage by [crane_erase_fn], or applied through [crane_call_erased] -- and
+    never applies directly.  A signature has nothing to claim about such a
+    callback: the helper adapts whatever it is given. *)
+val erased_into_storage_ids : cpp_stmt list -> Id.Set.t
+
+(** [erased_into_storage_tparam ~params body id] holds when the template
+    parameter [id] types a value parameter that [body] only erases into storage
+    (see {!erased_into_storage_ids}), so no constraint may be placed on it. *)
+val erased_into_storage_tparam :
+  params:(Id.t * cpp_type) list -> cpp_stmt list -> Id.t -> bool
+
+(** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
+    [typename] every [TTfun] parameter of [tparams] that types a callback
+    [body] only erases into storage, so a declaration written without the body
+    still states the constraints the definition does. *)
+val drop_stored_callback_constraints :
+  params:(Id.t * cpp_type) list -> cpp_stmt list ->
+  (template_type * Id.t) list -> (template_type * Id.t) list
+
 (** [fold_expr_children ~on_expr ~on_stmts acc e] folds over the immediate
     children of [e], threading [acc].  Mirrors {!iter_expr_children}: [on_expr]
     folds over child expressions and [on_stmts] over child statement lists

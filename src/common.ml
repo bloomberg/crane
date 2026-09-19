@@ -807,6 +807,15 @@ let modular_rename_ex ?(global_scope = false) _k id =
 let modular_rename k id = fst (modular_rename_ex k id)
 
 (** C++ names of every inductive type declared directly in [sel]. *)
+let type_alias_name_of_decl = function
+  (* An erased or custom-extracted alias is never emitted, so it competes for
+     nothing. *)
+  | Dtype (_, _, Tdummy Ktype) -> None
+  | Dtype (r, _, _) when Table.is_any_inline_custom r -> None
+  | Dtype (GlobRef.ConstRef cst, _, _) ->
+    Some (modular_rename Type (Label.to_id (Constant.label cst)))
+  | _ -> None
+
 let inductive_names_of_sel sel =
   List.concat_map
     (fun (_l, se) ->
@@ -817,6 +826,11 @@ let inductive_names_of_sel sel =
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
+      (* A [Definition] returning a type is emitted as a [using] alias beside
+         the module's struct, in the same scope: [Handler.v] declares both a
+         [Module Handler] and a [Definition Handler], and one of the two names
+         has to give way. *)
+      | SEdecl d -> Option.cata (fun n -> [n]) [] (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -835,12 +849,7 @@ let file_colliding_type_names sel =
       | SEdecl (Dind (_kn, ind)) ->
         Array.to_list
           (Array.map (fun p -> modular_rename Type p.ip_typename) ind.ind_packets)
-      (* An erased or custom-extracted alias is never emitted, so it competes
-         for nothing. *)
-      | SEdecl (Dtype (_, _, Tdummy Ktype)) -> []
-      | SEdecl (Dtype (r, _, _)) when Table.is_any_inline_custom r -> []
-      | SEdecl (Dtype (GlobRef.ConstRef cst, _, _)) ->
-        [modular_rename Type (Label.to_id (Constant.label cst))]
+      | SEdecl d -> Option.cata (fun n -> [n]) [] (type_alias_name_of_decl d)
       | _ -> [] )
     sel
 
@@ -895,8 +904,9 @@ let mod_struct_body m =
     emitted, and pre-populate {!sibling_collision_renames} so that
     {!mp_renaming_fun} can append a ["_Mod"] suffix.  A module becomes a
     struct, so all three of these positions are illegal in C++:
-    - an inductive is a {e sibling} of the module, so the two would become
-      same-named members of the same enclosing struct;
+    - a type -- an inductive, or a [Definition] returning one, which is emitted
+      as a [using] alias -- is a {e sibling} of the module, so the two would
+      become same-named members of the same enclosing struct;
     - an inductive is declared {e inside} the module, so the generated nested
       type would have the same name as the struct that encloses it;
     - the module is declared inside a module of the same name, which C++

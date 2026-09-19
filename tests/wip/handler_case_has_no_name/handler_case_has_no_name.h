@@ -168,11 +168,10 @@ using MonadIter = std::function<m<std::any>(
 
 struct Basics {
   template <template <typename> class T1, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<T1<Sum<T3, T2>>, F1 &, T3 &>
   static T1<T2> iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0);
 };
 
-struct Handler {
+struct Handler_Mod {
   template <typename T1, typename T2, typename T3 = void, typename T4,
             typename F0, typename F1, typename _P0, typename _P1>
   static std::shared_ptr<ITree<T4>> case_(F0 &&f, F1 &&g,
@@ -199,7 +198,7 @@ const<std::any, Handler<std::any, std::any>>
              const std::function<std::shared_ptr<ITree<_X>>(_X)> &x) mutable {
           return [=](Sum1<T1<_X>, T2<_X>, T4> _x0) mutable
                      -> std::shared_ptr<ITree<T4>> {
-            return Handler::case_(x, x0, _x0);
+            return Handler_Mod::case_(x, x0, _x0);
           };
         });
 

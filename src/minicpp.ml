@@ -1121,6 +1121,73 @@ let iter_stmt_children ~on_expr ~on_stmts (s : cpp_stmt) : unit =
       on_stmts br.smb_body) branches;
     Option.iter on_stmts default
 
+(** Names the body only ever hands to a representation-tolerant helper from
+    [crane_fn.h]: erased into storage by [crane_erase_fn], or applied through
+    [crane_call_erased].  Those helpers accept whatever shape they are given
+    and adapt it with [if constexpr], so the signature has nothing to say
+    about how such a callback is called.  Every other callback IS applied
+    directly in the body, and its constraint is a real check.
+
+    These are the names of {e value} parameters; {!erased_into_storage_tparam}
+    maps them to the template parameters a [requires] clause speaks of. *)
+let erased_into_storage_ids body =
+  let ids = ref Id.Set.empty and applied = ref Id.Set.empty in
+  let rec name = function
+    | CPPvar id -> Some id
+    | CPPmove e | CPPforward (_, e) -> name e
+    | _ -> None
+  in
+  let add set e = Option.iter (fun id -> set := Id.Set.add id !set) (name e) in
+  let rec check_expr e =
+    ( match e with
+    | CPPerase_fn (_, inner) -> add ids inner
+    | CPPtolerant_call (callee, _) -> add ids callee
+    (* Applied here, so the signature does have something to claim -- even if
+       the same callback is also handed to a helper elsewhere in the body. *)
+    | CPPfun_call (_, callee, _) -> add applied callee
+    | _ -> () );
+    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
+  and check_stmt s =
+    iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
+  in
+  List.iter check_stmt body;
+  Id.Set.diff !ids !applied
+
+(** [erased_into_storage_tparam ~params body id] holds when the template
+    parameter [id] types a value parameter that [body] only erases into
+    storage (see {!erased_into_storage_ids}), so no constraint may be placed
+    on it. *)
+let erased_into_storage_tparam ~params body =
+  let stored = erased_into_storage_ids body in
+  if Id.Set.is_empty stored then fun _ -> false
+  else fun id ->
+    let names = function
+      | Tvar (_, Some n) | Tid (n, _) -> Id.equal n id
+      | Tid_external (n, _) -> String.equal n (Id.to_string id)
+      | _ -> false
+    in
+    List.exists
+      (fun (pid, ty) -> Id.Set.mem pid stored && exists_cpp_type names ty)
+      params
+
+(** [drop_stored_callback_constraints ~params body tparams] demotes to a plain
+    [typename] every [TTfun] parameter that types a callback [body] only erases
+    into storage.
+
+    A declaration is written without the body that decides this, so the
+    decision has to be taken once, where the body is still at hand, and left in
+    the parameter list both spellings share: otherwise the out-of-line
+    definition of a function states one constraint and its in-struct
+    declaration another, and they are not the same function. *)
+let drop_stored_callback_constraints ~params body tparams =
+  let stored = erased_into_storage_tparam ~params body in
+  List.map
+    (fun (tt, id) ->
+      match tt with
+      | TTfun _ when stored id -> (TTtypename, id)
+      | _ -> (tt, id) )
+    tparams
+
 (** Fold over immediate children of a [cpp_expr].  Mirrors
     {!iter_expr_children} but threads an accumulator: [on_expr] folds over
     child expressions, [on_stmts] over child statement lists (e.g. a

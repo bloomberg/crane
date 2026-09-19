@@ -3933,7 +3933,11 @@ let gen_dfuns (ns, bs, tys) =
 
 (** Convert a definition to a declaration by dropping its body. Recursively handles Dtemplate wrappers. Used to generate forward
     declarations that match the full definition's signature (including concept
-    constraints). *)
+    constraints).
+
+    The body is also what decides which callback constraints the signature may
+    state, so the template parameters are settled here, against the body, and
+    written into both halves -- see {!Minicpp.drop_stored_callback_constraints}. *)
 let rec decl_to_spec (d : cpp_decl) : cpp_decl =
   match d with
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
@@ -3945,7 +3949,14 @@ let rec decl_to_spec (d : cpp_decl) : cpp_decl =
       { f with
         df_no_pure = no_pure;
         df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params) }
-  | Dtemplate (temps, cstr, inner) -> Dtemplate (temps, cstr, decl_to_spec inner)
+  | Dtemplate (temps, cstr, inner) ->
+    let temps =
+      match inner with
+      | Dfun {df_shape = Ddef (params, body); _} ->
+        drop_stored_callback_constraints ~params body temps
+      | _ -> temps
+    in
+    Dtemplate (temps, cstr, decl_to_spec inner)
   | _ -> d (* Already a declaration, return as-is *)
 
 (** Generate function declarations for header files *)

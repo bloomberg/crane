@@ -3406,56 +3406,6 @@ let pp_template_header = function
     default argument, which C++ allows to appear only once per parameter. *)
 let pp_template_param_redecl (tt, id) = pp_template_type tt ++ spc () ++ Id.print id
 
-(** Names the body only ever hands to a representation-tolerant helper from
-    [crane_fn.h]: erased into storage by [crane_erase_fn], or applied through
-    [crane_call_erased].  Those helpers accept whatever shape they are given
-    and adapt it with [if constexpr], so the signature has nothing to say
-    about how such a callback is called.  Every other callback IS applied
-    directly in the body, and its constraint is a real check -- see
-    {!pp_requires_of_tparams}.
-
-    These are the names of {e value} parameters; {!erased_into_storage_tparam}
-    maps them to the template parameters a [requires] clause speaks of. *)
-let erased_into_storage_ids body =
-  let ids = ref Id.Set.empty and applied = ref Id.Set.empty in
-  let rec name = function
-    | CPPvar id -> Some id
-    | CPPmove e | CPPforward (_, e) -> name e
-    | _ -> None
-  in
-  let add set e = Option.iter (fun id -> set := Id.Set.add id !set) (name e) in
-  let rec check_expr e =
-    ( match e with
-    | CPPerase_fn (_, inner) -> add ids inner
-    | CPPtolerant_call (callee, _) -> add ids callee
-    (* Applied here, so the signature does have something to claim -- even if
-       the same callback is also handed to a helper elsewhere in the body. *)
-    | CPPfun_call (_, callee, _) -> add applied callee
-    | _ -> () );
-    iter_expr_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) e
-  and check_stmt s =
-    iter_stmt_children ~on_expr:check_expr ~on_stmts:(List.iter check_stmt) s
-  in
-  List.iter check_stmt body;
-  Id.Set.diff !ids !applied
-
-(** [erased_into_storage_tparam ~params body id] holds when the template
-    parameter [id] types a value parameter that [body] only erases into
-    storage (see {!erased_into_storage_ids}), so no constraint may be placed
-    on it. *)
-let erased_into_storage_tparam ~params body =
-  let stored = erased_into_storage_ids body in
-  if Id.Set.is_empty stored then fun _ -> false
-  else fun id ->
-    let names = function
-      | Tvar (_, Some n) | Tid (n, _) -> Id.equal n id
-      | Tid_external (n, _) -> String.equal n (Id.to_string id)
-      | _ -> false
-    in
-    List.exists
-      (fun (pid, ty) -> Id.Set.mem pid stored && exists_cpp_type names ty)
-      params
-
 (** Build a [requires] clause from template parameters that have [TTfun]
     constraints.  Each [TTfun(dom, cod)] with parameter name [F] becomes
     [std::is_invocable_r_v<cod, F &, dom1 &, dom2 &, ...>].  Returns [None]
