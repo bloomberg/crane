@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -42,14 +43,20 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
+      this->v_ =
+          Cons{[&]() -> A {
+                 if constexpr (std::is_same_v<_U, std::any>) {
+                   return crane_any_cast<A>(a);
+                 } else {
+                   if constexpr (std::is_constructible_v<A, const _U &>) {
+                     return A(a);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }
+               }(),
+               (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 
@@ -136,14 +143,20 @@ struct ErasedFnInRecursiveContainer {
 
     template <typename _U> rose(const rose<_U> &_other) {
       const auto &[a0, a1] = std::get<typename rose<_U>::Node>(_other.v());
-      this->v_ = Node{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a0);
-                        } else {
-                          return A(a0);
-                        }
-                      }(),
-                      (a1 ? std::make_shared<List<rose<A>>>(*a1) : nullptr)};
+      this->v_ =
+          Node{[&]() -> A {
+                 if constexpr (std::is_same_v<_U, std::any>) {
+                   return crane_any_cast<A>(a0);
+                 } else {
+                   if constexpr (std::is_constructible_v<A, const _U &>) {
+                     return A(a0);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }
+               }(),
+               (a1 ? std::make_shared<List<rose<A>>>(*a1) : nullptr)};
     }
 
     static rose<A> node(A a0, List<rose<A>> a1) {

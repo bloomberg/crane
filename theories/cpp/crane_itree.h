@@ -36,6 +36,8 @@
 #include <type_traits>
 #include <variant>
 
+#include "crane_fn.h"  // crane_any_cast
+
 template <typename R>
 struct ITree : public std::enable_shared_from_this<ITree<R>> {
     // The tree's own result type, for helpers that have only the pointer.
@@ -338,6 +340,60 @@ struct itree_trigger_t {
                     return ITree<R>::ret(std::any_cast<R>(std::move(x)));
                 }));
     }
+};
+
+// A tree read at another result type.
+//
+// Only a [Ret] leaf knows the result type, so the conversion is one
+// [crane_any_cast] per leaf and nothing else: [Tau] and [Vis] are rebuilt
+// around a converted child, and a [Vis] continuation is converted where it is
+// resumed, which keeps an unexplored branch unexplored.
+//
+// This is the [crane_container_cast] hook: a tree has an element type but
+// nothing to walk, so the carrier supplies the conversion itself.
+template <typename B, typename A>
+std::shared_ptr<ITree<B>> crane_cast_to(crane_tag<std::shared_ptr<ITree<B>>>,
+                                        const std::shared_ptr<ITree<A>> &t) {
+    if constexpr (std::is_same_v<A, B>) {
+        return t;
+    } else {
+        if (!t)
+            return nullptr;
+        const auto &n = t->observe();
+        if (const auto *r = std::get_if<typename ITree<A>::Ret>(&n))
+            return ITree<B>::ret(crane_convert<B>(r->value));
+        if (const auto *u = std::get_if<typename ITree<A>::Tau>(&n))
+            return ITree<B>::tau(
+                crane_cast_to(crane_tag<std::shared_ptr<ITree<B>>>{}, u->next));
+        const auto &v = *std::get_if<typename ITree<A>::Vis>(&n);
+        auto cont = v.cont;
+        return ITree<B>::vis(
+            v.effect,
+            std::function<std::shared_ptr<ITree<B>>(std::any)>(
+                [cont](std::any x) {
+                    return crane_cast_to(
+                        crane_tag<std::shared_ptr<ITree<B>>>{},
+                        cont(std::move(x)));
+                }));
+    }
+}
+
+// The event of a [Vis] node, as a pattern match over the node sees it.
+//
+// A tree stores its event as the thunk that yields it -- see [itree_trigger]
+// -- because a tree that only carries an event has no name for its type.  A
+// handler is the first thing that does name it, in its own parameter, so the
+// recovery belongs at the conversion rather than at the projection: the thunk
+// is run and its box opened at whatever type the use site asks for.  Asking
+// for the thunk itself gets it back unchanged, which is what a match that
+// only passes the event along to another [Vis] wants.
+struct crane_event {
+    std::function<std::any()> effect;
+
+    operator std::function<std::any()>() const { return effect; }
+
+    template <typename E>
+    operator E() const { return crane_any_cast<E>(effect()); }
 };
 
 // Trigger with template argument deduction.  An event given an effect

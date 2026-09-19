@@ -40,7 +40,7 @@ struct ITreeReified {
           [=](const auto &) mutable { return itree_tau(rec(t_)); });
     } else {
       const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
-      auto e = _itf.effect;
+      crane_event e{_itf.effect};
       auto k = _itf.cont;
       return itree_vis(sum1_inl([&]() -> std::any {
                          std::cout << "[vis]"s << '\n';

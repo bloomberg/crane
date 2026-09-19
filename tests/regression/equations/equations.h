@@ -887,7 +887,7 @@ struct Equations {
              std::is_invocable_r_v<T1, F3 &, uint64_t &, T1 &>
   static T1 collatz_steps_elim(const T1 &f, const T1 &f0, F2 &&f2, F3 &&f3,
                                uint64_t n) {
-    return collatz_steps_graph_mut(
+    return collatz_steps_graph_mut<T1, std::any>(
         f, f0,
         [](uint64_t, const collatz_steps_clause_3_graph &, const T1 &x) {
           return x;

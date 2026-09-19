@@ -6,6 +6,7 @@
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -54,14 +55,20 @@ struct DocComments {
         this->v_ = Mynil{};
       } else {
         const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (std::is_same_v<_U, std::any>) {
-                              return crane_any_cast<A>(a);
-                            } else {
-                              return A(a);
-                            }
-                          }(),
-                          (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                return crane_any_cast<A>(a);
+              } else {
+                if constexpr (std::is_constructible_v<A, const _U &>) {
+                  return A(a);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }(),
+            (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
       }
     }
 

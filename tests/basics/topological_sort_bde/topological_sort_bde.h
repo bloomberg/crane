@@ -51,14 +51,20 @@ public:
       this->d_v_ = Nil{};
     } else {
       const auto &[d_a, d_l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->d_v_ = Cons{[&]() -> t_A {
-                          if constexpr (std::is_same_v<_U, std::any>) {
-                            return crane_any_cast<t_A>(d_a);
-                          } else {
-                            return t_A(d_a);
-                          }
-                        }(),
-                        (d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr)};
+      this->d_v_ =
+          Cons{[&]() -> t_A {
+                 if constexpr (std::is_same_v<_U, std::any>) {
+                   return crane_any_cast<t_A>(d_a);
+                 } else {
+                   if constexpr (std::is_constructible_v<t_A, const _U &>) {
+                     return t_A(d_a);
+                   } else {
+                     throw bsl::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }
+               }(),
+               (d_l ? bsl::make_shared<List<t_A>>(*d_l) : nullptr)};
     }
   }
   static List<t_A> nil() { return List<t_A>(Nil{}); }

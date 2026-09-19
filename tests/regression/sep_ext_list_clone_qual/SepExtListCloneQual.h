@@ -6,6 +6,7 @@
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -49,7 +50,12 @@ public:
             if constexpr (std::is_same_v<_U, std::any>) {
               return crane_any_cast<A>(a0);
             } else {
-              return A(a0);
+              if constexpr (std::is_constructible_v<A, const _U &>) {
+                return A(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
             }
           }(),
           (a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(

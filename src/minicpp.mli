@@ -447,6 +447,10 @@ and cpp_expr =
   | CPPis_same of cpp_type * cpp_type
       (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
           only be asked inside an {!Sif_constexpr}. *)
+  | CPPis_constructible of cpp_type * cpp_type
+      (** [std::is_constructible_v<T, U>] -- whether [T(u)] is well-formed for
+          a [u] of type [U].  Like {!CPPis_same}, only askable inside an
+          {!Sif_constexpr}. *)
   | CPPtype_name of cpp_type
       (** A type named where an expression is expected: the head of an
           aggregate initialisation, [typename T::Ctor{...}]. *)
@@ -691,6 +695,11 @@ val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
     the coercion seam and the sweep over a finished body, which recognise such
     a branch independently. *)
 val dead_branch_message : string
+
+(** What a converting constructor throws for a field of a constructor the
+    source does not hold, when the two instantiations disagree on its type and
+    so no conversion can be written. *)
+val inactive_field_message : string
 
 (** [curry_fun_type ty] respells every multi-parameter function type inside
     [ty] as nested single-parameter ones, as required of a type standing at a

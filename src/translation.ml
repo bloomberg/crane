@@ -1213,7 +1213,19 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
           [ Sif_constexpr
               ( CPPis_same (src_ty, Tany),
                 [Sreturn (Some (Cpp_erasure.unbox_tolerant dst expr))],
-                [Sreturn (Some (Cpp_erasure.converting_ctor dst [expr]))] ) ]
+                [ Sif_constexpr
+                    ( CPPis_constructible (dst, Tref (Tconst src_ty)),
+                      [Sreturn (Some (Cpp_erasure.converting_ctor dst [expr]))],
+                      (* [U] is neither a box nor something [A] accepts.  A
+                         converting constructor converts every field of every
+                         constructor, but only the constructor the source
+                         actually holds is reached; the rest are converted
+                         only because C++ compiles both sides of an [if].
+                         Two instantiations that agree on the field being
+                         carried can disagree completely on one that is not,
+                         so the unreachable side gets the throw rather than a
+                         conversion no one asked for. *)
+                      [Sthrow inactive_field_message] ) ] ) ]
       end
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
                      match strip_ns dst with
@@ -9337,31 +9349,78 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          method of a higher-kinded class ([cout : forall A, F A -> A], whose
          only parameter is the instance's associated carrier type, a
          non-deduced context). *)
-      let ret_tvar_undeducible () =
+      let rec tvars_of acc = function
+        | Miniml.Tvar (_, j) -> IntSet.add j acc
+        | Miniml.Tarr (a, b) -> tvars_of (tvars_of acc a) b
+        | Miniml.Tglob (_, l, _) -> List.fold_left tvars_of acc l
+        | Miniml.Tmeta { contents = Some t } -> tvars_of acc t
+        | _ -> acc
+      in
+      (* The callee's type variables a C++ compiler could read off the value
+         arguments.  A function-typed parameter reaches C++ as an opaque
+         template parameter [F0], not as a spelled-out signature, so a variable
+         occurring inside it -- as the callback's own codomain, say -- is in no
+         deducible context; every other parameter spells its type out. *)
+      let deducible_tvars () =
         match find_type_opt id with
-        | None -> false
-        | Some ml_ty_orig -> (
+        | None -> None
+        | Some ml_ty_orig ->
+          Some
+            (List.fold_left
+               (fun acc d ->
+                 match d with Miniml.Tarr _ -> acc | t -> tvars_of acc t)
+               IntSet.empty
+               (List.map resolve_tmeta (ml_domains ml_ty_orig)))
+      in
+      let ret_tvar_undeducible () =
+        match (find_type_opt id, deducible_tvars ()) with
+        | Some ml_ty_orig, Some deducible -> (
           match resolve_tmeta (ml_return_type ml_ty_orig) with
-          | Miniml.Tvar (_, i) ->
-            let rec mentions = function
-              | Miniml.Tvar (_, j) -> i = j
-              | Miniml.Tarr (a, b) -> mentions a || mentions b
-              | Miniml.Tglob (_, l, _) -> List.exists mentions l
-              | Miniml.Tmeta { contents = Some t } -> mentions t
-              | _ -> false
-            in
-            (* A function-typed parameter reaches C++ as an opaque template
-               parameter [F0], not as a spelled-out signature, so a variable
-               occurring inside it -- as the callback's own codomain, say -- is
-               in no deducible context either. *)
-            let deducible = function
-              | Miniml.Tarr _ -> false
-              | t -> mentions t
-            in
-            not
-              (List.exists deducible
-                 (List.map resolve_tmeta (ml_domains ml_ty_orig)))
+          | Miniml.Tvar (_, i) -> not (IntSet.mem i deducible)
           | _ -> false )
+        | _ -> false
+      in
+      (* Whether any type variable of the callee at all is beyond deduction.
+         Dropping the whole argument list rests on the compiler recovering it
+         from the values; a variable no parameter spells is one it cannot, and
+         then the list has to be written -- erased positions included, as
+         [std::any], which is what they are. *)
+      let some_tvar_undeducible () =
+        match (find_type_opt id, deducible_tvars ()) with
+        | Some ml_ty_orig, Some deducible ->
+          let all =
+            List.fold_left tvars_of IntSet.empty
+              (resolve_tmeta (ml_return_type ml_ty_orig)
+               :: List.map resolve_tmeta (ml_domains ml_ty_orig))
+          in
+          not (IntSet.subset all deducible)
+        | _ -> false
+      in
+      (* A higher-kinded argument is a type constructor, and [std::any] is not
+         a spelling of one: a list with an erased one in it cannot be written
+         out at all, so those calls keep deducing. *)
+      let no_erased_hkt_arg () =
+        match find_type_opt id with
+        | None -> true
+        | Some ml_ty ->
+          let arities = Ml_type_util.applied_ml_tvar_arities [ml_ty] in
+          Hashtbl.length arities = 0
+          ||
+          let n = IntSet.fold max (collect_tvars_set IntSet.empty ml_ty) 0 in
+          let kept =
+            List.filter (keeps_type_arg_position id)
+              (List.init n (fun i -> i + 1))
+          in
+          List.length kept <> List.length regular_type_args
+          || not
+               (List.exists2
+                  (fun i t -> Hashtbl.mem arities i && prints_as_any t)
+                  kept regular_type_args)
+      in
+      let written_out () =
+        if some_tvar_undeducible () && no_erased_hkt_arg () then
+          filter_erased_type_args ~preserve_positions:true regular_type_args
+        else filtered
       in
       if filtered = [] && regular_type_args <> [] then
         (* Case (a): tys was non-empty but all got filtered. Only attempt
@@ -9379,7 +9438,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
              filter out any remaining erased entries. *)
           List.mapi (fun j t -> if j = idx then ret_ty else t) regular_type_args
           |> List.filter (fun t -> not (prints_as_any t))
-        | None -> filtered
+        | None -> written_out ()
       else if tys = [] then
         (* Case (b): tys is empty — synthesize type args from scratch. Build one
            entry per Tdummy Ktype domain position.

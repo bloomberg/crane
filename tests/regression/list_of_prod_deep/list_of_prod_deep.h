@@ -6,6 +6,7 @@
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -39,14 +40,20 @@ struct ListOfProdDeep {
         this->v_ = Lnil{};
       } else {
         const auto &[a0, a1] = std::get<typename lst<_U>::Lcons>(_other.v());
-        this->v_ = Lcons{[&]() -> A {
-                           if constexpr (std::is_same_v<_U, std::any>) {
-                             return crane_any_cast<A>(a0);
-                           } else {
-                             return A(a0);
-                           }
-                         }(),
-                         (a1 ? std::make_shared<lst<A>>(*a1) : nullptr)};
+        this->v_ = Lcons{
+            [&]() -> A {
+              if constexpr (std::is_same_v<_U, std::any>) {
+                return crane_any_cast<A>(a0);
+              } else {
+                if constexpr (std::is_constructible_v<A, const _U &>) {
+                  return A(a0);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }(),
+            (a1 ? std::make_shared<lst<A>>(*a1) : nullptr)};
       }
     }
 

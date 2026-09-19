@@ -111,7 +111,12 @@ public:
         if constexpr (std::is_same_v<_U, std::any>) {
           return crane_any_cast<A>(a);
         } else {
-          return A(a);
+          if constexpr (std::is_constructible_v<A, const _U &>) {
+            return A(a);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     } else {
@@ -233,7 +238,12 @@ public:
         if constexpr (std::is_same_v<_U, std::any>) {
           return crane_any_cast<A>(a0);
         } else {
-          return A(a0);
+          if constexpr (std::is_constructible_v<A, const _U &>) {
+            return A(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     } else {
@@ -266,25 +276,27 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig_rec_uncurried(const sig<A> &x1_, const T1 &x2_) const {
-        return this->eq_sig_rect_uncurried(x1_, x2_);
+        return this->template eq_sig_rect_uncurried<std::any, T1>(x1_, x2_);
       }
 
       template <typename T1>
       T1 eq_sig_rect_uncurried(const sig<A> &v, T1 f) const {
-        return this->eq_sig_rect(v, [=]() mutable { return f; }());
+        return this->template eq_sig_rect<std::any, T1>(
+            v, [=]() mutable { return f; }());
       }
 
       template <typename T1> T1 eq_sig_rect_exist_r(A v1, const T1 &f) const {
-        return this->eq_sig_rect(sig<A>::exist(std::move(v1)), f);
+        return this->template eq_sig_rect<std::any, T1>(
+            sig<A>::exist(std::move(v1)), f);
       }
 
       template <typename T1> T1 eq_sig_rect_exist_l(A u1, const T1 &f) const {
-        return sig<A>::exist(u1).eq_sig_rect(*this, f);
+        return sig<A>::exist(u1).template eq_sig_rect<std::any, T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig_rec(const sig<A> &x1_, const T1 &x2_) const {
-        return this->eq_sig_rect(x1_, x2_);
+        return this->template eq_sig_rect<std::any, T1>(x1_, x2_);
       }
 
       template <typename T1> T1 eq_sig_rect(const sig<A> &, const T1 &f) const {
@@ -323,25 +335,29 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->eq_sig2_rect_uncurried(x1_, x2_);
+        return this->template eq_sig2_rect_uncurried<std::any, std::any, T1>(
+            x1_, x2_);
       }
 
       template <typename T1>
       T1 eq_sig2_rect_uncurried(const sig2<A> &v, T1 f) const {
-        return this->eq_sig2_rect(v, [=]() mutable { return f; }());
+        return this->template eq_sig2_rect<std::any, std::any, T1>(
+            v, [=]() mutable { return f; }());
       }
 
       template <typename T1> T1 eq_sig2_rect_exist2_r(A v1, const T1 &f) const {
-        return this->eq_sig2_rect(sig2<A>::exist2(std::move(v1)), f);
+        return this->template eq_sig2_rect<std::any, std::any, T1>(
+            sig2<A>::exist2(std::move(v1)), f);
       }
 
       template <typename T1> T1 eq_sig2_rect_exist2_l(A u1, const T1 &f) const {
-        return sig2<A>::exist2(u1).eq_sig2_rect(*this, f);
+        return sig2<A>::exist2(u1)
+            .template eq_sig2_rect<std::any, std::any, T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig2_rec(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->eq_sig2_rect(x1_, x2_);
+        return this->template eq_sig2_rect<std::any, std::any, T1>(x1_, x2_);
       }
 
       template <typename T1>
@@ -643,7 +659,12 @@ struct RocqBug14174 {
             if constexpr (std::is_same_v<_U, std::any>) {
               return crane_any_cast<A>(a0);
             } else {
-              return A(a0);
+              if constexpr (std::is_constructible_v<A, const _U &>) {
+                return A(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
             }
           }()};
         } else {

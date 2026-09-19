@@ -372,6 +372,7 @@ and cpp_expr =
     (* std::holds_alternative<T>(…) or std::holds_alternative<typename T::Ctor>(…) *)
   | CPPdeclval of cpp_type
   | CPPis_same of cpp_type * cpp_type
+  | CPPis_constructible of cpp_type * cpp_type
     (* std::declval<T>() *)
   | CPPtype_name of cpp_type
     (* typename T::Nested, usable where a dependent nested struct name is
@@ -625,6 +626,15 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
     return type -- and a reader of the generated code should not have to tell
     them apart. *)
 let dead_branch_message = "unreachable: impossible dependent match branch"
+
+(** What a converting constructor throws for a field it cannot convert.
+
+    A converting constructor is generated for every constructor of the
+    inductive, but at a given call only the one the source holds runs.  When
+    the two instantiations disagree on a field of some other constructor there
+    is no conversion to write, and none is needed: the branch is dead. *)
+let inactive_field_message =
+  "unreachable: inactive constructor field at this instantiation"
 
 (** [curry_fun_type ty] respells every multi-parameter function type inside
     [ty] as nested single-parameter ones: [Nat(Nat, Nat)] becomes
@@ -962,6 +972,7 @@ let map_expr
   | CPPstd_holds_alternative ty -> CPPstd_holds_alternative (ft ty)
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
+  | CPPis_constructible (t1, t2) -> CPPis_constructible (ft t1, ft t2)
   | CPPtype_name ty -> CPPtype_name (ft ty)
   | CPPlit (ty, s) -> CPPlit (ft ty, s)
   | CPPraw _ | CPPrt _ -> e
@@ -1055,7 +1066,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _
+  | CPPis_same _ | CPPis_constructible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
@@ -1219,7 +1230,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _
+  | CPPis_same _ | CPPis_constructible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _

@@ -9458,3 +9458,14 @@
   (alias runtest)
   (deps monad_method_targ_misnumbered.t.exe)
   (action (run ./monad_method_targ_misnumbered.t.exe))))
+
+(subdir handler_case_has_no_name
+ (rule
+  (targets handler_case_has_no_name.t.exe)
+  (deps HandlerCaseHasNoName.vo handler_case_has_no_name.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} handler_case_has_no_name.t.exe handler_case_has_no_name.cpp handler_case_has_no_name.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps handler_case_has_no_name.t.exe)
+  (action (run ./handler_case_has_no_name.t.exe))))

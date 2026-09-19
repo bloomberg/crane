@@ -7,6 +7,7 @@
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -104,7 +105,12 @@ public:
         if constexpr (std::is_same_v<_U0, std::any>) {
           return crane_any_cast<A>(a0);
         } else {
-          return A(a0);
+          if constexpr (std::is_constructible_v<A, const _U0 &>) {
+            return A(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     } else {
@@ -113,7 +119,12 @@ public:
         if constexpr (std::is_same_v<_U1, std::any>) {
           return crane_any_cast<B>(a0);
         } else {
-          return B(a0);
+          if constexpr (std::is_constructible_v<B, const _U1 &>) {
+            return B(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     }

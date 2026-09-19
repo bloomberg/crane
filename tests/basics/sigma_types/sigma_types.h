@@ -6,6 +6,7 @@
 #include <any>
 #include <atomic>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -42,14 +43,20 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
-      this->v_ = Cons{[&]() -> A {
-                        if constexpr (std::is_same_v<_U, std::any>) {
-                          return crane_any_cast<A>(a);
-                        } else {
-                          return A(a);
-                        }
-                      }(),
-                      (l ? std::make_shared<List<A>>(*l) : nullptr)};
+      this->v_ =
+          Cons{[&]() -> A {
+                 if constexpr (std::is_same_v<_U, std::any>) {
+                   return crane_any_cast<A>(a);
+                 } else {
+                   if constexpr (std::is_constructible_v<A, const _U &>) {
+                     return A(a);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }
+               }(),
+               (l ? std::make_shared<List<A>>(*l) : nullptr)};
     }
   }
 

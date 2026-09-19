@@ -34,6 +34,7 @@ template <typename T> T *crane_raw(T *p) noexcept { return p; }
 // [crane_erase_fn] needs it to recover a concrete result from a callable
 // whose own result is boxed.
 template <class T> T crane_any_cast(const std::any &a);
+template <class Dst, class Src> Dst crane_convert(Src &&src);
 
 // [crane_erase_fn] adapts an arbitrary callable to
 // [std::function<std::any(std::any...)>] and boxes the result into [std::any].
@@ -83,7 +84,7 @@ crane_erase_fn_impl(std::function<R(A...)> f) {
       f(crane_erase_fn_unbox<A>(as)...);
       return Ret{};
     } else {
-      return Ret(f(crane_erase_fn_unbox<A>(as)...));
+      return crane_convert<Ret>(f(crane_erase_fn_unbox<A>(as)...));
     }
   };
 }
@@ -250,7 +251,15 @@ struct crane_is_boxlike<
       ".get() must convert to the element type.");
 };
 
-template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
+// The hook a carrier that is not a container uses to say how it is read at
+// another element type.  A [std::shared_ptr<ITree<A>>] is the case that needs
+// it: the element type is real but there is nothing to walk, so the carrier
+// itself has to supply the conversion.  Found by argument-dependent lookup on
+// the tag, so a header that defines a carrier declares it alongside, and this
+// one need not know the carrier exists.
+template <class T> struct crane_tag {};
+
+template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
   using Elt = typename Dst::value_type;
   auto _convert = [](auto &&_e) -> Elt {
     if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
@@ -303,4 +312,35 @@ template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
     }
     return dst;
   }
+}
+
+template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
+  if constexpr (requires {
+                  crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
+                })
+    return crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
+  else
+    return crane_container_cast_impl<Dst>(std::forward<Src>(src));
+}
+
+// A value reaching a slot spelled at another instantiation of its own type.
+// Conversion is the ordinary answer; a carrier that cannot be constructed
+// from itself at another element type answers through [crane_cast_to].
+template <class Dst, class Src> Dst crane_convert(Src &&src) {
+  if constexpr (std::is_same_v<Dst, std::remove_cvref_t<Src>>)
+    return std::forward<Src>(src);
+  else if constexpr (std::is_same_v<std::remove_cvref_t<Src>, std::any>)
+    return crane_any_cast<Dst>(src);
+  else if constexpr (requires {
+                       crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
+                     })
+    return crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
+  else if constexpr (std::is_constructible_v<Dst, Src>)
+    return Dst(std::forward<Src>(src));
+  else if constexpr (requires { typename Dst::value_type; })
+    return crane_container_cast_impl<Dst>(std::forward<Src>(src));
+  else
+    // Nothing above applies: let the conversion itself be the diagnostic,
+    // rather than a failure inside machinery the reader did not write.
+    return Dst(std::forward<Src>(src));
 }

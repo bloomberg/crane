@@ -44,7 +44,7 @@ uint64_t LoopifyItreeReified::count_taus(
           _stack.emplace_back(_Enter{t_, fuel_});
         } else {
           const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-          auto _x = _itf.effect;
+          crane_event _x{_itf.effect};
           auto _x0 = _itf.cont;
           _result = UINT64_C(0);
         }

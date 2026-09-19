@@ -9,6 +9,7 @@
 #include <crane_itree.h>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -107,7 +108,12 @@ public:
         if constexpr (std::is_same_v<_U0, std::any>) {
           return crane_any_cast<A>(a0);
         } else {
-          return A(a0);
+          if constexpr (std::is_constructible_v<A, const _U0 &>) {
+            return A(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     } else {
@@ -116,7 +122,12 @@ public:
         if constexpr (std::is_same_v<_U1, std::any>) {
           return crane_any_cast<B>(a0);
         } else {
-          return B(a0);
+          if constexpr (std::is_constructible_v<B, const _U1 &>) {
+            return B(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     }
@@ -223,9 +234,10 @@ typename _tcI0::template m<T3> Interp::interp(MonadIter<_tcI0::template m> iM,
               Sum<std::shared_ptr<ITree<T3>>, std::any>::inl(t0));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
-          auto e = _itf.effect;
+          crane_event e{_itf.effect};
           auto k = _itf.cont;
-          return Functor0::template fmap<_tcI1>(
+          return Functor0::template fmap<_tcI1, std::any,
+                                         Sum<std::shared_ptr<ITree<T3>>, T3>>(
               [=](const auto &x) mutable {
                 return Sum<std::shared_ptr<ITree<T3>>, T3>::inl(k(x));
               },

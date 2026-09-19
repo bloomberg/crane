@@ -9,6 +9,7 @@
 #include <crane_itree.h>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -140,7 +141,12 @@ public:
         if constexpr (std::is_same_v<_U, std::any>) {
           return crane_any_cast<X>(x);
         } else {
-          return X(x);
+          if constexpr (std::is_constructible_v<X, const _U &>) {
+            return X(x);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
       }()};
     } else {
