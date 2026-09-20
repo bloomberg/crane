@@ -700,6 +700,25 @@ val instance_dependent : cpp_type -> (Id.t * GlobRef.t) option
     @return the structurally-transformed type *)
 val map_cpp_type : (cpp_type -> cpp_type) -> cpp_type -> cpp_type
 
+(** The type variable an alias template introduced for a type constructor
+    abstracts over.
+
+    A {!Ttyctor} is normally a type applied to its argument, and the printer
+    names the constructor by dropping that argument.  A carrier that is not of
+    that shape -- a custom mapping like [itree], or a Rocq carrier that is a
+    composite, [fun T => (T * box T)] -- has no head to cut back to, so an
+    alias template is introduced for it and this is the parameter it takes.
+    Lives here because both ends need it: the printer mints the alias, and the
+    front end builds the [Ttyctor] body with this name already standing where
+    the carrier's argument goes. *)
+val ctor_alias_tvar : string
+
+(** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
+    replaced by the {!ctor_alias_tvar} sentinel -- the type constructor whose
+    application to [over] is [ty] -- or [None] where [over] does not occur, so
+    that there is no such constructor to name. *)
+val abstract_cpp_type : over:cpp_type -> cpp_type -> cpp_type option
+
 (** What a branch throws when the scrutinee's indices rule it out; shared by
     the coercion seam and the sweep over a finished body, which recognise such
     a branch independently. *)

@@ -852,7 +852,7 @@ let ctor_alias_decls : (string * string) list ref = ref []
     to find out whether one is needed at all: rendering the constructor
     applied to it says whether the application is just a head plus this
     argument. *)
-let ctor_alias_tvar = "_CraneTcArg"
+let ctor_alias_tvar = Minicpp.ctor_alias_tvar
 
 let ctor_alias_name_for ~base body =
   match List.assoc_opt body !ctor_alias_decls with
@@ -1187,29 +1187,42 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       (* An applied type here is the eta-expansion of the constructor: its head
          is what the position wants. *)
       let t = match t with Tapply (head, _) -> head | t -> t in
-      (* A custom mapping whose application is not its head plus the argument
-         -- [itree] is [std::shared_ptr<ITree<%t1>>] -- has no head to name.
-         Rendering it at a sentinel argument is the test and the alias body at
-         once. *)
+      (* A constructor applied to the sentinel is both the test and the alias
+         body: where the rendering comes out as a head plus that one argument,
+         the head is a template name and naming it is enough; where it does
+         not, there is no head to name and an alias template is introduced.
+         [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier
+         is [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut
+         back, and the same reading of the same rendering covers both. *)
+      let alias_for_probe ~base probe =
+        let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
+        if
+          String.equal rendered
+            (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
+        then None
+        else Some (ctor_alias_name_for ~base rendered)
+      in
+      (* A custom mapping arrives applied to its real arguments, so the
+         sentinel has to be put in the carrier's place first. *)
       let alias_for_custom r args =
         match args with
         | [] -> None
         | _ ->
           let fixed = List.filteri (fun i _ -> i < List.length args - 1) args in
-          let probe =
-            Tglob (r, fixed @ [Tid_external (ctor_alias_tvar, [])], [])
-          in
-          let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
-          if
-            String.equal rendered
-              (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
-          then None
-          else
-            Some
-              (ctor_alias_name_for
-                 ~base:(Common.pp_global_name Type r)
-                 rendered)
+          alias_for_probe
+            ~base:(Common.pp_global_name Type r)
+            (Tglob (r, fixed @ [Tid_external (ctor_alias_tvar, [])], []))
       in
+      (* A carrier built by the front end already has the sentinel standing
+         where its argument goes -- it is the abstraction, not an application
+         of one, and there is nothing to substitute. *)
+      ( match
+        if exists_cpp_type (fun s -> s = Tid_external (ctor_alias_tvar, [])) t
+        then alias_for_probe ~base:"_crane_carrier" t
+        else None
+      with
+      | Some name -> str name
+      | None ->
       ( match t with
       | Tglob (r, (_ :: _ as args), _)
         when ( match find_custom_opt r with Some _ -> true | None -> false )
@@ -1232,7 +1245,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           | _ -> str (cut_at_argument_list template) )
         | Some template -> str (cut_at_argument_list template)
         | None -> pp_rec false (Tglob (r, [], [])) )
-      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) )
+      | _ -> str (cut_at_argument_list (Pp.string_of_ppcmds (pp_rec false t))) ) )
     | Tauto -> str "auto"
     | Tdecltype e ->
       (* Print std::decay_t<decltype(expr)> where expr has been rewritten by
@@ -3629,7 +3642,21 @@ let forward_struct_decls = ref ([] : Pp.t list)
 
 (** Take and clear the forward declarations accumulated since the last call. *)
 let take_forward_struct_decls () =
-  let aliases =
+  let l = List.rev !forward_struct_decls in
+  forward_struct_decls := [];
+  l
+
+(** Take and clear the alias templates ({!ctor_alias_decls}) minted since the
+    last call, as declarations.
+
+    Separate from {!take_forward_struct_decls} because the two answer to
+    different files.  A struct forward declaration belongs in the header, and
+    the implementation file, which includes it, has no use for one.  An alias
+    is minted by whichever file writes the use that needs it, and a use in the
+    implementation file is reached while the header has already been handed
+    over -- so it has to be declared where it was minted. *)
+let take_ctor_alias_decls () =
+  let l =
     List.rev_map
       (fun (body, name) ->
         str "template <typename "
@@ -3642,8 +3669,6 @@ let take_forward_struct_decls () =
       !ctor_alias_decls
   in
   ctor_alias_decls := [];
-  let l = List.rev !forward_struct_decls @ aliases in
-  forward_struct_decls := [];
   l
 
 (** Print a complete template parameter including name and optional default *)

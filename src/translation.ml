@@ -3637,6 +3637,70 @@ and fit_to_declared_tvars id targs =
     else List.filteri (fun i _ -> i < missing) fillers @ targs
   | _ -> targs
 
+(** The explicit type arguments a call needs when the callee is generic in a
+    type {e constructor} and Rocq erased which one.
+
+    A higher-kinded class parameter reaches the call as [Tdummy]: the carrier
+    of [TFunctor (fun T => T * box T)] is a term Rocq computed away.  C++
+    deduces the parameter from the value argument instead, by matching
+    [T1<T2>] against the argument's type -- which works exactly when the
+    carrier is a template name applied to one argument, and fails outright
+    when it is not: [std::pair<Nat, Box<Nat>>] deduces [T1 = std::pair], a
+    binary template where a unary one was declared.
+
+    The carrier is recovered from the type the result is expected to have.
+    The callee returns [Tapp (p, [Tvar v])] -- the carrier at position [p]
+    applied to the variable at position [v] -- so abstracting the expected
+    result over whatever [v] was instantiated to inverts that application.
+    {!Minicpp.abstract_cpp_type} writes the sentinel the printer mints an
+    alias template for, and only position [p] is written: the rest deduce
+    through the alias, which is transparent.
+
+    Nothing is claimed where the abstraction does not fire.  If [v]'s
+    instantiation does not occur in the result then the carrier is constant in
+    its argument and the result says nothing about it, and if the result type
+    is unknown there is nothing to read. *)
+and hkt_carrier_type_args env tvars ?result id tys =
+  let ( let* ) = Option.bind in
+  let* ml_ty = find_type_opt id in
+  let* p, v =
+    match resolve_tmeta (ml_return_type ml_ty) with
+    (* Only a leading carrier is written: an explicit argument list is
+       positional, so a carrier further in would need every argument before it
+       spelled as well, and a class parameter is always quantified first. *)
+    | Miniml.Tapp (1, [Miniml.Tvar (_, v)]) -> Some (1, v)
+    | _ -> None
+  in
+  let* () =
+    match List.nth_opt tys (p - 1) with
+    | Some (Miniml.Tdummy _) -> Some ()
+    | _ -> None
+  in
+  let* v_ml = List.nth_opt tys (v - 1) in
+  let* result =
+    match result with None -> (!tctx).current_cpp_return_type | r -> r
+  in
+  let over = template_arg_of_ml_type env tvars v_ml in
+  let* carrier = Minicpp.abstract_cpp_type ~over result in
+  (* A carrier that is one template applied to the argument is left to
+     deduction, which reads it off the value argument and gets it right.  Only
+     a carrier with no head to read -- a composite, or a partial application --
+     has to be written, and it is written alone: everything after it deduces
+     through the alias, which is transparent. *)
+  let sentinel = Minicpp.Tid_external (Minicpp.ctor_alias_tvar, []) in
+  let rec is_plain_head = function
+    (* A namespace or a const/reference wrapper is spelling, not structure. *)
+    | Minicpp.Tnamespace (_, t) | Minicpp.Tconst t | Minicpp.Tref t ->
+      is_plain_head t
+    | Minicpp.Tglob (_, [arg], _)
+    | Minicpp.Tid (_, [arg])
+    | Minicpp.Tid_external (_, [arg])
+    | Minicpp.Tapply (_, [arg]) ->
+      arg = sentinel
+    | _ -> false
+  in
+  if is_plain_head carrier then None else Some [Minicpp.Ttyctor carrier]
+
 (** Spell the erased arguments of [id]'s phantom prefix with the fillers
     {!phantom_prefix_args} gives them.
 
@@ -9714,7 +9778,18 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        parameters its signature never mentions, deduction has nothing to work
        from and the call has to name them. *)
     let all_type_args =
-      if all_type_args = [] then phantom_prefix_args id else all_type_args
+      if all_type_args = [] then
+        (* The call writes nothing, so every parameter is left to deduction --
+           and a type constructor is the one thing deduction can get wrong
+           rather than merely miss.  Where it cannot be read off the value
+           argument, name it; where the call names nothing else either, fall
+           back to the phantom prefix. *)
+        match
+          hkt_carrier_type_args env tvars ?result:slot.expected_cpp_ty id tys
+        with
+        | Some targs -> targs
+        | None -> phantom_prefix_args id
+      else all_type_args
     in
 
     let cglob = mk_cppglob ?yields:(glob_yields env id tys) id all_type_args in

@@ -620,6 +620,29 @@ let rec map_cpp_type (f : cpp_type -> cpp_type) (ty : cpp_type) : cpp_type =
   | Tvar _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved | Tany | Topaque
   | Tauto -> ty
 
+let ctor_alias_tvar = "_CraneTcArg"
+
+let abstract_cpp_type ~over ty =
+  let sentinel = Tid_external (ctor_alias_tvar, []) in
+  let fired = ref false in
+  (* Structural equality, but never descending into a [Tdecltype]: it wraps an
+     expression, and comparing two of those raises on the closures an
+     expression can hold. *)
+  let same a b =
+    match (a, b) with
+    | Tdecltype _, _ | _, Tdecltype _ -> false
+    (* A type variable is its index; the name beside it is a spelling hint one
+       side may not have been given. *)
+    | Tvar (i, _), Tvar (j, _) -> i = j
+    | _ -> a = b
+  in
+  let abstracted =
+    map_cpp_type
+      (fun t -> if same t over then (fired := true; sentinel) else t)
+      ty
+  in
+  if !fired then Some abstracted else None
+
 (** What a branch throws when the scrutinee's indices rule it out.
 
     Two places recognise such a branch -- the coercion seam, where extraction

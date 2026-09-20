@@ -2436,13 +2436,15 @@ let do_struct_with_decl_tracking ~is_header f s =
       prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
   let forward_decls =
-    if is_header then
-      match Cpp_print.take_forward_struct_decls () with
-      | [] -> mt ()
-      | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
-    else (
-      ignore (Cpp_print.take_forward_struct_decls ());
-      mt () )
+    let structs =
+      if is_header then Cpp_print.take_forward_struct_decls ()
+      else (ignore (Cpp_print.take_forward_struct_decls ()); [])
+    in
+    (* Aliases go wherever they were minted; see
+       {!Cpp_print.take_ctor_alias_decls}. *)
+    match structs @ Cpp_print.take_ctor_alias_decls () with
+    | [] -> mt ()
+    | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in
   (* Declared ahead of everything that could call them, which is everything:
      a lifted helper's definition is placed after the struct it came out of,
