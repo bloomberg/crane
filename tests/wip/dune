@@ -173,3 +173,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir hk_call_carrier_erased
+ (rule
+  (targets hk_call_carrier_erased.t.exe)
+  (deps HkCallCarrierErased.vo hk_call_carrier_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_call_carrier_erased.t.exe hk_call_carrier_erased.cpp hk_call_carrier_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_call_carrier_erased.t.exe)
+  (action (run ./hk_call_carrier_erased.t.exe))))
