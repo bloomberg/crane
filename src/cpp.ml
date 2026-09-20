@@ -1574,6 +1574,27 @@ let rec prlist_sep_nonempty sep f = function
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
       e ++ boundary ++ r
 
+(** [d] split into the declaration to emit ahead of its callers and the
+    definition to emit in its place, where [d] defines a namespace-scope
+    function.  [None] for anything else.
+
+    {!Gen_decls.decl_spec_and_def} answers for any declaration by returning it
+    twice, which is right for a caller meaning "make this a declaration if it
+    is not one" and wrong for one asking "is there a declaration to emit here"
+    -- a struct would come back whole and be defined a second time.  So the
+    shape is asked first.
+
+    The definition comes back rather than being reused as it arrived because
+    the split may settle the template head, and the half that is emitted here
+    has to state the same head as the half emitted at the top of the file. *)
+let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
+  let rec defines_fun = function
+    | Dfun {df_shape = Ddef _; _} -> true
+    | Dtemplate (_, _, inner) -> defines_fun inner
+    | _ -> false
+  in
+  if defines_fun d then Some (decl_spec_and_def d) else None
+
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 
     PASS 1 (is_header=true): Emit forward declarations (specs) for functions.
@@ -1591,10 +1612,13 @@ let rec prlist_sep_nonempty sep f = function
                          used to set [rc_struct_name] in the definition pass.
     @param func_sels   The [(label, structure_elem)] pairs from the wrapper
                        that contain function declarations ([Dterm], [Dfix]).
-    @return A triple [(specs_pp, defs_pp, lifted_pp)] where [specs_pp] is the
-            header-pass declaration block, [defs_pp] the implementation-pass
-            definition block, and [lifted_pp] any top-level declarations that
-            were lifted out of local function bodies during translation. *)
+    @return A quadruple [(specs_pp, defs_pp, lifted_pp, lifted_specs_pp)] where
+            [specs_pp] is the header-pass declaration block, [defs_pp] the
+            implementation-pass definition block, [lifted_pp] any top-level
+            declarations that were lifted out of local function bodies during
+            translation, and [lifted_specs_pp] the forward declarations of the
+            functions among those, which are due before the struct rather than
+            after it. *)
 let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
   let is_method_candidate x =
     List.exists
@@ -1713,16 +1737,43 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
           rc_struct_mp = Some wrapper_mp } )
       (fun () -> prlist_sep_nonempty cut2 render_sel_defs all_results)
   in
+  (* A lifted helper is emitted after the struct it was lifted out of, and its
+     callers are inside that struct, so by the time the definition appears the
+     name has already been used.  A wrapper struct's own members do not have
+     this problem -- {!gen_dfuns_dual} declares them all before defining any --
+     and this is the same repair for the one kind of function that path never
+     reaches, because it is not a member.  Only functions: a lifted struct is
+     already forward-declared where structs are, and a declaration of anything
+     else is either illegal or a second definition.
+
+     Both halves come out of one split so they state one template head, and the
+     definition emitted here is the split's, not the one that went in. *)
+  let lifted_split =
+    List.map
+      (fun d -> (d, lifted_fun_split d))
+      all_lifted
+  in
   let lifted_pp =
     if is_header then
       prlist_sep_nonempty
         cut2
-        (fun d -> pp_cpp_decl (empty_env ()) d)
-        all_lifted
+        (fun (d, split) ->
+          pp_cpp_decl (empty_env ())
+            (match split with Some (_, def) -> def | None -> d) )
+        lifted_split
     else
       mt ()
   in
-  (specs_pp, defs_pp, lifted_pp)
+  let lifted_specs_pp =
+    if is_header then
+      prlist_sep_nonempty
+        cut2
+        (fun d -> pp_cpp_decl (empty_env ()) d)
+        (List.filter_map (fun (_, s) -> Option.map fst s) lifted_split)
+    else
+      mt ()
+  in
+  (specs_pp, defs_pp, lifted_pp, lifted_specs_pp)
 
 (** What analysing the structure concluded, for the passes that render it. *)
 let structure_analysis : Structure_analysis.t option ref = ref None
@@ -1847,11 +1898,17 @@ let pp_wrapper_struct name specs =
 
     A lifted declaration is emitted once: whoever emits it empties the field,
     so what is left at the end of the file is exactly what no module's turn
-    came round to claim. *)
+    came round to claim.
+
+    [wr_lifted_specs] are the forward declarations of the functions among them,
+    and go at the top of the file instead, because the callers of a lifted
+    helper are inside the struct it was lifted out of and so precede it
+    wherever its definition lands. *)
 type wrapper_render = {
   wr_name : string;
   wr_defs : Pp.t;
   mutable wr_lifted : Pp.t option;
+  wr_lifted_specs : Pp.t;
 }
 
 (** Main structure renderer with declaration tracking.
@@ -1917,7 +1974,7 @@ let do_struct_with_decl_tracking ~is_header f s =
           let func_sels = List.filter is_func_decl sel in
           let old_decls = !current_structure_decls in
           current_structure_decls := sel;
-          let p_specs, p_defs, p_lifted =
+          let p_specs, p_defs, p_lifted, p_lifted_specs =
             pp_wrapper_module_dual ~is_header ~wrapper_mp:mp name func_sels
           in
           current_structure_decls := old_decls;
@@ -1930,6 +1987,7 @@ let do_struct_with_decl_tracking ~is_header f s =
               wr_name = name;
               wr_defs = p_defs;
               wr_lifted = (if Pp.ismt p_lifted then None else Some p_lifted);
+              wr_lifted_specs = p_lifted_specs;
             } )
       wrapper_names
   in
@@ -2181,7 +2239,16 @@ let do_struct_with_decl_tracking ~is_header f s =
                     order." ) )
       pending_wrapper_decls;
   Hashtbl.clear pending_wrapper_decls;
-  let pass2_lifted = Translation.take_lifted_decls () |> dedup_lifted_decls in
+  let pass2_lifted =
+    Translation.take_lifted_decls ()
+    |> dedup_lifted_decls
+    |> List.map (fun d -> (d, lifted_fun_split d))
+  in
+  (* What to emit in the helper's own place: the split's definition where there
+     was a split, so it states the head its declaration states. *)
+  let pass2_def (d, split) =
+    match split with Some (_, def) -> def | None -> d
+  in
   let pass2_pre_pp, pass2_post_pp =
     if is_header then
       let main_module_name =
@@ -2195,8 +2262,8 @@ let do_struct_with_decl_tracking ~is_header f s =
          each helper resolves, so it is asked while they are rendered. *)
       let rendered_lifted =
         List.map
-          (fun d ->
-            let render () = pp_cpp_decl (empty_env ()) d in
+          (fun entry ->
+            let render () = pp_cpp_decl (empty_env ()) (pass2_def entry) in
             match main_module_name with
             | Some name -> watching_for_reference_to name render
             | None -> (render (), false) )
@@ -2244,10 +2311,38 @@ let do_struct_with_decl_tracking ~is_header f s =
       ignore (Cpp_print.take_forward_struct_decls ());
       mt () )
   in
+  (* Declared ahead of everything that could call them, which is everything:
+     a lifted helper's definition is placed after the struct it came out of,
+     and its callers are that struct's members.  This goes after the concepts
+     because a helper's constraint may name one, and after the struct forward
+     declarations because its parameters may name a struct -- a declaration
+     needs those declared, not complete.  Redeclaring a helper that did land
+     before its uses is legal and costs a line; deciding which those are would
+     cost the property that makes this correct. *)
+  let lifted_fun_specs =
+    if is_header then
+      let parts =
+        List.filter_map
+          (fun w -> if Pp.ismt w.wr_lifted_specs then None else Some w.wr_lifted_specs)
+          wrapper_parts
+        @ List.filter_map
+            (fun (_, split) ->
+              Option.map
+                (fun (spec, _) -> pp_cpp_decl (empty_env ()) spec)
+                split )
+            pass2_lifted
+      in
+      match List.filter (fun x -> not (Pp.ismt x)) parts with
+      | [] -> mt ()
+      | l -> prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+    else
+      mt ()
+  in
   let deferred_lifted = deferred_lifted () in
   v 0
     ( forward_decls
     ++ hoisted_concepts
+    ++ lifted_fun_specs
     ++ p
     ++ pass2_post_pp
     ++ deferred_lifted
