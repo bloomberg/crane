@@ -724,27 +724,28 @@ let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_nam
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-(** Whether [ty] mentions a global that has no C++ name to be written as.
+(** Whether [r] has no C++ name to be written as.
 
     Two ways that happens, and they have to be asked together because both
     produce text no compiler will take.  A global mapped to the empty string --
     what [Crane Extract Skip] records -- vanishes, so a type applied to it
     renders as a bare argument list, [<typename I::PROV>].  A global from a
     module [Crane Extract Skip Module] left out renders as the name it would
-    have had, [IO_axioms::ioE], which nothing in the file introduces.
-
-    Asked before writing a type into a position that has an alternative to
-    writing it. *)
-let has_no_cpp_spelling ty =
+    have had, [IO_axioms::ioE], which nothing in the file introduces. *)
+let ref_has_no_cpp_name r =
   let rec mp_skipped mp =
     is_skip_module mp
     || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
   in
+  Ml_type_util.ref_has_no_spelling r || mp_skipped (modpath_of_r r)
+
+(** Whether [ty] mentions anywhere a global with no C++ name.
+
+    Asked before writing a type into a position that has an alternative to
+    writing it. *)
+let has_no_cpp_spelling ty =
   Minicpp.exists_cpp_type
-    (function
-      | Tglob (r, _, _) ->
-        Ml_type_util.ref_has_no_spelling r || mp_skipped (modpath_of_r r)
-      | _ -> false )
+    (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
     ty
 
 (** Alias templates standing in for custom-mapped type constructors that
@@ -1056,8 +1057,19 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                   (Id.to_string nested_id)
                   (pp_list (pp_rec false) targs) )
     | Tapply (head, args) ->
-      (* A non-dependent alias template: the head names it outright. *)
-      pp_rec false head ++ str "<" ++ pp_list (pp_rec false) args ++ str ">"
+      (* A non-dependent alias template: the head names it outright.
+
+         Unless the head has no name.  A constructor [Crane Extract Skip]
+         removed renders as nothing, and nothing followed by [<args>] is not a
+         template-id with an elided name, it is a syntax error -- and one that
+         then gets wrapped by whatever reads the result, which is how
+         [crane_event_as<<typename I::PROV>>] happened.  A removed constructor
+         is the identity on what it was applied to, so its arguments are the
+         whole of what there is to write. *)
+      ( match head with
+      | Tglob (r, _, _) when ref_has_no_cpp_name r ->
+        pp_list (pp_rec false) args
+      | _ -> pp_rec false head ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tvariant tys ->
       require_header "variant";
       std_angle "variant" (pp_list (pp_rec false) tys)
