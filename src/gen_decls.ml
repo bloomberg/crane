@@ -1851,9 +1851,37 @@ let applied_tvar_arities cty =
   arities
 
 (** Re-declare as template template parameters those entries of [temps] that
-    [cty] applies to arguments; see {!applied_tvar_arities}. *)
-let with_applied_tvars cty temps =
+    [cty] applies to arguments; see {!applied_tvar_arities}.
+
+    [ml_ty], when given, vetoes the promotion for a variable whose ML type does
+    not demand the higher kind ({!Ml_type_util.higher_kinded_ml_tvars}: applied
+    to something erasure left behind, or written where a generated constructor
+    expects a template name).  Being applied is not on its own a reason to be
+    higher-kinded -- when neither holds, the application
+    can be taken back off, which {!deapply_plain_tvars} then does -- and the
+    C++ type read here has not been through the relaxations, so it is not the
+    place to look for the occurrence that would justify the higher kind. *)
+let with_applied_tvars ?ml_ty cty temps =
   let arities = applied_tvar_arities cty in
+  let arities =
+    match ml_ty with
+    | None -> arities
+    | Some ty ->
+      let hk = Ml_type_util.higher_kinded_ml_tvars [ty] in
+      let veto = ref [] in
+      exists_cpp_type
+        (fun t ->
+          ( match t with
+          | Tapply (Tvar (i, name), _) when i > 0 && not (IntSet.mem i hk) ->
+            veto := tvar_id i :: !veto;
+            Option.iter (fun n -> veto := n :: !veto) name
+          | _ -> () );
+          false )
+        cty
+      |> ignore;
+      List.iter (Hashtbl.remove arities) !veto;
+      arities
+  in
   if Hashtbl.length arities = 0 then temps
   else
     List.map
@@ -2207,6 +2235,46 @@ let relax_applied_param temps decl =
     end
   | _ -> (temps, decl)
 
+(** Take the application back off a type variable that was left a plain
+    [typename].
+
+    A variable is declared [template <typename> class] only when the signature
+    has to name it with no argument list ({!with_applied_tvars}).  When it does
+    not, an occurrence like [T1<std::any>] is the application of a plain type
+    to a type -- which does not parse -- and the honest spelling is [T1]: the
+    index is erased, so the family applied at it is the event struct itself and
+    there is nothing for the argument list to say. *)
+let deapply_plain_tvars temps decl =
+  let plain =
+    List.filter_map
+      (fun (tt, id) -> match tt with TTtemplate _ -> None | _ -> Some id)
+      temps
+  in
+  let ft =
+    map_cpp_type (function
+      | Tapply (head, _) when List.exists (fun id -> tvar_is id head) plain ->
+        head
+      | t -> t )
+  in
+  match decl with
+  | Dfun ({df_ret = ret; df_shape = Ddef (params, body); _} as f) ->
+    let rec fe e = Minicpp.map_expr fe fs ft e
+    and fs st = Minicpp.map_stmt fe fs ft st in
+    ( temps,
+      Dfun
+        { f with
+          df_ret = ft ret;
+          df_shape =
+            Ddef (List.map (fun (n, ty) -> (n, ft ty)) params, List.map fs body)
+        } )
+  | Dfun ({df_ret = ret; df_shape = Ddecl params; _} as f) ->
+    ( temps,
+      Dfun
+        { f with
+          df_ret = ft ret;
+          df_shape = Ddecl (List.map (fun (n, ty) -> (n, ft ty)) params) } )
+  | _ -> (temps, decl)
+
 (** Default every template parameter the signature that came out of the
     relaxations no longer mentions.
 
@@ -2332,7 +2400,8 @@ let default_unmentioned_temps temps decl =
       Used for type INDEX tvars that are stripped from the C++ type but needed
       for [any_cast] in function bodies. *)
 let phantom_aware_temps
-    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) cty tvars =
+    ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?ml_ty cty
+    tvars =
   (* The leading phantoms are spelled out at every call site
      ({!Ml_type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
@@ -2346,7 +2415,7 @@ let phantom_aware_temps
       temps
   in
   undefault (explicit_tvar_prefix ~force_required cty)
-  @@ with_applied_tvars cty
+  @@ with_applied_tvars ?ml_ty cty
   @@
   match cty with
   | Tfun (dom, cod) ->
@@ -3558,6 +3627,7 @@ let gen_dfun n b cty ty temps =
       [ relax_applied_return;
         relax_tt_applied_return;
         relax_applied_param;
+        deapply_plain_tvars;
         default_unmentioned_temps ]
   in
   match temps with
@@ -3848,7 +3918,7 @@ let gen_decl_for_pp__inner n b ty =
   let tvars = tvars @ extra_index_tvars in
   let temps =
     phantom_aware_temps ~force_required:index_tvar_set
-      ~also_declared:(Ml_type_util.collect_ml_tvars ty) cty tvars
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
   in
   let result = match cty with
   | Tfun (dom, _) ->
@@ -3912,7 +3982,7 @@ let gen_dfun_def__inner n b ty =
   let tvars = tvars @ extra_index_tvars in
   let temps =
     phantom_aware_temps ~force_required:index_tvar_set
-      ~also_declared:(Ml_type_util.collect_ml_tvars ty) cty tvars
+      ~also_declared:(Ml_type_util.collect_ml_tvars ty) ~ml_ty:ty cty tvars
   in
   (* Count typeclass-typed parameters in the ML domain — these become template
      params inside gen_dfun but aren't reflected in tvars (which comes from the

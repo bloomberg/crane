@@ -701,21 +701,25 @@ let file_scope_type_names : CString.Set.t ref = ref CString.Set.empty
 let is_file_scope_type id =
   CString.Set.mem (Id.to_string id) !file_scope_type_names
 
-(** The type name a declaration introduces, if it introduces one. *)
+(** Record [name] as declared at file scope, if that is where we are.  Called
+    with the name the printer is about to write, not one recomputed from the
+    reference: a struct's spelling goes through several cases and a recomputed
+    name would silently fail to match the one a use site writes. *)
+let record_file_scope_name name =
+  if not (!render_ctx).rc_in_struct then
+    file_scope_type_names :=
+      CString.Set.add (Pp.string_of_ppcmds name) !file_scope_type_names
+
+(** The type name a declaration introduces, for the shapes whose spelling is
+    settled here.  A struct records itself where it is printed. *)
 let rec decl_type_name = function
   | Dtemplate (_, _, inner) -> decl_type_name inner
-  | Dusing u -> Some (Pp.string_of_ppcmds (pp_global Type u.du_name))
-  | Dstruct ds -> Some (String.capitalize_ascii (str_global Type ds.ds_ref))
-  | Dstruct_fwd (_, r) -> Some (String.capitalize_ascii (str_global Type r))
-  | Denum e -> Some (String.capitalize_ascii (str_global Type e.de_ref))
-  | Dnspace (Some r, _) -> Some (String.capitalize_ascii (str_global Type r))
+  | Dusing u -> Some (pp_global Type u.du_name)
+  | Dnspace (Some r, _) ->
+    Some (str (String.capitalize_ascii (str_global Type r)))
   | _ -> None
 
-let record_file_scope_type d =
-  if not (!render_ctx).rc_in_struct then
-    Option.iter
-      (fun n -> file_scope_type_names := CString.Set.add n !file_scope_type_names)
-      (decl_type_name d)
+let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_name d)
 
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
@@ -4416,6 +4420,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       | _ -> pp_global Type id
     in
     register_forward_struct_decl ~name:struct_name ~tparams ~cstr;
+    record_file_scope_name struct_name;
     if (!render_ctx).rc_in_struct then
       add_nested_struct_name (Pp.string_of_ppcmds struct_name) (NSref id);
     let f_s =

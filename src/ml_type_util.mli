@@ -485,6 +485,22 @@ val collect_ml_tvars : Miniml.ml_type -> IntSet.t
     and wherever a call supplies it -- as a bare template name. *)
 val applied_ml_tvar_arities : Miniml.ml_type list -> (int, int) Hashtbl.t
 
+(** The type variables the given types demand be declared
+    [template <typename> class] rather than plain [typename].
+
+    MiniML never names a higher-kinded variable bare -- every occurrence
+    arrives already applied -- so "is it applied" is not the question.  Two
+    things are: the variable is applied to an argument that survived erasure
+    (no single plain [typename] stands for two different real arguments), or it
+    sits in an argument position of a {i generated} type constructor, whose own
+    header declares that position [template <typename> class].
+
+    Neither holds for a family threaded through custom mappings: a custom
+    mapping spells its own parameters, and the ones taking an event family take
+    it at plain [typename], because the index it is applied at is erased.  For
+    those the application can simply be taken back off. *)
+val higher_kinded_ml_tvars : Miniml.ml_type list -> IntSet.t
+
 (** Whether a function type returns a type variable its arguments carry only as
     an inductive's type index ([eval : expr A -> A]).  Such a result cannot be
     a template parameter -- the branches return genuinely different types -- so

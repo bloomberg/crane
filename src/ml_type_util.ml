@@ -1243,6 +1243,61 @@ let applied_ml_tvar_arities tys =
   List.iter scan tys;
   arities
 
+(** The type variables an ML signature genuinely demands be declared
+    [template <typename> class] rather than plain [typename].
+
+    MiniML never names a higher-kinded variable bare: [sum1 E F X] arrives as
+    [sum1 (E ?) (F ?) X], every occurrence already applied.  So "is it applied"
+    cannot be the question, and two things answer it instead.
+
+    - It is applied to an argument that survived erasure.  [hk_map : (A -> B)
+      -> M A -> M B] applies [M] at two different real types, and no single
+      plain [typename] stands for both.
+    - It is an argument of a {b generated} type constructor.  That
+      constructor's own header declares the position [template <typename>
+      class] ({!Gen_decls.hkt_templates}), so whatever is written there has to
+      be a template name.
+
+    Neither holds for an event family threaded through custom mappings.
+    [sum1 => "Sum1"] and [itree => "std::shared_ptr<ITree<%t1>>"] spell their
+    own parameters, and they take a family at plain [typename] because the
+    index it is applied at is erased -- what reaches C++ is the event struct
+    itself.  Reading those occurrences as a demand for a higher kind is what
+    made [E_trigger] take a template template argument no call site could
+    supply.
+
+    This is read off the ML type on purpose.  The converted C++ type at the
+    point the kinds are chosen has not been through the signature relaxations,
+    so the occurrences that would justify the higher kind are not yet in it --
+    see the [hkt-kind-demotion-dead-end] note. *)
+let higher_kinded_ml_tvars tys =
+  let hk = ref IntSet.empty in
+  let demand i = hk := IntSet.add i !hk in
+  let survived_erasure a =
+    match resolve_tmeta a with
+    | Miniml.Tunknown | Miniml.Tdummy _ | Miniml.Tmeta _ -> false
+    | _ -> true
+  in
+  let rec scan ~generated_arg t =
+    match t with
+    | Miniml.Tapp (i, args) ->
+      (* Applied at something erasure did not take away, or written where a
+         generated constructor expects a template name. *)
+      if generated_arg || List.exists survived_erasure args
+      then demand i;
+      List.iter (scan ~generated_arg:false) args
+    | Miniml.Tglob (r, args, _) ->
+      let generated_arg = not (Table.is_custom r) in
+      List.iter (scan ~generated_arg) args
+    | Miniml.Tarr (a, b) ->
+      scan ~generated_arg:false a;
+      scan ~generated_arg:false b
+    | Miniml.Tmeta {contents = Some t} -> scan ~generated_arg t
+    | _ -> ()
+  in
+  List.iter (scan ~generated_arg:false) tys;
+  !hk
+
 (** Whether a function type returns a type variable that its arguments carry
     only as the type index of an inductive with several constructors.
 
