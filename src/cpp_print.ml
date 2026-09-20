@@ -741,12 +741,27 @@ let ref_has_no_cpp_name r =
 
 (** Whether [ty] mentions anywhere a global with no C++ name.
 
+    Asked of the type {e as the printer will write it}, not as it stands: an
+    application of a nameless constructor comes out as its arguments, so the
+    constructor having no name of its own costs the type nothing, and asking
+    before stripping it would condemn a type that prints perfectly well.  That
+    is not hypothetical -- it is every reified [Vis] whose event type is a
+    projection through a dictionary, and answering "no name" there gives up a
+    spelling the generator had.
+
     Asked before writing a type into a position that has an alternative to
     writing it. *)
 let has_no_cpp_spelling ty =
+  let as_printed =
+    Minicpp.map_cpp_type
+      (function
+        | Tapply (Tglob (r, _, _), [arg]) when ref_has_no_cpp_name r -> arg
+        | t -> t )
+      ty
+  in
   Minicpp.exists_cpp_type
     (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
-    ty
+    as_printed
 
 (** Alias templates standing in for custom-mapped type constructors that
     cannot be named by cutting their application back to a head.
