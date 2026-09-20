@@ -13,6 +13,7 @@
 
 struct Nat;
 template <typename A> struct List;
+template <typename T1> Nat _foo_aux(const T1 a, const Nat n);
 
 struct Nat {
   // TYPES

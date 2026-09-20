@@ -375,12 +375,6 @@ val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
     [reset_cpp_state]. *)
 val global_inductive_names : (string, Names.ModPath.t) Hashtbl.t
 
-(** Whether a use of [r] is spelled with a wrapper struct's name in front of
-    it, and so is name lookup into a struct that must be complete where the use
-    appears.  An inductive outside a wrapper module is spelled bare and needs
-    only to have been declared. *)
-val is_wrapper_qualified : Names.GlobRef.t -> bool
-
 (** Qualify a C++ name with its wrapper struct when the reference's module path
     is a wrapper module. [VarRef] references (lifted declarations) are never
     qualified, and already-qualified names are only rewritten for

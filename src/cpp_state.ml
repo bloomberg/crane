@@ -887,24 +887,6 @@ let is_shadowed_global_name name r =
 let global_inductive_names : (string, ModPath.t) Hashtbl.t =
   owned_table "global_inductive_names"
 
-(** Whether a use of [r] is spelled with a wrapper struct's name in front of
-    it.
-
-    The qualifier is a struct's, so naming [r] is name lookup {e into} that
-    struct and needs it complete -- which is the one thing a position above the
-    structs cannot supply, a forward declaration being all that is available
-    there.  An inductive that is not in a wrapper module is spelled bare
-    however deeply it nests in the IR, and needs only to have been declared.
-
-    The two exceptions are {!wrapper_qualify_name}'s own: a lifted declaration
-    is a [VarRef] and has no module, and something lifted to namespace scope is
-    no longer in the struct whatever its module path says. *)
-let is_wrapper_qualified (r : GlobRef.t) : bool =
-  match r with
-  | GlobRef.VarRef _ -> false
-  | _ when Common.is_namespace_scope_ref r -> false
-  | _ -> Hashtbl.mem wrapper_module_table (modpath_of_r r)
-
 (** Check if a GlobRef belongs to a wrapper module and return the qualified
     name. If the reference's module path matches a wrapper module, prepend the
     struct name. Only qualify ConstRef globals (actual Rocq constants from

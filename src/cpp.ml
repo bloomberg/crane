@@ -654,36 +654,48 @@ let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
     position above the structs is legal for such a signature and the honest
     answer is to leave it where it is.
 
-    Which of the two a type is cannot be read off its IR node.  [Nat] and
-    [List::list] are both [Tnamespace] -- the node means "an inductive's own
-    scope", not "inside a module struct" -- and what separates them is whether
-    the inductive's module is emitted as a wrapper struct, so that the
-    qualifier is actually written.  That is a layout question, and
-    {!Cpp_state.is_wrapper_qualified} is the printer's own answer to it; asking
-    anything else here would be a second opinion about what the printer will
-    write.
+    Decided by reading the rendered declaration, because the question is about
+    the text and nothing else can answer it without disagreeing.  The IR node
+    cannot: [Nat] and [List::list] are both [Tnamespace], which means "an
+    inductive's own scope", not "inside a module struct".  Nor can the tables
+    behind the printer, taken one at a time -- whether a qualifier is written
+    is settled by a chain of them (is the module a wrapper, is the type
+    nonetheless emitted at global scope, is it an eponymous record, an enum, a
+    local inductive), and any single one of them is a second opinion.  Two
+    such opinions have already been wrong here.
+
+    [std::] is the one qualifier that needs nothing complete: it names into a
+    namespace, not a struct, and the standard library is included above
+    everything.  Every other qualifier is refused, including a dependent
+    [M::t], which needs no completeness but costs only a missed hoist to
+    refuse.
 
     This is the one place a declaration is not free.  A helper declared
-    needlessly costs a line, but a helper declared needlessly {e and} qualifying
-    into a struct would drag the whole block below that struct -- past the uses
-    it exists to precede -- so what it costs is the position, for every other
-    helper in the block. *)
+    needlessly costs a line, but a helper declared needlessly {e and}
+    qualifying into a struct would drag the whole block below that struct --
+    past the uses it exists to precede -- so what it costs is the position, for
+    every other helper in the block. *)
+let spec_names_into_a_struct (rendered : string) : bool =
+  let n = String.length rendered in
+  let is_ident c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let rec scan i =
+    if i + 1 >= n then false
+    else if rendered.[i] = ':' && rendered.[i + 1] = ':' then
+      let stop = ref i in
+      while !stop > 0 && is_ident rendered.[!stop - 1] do decr stop done;
+      let qualifier = String.sub rendered !stop (i - !stop) in
+      if String.equal qualifier "std" then scan (i + 2) else true
+    else scan (i + 1)
+  in
+  scan 0
+
 let spec_is_hoistable (spec : cpp_decl) : bool =
-  let names_into_a_struct ty =
-    exists_cpp_type
-      (function
-        | Tqualified _ -> true
-        | Tnamespace (g, _) -> Cpp_state.is_wrapper_qualified g
-        | _ -> false )
-      ty
-  in
-  let rec sig_types = function
-    | Dtemplate (_, _, inner) -> sig_types inner
-    | Dfun {df_shape = Ddecl params; df_ret; _} ->
-      df_ret :: List.map snd params
-    | _ -> []
-  in
-  not (List.exists names_into_a_struct (sig_types spec))
+  not
+    (spec_names_into_a_struct
+       (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
 
 (** Report what a lifted helper met at the drain that consumed it, under
     [CRANE_DBG_LIFTED].
@@ -692,7 +704,11 @@ let spec_is_hoistable (spec : cpp_decl) : bool =
     one that sees it -- so which site handled a helper, and which of that
     site's conditions it failed, is not recoverable from the output.  A helper
     whose declaration is missing and a helper that was never lifted print the
-    same thing, which is nothing. *)
+    same thing, which is nothing.
+
+    The rendered declaration is printed with it, because that text is what
+    {!spec_is_hoistable} reads: a rejection is only interpretable next to the
+    qualifier that caused it. *)
 let dbg_lifted =
   let on = lazy (Sys.getenv_opt "CRANE_DBG_LIFTED" <> None) in
   fun ~site ?(extra = "") (d : cpp_decl) ->
@@ -705,8 +721,11 @@ let dbg_lifted =
       let split =
         match lifted_fun_split d with
         | Some (spec, _) ->
-          Printf.sprintf "splits=yes hoistable=%b"
-            (spec_is_hoistable spec)
+          let rendered =
+            Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)
+          in
+          Printf.sprintf "splits=yes hoistable=%b spec=%S"
+            (spec_is_hoistable spec) rendered
         | None -> "splits=no"
       in
       Feedback.msg_notice
