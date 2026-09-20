@@ -14,7 +14,7 @@ Nat EventMatchUntyped::weight(const std::shared_ptr<ITree<Nat>> &t) {
     return Nat::o();
   } else {
     const auto &_itf = *std::get_if<typename ITree<Nat>::Vis>(&_cs);
-    crane_event e{_itf.effect};
+    auto e = crane_event_as<EventMatchUntyped::IOE>(_itf.effect);
     auto _x = _itf.cont;
     if (std::holds_alternative<typename EventMatchUntyped::IOE::Rd>(e.v())) {
       return Nat::s(Nat::o());

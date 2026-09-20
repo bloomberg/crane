@@ -39,7 +39,7 @@ Crane Extract Inductive itreeF =>
   [ "itree_ret(%a0)"
     "itree_tau(%a0)"
     "itree_vis(%a0, %a1)" ]
-  "if (std::holds_alternative<typename ITree<%t1>::Ret>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Ret>(&%scrut); auto %b0a0 = _itf.value; %br0 } else if (std::holds_alternative<typename ITree<%t1>::Tau>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Tau>(&%scrut); auto %b1a0 = _itf.next; %br1 } else { const auto& _itf = *std::get_if<typename ITree<%t1>::Vis>(&%scrut); crane_event %b2a0{_itf.effect}; auto %b2a1 = _itf.cont; %br2 }"
+  "if (std::holds_alternative<typename ITree<%t1>::Ret>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Ret>(&%scrut); auto %b0a0 = _itf.value; %br0 } else if (std::holds_alternative<typename ITree<%t1>::Tau>(%scrut)) { const auto& _itf = *std::get_if<typename ITree<%t1>::Tau>(&%scrut); auto %b1a0 = _itf.next; %br1 } else { const auto& _itf = *std::get_if<typename ITree<%t1>::Vis>(&%scrut); auto %b2a0 = crane_event_as<%b2t0>(_itf.effect); auto %b2a1 = _itf.cont; %br2 }"
   From "crane_itree.h".
 
 (* The ITree library defines Ret/Tau/Vis as Notations. Shadow them with

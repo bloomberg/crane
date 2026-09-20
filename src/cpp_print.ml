@@ -724,6 +724,22 @@ let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_nam
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
+(** Whether [ty] names a global from a module extraction was told to leave out.
+
+    [Crane Extract Skip Module] removes a module's declarations, so a type from
+    inside one has no C++ spelling at all: written out it reads
+    [IO_axioms::ioE], an identifier nothing in the file introduces.  Asked
+    before writing a type into a position that has an alternative to writing
+    it. *)
+let mentions_unemitted_module ty =
+  let rec mp_skipped mp =
+    is_skip_module mp
+    || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
+  in
+  Minicpp.exists_cpp_type
+    (function Tglob (r, _, _) -> mp_skipped (modpath_of_r r) | _ -> false)
+    ty
+
 (** Alias templates standing in for custom-mapped type constructors that
     cannot be named by cutting their application back to a head.
 
@@ -3357,7 +3373,17 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
       ( try
           let ids, _, _ = List.nth cases i in
           let _, ty = List.nth ids j in
-          pp_cpp_type false vl ty
+          (* The generator's belief is only worth printing if this file can
+             spell it.  A type from a module [Crane Extract Skip Module] left
+             out has no declaration to name -- the binder would read
+             [IO_axioms::ioE], an identifier nothing introduces -- so the
+             honest answer is that the type is not known here, which is what
+             [std::any] says.  A template reading this placeholder can then
+             treat the two cases alike. *)
+          if mentions_unemitted_module ty then (
+            require_header "any";
+            str "std::any" )
+          else pp_cpp_type false vl ty
         with Failure _ ->
           CErrors.anomaly
             Pp.(

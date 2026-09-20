@@ -19,7 +19,7 @@ ItreeInvariants::count_taus(uint64_t fuel,
       return (count_taus(fuel_, t_) + 1);
     } else {
       const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
-      crane_event _x{_itf.effect};
+      auto _x = crane_event_as<std::any>(_itf.effect);
       auto _x0 = _itf.cont;
       return UINT64_C(0);
     }

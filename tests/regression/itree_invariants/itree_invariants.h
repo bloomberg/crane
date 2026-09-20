@@ -1,6 +1,7 @@
 #ifndef INCLUDED_ITREE_INVARIANTS
 #define INCLUDED_ITREE_INVARIANTS
 
+#include <any>
 #include <crane_itree.h>
 
 struct ItreeInvariants {

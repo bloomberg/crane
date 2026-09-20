@@ -236,7 +236,7 @@ Interp::interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM, F1 &&h0,
               Sum<std::shared_ptr<ITree<T3>>, std::any>::inl(t0));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
-          crane_event e{_itf.effect};
+          auto e = crane_event_as<std::any>(_itf.effect);
           auto k = _itf.cont;
           return Functor0::template fmap<_tcI1, std::any,
                                          Sum<std::shared_ptr<ITree<T3>>, T3>>(

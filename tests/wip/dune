@@ -174,14 +174,3 @@
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
 
-
-(subdir event_match_untyped
- (rule
-  (targets event_match_untyped.t.exe)
-  (deps EventMatchUntyped.vo event_match_untyped.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} event_match_untyped.t.exe event_match_untyped.cpp event_match_untyped.t.cpp)))
- (rule
-  (alias runtest)
-  (deps event_match_untyped.t.exe)
-  (action (run ./event_match_untyped.t.exe))))

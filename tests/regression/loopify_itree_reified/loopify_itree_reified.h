@@ -2,6 +2,7 @@
 #define INCLUDED_LOOPIFY_ITREE_REIFIED
 
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -33,7 +34,7 @@ struct LoopifyItreeReified {
       return itree_tau(rec(t_));
     } else {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
-      crane_event e{_itf.effect};
+      auto e = crane_event_as<std::any>(_itf.effect);
       auto k = _itf.cont;
       return itree_vis(e, [=](const auto &x) mutable { return rec(k(x)); });
     }

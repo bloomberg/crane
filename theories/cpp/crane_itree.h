@@ -396,6 +396,26 @@ struct crane_event {
     operator E() const { return crane_any_cast<E>(effect()); }
 };
 
+// The event of a [Vis] node, bound at whatever the generator knows about it.
+//
+// Deferring the recovery to the use site is right when the binding site has
+// nothing to say, and wrong when it does: a match on the event in the branch
+// that binds it never reaches a use that names a type, so it asks a
+// [crane_event] for the variant accessor an event inductive has and a thunk
+// does not.  Where the generator does know the type, binding at it is what
+// makes that match compile.
+//
+// [std::any] is the generator saying it does not know -- either the type was
+// erased or it names something this file cannot spell -- and there the old
+// deferral is exactly what is wanted, so it is what comes back.
+template <typename E>
+auto crane_event_as(std::function<std::any()> effect) {
+    if constexpr (std::is_same_v<E, std::any>)
+        return crane_event{std::move(effect)};
+    else
+        return crane_any_cast<E>(effect());
+}
+
 // Trigger with template argument deduction.  An event given an effect
 // spelling is already the thunk [ITree::vis] wants; one that is plain data is
 // reified as the thunk that yields it, for a handler to interpret later.
