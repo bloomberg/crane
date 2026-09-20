@@ -713,6 +713,7 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tdecltype _ | Tinstance _ | Tpromoted _ | Tvoid | Tunresolved
   | Tany | Topaque | Tauto -> ty
 
+
 (** [exists_cpp_type p ty] holds when [p] holds of [ty] itself or of any type
     nested inside it.
 
@@ -838,55 +839,26 @@ let tvar_name = function
   | Tvar (i, None) when i > 0 -> Some (tvar_id i)
   | _ -> None
 
+(** Every type variable [ty] names.
+
+    Written as a traversal that never succeeds, so that {!exists_cpp_type}
+    stays the one place the shape of a [cpp_type] is walked. *)
+let tvar_names ty =
+  let acc = ref Id.Set.empty in
+  ignore
+    (exists_cpp_type
+       (fun t ->
+         ( match tvar_name t with
+         | Some n -> acc := Id.Set.add n !acc
+         | None -> () );
+         false )
+       ty );
+  !acc
+
 (** Whether any of [tys] names the type variable [x], and so lets C++ deduce
     it.  A template parameter the call site cannot supply and the compiler
     cannot infer is worse than the erasure it replaced. *)
 let deduces_tparam x tys = List.exists (tvar_named x) tys
-
-let lambda ?(tparams = []) params ret body ~by_value =
-  (* A lambda's template parameter has nothing but its own parameters to be
-     deduced from, so one no parameter names could never be instantiated.
-     Dropping it here is what makes that state unreachable: no caller has to
-     remember the rule. *)
-  let tparams =
-    List.filter (fun x -> deduces_tparam x (List.map fst params)) tparams
-  in
-  { cl_params = {rev = List.rev params};
-    cl_tparams = tparams;
-    cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
-    cl_body = body;
-    cl_by_value = by_value }
-
-(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
-    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
-
-    A trailing return type is a by-value return, so a top-level [const] on it
-    says nothing and [-Wignored-qualifiers] rejects it.  Callers routinely
-    reach for the type of whatever the lambda stands in for -- a [const]
-    initialiser's own type, say -- so the qualifier is dropped here rather
-    than at each of them.  A [const] under a reference is a different claim
-    and is left alone.
-
-    A nullary lambda whose body only throws produces no value, so it is
-    {!CPPabort} instead: the same never-returning expression, and the one
-    spelling of it.  An un-annotated such lambda would otherwise deduce
-    [void] and could not stand where a value is expected; [Tany] is what an
-    erased slot asks for, and is the only thing left to say when the caller
-    named no type. *)
-let mk_lambda ?tparams params ret body ~by_value =
-  let l = lambda ?tparams params ret body ~by_value in
-  match (params, body) with
-  | [], [Sthrow msg] ->
-    CPPabort (msg, match l.cl_ret with Some t -> t | None -> Tany)
-  | _ -> CPPlambda l
-
-(** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
-    immediately, capturing by reference.
-
-    A body that does nothing but throw yields no value, so the lambda would
-    deduce [void] and could not stand where a value is expected; it reduces to
-    {!CPPabort}, which carries [ret] as the type it yields. *)
-let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 
 (** The arguments of a {!CPPfun_call}, in source order. *)
 let call_args (args : 'a revd) = List.rev args.rev
@@ -1493,25 +1465,94 @@ let rec map_field
   in
   (f', vis, tag)
 
-(** [monomorphise_lambda l] drops [l]'s own template parameters and spells
-    every use of them [std::any].
+(** [drop_tparams ids l] removes [ids] from [l]'s template parameters and
+    spells every use of them [std::any].
+
+    Removing the declaration is only half of it.  The variable is still named
+    by the trailing return type and by the body, and a name nothing in scope
+    declares does not compile -- the enclosing function's head does not
+    declare it either, because it was the lambda's own.  Erasing the uses is
+    what makes the two halves agree, and doing both here is what keeps a
+    caller from having to remember that they are two. *)
+let drop_tparams ids l =
+  match ids with
+  | [] -> l
+  | ids ->
+    (* Matched with {!tvar_is} rather than on [Tvar (_, Some n)]: a variable
+       whose head was never resolved to its parameter name still prints as
+       [T2], and erasing only the named spelling leaves the other one behind
+       as a free name. *)
+    let ft =
+      map_cpp_type (fun t ->
+        if List.exists (fun id -> tvar_is id t) ids then Tany else t )
+    in
+    let rec fs s = map_stmt fe fs ft s
+    and fe e = map_expr fe fs ft e in
+    let kept =
+      List.filter (fun x -> not (List.exists (Id.equal x) ids)) l.cl_tparams
+    in
+    {(map_lambda fs ft l) with cl_tparams = kept}
+
+(** [monomorphise_lambda l] drops all of [l]'s own template parameters.
 
     A polymorphic function object stands where the slot deduces its type.  A
     slot that writes its own signature -- a [std::function<Nat(std::any)>]
     field, say -- has already settled what the lambda is, and a lambda with a
     [template <typename>] of its own does not convert to it. *)
-let monomorphise_lambda l =
-  match l.cl_tparams with
-  | [] -> l
-  | ids ->
-    let ft =
-      map_cpp_type (function
-        | Tvar (_, Some n) when List.exists (Id.equal n) ids -> Tany
-        | t -> t )
-    in
-    let rec fs s = map_stmt fe fs ft s
-    and fe e = map_expr fe fs ft e in
-    {(map_lambda fs ft l) with cl_tparams = []}
+let monomorphise_lambda l = drop_tparams l.cl_tparams l
+
+let lambda ?(tparams = []) params ret body ~by_value =
+  let l =
+    { cl_params = {rev = List.rev params};
+      cl_tparams = tparams;
+      cl_ret = (match ret with Some (Tconst t) -> Some t | r -> r);
+      cl_body = body;
+      cl_by_value = by_value }
+  in
+  (* A lambda's template parameter has nothing but its own parameters to be
+     deduced from, so one no parameter names could never be instantiated.
+     Dropping it here is what makes that state unreachable: no caller has to
+     remember the rule.  It goes out through {!drop_tparams} rather than by
+     filtering the list, because the variable no parameter names is routinely
+     the one the return type does -- a handler eta-expanded at an index that
+     erasure took out of its argument -- and a return type still naming a
+     variable the head no longer declares is the same bug one level in. *)
+  drop_tparams
+    (List.filter
+       (fun x -> not (deduces_tparam x (List.map fst params)))
+       tparams )
+    l
+
+(** [mk_lambda params ret body ~by_value] is a lambda whose [params] are given
+    in {e source} order.  [by_value] selects a [\[=\]] capture over [\[&\]].
+
+    A trailing return type is a by-value return, so a top-level [const] on it
+    says nothing and [-Wignored-qualifiers] rejects it.  Callers routinely
+    reach for the type of whatever the lambda stands in for -- a [const]
+    initialiser's own type, say -- so the qualifier is dropped here rather
+    than at each of them.  A [const] under a reference is a different claim
+    and is left alone.
+
+    A nullary lambda whose body only throws produces no value, so it is
+    {!CPPabort} instead: the same never-returning expression, and the one
+    spelling of it.  An un-annotated such lambda would otherwise deduce
+    [void] and could not stand where a value is expected; [Tany] is what an
+    erased slot asks for, and is the only thing left to say when the caller
+    named no type. *)
+let mk_lambda ?tparams params ret body ~by_value =
+  let l = lambda ?tparams params ret body ~by_value in
+  match (params, body) with
+  | [], [Sthrow msg] ->
+    CPPabort (msg, match l.cl_ret with Some t -> t | None -> Tany)
+  | _ -> CPPlambda l
+
+(** [mk_iife ret body] evaluates [body] in place: a nullary lambda, invoked
+    immediately, capturing by reference.
+
+    A body that does nothing but throw yields no value, so the lambda would
+    deduce [void] and could not stand where a value is expected; it reduces to
+    {!CPPabort}, which carries [ret] as the type it yields. *)
+let mk_iife ret body = mk_call (mk_lambda [] ret body ~by_value:false) []
 
 (** [erased_lambda l ~params ~ret ~body] is [l] rewritten to take [params] and
     return [ret], with [body] doing whatever casting back the erasure of its

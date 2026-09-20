@@ -7,8 +7,8 @@
      []<typename _T2>(const LocalE<_T2>& a0) -> decltype(auto) {
        return handle_local_debug<_T2, ...>(a0); }
 
-   Actual: it is emitted monomorphic, wrapped in an IIFE, and its return type
-   names T2, which is not a template parameter of anything in scope:
+   Actual: it was emitted monomorphic, wrapped in an IIFE, and its return type
+   named T2, which is not a template parameter of anything in scope:
 
      template <Params _tcI0, typename T1>
      Monads::template stateT<Big, std::shared_ptr, T1> fused_local(LocalE e) {
@@ -29,6 +29,26 @@
    nonsense. That face is filed as eta_handler_event_as_template. Both faces
    are the same defect: an eta-expanded handler quantifies an index C++ cannot
    deduce, and neither the lambda nor its consumer says so.
+
+   The free name is now gone: eta-expansion binds the index it invents, as a
+   template parameter of the lambda it is building. What is left is the half
+   that binding exposes. LocalE is an enum -- erasure took the index out of
+   the parameter -- so no argument deduces it, and a template parameter
+   nothing can supply is worse than the erasure it replaced: the lambda comes
+   out returning stateT<lenv, itree_tc, std::any>, which is honest, and which
+   handle_local_stack cannot convert back to its declared T2.
+
+   Deducing it is not on: the enum carries nothing. The index has to be
+   supplied, by the one place that knows it -- the consumer, whose own return
+   type is stateT<lenv, itree_tc, T2> -- as h.template operator()<T2>(e). No
+   machinery for that exists yet; the rank-2 path at translation.ml:5630
+   drops an undeducible carrier for exactly the same reason, so this shape is
+   outside what either path handles.
+
+   The sibling shape does work, and is the one Vellvm is made of: where the
+   event type still carries the index (memM<T2> rather than a bare enum), the
+   lambda's parameter deduces it, the template parameter survives, and no
+   consumer change is needed.
 
    Reduced from Vellvm's Semantics/InterpretationStack.v:60-90, where
    fused_local, fused_intrinsic, fused_memory and the OOME/UBE cases of the

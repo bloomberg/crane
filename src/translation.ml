@@ -9878,6 +9878,32 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             else
               (Some cod, [Sreturn (Some call)])
           in
+          (* A type variable the eta-lambda's own signature names and the
+             enclosing declaration's head does not is the index the natural
+             transformation quantified over.  Eta-expansion is what introduced
+             it, so eta-expansion is what has to bind it: written nowhere it
+             is a free name, which is how [handle_local_debug]'s index reached
+             C++ as a bare [T2] under a head declaring only [T1].
+
+             Binding it is all that is decided here.  Whether it survives as a
+             [template <typename>] of the lambda or is erased away is
+             {!Minicpp.lambda}'s call, and it turns on whether a parameter
+             deduces it -- which is exactly the difference between an index
+             the event type still carries ([memM<T2>]) and one erasure took
+             out of it (a [LocalE] that is a plain enum). *)
+          let eta_tparams =
+            let named =
+              List.fold_left
+                (fun acc t -> Id.Set.union acc (Minicpp.tvar_names t))
+                Id.Set.empty
+                (cod :: List.map fst eta_args)
+            in
+            Id.Set.elements
+              (List.fold_left
+                 (fun acc x -> Id.Set.remove x acc)
+                 named
+                 (!tctx).current_type_vars )
+          in
           (* A use site expecting fewer parameters than the callee takes wants
              a curried closure: the arrows past its arity belong to the
              element type it is generic in, not to the callable itself. *)
@@ -9888,9 +9914,14 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             let outer = List.filteri (fun i _ -> i < n) eta_args in
             let inner = List.filteri (fun i _ -> i >= n) eta_args in
             mk_lambda outer None
-              [Sreturn (Some (mk_lambda inner ret_ty body ~by_value:true))]
+              [ Sreturn
+                  (Some
+                     (mk_lambda ~tparams:eta_tparams inner ret_ty body
+                        ~by_value:true ) ) ]
               ~by_value:true
-          | _ -> mk_lambda eta_args ret_ty body ~by_value:(not eta_keep_moves) )
+          | _ ->
+            mk_lambda ~tparams:eta_tparams eta_args ret_ty body
+              ~by_value:(not eta_keep_moves) )
       | _ ->
         if id_is_typeclass_instance && args = [] then
           cglob

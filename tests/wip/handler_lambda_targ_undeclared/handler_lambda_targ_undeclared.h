@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -135,7 +136,8 @@ template <Params _tcI0, typename T1>
 Monads::template stateT<Big, itree_tc, T1> fused_local(LocalE e) {
   return on_ls<LocalE, T1>(handle_local_stack<LocalE, T1>(
       []() {
-        return [](LocalE _x0) -> Monads::template stateT<lenv, itree_tc, T2> {
+        return [](LocalE _x0)
+                   -> Monads::template stateT<lenv, itree_tc, std::any> {
           return handle_local_debug<_tcI0, LocalE>(_x0);
         };
       }(),

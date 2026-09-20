@@ -874,6 +874,9 @@ val tvar_named : Names.Id.t -> cpp_type -> bool
 (** [tvar_name ty] is the name [ty] goes by if it is a type variable. *)
 val tvar_name : cpp_type -> Names.Id.t option
 
+(** [tvar_names ty] is every type variable [ty] names. *)
+val tvar_names : cpp_type -> Names.Id.Set.t
+
 (** [deduces_tparam x tys] is whether any of [tys] names the type variable
     [x], and so lets C++ deduce it from an argument. *)
 val deduces_tparam : Names.Id.t -> cpp_type list -> bool
