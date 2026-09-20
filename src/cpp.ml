@@ -623,6 +623,64 @@ let dedup_lifted_decls ds =
       | None -> true )
     ds
 
+(** [d] split into the declaration to emit ahead of its callers and the
+    definition to emit in its place, where [d] defines a namespace-scope
+    function.  [None] for anything else.
+
+    {!Gen_decls.decl_spec_and_def} answers for any declaration by returning it
+    twice, which is right for a caller meaning "make this a declaration if it
+    is not one" and wrong for one asking "is there a declaration to emit here"
+    -- a struct would come back whole and be defined a second time.  So the
+    shape is asked first.
+
+    The definition comes back rather than being reused as it arrived because
+    the split may settle the template head, and the half that is emitted here
+    has to state the same head as the half emitted at the top of the file. *)
+let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
+  let rec defines_fun = function
+    | Dfun {df_shape = Ddef _; _} -> true
+    | Dtemplate (_, _, inner) -> defines_fun inner
+    | _ -> false
+  in
+  if defines_fun d then Some (decl_spec_and_def d) else None
+
+(** Whether [spec] may be emitted at the top of the file, above every
+    definition in it.
+
+    A declaration needs the types in its signature {e declared}, not complete,
+    which is what lets one naming [Nat] precede [Nat]'s own definition.  Naming
+    [List::list] is a different act: it is name lookup {e into} [List], and
+    that needs [List] complete.  A forward declaration cannot supply it, so no
+    position above the structs is legal for such a signature and the honest
+    answer is to leave it where it is.
+
+    This is the one place a declaration is not free.  A helper declared
+    needlessly costs a line, but a helper declared needlessly {e and} qualifying
+    into a struct would drag the whole block below that struct -- past the uses
+    it exists to precede -- so what it costs is the position, for every other
+    helper in the block. *)
+let spec_is_hoistable (spec : cpp_decl) : bool =
+  let names_into_a_struct ty =
+    exists_cpp_type
+      (function Tqualified _ | Tnamespace _ -> true | _ -> false)
+      ty
+  in
+  let rec sig_types = function
+    | Dtemplate (_, _, inner) -> sig_types inner
+    | Dfun {df_shape = Ddecl params; df_ret; _} ->
+      df_ret :: List.map snd params
+    | _ -> []
+  in
+  not (List.exists names_into_a_struct (sig_types spec))
+
+(** The declarations of helpers lifted out of a declaration that is not a
+    wrapper module's -- an inductive's own, whose helpers {!pp_structure_elem}
+    emits directly after the struct closes, and so after the methods that call
+    them.  They are due at the top of the file like every other lifted helper's,
+    but the only thing in scope where they are produced is a [Pp.t] being
+    assembled inline, so they are left here for the file to collect. *)
+let pending_lifted_specs : Pp.t list ref = ref []
+
 (** Lifted helpers already emitted as members of the struct being rendered. *)
 let emitted_member_lifted : (Id.t, unit) Hashtbl.t = Hashtbl.create 16
 
@@ -664,6 +722,29 @@ let rec pp_structure_elem ~is_header f = function
         in
         List.fold_left
           (fun acc d' ->
+            (* Emitted after the struct this was lifted out of, so after the
+               methods that call it.  The definition stays where it is and the
+               declaration is left for the file to put at the top -- the same
+               repair as for a wrapper module's lifted helpers, on the path
+               that produces them one at a time into a [Pp.t]. *)
+            let d' =
+              match lifted_fun_split d' with
+              (* Only at namespace scope.  A struct is a complete-class
+                 context, so a method may call a member declared after it and
+                 a member has no forward reference to repair -- this pass has
+                 nothing to do there, whatever would be legal.
+
+                 Legality says the same thing the one time it is asked: a
+                 member's signature resolves against the struct, a nested [t]
+                 or a sibling type, and hoisting the declaration to file scope
+                 takes those names out of scope with it. *)
+              | Some (spec, def) when not (!render_ctx).rc_in_struct ->
+                if spec_is_hoistable spec then
+                  pending_lifted_specs :=
+                    pp_cpp_decl (empty_env ()) spec :: !pending_lifted_specs;
+                def
+              | _ -> d'
+            in
             let pp = pp_cpp_decl (empty_env ()) d' in
             if Pp.ismt pp then acc
             else if Pp.ismt acc then pp
@@ -1574,27 +1655,6 @@ let rec prlist_sep_nonempty sep f = function
       let boundary = if starts_with_doc_comment r then fnl () else sep () in
       e ++ boundary ++ r
 
-(** [d] split into the declaration to emit ahead of its callers and the
-    definition to emit in its place, where [d] defines a namespace-scope
-    function.  [None] for anything else.
-
-    {!Gen_decls.decl_spec_and_def} answers for any declaration by returning it
-    twice, which is right for a caller meaning "make this a declaration if it
-    is not one" and wrong for one asking "is there a declaration to emit here"
-    -- a struct would come back whole and be defined a second time.  So the
-    shape is asked first.
-
-    The definition comes back rather than being reused as it arrived because
-    the split may settle the template head, and the half that is emitted here
-    has to state the same head as the half emitted at the top of the file. *)
-let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
-  let rec defines_fun = function
-    | Dfun {df_shape = Ddef _; _} -> true
-    | Dtemplate (_, _, inner) -> defines_fun inner
-    | _ -> false
-  in
-  if defines_fun d then Some (decl_spec_and_def d) else None
-
 (** Process a wrapper module in dual-pass mode (header vs implementation).
 
     PASS 1 (is_header=true): Emit forward declarations (specs) for functions.
@@ -1769,7 +1829,12 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
       prlist_sep_nonempty
         cut2
         (fun d -> pp_cpp_decl (empty_env ()) d)
-        (List.filter_map (fun (_, s) -> Option.map fst s) lifted_split)
+        (List.filter_map
+           (fun (_, s) ->
+             match s with
+             | Some (spec, _) when spec_is_hoistable spec -> Some spec
+             | _ -> None )
+           lifted_split )
     else
       mt ()
   in
@@ -2327,10 +2392,14 @@ let do_struct_with_decl_tracking ~is_header f s =
           wrapper_parts
         @ List.filter_map
             (fun (_, split) ->
-              Option.map
-                (fun (spec, _) -> pp_cpp_decl (empty_env ()) spec)
-                split )
+              match split with
+              | Some (spec, _) when spec_is_hoistable spec ->
+                Some (pp_cpp_decl (empty_env ()) spec)
+              | _ -> None )
             pass2_lifted
+        @ (let pending = List.rev !pending_lifted_specs in
+           pending_lifted_specs := [];
+           pending)
       in
       match List.filter (fun x -> not (Pp.ismt x)) parts with
       | [] -> mt ()
