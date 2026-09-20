@@ -1,0 +1,40 @@
+#include "hk_instance_body_targ_undeclared.h"
+
+List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
+                             const List<std::any> &x1_) {
+  return x1_.template map<std::any>(std::move(x0_));
+}
+
+Nat HkInstanceBodyTargUndeclared::bump(Nat n) { return Nat::s(std::move(n)); }
+
+std::optional<List<Nat>>
+HkInstanceBodyTargUndeclared::on_option(const std::optional<List<Nat>> &o) {
+  return tfmap(
+      []() {
+        return [](std::function<std::any(std::any)> _x0,
+                  std::optional<std::any> _x1) -> std::optional<std::any> {
+          return TFunctor_option(
+              [](auto &&_ec0, List<std::any> _ec1) {
+                return TFunctor_list(_ec0, _ec1);
+              },
+              _x0, _x1);
+        };
+      }(),
+      bump, o);
+}
+
+List<List<Nat>>
+HkInstanceBodyTargUndeclared::on_list(const List<List<Nat>> &l) {
+  return tfmap(
+      []() {
+        return [](std::function<std::any(std::any)> _x0,
+                  List<std::any> _x1) -> List<std::any> {
+          return TFunctor_list_(
+              [](auto &&_ec0, List<std::any> _ec1) {
+                return TFunctor_list(_ec0, _ec1);
+              },
+              _x0, _x1);
+        };
+      }(),
+      bump, l);
+}
