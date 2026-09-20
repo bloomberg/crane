@@ -1251,6 +1251,23 @@ let string_of_global r =
 
 let safe_pr_global r = str (string_of_global r)
 
+(** The kernel name of [r], spelled out in full.
+
+    Every other name in this module is the shortest one that reads well, which
+    is what a message to a user wants.  A diagnostic aimed at whoever is
+    debugging Crane wants the opposite: two constants that print the same are
+    the whole difficulty, and a column that cannot tell them apart sends the
+    reader looking for a second bug. *)
+let kername_of_global r =
+  let s kn = KerName.to_string kn in
+  match r with
+  | GlobRef.ConstRef c -> s (Constant.user c)
+  | GlobRef.IndRef (mind, i) ->
+    Printf.sprintf "%s,%d" (s (MutInd.user mind)) i
+  | GlobRef.ConstructRef ((mind, i), j) ->
+    Printf.sprintf "%s,%d,%d" (s (MutInd.user mind)) i j
+  | GlobRef.VarRef v -> Id.to_string v
+
 (** Like [safe_pr_global] but with full qualification, for constants only. *)
 let safe_pr_long_global r =
   try Printer.pr_global r

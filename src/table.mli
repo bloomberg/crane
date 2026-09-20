@@ -33,6 +33,11 @@ module Refmap' : CSig.UMapS with type key = GlobRef.t
 (** Get a safe basename identifier from a global reference. *)
 val safe_basename_of_global : GlobRef.t -> Id.t
 
+(** The kernel name of a global, spelled out in full -- for debug diagnostics,
+    where two constants printing the same name is the difficulty rather than a
+    tidiness question.  User-facing messages want a short name instead. *)
+val kername_of_global : GlobRef.t -> string
+
 (** {2 Warning and Error messages} *)
 
 (** Issue warning about axioms. *)
