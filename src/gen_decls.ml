@@ -3208,6 +3208,66 @@ let gen_dfun n b cty ty temps =
         | _ -> (x, ty) )
       ids
   in
+  (* A parameter whose type is a callable behind a type alias -- a one-method
+     class demoted to [template <template <typename> class T> using C =
+     std::function<...>] -- is one no argument can be deduced through: what
+     arrives is a lambda, a lambda never has the alias's type, and deduction
+     fails before the conversion that would have succeeded is considered.
+
+     Taking it out of deduction is what lets the conversion happen.  The
+     alternative, generalising it to an [F &&] the way a bare [Tfun] parameter
+     is generalised above, would add a template parameter and so shift every
+     explicit argument list that already names this function -- and there is
+     nothing to gain by deducing a type the alias's own arguments, pinned by
+     the other parameters, already determine. *)
+  let ids =
+    (* A type constructor standing in for a template parameter: the alias is
+       applied to something of kind [Set -> Set], so the alias itself takes a
+       [template <typename> class] parameter -- the shape C++ cannot deduce. *)
+    let rec is_hk_arg a =
+      match a with
+      | Ttyctor _ -> true
+      | Tapply (Tvar _, _) -> true
+      | Tconst t | Tref t -> is_hk_arg t
+      | _ -> false
+    in
+    (* The alias stands for a callable.  A struct behind an alias deduces
+       perfectly well; it is only [std::function] that a lambda argument cannot
+       match. *)
+    let alias_rhs_is_fun kn =
+      match Table.lookup_typedef_unchecked kn with
+      | Some ml_ty -> (
+        match convert_ml_type_to_cpp_type env [] ml_ty with
+        | Tfun _ | Tconst (Tfun _) -> true
+        | _ -> false )
+      | None -> false
+    in
+    let rec alias_hides_fun ty =
+      match ty with
+      | Tconst t | Tref t -> alias_hides_fun t
+      | Tapply (Tglob (GlobRef.ConstRef kn, [], _), args)
+       |Tglob (GlobRef.ConstRef kn, (_ :: _ as args), _) ->
+        List.exists is_hk_arg args && alias_rhs_is_fun kn
+      | _ -> false
+    in
+    (* The wrapper the ownership pass put on stays where it is; only the type
+       it wraps is taken out of deduction. *)
+    let rec at_core f ty =
+      match ty with
+      | Tconst t -> Tconst (at_core f t)
+      | Tref t -> Tref (at_core f t)
+      | t -> f t
+    in
+    List.map
+      (fun (x, ty) ->
+        if alias_hides_fun ty then
+          ( x,
+            at_core
+              (fun t -> Tid_external ("std::type_identity_t", [t]))
+              ty )
+        else (x, ty) )
+      ids
+  in
   (* Add type class instance template parameters - instance types come first *)
   let typeclass_temps_basic =
     List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
