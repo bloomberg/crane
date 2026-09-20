@@ -526,6 +526,7 @@ and ctor_field = {
 (** Method field descriptor for struct methods. *)
 and method_field = {
   mf_name : Id.t;
+  mf_globref : GlobRef.t option;
   mf_tparams : (template_type * Id.t) list;
   mf_ret_type : cpp_type;
   mf_params : (Id.t * cpp_type) list;
@@ -561,6 +562,7 @@ let ind_ty_ptr id vars = Tshared_ptr (Tglob (id, vars, []))
     spelled as methods rather than as a second, near-identical field kind. *)
 let static_fun ~name ~ret ~params ~body =
   { mf_name = name;
+    mf_globref = None;
     mf_tparams = [];
     mf_ret_type = ret;
     mf_params = params;

@@ -9513,3 +9513,14 @@
   (alias runtest)
   (deps event_match_untyped.t.exe)
   (action (run ./event_match_untyped.t.exe))))
+
+(subdir tail_call_same_name_other_module
+ (rule
+  (targets tail_call_same_name_other_module.t.exe)
+  (deps TailCallSameNameOtherModule.vo tail_call_same_name_other_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tail_call_same_name_other_module.t.exe tail_call_same_name_other_module.cpp tail_call_same_name_other_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps tail_call_same_name_other_module.t.exe)
+  (action (run ./tail_call_same_name_other_module.t.exe))))

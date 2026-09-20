@@ -1454,6 +1454,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
             ( Fmethod
                 {
                   mf_name = method_name;
+                  mf_globref = None;
                   (* Undefaulted: every caller spells the arguments out --
                      the forwarding wrapper as [_tcI0::template ret<T2>(x)],
                      the concept probe at [std::any].  A default here would
@@ -5104,6 +5105,7 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
   ( Fmethod
       {
         mf_name = func_name;
+        mf_globref = Some func_ref;
         mf_tparams = template_params;
         mf_ret_type = ret_cpp;
         mf_params = params;
@@ -5353,6 +5355,7 @@ let gen_ind_header_v2
         let clone_field =
           ( Fmethod
               { mf_name = Id.of_string "clone";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type = self_ty;
                 mf_params = [];
@@ -7071,6 +7074,7 @@ let gen_ind_header_v2
           ( Fmethod
               {
                 mf_name = Id.of_string "v";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
                   Tconst (Tref variant_alias_ty);
@@ -7097,6 +7101,7 @@ let gen_ind_header_v2
           ( Fmethod
               {
                 mf_name = Id.of_string "v";
+                mf_globref = None;
                 mf_tparams = [];
                 mf_ret_type =
                   Tconst (Tref variant_alias_ty);
@@ -7124,6 +7129,7 @@ let gen_ind_header_v2
             ( Fmethod
                 {
                   mf_name = Id.of_string "v_mut";
+                  mf_globref = None;
                   mf_tparams = [];
                   mf_ret_type = Tref variant_alias_ty;
                   mf_params = [];

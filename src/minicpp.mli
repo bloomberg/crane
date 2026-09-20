@@ -606,6 +606,15 @@ and ctor_field = {
 (** Method descriptor record. *)
 and method_field = {
   mf_name : Id.t;  (** Method name *)
+  mf_globref : GlobRef.t option;
+      (** The global this method was made from, where one is known.
+
+          The name alone does not identify the method: a call to
+          [Other.cmp] from inside [This.cmp] is a different function that
+          happens to share a label, and treating it as recursion turns a
+          delegation into an infinite loop.  [None] where the method has no
+          source global (factories, generated operators), which are the
+          cases nothing calls by name anyway. *)
   mf_tparams : (template_type * Id.t) list;  (** Template parameters *)
   mf_ret_type : cpp_type;  (** Return type *)
   mf_params : (Id.t * cpp_type) list;  (** Parameters *)

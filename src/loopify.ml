@@ -690,6 +690,22 @@ let receiver_is_value = function
   | CPPderef _ | CPPvar _ | CPPthis -> false
   | _ -> true
 
+(** Whether a [CPPglob] callee is the method itself.
+
+    The method's own global decides it where there is one.  Matching on the
+    bare label instead is not a weaker test but a wrong one: [T1.cmp] called
+    from [T2.cmp] shares its label and nothing else, and reading that call as
+    recursion parks a delegation as a self-call, discards the real callee and
+    leaves a [while (true)] with no exit -- a miscompilation that compiles.
+    The label is still the answer where the method has no global to compare
+    against, which is the generated members ([clone], [v]) that no body calls
+    by name. *)
+let calls_self_glob ~(self_ref : GlobRef.t option) (name : Id.t) (r : GlobRef.t)
+    =
+  match self_ref with
+  | Some sr -> Common.globref_equal r sr
+  | None -> Id.equal (Label.to_id (Common.label_of_r r)) name
+
 (** Build a call checker for struct methods. Matches [CPPaccess_call] on
     [method_name] and, when [has_self_param] is true, includes the receiver
     pointer as the first argument. Also matches [CPPglob] calls that resolve to
@@ -706,11 +722,15 @@ let receiver_is_value = function
     @param this_pos     Index of the [this]/receiver argument in the argument
                         list of [CPPfun_call] forms. Used to extract and remove
                         the receiver from over-long argument lists.
+    @param self_ref     The global the method was made from, when known.  See
+                        {!calls_self_glob}.
     @param method_name  The method name to match on. *)
+
 let method_checker
     ~(n_params : int)
     ~(has_self_param : bool)
     ~(this_pos : int)
+    ?(self_ref : GlobRef.t option)
     (method_name : Id.t) : call_checker =
  (* Convert a receiver expression to a raw pointer for the _Enter struct.
     CPPderef(shared_ptr): use shared_ptr.get() to extract the raw pointer.
@@ -753,8 +773,7 @@ let method_checker
      else
        Some (mk_call_site args_normal)
    | CPPfun_call (_, CPPglob (r, _, _), args) ->
-     let label = Label.to_id (Common.label_of_r r) in
-     if Id.equal label method_name then
+     if calls_self_glob ~self_ref method_name r then
        let args_normal = call_args args in
        if has_self_param then
          let self_arg, rest = extract_at this_pos args_normal in
@@ -8680,15 +8699,15 @@ let try_inline_functional_into names body =
   in
   let is_self_ref r = List.exists (Common.globref_equal r) self_refs in
   let is_self_name n = List.exists (Id.equal n) self_labels in
-  (* The unqualified name a call target resolves to, if any. *)
-  let callee_name = function
-    | CPPvar id -> Some id
-    | CPPglob (r, _, _) -> (
-      match r with
-      | GlobRef.ConstRef c -> Some (Label.to_id (Constant.label c))
-      | GlobRef.VarRef v -> Some v
-      | _ -> None )
-    | _ -> None
+  (* Whether a call head is one of the functions being defined.  A [CPPglob]
+     carries the identity outright and is asked for it; only an unqualified
+     [CPPvar], which has no global behind it, has to fall back to the label.
+     Compare {!calls_self_glob}: the same distinction, and the same reason to
+     insist on it -- a sibling sharing a label is not recursion. *)
+  let is_self_call = function
+    | CPPglob (r, _, _) -> is_self_ref r
+    | CPPvar id -> is_self_name id
+    | _ -> false
   in
   (* Is [e] the eta-expansion [fun y => self(y)] of the function being defined?
      Return the call head so the exact self-call form (with its type args) can
@@ -8702,10 +8721,7 @@ let try_inline_functional_into names body =
                  (CPPfun_call
                     ({cs_yields = Ropaque; _}, head, {rev = [CPPvar y']}) ) ) ];
         _ }
-      when Id.equal y y'
-           && (match callee_name head with
-              | Some n -> is_self_name n
-              | None -> false) ->
+      when Id.equal y y' && is_self_call head ->
       Some head
     | _ -> None
   in
@@ -8713,9 +8729,9 @@ let try_inline_functional_into names body =
      self. *)
   let lookup_functional callee =
     match callee with
-    | CPPglob (r, _, _) when not (is_self_ref r) ->
+    | CPPglob (r, _, _) when not (is_self_call callee) ->
       Hashtbl.find_opt mutual_fn_table r
-    | CPPvar id when not (is_self_name id) ->
+    | CPPvar id when not (is_self_call callee) ->
       Hashtbl.fold
         (fun r pb acc ->
           match acc with
@@ -9187,7 +9203,8 @@ let transform_method ~tparams ~self_ty mf =
     let n_params = List.length mf.mf_params in
     let this_pos = mf.mf_this_pos in
     let check =
-      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+      method_checker ~n_params ~has_self_param:false ~this_pos
+        ?self_ref:mf.mf_globref mf.mf_name
     in
     { mf with
       mf_body =
@@ -9195,20 +9212,27 @@ let transform_method ~tparams ~self_ty mf =
   in
   if has_lazy_body mf.mf_body then begin
     let basic_check =
-      method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name
+      method_checker ~n_params ~has_self_param:false ~this_pos
+        ?self_ref:mf.mf_globref mf.mf_name
     in
     if classify basic_check mf.mf_body <> No_recursion then
       record_outcome name (Lp_deferred "cofixpoint body is lazy_-wrapped");
     Fmethod mf
   end else
-    let basic_check = method_checker ~n_params ~has_self_param:false ~this_pos mf.mf_name in
+    let basic_check =
+      method_checker ~n_params ~has_self_param:false ~this_pos
+        ?self_ref:mf.mf_globref mf.mf_name
+    in
     ( match classify basic_check mf.mf_body with
     | No_recursion ->
       Fmethod mf
     | (Tail_recursion | Nontail_recursion) as kind ->
       let self_id = id_self in
       let body_with_self = List.map (this_to_self_stmt self_id) mf.mf_body in
-      let self_check = method_checker ~n_params ~has_self_param:true ~this_pos mf.mf_name in
+      let self_check =
+        method_checker ~n_params ~has_self_param:true ~this_pos
+          ?self_ref:mf.mf_globref mf.mf_name
+      in
       (* Check whether any recursive call has a value-type receiver — a
          temporary such as [Trie::leaf()], whose address would dangle once
          stored in the _Enter frame.  Receivers that name existing storage
@@ -9280,7 +9304,7 @@ let transform_method ~tparams ~self_ty mf =
                  && not (List.exists mentions_self args) ->
             Some (recv, CPPaccess_call (Aarrow, CPPvar id_self_store, id, args))
           | CPPfun_call (_, CPPglob (r, targs, x), args)
-            when Id.equal (Label.to_id (Common.label_of_r r)) mf.mf_name
+            when calls_self_glob ~self_ref:mf.mf_globref mf.mf_name r
                  && List.length (to_reversed args) > n_params ->
             let args_normal = call_args args in
             let recv = List.nth args_normal this_pos in

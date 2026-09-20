@@ -173,4 +173,3 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
-
