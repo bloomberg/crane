@@ -654,6 +654,15 @@ let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
     position above the structs is legal for such a signature and the honest
     answer is to leave it where it is.
 
+    Which of the two a type is cannot be read off its IR node.  [Nat] and
+    [List::list] are both [Tnamespace] -- the node means "an inductive's own
+    scope", not "inside a module struct" -- and what separates them is whether
+    the inductive's module is emitted as a wrapper struct, so that the
+    qualifier is actually written.  That is a layout question, and
+    {!Cpp_state.is_wrapper_qualified} is the printer's own answer to it; asking
+    anything else here would be a second opinion about what the printer will
+    write.
+
     This is the one place a declaration is not free.  A helper declared
     needlessly costs a line, but a helper declared needlessly {e and} qualifying
     into a struct would drag the whole block below that struct -- past the uses
@@ -662,7 +671,10 @@ let lifted_fun_split (d : cpp_decl) : (cpp_decl * cpp_decl) option =
 let spec_is_hoistable (spec : cpp_decl) : bool =
   let names_into_a_struct ty =
     exists_cpp_type
-      (function Tqualified _ | Tnamespace _ -> true | _ -> false)
+      (function
+        | Tqualified _ -> true
+        | Tnamespace (g, _) -> Cpp_state.is_wrapper_qualified g
+        | _ -> false )
       ty
   in
   let rec sig_types = function
