@@ -12,7 +12,18 @@ Levenshtein::chain Levenshtein::same_chain(const String &s) {
 Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
                                               const String &s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
-    return _inserts_chain_F<Levenshtein::chain>(s2);
+    auto f_impl = [](auto &_self_f, const String &s) -> Levenshtein::chain {
+      if (std::holds_alternative<typename String::EmptyString>(s.v())) {
+        return chain::empty();
+      } else {
+        const auto &[a00, a10] = std::get<typename String::String0>(s.v());
+        return chain::skip(a00, *a10, *a10, Nat::o(), _self_f(_self_f, *a10));
+      }
+    };
+    auto f = [&](const String &s) -> Levenshtein::chain {
+      return f_impl(f_impl, s);
+    };
+    return f(s2);
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return inserts_chain(*a1, s2).insert_chain(a0, s2, a1->append(s2),

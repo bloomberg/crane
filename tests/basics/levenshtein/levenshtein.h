@@ -710,16 +710,6 @@ struct Levenshtein {
   };
 
   static chain same_chain(const String &s);
-
-  template <typename T1> static T1 _inserts_chain_F(const String s) {
-    if (std::holds_alternative<typename String::EmptyString>(s.v())) {
-      return chain::empty();
-    } else {
-      const auto &[a00, a10] = std::get<typename String::String0>(s.v());
-      return chain::skip(a00, *a10, *a10, Nat::o(), _inserts_chain_F<T1>(*a10));
-    }
-  }
-
   static chain inserts_chain(const String &s1, const String &s2);
   static chain inserts_chain_empty(const String &s);
   static chain deletes_chain(const String &s1, const String &s2);

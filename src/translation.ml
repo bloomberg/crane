@@ -1771,6 +1771,65 @@ let rec resolve_type_metas ~next_tvar = function
   | Miniml.Tglob (_, args, _) -> List.iter (resolve_type_metas ~next_tvar) args
   | _ -> ()
 
+(** The type a term builds in tail position, where its own annotations say so.
+
+    Only a constructor application answers.  [MLcons] carries the inductive it
+    builds (see the typing note on {!Miniml.ml_ast}), so it is the one node
+    that knows its type without reconstruction; a recursive call, by
+    definition, says nothing the fixpoint's own type does not already. *)
+let rec tail_constructed_type = function
+  | MLlam (_, _, b) | MLletin (_, _, _, b) | MLmagic (_, b) ->
+    tail_constructed_type b
+  | MLcons (ty, _, _) -> Some ty
+  | MLcase (_, _, brs) ->
+    Array.fold_left
+      (fun acc (_, _, _, b) ->
+        match acc with Some _ -> acc | None -> tail_constructed_type b )
+      None brs
+  | _ -> None
+
+(** Recover a fixpoint's return type from its body.
+
+    An eliminator's motive is erased, so the fixpoint MiniML builds for
+    [nat_rect] carries a type variable where its result type belongs -- one no
+    parameter mentions and no caller supplies.  Lifted to a C++ template that
+    becomes a template parameter nothing deduces, leaving the call site to
+    guess: [_shifted_F<std::any>] against a body returning [Positive].
+
+    The body knows.  Where the variable is undeducible -- absent from every
+    parameter type -- and a tail position builds a constructor, that
+    constructor's inductive is what the function returns, and substituting it
+    makes the signature say so.
+
+    A variable some parameter mentions is genuine polymorphism and is left
+    alone.  So is one whose body builds nothing:
+    [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
+    integer literals, and its call site supplies the argument. *)
+let recover_fix_codomain ((id, ty) : Id.t * ml_type) (body : ml_ast) :
+    (Id.t * ml_type) * ml_ast =
+  let dom, cod = Mlutil.type_decomp ty in
+  match cod with
+  | Miniml.Tvar (_, i)
+    when (not (List.exists (fun t -> collect_tvars [] t |> List.mem i) dom))
+         && tail_constructed_type body <> None ->
+    let subst = [(i, Option.get (tail_constructed_type body))] in
+    ( (id, subst_tvars_type subst ty),
+      map_types_in_ast (subst_tvars_type subst) body )
+  | _ -> ((id, ty), body)
+
+(** Settle the types of a fixpoint's functions: recover each codomain from its
+    body where erasure lost it, then mint [Tvar]s for the metas that remain.
+    The order is the point -- a variable already standing for the result type
+    is no longer asking what the body builds. *)
+let resolve_fix_types ~next_tvar ids funs =
+  Array.iteri
+    (fun i idty ->
+      let idty, body = recover_fix_codomain idty funs.(i) in
+      ids.(i) <- idty;
+      funs.(i) <- body )
+    ids;
+  Array.iter (fun (_, ty) -> resolve_type_metas ~next_tvar ty) ids
+
 (** Resolve unresolved metas in an ML AST by walking its sub-types.
     resolve_metas should be a function that resolves metas in a single ml_type.
 *)
@@ -12689,8 +12748,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     (* Special case for let-fix: the let binding name is the fix function name *)
     (* Resolve unresolved metas in fix function types to Tvars using mgu. *)
     let next_tvar = ref 1 in
-    let resolve_metas = resolve_type_metas ~next_tvar in
-    Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+    resolve_fix_types ~next_tvar ids funs;
     (* Collect all Tvar indices from the fixpoint types *)
     let fix_tvar_indices =
       Array.fold_left (fun acc (_, ty) -> collect_tvars acc ty) [] ids
@@ -13702,7 +13760,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        Traverse types and assign Tvar 1, 2, ... to each unresolved meta. *)
     let next_tvar = ref 1 in
     let resolve_metas = resolve_type_metas ~next_tvar in
-    Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+    resolve_fix_types ~next_tvar ids funs;
     Array.iter (resolve_metas_in_ast resolve_metas) funs;
     List.iter (resolve_metas_in_ast resolve_metas) args;
     (* Collect Tvars from bodies too *)
@@ -13910,8 +13968,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
        called in place), it will always escape.  Use the Y-combinator pattern:
        the generated wrapper lambda [fix_name] is already a plain callable. *)
     let next_tvar = ref 1 in
-    let resolve_metas = resolve_type_metas ~next_tvar in
-    Array.iter (fun (_, ty) -> resolve_metas ty) ids;
+    resolve_fix_types ~next_tvar ids funs;
     let all_fix_ids_list = Array.to_list ids in
     let funs_compiled =
       Array.to_list

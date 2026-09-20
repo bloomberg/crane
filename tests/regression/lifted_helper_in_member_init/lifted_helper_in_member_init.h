@@ -2,7 +2,6 @@
 #define INCLUDED_LIFTED_HELPER_IN_MEMBER_INIT
 
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -94,29 +93,34 @@ public:
 /// Two members so that the pair exercises the claim table that decides which
 /// emission path owns a lifted helper; one alone does not distinguish them.
 struct LiftedHelperInMemberInit {
-  template <typename T1> static T1 _shifted_F(const uint64_t n) {
-    if (n <= 0) {
-      return Positive::xh();
-    } else {
-      uint64_t n0 = n - 1;
-      return Positive::xo(_shifted_F<T1>(n0));
-    }
-  }
-
-  static inline const std::pair<bool, Positive> shifted = std::make_pair(
-      false, []() { return _shifted_F<std::any>(UINT64_C(4)); }());
-
-  template <typename T1> static T1 _doubled_F(const uint64_t n) {
-    if (n <= 0) {
-      return Positive::xh();
-    } else {
-      uint64_t n0 = n - 1;
-      return Positive::xi(_doubled_F<T1>(n0));
-    }
-  }
-
-  static inline const std::pair<bool, Positive> doubled = std::make_pair(
-      true, []() { return _doubled_F<std::any>(UINT64_C(3)); }());
+  static inline const std::pair<bool, Positive> shifted = []() {
+    return std::make_pair(false, []() {
+      auto f_impl = [](auto &_self_f, uint64_t n) -> Positive {
+        if (n <= 0) {
+          return Positive::xh();
+        } else {
+          uint64_t n0 = n - 1;
+          return Positive::xo(_self_f(_self_f, n0));
+        }
+      };
+      auto f = [&](uint64_t n) -> Positive { return f_impl(f_impl, n); };
+      return f(UINT64_C(4));
+    }());
+  }();
+  static inline const std::pair<bool, Positive> doubled = []() {
+    return std::make_pair(true, []() {
+      auto f_impl = [](auto &_self_f, uint64_t n) -> Positive {
+        if (n <= 0) {
+          return Positive::xh();
+        } else {
+          uint64_t n0 = n - 1;
+          return Positive::xi(_self_f(_self_f, n0));
+        }
+      };
+      auto f = [&](uint64_t n) -> Positive { return f_impl(f_impl, n); };
+      return f(UINT64_C(3));
+    }());
+  }();
 };
 
 #endif // INCLUDED_LIFTED_HELPER_IN_MEMBER_INIT

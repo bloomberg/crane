@@ -103,32 +103,34 @@ public:
 /// ("use of undeclared identifier '_anon_F'").  A single lifted helper in a
 /// single module works, so the defect is the name, not the lifting.
 struct Helper {
-  template <typename T1> static T1 _count_F(const uint64_t n) {
-    if (n <= 0) {
-      return UINT64_C(0);
-    } else {
-      uint64_t n0 = n - 1;
-      return (_count_F<T1>(n0) + 1);
-    }
-  }
-
   static inline const uint64_t count = []() {
-    return _count_F<uint64_t>(UINT64_C(3));
+    return []() {
+      auto f_impl = [](auto &_self_f, uint64_t n) -> uint64_t {
+        if (n <= 0) {
+          return UINT64_C(0);
+        } else {
+          uint64_t n0 = n - 1;
+          return (_self_f(_self_f, n0) + 1);
+        }
+      };
+      auto f = [&](uint64_t n) -> uint64_t { return f_impl(f_impl, n); };
+      return f(UINT64_C(3));
+    }();
   }();
 };
 
 struct AnonLiftNameCollision {
-  template <typename T1, typename T2> static T2 _run_F(const List<T1> l) {
+  template <typename T1> static uint64_t _run_F(const List<T1> l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return UINT64_C(0);
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return (_run_F<T1, T2>(*a1) + 1);
+      return (_run_F<T1>(*a1) + 1);
     }
   }
 
   static inline const uint64_t run = (Helper::count + []() {
-    return _run_F<uint64_t, uint64_t>(
+    return _run_F<uint64_t>(
         List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
   }());
 };
