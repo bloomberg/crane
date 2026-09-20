@@ -8651,6 +8651,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        Split into: - primary_args: first n_value_dom args (passed to the
        function) - excess_args: remaining non-dummy args (curried onto the
        result) Only activates when n_args > n_value_dom; otherwise unchanged. *)
+    let args_before_split = args in
     let args, excess_args =
       let is_value_arg = function
         | MLdummy _ -> false
@@ -8688,6 +8689,29 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         else
           (value_args, [])
       | None -> (List.filter is_value_arg args, [])
+    in
+    (* A value argument that vanishes here vanishes from the emitted call, and
+       the parameter it would have filled is dropped from the declaration by
+       the same [Tdummy] reading of the callee's domain -- leaving a body that
+       names a binder nothing supplies.  Report it rather than make it a
+       question about reading the generated C++ back. *)
+    let () =
+      if Sys.getenv_opt "CRANE_DBG_DROPPED_ARGS" <> None then
+        let n_in = List.length args_before_split in
+        let n_out = List.length args + List.length excess_args in
+        if n_out < n_in then
+          Feedback.msg_warning
+            (Pp.str
+               (Printf.sprintf
+                  "crane: call to %s drops %d of %d arguments (%d dummy, %d \
+                   value domains declared)"
+                  (Libnames.string_of_qualid (Nametab.shortest_qualid_of_global Names.Id.Set.empty id))
+                  (n_in - n_out) n_in
+                  (List.length
+                     (List.filter
+                        (function MLdummy _ -> true | _ -> false)
+                        args_before_split ))
+                  (List.length args) ) )
     in
     (* The primary arguments while they are still ML: [args] is rebound to
        generated C++ expressions further down, but the callee's instantiation
