@@ -4215,24 +4215,31 @@ let gen_dfuns (ns, bs, tys) =
       [result] )
     (List.mapi (fun i name -> (i, name)) (Array.to_list ns))
 
-(** Convert a definition to a declaration by dropping its body. Recursively handles Dtemplate wrappers. Used to generate forward
-    declarations that match the full definition's signature (including concept
-    constraints).
+(** Split a definition into the declaration and the definition of the same
+    function -- the same signature twice, once without the body.
 
-    The body is also what decides which callback constraints the signature may
-    state, so the template parameters are settled here, against the body, and
-    written into both halves -- see {!Minicpp.drop_stored_callback_constraints}. *)
-let rec decl_to_spec (d : cpp_decl) : cpp_decl =
+    The body decides which callback constraints the signature may state, and a
+    declaration is written without it, so the decision is taken here, where the
+    body is still at hand, and written into {e both} halves.  Returning the
+    pair is what makes that true rather than intended: settling the template
+    head and handing back only the declaration leaves the caller holding a
+    definition that still states the constraint the declaration dropped, and
+    two differently-constrained templates of one name are two functions.  See
+    {!Minicpp.drop_stored_callback_constraints}, whose own contract this is.
+
+    A declaration that arrives already a declaration is its own spec and has no
+    definition to pair with. *)
+let rec decl_spec_and_def (d : cpp_decl) : cpp_decl * cpp_decl =
   match d with
   | Dfun ({df_shape = Ddef (params, body); _} as f) ->
     let no_pure =
       f.df_no_pure
       || match body with [Sreturn (Some (CPPabort _))] -> true | _ -> false
     in
-    Dfun
-      { f with
-        df_no_pure = no_pure;
-        df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params) }
+    let f = {f with df_no_pure = no_pure} in
+    ( Dfun
+        {f with df_shape = Ddecl (List.map (fun (id, ty) -> (Some id, ty)) params)},
+      Dfun f )
   | Dtemplate (temps, cstr, inner) ->
     let temps =
       match inner with
@@ -4240,8 +4247,16 @@ let rec decl_to_spec (d : cpp_decl) : cpp_decl =
         drop_stored_callback_constraints ~params body temps
       | _ -> temps
     in
-    Dtemplate (temps, cstr, decl_to_spec inner)
-  | _ -> d (* Already a declaration, return as-is *)
+    let spec, def = decl_spec_and_def inner in
+    (Dtemplate (temps, cstr, spec), Dtemplate (temps, cstr, def))
+  | _ -> (d, d)
+
+(** The declaration half of {!decl_spec_and_def}.
+
+    Sound only where the definition is not also emitted, or is emitted from the
+    pair: a caller that keeps its own copy of the definition alongside this
+    declaration is the mismatch {!decl_spec_and_def} exists to prevent. *)
+let decl_to_spec (d : cpp_decl) : cpp_decl = fst (decl_spec_and_def d)
 
 (** Generate function declarations for header files *)
 let gen_dfuns_header (ns, bs, tys) =
@@ -4287,13 +4302,16 @@ let gen_dfuns_dual ~is_header (ns, bs, tys) =
     (fun (i, name) ->
       let ds, env, tvars = gen_dfun_def name bs.(i) tys.(i) in
       let lifted = take_lifted_decls () in
-      let spec = (decl_to_spec ds, env) in
+      (* Both halves from the one split, so the template head they state is the
+         same head; [ds] on its own would keep a constraint the spec drops. *)
+      let ds_spec, ds_def = decl_spec_and_def ds in
+      let spec = (ds_spec, env) in
       let def =
         match (tvars, is_header) with
-        | _ :: _, true -> Some (ds, env) (* Template + header: full def in .h *)
+        | _ :: _, true -> Some (ds_def, env) (* Template + header: def in .h *)
         | _ :: _, false -> None (* Template + source: already in .h *)
         | [], true -> None (* Non-template + header: def goes in .cpp *)
-        | [], false -> Some (ds, env)
+        | [], false -> Some (ds_def, env)
         (* Non-template + source: full def in .cpp *)
       in
       [(spec, def, lifted)] )
@@ -4306,16 +4324,19 @@ let gen_decl_for_pp_dual__inner ~is_header n b ty =
   let ds_opt, env, tvars = gen_decl_for_pp n b ty in
   match (ds_opt, tvars) with
   | Some ds, _ :: _ ->
-    (* Template function: spec is decl_to_spec, def only in header *)
-    let def = if is_header then Some (ds, env) else None in
-    (Some (decl_to_spec ds, env), def, tvars)
+    (* Template function: spec is the declaration half, def only in header *)
+    let ds_spec, ds_def = decl_spec_and_def ds in
+    let def = if is_header then Some (ds_def, env) else None in
+    (Some (ds_spec, env), def, tvars)
   | Some ds, [] ->
-    (* Non-template function: spec via decl_to_spec to ensure parameter types
-       (owned vs borrowed) match exactly between declaration and definition.
-       Using gen_spec here would run independent escape analysis that may
-       produce different ownership decisions than gen_dfun used for the def. *)
-    let def = if is_header then None else Some (ds, env) in
-    (Some (decl_to_spec ds, env), def, tvars)
+    (* Non-template function: both halves from the one split, so parameter
+       types (owned vs borrowed) match exactly between declaration and
+       definition.  Using gen_spec here would run independent escape analysis
+       that may produce different ownership decisions than gen_dfun used for
+       the def. *)
+    let ds_spec, ds_def = decl_spec_and_def ds in
+    let def = if is_header then None else Some (ds_def, env) in
+    (Some (ds_spec, env), def, tvars)
   | None, _ ->
     (* Non-function type: no def needed *)
     let spec_ds, spec_env = gen_spec n b ty in
