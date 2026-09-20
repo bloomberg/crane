@@ -763,6 +763,78 @@ let has_no_cpp_spelling ty =
     (function Tglob (r, _, _) -> ref_has_no_cpp_name r | _ -> false)
     as_printed
 
+(** Report what {!has_no_cpp_spelling} saw.
+
+    Two audiences.  A [Crane Extract Skip] on a constant that a custom
+    template later needs {e by name} degrades silently: the binder becomes
+    [std::any] and the only symptom is a type error a long way downstream, so
+    that one is always warned about, naming the directive to remove.  A module
+    left out by [Crane Extract Skip Module] was left out wholesale and on
+    purpose, so it is not worth a word unless asked.
+
+    [CRANE_DBG_UNSPELLABLE] adds the full shape.  The ordinal is the
+    discriminator: firings are reported in emission order, which is the only
+    handle on {e which} site fired when several share a custom template, and
+    the alternative -- a printer-filled table of the declaration being emitted
+    -- is the thing that must not be built. *)
+let unspellable_firings = ref 0
+
+let unspellable_warned : (string, unit) Hashtbl.t = Hashtbl.create 7
+
+let report_unspellable where ty =
+  let empty_custom = ref [] and skipped_mod = ref [] in
+  ignore
+    (Minicpp.exists_cpp_type
+       (function
+         | Tglob (r, _, _) when ref_has_no_cpp_name r ->
+           let n = Pp.string_of_ppcmds (GlobRef.print r) in
+           if Ml_type_util.ref_has_no_spelling r then
+             empty_custom := n :: !empty_custom
+           else skipped_mod := n :: !skipped_mod;
+           false
+         | _ -> false )
+       ty );
+  incr unspellable_firings;
+  List.iter
+    (fun n ->
+      if not (Hashtbl.mem unspellable_warned n) then begin
+        Hashtbl.add unspellable_warned n ();
+        Feedback.msg_warning
+          (Pp.str
+             (Printf.sprintf
+                "crane: a custom template needs %s by name, but [Crane \
+                 Extract Skip] removed it, so the binder is typed std::any \
+                 and the type is lost here.  If %s is still reachable, drop \
+                 the directive that skips it."
+                n n ) )
+      end )
+    (List.rev !empty_custom);
+  if Sys.getenv_opt "CRANE_DBG_UNSPELLABLE" <> None then begin
+    let shape = function
+      | Tglob _ -> "Tglob"
+      | Tapply _ -> "Tapply"
+      | Tqualified _ -> "Tqualified"
+      | Tvar _ -> "Tvar"
+      | Tinstance _ -> "Tinstance"
+      | Tpromoted _ -> "Tpromoted"
+      | Tid _ -> "Tid"
+      | Tid_external _ -> "Tid_external"
+      | Ttyctor _ -> "Ttyctor"
+      | Tany -> "Tany"
+      | _ -> "other"
+    in
+    let tagged tag l = List.map (fun n -> n ^ " [" ^ tag ^ "]") l in
+    Feedback.msg_warning
+      (Pp.str
+         (Printf.sprintf
+            "crane: firing %d: %s yields std::any; outermost %s; nameless \
+             globs: %s"
+            !unspellable_firings where (shape ty)
+            (String.concat ", "
+               ( tagged "empty custom" (List.rev !empty_custom)
+               @ tagged "skipped module" (List.rev !skipped_mod) ) ) ) )
+  end
+
 (** Alias templates standing in for custom-mapped type constructors that
     cannot be named by cutting their application back to a head.
 
@@ -3415,6 +3487,9 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
              [std::any] says.  A template reading this placeholder can then
              treat the two cases alike. *)
           if has_no_cpp_spelling ty then (
+            report_unspellable
+              (Printf.sprintf "branch %d var %d of %s" i j custom)
+              ty;
             require_header "any";
             str "std::any" )
           else pp_cpp_type false vl ty
