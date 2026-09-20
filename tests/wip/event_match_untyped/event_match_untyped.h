@@ -1,0 +1,110 @@
+#ifndef INCLUDED_EVENT_MATCH_UNTYPED
+#define INCLUDED_EVENT_MATCH_UNTYPED
+
+#include "small_vector.h"
+#include <atomic>
+#include <crane_itree.h>
+#include <memory>
+#include <utility>
+#include <variant>
+
+struct Nat;
+
+struct Nat {
+  // TYPES
+  struct O {};
+
+  struct S {
+    std::shared_ptr<Nat> a0;
+  };
+
+  using variant_t = std::variant<O, S>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Nat() {}
+
+  explicit Nat(O _v) : v_(_v) {}
+
+  explicit Nat(S _v) : v_(std::move(_v)) {}
+
+  static Nat o() { return Nat(O{}); }
+
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+
+  // MANIPULATORS
+  ~Nat() {
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
+
+struct EventMatchUntyped {
+  struct IOE {
+    // TYPES
+    struct Rd {};
+
+    struct Wr {
+      Nat a0;
+    };
+
+    using variant_t = std::variant<Rd, Wr>;
+
+  private:
+    // DATA
+    variant_t v_;
+
+  public:
+    // CREATORS
+    IOE() {}
+
+    explicit IOE(Rd _v) : v_(_v) {}
+
+    explicit IOE(Wr _v) : v_(std::move(_v)) {}
+
+    static IOE rd() { return IOE(Rd{}); }
+
+    static IOE wr(Nat a0) { return IOE(Wr{std::move(a0)}); }
+
+    // MANIPULATORS
+    inline variant_t &v_mut() { return v_; }
+
+    // ACCESSORS
+    const variant_t &v() const { return v_; }
+  };
+
+  /// The event is matched in the very branch that binds it, so nothing
+  /// downstream says what type it has.
+  static Nat weight(const std::shared_ptr<ITree<Nat>> &t);
+};
+
+#endif // INCLUDED_EVENT_MATCH_UNTYPED
