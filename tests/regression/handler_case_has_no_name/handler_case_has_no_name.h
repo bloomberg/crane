@@ -179,15 +179,16 @@ using MonadIter = std::function<m<std::any>(
 
 struct Basics {
   template <template <typename> class T1, typename T2, typename T3, typename F1>
-  static T1<T2> iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0);
+  static T1<T2> iter(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
+                     const T3 &x0);
 };
 
 struct Interp {
   template <Monad _tcI0, Functor _tcI1, typename T1 = void, typename T3,
             typename F1>
-  static typename _tcI0::template m<T3> interp(MonadIter<_tcI0::template m> iM,
-                                               F1 &&h0,
-                                               std::shared_ptr<ITree<T3>> x0_);
+  static typename _tcI0::template m<T3>
+  interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM, F1 &&h0,
+         std::shared_ptr<ITree<T3>> x0_);
 };
 enum class AE { A0 };
 enum class BE { B0 };
@@ -208,15 +209,16 @@ Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
 }
 
 template <template <typename> class T1, typename T2, typename T3, typename F1>
-T1<T2> Basics::iter(MonadIter<T1> monadIter, F1 &&x, const T3 &x0) {
+T1<T2> Basics::iter(std::type_identity_t<MonadIter<T1>> monadIter, F1 &&x,
+                    const T3 &x0) {
   return crane_container_cast<T1<T2>>(
       monadIter(crane_erase_fn<T1<Sum<std::any, std::any>>>(x), x0));
 }
 
 template <Monad _tcI0, Functor _tcI1, typename T1, typename T3, typename F1>
-typename _tcI0::template m<T3> Interp::interp(MonadIter<_tcI0::template m> iM,
-                                              F1 &&h0,
-                                              std::shared_ptr<ITree<T3>> x0_) {
+typename _tcI0::template m<T3>
+Interp::interp(std::type_identity_t<MonadIter<_tcI0::template m>> iM, F1 &&h0,
+               std::shared_ptr<ITree<T3>> x0_) {
   return Basics::template iter<_tcI0::template m, T3,
                                std::shared_ptr<ITree<T3>>>(
       std::move(iM),

@@ -186,7 +186,7 @@ using TFunctor =
 
 template <template <typename> class T1, typename T2, typename F1,
           typename T3 = std::invoke_result_t<F1 &, T2 &>>
-T1<T3> tfmap(TFunctor<T1> tFunctor, F1 &&f, T1<T2> x) {
+T1<T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f, T1<T2> x) {
   return crane_container_cast<T1<T3>>(
       tFunctor(crane_erase_fn(f), std::move(x)));
 }
@@ -195,7 +195,7 @@ List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
                              const List<std::any> &x1_);
 
 template <template <typename> class T1, typename F1>
-List<T1<std::any>> TFunctor_list_(TFunctor<T1> h, F1 &&f,
+List<T1<std::any>> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                                   List<T1<std::any>> x0_) {
   return std::move(x0_).template map<std::any>(
       [=]<typename T2>(T1<T2> _x0) mutable -> T1<std::any> {
@@ -205,7 +205,8 @@ List<T1<std::any>> TFunctor_list_(TFunctor<T1> h, F1 &&f,
 
 template <template <typename> class T1, typename F1>
 std::optional<T1<std::any>>
-TFunctor_option(TFunctor<T1> h, F1 &&f, const std::optional<T1<std::any>> &ot) {
+TFunctor_option(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
+                const std::optional<T1<std::any>> &ot) {
   if (ot.has_value()) {
     const auto &t = *ot;
     return std::make_optional<std::any>(

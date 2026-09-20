@@ -124,7 +124,7 @@ Monads::template stateT<lenv, itree_tc, T2> handle_local_stack(F0 &&h,
 
 template <typename T1 = void, typename T2>
 Monads::template stateT<Big, itree_tc, T2>
-on_ls(Monads::template stateT<lenv, itree_tc, T2> c) {
+on_ls(std::type_identity_t<Monads::template stateT<lenv, itree_tc, T2>> c) {
   return [=](const std::pair<Nat, Nat> &b) mutable {
     std::pair<Nat, T2> sa = c(b.first);
     return itree_ret(

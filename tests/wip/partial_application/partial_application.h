@@ -107,7 +107,7 @@ using TFunctor =
 
 template <template <typename> class T1, typename T2, typename F1,
           typename T3 = std::invoke_result_t<F1 &, T2 &>>
-T1<T3> tfmap(TFunctor<T1> tFunctor, F1 &&x, T1<T2> x0) {
+T1<T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&x, T1<T2> x0) {
   return crane_container_cast<T1<T3>>(
       tFunctor(crane_erase_fn(x), std::move(x0)));
 }
@@ -138,14 +138,15 @@ Box<std::any> TFunctor_box(Endo<Nat> _x, std::function<std::any(std::any)> x0_,
 
 template <typename T1, typename T2, typename F1>
   requires std::is_invocable_r_v<T2, F1 &, T1 &>
-std::pair<T2, Box<T2>> ft_pair(TFunctor<Box> h, F1 &&f,
+std::pair<T2, Box<T2>> ft_pair(std::type_identity_t<TFunctor<Box>> h, F1 &&f,
                                const std::pair<T1, Box<T1>> &p) {
   const auto &[u, b] = p;
   return std::make_pair(f(u), tfmap(h, f, b));
 }
 
 std::pair<std::any, Box<std::any>>
-TFunctor_pair(TFunctor<Box> h, std::function<std::any(std::any)> f,
+TFunctor_pair(std::type_identity_t<TFunctor<Box>> h,
+              std::function<std::any(std::any)> f,
               std::pair<std::any, Box<std::any>> x0_);
 
 struct PartialApplication {

@@ -145,15 +145,16 @@ using Iter =
     std::function<m<std::any>(std::function<m<std::any>(std::any)>, std::any)>;
 
 template <template <typename> class T1, typename T2, typename F1>
-T1<T2> iter(Iter<T1> iter0, F1 &&x, const T2 &x0) {
+T1<T2> iter(std::type_identity_t<Iter<T1>> iter0, F1 &&x, const T2 &x0) {
   return crane_container_cast<T1<T2>>(
       iter0(crane_erase_fn<T1<std::any>>(x), x0));
 }
 
 template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
   requires std::is_invocable_r_v<typename _tcI0::template F<T2>, F1 &, T2 &>
-typename _tcI0::template F<T2> run(Iter<_tcI0::template F> x0_, F1 &&x1_,
-                                   const T2 &x2_) {
+typename _tcI0::template F<T2>
+run(std::type_identity_t<Iter<_tcI0::template F>> x0_, F1 &&x1_,
+    const T2 &x2_) {
   return iter<_tcI0::template F, T2>(std::move(x0_), x1_, x2_);
 }
 
