@@ -173,3 +173,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir lifted_helper_in_member_init
+ (rule
+  (targets lifted_helper_in_member_init.t.exe)
+  (deps LiftedHelperInMemberInit.vo lifted_helper_in_member_init.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_helper_in_member_init.t.exe lifted_helper_in_member_init.cpp lifted_helper_in_member_init.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_helper_in_member_init.t.exe)
+  (action (run ./lifted_helper_in_member_init.t.exe))))

@@ -673,6 +673,36 @@ let spec_is_hoistable (spec : cpp_decl) : bool =
   in
   not (List.exists names_into_a_struct (sig_types spec))
 
+(** Report what a lifted helper met at the drain that consumed it, under
+    [CRANE_DBG_LIFTED].
+
+    Three sites drain one queue, and the first to reach a helper is the only
+    one that sees it -- so which site handled a helper, and which of that
+    site's conditions it failed, is not recoverable from the output.  A helper
+    whose declaration is missing and a helper that was never lifted print the
+    same thing, which is nothing. *)
+let dbg_lifted =
+  let on = lazy (Sys.getenv_opt "CRANE_DBG_LIFTED" <> None) in
+  fun ~site ?(extra = "") (d : cpp_decl) ->
+    if Lazy.force on then
+      let name =
+        match lifted_decl_key d with
+        | Some k -> Id.to_string k
+        | None -> "<not-a-lifted-helper>"
+      in
+      let split =
+        match lifted_fun_split d with
+        | Some (spec, _) ->
+          Printf.sprintf "splits=yes hoistable=%b"
+            (spec_is_hoistable spec)
+        | None -> "splits=no"
+      in
+      Feedback.msg_notice
+        (Pp.str
+           (Printf.sprintf "[crane:lifted] %-28s site=%-12s %s%s" name site
+              split
+              (if extra = "" then "" else " " ^ extra) ) )
+
 (** The declarations of helpers lifted out of a declaration that is not a
     wrapper module's -- an inductive's own, whose helpers {!pp_structure_elem}
     emits directly after the struct closes, and so after the methods that call
@@ -727,6 +757,10 @@ let rec pp_structure_elem ~is_header f = function
                declaration is left for the file to put at the top -- the same
                repair as for a wrapper module's lifted helpers, on the path
                that produces them one at a time into a [Pp.t]. *)
+            dbg_lifted ~site:"structure-elem"
+              ~extra:
+                (Printf.sprintf "rc_in_struct=%b" (!render_ctx).rc_in_struct)
+              d';
             let d' =
               match lifted_fun_split d' with
               (* Only at namespace scope.  A struct is a complete-class
@@ -1718,6 +1752,7 @@ let pp_wrapper_module_dual ~is_header ~wrapper_mp wrapper_name func_sels =
     | SEdecl (Dterm (r, a, t)) ->
       let spec_opt, def_opt, _tvars = gen_decl_for_pp_dual ~is_header r a t in
       let lifted = Translation.take_lifted_decls () in
+      List.iter (dbg_lifted ~site:"wrapper-dterm") lifted;
       let specs =
         match spec_opt with
         | Some s -> [s]
@@ -2307,7 +2342,9 @@ let do_struct_with_decl_tracking ~is_header f s =
   let pass2_lifted =
     Translation.take_lifted_decls ()
     |> dedup_lifted_decls
-    |> List.map (fun d -> (d, lifted_fun_split d))
+    |> List.map (fun d ->
+           dbg_lifted ~site:"pass2" d;
+           (d, lifted_fun_split d) )
   in
   (* What to emit in the helper's own place: the split's definition where there
      was a split, so it states the head its declaration states. *)
