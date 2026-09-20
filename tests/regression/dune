@@ -9075,7 +9075,7 @@
 (subdir cross_file_module_ref
  (rule
   (targets cross_file_module_ref.t.exe)
-  (deps Use.vo cross_file_module_ref.t.cpp (source_tree .))
+  (deps Lib.vo cross_file_module_ref.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} cross_file_module_ref.t.exe cross_file_module_ref.cpp cross_file_module_ref.t.cpp)))
  (rule
@@ -9121,7 +9121,7 @@
 (subdir name_prefixed_by_file
  (rule
   (targets name_prefixed_by_file.t.exe)
-  (deps Use.vo name_prefixed_by_file.t.cpp (source_tree .))
+  (deps EOU.vo name_prefixed_by_file.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} name_prefixed_by_file.t.exe name_prefixed_by_file.cpp name_prefixed_by_file.t.cpp)))
  (rule
@@ -9145,7 +9145,7 @@
   (targets erased_nested_type_args.t.exe)
   (deps ErasedNestedTypeArgs.vo erased_nested_type_args.t.cpp (source_tree .))
   (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_nested_type_args.t.exe erased_nested_type_args.cpp erased_nested_type_args.t.cpp)))
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_nested_type_args.t.exe erased_nested_type_args.cpp instance_in_record_literal.cpp erased_nested_type_args.t.cpp)))
  (rule
   (alias runtest)
   (deps erased_nested_type_args.t.exe)
@@ -9154,7 +9154,7 @@
 (subdir file_eponymous_with_alias
  (rule
   (targets file_eponymous_with_alias.t.exe)
-  (deps Use.vo file_eponymous_with_alias.t.cpp (source_tree .))
+  (deps DList.vo file_eponymous_with_alias.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} file_eponymous_with_alias.t.exe file_eponymous_with_alias.cpp file_eponymous_with_alias.t.cpp)))
  (rule
@@ -9165,7 +9165,7 @@
 (subdir nested_eponymous_type
  (rule
   (targets nested_eponymous_type.t.exe)
-  (deps Use.vo nested_eponymous_type.t.cpp (source_tree .))
+  (deps Compare.vo nested_eponymous_type.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} nested_eponymous_type.t.exe nested_eponymous_type.cpp nested_eponymous_type.t.cpp)))
  (rule
@@ -9176,7 +9176,7 @@
 (subdir case_insensitive_eponymy
  (rule
   (targets case_insensitive_eponymy.t.exe)
-  (deps Use.vo case_insensitive_eponymy.t.cpp (source_tree .))
+  (deps CFG.vo case_insensitive_eponymy.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} case_insensitive_eponymy.t.exe case_insensitive_eponymy.cpp case_insensitive_eponymy.t.cpp)))
  (rule
@@ -9187,7 +9187,7 @@
 (subdir fwd_decl_before_concept
  (rule
   (targets fwd_decl_before_concept.t.exe)
-  (deps Use.vo fwd_decl_before_concept.t.cpp (source_tree .))
+  (deps Lib.vo fwd_decl_before_concept.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} fwd_decl_before_concept.t.exe fwd_decl_before_concept.cpp fwd_decl_before_concept.t.cpp)))
  (rule
@@ -9198,7 +9198,7 @@
 (subdir instance_used_before_defined
  (rule
   (targets instance_used_before_defined.t.exe)
-  (deps Use.vo instance_used_before_defined.t.cpp (source_tree .))
+  (deps Lib.vo instance_used_before_defined.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} instance_used_before_defined.t.exe instance_used_before_defined.cpp instance_used_before_defined.t.cpp)))
  (rule
@@ -9209,7 +9209,7 @@
 (subdir lifted_instance_qualified
  (rule
   (targets lifted_instance_qualified.t.exe)
-  (deps Use.vo lifted_instance_qualified.t.cpp (source_tree .))
+  (deps Other.vo lifted_instance_qualified.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_instance_qualified.t.exe lifted_instance_qualified.cpp lifted_instance_qualified.t.cpp)))
  (rule
@@ -9220,7 +9220,7 @@
 (subdir file_module_eponymous_record
  (rule
   (targets file_module_eponymous_record.t.exe)
-  (deps Catalog.vo FileModuleEponymousRecord.vo file_module_eponymous_record.t.cpp (source_tree .))
+  (deps Catalog.vo file_module_eponymous_record.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} file_module_eponymous_record.t.exe file_module_eponymous_record.cpp file_module_eponymous_record.t.cpp)))
  (rule
@@ -9264,7 +9264,7 @@
 (subdir undeducible_tt_return
  (rule
   (targets undeducible_tt_return.t.exe)
-  (deps UndeducibleTtReturn.vo undeducible_tt_return.t.cpp (source_tree .))
+  (deps Handler.vo undeducible_tt_return.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} undeducible_tt_return.t.exe undeducible_tt_return.cpp undeducible_tt_return.t.cpp)))
  (rule
@@ -9334,7 +9334,7 @@
 (subdir file_struct_empty_qualifier
  (rule
   (targets file_struct_empty_qualifier.t.exe)
-  (deps Helpers.vo FileStructEmptyQualifier.vo file_struct_empty_qualifier.t.cpp (source_tree .))
+  (deps FileStructEmptyQualifier.vo file_struct_empty_qualifier.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} file_struct_empty_qualifier.t.exe file_struct_empty_qualifier.cpp file_struct_empty_qualifier.t.cpp)))
  (rule
@@ -9406,7 +9406,7 @@
 (subdir folded_inductive_not_capitalized
  (rule
   (targets folded_inductive_not_capitalized.t.exe)
-  (deps Helper.vo FoldedInductiveNotCapitalized.vo folded_inductive_not_capitalized.t.cpp (source_tree .))
+  (deps FoldedInductiveNotCapitalized.vo folded_inductive_not_capitalized.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} folded_inductive_not_capitalized.t.exe folded_inductive_not_capitalized.cpp folded_inductive_not_capitalized.t.cpp)))
  (rule
@@ -9473,7 +9473,7 @@
 (subdir instance_hoisted_over_qualified
  (rule
   (targets instance_hoisted_over_qualified.t.exe)
-  (deps InstanceHoistedOverQualified.vo instance_hoisted_over_qualified.t.cpp (source_tree .))
+  (deps Eou.vo instance_hoisted_over_qualified.t.cpp (source_tree .))
   (action
    (run %{project_root}/scripts/compile-std.sh %{project_root} instance_hoisted_over_qualified.t.exe instance_hoisted_over_qualified.cpp instance_hoisted_over_qualified.t.cpp)))
  (rule
@@ -9559,3 +9559,14 @@
   (alias runtest)
   (deps partial_application.t.exe)
   (action (run ./partial_application.t.exe))))
+
+(subdir let_shadows_match_binder
+ (rule
+  (targets let_shadows_match_binder.t.exe)
+  (deps LetShadowsMatchBinder.vo let_shadows_match_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_shadows_match_binder.t.exe let_shadows_match_binder.cpp let_shadows_match_binder.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_shadows_match_binder.t.exe)
+  (action (run ./let_shadows_match_binder.t.exe))))

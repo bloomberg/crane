@@ -13512,6 +13512,14 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
     let x' = cpp_id_of_id (id_of_mlid x) in
     let ids_renamed, env' = push_vars' [(x', t)] env in
     let x_renamed = fst (List.hd ids_renamed) in
+    (* The right-hand side is not under the binder, so it keeps [env]'s de
+       Bruijn list -- shifting it would misread every index in it.  But
+       [x_renamed] is already spoken for by the time the right-hand side runs,
+       so a binder the right-hand side introduces has to be freshened against
+       it too: [let x := match o with Some x => x end in ...] otherwise names
+       the branch binder [x] as well and the assignment reads [x = x].  The
+       names come from [env], the avoid set from [env']. *)
+    let env_rhs = (fst env, snd env') in
     if x == Dummy then (
       push_binders env [(x_renamed, t)];
       with_shifted_move_tracking 1 (fun () ->
@@ -13522,7 +13530,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
       push_binders env [(x_renamed, t)];
-      let rhs = gen_stmts env (fun e -> Sexpr e) a in
+      let rhs = gen_stmts env_rhs (fun e -> Sexpr e) a in
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun s ->
         match s with
@@ -13726,7 +13734,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
                   deep_erase = false;
                   expected_ml_ty = Some t_effective;
                   eta_keep_moves = is_single_use_partial_app }
-              env afun a )
+              env_rhs afun a )
       in
       (* Push env_types AFTER generating the value expression [a] — [a] uses de
          Bruijn indices that don't include the new let binding.  The body [b]

@@ -48,8 +48,8 @@ struct RocqBug10757 {
                const T1 &x) { // Precondition: (exists _ : le x (F x), forall z
                               // : A, le (F z) z -> le x z)
     T1 x0 = [&]() {
-      const auto &[x0] = x;
-      return x0;
+      const auto &[x1] = x;
+      return x1;
     }();
     std::function<Sig<T1>(T1)> iterate0 = [=](T1 x1) mutable {
       Sig<T1> y = Sig<T1>::exist(Sig<T1>::exist(x1));
@@ -62,7 +62,7 @@ struct RocqBug10757 {
     Bool0 filtered_var = beq(x0, x_);
     switch (filtered_var) {
     case Bool0::TRUE_: {
-      return Sig<T1>::exist(x0);
+      return Sig<T1>::exist(std::move(x0));
     }
     case Bool0::FALSE_: {
       return iterate0(std::move(x_));
