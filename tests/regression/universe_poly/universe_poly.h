@@ -105,6 +105,34 @@ struct UniversePoly {
   template <typename A, typename B> struct ppair {
     A pfst;
     B psnd;
+
+    // ACCESSORS
+    template <typename _U0, typename _U1> operator ppair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (std::is_same_v<A, std::any>) {
+                  return crane_any_cast<_U0>(pfst);
+                } else {
+                  if constexpr (std::is_constructible_v<_U0, const A &>) {
+                    return _U0(pfst);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (std::is_same_v<B, std::any>) {
+                  return crane_any_cast<_U1>(psnd);
+                } else {
+                  if constexpr (std::is_constructible_v<_U1, const B &>) {
+                    return _U1(psnd);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }()};
+    }
   };
 
   static inline const ppair<uint64_t, bool> test_pair =

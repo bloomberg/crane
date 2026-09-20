@@ -196,6 +196,22 @@ static_assert(Monad<EOU_monad>);
 template <typename I> struct Arith {
   std::function<EOU<I>(I, I)> madd;
   I mzero;
+
+  // ACCESSORS
+  template <typename _U> operator Arith<_U>() const {
+    return {std::function<EOU<_U>(_U, _U)>(madd), [&]() -> _U {
+              if constexpr (std::is_same_v<I, std::any>) {
+                return crane_any_cast<_U>(mzero);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const I &>) {
+                  return _U(mzero);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+  }
 };
 
 struct Ops {

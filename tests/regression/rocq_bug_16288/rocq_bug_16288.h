@@ -105,11 +105,46 @@ struct RocqBug16288 {
   template <Nop N> struct M {
     template <typename elt> struct M_t_NonEmpty {
       List<elt> M_m;
+
+      // ACCESSORS
+      template <typename _U> operator M_t_NonEmpty<_U>() const {
+        return {List<_U>(M_m)};
+      }
     };
 
     template <typename X, typename Y> struct M_t_NonEmpty_ {
       X a;
       Y b;
+
+      // ACCESSORS
+      template <typename _U0, typename _U1>
+      operator M_t_NonEmpty_<_U0, _U1>() const {
+        return {
+            [&]() -> _U0 {
+              if constexpr (std::is_same_v<X, std::any>) {
+                return crane_any_cast<_U0>(a);
+              } else {
+                if constexpr (std::is_constructible_v<_U0, const X &>) {
+                  return _U0(a);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }(),
+            [&]() -> _U1 {
+              if constexpr (std::is_same_v<Y, std::any>) {
+                return crane_any_cast<_U1>(b);
+              } else {
+                if constexpr (std::is_constructible_v<_U1, const Y &>) {
+                  return _U1(b);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+      }
     };
   };
 

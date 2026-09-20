@@ -90,6 +90,12 @@ concept Monad = requires {
 
 template <typename S, typename m, typename t> struct stateT {
   std::function<m(S)> runStateT;
+
+  // ACCESSORS
+  template <typename _U0, typename _U1, typename _U2>
+  operator stateT<_U0, _U1, _U2>() const {
+    return {std::function<_U1(_U0)>(runStateT)};
+  }
 };
 
 template <Monad _tcI0, typename T1> struct Monad_stateT {

@@ -304,6 +304,81 @@ let apply_hkt_resolutions_decl resolutions decl =
     Minicpp.map_decl fe fs ft decl
 
 
+(** The conversion function by which a value is read at another instantiation
+    of its own type -- [Box<Nat>] reaching a slot spelled [Box<std::any>].
+
+    The variant path says this with a converting constructor.  A struct that is
+    an aggregate cannot have one: every brace initialisation the codegen writes
+    for it, and every aggregate initialisation in hand-written test code,
+    depends on its staying an aggregate, which any user-declared constructor
+    would end.  A conversion function is the same statement from the other side
+    and an aggregate may have as many as it likes.
+
+    [fields] gives each field's name together with its C++ type {e at a given
+    spelling of the type parameters}, because the two callers -- a Rocq
+    [Record] and a flat single-constructor [Inductive] -- compute that type
+    differently.  Nothing is emitted where the type has no parameters, or no
+    fields: there is no other instantiation to read it at.
+
+    No constraint excludes [_U = T].  A conversion function to its own class
+    type is never selected, so declaring it is harmless and saying so costs a
+    [requires] clause on every generated struct. *)
+let conversion_to_other_instantiation ~name ~templates ~vars ~fields =
+  if vars = [] || fields = [] then []
+  else
+    let n_vars = List.length vars in
+    let u_var_names =
+      List.mapi
+        (fun i _ ->
+          Id.of_string (if n_vars = 1 then "_U" else "_U" ^ string_of_int i) )
+        vars
+    in
+    let u_tys = List.mapi (fun i x -> Tvar (i, Some x)) u_var_names in
+    let converted =
+      List.map
+        (fun (field_id, at) ->
+          gen_type_conversion_expr
+            (* Every inductive generated into this same scope -- the type
+               itself, its mutual siblings, and any other module-local
+               inductive -- is spelled bare here, so it must not be
+               namespace-qualified. *)
+            ~skip:(fun g ->
+              GlobRef.CanOrd.equal g name
+              || Table.same_mutual_block g name
+              || List.exists (GlobRef.CanOrd.equal g) (get_local_inductives ()) )
+            ~src_ty:(at vars) ~dst_ty:(at u_var_names) (CPPvar field_id) )
+        fields
+    in
+    (* The source instantiation is the same template as the destination, so its
+       arguments have the same kinds: a [template <typename> class] parameter
+       cannot be stood in for by a plain [typename]. *)
+    let tparams =
+      List.mapi
+        (fun i u ->
+          let tt =
+            match List.nth_opt templates i with Some (tt, _) -> tt | None -> TTtypename
+          in
+          (tt, u) )
+        u_var_names
+    in
+    [ ( Fmethod
+          { mf_name = Id.of_string "operator_at_other_instantiation";
+            mf_globref = None;
+            mf_tparams = tparams;
+            mf_ret_type = Tglob (name, u_tys, []);
+            mf_params = [];
+            mf_body = [Sreturn (Some (CPPbraced converted))];
+            mf_is_const = true;
+            mf_is_static = false;
+            mf_is_inline = false;
+            mf_this_pos = 0;
+            mf_no_pure = true;
+            mf_is_noexcept = false;
+            mf_is_conversion = true },
+        VPublic,
+        SAccessors ) ]
+
+
 (** Generate C++ struct for a record type.
 
     Only actual type parameters ([Keep] in [ip_sign]) become C++ template
@@ -333,19 +408,20 @@ let gen_record_cpp name fields ind =
       | _ -> Tany )
     | ty -> ty
   in
-  let l =
-    List.mapi
-      (fun i (x, t) ->
-        let n =
-          match x with
-          | Some n -> n
-          | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
-        in
-        let ct =
-          convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
-            all_vars
-            t
-        in
+  (* A field's type at a given spelling of the template parameters.  The
+     promoted tail is not a template parameter and keeps its own name; only
+     the [Keep] prefix is respelled, which is what the conversion function
+     below needs. *)
+  let field_cpp_ty param_names t =
+    let spelling =
+      List.mapi
+        (fun i x -> match List.nth_opt param_names i with Some u -> u | None -> x)
+        all_vars
+    in
+    let ct =
+      convert_ml_type_to_cpp_type (empty_env ()) ~ns:(Refset'.singleton name)
+        spelling t
+    in
         let ct = Minicpp.map_cpp_type replace_promoted ct in
         (* A record's parameters are plain [typename]s, so one of them cannot
            be applied: where the field type applies a higher-kinded parameter
@@ -353,22 +429,39 @@ let gen_record_cpp name fields ind =
            the erased element -- [FnD<std::optional<std::any>>] -- and the
            application is the parameter itself.  Only a class demotes such a
            parameter to an associated type it can apply. *)
-        let ct =
-          Minicpp.map_cpp_type
-            (function
-              | Tapply ((Tvar (_, Some v) as head), _)
-                when List.exists (fun x -> Id.equal x v) all_vars -> head
-              | ty -> ty )
-            ct
-        in
-        ( Fvar' (n, ct), VPublic, SNoTag ) )
+    Minicpp.map_cpp_type
+      (function
+        | Tapply ((Tvar (_, Some v) as head), _)
+          when List.exists (fun x -> Id.equal x v) spelling -> head
+        | ty -> ty )
+      ct
+  in
+  let field_name i x =
+    match x with
+    | Some n -> n
+    | None -> GlobRef.VarRef (Id.of_string ("_field" ^ string_of_int i))
+  in
+  let l =
+    List.mapi
+      (fun i (x, t) ->
+        (Fvar' (field_name i x, field_cpp_ty vars t), VPublic, SNoTag) )
       fields
   in
   let ty_vars = List.map (fun x -> (TTtypename, x)) vars in
+  let conversion_field =
+    conversion_to_other_instantiation ~name ~templates:ty_vars ~vars
+      ~fields:
+        (List.mapi
+           (fun i (x, t) ->
+             ( Id.of_string_soft
+                 (Common.pp_global_name Type (field_name i x)),
+               fun param_names -> field_cpp_ty param_names t ) )
+           fields)
+  in
   Dstruct
     {
       ds_ref = name;
-      ds_fields = l;
+      ds_fields = l @ conversion_field;
       ds_tparams = ty_vars;
       ds_constraint = None;
       ds_needs_shared_from_this = false;
@@ -5392,75 +5485,17 @@ let gen_ind_header_v2
                 mf_is_conversion = false; },
             VPublic, SAccessors )
         in
-        (* Read at another element type.  The variant path answers this with a
-           converting constructor, which a flat struct cannot have: it is an
-           aggregate, and every brace initialisation the codegen writes for it
-           -- [clone], the factory -- depends on its staying one.  A conversion
-           function is the same statement from the other side and leaves
-           aggregate initialisation alone. *)
         let conversion_field =
-          let all_fields_empty = tys_list = [] in
-          if vars = [] || all_fields_empty then []
-          else
-            let n_vars = List.length vars in
-            let u_var_names =
-              List.mapi
-                (fun i _ ->
-                  Id.of_string
-                    (if n_vars = 1 then "_U" else "_U" ^ string_of_int i))
-                vars
-            in
-            let u_tys = List.mapi (fun i x -> Tvar (i, Some x)) u_var_names in
-            let dst_ty = Tglob (name, u_tys, []) in
-            let converted =
-              List.mapi
-                (fun j ty ->
-                  let field_id = List.nth field_ids j in
-                  let at var_names =
-                    erase_if_needed
-                      (convert_ml_type_to_cpp_type (empty_env ()) var_names ty)
-                  in
-                  gen_type_conversion_expr
-                    (* Every inductive generated into this same scope is
-                       spelled bare here, so it must not be qualified. *)
-                    ~skip:(fun g ->
-                      GlobRef.CanOrd.equal g name
-                      || Table.same_mutual_block g name
-                      || List.exists (GlobRef.CanOrd.equal g)
-                           (get_local_inductives ()) )
-                    ~src_ty:(at vars) ~dst_ty:(at u_var_names)
-                    (CPPvar field_id) )
-                tys_list
-            in
-            (* The source instantiation is the same template as the
-               destination, so its arguments have the same kinds. *)
-            let tparams =
-              List.mapi
-                (fun i u ->
-                  let tt =
-                    match List.nth_opt templates i with
-                    | Some (tt, _) -> tt
-                    | None -> TTtypename
-                  in
-                  (tt, u) )
-                u_var_names
-            in
-            [ ( Fmethod
-                  { mf_name = Id.of_string "operator_at";
-                    mf_globref = None;
-                    mf_tparams = tparams;
-                    mf_ret_type = dst_ty;
-                    mf_params = [];
-                    mf_body = [Sreturn (Some (CPPbraced converted))];
-                    mf_is_const = true;
-                    mf_is_static = false;
-                    mf_is_inline = false;
-                    mf_this_pos = 0;
-                    mf_no_pure = true;
-                    mf_is_noexcept = false;
-                    mf_is_conversion = true },
-                VPublic,
-                SAccessors ) ]
+          conversion_to_other_instantiation ~name ~templates ~vars
+            ~fields:
+              (List.mapi
+                 (fun j ty ->
+                   ( List.nth field_ids j,
+                     fun var_names ->
+                       erase_if_needed
+                         (convert_ml_type_to_cpp_type (empty_env ()) var_names
+                            ty) ) )
+                 tys_list)
         in
         let factory_name =
           Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)

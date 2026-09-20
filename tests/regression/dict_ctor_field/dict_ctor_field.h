@@ -13,6 +13,11 @@
 struct DictCtorField {
   template <typename A> struct Sz {
     std::function<uint64_t(A)> sz;
+
+    // ACCESSORS
+    template <typename _U> operator Sz<_U>() const {
+      return {std::function<uint64_t(_U)>(sz)};
+    }
   };
 
   static inline const Sz<uint64_t> SzNat =

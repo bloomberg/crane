@@ -1417,6 +1417,11 @@ template <Int I, OrderedType X> struct Raw {
     tree<elt> t_left;
     std::optional<elt> t_opt;
     tree<elt> t_right;
+
+    // ACCESSORS
+    template <typename _U> operator triple<_U>() const {
+      return {tree<_U>(t_left), std::optional<_U>(t_opt), tree<_U>(t_right)};
+    }
   };
 
   template <typename T1>
@@ -1830,6 +1835,11 @@ template <Int I, OrderedType X> struct IntMake {
 
   template <typename elt> struct bst {
     typename Raw::template tree<elt> this_;
+
+    // ACCESSORS
+    template <typename _U> operator bst<_U>() const {
+      return {typename Raw::template tree<_U>(this_)};
+    }
   };
 
   template <typename elt> using t = bst<elt>;

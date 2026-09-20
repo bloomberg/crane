@@ -100,6 +100,11 @@ public:
 struct RocqBug13581 {
   template <typename T0> struct mixin_of {
     std::function<T0(T0)> mixin_f;
+
+    // ACCESSORS
+    template <typename _U> operator mixin_of<_U>() const {
+      return {std::function<_U(_U)>(mixin_f)};
+    }
   };
 
   static inline const mixin_of<Nat> d =
@@ -108,6 +113,11 @@ struct RocqBug13581 {
   template <typename T0> struct R {
     std::function<T0(T0)> g;
     Nat x;
+
+    // ACCESSORS
+    template <typename _U> operator R<_U>() const {
+      return {std::function<_U(_U)>(g), x};
+    }
   };
 
   template <typename T1>

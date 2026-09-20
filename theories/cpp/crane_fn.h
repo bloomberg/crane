@@ -326,6 +326,19 @@ template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
                   crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
                 })
     return crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
+  // The carrier already knows how to be read at the other element type: a
+  // converting constructor, or a conversion function on an aggregate that
+  // cannot have one.  That answer is exact, and it is the only one for a
+  // carrier that is not a container -- the element walk below needs a
+  // [value_type] that a record carrier does not have.
+  //
+  // Only where there is no element walk.  A container that has one already
+  // reaches its elements through it, and the two routes can disagree on the
+  // *value* rather than on whether they compile, so this must not move in
+  // front of a route that works today.
+  else if constexpr (!requires { typename Dst::value_type; } &&
+                     std::is_constructible_v<Dst, Src>)
+    return Dst(std::forward<Src>(src));
   else
     return crane_container_cast_impl<Dst>(std::forward<Src>(src));
 }

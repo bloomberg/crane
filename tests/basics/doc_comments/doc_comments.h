@@ -22,6 +22,34 @@ struct DocComments {
     A fst;
     /// The second element of the pair.
     B snd;
+
+    // ACCESSORS
+    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (std::is_same_v<A, std::any>) {
+                  return crane_any_cast<_U0>(fst);
+                } else {
+                  if constexpr (std::is_constructible_v<_U0, const A &>) {
+                    return _U0(fst);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (std::is_same_v<B, std::any>) {
+                  return crane_any_cast<_U1>(snd);
+                } else {
+                  if constexpr (std::is_constructible_v<_U1, const B &>) {
+                    return _U1(snd);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }()};
+    }
   };
 
   /// mylist is a polymorphic list type.

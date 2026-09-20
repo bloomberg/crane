@@ -206,6 +206,22 @@ List<T1<std::any>> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
 
 template <typename T> struct box {
   T b_payload;
+
+  // ACCESSORS
+  template <typename _U> operator box<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<T, std::any>) {
+        return crane_any_cast<_U>(b_payload);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const T &>) {
+          return _U(b_payload);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
 };
 
 box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
@@ -214,6 +230,22 @@ box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
 template <typename T, typename Body> struct outer {
   List<box<T>> o_boxes;
   Body o_body;
+
+  // ACCESSORS
+  template <typename _U0, typename _U1> operator outer<_U0, _U1>() const {
+    return {List<box<_U0>>(o_boxes), [&]() -> _U1 {
+              if constexpr (std::is_same_v<Body, std::any>) {
+                return crane_any_cast<_U1>(o_body);
+              } else {
+                if constexpr (std::is_constructible_v<_U1, const Body &>) {
+                  return _U1(o_body);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+  }
 };
 
 template <template <typename> class T1, typename F1>

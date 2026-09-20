@@ -228,6 +228,34 @@ template <typename g = void, typename a = void> using edge = std::any;
 template <typename A> struct DirectedEdge {
   A edge_from;
   A edge_to;
+
+  // ACCESSORS
+  template <typename _U> operator DirectedEdge<_U>() const {
+    return {[&]() -> _U {
+              if constexpr (std::is_same_v<A, std::any>) {
+                return crane_any_cast<_U>(edge_from);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const A &>) {
+                  return _U(edge_from);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }(),
+            [&]() -> _U {
+              if constexpr (std::is_same_v<A, std::any>) {
+                return crane_any_cast<_U>(edge_to);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const A &>) {
+                  return _U(edge_to);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -240,6 +268,11 @@ bool directed_originates(const T1 &a, const DirectedEdge<T1> &e) {
 template <typename A> struct Directed {
   List<A> directed_nodes;
   List<DirectedEdge<A>> directed_edges;
+
+  // ACCESSORS
+  template <typename _U> operator Directed<_U>() const {
+    return {List<_U>(directed_nodes), List<DirectedEdge<_U>>(directed_edges)};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -275,6 +308,34 @@ struct DirectedGraph {
 template <typename A> struct UndirectedEdge {
   A edge_first;
   A edge_second;
+
+  // ACCESSORS
+  template <typename _U> operator UndirectedEdge<_U>() const {
+    return {[&]() -> _U {
+              if constexpr (std::is_same_v<A, std::any>) {
+                return crane_any_cast<_U>(edge_first);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const A &>) {
+                  return _U(edge_first);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }(),
+            [&]() -> _U {
+              if constexpr (std::is_same_v<A, std::any>) {
+                return crane_any_cast<_U>(edge_second);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const A &>) {
+                  return _U(edge_second);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+  }
 };
 
 template <typename _tcI0, typename T1>
@@ -286,6 +347,12 @@ bool undirected_originates(const T1 &a, const UndirectedEdge<T1> &e) {
 template <typename A> struct Undirected {
   List<A> undirected_nodes;
   List<UndirectedEdge<A>> undirected_edges;
+
+  // ACCESSORS
+  template <typename _U> operator Undirected<_U>() const {
+    return {List<_U>(undirected_nodes),
+            List<UndirectedEdge<_U>>(undirected_edges)};
+  }
 };
 
 template <typename _tcI0, typename T1>

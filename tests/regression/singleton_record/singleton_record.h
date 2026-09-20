@@ -1,7 +1,11 @@
 #ifndef INCLUDED_SINGLETON_RECORD
 #define INCLUDED_SINGLETON_RECORD
 
+#include "crane_fn.h"
+#include <any>
 #include <functional>
+#include <stdexcept>
+#include <type_traits>
 
 struct SingletonRecord {
   struct wrapper {
@@ -16,6 +20,22 @@ struct SingletonRecord {
 
   template <typename A> struct box {
     A contents;
+
+    // ACCESSORS
+    template <typename _U> operator box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (std::is_same_v<A, std::any>) {
+          return crane_any_cast<_U>(contents);
+        } else {
+          if constexpr (std::is_constructible_v<_U, const A &>) {
+            return _U(contents);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
+        }
+      }()};
+    }
   };
 
   static inline const box<uint64_t> boxed_three = box<uint64_t>{UINT64_C(3)};

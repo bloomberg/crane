@@ -14,6 +14,34 @@ struct ConstrainedPoly {
   template <typename A, typename B> struct UPair {
     A ufst;
     B usnd;
+
+    // ACCESSORS
+    template <typename _U0, typename _U1> operator UPair<_U0, _U1>() const {
+      return {[&]() -> _U0 {
+                if constexpr (std::is_same_v<A, std::any>) {
+                  return crane_any_cast<_U0>(ufst);
+                } else {
+                  if constexpr (std::is_constructible_v<_U0, const A &>) {
+                    return _U0(ufst);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }(),
+              [&]() -> _U1 {
+                if constexpr (std::is_same_v<B, std::any>) {
+                  return crane_any_cast<_U1>(usnd);
+                } else {
+                  if constexpr (std::is_constructible_v<_U1, const B &>) {
+                    return _U1(usnd);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }()};
+    }
   };
 
   template <typename T1, typename T2>

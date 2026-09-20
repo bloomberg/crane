@@ -249,17 +249,35 @@ template <typename S> struct Point {
   std::function<int64_t(std::monostate)> getX;
   std::function<void(int64_t)> moveD;
   std::function<int64_t(std::monostate)> offsetX;
+
+  // ACCESSORS
+  template <typename _U> operator Point<_U>() const {
+    return {std::function<int64_t(std::monostate)>(getX), moveD,
+            std::function<int64_t(std::monostate)>(offsetX)};
+  }
 };
 
 template <typename S> struct Account {
   std::function<int64_t(std::monostate)> getBalance;
   std::function<int64_t(uint64_t)> deposit;
   std::function<std::optional<int64_t>(int64_t)> withdraw;
+
+  // ACCESSORS
+  template <typename _U> operator Account<_U>() const {
+    return {std::function<int64_t(std::monostate)>(getBalance),
+            std::function<int64_t(uint64_t)>(deposit),
+            std::function<std::optional<int64_t>(int64_t)>(withdraw)};
+  }
 };
 
 template <typename S> struct BankAccountCollection {
   Account<S> checking;
   Account<S> saving;
+
+  // ACCESSORS
+  template <typename _U> operator BankAccountCollection<_U>() const {
+    return {Account<_U>(checking), Account<_U>(saving)};
+  }
 };
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext();

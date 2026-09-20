@@ -180,6 +180,11 @@ public:
 template <typename T> struct cfg {
   Nat init;
   List<T> blks;
+
+  // ACCESSORS
+  template <typename _U> operator cfg<_U>() const {
+    return {init, List<_U>(blks)};
+  }
 };
 
 struct CFG0 {

@@ -78,6 +78,11 @@ public:
 struct HktRecordDict {
   template <typename F> struct FnD {
     std::function<F(std::function<std::any(std::any)>, F)> fmd;
+
+    // ACCESSORS
+    template <typename _U> operator FnD<_U>() const {
+      return {std::function<_U(std::function<std::any(std::any)>, _U)>(fmd)};
+    }
   };
 
   template <template <typename> class T1, typename T2, typename F1,
