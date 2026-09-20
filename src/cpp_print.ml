@@ -724,20 +724,27 @@ let record_file_scope_type d = Option.iter record_file_scope_name (decl_type_nam
 (** The C++ token an {!Minicpp.obj_access} prints as. *)
 let pp_obj_access = function Adot -> "." | Aarrow -> "->"
 
-(** Whether [ty] names a global from a module extraction was told to leave out.
+(** Whether [ty] mentions a global that has no C++ name to be written as.
 
-    [Crane Extract Skip Module] removes a module's declarations, so a type from
-    inside one has no C++ spelling at all: written out it reads
-    [IO_axioms::ioE], an identifier nothing in the file introduces.  Asked
-    before writing a type into a position that has an alternative to writing
-    it. *)
-let mentions_unemitted_module ty =
+    Two ways that happens, and they have to be asked together because both
+    produce text no compiler will take.  A global mapped to the empty string --
+    what [Crane Extract Skip] records -- vanishes, so a type applied to it
+    renders as a bare argument list, [<typename I::PROV>].  A global from a
+    module [Crane Extract Skip Module] left out renders as the name it would
+    have had, [IO_axioms::ioE], which nothing in the file introduces.
+
+    Asked before writing a type into a position that has an alternative to
+    writing it. *)
+let has_no_cpp_spelling ty =
   let rec mp_skipped mp =
     is_skip_module mp
     || match mp with MPdot (parent, _) -> mp_skipped parent | _ -> false
   in
   Minicpp.exists_cpp_type
-    (function Tglob (r, _, _) -> mp_skipped (modpath_of_r r) | _ -> false)
+    (function
+      | Tglob (r, _, _) ->
+        Ml_type_util.ref_has_no_spelling r || mp_skipped (modpath_of_r r)
+      | _ -> false )
     ty
 
 (** Alias templates standing in for custom-mapped type constructors that
@@ -3380,7 +3387,7 @@ and pp_custom ?container custom env typ t tyargs cases args arg_types vl cmds =
              honest answer is that the type is not known here, which is what
              [std::any] says.  A template reading this placeholder can then
              treat the two cases alike. *)
-          if mentions_unemitted_module ty then (
+          if has_no_cpp_spelling ty then (
             require_header "any";
             str "std::any" )
           else pp_cpp_type false vl ty
