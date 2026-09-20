@@ -4983,13 +4983,16 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
       in
       (* The body still builds its value at the one type it knows; the
          signature now promises the erased one.  [crane_container_cast] is the
-         conversion between the two, and it is the identity when they agree. *)
+         conversion between the two, and it is the identity when they agree.
+
+         A return type that erased away entirely needs nothing said: anything
+         converts to [std::any] by boxing. *)
       let rec cast_stmt s =
         match s with
         | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (erased, e, false)))
         | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
       in
-      (erased, List.map cast_stmt stmts)
+      if erased = Tany then (erased, stmts) else (erased, List.map cast_stmt stmts)
   in
   let template_params =
     List.filter (fun (_tt, tname) ->

@@ -80,19 +80,20 @@ struct AE {
   // CREATORS
   static AE a0(Nat a0_0) { return {std::move(a0_0)}; }
 
-  template <typename T2> std::shared_ptr<ITree<T2>> handle() const {
+  std::shared_ptr<ITree<std::any>> handle() const {
     const auto &[a0] = *this;
-    return itree_ret(a0);
+    return crane_container_cast<std::shared_ptr<ITree<std::any>>>(
+        itree_ret(a0));
   }
 };
 
-template <template <typename> class T1, typename T2 = void>
-std::shared_ptr<ITree<std::any>> E_trigger(T1<std::any> e) {
+template <typename T1, typename T2 = void>
+std::shared_ptr<ITree<std::any>> E_trigger(T1 e) {
   return itree_trigger(e);
 }
 
-template <typename T1 = void, template <typename> class T2>
-std::shared_ptr<ITree<std::any>> F_trigger(T2<std::any> e) {
+template <typename T1 = void, typename T2>
+std::shared_ptr<ITree<std::any>> F_trigger(T2 e) {
   return itree_trigger(e);
 }
 
