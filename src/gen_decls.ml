@@ -1478,6 +1478,7 @@ let gen_instance_struct (name : GlobRef.t) (body : ml_ast) (ty : ml_type) :
                   mf_this_pos = 0;
                   mf_no_pure = false;
                   mf_is_noexcept = false;
+                  mf_is_conversion = false;
                 },
               VPublic,
               SNoTag )
@@ -5136,7 +5137,8 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
         mf_is_inline = false;
         mf_this_pos = this_pos;
         mf_no_pure = no_pure;
-                  mf_is_noexcept = false;
+        mf_is_noexcept = false;
+        mf_is_conversion = false;
       },
     VPublic,
     SNoTag )
@@ -5386,8 +5388,79 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = true;
-                mf_is_noexcept = false; },
+                mf_is_noexcept = false;
+                mf_is_conversion = false; },
             VPublic, SAccessors )
+        in
+        (* Read at another element type.  The variant path answers this with a
+           converting constructor, which a flat struct cannot have: it is an
+           aggregate, and every brace initialisation the codegen writes for it
+           -- [clone], the factory -- depends on its staying one.  A conversion
+           function is the same statement from the other side and leaves
+           aggregate initialisation alone. *)
+        let conversion_field =
+          let all_fields_empty = tys_list = [] in
+          if vars = [] || all_fields_empty then []
+          else
+            let n_vars = List.length vars in
+            let u_var_names =
+              List.mapi
+                (fun i _ ->
+                  Id.of_string
+                    (if n_vars = 1 then "_U" else "_U" ^ string_of_int i))
+                vars
+            in
+            let u_tys = List.mapi (fun i x -> Tvar (i, Some x)) u_var_names in
+            let dst_ty = Tglob (name, u_tys, []) in
+            let converted =
+              List.mapi
+                (fun j ty ->
+                  let field_id = List.nth field_ids j in
+                  let at var_names =
+                    erase_if_needed
+                      (convert_ml_type_to_cpp_type (empty_env ()) var_names ty)
+                  in
+                  gen_type_conversion_expr
+                    (* Every inductive generated into this same scope is
+                       spelled bare here, so it must not be qualified. *)
+                    ~skip:(fun g ->
+                      GlobRef.CanOrd.equal g name
+                      || Table.same_mutual_block g name
+                      || List.exists (GlobRef.CanOrd.equal g)
+                           (get_local_inductives ()) )
+                    ~src_ty:(at vars) ~dst_ty:(at u_var_names)
+                    (CPPvar field_id) )
+                tys_list
+            in
+            (* The source instantiation is the same template as the
+               destination, so its arguments have the same kinds. *)
+            let tparams =
+              List.mapi
+                (fun i u ->
+                  let tt =
+                    match List.nth_opt templates i with
+                    | Some (tt, _) -> tt
+                    | None -> TTtypename
+                  in
+                  (tt, u) )
+                u_var_names
+            in
+            [ ( Fmethod
+                  { mf_name = Id.of_string "operator_at";
+                    mf_globref = None;
+                    mf_tparams = tparams;
+                    mf_ret_type = dst_ty;
+                    mf_params = [];
+                    mf_body = [Sreturn (Some (CPPbraced converted))];
+                    mf_is_const = true;
+                    mf_is_static = false;
+                    mf_is_inline = false;
+                    mf_this_pos = 0;
+                    mf_no_pure = true;
+                    mf_is_noexcept = false;
+                    mf_is_conversion = true },
+                VPublic,
+                SAccessors ) ]
         in
         let factory_name =
           Id.of_string (factory_name_of_ctor ~type_name:ind_type_name_str cname_str)
@@ -5415,7 +5488,10 @@ let gen_ind_header_v2
             VPublic, SCreators )
         in
         let method_fields = List.map (gen_single_method name vars) method_candidates in
-        let all_flat_fields = flat_fields @ [clone_field; factory_field] @ method_fields in
+        let all_flat_fields =
+          flat_fields @ [clone_field] @ conversion_field @ [factory_field]
+          @ method_fields
+        in
         Dstruct
           { ds_ref = name;
             ds_fields = all_flat_fields;
@@ -7114,7 +7190,8 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
-                  mf_is_noexcept = false;
+                mf_is_noexcept = false;
+                mf_is_conversion = false;
               },
             VPublic,
             SAccessors )
@@ -7133,7 +7210,8 @@ let gen_ind_header_v2
                 mf_is_inline = false;
                 mf_this_pos = 0;
                 mf_no_pure = false;
-                  mf_is_noexcept = false;
+                mf_is_noexcept = false;
+                mf_is_conversion = false;
               },
             VPublic,
             SAccessors )
@@ -7161,6 +7239,7 @@ let gen_ind_header_v2
                   mf_this_pos = 0;
                   mf_no_pure = true;
                   mf_is_noexcept = false;
+                  mf_is_conversion = false;
                 },
               VPublic,
               SManipulators );

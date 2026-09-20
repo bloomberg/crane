@@ -47,6 +47,8 @@ template <typename I> struct MyEvent {
   // ACCESSORS
   MyEvent<I> clone() const { return {v_0}; }
 
+  template <typename _U> operator MyEvent<_U>() const { return {v_0}; }
+
   // CREATORS
   static MyEvent<I> newref(uint64_t v_0) { return {v_0}; }
 };

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -121,6 +122,21 @@ template <typename T> struct Box {
 
   // ACCESSORS
   Box<T> clone() const { return {tag, t}; }
+
+  template <typename _U> operator Box<_U>() const {
+    return {tag, [&]() -> _U {
+              if constexpr (std::is_same_v<T, std::any>) {
+                return crane_any_cast<_U>(t);
+              } else {
+                if constexpr (std::is_constructible_v<_U, const T &>) {
+                  return _U(t);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }
+            }()};
+  }
 
   // CREATORS
   static Box<T> mk(Nat tag, T t) { return {std::move(tag), std::move(t)}; }

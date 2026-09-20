@@ -143,6 +143,21 @@ template <typename X> struct ReqA {
   // ACCESSORS
   ReqA<X> clone() const { return {a0}; }
 
+  template <typename _U> operator ReqA<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<X, std::any>) {
+        return crane_any_cast<_U>(a0);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const X &>) {
+          return _U(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
+
   // CREATORS
   static ReqA<X> mka(X a0) { return {std::move(a0)}; }
 };

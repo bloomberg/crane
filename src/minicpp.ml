@@ -537,6 +537,7 @@ and method_field = {
   mf_this_pos : int;
   mf_no_pure : bool;
   mf_is_noexcept : bool;
+  mf_is_conversion : bool;
 }
 
 (** Custom extraction info, resolved once during translation. *)
@@ -572,7 +573,8 @@ let static_fun ~name ~ret ~params ~body =
     mf_is_inline = false;
     mf_this_pos = 0;
     mf_no_pure = false;
-    mf_is_noexcept = false }
+    mf_is_noexcept = false;
+    mf_is_conversion = false }
 
 (** Rvalue reference type [T&&].  Uses the double-{!Tref} encoding that the
     pretty-printer already handles: [Tref(Tref(t))] prints as [t&&]. *)

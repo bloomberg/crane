@@ -1,7 +1,9 @@
 #ifndef INCLUDED_SIG_PROP_COMMENT
 #define INCLUDED_SIG_PROP_COMMENT
 
+#include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -17,6 +19,21 @@ template <typename A> struct Sig {
 
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
+
+  template <typename _U> operator Sig<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<A, std::any>) {
+        return crane_any_cast<_U>(x);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const A &>) {
+          return _U(x);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }

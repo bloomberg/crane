@@ -3,11 +3,14 @@
 
 #include "crane_fn.h"
 #include "small_vector.h"
+#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
 #include <functional>
 #include <memory>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -109,6 +112,21 @@ template <typename T> struct MemM {
 
   // ACCESSORS
   MemM<T> clone() const { return {a0}; }
+
+  template <typename _U> operator MemM<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<T, std::any>) {
+        return crane_any_cast<_U>(a0);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const T &>) {
+          return _U(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
 
   // CREATORS
   static MemM<T> memret(T a0) { return {std::move(a0)}; }

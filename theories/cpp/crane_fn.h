@@ -351,3 +351,17 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
     // rather than a failure inside machinery the reader did not write.
     return Dst(std::forward<Src>(src));
 }
+
+// A composite carrier -- a Rocq carrier of the shape [fun T => (T * box T)] --
+// is neither a range nor constructible from itself at another element type,
+// because [std::pair]'s converting constructor asks each component to be
+// constructible and an erased component needs a cast instead.  It is still
+// read component-wise, so say that once here rather than special-casing pairs
+// in the machinery above: this is the [crane_cast_to] hook a carrier uses to
+// declare how it is read, and it is found by argument-dependent lookup.
+template <class A, class B, class X, class Y>
+std::pair<A, B> crane_cast_to(crane_tag<std::pair<A, B>>,
+                              const std::pair<X, Y> &src) {
+  return std::pair<A, B>(crane_convert<A>(src.first),
+                         crane_convert<B>(src.second));
+}

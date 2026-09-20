@@ -1,12 +1,15 @@
 #ifndef INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
 #define INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -104,6 +107,21 @@ struct HktSingleCtorInstanceBody {
 
     // ACCESSORS
     box<A> clone() const { return {a0}; }
+
+    template <typename _U> operator box<_U>() const {
+      return {[&]() -> _U {
+        if constexpr (std::is_same_v<A, std::any>) {
+          return crane_any_cast<_U>(a0);
+        } else {
+          if constexpr (std::is_constructible_v<_U, const A &>) {
+            return _U(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
+        }
+      }()};
+    }
 
     // CREATORS
     static box<A> mkbox(A a0) { return {std::move(a0)}; }

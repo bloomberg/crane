@@ -154,6 +154,21 @@ struct PartialApply {
     // ACCESSORS
     tagged<A> clone() const { return {a0, a1}; }
 
+    template <typename _U> operator tagged<_U>() const {
+      return {a0, [&]() -> _U {
+                if constexpr (std::is_same_v<A, std::any>) {
+                  return crane_any_cast<_U>(a1);
+                } else {
+                  if constexpr (std::is_constructible_v<_U, const A &>) {
+                    return _U(a1);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }
+              }()};
+    }
+
     // CREATORS
     static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
   };

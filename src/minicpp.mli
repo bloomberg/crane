@@ -636,6 +636,11 @@ and method_field = {
   mf_is_noexcept : bool;
       (** When true, emit [noexcept] after the parameter list.  Set for
           move assignment operators. *)
+  mf_is_conversion : bool;
+      (** When true this is a conversion function, whose name {e is} its
+          return type: it prints as [operator <mf_ret_type>()] with no return
+          type of its own, and [mf_name] is only what the doc comment and any
+          out-of-line qualifier use. *)
 }
 
 (** Custom extraction metadata for manually mapped entities.  Resolved once

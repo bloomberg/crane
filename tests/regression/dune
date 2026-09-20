@@ -9548,3 +9548,14 @@
   (alias runtest)
   (deps delifted_binary_fixpoint.t.exe)
   (action (run ./delifted_binary_fixpoint.t.exe))))
+
+(subdir partial_application
+ (rule
+  (targets partial_application.t.exe)
+  (deps PartialApplication.vo partial_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_application.t.exe partial_application.cpp partial_application.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_application.t.exe)
+  (action (run ./partial_application.t.exe))))

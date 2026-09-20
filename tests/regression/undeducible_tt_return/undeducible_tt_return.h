@@ -1,11 +1,14 @@
 #ifndef INCLUDED_UNDEDUCIBLE_TT_RETURN
 #define INCLUDED_UNDEDUCIBLE_TT_RETURN
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
+#include <stdexcept>
+#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -142,6 +145,21 @@ template <typename X> struct ReqA {
   // ACCESSORS
   ReqA<X> clone() const { return {x}; }
 
+  template <typename _U> operator ReqA<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<X, std::any>) {
+        return crane_any_cast<_U>(x);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const X &>) {
+          return _U(x);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
+
   // CREATORS
   static ReqA<X> mka(X x) { return {std::move(x)}; }
 };
@@ -152,6 +170,21 @@ template <typename X> struct ReqB {
 
   // ACCESSORS
   ReqB<X> clone() const { return {x}; }
+
+  template <typename _U> operator ReqB<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<X, std::any>) {
+        return crane_any_cast<_U>(x);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const X &>) {
+          return _U(x);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
 
   // CREATORS
   static ReqB<X> mkb(X x) { return {std::move(x)}; }

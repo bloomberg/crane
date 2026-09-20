@@ -92,6 +92,10 @@ struct TypeAliasAppliedCtorParam {
     // ACCESSORS
     holder<F> clone() const { return {a0}; }
 
+    template <template <typename> class _U> operator holder<_U>() const {
+      return {ap<_U, Nat>(a0)};
+    }
+
     // CREATORS
     static holder<F> hold(ap<F, Nat> a0) { return {std::move(a0)}; }
   };

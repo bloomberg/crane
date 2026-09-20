@@ -84,6 +84,8 @@ struct PhantomTypeArgNeverEmitted {
     // ACCESSORS
     phantom<A> clone() const { return {a0}; }
 
+    template <typename _U> operator phantom<_U>() const { return {a0}; }
+
     // CREATORS
     static phantom<A> ph(Nat a0) { return {std::move(a0)}; }
   };

@@ -78,21 +78,6 @@
   (deps cps_continuation_copy.t.exe)
   (action (run ./cps_continuation_copy.t.exe))))
 
-; --- Reductions from extracting Vellvm (https://github.com/vellvm/vellvm).
-; Each of these currently fails; see the header comment in the .v file.
-
-(subdir partial_application
- (rule
-  (targets partial_application.t.exe)
-  (deps PartialApplication.vo partial_application.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_application.t.exe partial_application.cpp partial_application.t.cpp)))
- (rule
-  (alias runtest)
-  (deps partial_application.t.exe)
-  (action (run ./partial_application.t.exe))))
-
-
 ; --- Ninth round of Vellvm reductions, against Crane 79cf29afc.
 
 (subdir stateT_dict_arg_dropped

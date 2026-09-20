@@ -105,6 +105,8 @@ struct TwoLevelMediation {
     // ACCESSORS
     w<A> clone() const { return {a0, a1}; }
 
+    template <typename _U> operator w<_U>() const { return {a0, List<_U>(a1)}; }
+
     // CREATORS
     static w<A> mkw(uint64_t a0, List<A> a1) { return {a0, std::move(a1)}; }
 

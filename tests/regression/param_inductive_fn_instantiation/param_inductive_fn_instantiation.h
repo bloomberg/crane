@@ -18,6 +18,10 @@ struct ParamInductiveFnInstantiation {
     // ACCESSORS
     endo<A> clone() const { return {a0}; }
 
+    template <typename _U> operator endo<_U>() const {
+      return {std::function<_U(_U)>(a0)};
+    }
+
     // CREATORS
     static endo<A> e(std::function<A(A)> a0) { return {std::move(a0)}; }
   };

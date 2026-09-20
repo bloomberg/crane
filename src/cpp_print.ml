@@ -3874,6 +3874,7 @@ let rec pp_cpp_field
         mf_is_inline;
         mf_no_pure;
         mf_is_noexcept;
+        mf_is_conversion;
       } ->
     let const_s = if mf_is_const then str " const" else mt () in
     let noexcept_s = if mf_is_noexcept then str " noexcept" else mt () in
@@ -3933,15 +3934,17 @@ let rec pp_cpp_field
         (pp_owner_template owner_tps, qual ++ str "::")
       | Mm_inline | Mm_declared -> (mt (), mt ())
     in
+    (* A conversion function has no return type of its own -- its name is the
+       type it converts to -- and none of the qualifiers [fun_qualifier]
+       computes from a return type apply. *)
     let head =
       h
         ( inline_s
-        ++ qualifier
-        ++ static_s
-        ++ pp_type mf_ret_type
-        ++ str " "
-        ++ qual_s
-        ++ Id.print mf_name
+        ++ ( if mf_is_conversion then
+               qual_s ++ str "operator " ++ pp_type mf_ret_type
+             else
+               qualifier ++ static_s ++ pp_type mf_ret_type ++ str " "
+               ++ qual_s ++ Id.print mf_name )
         ++ pp_par true params_s
         ++ const_s
         ++ noexcept_s )

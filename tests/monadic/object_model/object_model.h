@@ -118,6 +118,21 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
+  template <typename _U> operator ExceptE<_U>() const {
+    return {[&]() -> _U {
+      if constexpr (std::is_same_v<Err, std::any>) {
+        return crane_any_cast<_U>(a0);
+      } else {
+        if constexpr (std::is_constructible_v<_U, const Err &>) {
+          return _U(a0);
+        } else {
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
+        }
+      }
+    }()};
+  }
+
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
