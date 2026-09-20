@@ -4949,9 +4949,52 @@ let gen_single_method name vars (func_ref, body, ty, this_pos) =
     List.iter (fun s -> ignore (on_stmt s)) stmts;
     !found
   in
+  (* An extra tvar the return type is alone in mentioning is a dead letter.
+     Nothing deduces it -- the receiver carries only the inductive's own
+     parameters, and no value parameter names it -- and the body cannot honour
+     it either, since the body never names it: whatever the body builds, it
+     builds at one fixed type.  Quantifying it declares a method no call can
+     name; the honest spelling is the erased one, which is also what the index
+     of an event family reaches C++ as everywhere else. *)
+  let return_only_tvars =
+    List.filter_map
+      (fun (_tt, tname) ->
+        if
+          Id.Set.mem tname extra_tvar_name_set
+          && cpp_type_has_tvar tname ret_cpp
+          && (not (List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params))
+          && not (stmt_has_tvar tname stmts)
+        then Some tname
+        else None )
+      template_params
+  in
+  let return_only_set =
+    List.fold_left (fun s n -> Id.Set.add n s) Id.Set.empty return_only_tvars
+  in
+  let ret_cpp, stmts =
+    if Id.Set.is_empty return_only_set then (ret_cpp, stmts)
+    else
+      let erased =
+        map_cpp_type
+          (function
+            | Tvar (_, Some n) when Id.Set.mem n return_only_set -> Tany
+            | t -> t )
+          ret_cpp
+      in
+      (* The body still builds its value at the one type it knows; the
+         signature now promises the erased one.  [crane_container_cast] is the
+         conversion between the two, and it is the identity when they agree. *)
+      let rec cast_stmt s =
+        match s with
+        | Sreturn (Some e) -> Sreturn (Some (CPPcontainer_cast (erased, e, false)))
+        | _ -> Minicpp.map_stmt (fun e -> e) cast_stmt (fun t -> t) s
+      in
+      (erased, List.map cast_stmt stmts)
+  in
   let template_params =
     List.filter (fun (_tt, tname) ->
       if not (Id.Set.mem tname extra_tvar_name_set) then true
+      else if Id.Set.mem tname return_only_set then false
       else
         cpp_type_has_tvar tname ret_cpp
         || List.exists (fun (_, pty) -> cpp_type_has_tvar tname pty) params
