@@ -332,7 +332,7 @@ struct Helpers {
       const auto &[a1, a2] = std::get<typename List<T2>::Cons>(l.v());
       const List<T2> &a2_value = *a2;
       return Monad0::template bind<_tcI0, T3, List<T3>>(
-          f(a1), [=](const auto &b0) mutable {
+          f(a1), [=](T3 b0) mutable {
             return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
                 Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
                 [=](const auto &bs) mutable {

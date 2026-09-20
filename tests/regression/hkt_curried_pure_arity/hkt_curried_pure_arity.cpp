@@ -5,9 +5,8 @@ std::optional<Nat> HktCurriedPureArity::run(const std::optional<Nat> &a,
   return ap<HktCurriedPureArity::ApOpt, Nat, Nat>(
       ap<HktCurriedPureArity::ApOpt, Nat, std::function<Nat(Nat)>>(
           pure<HktCurriedPureArity::ApOpt,
-               std::function<std::function<Nat(Nat)>(Nat)>>([](const auto &x) {
-            return [=](const auto &) mutable { return x; };
-          }),
+               std::function<std::function<Nat(Nat)>(Nat)>>(
+              [](Nat x) { return [=](const Nat &) mutable { return x; }; }),
           a),
       b);
 }

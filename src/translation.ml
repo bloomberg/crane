@@ -5572,9 +5572,33 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let f =
       with_escape_analysis (fun () ->
         let tvars = get_current_type_vars () in
+        (* What the slot this lambda flows into declares its parameters to be,
+           when it declares a signature at all. *)
+        let expected_param_cpp_tys =
+          match Option.map (unfold_cpp_typedef env) expected_ty with
+          | Some (Tfun (doms, _)) -> Some doms
+          | _ -> None
+        in
+        let slot_param_cpp_ty j =
+          (* Only a type this lambda could actually be written against.  The
+             slot is read off the callee's declaration, so it may name that
+             declaration's own template parameters, which are no more in scope
+             here than the erasure was -- adopting one trades [std::any] for a
+             free name. *)
+          let in_scope t =
+            Id.Set.for_all
+              (fun n -> List.exists (Id.equal n) tvars)
+              (Minicpp.tvar_names t)
+          in
+          match
+            Option.bind expected_param_cpp_tys (fun doms -> List.nth_opt doms j)
+          with
+          | Some t when in_scope t -> Some t
+          | _ -> None
+        in
         let cpp_arg_info =
-          List.map
-            (fun (id, ty, owned) ->
+          List.mapi
+            (fun j (id, ty, owned) ->
               let bare_cpp_ty =
                 cpp_of_ml env ty
               in
@@ -5597,6 +5621,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                        && has_tany_in_type bare_cpp_ty
                        && not (Rank2.is_bare_box bare_cpp_ty) ->
                   Tref (Tconst (at_carrier bare_cpp_ty))
+                | None
+                  when prints_as_any bare_cpp_ty
+                       && ( match slot_param_cpp_ty j with
+                          | Some d -> not (prints_as_any d)
+                          | None -> false ) ->
+                  (* The binder's own annotation says nothing -- a constructor
+                     eta-expanded into a lambda ([fmap inr m]) is handed a
+                     parameter extraction never gave a type -- but the slot it
+                     flows into does: the callee's instantiated domain.  Taking
+                     the type from there is what keeps the signature and the
+                     body in step, since the body was generated against the
+                     concrete type the constructor needs.  Written [std::any]
+                     instead, the parameter is a claim the body cannot keep,
+                     and the error lands inside the lambda at the use. *)
+                  wrap_param_by_ownership ~is_owned:owned
+                    (Option.get (slot_param_cpp_ty j))
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
                   (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
@@ -5637,13 +5677,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            parameter dropped by [filtered_args_with_owned] keeps its
            conversion-derived assignment. *)
         let () =
-          (* What the slot this lambda flows into declares its parameters to
-             be, when it declares a signature at all. *)
-          let expected_param_cpp_tys =
-            match Option.map (unfold_cpp_typedef env) expected_ty with
-            | Some (Tfun (doms, _)) -> Some doms
-            | _ -> None
-          in
           let declared =
             List.combine
               (List.mapi (fun j (id, _, _) -> (j, id)) filtered_args_with_owned)

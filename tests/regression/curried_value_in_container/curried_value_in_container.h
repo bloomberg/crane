@@ -129,7 +129,7 @@ struct CurriedValueInContainer {
                 UINT64_C(1),
                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))) +
        constK<uint64_t, std::function<uint64_t(uint64_t)>>(
-           UINT64_C(7), [](const auto &n) { return n; }));
+           UINT64_C(7), [](uint64_t n) { return n; }));
   /// Stored in a list and reapplied.
   static inline const List<std::function<uint64_t(uint64_t, uint64_t)>> stored =
       List<std::function<uint64_t(uint64_t, uint64_t)>>::cons(

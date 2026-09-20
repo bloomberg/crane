@@ -153,7 +153,7 @@ struct Monads {
     static std::function<
         typename _tcI0::template m<std::pair<_A0, std::any>>(_A0)>
     ret(_A0 a) {
-      return [=](const auto &s) mutable {
+      return [=](_A0 s) mutable {
         return itree_ret(std::make_pair(std::any(s), std::any(a)));
       };
     }
@@ -167,7 +167,7 @@ struct Monads {
         std::function<typename _tcI0::template m<std::pair<_A0, std::any>>(_A0,
                                                                            _A0)>
             k) {
-      return [=](const auto &s) mutable {
+      return [=](const _A0 &s) mutable {
         return itree_bind(t(s), [=](const auto &sa) mutable {
           return k(sa.second, sa.first);
         });

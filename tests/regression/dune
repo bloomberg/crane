@@ -9491,3 +9491,14 @@
   (alias runtest)
   (deps handler_indexed_event_arg.t.exe)
   (action (run ./handler_indexed_event_arg.t.exe))))
+
+(subdir fmap_erased_lambda_param
+ (rule
+  (targets fmap_erased_lambda_param.t.exe)
+  (deps FmapErasedLambdaParam.vo fmap_erased_lambda_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fmap_erased_lambda_param.t.exe fmap_erased_lambda_param.cpp fmap_erased_lambda_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps fmap_erased_lambda_param.t.exe)
+  (action (run ./fmap_erased_lambda_param.t.exe))))

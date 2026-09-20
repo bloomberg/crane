@@ -174,7 +174,7 @@ struct FailE {
 
   template <typename T1, typename T2> std::shared_ptr<ITree<T2>> cast_() const {
     return itree_bind(itree_trigger(*this),
-                      [](const auto &) -> std::shared_ptr<ITree<T2>> {
+                      [](const Empty_set &) -> std::shared_ptr<ITree<T2>> {
                         throw std::logic_error("absurd case");
                       });
   }

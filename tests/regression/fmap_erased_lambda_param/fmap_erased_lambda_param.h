@@ -1,5 +1,5 @@
-#ifndef INCLUDED_FWD_DECL_BEFORE_CONCEPT
-#define INCLUDED_FWD_DECL_BEFORE_CONCEPT
+#ifndef INCLUDED_FMAP_ERASED_LAMBDA_PARAM
+#define INCLUDED_FMAP_ERASED_LAMBDA_PARAM
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -9,12 +9,16 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-struct Monad_option;
 struct Nat;
+template <typename A, typename B> struct Sum;
+enum class Exc;
+struct Dv;
+struct Monad_option;
 
 struct Nat {
   // TYPES
@@ -72,30 +76,73 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
 
-  bool eqb(const Nat &m) const {
-    const Nat *_loop_self = this;
-    const Nat *_loop_m = &m;
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
-          return true;
+template <typename A, typename B> struct Sum {
+  // TYPES
+  struct Inl {
+    A a0;
+  };
+
+  struct Inr {
+    B a0;
+  };
+
+  using variant_t = std::variant<Inl, Inr>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Sum() {}
+
+  explicit Sum(Inl _v) : v_(std::move(_v)) {}
+
+  explicit Sum(Inr _v) : v_(std::move(_v)) {}
+
+  template <typename _U0, typename _U1> Sum(const Sum<_U0, _U1> &_other) {
+    if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+      const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+      this->v_ = Inl{[&]() -> A {
+        if constexpr (std::is_same_v<_U0, std::any>) {
+          return crane_any_cast<A>(a0);
         } else {
-          return false;
+          if constexpr (std::is_constructible_v<A, const _U0 &>) {
+            return A(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
-      } else {
-        const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
-          return false;
+      }()};
+    } else {
+      const auto &[a0] = std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+      this->v_ = Inr{[&]() -> B {
+        if constexpr (std::is_same_v<_U1, std::any>) {
+          return crane_any_cast<B>(a0);
         } else {
-          const auto &[a00] = std::get<typename Nat::S>(_loop_m->v());
-          _loop_self = crane_raw(a0);
-          _loop_m = crane_raw(a00);
+          if constexpr (std::is_constructible_v<B, const _U1 &>) {
+            return B(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
-      }
+      }()};
     }
   }
+
+  static Sum<A, B> inl(A a0) { return Sum<A, B>(Inl{std::move(a0)}); }
+
+  static Sum<A, B> inr(B a0) { return Sum<A, B>(Inr{std::move(a0)}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 template <typename I>
@@ -137,27 +184,18 @@ struct Monad0 {
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
+enum class Exc { OOPS };
 
-struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+struct Dv {
+  // DATA
+  Nat n;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
-  }
+  // ACCESSORS
+  Dv clone() const { return {n}; }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 std::function<std::optional<_A1>(_A0)> c2) {
-    if (c1.has_value()) {
-      const _A0 &v = *c1;
-      return c2(v);
-    } else {
-      return std::optional<_A1>();
-    }
-  }
+  // CREATORS
+  static Dv DV_(Nat n) { return {std::move(n)}; }
 };
-
-static_assert(Monad<Monad_option>);
 
 template <Monad _tcI0> struct Functor_Monad {
   template <typename _A0> using m = typename _tcI0::template m<_A0>;
@@ -173,8 +211,36 @@ template <Monad _tcI0> struct Functor_Monad {
   }
 };
 
-struct FwdDeclBeforeConcept {
-  static std::optional<bool> use(const std::optional<Nat> &o);
+struct Monad_option {
+  template <typename _A0> using m = std::optional<_A0>;
+
+  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
+    return std::make_optional<_A0>(x);
+  }
+
+  template <typename _A0, typename _A1>
+  static std::optional<_A1> bind(std::optional<_A0> m,
+                                 std::function<std::optional<_A1>(_A0)> f) {
+    if (m.has_value()) {
+      const _A0 &x = *m;
+      return f(x);
+    } else {
+      return std::optional<_A1>();
+    }
+  }
+};
+
+static_assert(Monad<Monad_option>);
+
+template <Monad _tcI0>
+typename _tcI0::template m<Sum<Exc, Dv>>
+raise_right(typename _tcI0::template m<Dv> m) {
+  return Functor0::template fmap<Functor_Monad<_tcI0>, Dv, Sum<Exc, Dv>>(
+      [](Dv x) { return Sum<Exc, Dv>::inr(x); }, std::move(m));
+}
+
+struct FmapErasedLambdaParam {
+  static std::optional<Sum<Exc, Dv>> go(Nat n);
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>
@@ -196,4 +262,4 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
 
-#endif // INCLUDED_FWD_DECL_BEFORE_CONCEPT
+#endif // INCLUDED_FMAP_ERASED_LAMBDA_PARAM

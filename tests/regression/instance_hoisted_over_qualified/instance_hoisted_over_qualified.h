@@ -333,15 +333,13 @@ typename _tcI0::template m<List<T3>> MemoryBytes::map_monad(F0 &&f,
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
-    return Monad0::template bind<_tcI0, T3, List<T3>>(
-        f(a0), [=](const auto &y) mutable {
-          return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
-              MemoryBytes::template map_monad<_tcI0, T2, T3>(f, a1_value),
-              [=](const auto &ys) mutable {
-                return Monad0::template ret<_tcI0, List<T3>>(
-                    List<T3>::cons(y, ys));
-              });
-        });
+    return Monad0::template bind<_tcI0, T3, List<T3>>(f(a0), [=](T3 y) mutable {
+      return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
+          MemoryBytes::template map_monad<_tcI0, T2, T3>(f, a1_value),
+          [=](const auto &ys) mutable {
+            return Monad0::template ret<_tcI0, List<T3>>(List<T3>::cons(y, ys));
+          });
+    });
   }
 }
 
