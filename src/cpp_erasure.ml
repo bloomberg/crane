@@ -352,15 +352,22 @@ let bind_free_tvars (d : settled) : settled =
     | s' -> s'
   in
   let body bound stmts = List.map (fs bound) stmts in
-  let field bound ((f, vis, tag) as fld) =
+  let method_scope bound mf =
+    bound
+    |> add_ids (List.map snd mf.mf_tparams)
+    |> add_ty mf.mf_ret_type
+    |> add_tys (List.map snd mf.mf_params)
+  in
+  let member bound = function
+    | OLmethod mf ->
+      let bound = method_scope bound mf in
+      OLmethod {mf with mf_body = body bound mf.mf_body}
+    | OLdestructor stmts -> OLdestructor (body bound stmts)
+  in
+  let rec field bound ((f, vis, tag) as fld) =
     match f with
     | Fmethod mf ->
-      let bound =
-        bound
-        |> add_ids (List.map snd mf.mf_tparams)
-        |> add_ty mf.mf_ret_type
-        |> add_tys (List.map snd mf.mf_params)
-      in
+      let bound = method_scope bound mf in
       (Fmethod {mf with mf_body = body bound mf.mf_body}, vis, tag)
     | Fconstructor fc ->
       let bound =
@@ -369,6 +376,11 @@ let bind_free_tvars (d : settled) : settled =
         |> add_tys (List.map snd fc.fc_params)
       in
       (Fconstructor {fc with fc_body = body bound fc.fc_body}, vis, tag)
+    | Fdestructor stmts -> (Fdestructor (body bound stmts), vis, tag)
+    | Fnested_struct (id, fields) ->
+      (Fnested_struct (id, List.map (field bound) fields), vis, tag)
+    (* An {!Fmember_decl} is the half without a body; the body is the
+       {!Dmember_def} that follows, and is reached there. *)
     | _ -> fld
   in
   let rec go bound d =
@@ -376,13 +388,21 @@ let bind_free_tvars (d : settled) : settled =
     | Dtemplate (tps, cstr, inner) ->
       Dtemplate (tps, cstr, go (add_ids (List.map snd tps) bound) inner)
     | Dnspace (r, decls) -> Dnspace (r, List.map (go bound) decls)
-    | Dstruct st ->
-      let bound = add_ids (List.map snd st.ds_tparams) bound in
-      Dstruct {st with ds_fields = List.map (field bound) st.ds_fields}
+    | Dstruct st -> Dstruct (struct_ bound st)
+    | Dfields st -> Dfields (struct_ bound st)
+    | Dmember_def dm ->
+      let bound = add_ids (List.map snd dm.dm_tparams) bound in
+      Dmember_def {dm with dm_field = member bound dm.dm_field}
     | Dfun ({df_shape = Ddef (params, stmts); df_ret; _} as f) ->
       let bound = bound |> add_ty df_ret |> add_tys (List.map snd params) in
       Dfun {f with df_shape = Ddef (params, body bound stmts)}
+    (* A global's initialiser is a body like any other, and its declared type
+       is as much a signature as a function's return type. *)
+    | Dasgn (r, ty, e) -> Dasgn (r, ty, fe (add_ty ty bound) e)
     | _ -> d
+  and struct_ bound st =
+    let bound = add_ids (List.map snd st.ds_tparams) bound in
+    {st with ds_fields = List.map (field bound) st.ds_fields}
   in
   go Id.Set.empty d
 
