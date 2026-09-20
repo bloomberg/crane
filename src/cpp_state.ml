@@ -777,25 +777,32 @@ let concept_name_table : (GlobRef.t, string) Hashtbl.t =
 let global_scope_enum_table : (GlobRef.t, unit) Hashtbl.t =
   owned_table "global_scope_enum_table"
 
-(** Global-scope type alias table: tracks type aliases (ConstRef from Dtype)
-    that were rendered at global scope as [using T = ...] declarations, not
-    inside any struct.  When an imported module's type alias (e.g., [cell] from
-    [AliasSource.v]) is rendered at global scope in the header but the struct
-    qualifier logic would incorrectly add [StructName::] in the .cpp, checking
-    this table prevents the spurious qualification.
+(** The type names a wrapper struct's module contributes to C++ {i global}
+    scope rather than to the struct.
 
-    {b Lifecycle:} Populated during the rendering pass by
-    [register_global_scope_type_alias] when a [Dtype] is rendered outside
-    any struct.  Queried in [cpp_names.ml] for name qualification.
-    Cleared by [reset_cpp_state] between extraction runs. *)
-let global_scope_type_alias_table : (GlobRef.t, unit) Hashtbl.t =
-  owned_table "global_scope_type_alias_table"
+    A module forced into a wrapper struct by a name collision does not take
+    all of its declarations with it.  A type alias stays outside as
+    [using T = ...;], because C++ puts it there; a type class instance is
+    lifted out deliberately, because an instance is named from wherever its
+    class is used and a concept's template argument is a type, not a member of
+    whatever module happened to declare it.  Either way the wrapper struct
+    does not declare the name, and {!Cpp_names.struct_qualifier_for} must not
+    write [Wrapper::] in front of it in the [.cpp].
 
-let register_global_scope_type_alias r =
-  Hashtbl.replace global_scope_type_alias_table r ()
+    Asking where the name was {i emitted} is the only question that answers
+    this; where it was {i declared} in Rocq says the opposite, and says it
+    confidently.
 
-let is_global_scope_type_alias r =
-  Hashtbl.mem global_scope_type_alias_table r
+    {b Lifecycle:} populated from {!Structure_analysis}'s module layout before
+    any rendering begins -- which is what makes it safe to read from a [.cpp]
+    body printed long before the [.h] declares the name.  Queried in
+    [cpp_names.ml] for name qualification; cleared by [reset_cpp_state]. *)
+let global_scope_type_table : (GlobRef.t, unit) Hashtbl.t =
+  owned_table "global_scope_type_table"
+
+let register_global_scope_type r = Hashtbl.replace global_scope_type_table r ()
+
+let is_global_scope_type r = Hashtbl.mem global_scope_type_table r
 
 (** Pending wrapper declarations: maps a Dnspace struct name (e.g., "Nat") to
     pre-rendered forward declarations (specs) that should be injected into that

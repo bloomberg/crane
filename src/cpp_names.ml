@@ -472,12 +472,14 @@ let struct_qualifier_for r name_str =
         struct_name ++ str "::"
       else
         mt ()
-    (* Type aliases (ConstRef from Dtype) that were rendered at global C++ scope
-       as [using T = ...] declarations are never members of the struct.  When a
-       module is imported from another file, its type aliases end up at global
-       scope in the header (not inside [struct StructName]), so they must not
-       be qualified with [StructName::] in the .cpp out-of-line definitions. *)
-    else if Cpp_state.is_global_scope_type_alias r then
+    (* A name the struct's module contributes to global scope rather than to
+       the struct is never a member of it: a [using T = ...] alias, which C++
+       puts outside, and a type class instance, which Crane lifts out so that
+       a concept's template argument can be written unqualified.  Both are
+       recorded by the module layout, which knows where the declaration goes;
+       the kernel module path consulted below only knows where it came from,
+       and for these two answers [Member]. *)
+    else if Cpp_state.is_global_scope_type r then
       mt ()
     (* The kernel module path settles the question outright when it is known:
        the type is a member of this struct exactly when it was declared in the

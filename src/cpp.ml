@@ -1783,16 +1783,20 @@ let install_analysis
       | None -> ()
       | Some name ->
         Hashtbl.replace wrapper_module_table mi.modpath name;
-        (* A wrapper module's type aliases are emitted at global C++ scope, as
-           [using T = ...;] rather than members of the wrapper struct, so
-           {!Cpp_names.struct_qualifier_for} must not qualify them in the .cpp
-           file.  Which module a declaration is emitted in is layout, so it is
-           settled here rather than while emitting it. *)
+        (* Not everything a wrapper module declares ends up inside the wrapper
+           struct.  A type alias is emitted at global C++ scope as
+           [using T = ...;], and a type class instance is lifted out to
+           namespace scope by [process_sel] below, for the reason recorded
+           there.  Either way {!Cpp_names.struct_qualifier_for} must not write
+           [Wrapper::] in front of the name in the .cpp file.  Which module a
+           declaration is emitted in is layout, so it is settled here rather
+           than while emitting it. *)
         List.iter
           (fun (_l, se) ->
             match se with
-            | SEdecl (Dtype (r, _, _)) ->
-              Cpp_state.register_global_scope_type_alias r
+            | SEdecl (Dtype (r, _, _)) -> Cpp_state.register_global_scope_type r
+            | SEdecl (Dterm (r, a, t)) when is_typeclass_instance a t ->
+              Cpp_state.register_global_scope_type r
             | _ -> () )
           mi.sels )
     sorted_modules

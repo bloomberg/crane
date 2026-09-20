@@ -18,17 +18,23 @@
    - That file's definitions must be wrapped in a file struct, which only
      happens when a name collides across files -- hence [Eou.helper].
 
-   In Vellvm this is 5 of the 69 remaining errors, all of them
-   [MemoryBytes::EOUP_Monad] as a type argument of [ListUtil::map_monad],
-   from rocq/Semantics/MemoryBytes.v:80.  Note that signature positions are
-   already correct: the enclosing hoisted definition's own return and
-   parameter types name file-scope structs unqualified.  It is specifically a
-   type argument written inside an *expression*. *)
+   Signature positions were already correct: the enclosing hoisted
+   definition's own return and parameter types name file-scope structs
+   unqualified.  It was specifically a type argument written inside an
+   *expression*.
+
+   Fixed by recording the instance where the layout already records the
+   wrapper module's [using] aliases -- both are names the wrapper's module
+   contributes to global scope rather than to the struct, and
+   [Cpp_names.struct_qualifier_for] reads the one table for both.  The
+   printer cannot answer this: the reference is in the [.cpp], which is
+   written before the [.h] that declares the struct, so "where was this
+   emitted" has to be settled by [Structure_analysis] before rendering. *)
 From Crane Require Import Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List.
-From CraneTestsWIP Require Import instance_hoisted_over_qualified.Eou.
-From CraneTestsWIP Require Import instance_hoisted_over_qualified.MemoryBytes.
+From CraneTestsRegression Require Import instance_hoisted_over_qualified.Eou.
+From CraneTestsRegression Require Import instance_hoisted_over_qualified.MemoryBytes.
 
 Module InstanceHoistedOverQualified.
   Definition use (bs : list nat) := (Eou.helper 0, MemoryBytes.bump_all bs).

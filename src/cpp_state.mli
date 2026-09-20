@@ -326,17 +326,18 @@ val concept_name_table : (Names.GlobRef.t, string) Hashtbl.t
     [reset_cpp_state]. *)
 val global_scope_enum_table : (Names.GlobRef.t, unit) Hashtbl.t
 
-(** Type aliases ([Dtype] constants) rendered at global scope as [using T = ...]
-    declarations. Populated during rendering by
-    [register_global_scope_type_alias], queried for name qualification, and
-    cleared by [reset_cpp_state]. *)
-val global_scope_type_alias_table : (Names.GlobRef.t, unit) Hashtbl.t
+(** The type names a wrapper struct's module puts at C++ global scope instead
+    of inside the struct: its [using T = ...] aliases, and the type class
+    instances lifted out of it. Populated from the module layout before
+    rendering by [register_global_scope_type], queried for name
+    qualification, and cleared by [reset_cpp_state]. *)
+val global_scope_type_table : (Names.GlobRef.t, unit) Hashtbl.t
 
-(** Record that the given type alias was rendered at global scope. *)
-val register_global_scope_type_alias : Names.GlobRef.t -> unit
+(** Record that the given type name is emitted at global scope. *)
+val register_global_scope_type : Names.GlobRef.t -> unit
 
-(** [true] if the reference is in [global_scope_type_alias_table]. *)
-val is_global_scope_type_alias : Names.GlobRef.t -> bool
+(** [true] if the reference is in [global_scope_type_table]. *)
+val is_global_scope_type : Names.GlobRef.t -> bool
 
 (** Pre-rendered forward declarations to inject into a [Dnspace] struct, keyed
     by struct name. Cleared by [reset_cpp_state]. *)
