@@ -2446,6 +2446,59 @@ let rec clean_self_ns t =
   | Tshared_ptr t -> Tshared_ptr (clean_self_ns t)
   | t -> t
 
+(** Rewrite a local fixpoint's recursive calls to pass the self-parameters.
+
+    Both lowerings of a local fixpoint -- the by-reference one and the
+    Y-combinator one -- generate an [f_impl] lambda that takes [_self_f]
+    ahead of its own arguments, so both need every call to [f] inside the
+    body to grow that argument.  The rewrite is the same one, so it lives
+    here rather than in each.
+
+    A recursive call reaches its arguments through however many applications
+    MiniML curried it into: [f a b] can arrive as one call of two arguments
+    or as two calls of one.  The lambda takes them all at once, so the
+    application spine is flattened before [_self_f] is prefixed -- rewriting
+    only the innermost call yields [_self_f(_self_f, a)(b)], which asks a
+    three-argument lambda for two.  A unary fixpoint cannot show the
+    difference, which is why this went unnoticed.
+
+    [renamed_ids] and [self_ids] are positionally paired.
+    @return the expression and statement rewriters, which are mutually
+      recursive and must be taken together. *)
+let self_call_rewriter (renamed_ids : (Id.t * 'a) list) (self_ids : Id.t list)
+    : (cpp_expr -> cpp_expr) * (cpp_stmt -> cpp_stmt) =
+  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
+  let find_self_id id =
+    let rec aux ids sids =
+      match (ids, sids) with
+      | (fix_id, _) :: _, sid :: _ when Id.equal id fix_id -> Some sid
+      | _ :: ids', _ :: sids' -> aux ids' sids'
+      | _ -> None
+    in
+    aux renamed_ids self_ids
+  in
+  (* The self id this application spine calls, with every argument along it
+     in one reversed list -- an outer application's arguments come after an
+     inner one's, so they go first once reversed. *)
+  let rec self_call_spine = function
+    | CPPfun_call (_, CPPvar id, args) ->
+      Option.map (fun self_id -> (self_id, to_reversed args)) (find_self_id id)
+    | CPPfun_call (_, callee, args) ->
+      Option.map
+        (fun (self_id, inner) -> (self_id, to_reversed args @ inner))
+        (self_call_spine callee)
+    | _ -> None
+  in
+  let rec rewrite_expr e =
+    match self_call_spine e with
+    | Some (self_id, args_rev) ->
+      CPPfun_call
+        ( call_opaque, CPPvar self_id,
+          of_reversed (List.map rewrite_expr args_rev @ self_vars_rev) )
+    | None -> map_expr rewrite_expr rewrite_stmt Fun.id e
+  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+  (rewrite_expr, rewrite_stmt)
+
 (** [ml_ast_type_hint e] is the ML type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
     inserted around it.  Used to recover a type argument left [Tunresolved] by
@@ -12428,29 +12481,7 @@ and gen_local_fix_by_ref env renamed_ids funs_with_params owned_flags_per_fun =
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
-  let find_self_id id =
-    let rec aux ids sids =
-      match (ids, sids) with
-      | (fix_id, _) :: _, sid :: _ when Id.equal id fix_id -> Some sid
-      | _ :: ids', _ :: sids' -> aux ids' sids'
-      | _ -> None
-    in
-    aux renamed_ids self_ids
-  in
-  let rec rewrite_expr e =
-    match e with
-    | CPPfun_call (_, CPPvar id, args) -> (
-      match find_self_id id with
-      | Some self_id ->
-        CPPfun_call
-          (call_opaque, CPPvar self_id,
-            of_reversed
-              (List.map rewrite_expr (to_reversed args) @ self_vars_rev) )
-      | None ->
-        CPPfun_call (call_opaque, CPPvar id, map_args rewrite_expr args) )
-    | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
-  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+  let rewrite_expr, rewrite_stmt = self_call_rewriter renamed_ids self_ids in
   let impl_stmts =
     List.map2
       (fun (((_fix_id, fty), impl_id), owned_flags) (args, body) ->
@@ -12643,34 +12674,7 @@ and gen_local_fix_ycomb env renamed_ids funs_with_params =
       (fun (id, _) -> Id.of_string (Id.to_string id ^ "_impl"))
       renamed_ids
   in
-  (* The self-parameter CPP vars, in reversed order for prepending to
-     reversed arg lists in CPPfun_call nodes. *)
-  let self_vars_rev = List.rev_map (fun id -> CPPvar id) self_ids in
-  (* Rewrite recursive calls in a body: for each fix_id, replace
-     CPPfun_call(CPPvar fix_id, args) with
-     CPPfun_call(CPPvar self_id, args @ self_vars_rev). *)
-  let find_self_id id =
-    let rec aux ids sids =
-      match (ids, sids) with
-      | (fix_id, _) :: _, sid :: _ when Id.equal id fix_id -> Some sid
-      | _ :: ids', _ :: sids' -> aux ids' sids'
-      | _ -> None
-    in
-    aux renamed_ids self_ids
-  in
-  let rec rewrite_expr e =
-    match e with
-    | CPPfun_call (_, CPPvar id, args) -> (
-      match find_self_id id with
-      | Some self_id ->
-        CPPfun_call
-          (call_opaque, CPPvar self_id,
-            of_reversed
-              (List.map rewrite_expr (to_reversed args) @ self_vars_rev) )
-      | None ->
-        CPPfun_call (call_opaque, CPPvar id, map_args rewrite_expr args) )
-    | _ -> map_expr rewrite_expr rewrite_stmt Fun.id e
-  and rewrite_stmt s = map_stmt rewrite_expr rewrite_stmt Fun.id s in
+  let rewrite_expr, rewrite_stmt = self_call_rewriter renamed_ids self_ids in
   (* Generate impl lambdas: each takes all self params (auto &) + original params. *)
   let impl_stmts =
     List.map2

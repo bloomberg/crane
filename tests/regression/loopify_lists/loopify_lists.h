@@ -391,10 +391,7 @@ struct LoopifyLists {
       };
       /// _Resume_j: saves [_s0], resumes after recursive call with _result.
       struct _Resume_j {
-        std::decay_t<decltype(f((((n - std::declval<uint64_t &>()) > n
-                                      ? 0
-                                      : (n - std::declval<uint64_t &>())))))>
-            _s0;
+        std::decay_t<T1> _s0;
       };
       using _Frame = std::variant<_Enter, _Resume_j>;
       list<T1> _result{};
@@ -416,7 +413,7 @@ struct LoopifyLists {
           }
         } else {
           auto _f = std::move(std::get<_Resume_j>(_frame));
-          _result = list<T1>::cons(_f._s0, std::move(_result));
+          _result = list<T1>::cons(std::move(_f._s0), std::move(_result));
         }
       }
       return _result;

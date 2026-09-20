@@ -260,10 +260,7 @@ struct LoopifyGenerators {
       };
       /// _Resume_j: saves [_s0], resumes after recursive call with _result.
       struct _Resume_j {
-        std::decay_t<decltype(f((((n - std::declval<uint64_t &>()) > n
-                                      ? 0
-                                      : (n - std::declval<uint64_t &>())))))>
-            _s0;
+        uint64_t _s0;
       };
       using _Frame = std::variant<_Enter, _Resume_j>;
       List<uint64_t> _result{};

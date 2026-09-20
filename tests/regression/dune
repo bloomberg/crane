@@ -9537,3 +9537,14 @@
   (alias runtest)
   (deps lifted_helper_in_member_init.t.exe)
   (action (run ./lifted_helper_in_member_init.t.exe))))
+
+(subdir delifted_binary_fixpoint
+ (rule
+  (targets delifted_binary_fixpoint.t.exe)
+  (deps DeliftedBinaryFixpoint.vo delifted_binary_fixpoint.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} delifted_binary_fixpoint.t.exe delifted_binary_fixpoint.cpp delifted_binary_fixpoint.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps delifted_binary_fixpoint.t.exe)
+  (action (run ./delifted_binary_fixpoint.t.exe))))
