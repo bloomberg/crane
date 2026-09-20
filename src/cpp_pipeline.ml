@@ -79,5 +79,9 @@ let finish ~loopify decl =
      this seam is what gives {!Cpp_erasure.settled}, the printer's input
      type. *)
   let decl = Cpp_erasure.resolve_casts (Cpp_erasure.materialise decl) in
+  (* With the heads final, a body naming a type variable no head declares is
+     a name nothing in scope introduces; spell it [std::any] rather than emit
+     it. *)
+  let decl = Cpp_erasure.bind_free_tvars decl in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then check_settled decl;
   decl

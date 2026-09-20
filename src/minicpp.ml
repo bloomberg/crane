@@ -857,6 +857,28 @@ let tvar_names ty =
        ty );
   !acc
 
+(** Every name the type variables in [ty] answer to.
+
+    A type variable has up to two spellings -- the parameter name it was given
+    and the positional [T<i>] its index prints as -- and which one a given
+    occurrence carries depends on whether its head was ever resolved.  A scope
+    built from one spelling would fail to recognise the other and erase a
+    variable that is perfectly well in scope, so both go in.  {!tvar_is} asks
+    the same question from the other side, and the two have to agree. *)
+let tvar_spellings ty =
+  let acc = ref Id.Set.empty in
+  ignore
+    (exists_cpp_type
+       (fun t ->
+         ( match t with
+         | Tvar (i, name) ->
+           Option.iter (fun n -> acc := Id.Set.add n !acc) name;
+           if i > 0 then acc := Id.Set.add (tvar_id i) !acc
+         | _ -> () );
+         false )
+       ty );
+  !acc
+
 (** Whether any of [tys] names the type variable [x], and so lets C++ deduce
     it.  A template parameter the call site cannot supply and the compiler
     cannot infer is worse than the erasure it replaced. *)

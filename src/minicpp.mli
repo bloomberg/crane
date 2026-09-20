@@ -886,6 +886,11 @@ val tvar_name : cpp_type -> Names.Id.t option
 (** [tvar_names ty] is every type variable [ty] names. *)
 val tvar_names : cpp_type -> Names.Id.Set.t
 
+(** [tvar_spellings ty] is every name the type variables in [ty] answer to --
+    both the parameter name and the positional [T<i>], since an occurrence may
+    carry either.  For building a scope that {!tvar_is} will be asked about. *)
+val tvar_spellings : cpp_type -> Names.Id.Set.t
+
 (** [deduces_tparam x tys] is whether any of [tys] names the type variable
     [x], and so lets C++ deduce it from an argument. *)
 val deduces_tparam : Names.Id.t -> cpp_type list -> bool

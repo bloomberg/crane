@@ -286,6 +286,106 @@ let rec resolve_casts (d : settled) : settled =
     Dasgn (id, ty, resolve_expr (unbox (Ml_type_util.resolve_tvars_to_any ty) e))
   | _ -> map_decl resolve_expr resolve_stmt (fun t -> t) d
 
+(** [bind_free_tvars decl] spells [std::any] every type variable a body names
+    that nothing in scope declares.
+
+    A declaration's head is the authority on what type variables it has.  The
+    head is built from the instance context a definition sits in; the body is
+    generated against the ML type, which still carries the definition's own
+    [forall].  Where the two disagree the body wins nothing -- it names [T2]
+    under a head declaring [T1], and a name nothing declares does not compile.
+    Erasing the use is the same repair {!Minicpp.drop_tparams} makes for a
+    lambda, one level up, and for the same reason: half a quantifier is worth
+    less than none.
+
+    Scope is threaded rather than collected, because it genuinely nests -- a
+    function template inside a struct template inside a namespace, and a
+    lambda with template parameters of its own inside all three.  The
+    signature counts as declaring: whatever a parameter or the return type
+    names, the head had to declare for the signature itself to compile, so the
+    body may name it too.
+
+    Only bodies are rewritten.  A signature naming a variable its head does
+    not declare is the same defect, but the honest repair there is a different
+    one -- give the head the parameter -- and erasing it here would hide the
+    case rather than fix it. *)
+let bind_free_tvars (d : settled) : settled =
+  let add_ids ids bound =
+    List.fold_left (fun acc id -> Id.Set.add id acc) bound ids
+  in
+  let add_ty ty bound = Id.Set.union (tvar_spellings ty) bound in
+  let add_tys tys bound = List.fold_left (fun acc t -> add_ty t acc) bound tys in
+  let erase bound =
+    map_cpp_type (fun t ->
+      match t with
+      | Tvar _ when not (Id.Set.exists (fun b -> tvar_is b t) bound) -> Tany
+      | _ -> t )
+  in
+  (* A lambda is the one expression that introduces type variables, so it is
+     the one expression this has to spell out. *)
+  let rec fe bound e =
+    match e with
+    | CPPlambda l ->
+      let bound = add_ids l.cl_tparams bound in
+      CPPlambda (map_lambda (fs bound) (erase bound) l)
+    | _ -> map_expr (fe bound) (fs bound) (erase bound) e
+  and fs bound s =
+    match map_stmt (fe bound) (fs bound) (erase bound) s with
+    (* A structured binding writes none of its field types -- [const auto
+       &[a0, a1]] spells only the names -- so a free variable among them is
+       not a name the compiler can fail on, and erasing it would convert an
+       imprecision in the IR into a decision about representation, which the
+       printer then has to paper over with a cast at every use.  Restore them
+       from the statement as it came in. *)
+    | Smatch (scrut, branches', dflt) ->
+      let restore b' b =
+        {b' with smb_field_bindings = b.smb_field_bindings}
+      in
+      let branches =
+        match s with
+        | Smatch (_, branches, _)
+          when List.length branches = List.length branches' ->
+          List.map2 restore branches' branches
+        | _ -> branches'
+      in
+      Smatch (scrut, branches, dflt)
+    | s' -> s'
+  in
+  let body bound stmts = List.map (fs bound) stmts in
+  let field bound ((f, vis, tag) as fld) =
+    match f with
+    | Fmethod mf ->
+      let bound =
+        bound
+        |> add_ids (List.map snd mf.mf_tparams)
+        |> add_ty mf.mf_ret_type
+        |> add_tys (List.map snd mf.mf_params)
+      in
+      (Fmethod {mf with mf_body = body bound mf.mf_body}, vis, tag)
+    | Fconstructor fc ->
+      let bound =
+        bound
+        |> add_ids (List.map snd fc.fc_tparams)
+        |> add_tys (List.map snd fc.fc_params)
+      in
+      (Fconstructor {fc with fc_body = body bound fc.fc_body}, vis, tag)
+    | _ -> fld
+  in
+  let rec go bound d =
+    match d with
+    | Dtemplate (tps, cstr, inner) ->
+      Dtemplate (tps, cstr, go (add_ids (List.map snd tps) bound) inner)
+    | Dnspace (r, decls) -> Dnspace (r, List.map (go bound) decls)
+    | Dstruct st ->
+      let bound = add_ids (List.map snd st.ds_tparams) bound in
+      Dstruct {st with ds_fields = List.map (field bound) st.ds_fields}
+    | Dfun ({df_shape = Ddef (params, stmts); df_ret; _} as f) ->
+      let bound = bound |> add_ty df_ret |> add_tys (List.map snd params) in
+      Dfun {f with df_shape = Ddef (params, body bound stmts)}
+    | _ -> d
+  in
+  go Id.Set.empty d
+
 (** [materialise decl] replaces every {!Minicpp.Topaque} in [decl] with
     {!Minicpp.Tany}.
 
