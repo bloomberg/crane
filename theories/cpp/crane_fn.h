@@ -315,7 +315,14 @@ template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
 }
 
 template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
-  if constexpr (requires {
+  // Reading a carrier at the element type it already has is the identity, and
+  // saying so here is what makes the cast usable on a carrier that is not a
+  // container: [Box<std::any>] has neither [value_type] nor [begin], so the
+  // walk below would not compile even though there is nothing to walk.  The
+  // same shortcut [crane_convert] takes, for the same reason.
+  if constexpr (std::is_same_v<Dst, std::remove_cvref_t<Src>>)
+    return std::forward<Src>(src);
+  else if constexpr (requires {
                   crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
                 })
     return crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(src));
