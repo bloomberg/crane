@@ -162,3 +162,14 @@
   (alias runtest)
   (deps handler_lambda_targ_undeclared.t.exe)
   (action (run ./handler_lambda_targ_undeclared.t.exe))))
+
+(subdir instance_hoisted_over_qualified
+ (rule
+  (targets instance_hoisted_over_qualified.t.exe)
+  (deps InstanceHoistedOverQualified.vo instance_hoisted_over_qualified.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_hoisted_over_qualified.t.exe instance_hoisted_over_qualified.cpp instance_hoisted_over_qualified.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_hoisted_over_qualified.t.exe)
+  (action (run ./instance_hoisted_over_qualified.t.exe))))
