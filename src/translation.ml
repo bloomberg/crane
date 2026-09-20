@@ -8705,7 +8705,7 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
                (Printf.sprintf
                   "crane: call to %s drops %d of %d arguments (%d dummy, %d \
                    value domains declared)"
-                  (Libnames.string_of_qualid (Nametab.shortest_qualid_of_global Names.Id.Set.empty id))
+                  (Names.Id.to_string (Table.safe_basename_of_global id))
                   (n_in - n_out) n_in
                   (List.length
                      (List.filter
