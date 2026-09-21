@@ -9686,3 +9686,14 @@
   (alias runtest)
   (deps eta_partial_app_drops_targs.t.exe)
   (action (run ./eta_partial_app_drops_targs.t.exe))))
+
+(subdir member_calls_later
+ (rule
+  (targets member_calls_later.t.exe)
+  (deps MemberCallsLaterModule.vo member_calls_later.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} member_calls_later.t.exe member_calls_later.cpp member_calls_later.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps member_calls_later.t.exe)
+  (action (run ./member_calls_later.t.exe))))
