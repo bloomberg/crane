@@ -5,7 +5,8 @@
 int main() {
   // The bystander named bare: [start]'s type is spelled through the functor
   // instantiated at [AstLib::RawIDOrd].
-  assert(start.empty());
+  using Tbl = List<std::pair<Raw_id, bool>>;
+  assert(std::holds_alternative<Tbl::Nil>(start.v()));
 
   // The controls: the same bystander named through [::], and the colliding
   // child that the wrapper flattens.

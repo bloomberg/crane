@@ -319,6 +319,11 @@ val collision_wrapper_table : (Names.ModPath.t, unit) Hashtbl.t
     own qualifier instead of replacing it. Cleared by [reset_cpp_state]. *)
 val wrapper_bystander_table : (Names.ModPath.t, unit) Hashtbl.t
 
+(** [wrapper_qualify_modname mp name] re-roots [name] at the wrapper struct
+    holding [mp], when [mp] is a bystander that struct nests under its own name.
+    The module-as-a-module counterpart of [wrapper_qualify_name]. *)
+val wrapper_qualify_modname : Names.ModPath.t -> string -> string
+
 (** The C++ concept name of each type class whose own name does not settle it,
     because another module declares a class of the same name and a concept is
     declared at file scope. Populated from

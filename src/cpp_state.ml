@@ -943,6 +943,29 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
         name
     | _ -> name )
 
+(** The name a module absorbed into a collision wrapper as a bystander is
+    spelled under, when it is named as a module rather than through one of its
+    members: the wrapper's name in front of its own, unless already there.
+
+    {!wrapper_qualify_name} answers the same question for a reference to a
+    member, and cannot answer this one -- a module is not a [GlobRef.t].  Only
+    bystanders: they are the ones the wrapper nests under their own name, so
+    that name is exactly what needs re-rooting.  A flattened child has no struct
+    to name, and an ordinary wrapper's children are spelled correctly already.
+
+    The resolution this rewrites is also what decides whether a template
+    argument needs [typename], and that decision is left alone: a bystander's
+    struct is a concrete one, never dependent. *)
+let wrapper_qualify_modname (mp : ModPath.t) (name : string) : string =
+  if not (Hashtbl.mem wrapper_bystander_table mp) then
+    name
+  else
+    match Hashtbl.find_opt wrapper_module_table mp with
+    | Some struct_name ->
+      let prefix = struct_name ^ "::" in
+      if String.starts_with ~prefix name then name else prefix ^ name
+    | None -> name
+
 (** Register a method with the method registry.
     @param func_ref the global reference of the function being registered as a method
     @param epon_ref the global reference of the eponymous inductive type on which

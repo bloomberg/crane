@@ -282,7 +282,7 @@ struct AstLib {
 };
 
 bool viaQualified(const Raw_id &a, const Raw_id &b);
-using RM = Make<RawIDOrd>;
+using RM = Make<AstLib::RawIDOrd>;
 const RM::template tbl<bool> start = RM::template empty<bool>();
 Nat viaColliding(const Nat &x0_, const Nat &x1_);
 Nat keepColl(const Collider &r);

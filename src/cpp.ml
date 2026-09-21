@@ -1723,7 +1723,7 @@ and pp_module_app ~is_header f me me' =
     match me with
     | MEident mp ->
       let r = Common.resolve_module mp in
-      (str (Common.resolved_string r), Some r)
+      (str (wrapper_qualify_modname mp (Common.resolved_string r)), Some r)
     | MEapply (g, g') -> pp_module_app ~is_header f g g'
     | _ -> (pp_module_expr ~is_header f [] me, None)
   in
