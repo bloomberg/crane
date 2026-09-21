@@ -162,8 +162,8 @@ template <template <typename> class T1, typename T2, typename F1,
           typename T3 = std::invoke_result_t<F1 &, T2 &>>
 T1<T3> fmapish(std::type_identity_t<Functorish<T1>> functorish, F1 &&x,
                T1<T2> x0) {
-  return crane_container_cast<T1<T3>>(
-      functorish(crane_erase_fn(x), std::move(x0)));
+  return crane_container_cast<T1<T3>>(functorish(
+      crane_erase_fn(x), crane_convert<T1<std::any>>(std::move(x0))));
 }
 
 std::optional<std::any> Functorish_option(std::function<std::any(std::any)> f,

@@ -5384,18 +5384,21 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
     above, already answered there; a carrier's element walk applied to a
     closure is not a conversion but a compile error.
 
-    And only where the destination has a name to ask about.  A carrier whose
-    head is still a type variable is spelled [T1<A>] on the strength of the
-    surrounding declaration; naming it again inside a template argument list
-    asks C++ to accept [T1] as a template where it was written as a type. *)
+    And only where the element is erased, which is the whole of the mismatch:
+    a carrier written at a concrete element is already the caller's own type,
+    and naming it again buys nothing while asking the head to be spelled as a
+    template -- which a declaration that kept it a phantom [typename] will not
+    accept. *)
 and convert_carrier_arg param_ml_ty param_cpp_ty e expr =
-  let head_is_tvar =
-    match param_cpp_ty with Tapply (Tvar _, _) -> true | _ -> false
+  let elem_is_erased =
+    match param_cpp_ty with
+    | Tapply (_, args) -> List.exists prints_as_any args
+    | _ -> false
   in
   match resolve_tmeta param_ml_ty with
   | Miniml.Tapp _
     when (not (prints_as_any param_cpp_ty))
-         && (not head_is_tvar)
+         && elem_is_erased
          && (not (ml_expr_is_function_value e))
          && classify_fun_erasure param_cpp_ty = Fe_not_a_function ->
     Table.mark_needs_erase_fn ();

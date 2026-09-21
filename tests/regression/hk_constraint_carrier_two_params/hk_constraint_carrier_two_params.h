@@ -190,7 +190,7 @@ template <template <typename> class T1, typename T2, typename F1,
           typename T3 = std::invoke_result_t<F1 &, T2 &>>
 T1<T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f, T1<T2> x) {
   return crane_container_cast<T1<T3>>(
-      tFunctor(crane_erase_fn(f), std::move(x)));
+      tFunctor(crane_erase_fn(f), crane_convert<T1<std::any>>(std::move(x))));
 }
 
 List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
