@@ -9653,3 +9653,14 @@
   (alias runtest)
   (deps erased_pair_pattern_probed_at_any.t.exe)
   (action (run ./erased_pair_pattern_probed_at_any.t.exe))))
+
+(subdir boxed_pair_field_conv_ctor
+ (rule
+  (targets boxed_pair_field_conv_ctor.t.exe)
+  (deps BoxedPairFieldConvCtor.vo boxed_pair_field_conv_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} boxed_pair_field_conv_ctor.t.exe boxed_pair_field_conv_ctor.cpp boxed_pair_field_conv_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps boxed_pair_field_conv_ctor.t.exe)
+  (action (run ./boxed_pair_field_conv_ctor.t.exe))))
