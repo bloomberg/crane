@@ -9664,3 +9664,14 @@
   (alias runtest)
   (deps boxed_pair_field_conv_ctor.t.exe)
   (action (run ./boxed_pair_field_conv_ctor.t.exe))))
+
+(subdir dropped_binder_in_instance_method
+ (rule
+  (targets dropped_binder_in_instance_method.t.exe)
+  (deps DroppedBinderInInstanceMethod.vo dropped_binder_in_instance_method.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} dropped_binder_in_instance_method.t.exe dropped_binder_in_instance_method.cpp dropped_binder_in_instance_method.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps dropped_binder_in_instance_method.t.exe)
+  (action (run ./dropped_binder_in_instance_method.t.exe))))
