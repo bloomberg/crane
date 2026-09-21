@@ -3898,9 +3898,75 @@ and dict_carrier_type_args env tvars id args =
      says so through the constraint its own type spells.  Both end at an ML
      type whose head is the carrier and whose last argument is the one the
      carrier varies in. *)
-  let rec dict_ml_type = function
+  (* A dictionary-producing global abstracts over the class parameters of the
+     instances it is built from: [TFunctor_holder] takes a [TFunctor FnBody]
+     and returns the traversal of [fun T => holder T (FnBody T)].  Its
+     codomain names [FnBody] as a [Tapp], and what stands for it is whatever
+     dictionary the call supplies.  Paired here as (argument position, type
+     variable), the positions counted over arguments rather than domains for
+     the reason above. *)
+  let class_params ty =
+    let rec go i acc = function
+      | [] -> List.rev acc
+      | d :: ds -> (
+        match resolve_tmeta d with
+        | Miniml.Tdummy _ -> go i acc ds
+        | Miniml.Tglob (_, [arg], _) -> (
+          match resolve_tmeta arg with
+          | Miniml.Tapp (k, _) -> go (i + 1) ((i, k) :: acc) ds
+          | _ -> go (i + 1) acc ds )
+        | _ -> go (i + 1) acc ds )
+    in
+    go 0 [] (ml_domains ty)
+  in
+  (* [carrier] is an applied type whose leading argument stands for what it is
+     applied to, the convention {!apply_hkt_tyctors} also follows, so applying
+     it is replacing that argument. *)
+  let apply_carrier carrier k xs =
+    match (carrier, xs) with
+    | Miniml.Tglob (c, _ :: rest, l), [x] -> Miniml.Tglob (c, x :: rest, l)
+    (* Anything else and the two do not line up: the carrier is not an applied
+       type, or it is applied to a number of arguments the occurrence does not
+       supply.  Leave the occurrence as it was rather than put a type in its
+       place that has the wrong arity -- a wrong spelling is worse than an
+       unrecovered one, which is only a missed opportunity. *)
+    | _ -> Miniml.Tapp (k, xs)
+  in
+  let rec subst_carrier k carrier t =
+    let go = subst_carrier k carrier in
+    match resolve_tmeta t with
+    | Miniml.Tapp (j, xs) when j = k -> apply_carrier carrier k (List.map go xs)
+    | Miniml.Tapp (j, xs) -> Miniml.Tapp (j, List.map go xs)
+    | Miniml.Tglob (c, a, l) -> Miniml.Tglob (c, List.map go a, l)
+    | Miniml.Tarr (a, b) -> Miniml.Tarr (go a, go b)
+    | t -> t
+  in
+  let rec head_glob = function
     | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
-      dict_ml_type b
+      head_glob b
+    | Miniml.MLglob (r, _) -> Some r
+    | _ -> None
+  in
+  let rec dict_ml_type = function
+    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) -> dict_ml_type b
+    | Miniml.MLapp (b, dicts) as tm ->
+      (* The head's codomain still names its own class parameters; the
+         dictionaries it is applied to are what say which carriers those are.
+         Without this the generic instance's binder is what gets written, and
+         at a site with no binder in scope it does not even name anything. *)
+      let* cod = dict_ml_type b in
+      let params =
+        match Option.bind (head_glob tm) find_type_opt with
+        | Some ty -> class_params ty
+        | None -> []
+      in
+      Some
+        (List.fold_left
+           (fun acc (p, k) ->
+             match Option.bind (List.nth_opt dicts p) dict_ml_type with
+             | Some carrier -> subst_carrier k carrier acc
+             | None -> acc )
+           cod params )
     | Miniml.MLglob (r, _) ->
       (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
          is [box B]. *)
@@ -3926,7 +3992,10 @@ and dict_carrier_type_args env tvars id args =
         let* decl_ty = find_type_opt r in
         let doms = ml_domains decl_ty in
         let n = List.length (!tctx).env_types in
-        if n <> List.length doms then None
+        (* [List.nth_opt] raises rather than answering [None] on a negative
+           index, and [i] can exceed [n]: a dictionary reached through an
+           argument of the call need not be a binder of this body at all. *)
+        if n <> List.length doms || i > n || i <= 0 then None
         else constraint_arg (List.nth_opt doms (n - i)) )
     | _ -> None
   in
