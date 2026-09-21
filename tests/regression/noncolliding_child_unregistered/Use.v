@@ -1,7 +1,7 @@
 From Crane Require Import Mapping.Std.
-From CraneTestsWIP Require Import noncolliding_child_unregistered.Coll.
-From CraneTestsWIP Require Import noncolliding_child_unregistered.Rid.
-From CraneTestsWIP Require Import noncolliding_child_unregistered.AstLib.
+From CraneTestsRegression Require Import noncolliding_child_unregistered.Coll.
+From CraneTestsRegression Require Import noncolliding_child_unregistered.Rid.
+From CraneTestsRegression Require Import noncolliding_child_unregistered.AstLib.
 
 (** The bystander, seen from outside: the one reference of the four that comes
     out unqualified. *)

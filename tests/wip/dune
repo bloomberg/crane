@@ -159,13 +159,3 @@
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
 
-(subdir noncolliding_child_unregistered
- (rule
-  (targets noncolliding_child_unregistered.t.exe)
-  (deps Use.vo noncolliding_child_unregistered.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} noncolliding_child_unregistered.t.exe noncolliding_child_unregistered.cpp noncolliding_child_unregistered.t.cpp)))
- (rule
-  (alias runtest)
-  (deps noncolliding_child_unregistered.t.exe)
-  (action (run ./noncolliding_child_unregistered.t.exe))))

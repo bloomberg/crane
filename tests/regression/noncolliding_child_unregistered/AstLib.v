@@ -14,7 +14,7 @@
 
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import Arith PeanoNat.
-From CraneTestsWIP Require Import noncolliding_child_unregistered.Rid.
+From CraneTestsRegression Require Import noncolliding_child_unregistered.Rid.
 
 (** Colliding: its capitalised label is [Coll]'s inductive, so it fires the
     wrapper -- and the printer flattens it. *)
