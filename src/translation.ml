@@ -3859,22 +3859,39 @@ and dict_carrier_type_args env tvars id args =
   let ( let* ) = Option.bind in
   let* ml_ty = find_type_opt id in
   (* The class parameter is quantified first, and an explicit argument list is
-     positional, so only a leading carrier can be written. *)
-  let* i =
+     positional, so only a leading carrier can be written.
+
+     The position wanted is into the {e arguments}, which is not the position
+     in the domain list: an erased domain takes no argument.  A class method
+     quantifies its own [forall]s before the class, so counting domains would
+     land past the dictionary -- [tfmap]'s class domain is second but its
+     dictionary is the first argument. *)
+  let* i, cls =
     let rec find i = function
       | [] -> None
       | d :: ds -> (
         match resolve_tmeta d with
-        | Miniml.Tglob (_, [arg], _)
+        | Miniml.Tglob (c, [arg], _)
           when ( match resolve_tmeta arg with
                | Miniml.Tapp (1, _) -> true
                | _ -> false ) ->
-          Some i
+          Some (i, c)
+        | Miniml.Tdummy _ -> find i ds
         | _ -> find (i + 1) ds )
     in
     find 0 (ml_domains ml_ty)
   in
   let* dict = List.nth_opt args i in
+  (* The class applied to one argument {e is} the carrier, already applied:
+     a MiniML type has no way to hold a constructor that is not.  Both sources
+     below may land on it -- a binder's type is the constraint itself, and a
+     dictionary that is a record value has the class as its own type -- so
+     both go through this one step. *)
+  let strip_class t =
+    match t with
+    | Miniml.Tglob (c, [arg], _) when Environ.QGlobRef.equal (Global.env ()) c cls -> resolve_tmeta arg
+    | t -> t
+  in
   (* Two sources, one consumer.  A dictionary that {e is} a named instance
      says what its carrier is through the method it defines; a dictionary that
      is a binder -- the enclosing function abstracting over the instance --
@@ -3889,15 +3906,31 @@ and dict_carrier_type_args env tvars id args =
          is [box B]. *)
       Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
     | Miniml.MLrel i ->
-      (* The binder's type is the constraint itself, [TFunctor box], and the
-         class's argument is the carrier -- already applied, since a MiniML
-         type has no way to hold a constructor that is not. *)
-      ( match Option.map resolve_tmeta (get_env_type_opt i) with
-      | Some (Miniml.Tglob (_, [arg], _)) -> Some (resolve_tmeta arg)
-      | _ -> None )
+      let constraint_arg t =
+        match Option.map resolve_tmeta t with
+        | Some (Miniml.Tglob (_, [_], _) as t) -> Some (strip_class t)
+        | _ -> None
+      in
+      let recorded = constraint_arg (get_env_type_opt i) in
+      ( match recorded with
+      | Some _ -> recorded
+      | None ->
+        (* The recorded type can be gone: a class with a single field is
+           inlined to that field, so the binder is remembered as the method's
+           own arrow and the class it came from is nowhere in it.  The
+           enclosing declaration still spells the constraint, and while the
+           body is under nothing but that declaration's own binders, the two
+           lists are the same list read from opposite ends. *)
+        let ( let* ) = Option.bind in
+        let* r = !Table.current_decl_ref in
+        let* decl_ty = find_type_opt r in
+        let doms = ml_domains decl_ty in
+        let n = List.length (!tctx).env_types in
+        if n <> List.length doms then None
+        else constraint_arg (List.nth_opt doms (n - i)) )
     | _ -> None
   in
-  let* cod = dict_ml_type dict in
+  let* cod = Option.map strip_class (dict_ml_type dict) in
   (* Abstracted over the {e leading} argument, as {!apply_hkt_tyctors} does:
      the class applies its carrier to the traversed type, and this idiom writes
      that type first, so the two agree on one body and the printer mints one

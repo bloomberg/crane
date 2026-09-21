@@ -253,7 +253,7 @@ outer<std::any, T1<std::any>>
 TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                const outer<std::any, T1<std::any>> &m) {
   return outer<std::any, std::any>{
-      tfmap(
+      tfmap<List>(
           []() {
             return [](std::function<std::any(std::any)> _x0,
                       List<std::any> _x1) -> List<std::any> {

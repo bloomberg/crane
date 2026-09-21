@@ -158,15 +158,3 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
-
-
-(subdir hk_constraint_carrier_two_params
- (rule
-  (targets hk_constraint_carrier_two_params.t.exe)
-  (deps HkConstraintCarrierTwoParams.vo hk_constraint_carrier_two_params.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_constraint_carrier_two_params.t.exe hk_constraint_carrier_two_params.cpp hk_constraint_carrier_two_params.t.cpp)))
- (rule
-  (alias runtest)
-  (deps hk_constraint_carrier_two_params.t.exe)
-  (action (run ./hk_constraint_carrier_two_params.t.exe))))

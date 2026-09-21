@@ -157,7 +157,7 @@ template <typename T1, typename T2, typename F1>
 std::pair<T2, Box<T2>> ft_pair(std::type_identity_t<TFunctor<Box>> h, F1 &&f,
                                const std::pair<T1, Box<T1>> &p) {
   const auto &[u, b] = p;
-  return std::make_pair(f(u), tfmap(h, f, b));
+  return std::make_pair(f(u), tfmap<Box>(h, f, b));
 }
 
 std::pair<std::any, Box<std::any>>

@@ -254,7 +254,7 @@ TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
                 std::type_identity_t<TFunctor<box>> h0, F2 &&f,
                 const holder<std::any, T1<std::any>> &m) {
   return holder<std::any, std::any>{
-      tfmap(
+      tfmap<List>(
           [=]() mutable {
             return [=](std::function<std::any(std::any)> _x0,
                        List<std::any> _x1) mutable -> List<std::any> {

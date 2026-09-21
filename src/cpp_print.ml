@@ -1254,7 +1254,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         let seen = ref [] in
         let rec go t =
           match t with
-          | Tvar (i, None) ->
+          | Tvar (i, _) ->
             if not (List.mem i !seen) then seen := !seen @ [i]
           | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
           | Tvariant ts ->
@@ -1301,7 +1301,7 @@ let rec pp_cpp_type ?(lead = true) par vl t =
                 (fun acc (k, i) ->
                   map_cpp_type
                     (function
-                      | Tvar (j, None) when j = i ->
+                      | Tvar (j, _) when j = i ->
                         Tid_external ("_F" ^ string_of_int k, [])
                       | t -> t )
                     acc )

@@ -265,7 +265,8 @@ outer1<std::any, two<std::any, T1<std::any>>> TFunctor_outer1(
     std::type_identity_t<TFunctor<T1>>,
     std::type_identity_t<TFunctor<_crane_carrier_tch<T1>::template c>> h0,
     F2 &&f, const outer1<std::any, two<std::any, T1<std::any>>> &m) {
-  return outer1<std::any, std::any>{tfmap(std::move(h0), f, m.o_inner)};
+  return outer1<std::any, std::any>{
+      tfmap<_crane_carrier_tch<T1>::template c>(std::move(h0), f, m.o_inner)};
 }
 
 struct HkConstraintCarrierTwoParams {
