@@ -108,7 +108,7 @@ struct RocqBug16288 {
 
       // ACCESSORS
       template <typename _U> operator M_t_NonEmpty<_U>() const {
-        return {List<_U>(M_m)};
+        return {crane_convert<List<_U>>(M_m)};
       }
     };
 

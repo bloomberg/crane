@@ -93,7 +93,7 @@ struct TypeAliasAppliedCtorParam {
     holder<F> clone() const { return {a0}; }
 
     template <template <typename> class _U> operator holder<_U>() const {
-      return {ap<_U, Nat>(a0)};
+      return {crane_convert<ap<_U, Nat>>(a0)};
     }
 
     // CREATORS

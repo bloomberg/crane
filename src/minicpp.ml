@@ -398,6 +398,12 @@ and cpp_expr =
   | CPPany_cast_tolerant of cpp_type * cpp_expr
     (* crane_any_cast<T>(expr) — same, but the shape in the box is only
        knowable when C++ instantiates the surrounding template *)
+  | CPPconvert of cpp_type * cpp_expr
+    (* crane_convert<Dst>(expr) — reads a value at another instantiation of
+       its own type.  Not every type has a converting constructor to do it
+       with: std::pair's asks each component to be constructible from the
+       other's, which an erased component is not, so the helper takes it
+       apart and puts it back together instead *)
   | CPPerase_fn of cpp_type option * cpp_expr
     (* crane_erase_fn<Ret>(expr) — adapts a concrete callable to the canonical
        erased representation std::function<Ret(std::any...)>.  [None] means the
@@ -1004,6 +1010,7 @@ let map_expr
   | CPPunop (op, e') -> CPPunop (op, fe e')
   | CPPany_cast (ty, e') -> CPPany_cast (ft ty, fe e')
   | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ft ty, fe e')
+  | CPPconvert (ty, e') -> CPPconvert (ft ty, fe e')
   | CPPerase_fn (ty, e') -> CPPerase_fn (Option.map ft ty, fe e')
   | CPPerased_call (f, a) -> CPPerased_call (fe f, fe a)
   | CPPtolerant_call (f, args) -> CPPtolerant_call (fe f, List.map fe args)
@@ -1101,7 +1108,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPget (e', _) | CPPget' (e', _) | CPPaccess (_, e', _)
   | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     on_expr e'
@@ -1266,7 +1273,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPget (e', _) | CPPget' (e', _) | CPPaccess (_, e', _)
   | CPPscope (e', _, _)
   | CPPshared_ptr_ctor (_, e')
-  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e')
+  | CPPany_cast (_, e') | CPPany_cast_tolerant (_, e') | CPPconvert (_, e')
   | CPPcontainer_cast (_, e', _) | CPPerase_fn (_, e') | CPPfn_value e'
   | CPPunop (_, e') | CPPstd_get_if (_, e') ->
     fe acc e'

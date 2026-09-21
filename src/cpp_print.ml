@@ -2653,6 +2653,13 @@ and pp_cpp_expr env args t =
   | CPPfn_value e ->
     require_header "functional";
     str "std::function(" ++ pp_cpp_expr env args e ++ str ")"
+  | CPPconvert (ty, e) ->
+    str Crane_rt.convert
+    ++ str "<"
+    ++ pp_cpp_type false [] ty
+    ++ str ">("
+    ++ pp_cpp_expr env args e
+    ++ str ")"
   | CPPcontainer_cast (ty, e, suppress_boxing) ->
     let saved = !suppress_elem_boxing in
     if suppress_boxing then suppress_elem_boxing := true;

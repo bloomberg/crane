@@ -233,7 +233,7 @@ template <typename T, typename Body> struct outer {
 
   // ACCESSORS
   template <typename _U0, typename _U1> operator outer<_U0, _U1>() const {
-    return {List<box<_U0>>(o_boxes), [&]() -> _U1 {
+    return {crane_convert<List<box<_U0>>>(o_boxes), [&]() -> _U1 {
               if constexpr (std::is_same_v<Body, std::any>) {
                 return crane_any_cast<_U1>(o_body);
               } else {

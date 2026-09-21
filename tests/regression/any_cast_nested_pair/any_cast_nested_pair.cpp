@@ -9,6 +9,5 @@ uint64_t AnyCastNestedPair::apply_pred(AnyCastNestedPair::symbols_semty input) {
 uint64_t AnyCastNestedPair::test_pred(uint64_t a, uint64_t b) {
   return apply_pred(
       std::make_pair(std::any(std::any(a)),
-                     std::any(std::make_pair(std::any(std::any(b)),
-                                             std::any(std::monostate{})))));
+                     std::any(std::make_pair(std::any(b), std::monostate{}))));
 }

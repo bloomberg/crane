@@ -42,8 +42,7 @@ uint64_t check(uint64_t n) {
           _a1.push_front(_a0);
           return _a1;
         }(Sym::B, std::deque<Sym>{})),
-      std::make_pair(
-          std::any(n),
-          std::any(std::make_pair(std::any(n), std::any(std::monostate{}))))));
+      std::make_pair(std::any(n),
+                     std::any(std::make_pair(n, std::monostate{})))));
   return std::any_cast<uint64_t>(v);
 }

@@ -1420,7 +1420,8 @@ template <Int I, OrderedType X> struct Raw {
 
     // ACCESSORS
     template <typename _U> operator triple<_U>() const {
-      return {tree<_U>(t_left), std::optional<_U>(t_opt), tree<_U>(t_right)};
+      return {crane_convert<tree<_U>>(t_left), std::optional<_U>(t_opt),
+              crane_convert<tree<_U>>(t_right)};
     }
   };
 
@@ -1547,7 +1548,7 @@ template <Int I, OrderedType X> struct Raw {
                 }
               }
             }(),
-            tree<elt>(a2),
+            crane_convert<tree<elt>>(a2),
             (a3 ? std::make_shared<enumeration<elt>>(*a3) : nullptr)};
       }
     }
@@ -1838,7 +1839,7 @@ template <Int I, OrderedType X> struct IntMake {
 
     // ACCESSORS
     template <typename _U> operator bst<_U>() const {
-      return {typename Raw::template tree<_U>(this_)};
+      return {crane_convert<typename Raw::template tree<_U>>(this_)};
     }
   };
 

@@ -1,5 +1,5 @@
-#ifndef INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM
-#define INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM
+#ifndef INCLUDED_PAIR_FIELD_CONV_CTOR
+#define INCLUDED_PAIR_FIELD_CONV_CTOR
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -14,8 +14,9 @@
 
 struct Nat;
 template <typename A> struct List;
-template <typename T> struct box;
-template <typename T, typename Body> struct holder;
+struct Dt;
+template <typename T> struct Exp0;
+template <typename T> struct Ann;
 
 struct Nat {
   // TYPES
@@ -181,92 +182,167 @@ public:
     return std::move(*_head);
   }
 };
-template <template <typename> class t>
+template <template <typename> class f>
 using TFunctor =
-    std::function<t<std::any>(std::function<std::any(std::any)>, t<std::any>)>;
+    std::function<f<std::any>(std::function<std::any(std::any)>, f<std::any>)>;
 
 template <template <typename> class T1, typename T2, typename F1,
           typename T3 = std::invoke_result_t<F1 &, T2 &>>
-T1<T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f, T1<T2> x) {
+T1<T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&x, T1<T2> x0) {
   return crane_container_cast<T1<T3>>(
-      tFunctor(crane_erase_fn(f), std::move(x)));
+      tFunctor(crane_erase_fn(x), std::move(x0)));
 }
 
-List<std::any> TFunctor_list(std::function<std::any(std::any)> x0_,
-                             const List<std::any> &x1_);
+struct Dt {
+  // TYPES
+  struct DI {
+    Nat a0;
+  };
 
-template <template <typename> class T1, typename F1>
-List<T1<std::any>> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                  List<T1<std::any>> x0_) {
-  return std::move(x0_).template map<std::any>(
-      [=]<typename T2>(T1<T2> _x0) mutable -> T1<std::any> {
-        return tfmap<T1, std::any>(h, f, _x0);
-      });
-}
+  struct DP {};
 
-template <typename T> struct box {
-  T b_payload;
+  using variant_t = std::variant<DI, DP>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Dt() {}
+
+  explicit Dt(DI _v) : v_(std::move(_v)) {}
+
+  explicit Dt(DP _v) : v_(_v) {}
+
+  static Dt di(Nat a0) { return Dt(DI{std::move(a0)}); }
+
+  static Dt dp() { return Dt(DP{}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  template <typename _U> operator box<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (std::is_same_v<T, std::any>) {
-        return crane_any_cast<_U>(b_payload);
-      } else {
-        if constexpr (std::is_constructible_v<_U, const T &>) {
-          return _U(b_payload);
+  const variant_t &v() const { return v_; }
+};
+
+template <typename T> struct Exp0 {
+  // TYPES
+  struct EV {
+    T a0;
+  };
+
+  struct EN {};
+
+  using variant_t = std::variant<EV, EN>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Exp0() {}
+
+  explicit Exp0(EV _v) : v_(std::move(_v)) {}
+
+  explicit Exp0(EN _v) : v_(_v) {}
+
+  template <typename _U> Exp0(const Exp0<_U> &_other) {
+    if (std::holds_alternative<typename Exp0<_U>::EV>(_other.v())) {
+      const auto &[a0] = std::get<typename Exp0<_U>::EV>(_other.v());
+      this->v_ = EV{[&]() -> T {
+        if constexpr (std::is_same_v<_U, std::any>) {
+          return crane_any_cast<T>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          if constexpr (std::is_constructible_v<T, const _U &>) {
+            return T(a0);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
         }
-      }
-    }()};
+      }()};
+    } else {
+      this->v_ = EN{};
+    }
   }
-};
 
-box<std::any> TFunctor_box(std::function<std::any(std::any)> f,
-                           const box<std::any> &b);
+  static Exp0<T> ev(T a0) { return Exp0<T>(EV{std::move(a0)}); }
 
-template <typename T, typename Body> struct holder {
-  List<box<T>> h_boxes;
-  Body h_body;
+  static Exp0<T> en() { return Exp0<T>(EN{}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
-  template <typename _U0, typename _U1> operator holder<_U0, _U1>() const {
-    return {crane_convert<List<box<_U0>>>(h_boxes), [&]() -> _U1 {
-              if constexpr (std::is_same_v<Body, std::any>) {
-                return crane_any_cast<_U1>(h_body);
-              } else {
-                if constexpr (std::is_constructible_v<_U1, const Body &>) {
-                  return _U1(h_body);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }()};
+  const variant_t &v() const { return v_; }
+
+  template <typename F0> Exp0<std::any> TFunctor_exp(F0 &&f) const {
+    if (std::holds_alternative<typename Exp0<std::any>::EV>(this->v())) {
+      const auto &[a0] = std::get<typename Exp0<std::any>::EV>(this->v());
+      return Exp0<std::any>::ev(crane_call_erased(f, a0));
+    } else {
+      return Exp0<std::any>::en();
+    }
   }
 };
 
-template <template <typename> class T1, typename F2>
-holder<std::any, T1<std::any>>
-TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
-                std::type_identity_t<TFunctor<box>> h0, F2 &&f,
-                const holder<std::any, T1<std::any>> &m) {
-  return holder<std::any, T1<std::any>>{
-      tfmap<List>(
-          [=]() mutable {
-            return [=](std::function<std::any(std::any)> _x0,
-                       List<std::any> _x1) mutable -> List<std::any> {
-              return TFunctor_list_<box>(h0, _x0, _x1);
-            };
-          }(),
-          f, m.h_boxes),
-      tfmap<T1, std::any>(std::move(h), f, m.h_body)};
-}
+template <typename t> using texp = std::pair<t, Exp0<t>>;
 
-struct HkDictFromConstraintParam {
-  static holder<Nat, List<Nat>> run(const holder<Nat, List<Nat>> &m);
+/// The two field kinds, side by side: a Crane container that converts, and a
+/// std::pair that does not.
+template <typename T> struct Ann {
+  // TYPES
+  struct ANN_metadata {
+    List<T> a0;
+  };
+
+  struct ANN_prefix {
+    texp<T> a0;
+  };
+
+  using variant_t = std::variant<ANN_metadata, ANN_prefix>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Ann() {}
+
+  explicit Ann(ANN_metadata _v) : v_(std::move(_v)) {}
+
+  explicit Ann(ANN_prefix _v) : v_(std::move(_v)) {}
+
+  template <typename _U> Ann(const Ann<_U> &_other) {
+    if (std::holds_alternative<typename Ann<_U>::ANN_metadata>(_other.v())) {
+      const auto &[a0] = std::get<typename Ann<_U>::ANN_metadata>(_other.v());
+      this->v_ = ANN_metadata{crane_convert<List<T>>(a0)};
+    } else {
+      const auto &[a0] = std::get<typename Ann<_U>::ANN_prefix>(_other.v());
+      this->v_ = ANN_prefix{crane_convert<texp<T>>(a0)};
+    }
+  }
+
+  static Ann<T> ann_metadata(List<T> a0) {
+    return Ann<T>(ANN_metadata{std::move(a0)});
+  }
+
+  static Ann<T> ann_prefix(texp<T> a0) {
+    return Ann<T>(ANN_prefix{std::move(a0)});
+  }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
-#endif // INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM
+Ann<std::any> TFunctor_ann(std::function<std::any(std::any)> f,
+                           const Ann<std::any> &a);
+Ann<Dt> run(const Ann<Nat> &a);
+
+#endif // INCLUDED_PAIR_FIELD_CONV_CTOR

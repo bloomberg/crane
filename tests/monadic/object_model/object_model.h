@@ -276,7 +276,8 @@ template <typename S> struct BankAccountCollection {
 
   // ACCESSORS
   template <typename _U> operator BankAccountCollection<_U>() const {
-    return {Account<_U>(checking), Account<_U>(saving)};
+    return {crane_convert<Account<_U>>(checking),
+            crane_convert<Account<_U>>(saving)};
   }
 };
 

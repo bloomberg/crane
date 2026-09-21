@@ -1205,8 +1205,13 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
     | Tglob (g1, _src_ts, _), Tglob (g2, _dst_ts, _)
       when GlobRef.CanOrd.equal g1 g2 && _src_ts <> _dst_ts
            && not (Table.is_inline_custom g1) ->
-      (* Same Crane container, different element types → converting ctor *)
-      Cpp_erasure.converting_ctor orig_dst_ty [expr]
+      (* Same type at different arguments.  A converting constructor is the
+         usual way across, but not every type has one -- [std::pair]'s asks
+         each component to be constructible from the other's, and an erased
+         component has to be cast rather than constructed -- so ask the helper,
+         which uses the constructor where there is one and takes the value
+         apart where there is not. *)
+      CPPconvert (orig_dst_ty, expr)
     | Tvar (_, Some _), Tvar (_, Some _) ->
       (* Type-variable-to-type-variable conversion in converting constructors.
          When the source type variable is std::any at runtime (e.g. List<_U>
@@ -3543,10 +3548,19 @@ and restore_erased_env saved = tctx := { !tctx with cpp_binder_types = saved }
 and unfold_cpp_typedef env cpp_ty =
   match cpp_ty with
   | Tnamespace (_, inner) -> unfold_cpp_typedef env inner
-  | Tglob (GlobRef.ConstRef kn, [], _) -> (
+  | Tglob (GlobRef.ConstRef kn, args, _) -> (
     match Table.lookup_typedef_unchecked kn with
     | Some ml_ty ->
-      cpp_of_ml env ml_ty
+      (* A parameterised alias hides its arguments twice over: [texp T] stands
+         for [(T * exp T)], so the one argument the name takes is not the two
+         the [std::pair] behind it was written with.  Put the alias's own
+         arguments back where its body's variables stand. *)
+      let body = cpp_of_ml env ml_ty in
+      if args = [] then body
+      else
+        Minicpp.subst_cpp_tvars
+          (fun i -> List.nth_opt args (i - 1))
+          body
     | None -> cpp_ty )
   | _ -> cpp_ty
 
@@ -4415,6 +4429,24 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
       | _ -> draft_ctor_temps_for_wrap )
     | _ -> draft_ctor_temps_for_wrap
   in
+  (* Whether the destination spelled position [j] concretely.  A type that
+     writes its arguments down -- [std::pair<std::any, Exp<std::any>>] -- has
+     thereby said which of them are boxed and which are not, and a statement
+     beats the inference below, which concludes from one erased argument that
+     every position is read back erased.  That inference is sound only where
+     the erasure is invisible in the C++ type. *)
+  let slot_states_unboxed j =
+    match (expected_ty, r) with
+    | Some exp, GlobRef.ConstructRef ((kn, i), _) -> (
+      match unfold_cpp_typedef env exp with
+      | Tglob (en, eargs, _)
+        when GlobRef.CanOrd.equal en (GlobRef.IndRef (kn, i)) -> (
+        match List.nth_opt eargs j with
+        | Some t -> not (prints_as_any t)
+        | None -> false )
+      | _ -> false )
+    | _ -> false
+  in
   let args =
     List.rev (List.mapi (fun i e ->
       let saved_ret = (!tctx).current_cpp_return_type in
@@ -4609,7 +4641,10 @@ and gen_expr_custom_cons ?expected_ty ?(slot = empty_slot) env (ty : ml_type)
                  which {!coerce} supplies once it is told the slot's own
                  signature. *)
               | Some _ when erased_fn_slot <> None -> erased_fn_slot
-              | Some _ when slot_is_deeply_erased -> Some Tany
+              | Some _
+                when slot_is_deeply_erased && not (slot_states_unboxed (j - 1))
+                ->
+                Some Tany
               | _ -> None )
           | _ -> None
       in
@@ -7973,7 +8008,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                 let ct = instantiated_field_cpp_ty ft in
                 ( match (ft, ct) with
                 | _, Tfun (_, Tfun _) when not (prints_as_any ct) -> Some ct
-                | _ -> None ) )
+                | _ -> (
+                  (* The same rule the bare-parameter case above states, for a
+                     field that names a type of its own: where the field's
+                     spelling erases some of its arguments and keeps others,
+                     that spelling is the only statement of which are which,
+                     and the value has to be built at it. *)
+                  let u = unfold_cpp_typedef env ct in
+                  match u with
+                  | Tglob (_, (_ :: _ as args), _)
+                    when List.exists prints_as_any args
+                         && not (List.for_all prints_as_any args) ->
+                    Some u
+                  | _ -> None ) ) )
             | None -> None
           in
           (* When a function value is stored into an erased ([std::any])
@@ -8138,7 +8185,13 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let field_declared_erased i =
           match List.nth_opt field_types_rec i with
           | Some ft -> (
-            match Ml_type_util.unqualify_ty (declared_field_cpp_ty ft) with
+            (* The alias has to come off first: [texp<std::any>] looks fully
+               erased at its own one argument and is not -- the [std::pair] it
+               stands for keeps a concrete second component. *)
+            match
+              Ml_type_util.unqualify_ty
+                (unfold_cpp_typedef env (declared_field_cpp_ty ft))
+            with
             | Tglob (_, (_ :: _ as args), _) as d
               when List.for_all
                      (fun a ->

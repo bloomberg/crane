@@ -271,7 +271,8 @@ template <typename A> struct Directed {
 
   // ACCESSORS
   template <typename _U> operator Directed<_U>() const {
-    return {List<_U>(directed_nodes), List<DirectedEdge<_U>>(directed_edges)};
+    return {crane_convert<List<_U>>(directed_nodes),
+            crane_convert<List<DirectedEdge<_U>>>(directed_edges)};
   }
 };
 
@@ -350,8 +351,8 @@ template <typename A> struct Undirected {
 
   // ACCESSORS
   template <typename _U> operator Undirected<_U>() const {
-    return {List<_U>(undirected_nodes),
-            List<UndirectedEdge<_U>>(undirected_edges)};
+    return {crane_convert<List<_U>>(undirected_nodes),
+            crane_convert<List<UndirectedEdge<_U>>>(undirected_edges)};
   }
 };
 

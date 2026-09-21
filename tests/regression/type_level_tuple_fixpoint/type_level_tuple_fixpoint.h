@@ -82,9 +82,8 @@ struct TypeLevelTupleFixpoint {
   static inline const tup mk3 = std::make_pair(
       std::any(Nat::s(Nat::o())),
       std::any(std::make_pair(
-          std::any(Nat::s(Nat::s(Nat::o()))),
-          std::any(std::make_pair(std::any(Nat::s(Nat::s(Nat::s(Nat::o())))),
-                                  std::any(std::monostate{}))))));
+          Nat::s(Nat::s(Nat::o())),
+          std::make_pair(Nat::s(Nat::s(Nat::s(Nat::o()))), std::monostate{}))));
   static Nat fst3(tup t);
   static inline const Nat run = fst3(mk3);
 };

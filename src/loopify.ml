@@ -877,6 +877,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPunop _
    |CPPany_cast _
    |CPPany_cast_tolerant _
+   |CPPconvert _
    |CPPerase_fn _
    |CPPfn_value _
    |CPPcontainer_cast _

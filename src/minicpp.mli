@@ -486,6 +486,12 @@ and cpp_expr =
           value has in the box is only knowable once C++ instantiates the
           surrounding template, so the [crane_fn.h] helper decides.  Produced
           by {!Cpp_erasure.resolve_casts}, never by translation. *)
+  | CPPconvert of cpp_type * cpp_expr
+      (** [crane_convert<Dst>(expr)] — reads a value at another instantiation
+          of its own type.  A converting constructor does it where the type
+          has one; where it does not -- [std::pair]'s asks each component to
+          be constructible from the other's, which an erased component is not
+          -- the helper takes the value apart and puts it back together. *)
   | CPPerase_fn of cpp_type option * cpp_expr
   | CPPerased_call of cpp_expr * cpp_expr
       (** Applies a callable whose representation was erased, recovering it at

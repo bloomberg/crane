@@ -9631,3 +9631,14 @@
   (alias runtest)
   (deps hk_carrier_binder_at_concrete_site.t.exe)
   (action (run ./hk_carrier_binder_at_concrete_site.t.exe))))
+
+(subdir pair_field_conv_ctor
+ (rule
+  (targets pair_field_conv_ctor.t.exe)
+  (deps PairFieldConvCtor.vo pair_field_conv_ctor.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pair_field_conv_ctor.t.exe pair_field_conv_ctor.cpp pair_field_conv_ctor.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pair_field_conv_ctor.t.exe)
+  (action (run ./pair_field_conv_ctor.t.exe))))

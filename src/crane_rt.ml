@@ -13,6 +13,7 @@ let arena_make_shared = "crane::arena_make_shared"
 let any_cast = "crane_any_cast"
 let erase_fn = "crane_erase_fn"
 let call_erased = "crane_call_erased"
+let convert = "crane_convert"
 let small_vector = "crane::small_vector"
 let lazy_ = "crane::lazy"
 

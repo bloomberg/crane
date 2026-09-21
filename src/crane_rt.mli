@@ -53,6 +53,11 @@ val call_erased : string
     known once C++ instantiates the enclosing template, recovering them by
     CTAD. *)
 
+val convert : string
+(** [crane_convert<Dst>(e)] -- read a value at another instantiation of its
+    own type, by whichever route that type offers: a converting constructor
+    where it has one, and the [crane_cast_to] hook where it does not. *)
+
 (** {2 Containers} *)
 
 val small_vector : string  (** [crane::small_vector<T>] *)
