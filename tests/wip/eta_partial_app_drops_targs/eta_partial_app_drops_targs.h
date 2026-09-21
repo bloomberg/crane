@@ -238,7 +238,7 @@ template <Mon _tcI0> struct Fun_Mon {
   template <typename _A0, typename _A1>
   static typename _tcI0::template m<_A1>
   ffmap(std::function<_A1(_A0)> a0, typename _tcI0::template m<_A0> a1) {
-    return liftM<_tcI0>(std::move(a0), std::move(a1));
+    return liftM<_tcI0, _A0, _A1>(std::move(a0), std::move(a1));
   }
 
   static typename _tcI0::template m<std::any> fconst(std::any a, std::any x) {

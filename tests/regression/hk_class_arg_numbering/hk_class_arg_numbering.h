@@ -116,7 +116,8 @@ template <Monad _tcI0> struct Functor_Monad {
   static typename _tcI0::template m<std::any>
   fmap(std::function<std::any(std::any)> a0,
        typename _tcI0::template m<std::any> a1) {
-    return Monad0::template liftM<_tcI0>(std::move(a0), std::move(a1));
+    return Monad0::template liftM<_tcI0, std::any, std::any>(std::move(a0),
+                                                             std::move(a1));
   }
 };
 

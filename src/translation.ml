@@ -2130,6 +2130,31 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) convert_fn base_temps
   let all_temps_with_funs = base_temps @ extra_temps in
   (cpp_params, all_temps_with_funs)
 
+(** The type variables a type spells out in a deducible position.  A
+    function-typed parameter reaches C++ as an opaque template parameter [F0]
+    rather than as a written-out signature, so a variable occurring only
+    inside one -- the callback's own codomain, say -- is in no deducible
+    context; every other parameter spells its type out. *)
+let rec spelled_tvars_of acc = function
+  | Miniml.Tvar (_, j) -> IntSet.add j acc
+  | Miniml.Tarr (a, b) -> spelled_tvars_of (spelled_tvars_of acc a) b
+  | Miniml.Tglob (_, l, _) -> List.fold_left spelled_tvars_of acc l
+  | Miniml.Tmeta {contents = Some t} -> spelled_tvars_of acc t
+  | _ -> acc
+
+(** The type variables of [id] a C++ compiler could read off the call's value
+    arguments. *)
+let deducible_tvars_of_glob id =
+  match find_type_opt id with
+  | None -> None
+  | Some ml_ty_orig ->
+    Some
+      (List.fold_left
+         (fun acc d ->
+           match d with Miniml.Tarr _ -> acc | t -> spelled_tvars_of acc t )
+         IntSet.empty
+         (List.map resolve_tmeta (ml_domains ml_ty_orig)) )
+
 (** Infer the ML type of a body expression from its structure, or [None] where
     the structure does not say.
 
@@ -2186,7 +2211,20 @@ let rec infer_ml_body_type (a : ml_ast) : ml_type option =
     The result is indexed the way {!Mlutil.type_subst_list} expects: position
     [i] instantiates [Tvar (_, i + 1)].  A variable no argument mentions keeps
     itself, so substituting leaves it alone. *)
-and tvar_instantiation callee_ty args =
+and tvar_instantiation_found ?(in_scope = false) callee_ty args =
+  (* A binder's type is not on the [MLrel] that names it; it was written down
+     where it was bound, which is what {!Translation_state.env_types} keeps.
+     Only a caller generating code {e inside} that scope may read it, which is
+     why it is asked for rather than assumed. *)
+  let arg_ml_ty a =
+    match infer_ml_body_type a with
+    | Some _ as t -> t
+    | None -> (
+      match a with
+      | MLrel i when in_scope ->
+        Option.map snd (List.nth_opt (!tctx).env_types (i - 1))
+      | _ -> None )
+  in
   let found = Hashtbl.create 7 in
   let rec unify formal actual =
     match (resolve_tmeta formal, resolve_tmeta actual) with
@@ -2197,6 +2235,12 @@ and tvar_instantiation callee_ty args =
     | Miniml.Tarr (d1, c1), Miniml.Tarr (d2, c2) ->
       unify d1 d2 ;
       unify c1 c2
+    (* A carrier applied to arguments -- [m A] -- is the shape a class method
+       is written in, and its element is exactly the variable a call site
+       cannot deduce.  The heads are variables themselves, so they pin nothing
+       down against each other; the arguments do. *)
+    | Miniml.Tapp (_, a1), Miniml.Tapp (_, a2)
+      when List.length a1 = List.length a2 -> List.iter2 unify a1 a2
     | _ -> ()
   in
   (* [args] holds the value arguments only, so a [Tdummy] formal -- an erased
@@ -2205,20 +2249,59 @@ and tvar_instantiation callee_ty args =
     match (resolve_tmeta ty, args) with
     | Miniml.Tarr (Miniml.Tdummy _, cod), _ -> walk cod args
     | Miniml.Tarr (dom, cod), a :: rest ->
-      ( match infer_ml_body_type a with
+      ( match arg_ml_ty a with
       | Some t -> unify dom t
       | None -> () ) ;
       walk cod rest
     | _ -> ()
   in
   walk callee_ty args ;
-  if Hashtbl.length found = 0 then []
-  else
-    let n = Hashtbl.fold (fun i _ m -> max i m) found 0 in
+  Hashtbl.fold (fun i t acc -> (i, t) :: acc) found []
+
+(** {!tvar_instantiation_found} padded into the positional list
+    {!Mlutil.type_subst_list} expects: position [i] instantiates
+    [Tvar (_, i + 1)], and a variable no argument mentions keeps itself, so
+    substituting leaves it alone. *)
+and tvar_instantiation callee_ty args =
+  match tvar_instantiation_found callee_ty args with
+  | [] -> []
+  | found ->
+    let n = List.fold_left (fun m (i, _) -> max i m) 0 found in
     List.init n (fun k ->
-        match Hashtbl.find_opt found (k + 1) with
+        match List.assoc_opt (k + 1) found with
         | Some t -> t
         | None -> Miniml.Tvar (Miniml.Schematic, k + 1) )
+
+(** [complete_short_tys id tys args] extends a call's type-argument list to the
+    length the callee's schema needs, where the arguments determine the
+    missing entries and C++ could not have deduced them.
+
+    All or nothing: C++ takes a prefix of the parameter list, so a position
+    that cannot be named leaves every later one unnameable too, and writing a
+    shorter prefix than the undeducible variable's position achieves nothing.
+    Positions the compiler can deduce are left to it -- naming a type twice is
+    an opportunity to spell it differently, not a safeguard. *)
+and complete_short_tys id tys args =
+  match find_type_opt id with
+  | None -> tys
+  | Some callee_ty ->
+    let n = IntSet.fold max (collect_tvars_set IntSet.empty callee_ty) 0 in
+    let have = List.length tys in
+    if have >= n then tys
+    else
+      let deducible =
+        match deducible_tvars_of_glob id with
+        | Some d -> d
+        | None -> IntSet.empty
+      in
+      let missing = List.init (n - have) (fun k -> have + k + 1) in
+      if List.for_all (fun i -> IntSet.mem i deducible) missing then tys
+      else
+        let found = tvar_instantiation_found ~in_scope:true callee_ty args in
+        let recovered = List.map (fun i -> List.assoc_opt i found) missing in
+        if List.for_all Option.has_some recovered then
+          tys @ List.map Option.get recovered
+        else tys
 
 (** Check if a GlobRef returns a typeclass type (possibly through Tarr layers).
 *)
@@ -9990,6 +10073,13 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
        C++ can't deduce it from lambda arguments (lambdas don't participate in
        template argument deduction). In that case, recover the concrete type
        from the enclosing function's return type. *)
+    (* A partial application writes only the type arguments the Rocq term
+       applied: [Instance Fun_Mon := { ffmap := @liftM m _ }] names the
+       carrier and leaves [liftM]'s own element variables to inference, which
+       in OCaml costs nothing and in C++ costs everything -- they occur only
+       in [typename I::m<T>] and in the return type, both non-deduced.  The
+       arguments still say what they are, so finish the list from them. *)
+    let tys = complete_short_tys id tys primary_ml_args in
     let regular_type_args =
       (* A type argument standing for a higher-kinded class parameter is not a
          template parameter of the callee (it is the instance's associated
@@ -10059,29 +10149,8 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
          method of a higher-kinded class ([cout : forall A, F A -> A], whose
          only parameter is the instance's associated carrier type, a
          non-deduced context). *)
-      let rec tvars_of acc = function
-        | Miniml.Tvar (_, j) -> IntSet.add j acc
-        | Miniml.Tarr (a, b) -> tvars_of (tvars_of acc a) b
-        | Miniml.Tglob (_, l, _) -> List.fold_left tvars_of acc l
-        | Miniml.Tmeta { contents = Some t } -> tvars_of acc t
-        | _ -> acc
-      in
-      (* The callee's type variables a C++ compiler could read off the value
-         arguments.  A function-typed parameter reaches C++ as an opaque
-         template parameter [F0], not as a spelled-out signature, so a variable
-         occurring inside it -- as the callback's own codomain, say -- is in no
-         deducible context; every other parameter spells its type out. *)
-      let deducible_tvars () =
-        match find_type_opt id with
-        | None -> None
-        | Some ml_ty_orig ->
-          Some
-            (List.fold_left
-               (fun acc d ->
-                 match d with Miniml.Tarr _ -> acc | t -> tvars_of acc t)
-               IntSet.empty
-               (List.map resolve_tmeta (ml_domains ml_ty_orig)))
-      in
+      let tvars_of = spelled_tvars_of in
+      let deducible_tvars () = deducible_tvars_of_glob id in
       let ret_tvar_undeducible () =
         match (find_type_opt id, deducible_tvars ()) with
         | Some ml_ty_orig, Some deducible -> (
