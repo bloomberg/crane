@@ -72,7 +72,7 @@ struct FreeMonad {
   static T1 IO_rect(F0 &&f, F1 &&f0, T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
-      return std::any_cast<T1>(crane_call_erased(f, a0));
+      return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
       return std::any_cast<T1>(
@@ -94,7 +94,7 @@ struct FreeMonad {
   static T1 IO_rec(F0 &&f, F1 &&f0, T1 f1, F3 &&f2, const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
-      return std::any_cast<T1>(crane_call_erased(f, a0));
+      return std::any_cast<T1>(crane_call_erased(f, std::any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
       return std::any_cast<T1>(

@@ -2394,10 +2394,19 @@ let deapply_plain_tvars temps decl =
     A mention is counted in the arguments a type actually writes, so an
     occurrence sitting where nothing is written does not save the variable --
     and must not survive it either, or the declaration would default a
-    parameter it goes on to spell.  Every occurrence left anywhere, in the
-    signature or in a body annotation the relaxation did not reach, is erased
-    to [std::any]: what the variable stood for once nothing was left to
-    instantiate it with. *)
+    parameter it goes on to spell.  Those occurrences are erased to [std::any].
+
+    The body's occurrences go the same way, with one exception: the target
+    type of an [any_cast].  Everywhere else an erased spelling is a vaguer
+    spelling of the same thing, and vaguer is what the variable has become.
+    An [any_cast] target is not a spelling but a run-time equality test
+    against the type the value was stored as, so erasing an argument inside
+    one does not widen the cast, it changes which cast is performed:
+    [std::pair<std::any, nat>] read of a pair stored with concrete components
+    throws, while compiling perfectly clean.  The defaulted parameter is still
+    declared, and a call site that knows what the value was stored as writes
+    it -- which is the only way such a parameter is ever given a value, and
+    the reason it is defaulted rather than dropped. *)
 let default_unmentioned_temps temps decl =
   (* Stricter than {!tvar_is}, which lets an unresolved head answer to its
      index as well as to its name: a relaxation names its parameters [F1],
@@ -2458,7 +2467,12 @@ let default_unmentioned_temps temps decl =
         let df_shape =
           match df_shape with
           | Ddef (params, body) ->
-            let rec fe e = Minicpp.map_expr fe fs erase e
+            let rec fe e =
+              match e with
+              (* The cast's target is left alone; its operand is not. *)
+              | CPPany_cast (ty, e') -> CPPany_cast (ty, fe e')
+              | CPPany_cast_tolerant (ty, e') -> CPPany_cast_tolerant (ty, fe e')
+              | e -> Minicpp.map_expr fe fs erase e
             and fs s = Minicpp.map_stmt fe fs erase s in
             Ddef (erase_params params, List.map fs body)
           | Ddecl params -> Ddecl (erase_params params)
@@ -3778,9 +3792,9 @@ let gen_dfun n b cty ty temps =
       [ relax_applied_return;
         relax_tt_applied_return;
         relax_applied_param;
-        deapply_plain_tvars;
-        default_unmentioned_temps ]
+        deapply_plain_tvars ]
   in
+  let temps, inner = default_unmentioned_temps temps inner in
   match temps with
   | [] -> (inner, env)
   | l -> (Dtemplate (l, None, inner), env)

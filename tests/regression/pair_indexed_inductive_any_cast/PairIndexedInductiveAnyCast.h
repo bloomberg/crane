@@ -32,7 +32,7 @@ struct Ops {
   template <typename T1 = void>
   static Datatypes::Nat get_snd(const Pair_wrap &p) {
     const auto &[a] = p;
-    return crane_any_cast<std::pair<std::any, Datatypes::Nat>>(a).second;
+    return crane_any_cast<std::pair<T1, Datatypes::Nat>>(a).second;
   }
 
   template <typename T1> static Pair_wrap make(T1 a, Datatypes::Nat n) {
