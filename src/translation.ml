@@ -3643,7 +3643,65 @@ and declared_tvar_count id =
   | None -> None
   | Some ml_ty -> Some (Mlutil.type_maxvar (type_simpl ml_ty))
 
-(** Make an explicit argument list as long as {!declared_tvar_count} says the
+(** The Rocq type-variable positions a call may still write, given that the
+    declaration reorders some of them out of reach.
+
+    {!Gen_decls.relax_applied_return} handles a variable named only by the
+    return type -- C++ deduces nothing from a return type -- by giving it the
+    producing callback's result as its default and moving it {e last}, since a
+    default may only name parameters declared before it.  That pass records
+    "nothing supplies this signature's arguments explicitly, so the order is
+    free", and for a lifted helper that is true.  For a class method it is not:
+    [tfmap] is called with its Rocq arguments written out.
+
+    Once such a variable has moved, every position from it onwards is
+    unreachable positionally -- reaching it would mean spelling the synthesised
+    callable parameter that now precedes it, which is deduced and has no Rocq
+    argument to spell.  So the writable prefix ends there.
+
+    The condition is read off the Rocq type rather than the emitted
+    declaration, which a call site cannot consult ({!Table.census}'s rule that
+    discovery decides and emission reads): the variable occurs in the
+    codomain, and every domain occurrence of it is under an arrow -- that is,
+    it is a callback's result, which is exactly the parameter the declaration
+    collapses to a deduced callable and stops naming. *)
+and writable_tvar_count id =
+  let ( let* ) o f = match o with None -> None | Some x -> f x in
+  let* n = declared_tvar_count id in
+  let* ml_ty = find_type_opt id in
+  let occurs v t = IntSet.mem v (collect_tvars_set IntSet.empty t) in
+  let cod = resolve_tmeta (ml_codomain ml_ty) in
+  (* Only a codomain that {e applies} a variable is relaxed.  [list B] names
+     [B] as a plain leading parameter that the call still has to write, and
+     dropping it would leave nothing to deduce it from; [T V] is the
+     higher-kinded shape {!Gen_decls.relax_applied_return} rewrites. *)
+  let applied_cod = match cod with Miniml.Tapp _ -> true | _ -> false in
+  let derived v =
+    applied_cod && occurs v cod
+    && List.for_all
+         (fun d ->
+           match resolve_tmeta d with
+           | Miniml.Tarr _ -> true
+           | d -> not (occurs v d) )
+         (ml_domains ml_ty)
+    && List.exists (fun d -> occurs v d) (ml_domains ml_ty)
+  in
+  (* Only a derived {e suffix} may be dropped.  A derived position followed by
+     one that is still written cannot be removed without taking that one with
+     it, and the later position may be doing work the truncation would undo --
+     [iter]'s [R] is derived but its [I] is not, and dropping both loses an
+     argument deduction was relying on the first two to place.  Where the list
+     cannot be fixed by cutting its tail, it is left exactly as it was. *)
+  let rec suffix_start v = if v < 1 then 1 else if derived v then suffix_start (v - 1) else v + 1 in
+  Some (suffix_start n - 1)
+
+(** [targs] cut back to the prefix {!writable_tvar_count} says is reachable. *)
+and truncate_to_writable id targs =
+  match writable_tvar_count id with
+  | Some n when n < List.length targs -> List.filteri (fun i _ -> i < n) targs
+  | _ -> targs
+
+(** Make an explicit argument list as long as {!writable_tvar_count} says the
     callee's parameter list is.
 
     Extraction and C++ disagree at both ends.  A Rocq application can carry an
@@ -3730,6 +3788,72 @@ and hkt_carrier_type_args env tvars ?result id tys =
     | _ -> false
   in
   if is_plain_head carrier then None else Some [Minicpp.Ttyctor carrier]
+
+(** The carrier of a higher-kinded class parameter, read off the {e dictionary}
+    the call passes for that class.
+
+    {!hkt_carrier_type_args} recovers a carrier from the type the result is
+    expected to have, which needs the result to mention it.  An instance
+    {e method} for a nested functor does not qualify: [TFunctor_list']'s result
+    is [list (T1 B)], and by the time the call is built the expected type has
+    already erased the element to [std::any], so there is nothing left to
+    abstract over.
+
+    What still knows the carrier is the dictionary argument.  A parameter of
+    class type -- [TFunctor T1] -- is instantiated by the instance for exactly
+    one type constructor, and that instance's method returns [T1] applied: the
+    dictionary for [box] is a function whose codomain is [box B].  So the head
+    of the dictionary's codomain {e is} the carrier.
+
+    The dictionary reaches the call wrapped in the adapter lambda that erases
+    its arguments, so the instance is found by descending to the head of the
+    lambda's body.  Nothing is claimed when that head has no ML type, or when
+    its codomain is not an application -- a carrier has to be applied to
+    something to be one.
+
+    Written unconditionally, unlike the result route: [T1] here occupies a
+    non-deduced position ([std::type_identity_t<TFunctor<T1>>], and [T1<std::any>]
+    against an already-erased argument), so even a carrier that is a plain
+    template name has to be named rather than left to deduction. *)
+and dict_carrier_type_args env tvars id args =
+  let ( let* ) = Option.bind in
+  let* ml_ty = find_type_opt id in
+  (* The class parameter is quantified first, and an explicit argument list is
+     positional, so only a leading carrier can be written. *)
+  let* i =
+    let rec find i = function
+      | [] -> None
+      | d :: ds -> (
+        match resolve_tmeta d with
+        | Miniml.Tglob (_, [arg], _)
+          when ( match resolve_tmeta arg with
+               | Miniml.Tapp (1, _) -> true
+               | _ -> false ) ->
+          Some i
+        | _ -> find (i + 1) ds )
+    in
+    find 0 (ml_domains ml_ty)
+  in
+  let* dict = List.nth_opt args i in
+  let rec instance_head = function
+    | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
+      instance_head b
+    | Miniml.MLglob (r, _) -> Some r
+    | _ -> None
+  in
+  let* r = instance_head dict in
+  let* inst_ty = find_type_opt r in
+  let cod = resolve_tmeta (ml_codomain inst_ty) in
+  let* over =
+    match cod with
+    | Miniml.Tglob (_, (_ :: _ as ts), _) | Miniml.Tapp (_, (_ :: _ as ts)) ->
+      Some (template_arg_of_ml_type env tvars (List.nth ts (List.length ts - 1)))
+    | _ -> None
+  in
+  let* carrier =
+    Minicpp.abstract_cpp_type ~over (template_arg_of_ml_type env tvars cod)
+  in
+  Some [Minicpp.Ttyctor carrier]
 
 (** Spell the erased arguments of [id]'s phantom prefix with the fillers
     {!phantom_prefix_args} gives them.
@@ -9806,7 +9930,11 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
     in
     let all_type_args =
       typeclass_type_args
-      @ hkt_spelled_type_args id regular_type_args
+      (* Truncated last: {!hkt_spelled_type_args} rebuilds the correspondence
+         between arguments and positions by length, so a list shortened before
+         it reaches it is left unrespelled -- the carrier comes out as
+         [typename I::m] where the position wants [I::template m]. *)
+      @ truncate_to_writable id (hkt_spelled_type_args id regular_type_args)
       @ promoted_type_args
     in
     (* Nothing survived the erasure filters, so if the callee opens with
@@ -9823,7 +9951,12 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
           hkt_carrier_type_args env tvars ?result:slot.expected_cpp_ty id tys
         with
         | Some targs -> targs
-        | None -> phantom_prefix_args id
+        | None -> (
+          (* The result did not say what the carrier is; the dictionary the
+             call passes for the class still does. *)
+          match dict_carrier_type_args env tvars id primary_ml_args with
+          | Some targs -> targs
+          | None -> phantom_prefix_args id )
       else all_type_args
     in
 

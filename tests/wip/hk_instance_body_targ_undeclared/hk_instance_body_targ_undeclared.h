@@ -199,7 +199,7 @@ List<T1<std::any>> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                                   List<T1<std::any>> x0_) {
   return std::move(x0_).template map<std::any>(
       [=]<typename T2>(T1<T2> _x0) mutable -> T1<std::any> {
-        return tfmap<T1, std::any, std::any>(h, f, _x0);
+        return tfmap<T1, std::any>(h, f, _x0);
       });
 }
 

@@ -200,7 +200,7 @@ List<T1<std::any>> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                                   List<T1<std::any>> x0_) {
   return std::move(x0_).template map<std::any>(
       [=]<typename T2>(T1<T2> _x0) mutable -> T1<std::any> {
-        return tfmap<T1, std::any, std::any>(h, f, _x0);
+        return tfmap<T1, std::any>(h, f, _x0);
       });
 }
 
@@ -257,7 +257,7 @@ TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
           []() {
             return [](std::function<std::any(std::any)> _x0,
                       List<std::any> _x1) -> List<std::any> {
-              return TFunctor_list_(
+              return TFunctor_list_<box>(
                   [](auto &&_ec0, box<std::any> _ec1) {
                     return TFunctor_box(_ec0, _ec1);
                   },
@@ -265,7 +265,7 @@ TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
             };
           }(),
           f, m.o_boxes),
-      tfmap<T1, std::any, std::any>(std::move(h), f, m.o_body)};
+      tfmap<T1, std::any>(std::move(h), f, m.o_body)};
 }
 
 struct HkCallCarrierErased {

@@ -18,7 +18,7 @@ HkInstanceBodyTargUndeclared::on_option(const std::optional<List<Nat>> &o) {
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   std::optional<std::any> _x1) -> std::optional<std::any> {
-          return TFunctor_option(
+          return TFunctor_option<List>(
               [](auto &&_ec0, List<std::any> _ec1) {
                 return TFunctor_list(_ec0, _ec1);
               },
@@ -34,7 +34,7 @@ HkInstanceBodyTargUndeclared::on_list(const List<List<Nat>> &l) {
       []() {
         return [](std::function<std::any(std::any)> _x0,
                   List<std::any> _x1) -> List<std::any> {
-          return TFunctor_list_(
+          return TFunctor_list_<List>(
               [](auto &&_ec0, List<std::any> _ec1) {
                 return TFunctor_list(_ec0, _ec1);
               },
