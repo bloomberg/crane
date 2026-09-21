@@ -158,3 +158,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir member_calls_later
+ (rule
+  (targets member_calls_later.t.exe)
+  (deps MemberCallsLaterModule.vo member_calls_later.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} member_calls_later.t.exe member_calls_later.cpp member_calls_later.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps member_calls_later.t.exe)
+  (action (run ./member_calls_later.t.exe))))
