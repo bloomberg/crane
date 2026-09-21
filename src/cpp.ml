@@ -721,8 +721,13 @@ let module_members_name_only_inductives sel =
       match se with
       | SEdecl (Dterm (_, _, t)) -> ty_ok t
       | SEdecl (Dfix (_, _, tv)) -> Array.for_all ty_ok tv
-      | SEdecl (Dind _) -> true
-      | _ -> false )
+      (* Only a function declaration is being judged here.  Everything else a
+         module holds -- an inductive, a type alias, a submodule -- is either
+         rendered somewhere other than this struct or shows up in its text as a
+         member that is not a [static] declaration, which the other half
+         rejects; asking a question about it here only rejects modules whose
+         struct never contained it. *)
+      | _ -> true )
     sel
 
 (** Whether a module's struct may be declared ahead of the file rather than at
