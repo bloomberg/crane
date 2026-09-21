@@ -29,10 +29,12 @@ struct StateMonadTypeSynonym {
     return std::make_pair(s, (s + 1));
   };
   static inline const st<uint64_t> prog = []() {
-    return bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
-      return bind<uint64_t, uint64_t>(
-          tick, [=](uint64_t b) mutable { return ret<uint64_t>((a + b)); });
-    });
+    return [](uint64_t eta0_) {
+      return bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
+        return bind<uint64_t, uint64_t>(
+            tick, [=](uint64_t b) mutable { return ret<uint64_t>((a + b)); });
+      })(eta0_);
+    };
   }();
   static inline const uint64_t go = prog(UINT64_C(1)).first;
 };

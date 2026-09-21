@@ -25,6 +25,12 @@ val reset_meta_count : unit -> unit
 (** Create a fresh meta variable. *)
 val new_meta : 'a -> ml_type
 
+(** Apply a type to arguments, contracting the application when the head is
+    known. A head that carries placeholders -- an eta-expanded constructor, or
+    a type-level lambda whose binder extraction could not name -- has them
+    filled rather than extended. *)
+val apply_ml_type : ml_type -> ml_type list -> ml_type
+
 (** Substitute type variables using a list of types.
     @param l replacement types for [Tvar 1], [Tvar 2], ... in order
     @param t the ML type to substitute into *)

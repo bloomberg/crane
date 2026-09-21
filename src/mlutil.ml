@@ -131,14 +131,44 @@ and eq_ml_meta m1 m2 =
     to a real argument does not extend the application, it fills the
     placeholder.  Appending instead would give the constructor one argument per
     substitution it passes through: [m<std::any, A>] for an [m] that takes one,
-    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three. *)
+    [Sum1<AE, BE, std::any, std::any>] for a [Sum1] that takes three.
+
+    The placeholders are not always trailing.  A carrier that is a type-level
+    lambda -- [fun T => holder T (box T)] -- has no MiniML spelling, and what
+    extraction leaves is the body with every occurrence of the binder written
+    as [Tunknown]: [holder[_, box[_]]].  Applying that is filling each hole,
+    not appending, which would give [holder] a third argument it does not
+    take. *)
 let fill_placeholders pre args =
   let rec drop rpre n =
     match (rpre, n) with
     | Tunknown :: rest, n when n > 0 -> drop rest (n - 1)
     | _ -> rpre
   in
-  List.rev (drop (List.rev pre) (List.length args)) @ args
+  let kept = List.rev (drop (List.rev pre) (List.length args)) in
+  let rec has_hole = function
+    | Tunknown -> true
+    | Tglob (_, l, _) | Tapp (_, l) -> List.exists has_hole l
+    | Tarr (a, b) -> has_hole a || has_hole b
+    | Tmeta {contents = Some t} -> has_hole t
+    | _ -> false
+  in
+  let rec fill a = function
+    | Tunknown -> a
+    | Tglob (r, l, e) -> Tglob (r, List.map (fill a) l, e)
+    | Tapp (j, l) -> Tapp (j, List.map (fill a) l)
+    | Tarr (x, y) -> Tarr (fill a x, fill a y)
+    | t -> t
+  in
+  match args with
+  (* Every trailing placeholder was consumed, so the head was eta-expanded and
+     appending is right.  Only a head that had too few of them -- and holes
+     somewhere inside -- is a lambda body, and one argument is all such a
+     spelling can say where to put. *)
+  | [arg]
+    when List.length pre - List.length kept < 1 && List.exists has_hole pre ->
+    List.map (fill arg) pre
+  | _ -> kept @ args
 
 (** Apply a type to [args], contracting the application when the head is
     known.  [Tapp] is a redex: its head is a type variable, so substituting

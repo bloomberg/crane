@@ -3919,17 +3919,17 @@ and dict_carrier_type_args env tvars id args =
     in
     go 0 [] (ml_domains ty)
   in
-  (* [carrier] is an applied type whose leading argument stands for what it is
-     applied to, the convention {!apply_hkt_tyctors} also follows, so applying
-     it is replacing that argument. *)
+  (* [carrier] is a type constructor written as an application whose
+     placeholders stand for what it is applied to, so applying it is filling
+     them -- which is what {!Mlutil.apply_ml_type} does, including for the
+     type-level lambda [fun T => holder T (box T)] whose binder occurs twice. *)
   let apply_carrier carrier k xs =
-    match (carrier, xs) with
-    | Miniml.Tglob (c, _ :: rest, l), [x] -> Miniml.Tglob (c, x :: rest, l)
-    (* Anything else and the two do not line up: the carrier is not an applied
-       type, or it is applied to a number of arguments the occurrence does not
-       supply.  Leave the occurrence as it was rather than put a type in its
-       place that has the wrong arity -- a wrong spelling is worse than an
-       unrecovered one, which is only a missed opportunity. *)
+    match carrier with
+    | Miniml.Tglob _ -> Mlutil.apply_ml_type carrier xs
+    (* Not an applied type, so the two do not line up.  Leave the occurrence as
+       it was rather than put a type in its place that has the wrong arity -- a
+       wrong spelling is worse than an unrecovered one, which is only a missed
+       opportunity. *)
     | _ -> Miniml.Tapp (k, xs)
   in
   let rec subst_carrier k carrier t =

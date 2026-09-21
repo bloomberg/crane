@@ -169,6 +169,33 @@ let rec ml_domains t =
 let ml_value_domains t =
   List.filter (fun d -> not (Mlutil.isTdummy d)) (ml_domains t)
 
+(** Give [b] as many binders as [ty] has value arrows.
+
+    A body that stops short of its type -- [fun n => tfmap f] where the type
+    asks for two arguments -- is a partial application, which is a term a
+    functional language writes freely and a C++ slot of a known signature
+    cannot hold.  The binders are added innermost, so the lambdas already
+    written keep their names and only the ones the body never named are
+    invented. *)
+let eta_expand_to ty b =
+  let doms = ml_value_domains ty in
+  let ids, inner = Mlutil.collect_lams b in
+  let k = List.length doms - List.length ids in
+  if k <= 0 then b
+  else
+    let missing = List.filteri (fun i _ -> i >= List.length doms - k) doms in
+    (* [collect_lams] and [named_lams] both count innermost first, and the
+       binders missing from the body are the last of the type's domains. *)
+    let extra =
+      List.mapi
+        (fun i t ->
+          ( Miniml.Id (Names.Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
+            t ) )
+        (List.rev missing)
+    in
+    let args = List.init k (fun i -> Miniml.MLrel (k - i)) in
+    Mlutil.named_lams (extra @ ids) (Miniml.MLapp (Mlutil.ast_lift k inner, args))
+
 (** A class method's type with the quantifier a concept erased put back.
 
     A class's [ip_types] entry has already erased the method's own [forall A]

@@ -161,9 +161,9 @@ std::pair<T2, Box<T2>> ft_pair(std::type_identity_t<TFunctor<Box>> h, F1 &&f,
 }
 
 std::pair<std::any, Box<std::any>>
-TFunctor_pair(std::type_identity_t<TFunctor<Box>> h,
-              std::function<std::any(std::any)> f,
-              std::pair<std::any, Box<std::any>> x0_);
+TFunctor_pair(std::type_identity_t<TFunctor<Box>> x0_,
+              std::function<std::any(std::any)> x1_,
+              const std::pair<std::any, Box<std::any>> &x2_);
 
 struct PartialApplication {
   static std::pair<bool, Box<bool>> convert(const std::pair<Nat, Box<Nat>> &p);

@@ -236,7 +236,7 @@ template <template <typename> class T1, typename F1>
 two<std::any, T1<std::any>> TFunctor_two(std::type_identity_t<TFunctor<T1>> h,
                                          F1 &&f,
                                          const two<std::any, T1<std::any>> &p) {
-  return two<std::any, std::any>{
+  return two<std::any, T1<std::any>>{
       f(p.t_head), tfmap<T1, std::any>(std::move(h), f, p.t_body)};
 }
 
@@ -265,7 +265,7 @@ outer1<std::any, two<std::any, T1<std::any>>> TFunctor_outer1(
     std::type_identity_t<TFunctor<T1>>,
     std::type_identity_t<TFunctor<_crane_carrier_tch<T1>::template c>> h0,
     F2 &&f, const outer1<std::any, two<std::any, T1<std::any>>> &m) {
-  return outer1<std::any, std::any>{
+  return outer1<std::any, two<std::any, T1<std::any>>>{
       tfmap<_crane_carrier_tch<T1>::template c>(std::move(h0), f, m.o_inner)};
 }
 

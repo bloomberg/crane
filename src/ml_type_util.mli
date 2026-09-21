@@ -95,6 +95,12 @@ val ml_domains : Miniml.ml_type -> Miniml.ml_type list
     ([Tdummy]) ones dropped -- one entry per argument a C++ call passes. *)
 val ml_value_domains : Miniml.ml_type -> Miniml.ml_type list
 
+(** [eta_expand_to ty b] gives [b] as many binders as [ty] has value arrows,
+    added innermost so the lambdas already written keep their names. A body
+    that stops short of its type is a partial application, which no C++ slot of
+    a known signature can hold. *)
+val eta_expand_to : Miniml.ml_type -> Miniml.ml_ast -> Miniml.ml_ast
+
 (** A class method's type with the leading domains a concept erased -- its own
     [forall A] binders and the class instance -- stripped back off, as read
     from the projection constant which kept them. *)

@@ -168,7 +168,7 @@ template <template <typename> class T1, typename F1>
 holder<std::any, T1<std::any>>
 TFunctor_holder(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
                 const holder<std::any, T1<std::any>> &m) {
-  return holder<std::any, std::any>{
+  return holder<std::any, T1<std::any>>{
       f(m.h_head), tfmap<T1, std::any>(std::move(h), f, m.h_body)};
 }
 template <template <typename> class f>
@@ -180,21 +180,22 @@ T1<bool> convert(std::type_identity_t<Convert<T1>> convert0, const Nat &x0_,
   return crane_container_cast<T1<bool>>(convert0(x0_, std::move(x1_)));
 }
 
-const Convert<_crane_carrier_tc> Convert_holder = [](Nat n) {
-  return tfmap<_crane_carrier_tc>(
-      []() {
-        return
-            [](std::function<std::any(std::any)> _x0,
-               holder<std::any, std::any> _x1) -> holder<std::any, std::any> {
+const Convert<_crane_carrier_tc> Convert_holder =
+    [](Nat n, const holder<Nat, box<Nat>> &eta0_) {
+      return tfmap<_crane_carrier_tc>(
+          []() {
+            return [](std::function<std::any(std::any)> _x0,
+                      holder<std::any, std::any> _x1)
+                       -> holder<std::any, std::any> {
               return TFunctor_holder<box>(
                   [](auto &&_ec0, box<std::any> _ec1) {
                     return TFunctor_box(_ec0, _ec1);
                   },
                   _x0, _x1);
             };
-      }(),
-      [=](const Nat &x) mutable { return n.ltb(x); });
-};
+          }(),
+          [=](const Nat &x) mutable { return n.ltb(x); }, eta0_);
+    };
 holder<bool, box<bool>> run(const holder<Nat, box<Nat>> &m);
 
 #endif // INCLUDED_HK_CARRIER_BINDER_AT_CONCRETE_SITE

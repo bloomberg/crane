@@ -4221,6 +4221,18 @@ let gen_spec__inner n b ty =
       let has_magic =
         has_magic || ml_head_has_magic b
       in
+      (* A constant typed by a name -- an instance of a single-method class is
+         typed by the class -- may be initialised with a partially applied
+         body: [Instance Convert_holder : Convert hbox := fun n => tfmap f],
+         where [Convert] stands for two arrows and the body writes one.  The
+         slot it initialises is a [std::function] of the full signature, which
+         no partial application can fill, so the arrows the name stands for are
+         the arrows the body must have. *)
+      let inner_body =
+        Ml_type_util.eta_expand_to
+          (Ml_type_util.expand_ml_fun_alias ml_ty)
+          inner_body
+      in
       tctx := { !tctx with cs_counter = 0 };
       (* The constant's own type is also the expected type of its body, so an
          IIFE standing in for a let-in tail expression re-bases onto it rather
