@@ -9618,3 +9618,16 @@
   (action (run ./hk_constraint_carrier_two_params.t.exe))))
 
 
+
+
+
+(subdir hk_carrier_binder_at_concrete_site
+ (rule
+  (targets hk_carrier_binder_at_concrete_site.t.exe)
+  (deps HkCarrierBinderAtConcreteSite.vo hk_carrier_binder_at_concrete_site.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_binder_at_concrete_site.t.exe hk_carrier_binder_at_concrete_site.cpp hk_carrier_binder_at_concrete_site.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_binder_at_concrete_site.t.exe)
+  (action (run ./hk_carrier_binder_at_concrete_site.t.exe))))
