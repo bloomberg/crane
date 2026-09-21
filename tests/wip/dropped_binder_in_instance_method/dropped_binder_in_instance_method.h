@@ -181,7 +181,7 @@ struct Prov_nat {
         [](auto &&_ec0, std::optional<std::any> _ec1) {
           return Functorish_option(_ec0, _ec1);
         },
-        [=]() mutable { return List<Nat>::cons(x, List<Nat>::nil()); }(),
+        [](Nat x) { return List<Nat>::cons(x, List<Nat>::nil()); },
         std::move(aid));
   }
 };

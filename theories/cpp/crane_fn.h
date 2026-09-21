@@ -7,6 +7,7 @@
 #include <any>
 #include <functional>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -393,4 +394,18 @@ std::pair<A, B> crane_cast_to(crane_tag<std::pair<A, B>>,
                               const std::pair<X, Y> &src) {
   return std::pair<A, B>(crane_convert<A>(src.first),
                          crane_convert<B>(src.second));
+}
+
+// [std::optional] is the opposite problem and needs the same hook.  It is
+// constructible from an optional at another element type -- too readily:
+// [std::optional<std::any>] takes a [std::optional<Nat>] through its
+// value constructor, since [std::any] holds anything, and stores the whole
+// optional in the box where the consumer expects the [Nat].  Say how it is
+// really read, which is through the contained value if there is one.
+template <class A, class X>
+std::optional<A> crane_cast_to(crane_tag<std::optional<A>>,
+                               const std::optional<X> &src) {
+  if (!src.has_value())
+    return std::optional<A>();
+  return std::optional<A>(crane_convert<A>(*src));
 }

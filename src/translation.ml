@@ -5366,6 +5366,40 @@ and erase_fn_arg_for_param env param_ml_ty e expr =
   match erased_fn_param with
   | Some ret_ty when ml_expr_is_function_value e ->
     wrap_crane_erase_fn ?ret_ty:(Option.map Fun.id ret_ty) expr
+  | _ -> convert_carrier_arg param_ml_ty param_cpp_ty e expr
+
+(** The mirror of {!recover_carrier_result}: a value reaching a parameter the
+    callee declared as a carrier applied to a type variable -- [M A], a
+    {!Miniml.Tapp} -- arrives at whatever element the caller had, while a
+    dictionary stores its methods at the erased one.
+
+    Letting C++ convert implicitly is not enough.  A Crane carrier has a
+    generated converting constructor and crosses on its own, but a custom one
+    need not: [std::optional<std::any>] accepts {e anything}, so the whole
+    [std::optional<Nat>] goes into the box and the consumer's [any_cast<Nat>]
+    throws.  Asking the helper is the same question the result side asks, and
+    it is the identity where the two instantiations already agree.
+
+    Only for a value.  A function reaching such a slot is the erasure question
+    above, already answered there; a carrier's element walk applied to a
+    closure is not a conversion but a compile error.
+
+    And only where the destination has a name to ask about.  A carrier whose
+    head is still a type variable is spelled [T1<A>] on the strength of the
+    surrounding declaration; naming it again inside a template argument list
+    asks C++ to accept [T1] as a template where it was written as a type. *)
+and convert_carrier_arg param_ml_ty param_cpp_ty e expr =
+  let head_is_tvar =
+    match param_cpp_ty with Tapply (Tvar _, _) -> true | _ -> false
+  in
+  match resolve_tmeta param_ml_ty with
+  | Miniml.Tapp _
+    when (not (prints_as_any param_cpp_ty))
+         && (not head_is_tvar)
+         && (not (ml_expr_is_function_value e))
+         && classify_fun_erasure param_cpp_ty = Fe_not_a_function ->
+    Table.mark_needs_erase_fn ();
+    CPPconvert (param_cpp_ty, expr)
   | _ -> expr
 
 (** A callable handed to a parameter the callee declared at one of its own
@@ -6044,10 +6078,19 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
     let args_with_owned =
       List.map2 (fun (id, ty) owned -> (id, ty, owned)) args owned_flags
     in
+    (* A binder typed [Tdummy] -- or [unit] under a reified tree -- carries
+       nothing, so it is not a C++ parameter.  Unless the body names it: an
+       instance method's body is read at the class's erased method type, where
+       a value binder the class quantified over has no type left to record,
+       and dropping it leaves the body naming a variable nothing declares.
+       What the body does with a binder settles whether it is one; the
+       recorded type only says so where there is nothing to go on. *)
     let filtered_args_with_owned =
-      List.filter (fun (_, ty, _) ->
-        not (isTdummy ty) && not (ml_type_is_void ty)
-        && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty))
+      List.filteri
+        (fun i (_, ty, _) ->
+          ((not (isTdummy ty)) && not (ml_type_is_void ty)
+           && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty))
+          || Mlutil.ast_occurs (i + 1) a )
         args_with_owned
     in
     let filtered_args =
