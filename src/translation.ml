@@ -3807,9 +3807,13 @@ and hkt_carrier_type_args env tvars ?result id tys =
 
     The dictionary reaches the call wrapped in the adapter lambda that erases
     its arguments, so the instance is found by descending to the head of the
-    lambda's body.  Nothing is claimed when that head has no ML type, or when
-    its codomain is not an application -- a carrier has to be applied to
-    something to be one.
+    lambda's body.  It need not be an instance at all: where the enclosing
+    function abstracts over the instance, the dictionary is a binder, and the
+    carrier is written in the constraint that binder's own type spells.  Both
+    sources end at an ML type headed by the carrier, and are consumed as one.
+
+    Nothing is claimed when neither source yields a type, or when that type is
+    not an application -- a carrier has to be applied to something to be one.
 
     Written unconditionally, unlike the result route: [T1] here occupies a
     non-deduced position ([std::type_identity_t<TFunctor<T1>>], and [T1<std::any>]
@@ -3835,15 +3839,29 @@ and dict_carrier_type_args env tvars id args =
     find 0 (ml_domains ml_ty)
   in
   let* dict = List.nth_opt args i in
-  let rec instance_head = function
+  (* Two sources, one consumer.  A dictionary that {e is} a named instance
+     says what its carrier is through the method it defines; a dictionary that
+     is a binder -- the enclosing function abstracting over the instance --
+     says so through the constraint its own type spells.  Both end at an ML
+     type whose head is the carrier and whose last argument is the one the
+     carrier varies in. *)
+  let rec dict_ml_type = function
     | Miniml.MLlam (_, _, b) | Miniml.MLmagic (_, b) | Miniml.MLapp (b, _) ->
-      instance_head b
-    | Miniml.MLglob (r, _) -> Some r
+      dict_ml_type b
+    | Miniml.MLglob (r, _) ->
+      (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
+         is [box B]. *)
+      Option.map (fun t -> resolve_tmeta (ml_codomain t)) (find_type_opt r)
+    | Miniml.MLrel i ->
+      (* The binder's type is the constraint itself, [TFunctor box], and the
+         class's argument is the carrier -- already applied, since a MiniML
+         type has no way to hold a constructor that is not. *)
+      ( match Option.map resolve_tmeta (get_env_type_opt i) with
+      | Some (Miniml.Tglob (_, [arg], _)) -> Some (resolve_tmeta arg)
+      | _ -> None )
     | _ -> None
   in
-  let* r = instance_head dict in
-  let* inst_ty = find_type_opt r in
-  let cod = resolve_tmeta (ml_codomain inst_ty) in
+  let* cod = dict_ml_type dict in
   let* over =
     match cod with
     | Miniml.Tglob (_, (_ :: _ as ts), _) | Miniml.Tapp (_, (_ :: _ as ts)) ->

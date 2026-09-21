@@ -258,7 +258,7 @@ TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
           [=]() mutable {
             return [=](std::function<std::any(std::any)> _x0,
                        List<std::any> _x1) mutable -> List<std::any> {
-              return TFunctor_list_(h0, _x0, _x1);
+              return TFunctor_list_<box>(h0, _x0, _x1);
             };
           }(),
           f, m.h_boxes),

@@ -12,11 +12,17 @@
      }
 
    There is no instance body to descend to -- [h0] is a binder -- and
-   [dict_carrier_type_args] finds nothing.  But the carrier is not lost: it is
+   [dict_carrier_type_args] found nothing.  But the carrier is not lost: it is
    written in [h0]'s own declared type, which the enclosing signature already
-   spells.  So this is a second source for the same query, adjacent to the one
-   that landed, and the two should share their consumer rather than each
-   growing their own call-site branch.
+   spells.
+
+   So this is a second {e source} for one query, and it is added as one.  Both
+   sources end at an ML type headed by the carrier -- a named instance says so
+   through the method it defines, whose codomain is [box B]; a binder says so
+   through the constraint its type spells, [TFunctor box], whose class argument
+   is already applied because a MiniML type has no way to hold a constructor
+   that is not -- and [dict_ml_type] produces that type from either, leaving
+   the abstraction and the [Ttyctor] downstream of both.
 
    The shape is [tfmap f (h_boxes m)] inside [TFunctor_holder]: it resolves to
    the ambient [`{TFunctor box}], not to a global instance, because the
