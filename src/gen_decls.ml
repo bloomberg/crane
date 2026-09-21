@@ -2803,12 +2803,8 @@ let gen_dfun n b cty ty temps =
        so the C++ function literally returns void)
      - Reified mode: Tglob(itree, [E; Unit]) → Tglob(itree, [E; void])
        (printed as shared_ptr<ITree<void>> via monad template) *)
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty)
-  in
-  let cod = apply_unit_void unit_void ((!tctx).itree_mode = Reified) cod in
+  let unit_void = ml_type_is_void_call ty in
+  let cod = apply_unit_void unit_void cod in
   (* Reversed: the lambda collection below peels the innermost arrow first. *)
   let mldom = List.rev (Ml_type_util.ml_domains ty) in
   (* Limit lambda collection to the number of type arrows. When a type alias
@@ -4173,13 +4169,7 @@ let gen_dfun_def n b ty =
 let gen_spec__inner n b ty =
   let ty = type_simpl ty in
   let ml_ty = ty in  (* preserve ML type before C++ conversion *)
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty) in
-  let is_reified = unit_void &&
-    (match extract_monad_from_codomain ty with
-     | Some mr -> is_monad_reified mr | None -> false) in
+  let unit_void = ml_type_is_void_call ty in
   with_method_ns_for_locals @@ fun () ->
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
@@ -4187,7 +4177,7 @@ let gen_spec__inner n b ty =
   let result =
     match ty with
     | Tfun (dom, cod) ->
-      let cod = apply_unit_void unit_void is_reified cod in
+      let cod = apply_unit_void unit_void cod in
       gen_sfun n b dom cod temps
     | _ ->
     match b with
@@ -4279,22 +4269,16 @@ let gen_spec n b ty =
     struct bodies where the full definition is not needed. *)
 let gen_sfun_spec n b ty =
   let ty = type_simpl ty in
-  let unit_void =
-    (match ty with Miniml.Tarr _ -> true
-     | Miniml.Tglob (r, _, _) when Table.is_monad r -> true | _ -> false)
-    && ml_type_is_unit (ml_result_type ty) in
-  let is_reified = unit_void &&
-    (match extract_monad_from_codomain ty with
-     | Some mr -> is_monad_reified mr | None -> false) in
+  let unit_void = ml_type_is_void_call ty in
   let ty = convert_ml_type_to_cpp_type (empty_env ()) [] ty in
   let tvars = get_tvars ty in
   let temps = List.map (fun id -> (TTtypename, id)) tvars in
   match ty with
   | Tfun (dom, cod) ->
-    let cod = apply_unit_void unit_void is_reified cod in
+    let cod = apply_unit_void unit_void cod in
     gen_sfun n b dom cod temps
   | _ ->
-    let ty = apply_unit_void unit_void is_reified ty in
+    let ty = apply_unit_void unit_void ty in
     gen_sfun n b [Tvoid] ty temps
 
 (** Generate multiple function definitions *)

@@ -334,14 +334,10 @@ let hkt_tvar_positions_of_type ty =
   in
   go 0 [] ty
 
-(** Apply unit-to-void conversion on a C++ type, respecting reified mode.
-    In reified mode, [Unit] inside [ITree<Unit>] becomes [ITree<void>].
-    In sequential mode, the entire type becomes [Tvoid]. *)
-let apply_unit_void unit_void is_reified ty =
-  if unit_void then
-    if is_reified then voidify_unit_in_type ty
-    else Tvoid
-  else ty
+(** Apply unit-to-void conversion on a C++ type.  [unit_void] comes from
+    {!ml_type_is_void_call}, which already declines for a reified monad, so
+    there is one outcome left: the whole type is [void]. *)
+let apply_unit_void unit_void ty = if unit_void then Tvoid else ty
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor).
     Does NOT call [gen_expr] — it checks the extraction table directly. *)
@@ -362,21 +358,45 @@ let mk_tt_expr () =
   | None ->
     CErrors.anomaly (Pp.str "mk_tt_expr: could not resolve core.unit.tt")
 
+(** Whether [ty]'s codomain is a monad extracted as a reified tree. *)
+let codomain_is_reified_monad (ty : Miniml.ml_type) : bool =
+  match ml_codomain ty with
+  | Miniml.Tglob (r, _, _) -> Table.is_monad r && is_monad_reified r
+  | _ -> false
+
 (** Whether [ty] is the type of something whose C++ call returns [void]: a
     function (or monad) whose result type is [unit].  Such a call cannot be
     used as a value — it must be wrapped in an IIFE that executes it for its
-    side effect and returns [std::monostate{}]. *)
+    side effect and returns [std::monostate{}].
+
+    A monad counts only in sequential mode, where a monadic value {e is} the
+    running of its effects and a [unit] result is therefore nothing.  Under the
+    reified backend it is data: [itree E unit] is a tree that has to be
+    returned, built, and bound into, and void-ifying it does not merely mistype
+    the call -- it drops the tree, and with it the sequencing the program was
+    expressed in. *)
 let ml_type_is_void_call (ty : Miniml.ml_type) : bool =
   (match Ml_type_util.resolve_tmeta ty with
   | Miniml.Tarr _ -> true
   | Miniml.Tglob (r, _, _) -> Table.is_monad r
   | _ -> false)
   && ml_type_is_unit (ml_result_type ty)
+  && not (codomain_is_reified_monad ty)
 
-(** Whether a global reference [r] has been void-ified. *)
+(** Whether a global reference [r] has been void-ified.
+
+    An inline custom is void-ified in reified mode as well.  Its replacement
+    text is written once, in the sequential spelling -- [std::cout << s] is a
+    statement, not a tree -- so its Rocq type saying [itree E unit] does not
+    make its C++ a tree.  The lift into [ITree<R>::ret()] at the call site is
+    what makes it one, and that lift is keyed on this. *)
 let is_void_ified_ref (r : GlobRef.t) : bool =
   match find_type_opt r with
-  | Some ty -> ml_type_is_void_call ty
+  | Some ty ->
+    ml_type_is_void_call ty
+    || Table.is_inline_custom r
+       && ml_type_is_unit (ml_result_type ty)
+       && codomain_is_reified_monad ty
   | None -> false
 
 (** Wrap a void-returning function call expression in an IIFE so it can
@@ -396,6 +416,12 @@ let rec ml_callee_is_void = function
   | MLmagic (_, inner) -> ml_callee_is_void inner
   | MLrel i -> ( try ml_type_is_void_call (get_env_type i) with _ -> false )
   | _ -> false
+
+(** Whether the C++ for an ML expression is a statement rather than a value:
+    a call to something void-ified, applied or not. *)
+let ml_expr_is_void_call = function
+  | MLapp (f, _) -> ml_callee_is_void f
+  | e -> ml_callee_is_void e
 
 (** {3 Reified ITree helpers}
 
@@ -1252,15 +1278,17 @@ let mk_itree_ret (r_cpp : cpp_type) (args : cpp_expr list) : cpp_expr =
   let itree_ty = Tid_external ("ITree", [r_cpp]) in
   mk_call (CPPqualified_t (itree_ty, Id.of_string "ret")) args
 
-(** Build [ITree<R>::ret(v)] or [ITree<void>::ret()] depending on whether
-    the result type is void.  [r_cpp] is the C++ result type; [r_ml] is
-    the ML result type (checked with {!ml_type_is_void} for unit-mapped
-    types); [v] is the value expression to wrap. *)
+(** Build [ITree<R>::ret(v)], or [ITree<void>::ret()] where there is no value
+    to carry.  [r_cpp] is the C++ result type, [r_ml] the ML one, [v] the value.
+
+    Only a type extracted as C++ [void] is valueless.  Rocq's [unit] is not: it
+    has an inhabitant, spelled [std::monostate], and a tree carrying it is a
+    tree like any other.  Spelling it [ITree<void>] instead loses the
+    distinction between a computation that yields nothing and one that yields
+    the trivial thing, and the two then meet in one match. *)
 let mk_itree_ret_for_value r_cpp r_ml v =
-  if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
-    mk_itree_ret Tvoid []
-  else
-    mk_itree_ret r_cpp [v]
+  if r_cpp = Tvoid || ml_type_is_void r_ml then mk_itree_ret Tvoid []
+  else mk_itree_ret r_cpp [v]
 
 (** Reify a monadic parameter type for ITree extraction.
 
@@ -1276,8 +1304,6 @@ let reify_monadic_param_type ml_ty cpp_ty =
       | Tglob (_, _ :: r :: _, _) -> r
       | t -> t
     in
-    (* Voidify unit result type inside ITree params *)
-    let r_ty = if is_cpp_unit_type r_ty then Tvoid else r_ty in
     mk_itree_type r_ty
   end
   else cpp_ty
@@ -1326,11 +1352,15 @@ let is_reified_monadic_expr ml_expr =
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type ty | None -> false)
   | MLapp (MLrel i, _) ->
     (match get_env_type_opt i with Some ty -> is_monadic_ml_type (ml_codomain ty) | None -> false)
-  | MLapp (MLglob (r, _), args) ->
+  (* A global of monadic type is already a tree whether or not it is applied:
+     a zero-arity constant like [get : itree E nat] is the same value that its
+     applied form would be, and wrapping it in [ret] builds a tree of trees. *)
+  | MLglob (r, _) | MLapp (MLglob (r, _), _) ->
+    let nargs = match ml_expr with MLapp (_, args) -> List.length args | _ -> 0 in
     (not (is_void_ified_ref r))
     && ( match find_type_opt r with
        | Some ty ->
-         let res = ml_result_after (List.length args) ty in
+         let res = ml_result_after nargs ty in
          is_monadic_ml_type res
          && ( (not (Table.is_inline_custom r))
             || match Ml_type_util.resolve_tmeta res with
@@ -2628,7 +2658,7 @@ let rec convert_ml_type_to_cpp_type
          since the C++ type may still be a monad Tglob, not bare unit. *)
       let voidify_cod c =
         if is_cpp_unit_type c then Tvoid
-        else if ml_type_is_unit (ml_result_type t2) then Tvoid
+        else if ml_type_is_void_call t2 then Tvoid
         else c
       in
       (* A result the arguments only pin down as a type index is not something
@@ -3075,7 +3105,7 @@ and iife_void_return env typ pv =
     match Array.to_list pv with (_, rty, _, _) :: _ -> rty | [] -> typ
   in
   let r = cpp_of_ml env branch_rty in
-  if is_cpp_unit_type r || ml_type_is_unit (ml_result_type branch_rty) then
+  if is_cpp_unit_type r || ml_type_is_void_call branch_rty then
     Some Tvoid
   else None
 
@@ -5489,8 +5519,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       let t = Common.last (a1 :: l) in
       match t with
       | MLglob (g, _) when is_ghost g ->
-        mk_itree_ret Tvoid []
-      | MLcons (_, cr, []) when Table.is_tt_constructor cr ->
         mk_itree_ret Tvoid []
       | _ ->
         let inner = gen_expr env t in
@@ -7910,7 +7938,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
       in
       let r = cpp_of_ml env branch_rty in
       if is_cpp_unit_type r
-         || ml_type_is_unit (ml_result_type branch_rty)
+         || ml_type_is_void_call branch_rty
       then Tvoid else r
     in
     let stmts =
@@ -9489,16 +9517,23 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
         Table.require_itree_header ();
         let r_ml = extract_itree_result_ml param_ty in
         let r_cpp = cpp_of_ml env r_ml in
-        (* Voidify unit result type in ITree wrapper *)
-        let r_cpp = if ml_type_is_unit r_ml then Tvoid else r_cpp in
+
         let itree_ty = mk_itree_type r_cpp in
-        let ret_expr = mk_itree_ret_for_value r_cpp r_ml expr in
-        (* Void/unit effects need their side-effect evaluated before ret(). *)
+        (* [expr] is a value unless the thing it calls was void-ified, in
+           which case it is a statement and the tree carries [tt] instead.
+           Only a genuinely valueless result gets the nullary [ret()]: a
+           [unit] one has [monostate] to carry, and a tree spelled
+           [ITree<void>] would not match the [ITree<Unit>] declared for it. *)
+        let no_value = r_cpp = Tvoid || ml_type_is_void r_ml in
+        let as_statement = no_value || ml_expr_is_void_call ml_arg in
+        let ret_expr =
+          if no_value then mk_itree_ret Tvoid []
+          else if as_statement then mk_itree_ret r_cpp [mk_tt_expr ()]
+          else mk_itree_ret_for_value r_cpp r_ml expr
+        in
         let body =
-          if r_cpp = Tvoid || ml_type_is_unit_or_void r_ml then
-            [Sexpr expr; Sreturn (Some ret_expr)]
-          else
-            [Sreturn (Some ret_expr)]
+          if as_statement then [Sexpr expr; Sreturn (Some ret_expr)]
+          else [Sreturn (Some ret_expr)]
         in
         mk_iife (Some itree_ty) body
       (* Void-ified function reference passed as callback to polymorphic
@@ -13186,8 +13221,7 @@ and gen_stmts ?(slot = empty_slot) env (k : cpp_expr -> cpp_stmt) ast =
         push_binders env [(x_renamed, t)];
         let r_ml = extract_itree_result_ml t in
         let r_cpp = cpp_of_ml env r_ml in
-        (* Voidify unit result type in ITree wrapper *)
-        let r_cpp = if ml_type_is_unit r_ml then Tvoid else r_cpp in
+
         let reified_ty = mk_itree_type r_cpp in
         let ret_k v = Sreturn (Some (mk_itree_ret_for_value r_cpp r_ml v)) in
         let body_stmts = gen_stmts env ret_k a in

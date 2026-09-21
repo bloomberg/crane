@@ -5,19 +5,20 @@
 #include <crane_itree.h>
 #include <memory>
 #include <string>
-#include <utility>
 #include <variant>
 
 using namespace std::string_literals;
 
 struct ITreeReified {
   /// Pass-through: takes a reified itree and returns it unchanged.
-  static void run_tree(std::shared_ptr<ITree<void>> t);
+  static std::shared_ptr<ITree<std::monostate>>
+  run_tree(std::shared_ptr<ITree<std::monostate>> t);
   /// Sequence two reified itrees.
-  static void sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                             const std::shared_ptr<ITree<void>> &t2);
+  static std::shared_ptr<ITree<std::monostate>>
+  sequence_trees(const std::shared_ptr<ITree<std::monostate>> &t1,
+                 const std::shared_ptr<ITree<std::monostate>> &t2);
   /// Direct mode (no itree params) should be unchanged.
-  static std::shared_ptr<ITree<void>> test_direct();
+  static std::shared_ptr<ITree<std::monostate>> test_direct();
 
   /// Traverse an itree E T, logging at every Tau and Vis node.
   /// The result lives in itree (ioE +' E) T: original effects on
@@ -62,11 +63,11 @@ struct ITreeReified {
   }
 
   /// A simple tree to instrument.
-  static std::shared_ptr<ITree<void>> greet();
+  static std::shared_ptr<ITree<std::monostate>> greet();
   /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
-  static std::shared_ptr<ITree<void>> test_logging();
+  static std::shared_ptr<ITree<std::monostate>> test_logging();
   /// ---- Main (auto-wrapper) ----
-  static std::shared_ptr<ITree<void>> main();
+  static std::shared_ptr<ITree<std::monostate>> main();
 };
 
 #endif // INCLUDED_ITREE_REIFIED

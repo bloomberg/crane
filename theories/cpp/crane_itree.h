@@ -184,15 +184,28 @@ using itreeF_t = typename ITree<R>::variant_t;
 // The continuation is taken by value, not by forwarding reference: a Vis
 // stores it in the node it returns, which outlives this call.  K stays a
 // generic callable (not a std::function) so lambdas deduce against it.
+//
+// A continuation that ignores the bound value is written with no parameter at
+// all -- `t ;; k` in Rocq discards it, and the generated lambda says so.  That
+// is a fact about the continuation, not about the element type, so it is
+// handled here rather than by a separate overload per element type.
+template<typename K, typename A>
+decltype(auto) crane_itree_apply(K &k, const A &value) {
+    if constexpr (std::is_invocable_v<K &>)
+        return k();
+    else
+        return k(value);
+}
+
 template<typename A, typename K>
 auto itree_bind(std::shared_ptr<ITree<A>> m, K k)
-    -> decltype(k(std::declval<A>())) {
-    using tree_b = decltype(k(std::declval<A>()));
+    -> decltype(crane_itree_apply(k, std::declval<const A &>())) {
+    using tree_b = decltype(crane_itree_apply(k, std::declval<const A &>()));
     using node_b = typename tree_b::element_type;
     if (!m)
         throw std::invalid_argument("crane: itree_bind given a null tree");
     if (auto *r = std::get_if<typename ITree<A>::Ret>(&m->node))
-        return k(r->value);
+        return crane_itree_apply(k, r->value);
     if (auto *t = std::get_if<typename ITree<A>::Tau>(&m->node))
         return node_b::tau(itree_bind(t->next, k));
     auto &v = std::get<typename ITree<A>::Vis>(m->node);
@@ -497,6 +510,10 @@ struct sum1_inr_t {
 template<typename E> sum1_inl_t<E> sum1_inl(E a0) { return {std::move(a0)}; }
 template<typename F> sum1_inr_t<F> sum1_inr(F a0) { return {std::move(a0)}; }
 
+template<typename T> struct is_sum1_injection : std::false_type {};
+template<typename E> struct is_sum1_injection<sum1_inl_t<E>> : std::true_type {};
+template<typename F> struct is_sum1_injection<sum1_inr_t<F>> : std::true_type {};
+
 // The single argument a non-generic callable takes.
 template<typename T> struct crane_fn_arg;
 template<typename C, typename R, typename A>
@@ -538,14 +555,23 @@ template<typename Effect, typename Cont>
 auto itree_vis(Effect effect, Cont cont) {
     using TreePtr = std::invoke_result_t<Cont, std::any>;
     using TreeT = typename TreePtr::element_type;
-    std::function<std::any()> eff;
-    if constexpr (std::is_same_v<std::decay_t<Effect>, std::any>) {
-        eff = std::any_cast<std::function<std::any()>>(effect);
-    } else {
-        eff = std::function<std::any()>(std::move(effect));
+    // A [Vis] stores its effect as a thunk, so the sum an injection names has
+    // no representation here: [inl1 e] and [inr1 e] are both carried as [e].
+    // The proxy's whole job is to defer the sum type to a use site, and this
+    // use site is one that never spells it -- so it is unwrapped rather than
+    // converted.  Which side it came from is recovered by the handler, from
+    // the [Sum1] the *handler's* signature spells.
+    if constexpr (is_sum1_injection<std::decay_t<Effect>>::value)
+        return itree_vis(std::move(effect.a0), std::move(cont));
+    else {
+        std::function<std::any()> eff;
+        if constexpr (std::is_same_v<std::decay_t<Effect>, std::any>)
+            eff = std::any_cast<std::function<std::any()>>(effect);
+        else
+            eff = std::function<std::any()>(std::move(effect));
+        return TreeT::vis(std::move(eff),
+            std::function<TreePtr(std::any)>(std::move(cont)));
     }
-    return TreeT::vis(std::move(eff),
-        std::function<TreePtr(std::any)>(std::move(cont)));
 }
 
 #endif // INCLUDED_CRANE_ITREE

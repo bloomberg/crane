@@ -193,8 +193,13 @@ type hkt_tvar_position = {
 (** Type variables standing for a higher-kinded class parameter. *)
 val hkt_tvar_positions_of_type : ml_type -> hkt_tvar_position list
 
-(** Apply unit-to-void conversion on a C++ type, respecting reified mode. *)
-val apply_unit_void : bool -> bool -> cpp_type -> cpp_type
+(** Whether a declaration of this ML type is emitted as returning [void]: its
+    result, after the arrows and a monad's result argument, is [unit] -- and
+    the monad is not a reified one, whose trees are values. *)
+val ml_type_is_void_call : ml_type -> bool
+
+(** Apply unit-to-void conversion on a C++ type. *)
+val apply_unit_void : bool -> cpp_type -> cpp_type
 
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor). *)
 val mk_tt_expr : unit -> cpp_expr

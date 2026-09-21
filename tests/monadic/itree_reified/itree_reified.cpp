@@ -1,95 +1,83 @@
 #include "itree_reified.h"
 
 /// Pass-through: takes a reified itree and returns it unchanged.
-void ITreeReified::run_tree(std::shared_ptr<ITree<void>> t) {
-  {
-    std::move(t);
-    return;
-  }
+std::shared_ptr<ITree<std::monostate>>
+ITreeReified::run_tree(std::shared_ptr<ITree<std::monostate>> t) {
+  return t;
 }
 
 /// Sequence two reified itrees.
-void ITreeReified::sequence_trees(const std::shared_ptr<ITree<void>> &t1,
-                                  const std::shared_ptr<ITree<void>> &t2) {
-  {
-    itree_bind(t1, [=]() mutable { return t2; });
-    return;
-  }
+std::shared_ptr<ITree<std::monostate>>
+ITreeReified::sequence_trees(const std::shared_ptr<ITree<std::monostate>> &t1,
+                             const std::shared_ptr<ITree<std::monostate>> &t2) {
+  return itree_bind(t1, [=]() mutable { return t2; });
 }
 
 /// Direct mode (no itree params) should be unchanged.
-std::shared_ptr<ITree<void>> ITreeReified::test_direct() {
+std::shared_ptr<ITree<std::monostate>> ITreeReified::test_direct() {
   return itree_bind(
-      []() -> std::shared_ptr<ITree<void>> {
+      []() -> std::shared_ptr<ITree<std::monostate>> {
         std::cout << "direct1"s << '\n';
-        return ITree<void>::ret();
+        return ITree<std::monostate>::ret(std::monostate{});
       }(),
       []() {
         return itree_bind(
-            []() -> std::shared_ptr<ITree<void>> {
+            []() -> std::shared_ptr<ITree<std::monostate>> {
               std::cout << "direct2"s << '\n';
-              return ITree<void>::ret();
+              return ITree<std::monostate>::ret(std::monostate{});
             }(),
-            []() { return ITree<void>::ret(); });
+            []() { return ITree<std::monostate>::ret(std::monostate{}); });
       });
 }
 
 /// A simple tree to instrument.
-std::shared_ptr<ITree<void>> ITreeReified::greet() {
+std::shared_ptr<ITree<std::monostate>> ITreeReified::greet() {
   return itree_bind(
-      []() -> std::shared_ptr<ITree<void>> {
+      []() -> std::shared_ptr<ITree<std::monostate>> {
         std::cout << "Hello!"s << '\n';
-        return ITree<void>::ret();
+        return ITree<std::monostate>::ret(std::monostate{});
       }(),
-      []() { return ITree<void>::ret(); });
+      []() { return ITree<std::monostate>::ret(std::monostate{}); });
 }
 
 /// Apply with_logging to greet, producing itree (ioE +' ioE) unit.
-std::shared_ptr<ITree<void>> ITreeReified::test_logging() {
-  return with_logging<void, std::monostate>(
-      []() -> std::shared_ptr<ITree<void>> {
-        greet();
-        return ITree<void>::ret();
-      }());
+std::shared_ptr<ITree<std::monostate>> ITreeReified::test_logging() {
+  return with_logging<void, std::monostate>(greet());
 }
 
 /// ---- Main (auto-wrapper) ----
-std::shared_ptr<ITree<void>> ITreeReified::main() {
+std::shared_ptr<ITree<std::monostate>> ITreeReified::main() {
   return itree_bind(
-      []() -> std::shared_ptr<ITree<void>> {
+      []() -> std::shared_ptr<ITree<std::monostate>> {
         std::cout << "=== Starting ==="s << '\n';
-        return ITree<void>::ret();
+        return ITree<std::monostate>::ret(std::monostate{});
       }(),
       []() {
         return itree_bind(
-            []() -> std::shared_ptr<ITree<void>> {
-              run_tree([]() -> std::shared_ptr<ITree<void>> {
-                std::cout << "Hello from reified mode!"s << '\n';
-                return ITree<void>::ret();
-              }());
-              return ITree<void>::ret();
-            }(),
+            run_tree([]() -> std::shared_ptr<ITree<std::monostate>> {
+              std::cout << "Hello from reified mode!"s << '\n';
+              return ITree<std::monostate>::ret(std::monostate{});
+            }()),
             []() {
               return itree_bind(
-                  []() -> std::shared_ptr<ITree<void>> {
-                    sequence_trees(
-                        []() -> std::shared_ptr<ITree<void>> {
-                          std::cout << "First"s << '\n';
-                          return ITree<void>::ret();
-                        }(),
-                        []() -> std::shared_ptr<ITree<void>> {
-                          std::cout << "Second"s << '\n';
-                          return ITree<void>::ret();
-                        }());
-                    return ITree<void>::ret();
-                  }(),
+                  sequence_trees(
+                      []() -> std::shared_ptr<ITree<std::monostate>> {
+                        std::cout << "First"s << '\n';
+                        return ITree<std::monostate>::ret(std::monostate{});
+                      }(),
+                      []() -> std::shared_ptr<ITree<std::monostate>> {
+                        std::cout << "Second"s << '\n';
+                        return ITree<std::monostate>::ret(std::monostate{});
+                      }()),
                   []() {
                     return itree_bind(
-                        []() -> std::shared_ptr<ITree<void>> {
+                        []() -> std::shared_ptr<ITree<std::monostate>> {
                           std::cout << "=== Done ==="s << '\n';
-                          return ITree<void>::ret();
+                          return ITree<std::monostate>::ret(std::monostate{});
                         }(),
-                        []() { return ITree<void>::ret(); });
+                        []() {
+                          return ITree<std::monostate>::ret(std::monostate{});
+                        });
                   });
             });
       });

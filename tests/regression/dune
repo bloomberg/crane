@@ -9570,3 +9570,14 @@
   (alias runtest)
   (deps let_shadows_match_binder.t.exe)
   (action (run ./let_shadows_match_binder.t.exe))))
+
+(subdir itree_unit_collapses_to_void
+ (rule
+  (targets itree_unit_collapses_to_void.t.exe)
+  (deps ItreeUnitCollapsesToVoid.vo itree_unit_collapses_to_void.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} itree_unit_collapses_to_void.t.exe itree_unit_collapses_to_void.cpp itree_unit_collapses_to_void.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps itree_unit_collapses_to_void.t.exe)
+  (action (run ./itree_unit_collapses_to_void.t.exe))))
