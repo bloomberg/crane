@@ -9675,3 +9675,14 @@
   (alias runtest)
   (deps dropped_binder_in_instance_method.t.exe)
   (action (run ./dropped_binder_in_instance_method.t.exe))))
+
+(subdir eta_partial_app_drops_targs
+ (rule
+  (targets eta_partial_app_drops_targs.t.exe)
+  (deps EtaPartialAppDropsTargs.vo eta_partial_app_drops_targs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_partial_app_drops_targs.t.exe eta_partial_app_drops_targs.cpp eta_partial_app_drops_targs.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_partial_app_drops_targs.t.exe)
+  (action (run ./eta_partial_app_drops_targs.t.exe))))
