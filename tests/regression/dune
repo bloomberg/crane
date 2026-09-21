@@ -9707,3 +9707,13 @@
   (alias runtest)
   (deps noncolliding_child_unregistered.t.exe)
   (action (run ./noncolliding_child_unregistered.t.exe))))
+(subdir bystander_named_bare
+ (rule
+  (targets bystander_named_bare.t.exe)
+  (deps User.vo bystander_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bystander_named_bare.t.exe bystander_named_bare.cpp bystander_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps bystander_named_bare.t.exe)
+  (action (run ./bystander_named_bare.t.exe))))

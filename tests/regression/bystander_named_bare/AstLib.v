@@ -13,8 +13,8 @@
 
 From Crane Require Import Mapping.Std.
 From Stdlib Require Import Arith PeanoNat.
-From CraneTestsWIP Require Import bystander_named_bare.Rid.
-From CraneTestsWIP Require Import bystander_named_bare.Ord.
+From CraneTestsRegression Require Import bystander_named_bare.Rid.
+From CraneTestsRegression Require Import bystander_named_bare.Ord.
 
 (** Colliding: its capitalised label is [Coll]'s inductive, so it fires the
     wrapper -- and the printer flattens it into the wrapper's body. *)
