@@ -158,3 +158,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir erased_pair_pattern_probed_at_any
+ (rule
+  (targets erased_pair_pattern_probed_at_any.t.exe)
+  (deps ErasedPairPatternProbedAtAny.vo erased_pair_pattern_probed_at_any.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} erased_pair_pattern_probed_at_any.t.exe erased_pair_pattern_probed_at_any.cpp erased_pair_pattern_probed_at_any.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps erased_pair_pattern_probed_at_any.t.exe)
+  (action (run ./erased_pair_pattern_probed_at_any.t.exe))))
