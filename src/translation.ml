@@ -1214,49 +1214,36 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
       CPPconvert (orig_dst_ty, expr)
     | Tvar (_, Some _), Tvar (_, Some _) ->
       (* Type-variable-to-type-variable conversion in converting constructors.
-         When the source type variable is std::any at runtime (e.g. List<_U>
-         constructed from List<std::any> in grammar action wrappers), a plain
-         converting constructor A(field) fails to compile because pair<K,V>
-         has no constructor from std::any.  Dispatch at compile time instead.
-
-         When A is a pair type, grammar actions may store elements as
-         pair<any,any> (all fields erased) even when A = pair<K,V> with
-         concrete K and V.  This happens because nt_semty erases all
-         nonterminal semantic types to __ in ML extraction.  Handle this by
-         attempting a direct any_cast<A> first (succeeds when stored as
-         pair<K,V>), and falling back to a two-level cast from pair<any,any>
-         when A has first_type/second_type members (i.e. A is a std::pair). *)
+         A plain converting constructor [A(field)] is wrong here: at runtime
+         [U] may be [std::any], and [pair<K,V>] has no constructor from one --
+         nor from [pair<any,any>], which is how a pair's components are boxed
+         one at a time.  Dispatch at compile time instead. *)
       require_header "any";
       if not (is_access_path expr) then
         Cpp_erasure.converting_ctor orig_dst_ty [expr]
       else begin
-        (* Recovering [A] from a box -- including the case where [A] is a pair
-           whose components were boxed one at a time -- is exactly what
-           [crane_any_cast] does, and it recurses, so nested pairs work too.
-           All that is left here is the outer question, which genuinely cannot
-           be answered until C++ substitutes [U]: is there a box at all?  If
-           [U] is not [std::any] the value is already a [U] and wants an
-           ordinary conversion.  Hence [if constexpr]: only the taken side has
-           to compile. *)
+        (* Which way [U] is read at [A] -- unboxed, converted, or taken apart
+           component by component -- cannot be decided until C++ substitutes
+           [U], and [crane_convert] is exactly that decision, so ask it rather
+           than restate a part of it here.  The one question left is whether
+           there is any route at all: where there is none the field belongs to
+           a constructor this instantiation never holds. *)
         Table.mark_needs_erase_fn ();
         let dst = qualify_inductives ~skip orig_dst_ty in
         mk_iife (Some dst)
           [ Sif_constexpr
-              ( CPPis_same (src_ty, Tany),
-                [Sreturn (Some (Cpp_erasure.unbox_tolerant dst expr))],
-                [ Sif_constexpr
-                    ( CPPis_constructible (dst, Tref (Tconst src_ty)),
-                      [Sreturn (Some (Cpp_erasure.converting_ctor dst [expr]))],
-                      (* [U] is neither a box nor something [A] accepts.  A
-                         converting constructor converts every field of every
-                         constructor, but only the constructor the source
-                         actually holds is reached; the rest are converted
-                         only because C++ compiles both sides of an [if].
-                         Two instantiations that agree on the field being
-                         carried can disagree completely on one that is not,
-                         so the unreachable side gets the throw rather than a
-                         conversion no one asked for. *)
-                      [Sthrow inactive_field_message] ) ] ) ]
+              ( CPPconvertible (dst, Tref (Tconst src_ty)),
+                [Sreturn (Some (CPPconvert (dst, expr)))],
+                (* [U] is neither a box nor anything else [A] can be read
+                   from.  A converting constructor converts every field of
+                   every constructor, but only the constructor the source
+                   actually holds is reached; the rest are converted only
+                   because C++ compiles both sides of an [if].  Two
+                   instantiations that agree on the field being carried can
+                   disagree completely on one that is not, so the unreachable
+                   side gets the throw rather than a conversion no one asked
+                   for. *)
+                [Sthrow inactive_field_message] ) ]
       end
     | (_, dst) when (let strip_ns = function Tnamespace (_, t) -> t | t -> t in
                      match strip_ns dst with
@@ -6160,6 +6147,22 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      and the error lands inside the lambda at the use. *)
                   wrap_param_by_ownership ~is_owned:owned
                     (Option.get (slot_param_cpp_ty j))
+                | None
+                  when Ml_type_util.has_tany_written bare_cpp_ty
+                       && n_all_params = 1
+                       && ( match a with
+                          | MLcase (_, MLrel 1, pv) -> is_custom_match pv
+                          | _ -> false ) ->
+                  (* A pattern lambda: the body decomposes this parameter with
+                     a structured binding, which is ill-formed at [std::any].
+                     [crane_erase_fn] probes a generic callable with exactly
+                     that -- and the binding is in the body, not the signature,
+                     so no [requires] can absorb the failure and the probe
+                     becomes a hard error.  Spelling the type keeps the probe
+                     well-formed: CTAD then deduces a signature, and the
+                     adapter unboxes at this very type, which is the one the
+                     producer boxed. *)
+                  wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
                   (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete

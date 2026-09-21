@@ -43,15 +43,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -109,27 +105,19 @@ struct UniversePoly {
     // ACCESSORS
     template <typename _U0, typename _U1> operator ppair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(pfst);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(pfst);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(pfst);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(psnd);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(psnd);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(psnd);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }
@@ -168,15 +156,11 @@ struct UniversePoly {
       } else {
         const auto &[a0] = std::get<typename poption<_U>::Psome>(_other.v());
         this->v_ = Psome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       }

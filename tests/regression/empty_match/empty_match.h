@@ -57,30 +57,22 @@ struct EmptyMatch {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
         this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U0 &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U0 &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
         this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>) {
-            return crane_any_cast<B>(a0);
+          if constexpr (crane_convertible<B, const _U1 &>) {
+            return crane_convert<B>(a0);
           } else {
-            if constexpr (std::is_constructible_v<B, const _U1 &>) {
-              return B(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       }

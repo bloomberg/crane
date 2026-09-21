@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -47,15 +46,11 @@ public:
       const auto &[a0, a1] = std::get<typename Forest<_U>::Node>(_other.v());
       this->v_ = Node{
           [&]() -> A {
-            if constexpr (std::is_same_v<_U, std::any>) {
-              return crane_any_cast<A>(a0);
+            if constexpr (crane_convertible<A, const _U &>) {
+              return crane_convert<A>(a0);
             } else {
-              if constexpr (std::is_constructible_v<A, const _U &>) {
-                return A(a0);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
+              throw std::logic_error("unreachable: inactive constructor field "
+                                     "at this instantiation");
             }
           }(),
           (a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(

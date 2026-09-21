@@ -41,21 +41,17 @@ struct HofTreeLoopify {
         this->v_ = Leaf{};
       } else {
         const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{
-            (l ? std::make_shared<tree<A>>(*l) : nullptr),
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(x);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(x);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (r ? std::make_shared<tree<A>>(*r) : nullptr)};
+        this->v_ =
+            Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
+                 [&]() -> A {
+                   if constexpr (crane_convertible<A, const _U &>) {
+                     return crane_convert<A>(x);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }(),
+                 (r ? std::make_shared<tree<A>>(*r) : nullptr)};
       }
     }
 

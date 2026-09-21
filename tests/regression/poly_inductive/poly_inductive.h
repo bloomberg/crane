@@ -21,15 +21,11 @@ struct PolyInductive {
 
     template <typename _U> operator pbox<_U>() const {
       return {[&]() -> _U {
-        if constexpr (std::is_same_v<A, std::any>) {
-          return crane_any_cast<_U>(a0);
+        if constexpr (crane_convertible<_U, const A &>) {
+          return crane_convert<_U>(a0);
         } else {
-          if constexpr (std::is_constructible_v<_U, const A &>) {
-            return _U(a0);
-          } else {
-            throw std::logic_error("unreachable: inactive constructor field at "
-                                   "this instantiation");
-          }
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
         }
       }()};
     }
@@ -67,27 +63,19 @@ struct PolyInductive {
 
     template <typename _U0, typename _U1> operator ppair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(a0);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(a1);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(a1);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }
@@ -150,15 +138,11 @@ struct PolyInductive {
       } else {
         const auto &[a0] = std::get<typename pmaybe<_U>::PJust>(_other.v());
         this->v_ = PJust{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       }
@@ -246,15 +230,11 @@ struct PolyInductive {
       if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
         const auto &[a0] = std::get<typename ptree<_U>::PLeaf>(_other.v());
         this->v_ = PLeaf{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       } else {

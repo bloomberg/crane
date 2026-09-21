@@ -9,7 +9,6 @@
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -45,21 +44,17 @@ struct List {
       } else {
         const auto &[a, l] =
             std::get<typename List::template list<_U>::Cons>(_other.v());
-        this->v_ = Cons{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (l ? std::make_shared<typename List::template list<A>>(*l)
-               : nullptr)};
+        this->v_ =
+            Cons{[&]() -> A {
+                   if constexpr (crane_convertible<A, const _U &>) {
+                     return crane_convert<A>(a);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }(),
+                 (l ? std::make_shared<typename List::template list<A>>(*l)
+                    : nullptr)};
       }
     }
 

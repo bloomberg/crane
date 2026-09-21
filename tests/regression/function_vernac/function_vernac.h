@@ -45,15 +45,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -107,15 +103,11 @@ template <typename A> struct Sig {
 
   template <typename _U> operator Sig<_U>() const {
     return {[&]() -> _U {
-      if constexpr (std::is_same_v<A, std::any>) {
-        return crane_any_cast<_U>(x);
+      if constexpr (crane_convertible<_U, const A &>) {
+        return crane_convert<_U>(x);
       } else {
-        if constexpr (std::is_constructible_v<_U, const A &>) {
-          return _U(x);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
       }
     }()};
   }

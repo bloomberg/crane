@@ -103,15 +103,11 @@ public:
       const auto &[h, n, a2] = std::get<typename T<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(h);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(h);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(h);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                n, (a2 ? std::make_shared<T<A>>(*a2) : nullptr)};

@@ -2670,6 +2670,12 @@ and pp_cpp_expr env args t =
     ++ str ">("
     ++ pp_cpp_expr env args e
     ++ str ")"
+  | CPPconvertible (t1, t2) ->
+    str "crane_convertible<"
+    ++ pp_cpp_type false [] t1
+    ++ str ", "
+    ++ pp_cpp_type false [] t2
+    ++ str ">"
   | CPPis_constructible (t1, t2) ->
     require_header "type_traits";
     str "std::is_constructible_v<"

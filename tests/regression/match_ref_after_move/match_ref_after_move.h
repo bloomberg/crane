@@ -44,20 +44,16 @@ struct MatchRefAfterMove {
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a0);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a0);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
+        this->v_ = Mycons{[&]() -> A {
+                            if constexpr (crane_convertible<A, const _U &>) {
+                              return crane_convert<A>(a0);
+                            } else {
+                              throw std::logic_error(
+                                  "unreachable: inactive constructor field at "
+                                  "this instantiation");
+                            }
+                          }(),
+                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
       }
     }
 
@@ -245,27 +241,19 @@ struct MatchRefAfterMove {
 
     template <typename _U0, typename _U1> operator mypair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(a0);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(a1);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(a1);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }
@@ -401,30 +389,22 @@ struct MatchRefAfterMove {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Left>(_other.v());
         this->v_ = Left{[&]() -> A {
-          if constexpr (std::is_same_v<_U0, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U0 &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U0 &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       } else {
         const auto &[a0] =
             std::get<typename either<_U0, _U1>::Right>(_other.v());
         this->v_ = Right{[&]() -> B {
-          if constexpr (std::is_same_v<_U1, std::any>) {
-            return crane_any_cast<B>(a0);
+          if constexpr (crane_convertible<B, const _U1 &>) {
+            return crane_convert<B>(a0);
           } else {
-            if constexpr (std::is_constructible_v<B, const _U1 &>) {
-              return B(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       }

@@ -5,7 +5,6 @@
 #include <any>
 #include <functional>
 #include <stdexcept>
-#include <type_traits>
 
 struct InstanceInRecord {
   template <typename A> struct Monoid {
@@ -15,15 +14,11 @@ struct InstanceInRecord {
     // ACCESSORS
     template <typename _U> operator Monoid<_U>() const {
       return {[&]() -> _U {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U>(unit_);
+                if constexpr (crane_convertible<_U, const A &>) {
+                  return crane_convert<_U>(unit_);
                 } else {
-                  if constexpr (std::is_constructible_v<_U, const A &>) {
-                    return _U(unit_);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               std::function<_U(_U, _U)>(op)};

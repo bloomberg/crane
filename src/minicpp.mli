@@ -448,6 +448,8 @@ and cpp_expr =
       (** [std::is_same_v<T, U>] -- a compile-time type comparison, so it can
           only be asked inside an {!Sif_constexpr}. *)
   | CPPis_constructible of cpp_type * cpp_type
+  | CPPconvertible of cpp_type * cpp_type
+    (* crane_convertible<Dst, Src> -- whether crane_convert has a route *)
       (** [std::is_constructible_v<T, U>] -- whether [T(u)] is well-formed for
           a [u] of type [U].  Like {!CPPis_same}, only askable inside an
           {!Sif_constexpr}. *)

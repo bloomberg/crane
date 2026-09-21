@@ -10,7 +10,6 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -115,15 +114,11 @@ template <typename T> struct MemM {
 
   template <typename _U> operator MemM<_U>() const {
     return {[&]() -> _U {
-      if constexpr (std::is_same_v<T, std::any>) {
-        return crane_any_cast<_U>(a0);
+      if constexpr (crane_convertible<_U, const T &>) {
+        return crane_convert<_U>(a0);
       } else {
-        if constexpr (std::is_constructible_v<_U, const T &>) {
-          return _U(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
       }
     }()};
   }

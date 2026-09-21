@@ -42,21 +42,17 @@ struct DeepMap {
       } else {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{
-            (a0 ? std::make_shared<tree<A>>(*a0) : nullptr),
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a1);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a1);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (a2 ? std::make_shared<tree<A>>(*a2) : nullptr)};
+        this->v_ =
+            Node{(a0 ? std::make_shared<tree<A>>(*a0) : nullptr),
+                 [&]() -> A {
+                   if constexpr (crane_convertible<A, const _U &>) {
+                     return crane_convert<A>(a1);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }(),
+                 (a2 ? std::make_shared<tree<A>>(*a2) : nullptr)};
       }
     }
 

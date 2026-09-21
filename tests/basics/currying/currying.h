@@ -23,27 +23,19 @@ struct Currying {
 
     template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(a0);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(a0);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(a0);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(a1);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(a1);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(a1);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }

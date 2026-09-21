@@ -9,7 +9,6 @@
 #include <functional>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -147,15 +146,11 @@ public:
     } else {
       const auto &[x] = std::get<typename EOU<_U>::Raise_ret>(_other.v());
       this->v_ = Raise_ret{[&]() -> X {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<X>(x);
+        if constexpr (crane_convertible<X, const _U &>) {
+          return crane_convert<X>(x);
         } else {
-          if constexpr (std::is_constructible_v<X, const _U &>) {
-            return X(x);
-          } else {
-            throw std::logic_error("unreachable: inactive constructor field at "
-                                   "this instantiation");
-          }
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
         }
       }()};
     }

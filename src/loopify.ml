@@ -889,6 +889,7 @@ let rec collect_expr (check : call_checker) expr =
    |CPPfloat _
    |CPPis_same _
    |CPPis_constructible _
+   |CPPconvertible _
    |CPPconcept_app _
    |CPPrequires _ -> []
 

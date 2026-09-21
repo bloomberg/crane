@@ -41,21 +41,17 @@ struct DepMatchUnitVec {
         this->v_ = Vnil{};
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<_U>::Vcons>(_other.v());
-        this->v_ = Vcons{
-            n,
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a1);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a1);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (a2 ? std::make_shared<vec<A>>(*a2) : nullptr)};
+        this->v_ = Vcons{n,
+                         [&]() -> A {
+                           if constexpr (crane_convertible<A, const _U &>) {
+                             return crane_convert<A>(a1);
+                           } else {
+                             throw std::logic_error(
+                                 "unreachable: inactive constructor field at "
+                                 "this instantiation");
+                           }
+                         }(),
+                         (a2 ? std::make_shared<vec<A>>(*a2) : nullptr)};
       }
     }
 

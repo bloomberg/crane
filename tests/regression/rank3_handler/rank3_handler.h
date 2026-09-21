@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -101,15 +100,11 @@ public:
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
       this->v_ = Some{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<A>(a);
+        if constexpr (crane_convertible<A, const _U &>) {
+          return crane_convert<A>(a);
         } else {
-          if constexpr (std::is_constructible_v<A, const _U &>) {
-            return A(a);
-          } else {
-            throw std::logic_error("unreachable: inactive constructor field at "
-                                   "this instantiation");
-          }
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
         }
       }()};
     } else {
@@ -145,15 +140,11 @@ template <typename X> struct ReqA {
 
   template <typename _U> operator ReqA<_U>() const {
     return {[&]() -> _U {
-      if constexpr (std::is_same_v<X, std::any>) {
-        return crane_any_cast<_U>(a0);
+      if constexpr (crane_convertible<_U, const X &>) {
+        return crane_convert<_U>(a0);
       } else {
-        if constexpr (std::is_constructible_v<_U, const X &>) {
-          return _U(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
       }
     }()};
   }

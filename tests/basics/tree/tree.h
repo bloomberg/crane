@@ -155,15 +155,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -265,15 +261,11 @@ public:
       this->v_ =
           Node{(t1 ? std::make_shared<Tree<A>>(*t1) : nullptr),
                [&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(x);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(x);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(x);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (t2 ? std::make_shared<Tree<A>>(*t2) : nullptr)};

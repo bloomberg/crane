@@ -14,7 +14,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,15 +57,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -120,15 +115,11 @@ template <typename Err> struct ExceptE {
 
   template <typename _U> operator ExceptE<_U>() const {
     return {[&]() -> _U {
-      if constexpr (std::is_same_v<Err, std::any>) {
-        return crane_any_cast<_U>(a0);
+      if constexpr (crane_convertible<_U, const Err &>) {
+        return crane_convert<_U>(a0);
       } else {
-        if constexpr (std::is_constructible_v<_U, const Err &>) {
-          return _U(a0);
-        } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
-        }
+        throw std::logic_error(
+            "unreachable: inactive constructor field at this instantiation");
       }
     }()};
   }

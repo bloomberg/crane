@@ -108,15 +108,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -232,27 +228,19 @@ template <typename A> struct DirectedEdge {
   // ACCESSORS
   template <typename _U> operator DirectedEdge<_U>() const {
     return {[&]() -> _U {
-              if constexpr (std::is_same_v<A, std::any>) {
-                return crane_any_cast<_U>(edge_from);
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_from);
               } else {
-                if constexpr (std::is_constructible_v<_U, const A &>) {
-                  return _U(edge_from);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
               }
             }(),
             [&]() -> _U {
-              if constexpr (std::is_same_v<A, std::any>) {
-                return crane_any_cast<_U>(edge_to);
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_to);
               } else {
-                if constexpr (std::is_constructible_v<_U, const A &>) {
-                  return _U(edge_to);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
               }
             }()};
   }
@@ -313,27 +301,19 @@ template <typename A> struct UndirectedEdge {
   // ACCESSORS
   template <typename _U> operator UndirectedEdge<_U>() const {
     return {[&]() -> _U {
-              if constexpr (std::is_same_v<A, std::any>) {
-                return crane_any_cast<_U>(edge_first);
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_first);
               } else {
-                if constexpr (std::is_constructible_v<_U, const A &>) {
-                  return _U(edge_first);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
               }
             }(),
             [&]() -> _U {
-              if constexpr (std::is_same_v<A, std::any>) {
-                return crane_any_cast<_U>(edge_second);
+              if constexpr (crane_convertible<_U, const A &>) {
+                return crane_convert<_U>(edge_second);
               } else {
-                if constexpr (std::is_constructible_v<_U, const A &>) {
-                  return _U(edge_second);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
               }
             }()};
   }

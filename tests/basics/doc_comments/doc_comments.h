@@ -26,27 +26,19 @@ struct DocComments {
     // ACCESSORS
     template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(fst);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(fst);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(fst);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(snd);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(snd);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(snd);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }
@@ -83,20 +75,16 @@ struct DocComments {
         this->v_ = Mynil{};
       } else {
         const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
+        this->v_ = Mycons{[&]() -> A {
+                            if constexpr (crane_convertible<A, const _U &>) {
+                              return crane_convert<A>(a);
+                            } else {
+                              throw std::logic_error(
+                                  "unreachable: inactive constructor field at "
+                                  "this instantiation");
+                            }
+                          }(),
+                          (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
       }
     }
 

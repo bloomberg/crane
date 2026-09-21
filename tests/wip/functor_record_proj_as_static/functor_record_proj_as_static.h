@@ -131,15 +131,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -1071,21 +1067,17 @@ template <Int I, OrderedType X> struct Raw {
       } else {
         const auto &[a0, a1, a2, a3, a4] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ = Node{
-            (a0 ? std::make_shared<tree<elt>>(*a0) : nullptr), a1,
-            [&]() -> elt {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<elt>(a2);
-              } else {
-                if constexpr (std::is_constructible_v<elt, const _U &>) {
-                  return elt(a2);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (a3 ? std::make_shared<tree<elt>>(*a3) : nullptr), a4};
+        this->v_ =
+            Node{(a0 ? std::make_shared<tree<elt>>(*a0) : nullptr), a1,
+                 [&]() -> elt {
+                   if constexpr (crane_convertible<elt, const _U &>) {
+                     return crane_convert<elt>(a2);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }(),
+                 (a3 ? std::make_shared<tree<elt>>(*a3) : nullptr), a4};
       }
     }
 
@@ -1534,22 +1526,18 @@ template <Int I, OrderedType X> struct Raw {
       } else {
         const auto &[a0, a1, a2, a3] =
             std::get<typename enumeration<_U>::More>(_other.v());
-        this->v_ = More{
-            a0,
-            [&]() -> elt {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<elt>(a1);
-              } else {
-                if constexpr (std::is_constructible_v<elt, const _U &>) {
-                  return elt(a1);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            crane_convert<tree<elt>>(a2),
-            (a3 ? std::make_shared<enumeration<elt>>(*a3) : nullptr)};
+        this->v_ =
+            More{a0,
+                 [&]() -> elt {
+                   if constexpr (crane_convertible<elt, const _U &>) {
+                     return crane_convert<elt>(a1);
+                   } else {
+                     throw std::logic_error("unreachable: inactive constructor "
+                                            "field at this instantiation");
+                   }
+                 }(),
+                 crane_convert<tree<elt>>(a2),
+                 (a3 ? std::make_shared<enumeration<elt>>(*a3) : nullptr)};
       }
     }
 

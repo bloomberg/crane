@@ -100,15 +100,11 @@ public:
     if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
       const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
       this->v_ = Some{[&]() -> A {
-        if constexpr (std::is_same_v<_U, std::any>) {
-          return crane_any_cast<A>(a);
+        if constexpr (crane_convertible<A, const _U &>) {
+          return crane_convert<A>(a);
         } else {
-          if constexpr (std::is_constructible_v<A, const _U &>) {
-            return A(a);
-          } else {
-            throw std::logic_error("unreachable: inactive constructor field at "
-                                   "this instantiation");
-          }
+          throw std::logic_error(
+              "unreachable: inactive constructor field at this instantiation");
         }
       }()};
     } else {

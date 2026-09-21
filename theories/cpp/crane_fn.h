@@ -343,6 +343,21 @@ template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
     return crane_container_cast_impl<Dst>(std::forward<Src>(src));
 }
 
+// Whether [crane_convert<Dst>] has a route from [Src]: one disjunct per
+// branch of the dispatch below, in the same order.  A generated converting
+// constructor asks this before converting, because it is written for every
+// field of every constructor and only the source's own constructor is ever
+// reached -- a field of some other one may have no route at all, and saying
+// so is not an error.
+template <class Dst, class Src>
+concept crane_convertible =
+    std::is_same_v<Dst, std::remove_cvref_t<Src>> ||
+    std::is_same_v<std::remove_cvref_t<Src>, std::any> ||
+    requires(Src &&s) {
+      crane_cast_to(crane_tag<Dst>{}, std::forward<Src>(s));
+    } || std::is_constructible_v<Dst, Src> ||
+    requires { typename Dst::value_type; };
+
 // A value reaching a slot spelled at another instantiation of its own type.
 // Conversion is the ordinary answer; a carrier that cannot be constructed
 // from itself at another element type answers through [crane_cast_to].
@@ -360,8 +375,9 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
   else if constexpr (requires { typename Dst::value_type; })
     return crane_container_cast_impl<Dst>(std::forward<Src>(src));
   else
-    // Nothing above applies: let the conversion itself be the diagnostic,
-    // rather than a failure inside machinery the reader did not write.
+    // [!crane_convertible<Dst, Src>]: let the conversion itself be the
+    // diagnostic, rather than a failure inside machinery the reader did not
+    // write.
     return Dst(std::forward<Src>(src));
 }
 

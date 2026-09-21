@@ -7,7 +7,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -43,15 +42,11 @@ public:
       const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
       this->v_ =
           Cons{[&]() -> A {
-                 if constexpr (std::is_same_v<_U, std::any>) {
-                   return crane_any_cast<A>(a);
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
                  } else {
-                   if constexpr (std::is_constructible_v<A, const _U &>) {
-                     return A(a);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
                  }
                }(),
                (l ? std::make_shared<List<A>>(*l) : nullptr)};
@@ -119,31 +114,22 @@ struct RocqBug16288 {
       // ACCESSORS
       template <typename _U0, typename _U1>
       operator M_t_NonEmpty_<_U0, _U1>() const {
-        return {
-            [&]() -> _U0 {
-              if constexpr (std::is_same_v<X, std::any>) {
-                return crane_any_cast<_U0>(a);
-              } else {
-                if constexpr (std::is_constructible_v<_U0, const X &>) {
-                  return _U0(a);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            [&]() -> _U1 {
-              if constexpr (std::is_same_v<Y, std::any>) {
-                return crane_any_cast<_U1>(b);
-              } else {
-                if constexpr (std::is_constructible_v<_U1, const Y &>) {
-                  return _U1(b);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }()};
+        return {[&]() -> _U0 {
+                  if constexpr (crane_convertible<_U0, const X &>) {
+                    return crane_convert<_U0>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                [&]() -> _U1 {
+                  if constexpr (crane_convertible<_U1, const Y &>) {
+                    return crane_convert<_U1>(b);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }()};
       }
     };
   };

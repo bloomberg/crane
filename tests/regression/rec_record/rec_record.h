@@ -41,20 +41,16 @@ struct RecRecord {
         this->v_ = Rnil{};
       } else {
         const auto &[a0, a1] = std::get<typename rlist<_U>::Rcons>(_other.v());
-        this->v_ = Rcons{
-            [&]() -> A {
-              if constexpr (std::is_same_v<_U, std::any>) {
-                return crane_any_cast<A>(a0);
-              } else {
-                if constexpr (std::is_constructible_v<A, const _U &>) {
-                  return A(a0);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }
-            }(),
-            (a1 ? std::make_shared<rlist<A>>(*a1) : nullptr)};
+        this->v_ = Rcons{[&]() -> A {
+                           if constexpr (crane_convertible<A, const _U &>) {
+                             return crane_convert<A>(a0);
+                           } else {
+                             throw std::logic_error(
+                                 "unreachable: inactive constructor field at "
+                                 "this instantiation");
+                           }
+                         }(),
+                         (a1 ? std::make_shared<rlist<A>>(*a1) : nullptr)};
       }
     }
 

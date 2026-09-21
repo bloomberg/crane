@@ -18,27 +18,19 @@ struct ConstrainedPoly {
     // ACCESSORS
     template <typename _U0, typename _U1> operator UPair<_U0, _U1>() const {
       return {[&]() -> _U0 {
-                if constexpr (std::is_same_v<A, std::any>) {
-                  return crane_any_cast<_U0>(ufst);
+                if constexpr (crane_convertible<_U0, const A &>) {
+                  return crane_convert<_U0>(ufst);
                 } else {
-                  if constexpr (std::is_constructible_v<_U0, const A &>) {
-                    return _U0(ufst);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }(),
               [&]() -> _U1 {
-                if constexpr (std::is_same_v<B, std::any>) {
-                  return crane_any_cast<_U1>(usnd);
+                if constexpr (crane_convertible<_U1, const B &>) {
+                  return crane_convert<_U1>(usnd);
                 } else {
-                  if constexpr (std::is_constructible_v<_U1, const B &>) {
-                    return _U1(usnd);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
                 }
               }()};
     }
@@ -80,15 +72,11 @@ struct ConstrainedPoly {
       if (std::holds_alternative<typename UOption<_U>::USome>(_other.v())) {
         const auto &[a0] = std::get<typename UOption<_U>::USome>(_other.v());
         this->v_ = USome{[&]() -> A {
-          if constexpr (std::is_same_v<_U, std::any>) {
-            return crane_any_cast<A>(a0);
+          if constexpr (crane_convertible<A, const _U &>) {
+            return crane_convert<A>(a0);
           } else {
-            if constexpr (std::is_constructible_v<A, const _U &>) {
-              return A(a0);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
           }
         }()};
       } else {

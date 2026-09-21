@@ -373,6 +373,8 @@ and cpp_expr =
   | CPPdeclval of cpp_type
   | CPPis_same of cpp_type * cpp_type
   | CPPis_constructible of cpp_type * cpp_type
+  | CPPconvertible of cpp_type * cpp_type
+    (* crane_convertible<Dst, Src> -- whether crane_convert has a route *)
     (* std::declval<T>() *)
   | CPPtype_name of cpp_type
     (* typename T::Nested, usable where a dependent nested struct name is
@@ -1000,6 +1002,7 @@ let map_expr
   | CPPdeclval ty -> CPPdeclval (ft ty)
   | CPPis_same (t1, t2) -> CPPis_same (ft t1, ft t2)
   | CPPis_constructible (t1, t2) -> CPPis_constructible (ft t1, ft t2)
+  | CPPconvertible (t1, t2) -> CPPconvertible (ft t1, ft t2)
   | CPPtype_name ty -> CPPtype_name (ft ty)
   | CPPlit (ty, s) -> CPPlit (ft ty, s)
   | CPPraw _ | CPPrt _ -> e
@@ -1094,7 +1097,7 @@ let iter_expr_children ~on_expr ~on_stmts (e : cpp_expr) : unit =
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _ | CPPis_constructible _
+  | CPPis_same _ | CPPis_constructible _ | CPPconvertible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
@@ -1258,7 +1261,7 @@ let fold_expr_children ~(on_expr : 'a -> cpp_expr -> 'a)
   | CPPvar _ | CPPglob _ | CPPalloc _
   | CPPstring _ | CPPuint _ | CPPfloat _ | CPPconvertible_to _
   | CPPabort _ | CPPenum_val _ | CPPnullptr | CPPstd_holds_alternative _
-  | CPPis_same _ | CPPis_constructible _
+  | CPPis_same _ | CPPis_constructible _ | CPPconvertible _
   | CPPdeclval _ | CPPtype_name _ | CPPqualified_t _ | CPPlit _
    |CPPraw _ | CPPrt _
   | CPPbool _ | CPPint _
