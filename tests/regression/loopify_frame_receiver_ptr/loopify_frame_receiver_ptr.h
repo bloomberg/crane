@@ -14,6 +14,10 @@ template <typename A> struct List;
 struct Ascii;
 struct String;
 
+struct LoopifyFrameReceiverPtr {
+  static String f(const List<String> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -247,10 +251,6 @@ public:
     }
     return _result;
   }
-};
-
-struct LoopifyFrameReceiverPtr {
-  static String f(const List<String> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_FRAME_RECEIVER_PTR

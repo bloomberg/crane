@@ -697,6 +697,89 @@ let spec_is_hoistable (spec : cpp_decl) : bool =
     (spec_names_into_a_struct
        (Pp.string_of_ppcmds (pp_cpp_decl (empty_env ()) spec)) )
 
+(** Whether a module's members name only types a forward declaration can
+    stand in for.
+
+    The header opens with a forward declaration of every datatype struct, so a
+    parameter or result spelled at one is nameable from anywhere in the file.
+    Anything else a member's type can name -- a Rocq definition used as a type,
+    which reaches C++ as a [using] alias at the point it was defined -- is not.
+
+    Read off the members' ML types rather than the rendered text, because the
+    text cannot tell [tbl] the alias from [a] the parameter. *)
+let module_members_name_only_inductives sel =
+  let rec ty_ok = function
+    | Miniml.Tglob (r, args, _) ->
+      (match r with GlobRef.IndRef _ -> true | _ -> false)
+      && List.for_all ty_ok args
+    | Miniml.Tarr (a, b) -> ty_ok a && ty_ok b
+    | Miniml.Tmeta {contents = Some t} -> ty_ok t
+    | _ -> true
+  in
+  List.for_all
+    (fun (_, se) ->
+      match se with
+      | SEdecl (Dterm (_, _, t)) -> ty_ok t
+      | SEdecl (Dfix (_, _, tv)) -> Array.for_all ty_ok tv
+      | SEdecl (Dind _) -> true
+      | _ -> false )
+    sel
+
+(** Whether a module's struct may be declared ahead of the file rather than at
+    the module's own place in the emitted order.
+
+    Its own place is the safe answer and stays the default, because a member
+    initialised inside the struct body runs there, and everything that body
+    names must be complete by then.  The one shape that is certainly free of
+    that is a struct of nothing but static function {e declarations} --
+    [static Nat pick(Nat, Nat);], defined out of line: a declaration asks its
+    parameter and result types to be declared, which the forward declarations
+    above already do, and asks nothing else of the file at all.  So the only
+    thing such a struct's position decides is whether its callers can see it,
+    and a function hoisted onto a datatype is a caller emitted with the
+    datatype, which may come first.
+
+    This half is read off the rendered struct, because that text is what the
+    compiler reads: every member must be a [static] declaration ending at its
+    semicolon -- no body, no initialiser, no alias, no data, no nested type --
+    the struct must not be a template, and no name may be qualified into
+    another struct, which is the question {!spec_is_hoistable} asks of a lifted
+    helper and for the same reason: [Other::t] needs [Other] complete, so
+    moving this in front of it would not help.  The other half, which the text
+    cannot answer, is {!module_members_name_only_inductives}. *)
+let module_struct_is_hoistable rendered =
+  match (String.index_opt rendered '{', String.rindex_opt rendered '}') with
+  | Some o, Some c when o < c ->
+    let head = String.sub rendered 0 o in
+    let body = String.sub rendered (o + 1) (c - o - 1) in
+    let members = String.split_on_char ';' body in
+    let is_static_decl m =
+      let m = String.trim m in
+      m = ""
+      || (String.length m > 7
+         && String.equal (String.sub m 0 7) "static "
+         && String.contains m '('
+         && not (String.contains m '='))
+    in
+    let is_template =
+      let n = String.length head in
+      let rec scan i =
+        i + 8 <= n
+        && (String.equal (String.sub head i 8) "template" || scan (i + 1))
+      in
+      scan 0
+    in
+    (not (String.contains body '{'))
+    && (not is_template)
+    && (not (spec_names_into_a_struct rendered))
+    && List.for_all is_static_decl members
+  | _ -> false
+
+(** The module structs this file's pass chose to declare ahead of everything,
+    newest first.  Emptied by the assembly at the end of
+    {!do_struct_with_decl_tracking}. *)
+let hoisted_module_structs : Pp.t list ref = ref []
+
 (** Report what a lifted helper met at the drain that consumed it, under
     [CRANE_DBG_LIFTED].
 
@@ -1559,7 +1642,21 @@ let rec pp_structure_elem ~is_header f = function
       mt ()
     else
       let doc = pp_doc_comment l in
-      doc ++ mod_pp
+      let whole = doc ++ mod_pp in
+      (* A [Module] of nothing but definitions is rendered as a struct of
+         declarations, and a datatype's hoisted member may call one; see
+         {!module_struct_is_hoistable}. *)
+      if
+        is_header
+        && (not (!render_ctx).rc_in_struct)
+        && (match m.ml_mod_expr with
+           | MEstruct (_, sel) -> module_members_name_only_inductives sel
+           | _ -> false)
+        && module_struct_is_hoistable (Pp.string_of_ppcmds whole)
+      then (
+        hoisted_module_structs := whole :: !hoisted_module_structs;
+        mt () )
+      else whole
   | l, SEmodtype m ->
     if (not is_header) || (!render_ctx).rc_in_struct then
       mt ()
@@ -2065,6 +2162,7 @@ type wrapper_render = {
             out-of-line function definitions. *)
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
+  hoisted_module_structs := [];
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -2194,7 +2292,14 @@ let do_struct_with_decl_tracking ~is_header f s =
             match Hashtbl.find_opt pending_wrapper_decls name with
             | Some specs ->
               Hashtbl.remove pending_wrapper_decls name;
-              pp_wrapper_struct name specs
+              let struct_pp = pp_wrapper_struct name specs in
+              if
+                module_members_name_only_inductives sel
+                && module_struct_is_hoistable (Pp.string_of_ppcmds struct_pp)
+              then (
+                hoisted_module_structs := struct_pp :: !hoisted_module_structs;
+                mt () )
+              else struct_pp
             | None -> mt ()
         in
         (* A declaration lifted out of this module -- an instance struct -- is
@@ -2477,10 +2582,20 @@ let do_struct_with_decl_tracking ~is_header f s =
     else
       mt ()
   in
+  (* Alongside the lifted helpers and for the same reason, in front of them
+     because a helper's own declaration may name one of these. *)
+  let hoisted_wrappers =
+    match List.rev !hoisted_module_structs with
+    | [] -> mt ()
+    | l ->
+      hoisted_module_structs := [];
+      prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
+  in
   let deferred_lifted = deferred_lifted () in
   v 0
     ( forward_decls
     ++ hoisted_concepts
+    ++ hoisted_wrappers
     ++ lifted_fun_specs
     ++ p
     ++ pass2_post_pp

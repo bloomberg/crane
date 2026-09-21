@@ -12,6 +12,10 @@ struct Nat;
 enum class AE;
 enum class BE;
 
+struct SumEventMatch {
+  static std::shared_ptr<ITree<Nat>> use();
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -82,9 +86,5 @@ std::shared_ptr<ITree<T1>> handle(const Sum1<AE, BE, T1> &e) {
     return itree_trigger(sum1_inr(a0));
   }
 }
-
-struct SumEventMatch {
-  static std::shared_ptr<ITree<Nat>> use();
-};
 
 #endif // INCLUDED_SUM_EVENT_MATCH

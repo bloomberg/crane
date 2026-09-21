@@ -17,6 +17,10 @@ template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct holder;
 
+struct HkDictFromConstraintParam {
+  static holder<Nat, List<Nat>> run(const holder<Nat, List<Nat>> &m);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -253,9 +257,5 @@ TFunctor_holder(std::type_identity_t<TFunctor<T1>> h,
           f, m.h_boxes),
       tfmap<T1, std::any>(std::move(h), f, m.h_body)};
 }
-
-struct HkDictFromConstraintParam {
-  static holder<Nat, List<Nat>> run(const holder<Nat, List<Nat>> &m);
-};
 
 #endif // INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM

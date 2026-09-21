@@ -12,6 +12,13 @@
 struct Nat;
 struct E;
 
+struct ItreeUnitCollapsesToVoid {
+  static std::shared_ptr<ITree<Nat>> get();
+  static std::shared_ptr<ITree<std::monostate>> put(Nat n);
+  static std::shared_ptr<ITree<std::monostate>> both(bool b);
+  static std::shared_ptr<ITree<std::monostate>> prog();
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -125,13 +132,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct ItreeUnitCollapsesToVoid {
-  static std::shared_ptr<ITree<Nat>> get();
-  static std::shared_ptr<ITree<std::monostate>> put(Nat n);
-  static std::shared_ptr<ITree<std::monostate>> both(bool b);
-  static std::shared_ptr<ITree<std::monostate>> prog();
 };
 
 #endif // INCLUDED_ITREE_UNIT_COLLAPSES_TO_VOID

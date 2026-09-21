@@ -16,6 +16,10 @@
 struct Monad_option;
 struct Nat;
 
+struct HkClassArgNumbering {
+  static std::optional<Nat> use(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -163,10 +167,6 @@ template <typename F0>
 std::optional<std::any> Iter_option(F0 &&f, std::any x0_) {
   return f(x0_);
 }
-
-struct HkClassArgNumbering {
-  static std::optional<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

@@ -19,6 +19,10 @@ struct Monad_option;
 struct Nat;
 template <typename A> struct List;
 
+struct MonadMethodTargMisnumbered {
+  static std::optional<Nat> use(const List<Nat> &l);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -229,9 +233,5 @@ typename _tcI0::template m<T3> monad_fold_right(F0 &&f, const List<T2> &l,
         [=](const T3 &r) mutable { return f(r, a0); });
   }
 }
-
-struct MonadMethodTargMisnumbered {
-  static std::optional<Nat> use(const List<Nat> &l);
-};
 
 #endif // INCLUDED_MONAD_METHOD_TARG_MISNUMBERED

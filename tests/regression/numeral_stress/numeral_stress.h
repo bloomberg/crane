@@ -14,6 +14,8 @@
 
 template <typename A> struct List;
 
+struct Z {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -93,8 +95,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-struct Z {};
 
 struct NumeralStress {
   /// 1. Numeral inside option

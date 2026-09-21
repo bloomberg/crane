@@ -17,6 +17,10 @@ template <typename A, typename P> struct SigT;
 enum class Sumbool;
 struct Ascii;
 struct String;
+
+struct Bool {
+  static Sumbool bool_dec(Bool0 b1, Bool0 b2);
+};
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -133,10 +137,6 @@ template <typename A, typename P> struct SigT {
   }
 };
 enum class Sumbool { LEFT, RIGHT };
-
-struct Bool {
-  static Sumbool bool_dec(Bool0 b1, Bool0 b2);
-};
 
 struct Ascii {
   // DATA

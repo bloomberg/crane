@@ -16,6 +16,12 @@
 struct Nat;
 template <typename A> struct List;
 
+struct HkInstanceBodyTargUndeclared {
+  static Nat bump(Nat n);
+  static std::optional<List<Nat>> on_option(const std::optional<List<Nat>> &o);
+  static List<List<Nat>> on_list(const List<List<Nat>> &l);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -211,11 +217,5 @@ TFunctor_option(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
     return std::optional<T1<std::any>>();
   }
 }
-
-struct HkInstanceBodyTargUndeclared {
-  static Nat bump(Nat n);
-  static std::optional<List<Nat>> on_option(const std::optional<List<Nat>> &o);
-  static List<List<Nat>> on_list(const List<List<Nat>> &l);
-};
 
 #endif // INCLUDED_HK_INSTANCE_BODY_TARG_UNDECLARED

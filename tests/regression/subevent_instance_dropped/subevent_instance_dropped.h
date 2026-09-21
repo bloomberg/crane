@@ -14,6 +14,10 @@ struct Empty_set;
 struct Nat;
 struct FailE;
 
+struct SubeventInstanceDropped {
+  static std::shared_ptr<ITree<Nat>> use(const Nat &n);
+};
+
 struct Empty_set {
   Empty_set() = delete;
 };
@@ -99,9 +103,5 @@ std::shared_ptr<ITree<T2>> boom(Nat n) {
                       throw std::logic_error("absurd case");
                     });
 }
-
-struct SubeventInstanceDropped {
-  static std::shared_ptr<ITree<Nat>> use(const Nat &n);
-};
 
 #endif // INCLUDED_SUBEVENT_INSTANCE_DROPPED

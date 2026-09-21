@@ -12,6 +12,18 @@
 
 template <typename A> struct List;
 
+struct LoopifyListCombining {
+  static List<uint64_t> append(const List<uint64_t> &a, List<uint64_t> b);
+  static List<uint64_t> intersperse(uint64_t sep, const List<uint64_t> &l);
+  static List<uint64_t> intercalate(const List<uint64_t> &sep,
+                                    const List<List<uint64_t>> &ll);
+  static List<uint64_t> concat(const List<List<uint64_t>> &ll);
+  static List<uint64_t> mapcat(const List<uint64_t> &l);
+  static List<uint64_t> interleave_two(List<uint64_t> l1, List<uint64_t> l2);
+  static List<uint64_t> concat_sep(uint64_t sep,
+                                   const List<List<uint64_t>> &ll);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,18 +102,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyListCombining {
-  static List<uint64_t> append(const List<uint64_t> &a, List<uint64_t> b);
-  static List<uint64_t> intersperse(uint64_t sep, const List<uint64_t> &l);
-  static List<uint64_t> intercalate(const List<uint64_t> &sep,
-                                    const List<List<uint64_t>> &ll);
-  static List<uint64_t> concat(const List<List<uint64_t>> &ll);
-  static List<uint64_t> mapcat(const List<uint64_t> &l);
-  static List<uint64_t> interleave_two(List<uint64_t> l1, List<uint64_t> l2);
-  static List<uint64_t> concat_sep(uint64_t sep,
-                                   const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_COMBINING

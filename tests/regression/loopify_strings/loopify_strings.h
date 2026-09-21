@@ -12,6 +12,32 @@
 
 template <typename A> struct List;
 
+struct LoopifyStrings {
+  static List<uint64_t> append(const List<uint64_t> &l1, List<uint64_t> l2);
+  static List<uint64_t> join_with(uint64_t sep, const List<uint64_t> &l);
+  static List<uint64_t> repeat_string(const List<uint64_t> &s, uint64_t n);
+  static List<uint64_t> repeat_with_sep(List<uint64_t> s,
+                                        const List<uint64_t> &sep, uint64_t n);
+  static List<uint64_t> string_chain_fuel(uint64_t fuel,
+                                          const List<uint64_t> &s, uint64_t n,
+                                          const List<uint64_t> &sep,
+                                          const List<uint64_t> &end_marker);
+  static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
+                                     const List<uint64_t> &sep,
+                                     const List<uint64_t> &end_marker);
+  static List<uint64_t> reverse(const List<uint64_t> &l);
+  static bool list_eq(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  static bool is_palindrome(const List<uint64_t> &l);
+  static List<uint64_t> intersperse(uint64_t sep, const List<uint64_t> &l);
+  static List<uint64_t> intercalate(const List<uint64_t> &sep,
+                                    const List<List<uint64_t>> &ll);
+  static List<uint64_t> replicate(uint64_t n, uint64_t x);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_aux(uint64_t current, uint64_t count, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,32 +116,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyStrings {
-  static List<uint64_t> append(const List<uint64_t> &l1, List<uint64_t> l2);
-  static List<uint64_t> join_with(uint64_t sep, const List<uint64_t> &l);
-  static List<uint64_t> repeat_string(const List<uint64_t> &s, uint64_t n);
-  static List<uint64_t> repeat_with_sep(List<uint64_t> s,
-                                        const List<uint64_t> &sep, uint64_t n);
-  static List<uint64_t> string_chain_fuel(uint64_t fuel,
-                                          const List<uint64_t> &s, uint64_t n,
-                                          const List<uint64_t> &sep,
-                                          const List<uint64_t> &end_marker);
-  static List<uint64_t> string_chain(const List<uint64_t> &s, uint64_t n,
-                                     const List<uint64_t> &sep,
-                                     const List<uint64_t> &end_marker);
-  static List<uint64_t> reverse(const List<uint64_t> &l);
-  static bool list_eq(const List<uint64_t> &l1, const List<uint64_t> &l2);
-  static bool is_palindrome(const List<uint64_t> &l);
-  static List<uint64_t> intersperse(uint64_t sep, const List<uint64_t> &l);
-  static List<uint64_t> intercalate(const List<uint64_t> &sep,
-                                    const List<List<uint64_t>> &ll);
-  static List<uint64_t> replicate(uint64_t n, uint64_t x);
-  static List<std::pair<uint64_t, uint64_t>>
-  run_length_aux(uint64_t current, uint64_t count, const List<uint64_t> &l);
-  static List<std::pair<uint64_t, uint64_t>>
-  run_length_encode(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_STRINGS

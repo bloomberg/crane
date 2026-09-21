@@ -12,6 +12,10 @@
 struct Nat;
 struct AE;
 
+struct AppliedTypenameNotHk {
+  static std::shared_ptr<ITree<Nat>> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -104,9 +108,5 @@ h(Sum1<std::any, Sum1<AE, std::any, std::any>, std::any> x) {
                     itree_case([](const auto &_x) { return _x.handle(); },
                                F_trigger<std::any, std::any>))(std::move(x));
 }
-
-struct AppliedTypenameNotHk {
-  static std::shared_ptr<ITree<Nat>> use(Nat n);
-};
 
 #endif // INCLUDED_APPLIED_TYPENAME_NOT_HK

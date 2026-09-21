@@ -12,6 +12,10 @@ struct Nat;
 enum class AE;
 enum class BE;
 
+struct TranslateCalleeHasNoName {
+  static std::shared_ptr<ITree<Nat>> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -76,9 +80,5 @@ template <typename T1>
 std::shared_ptr<ITree<T1>> w(const std::shared_ptr<ITree<T1>> &x) {
   return x;
 }
-
-struct TranslateCalleeHasNoName {
-  static std::shared_ptr<ITree<Nat>> use(Nat n);
-};
 
 #endif // INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME

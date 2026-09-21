@@ -17,6 +17,10 @@ using namespace std::string_literals;
 
 template <typename A> struct List;
 
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -348,10 +352,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 struct ToString {

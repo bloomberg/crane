@@ -21,6 +21,26 @@ struct Positive;
 struct Z;
 template <typename X> struct Compare;
 
+struct Datatypes {
+  static Comparison CompOpp(Comparison r);
+};
+
+struct Coq_Pos {
+  static bool eq_dec(const Positive &p, const Positive &x0);
+};
+
+struct Pos {
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive pred_double(const Positive &x);
+  static Positive mul(const Positive &x, Positive y);
+  static Comparison compare_cont(Comparison r, const Positive &x,
+                                 const Positive &y);
+  static Comparison compare(const Positive &x0_, const Positive &x1_);
+  static bool eqb(const Positive &p, const Positive &q);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -246,11 +266,6 @@ public:
   }
 };
 enum class Comparison { EQ, LT, GT };
-
-struct Datatypes {
-  static Comparison CompOpp(Comparison r);
-};
-
 template <typename M>
 concept EqLtLe = requires { typename M::t; };
 
@@ -453,22 +468,6 @@ template <OrderedType O> struct OrderedTypeFacts {
 
 template <OrderedType O> struct KeyOrderedType {
   using MO = OrderedTypeFacts<O>;
-};
-
-struct Coq_Pos {
-  static bool eq_dec(const Positive &p, const Positive &x0);
-};
-
-struct Pos {
-  static Positive succ(const Positive &x);
-  static Positive add(const Positive &x, const Positive &y);
-  static Positive add_carry(const Positive &x, const Positive &y);
-  static Positive pred_double(const Positive &x);
-  static Positive mul(const Positive &x, Positive y);
-  static Comparison compare_cont(Comparison r, const Positive &x,
-                                 const Positive &y);
-  static Comparison compare(const Positive &x0_, const Positive &x1_);
-  static bool eqb(const Positive &p, const Positive &q);
 };
 
 template <OrderedType X> struct Coq_Raw {

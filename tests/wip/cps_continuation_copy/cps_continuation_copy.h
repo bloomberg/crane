@@ -13,6 +13,10 @@
 
 template <typename A> struct List;
 
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -91,10 +95,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
 };
 
 /// sumk is tail recursive and is loopified into a for, so it should run in

@@ -15,6 +15,10 @@
 struct Monad_option;
 struct Nat;
 
+struct MemberAliasAsTtArg {
+  static std::optional<std::pair<Nat, Nat>> use(const Nat &o);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -115,9 +119,5 @@ run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step, T2 x0_) {
   return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
       step(std::move(x0_)));
 }
-
-struct MemberAliasAsTtArg {
-  static std::optional<std::pair<Nat, Nat>> use(const Nat &o);
-};
 
 #endif // INCLUDED_MEMBER_ALIAS_AS_TT_ARG

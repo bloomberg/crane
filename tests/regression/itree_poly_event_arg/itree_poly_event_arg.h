@@ -10,6 +10,10 @@
 
 struct Nat;
 
+struct ItreePolyEventArg {
+  static std::shared_ptr<ITree<Nat>> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -72,9 +76,5 @@ template <typename T1 = void>
 std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x) {
   return itree_bind(x, [](Nat a) { return itree_ret(Nat::s(a)); });
 }
-
-struct ItreePolyEventArg {
-  static std::shared_ptr<ITree<Nat>> use(Nat n);
-};
 
 #endif // INCLUDED_ITREE_POLY_EVENT_ARG

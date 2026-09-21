@@ -12,6 +12,10 @@
 
 struct Nat;
 
+struct ItreeNestedBindInstance {
+  static std::shared_ptr<ITree<Nat>> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -101,9 +105,5 @@ std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x) {
         });
   });
 }
-
-struct ItreeNestedBindInstance {
-  static std::shared_ptr<ITree<Nat>> use(Nat n);
-};
 
 #endif // INCLUDED_ITREE_NESTED_BIND_INSTANCE

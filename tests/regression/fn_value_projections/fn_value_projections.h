@@ -14,6 +14,10 @@
 
 template <typename A> struct List;
 
+struct Datatypes {
+  static std::any id(std::any x);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -196,10 +200,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Datatypes {
-  static std::any id(std::any x);
 };
 
 struct FnValueProjections {

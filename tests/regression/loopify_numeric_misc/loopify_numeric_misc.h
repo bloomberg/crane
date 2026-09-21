@@ -12,6 +12,18 @@
 
 template <typename A> struct List;
 
+struct LoopifyNumericMisc {
+  static uint64_t sum_abs(const List<uint64_t> &l);
+  static uint64_t alternating_ops(uint64_t n);
+  static uint64_t count_even(const List<uint64_t> &l);
+  static uint64_t count_odd(const List<uint64_t> &l);
+  static uint64_t product(const List<uint64_t> &l);
+  static uint64_t sum_of_squares(const List<uint64_t> &l);
+  static uint64_t max_two(uint64_t a, uint64_t b);
+  static uint64_t list_max(const List<uint64_t> &l);
+  static uint64_t list_min(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,18 +102,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyNumericMisc {
-  static uint64_t sum_abs(const List<uint64_t> &l);
-  static uint64_t alternating_ops(uint64_t n);
-  static uint64_t count_even(const List<uint64_t> &l);
-  static uint64_t count_odd(const List<uint64_t> &l);
-  static uint64_t product(const List<uint64_t> &l);
-  static uint64_t sum_of_squares(const List<uint64_t> &l);
-  static uint64_t max_two(uint64_t a, uint64_t b);
-  static uint64_t list_max(const List<uint64_t> &l);
-  static uint64_t list_min(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_NUMERIC_MISC

@@ -11,6 +11,10 @@
 
 struct Nat;
 
+struct PrimedIdentifier {
+  static Nat use(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -99,9 +103,5 @@ template <typename T1> Nat size(Sized<T1> sized, T1 x0_) {
 
 const Sized<Nat> Sized_nat_ = [](Nat n) { return Nat::s(n); };
 Nat twice_(const Nat &n);
-
-struct PrimedIdentifier {
-  static Nat use(const Nat &n);
-};
 
 #endif // INCLUDED_PRIMED_IDENTIFIER

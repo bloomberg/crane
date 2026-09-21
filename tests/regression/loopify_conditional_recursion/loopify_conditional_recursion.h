@@ -13,6 +13,20 @@
 
 template <typename A> struct List;
 
+struct LoopifyConditionalRecursion {
+  static std::pair<uint64_t, uint64_t>
+  cached_sum(const std::optional<uint64_t> &cache, const List<uint64_t> &l);
+  static std::pair<uint64_t, List<uint64_t>>
+  find_or_recurse(uint64_t target, const List<uint64_t> &l);
+  static uint64_t nested_cond(uint64_t threshold, uint64_t lo, uint64_t hi,
+                              const List<uint64_t> &l);
+  static std::pair<uint64_t, std::optional<std::pair<uint64_t, uint64_t>>>
+  multi_return(const std::optional<std::pair<uint64_t, uint64_t>> &memo,
+               const List<uint64_t> &l);
+  static std::pair<uint64_t, uint64_t>
+  accum_with_cache(uint64_t key, const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -91,20 +105,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyConditionalRecursion {
-  static std::pair<uint64_t, uint64_t>
-  cached_sum(const std::optional<uint64_t> &cache, const List<uint64_t> &l);
-  static std::pair<uint64_t, List<uint64_t>>
-  find_or_recurse(uint64_t target, const List<uint64_t> &l);
-  static uint64_t nested_cond(uint64_t threshold, uint64_t lo, uint64_t hi,
-                              const List<uint64_t> &l);
-  static std::pair<uint64_t, std::optional<std::pair<uint64_t, uint64_t>>>
-  multi_return(const std::optional<std::pair<uint64_t, uint64_t>> &memo,
-               const List<uint64_t> &l);
-  static std::pair<uint64_t, uint64_t>
-  accum_with_cache(uint64_t key, const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_CONDITIONAL_RECURSION

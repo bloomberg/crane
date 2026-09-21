@@ -17,6 +17,10 @@ struct Nat;
 template <typename X> struct Err;
 struct Monad_Err;
 
+struct ItreeMappingHijacksMonad {
+  static Err<Nat> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -180,9 +184,5 @@ struct Monad_Err {
 
 static_assert(Monad<Monad_Err>);
 Err<Nat> twice(const Err<Nat> &x);
-
-struct ItreeMappingHijacksMonad {
-  static Err<Nat> use(Nat n);
-};
 
 #endif // INCLUDED_ITREE_MAPPING_HIJACKS_MONAD

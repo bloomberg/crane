@@ -15,6 +15,10 @@ struct Nat;
 template <typename A, typename B> struct Sum;
 struct FailE;
 
+struct IterCalleeHasNoName {
+  static std::shared_ptr<ITree<Nat>> countdown(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -141,10 +145,6 @@ struct FailE {
 
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
-};
-
-struct IterCalleeHasNoName {
-  static std::shared_ptr<ITree<Nat>> countdown(const Nat &n);
 };
 
 #endif // INCLUDED_ITER_CALLEE_HAS_NO_NAME

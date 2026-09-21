@@ -12,6 +12,25 @@
 
 template <typename A> struct List;
 
+struct LoopifyListPairing {
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  unzip(const List<std::pair<uint64_t, uint64_t>> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  swizzle(const List<uint64_t> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  partition(const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                   const List<uint64_t> &l2, uint64_t default0);
+  static List<std::pair<uint64_t, uint64_t>>
+  zip_longest(const List<uint64_t> &l1, const List<uint64_t> &l2,
+              uint64_t default0);
+  static List<uint64_t> zipWith(const List<uint64_t> &l1,
+                                const List<uint64_t> &l2);
+  static std::pair<List<uint64_t>, List<uint64_t>>
+  split_even_odd(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,25 +147,6 @@ public:
     }
     return _result;
   }
-};
-
-struct LoopifyListPairing {
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  unzip(const List<std::pair<uint64_t, uint64_t>> &l);
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  swizzle(const List<uint64_t> &l);
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  partition(const List<uint64_t> &l);
-  static List<std::pair<uint64_t, uint64_t>>
-  zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
-                   const List<uint64_t> &l2, uint64_t default0);
-  static List<std::pair<uint64_t, uint64_t>>
-  zip_longest(const List<uint64_t> &l1, const List<uint64_t> &l2,
-              uint64_t default0);
-  static List<uint64_t> zipWith(const List<uint64_t> &l1,
-                                const List<uint64_t> &l2);
-  static std::pair<List<uint64_t>, List<uint64_t>>
-  split_even_odd(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_PAIRING

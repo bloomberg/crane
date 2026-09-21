@@ -10,6 +10,10 @@
 
 struct Nat;
 
+struct ItreeRetGo {
+  static std::shared_ptr<ITree<Nat>> use(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -66,10 +70,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct ItreeRetGo {
-  static std::shared_ptr<ITree<Nat>> use(Nat n);
 };
 
 #endif // INCLUDED_ITREE_RET_GO

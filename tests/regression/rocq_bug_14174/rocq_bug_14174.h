@@ -22,6 +22,8 @@ template <typename A, typename P> struct SigT;
 template <typename A, typename P, typename Q> struct SigT2;
 enum class Sumbool;
 template <typename A> struct Sumor;
+
+struct SigTNotations {};
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -289,8 +291,6 @@ template <typename A, typename P, typename Q> struct SigT2 {
     return {std::move(x), std::move(a1), std::move(a2)};
   }
 };
-
-struct SigTNotations {};
 enum class Sumbool { LEFT, RIGHT };
 
 template <typename A> struct Sumor {

@@ -10,12 +10,11 @@
 #include <variant>
 
 enum class Comparison;
-enum class Comparison { EQ, LT, GT };
 
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
-
+enum class Comparison { EQ, LT, GT };
 template <typename M>
 concept BaseType = requires { typename M::t; };
 template <typename M>

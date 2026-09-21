@@ -14,6 +14,8 @@
 
 template <typename A> struct List;
 
+struct Z {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -110,8 +112,6 @@ public:
     }
   }
 };
-
-struct Z {};
 
 /// ZInt maps Z to int64_t but leaves nat as the extracted unary
 /// inductive, so Z.of_nat 2 becomes static_cast<int64_t>(Nat::s(Nat::s(

@@ -11,6 +11,10 @@
 #include <utility>
 #include <variant>
 
+struct Nat {
+  static bool eq_dec(uint64_t n, uint64_t m);
+};
+
 struct List {
   template <typename A> struct list {
     // TYPES
@@ -144,10 +148,6 @@ struct List {
     requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List::list<T1> remove(F0 &&eq_dec0, const T1 &x,
                                const List::list<T1> &l);
-};
-
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
 };
 
 struct LoopifySelfTemplateArgs {

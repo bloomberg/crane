@@ -10,6 +10,11 @@
 
 struct Nat;
 
+struct LetShadowsMatchBinder {
+  static Nat two(const std::optional<Nat> &o);
+  static Nat three(const std::optional<Nat> &x);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -66,11 +71,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LetShadowsMatchBinder {
-  static Nat two(const std::optional<Nat> &o);
-  static Nat three(const std::optional<Nat> &x);
 };
 
 #endif // INCLUDED_LET_SHADOWS_MATCH_BINDER

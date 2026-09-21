@@ -12,6 +12,8 @@
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -91,8 +93,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-struct Nat {};
 
 struct WellFoundedRec {
   static List<uint64_t> countdown_acc(uint64_t n);

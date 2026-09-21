@@ -12,6 +12,21 @@
 
 template <typename A> struct List;
 
+struct LoopifyListSubsequences {
+  static List<List<uint64_t>> map_cons_helper(uint64_t x,
+                                              const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> tails(List<uint64_t> l);
+  static List<List<uint64_t>> inits_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> inits(const List<uint64_t> &l);
+  static List<uint64_t> init_list(const List<uint64_t> &l);
+  static List<uint64_t> snoc(const List<uint64_t> &l, uint64_t x);
+  static uint64_t last_elem(const List<uint64_t> &l);
+  static uint64_t nth_elem(uint64_t n, const List<uint64_t> &l);
+  static std::pair<List<uint64_t>, List<uint64_t>> split_at(uint64_t n,
+                                                            List<uint64_t> l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,21 +143,6 @@ public:
     }
     return _result;
   }
-};
-
-struct LoopifyListSubsequences {
-  static List<List<uint64_t>> map_cons_helper(uint64_t x,
-                                              const List<List<uint64_t>> &ll);
-  static List<List<uint64_t>> tails(List<uint64_t> l);
-  static List<List<uint64_t>> inits_fuel(uint64_t fuel,
-                                         const List<uint64_t> &l);
-  static List<List<uint64_t>> inits(const List<uint64_t> &l);
-  static List<uint64_t> init_list(const List<uint64_t> &l);
-  static List<uint64_t> snoc(const List<uint64_t> &l, uint64_t x);
-  static uint64_t last_elem(const List<uint64_t> &l);
-  static uint64_t nth_elem(uint64_t n, const List<uint64_t> &l);
-  static std::pair<List<uint64_t>, List<uint64_t>> split_at(uint64_t n,
-                                                            List<uint64_t> l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_SUBSEQUENCES

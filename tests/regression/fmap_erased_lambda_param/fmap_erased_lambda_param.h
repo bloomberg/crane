@@ -20,6 +20,10 @@ enum class Exc;
 struct Dv;
 struct Monad_option;
 
+struct FmapErasedLambdaParam {
+  static std::optional<Sum<Exc, Dv>> go(Nat n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -230,10 +234,6 @@ raise_right(typename _tcI0::template m<Dv> m) {
   return Functor0::template fmap<Functor_Monad<_tcI0>, Dv, Sum<Exc, Dv>>(
       [](Dv x) { return Sum<Exc, Dv>::inr(x); }, std::move(m));
 }
-
-struct FmapErasedLambdaParam {
-  static std::optional<Sum<Exc, Dv>> go(Nat n);
-};
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>
   requires std::is_invocable_r_v<T3, F0 &, T2 &>

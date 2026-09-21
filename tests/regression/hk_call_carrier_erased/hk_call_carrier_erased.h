@@ -17,6 +17,12 @@ template <typename A> struct List;
 template <typename T> struct box;
 template <typename T, typename Body> struct outer;
 
+struct HkCallCarrierErased {
+  static Nat bump(Nat n);
+  static List<box<Nat>> on_boxes(const List<box<Nat>> &l);
+  static outer<Nat, List<Nat>> on_outer(const outer<Nat, List<Nat>> &m);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -256,11 +262,5 @@ TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
           f, m.o_boxes),
       tfmap<T1, std::any>(std::move(h), f, m.o_body)};
 }
-
-struct HkCallCarrierErased {
-  static Nat bump(Nat n);
-  static List<box<Nat>> on_boxes(const List<box<Nat>> &l);
-  static outer<Nat, List<Nat>> on_outer(const outer<Nat, List<Nat>> &m);
-};
 
 #endif // INCLUDED_HK_CALL_CARRIER_ERASED

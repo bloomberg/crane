@@ -17,6 +17,10 @@ struct Nat;
 template <typename X> struct Opt;
 struct opt_monad;
 
+struct ModuleTypeNameCollision {
+  static Opt<Nat> use(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -189,10 +193,6 @@ struct opt_monad {
 
 static_assert(Monad<opt_monad>);
 Opt<Nat> double0(const Nat &n);
-
-struct ModuleTypeNameCollision {
-  static Opt<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

@@ -12,6 +12,32 @@
 
 template <typename A> struct List;
 
+struct LoopifyListTransforms {
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
+  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs(const List<uint64_t> &l);
+  static uint64_t abs_diff(uint64_t x, uint64_t y);
+  static List<uint64_t> differences_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> differences(const List<uint64_t> &l);
+  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> drop(uint64_t n, List<uint64_t> l);
+  static List<List<uint64_t>> chunks_of_fuel(uint64_t fuel, uint64_t n,
+                                             const List<uint64_t> &l);
+  static List<List<uint64_t>> chunks_of(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         List<uint64_t> l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
+  static uint64_t step_sum(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -151,32 +177,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct LoopifyListTransforms {
-  static List<std::pair<uint64_t, uint64_t>>
-  run_length_encode(const List<uint64_t> &l);
-  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
-  static List<std::pair<uint64_t, uint64_t>>
-  sliding_pairs_fuel(uint64_t fuel, const List<uint64_t> &l);
-  static List<std::pair<uint64_t, uint64_t>>
-  sliding_pairs(const List<uint64_t> &l);
-  static uint64_t abs_diff(uint64_t x, uint64_t y);
-  static List<uint64_t> differences_fuel(uint64_t fuel,
-                                         const List<uint64_t> &l);
-  static List<uint64_t> differences(const List<uint64_t> &l);
-  static List<uint64_t> take(uint64_t n, const List<uint64_t> &l);
-  static List<uint64_t> drop(uint64_t n, List<uint64_t> l);
-  static List<List<uint64_t>> chunks_of_fuel(uint64_t fuel, uint64_t n,
-                                             const List<uint64_t> &l);
-  static List<List<uint64_t>> chunks_of(uint64_t n, const List<uint64_t> &l);
-  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
-  static List<uint64_t> uniq_sorted_fuel(uint64_t fuel,
-                                         const List<uint64_t> &l);
-  static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
-  static uint64_t step_sum(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_TRANSFORMS

@@ -12,6 +12,10 @@
 
 template <typename A> struct List;
 
+struct Compare_dec {
+  static bool le_lt_dec(uint64_t n, uint64_t m);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,10 +132,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Compare_dec {
-  static bool le_lt_dec(uint64_t n, uint64_t m);
 };
 
 struct MergesortFuel {

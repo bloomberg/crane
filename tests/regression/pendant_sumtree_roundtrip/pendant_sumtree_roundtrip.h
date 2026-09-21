@@ -19,6 +19,12 @@ template <typename A, typename P> struct SigT;
 template <typename A> struct T0;
 struct T;
 
+struct Nat {};
+
+struct Fin {
+  static T of_nat_lt(uint64_t p, uint64_t n);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil0 {};
@@ -369,8 +375,6 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
-struct Nat {};
-
 template <typename A> struct T0 {
   // TYPES
   struct Nil {};
@@ -534,10 +538,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Fin {
-  static T of_nat_lt(uint64_t p, uint64_t n);
 };
 
 struct PendantSumtreeRoundtripCase {

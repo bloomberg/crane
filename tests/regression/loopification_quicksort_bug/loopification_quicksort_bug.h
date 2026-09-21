@@ -16,6 +16,8 @@ using namespace std::string_literals;
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -147,8 +149,6 @@ public:
     return std::move(*_head);
   }
 };
-
-struct Nat {};
 
 struct QuicksortFun {
   template <typename F1>

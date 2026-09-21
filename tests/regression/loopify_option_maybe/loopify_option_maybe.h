@@ -13,6 +13,22 @@
 
 template <typename A> struct List;
 
+struct LoopifyOptionMaybe {
+  static std::optional<uint64_t> find_even(const List<uint64_t> &l);
+  static std::optional<uint64_t> find_greater(uint64_t threshold,
+                                              const List<uint64_t> &l);
+  static std::optional<uint64_t>
+  lookup(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
+  static List<uint64_t>
+  lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
+  static std::optional<uint64_t> safe_head(const List<uint64_t> &l);
+  static std::optional<List<uint64_t>> safe_tail(const List<uint64_t> &l);
+  static List<uint64_t> catMaybes(const List<std::optional<uint64_t>> &l);
+  static std::optional<uint64_t> find_index_even_aux(const List<uint64_t> &l,
+                                                     uint64_t idx);
+  static std::optional<uint64_t> find_index_even(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -91,22 +107,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyOptionMaybe {
-  static std::optional<uint64_t> find_even(const List<uint64_t> &l);
-  static std::optional<uint64_t> find_greater(uint64_t threshold,
-                                              const List<uint64_t> &l);
-  static std::optional<uint64_t>
-  lookup(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
-  static List<uint64_t>
-  lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
-  static std::optional<uint64_t> safe_head(const List<uint64_t> &l);
-  static std::optional<List<uint64_t>> safe_tail(const List<uint64_t> &l);
-  static List<uint64_t> catMaybes(const List<std::optional<uint64_t>> &l);
-  static std::optional<uint64_t> find_index_even_aux(const List<uint64_t> &l,
-                                                     uint64_t idx);
-  static std::optional<uint64_t> find_index_even(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_OPTION_MAYBE

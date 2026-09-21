@@ -11,6 +11,11 @@
 #include <utility>
 #include <variant>
 
+struct Nat {
+  static bool even(uint64_t n);
+  static uint64_t div2(uint64_t n);
+};
+
 template <typename I, typename
 A>concept FunctionalInduction = requires {
   typename I::fun_ind_prf_ty;
@@ -19,11 +24,6 @@ A>concept FunctionalInduction = requires {
 } || requires {
   { I::fun_ind_prf } -> std::convertible_to<typename I::fun_ind_prf_ty>;
 });
-
-struct Nat {
-  static bool even(uint64_t n);
-  static uint64_t div2(uint64_t n);
-};
 
 struct Equations {
   template <typename F3>

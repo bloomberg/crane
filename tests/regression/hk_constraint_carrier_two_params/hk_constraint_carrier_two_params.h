@@ -21,6 +21,11 @@ template <template <typename> class _F0> struct _crane_carrier_tch {
   template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
 };
 
+struct HkConstraintCarrierTwoParams {
+  static outer1<Nat, two<Nat, List<Nat>>>
+  run(const outer1<Nat, two<Nat, List<Nat>>> &m);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -253,10 +258,5 @@ outer1<std::any, two<std::any, T1<std::any>>> TFunctor_outer1(
   return outer1<std::any, two<std::any, T1<std::any>>>{
       tfmap<_crane_carrier_tch<T1>::template c>(std::move(h0), f, m.o_inner)};
 }
-
-struct HkConstraintCarrierTwoParams {
-  static outer1<Nat, two<Nat, List<Nat>>>
-  run(const outer1<Nat, two<Nat, List<Nat>>> &m);
-};
 
 #endif // INCLUDED_HK_CONSTRAINT_CARRIER_TWO_PARAMS

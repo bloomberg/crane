@@ -13,6 +13,8 @@
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -140,8 +142,6 @@ struct ListDef {
   template <typename T1>
   static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
 };
-
-struct Nat {};
 
 struct RegisterPairOps {
   template <typename T1>

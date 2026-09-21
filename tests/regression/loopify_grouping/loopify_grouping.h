@@ -12,6 +12,22 @@
 
 template <typename A> struct List;
 
+struct LoopifyGrouping {
+  static List<List<uint64_t>> prepend_to_groups(uint64_t x, bool same,
+                                                List<List<uint64_t>> groups);
+  static List<List<uint64_t>> group_fuel(uint64_t fuel,
+                                         const List<uint64_t> &l);
+  static List<List<uint64_t>> group(const List<uint64_t> &l);
+  static bool elem(uint64_t x, const List<uint64_t> &l);
+  static List<uint64_t> nub(const List<uint64_t> &l);
+  static List<uint64_t> remove_elem(uint64_t x, const List<uint64_t> &l);
+  static std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
+  partition3(uint64_t pivot, const List<uint64_t> &l);
+  static uint64_t count_elem(uint64_t x, const List<uint64_t> &l);
+  static List<std::pair<uint64_t, uint64_t>>
+  group_pairs(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,22 +144,6 @@ public:
     }
     return _result;
   }
-};
-
-struct LoopifyGrouping {
-  static List<List<uint64_t>> prepend_to_groups(uint64_t x, bool same,
-                                                List<List<uint64_t>> groups);
-  static List<List<uint64_t>> group_fuel(uint64_t fuel,
-                                         const List<uint64_t> &l);
-  static List<List<uint64_t>> group(const List<uint64_t> &l);
-  static bool elem(uint64_t x, const List<uint64_t> &l);
-  static List<uint64_t> nub(const List<uint64_t> &l);
-  static List<uint64_t> remove_elem(uint64_t x, const List<uint64_t> &l);
-  static std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-  partition3(uint64_t pivot, const List<uint64_t> &l);
-  static uint64_t count_elem(uint64_t x, const List<uint64_t> &l);
-  static List<std::pair<uint64_t, uint64_t>>
-  group_pairs(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_GROUPING

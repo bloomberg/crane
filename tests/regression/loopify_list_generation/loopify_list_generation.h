@@ -12,6 +12,17 @@
 
 template <typename A> struct List;
 
+struct LoopifyListGeneration {
+  static List<uint64_t> replicate(uint64_t n, uint64_t x);
+  static List<uint64_t> stutter(const List<uint64_t> &l);
+  static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
+  static List<uint64_t> iterate(uint64_t n, uint64_t x);
+  static List<uint64_t>
+  replicate_list(const List<std::pair<uint64_t, uint64_t>> &l);
+  static List<uint64_t> repeat_with_sep(uint64_t sep, uint64_t n, uint64_t x);
+  static List<uint64_t> range(uint64_t start, uint64_t len);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -113,17 +124,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct LoopifyListGeneration {
-  static List<uint64_t> replicate(uint64_t n, uint64_t x);
-  static List<uint64_t> stutter(const List<uint64_t> &l);
-  static List<uint64_t> cycle(uint64_t n, const List<uint64_t> &l);
-  static List<uint64_t> iterate(uint64_t n, uint64_t x);
-  static List<uint64_t>
-  replicate_list(const List<std::pair<uint64_t, uint64_t>> &l);
-  static List<uint64_t> repeat_with_sep(uint64_t sep, uint64_t n, uint64_t x);
-  static List<uint64_t> range(uint64_t start, uint64_t len);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_GENERATION

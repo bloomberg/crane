@@ -16,6 +16,10 @@ struct Nat;
 template <typename A> struct List;
 struct FailE;
 
+struct ErasedEventAliasTarg {
+  static std::shared_ptr<ITree<Nat>> use(const List<Nat> &x0_);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -191,9 +195,5 @@ using semantic_function = std::function<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
 template <typename T1>
 const semantic_function<T1> k =
     [](const List<Nat> &args) { return itree_ret(args.length()); };
-
-struct ErasedEventAliasTarg {
-  static std::shared_ptr<ITree<Nat>> use(const List<Nat> &x0_);
-};
 
 #endif // INCLUDED_ERASED_EVENT_ALIAS_TARG

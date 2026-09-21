@@ -14,6 +14,11 @@
 template <typename A> struct List;
 template <typename A> struct Sig;
 
+struct Compare_dec {
+  static bool le_gt_dec(uint64_t x0_, uint64_t x1_);
+  static bool le_dec(uint64_t n, uint64_t m);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -152,11 +157,6 @@ template <typename A> struct Sig {
 
   // CREATORS
   static Sig<A> exist(A x) { return {std::move(x)}; }
-};
-
-struct Compare_dec {
-  static bool le_gt_dec(uint64_t x0_, uint64_t x1_);
-  static bool le_dec(uint64_t n, uint64_t m);
 };
 
 struct Sort {

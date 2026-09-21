@@ -27,6 +27,14 @@ template <typename S> struct Point;
 template <typename S> struct Account;
 template <typename S> struct BankAccountCollection;
 
+struct ListDef {
+  static List<uint64_t> seq(uint64_t start, uint64_t len);
+};
+
+struct Nat {};
+
+struct Z {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -128,14 +136,6 @@ template <typename Err> struct ExceptE {
   // CREATORS
   static ExceptE<Err> Throw_(Err a0) { return {std::move(a0)}; }
 };
-
-struct ListDef {
-  static List<uint64_t> seq(uint64_t start, uint64_t len);
-};
-
-struct Nat {};
-
-struct Z {};
 
 struct Err {
   // DATA

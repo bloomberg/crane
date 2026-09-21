@@ -15,6 +15,14 @@
 
 template <typename A> struct List;
 
+struct Nat {
+  static bool eq_dec(uint64_t n, uint64_t m);
+};
+
+struct Bool {
+  static bool bool_dec(bool b1, bool b2);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -255,14 +263,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
-};
-
-struct Bool {
-  static bool bool_dec(bool b1, bool b2);
 };
 
 struct ValidatedVirtualCrossmatchTraceCase {

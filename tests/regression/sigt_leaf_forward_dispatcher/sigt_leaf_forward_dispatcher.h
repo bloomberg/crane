@@ -15,6 +15,18 @@
 template <typename A> struct List;
 template <typename A, typename P> struct SigT;
 
+struct Bool {
+  static bool eqb(bool b1, bool b2);
+};
+
+struct Ascii0 {
+  static bool eqb0(char a, char b);
+};
+
+struct String0 {
+  static bool eqb1(const std::string &s1, const std::string &s2);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -124,18 +136,6 @@ template <typename A, typename P> struct SigT {
 
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
-};
-
-struct Bool {
-  static bool eqb(bool b1, bool b2);
-};
-
-struct Ascii0 {
-  static bool eqb0(char a, char b);
-};
-
-struct String0 {
-  static bool eqb1(const std::string &s1, const std::string &s2);
 };
 
 /// Unlike sigt_leaf_forward_topfn, which writes the action closure directly

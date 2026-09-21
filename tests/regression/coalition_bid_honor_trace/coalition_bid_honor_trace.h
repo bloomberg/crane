@@ -16,6 +16,16 @@ template <typename A> struct List;
 struct Positive;
 struct Z;
 
+struct Nat {};
+
+struct Pos {
+  static Positive succ(const Positive &x);
+  static Positive add(const Positive &x, const Positive &y);
+  static Positive add_carry(const Positive &x, const Positive &y);
+  static Positive pred_double(const Positive &x);
+  static bool eqb(const Positive &p, const Positive &q);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -426,16 +436,6 @@ public:
 struct ListDef {
   template <typename T1>
   static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
-};
-
-struct Nat {};
-
-struct Pos {
-  static Positive succ(const Positive &x);
-  static Positive add(const Positive &x, const Positive &y);
-  static Positive add_carry(const Positive &x, const Positive &y);
-  static Positive pred_double(const Positive &x);
-  static bool eqb(const Positive &p, const Positive &q);
 };
 
 struct BinInt {

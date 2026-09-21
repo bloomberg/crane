@@ -16,6 +16,12 @@
 template <typename A> struct List;
 struct Q;
 
+struct Nat {};
+
+struct Z {
+  static int64_t pow_pos(int64_t z, unsigned int x0_);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -134,8 +140,6 @@ public:
   }
 };
 
-struct Nat {};
-
 struct ListDef {
   template <typename T1>
   static T1 nth(uint64_t n, const List<T1> &l, T1 default0);
@@ -160,10 +164,6 @@ struct Pos {
 struct Q {
   int64_t Qnum;
   unsigned int Qden;
-};
-
-struct Z {
-  static int64_t pow_pos(int64_t z, unsigned int x0_);
 };
 
 struct Rdefinitions {

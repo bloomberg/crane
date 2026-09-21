@@ -28,6 +28,9 @@ template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
 template <typename t_A> struct List;
+struct ListDef {
+  static List<unsigned int> seq(unsigned int start, unsigned int len);
+};
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
@@ -334,9 +337,6 @@ public:
     }
     return bsl::move(*_head);
   }
-};
-struct ListDef {
-  static List<unsigned int> seq(unsigned int start, unsigned int len);
 };
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>

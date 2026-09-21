@@ -12,6 +12,16 @@
 
 template <typename A> struct List;
 
+struct LoopifyScans {
+  static List<uint64_t> scanl(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> scanl_mult(uint64_t acc, const List<uint64_t> &l);
+  static List<uint64_t> running_max(uint64_t current, const List<uint64_t> &l);
+  static List<uint64_t> running_min(uint64_t current, const List<uint64_t> &l);
+  static List<uint64_t> pairwise_diff(uint64_t prev, const List<uint64_t> &l);
+  static List<uint64_t> accumulate_if_even(uint64_t acc,
+                                           const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,16 +100,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LoopifyScans {
-  static List<uint64_t> scanl(uint64_t acc, const List<uint64_t> &l);
-  static List<uint64_t> scanl_mult(uint64_t acc, const List<uint64_t> &l);
-  static List<uint64_t> running_max(uint64_t current, const List<uint64_t> &l);
-  static List<uint64_t> running_min(uint64_t current, const List<uint64_t> &l);
-  static List<uint64_t> pairwise_diff(uint64_t prev, const List<uint64_t> &l);
-  static List<uint64_t> accumulate_if_even(uint64_t acc,
-                                           const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SCANS

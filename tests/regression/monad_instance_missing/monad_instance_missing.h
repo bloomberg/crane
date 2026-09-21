@@ -17,6 +17,10 @@ struct Nat;
 template <typename X> struct EOU;
 struct EOU_monad;
 
+struct MonadInstanceMissing {
+  static EOU<Nat> use(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -193,10 +197,6 @@ struct EOU_monad {
 
 static_assert(Monad<EOU_monad>);
 EOU<Nat> double0(const Nat &n);
-
-struct MonadInstanceMissing {
-  static EOU<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

@@ -17,6 +17,10 @@ template <typename A> struct List;
 template <typename A> struct Sig;
 template <typename A, typename P> struct SigT;
 
+struct Sumbool {
+  static Sig<bool> bool_of_sumbool(bool s);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -227,10 +231,6 @@ template <typename a> using EqDec = std::function<bool(a, a)>;
 struct EquivDec {
   template <typename T1>
   static bool equiv_dec(EqDec<T1> eqDec, const T1 &x0_, T1 x1_);
-};
-
-struct Sumbool {
-  static Sig<bool> bool_of_sumbool(bool s);
 };
 
 template <typename k, typename v> using halist = List<SigT<k, v>>;

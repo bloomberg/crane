@@ -12,6 +12,10 @@
 
 template <typename A> struct List;
 
+struct Nat {
+  static bool even(uint64_t n);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -90,10 +94,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct Nat {
-  static bool even(uint64_t n);
 };
 
 struct FixStateThreading {

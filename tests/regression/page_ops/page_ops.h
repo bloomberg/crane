@@ -14,6 +14,10 @@
 
 template <typename A> struct List;
 
+struct Nat {
+  static uint64_t pow(uint64_t n, uint64_t m);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -92,10 +96,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct Nat {
-  static uint64_t pow(uint64_t n, uint64_t m);
 };
 
 struct PageOps {

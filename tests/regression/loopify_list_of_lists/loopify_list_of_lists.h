@@ -13,6 +13,26 @@
 
 template <typename A> struct List;
 
+struct LoopifyListOfLists {
+  static List<uint64_t> intercalate(const List<uint64_t> &sep,
+                                    const List<List<uint64_t>> &ll);
+  static List<uint64_t> map_hd(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> map_tl(const List<List<uint64_t>> &ll);
+  static bool all_empty(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> transpose_fuel(uint64_t fuel,
+                                             const List<List<uint64_t>> &ll);
+  static uint64_t list_len(const List<uint64_t> &l);
+  static uint64_t total_length(const List<List<uint64_t>> &ll);
+  static List<List<uint64_t>> transpose(const List<List<uint64_t>> &ll);
+  static List<uint64_t> flatten(const List<List<uint64_t>> &ll);
+  static uint64_t count_total(const List<List<uint64_t>> &ll);
+  static List<uint64_t> firsts(const List<List<uint64_t>> &ll);
+  static bool all_nil(const List<List<uint64_t>> &ll);
+  static List<std::pair<List<uint64_t>, List<uint64_t>>>
+  zip_lists(const List<List<uint64_t>> &ll1, const List<List<uint64_t>> &ll2);
+  static uint64_t max_length(const List<List<uint64_t>> &ll);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -114,26 +134,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct LoopifyListOfLists {
-  static List<uint64_t> intercalate(const List<uint64_t> &sep,
-                                    const List<List<uint64_t>> &ll);
-  static List<uint64_t> map_hd(const List<List<uint64_t>> &ll);
-  static List<List<uint64_t>> map_tl(const List<List<uint64_t>> &ll);
-  static bool all_empty(const List<List<uint64_t>> &ll);
-  static List<List<uint64_t>> transpose_fuel(uint64_t fuel,
-                                             const List<List<uint64_t>> &ll);
-  static uint64_t list_len(const List<uint64_t> &l);
-  static uint64_t total_length(const List<List<uint64_t>> &ll);
-  static List<List<uint64_t>> transpose(const List<List<uint64_t>> &ll);
-  static List<uint64_t> flatten(const List<List<uint64_t>> &ll);
-  static uint64_t count_total(const List<List<uint64_t>> &ll);
-  static List<uint64_t> firsts(const List<List<uint64_t>> &ll);
-  static bool all_nil(const List<List<uint64_t>> &ll);
-  static List<std::pair<List<uint64_t>, List<uint64_t>>>
-  zip_lists(const List<List<uint64_t>> &ll1, const List<List<uint64_t>> &ll2);
-  static uint64_t max_length(const List<List<uint64_t>> &ll);
 };
 
 #endif // INCLUDED_LOOPIFY_LIST_OF_LISTS

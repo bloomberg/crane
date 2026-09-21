@@ -14,6 +14,10 @@
 
 template <typename A> struct List;
 
+struct Z {};
+
+struct N {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -93,10 +97,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-struct Z {};
-
-struct N {};
 
 struct NumeralEdge {
   /// 1. Zero

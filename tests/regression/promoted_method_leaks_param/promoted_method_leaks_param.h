@@ -16,6 +16,10 @@ struct Nat;
 template <typename A> struct List;
 struct FailE;
 
+struct PromotedMethodLeaksParam {
+  static std::shared_ptr<ITree<Nat>> use(const List<Nat> &l);
+};
+
 struct Empty_set {
   Empty_set() = delete;
 };
@@ -180,9 +184,5 @@ template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<T2>> raise0(const Nat &) {
   return FailE::Throw_(std::monostate{}).template cast_<std::any, T2>();
 }
-
-struct PromotedMethodLeaksParam {
-  static std::shared_ptr<ITree<Nat>> use(const List<Nat> &l);
-};
 
 #endif // INCLUDED_PROMOTED_METHOD_LEAKS_PARAM

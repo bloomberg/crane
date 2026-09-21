@@ -13,6 +13,26 @@
 
 template <typename A> struct List;
 
+struct LoopifySearchOpt {
+  static List<uint64_t> lis(const List<uint64_t> &l);
+  static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> current,
+                                         List<uint64_t> best,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> longest_run(const List<uint64_t> &l);
+  static uint64_t
+  knapsack_fuel(uint64_t fuel, uint64_t capacity,
+                const List<std::pair<uint64_t, uint64_t>> &items);
+  static uint64_t knapsack(uint64_t capacity,
+                           const List<std::pair<uint64_t, uint64_t>> &items);
+  static bool subset_sum_fuel(uint64_t fuel, uint64_t target,
+                              const List<uint64_t> &l);
+  static bool subset_sum(uint64_t target, const List<uint64_t> &l);
+  static std::pair<uint64_t, uint64_t> majority(const List<uint64_t> &l);
+  static bool binary_search_fuel(uint64_t fuel, uint64_t target,
+                                 const List<uint64_t> &l);
+  static bool binary_search(uint64_t target, const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -129,26 +149,6 @@ public:
     }
     return _result;
   }
-};
-
-struct LoopifySearchOpt {
-  static List<uint64_t> lis(const List<uint64_t> &l);
-  static List<uint64_t> longest_run_fuel(uint64_t fuel, List<uint64_t> current,
-                                         List<uint64_t> best,
-                                         const List<uint64_t> &l);
-  static List<uint64_t> longest_run(const List<uint64_t> &l);
-  static uint64_t
-  knapsack_fuel(uint64_t fuel, uint64_t capacity,
-                const List<std::pair<uint64_t, uint64_t>> &items);
-  static uint64_t knapsack(uint64_t capacity,
-                           const List<std::pair<uint64_t, uint64_t>> &items);
-  static bool subset_sum_fuel(uint64_t fuel, uint64_t target,
-                              const List<uint64_t> &l);
-  static bool subset_sum(uint64_t target, const List<uint64_t> &l);
-  static std::pair<uint64_t, uint64_t> majority(const List<uint64_t> &l);
-  static bool binary_search_fuel(uint64_t fuel, uint64_t target,
-                                 const List<uint64_t> &l);
-  static bool binary_search(uint64_t target, const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_SEARCH_OPT

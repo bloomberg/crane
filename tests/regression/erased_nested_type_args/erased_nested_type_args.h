@@ -17,6 +17,10 @@ template <typename X> struct EOU;
 struct EOU_monad;
 struct Ops_nat;
 
+struct ErasedNestedTypeArgs {
+  static EOU<Nat> use(const Nat &n);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -204,10 +208,6 @@ struct Ops_nat {
 };
 
 static_assert(Ops<Ops_nat, Nat>);
-
-struct ErasedNestedTypeArgs {
-  static EOU<Nat> use(const Nat &n);
-};
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {

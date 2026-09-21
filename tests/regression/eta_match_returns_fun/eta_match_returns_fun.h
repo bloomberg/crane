@@ -13,6 +13,8 @@
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -92,8 +94,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-struct Nat {};
 
 struct EtaMatchReturnsFun {
   static inline const List<

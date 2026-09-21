@@ -14,6 +14,10 @@
 
 template <typename A> struct List;
 
+struct Nat {
+  static bool even(uint64_t n);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -130,10 +134,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Nat {
-  static bool even(uint64_t n);
 };
 
 struct CPS {

@@ -15,6 +15,8 @@
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -132,8 +134,6 @@ public:
     return _result;
   }
 };
-
-struct Nat {};
 
 struct HistoricalEventSafetyTraceCase {
   struct State {

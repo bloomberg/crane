@@ -13,6 +13,10 @@
 
 template <typename A> struct List;
 
+struct LoopifyFrameDeclval {
+  static List<std::pair<uint64_t, uint64_t>> g(const List<uint64_t> &l);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -181,10 +185,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct LoopifyFrameDeclval {
-  static List<std::pair<uint64_t, uint64_t>> g(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_FRAME_DECLVAL

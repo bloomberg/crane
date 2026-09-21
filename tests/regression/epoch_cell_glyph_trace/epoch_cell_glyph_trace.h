@@ -17,6 +17,14 @@ struct Positive;
 struct Z;
 struct Q;
 
+struct Datatypes {
+  static Comparison CompOpp(Comparison r);
+};
+
+struct QArith_base {
+  static bool Qle_bool(const Q &x, const Q &y);
+};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -97,10 +105,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 enum class Comparison { EQ, LT, GT };
-
-struct Datatypes {
-  static Comparison CompOpp(Comparison r);
-};
 
 struct Positive {
   // TYPES
@@ -270,10 +274,6 @@ struct BinInt {
 struct Q {
   Z Qnum;
   Positive Qden;
-};
-
-struct QArith_base {
-  static bool Qle_bool(const Q &x, const Q &y);
 };
 
 struct EpochCellGlyphTraceCase {

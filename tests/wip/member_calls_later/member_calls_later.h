@@ -11,6 +11,10 @@
 struct Nat;
 struct Tree;
 
+struct Helper {
+  static Nat pick(Nat a, Nat b);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -187,10 +191,6 @@ public:
     }
     return _result;
   }
-};
-
-struct Helper {
-  static Nat pick(Nat a, Nat b);
 };
 
 #endif // INCLUDED_MEMBER_CALLS_LATER

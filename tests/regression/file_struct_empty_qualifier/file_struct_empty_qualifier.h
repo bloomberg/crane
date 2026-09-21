@@ -20,6 +20,15 @@ template <typename A> struct List;
 struct Positive;
 struct N;
 
+struct Pos {
+  static Positive succ(const Positive &x);
+};
+
+struct FileStructEmptyQualifier {
+  static N a(const List<Nat> &x0_);
+  static std::optional<List<Nat>> b(const List<Nat> &l);
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -310,10 +319,6 @@ struct Monad_option {
 
 static_assert(Monad<Monad_option>);
 
-struct Pos {
-  static Positive succ(const Positive &x);
-};
-
 struct BinNat {
   static N succ(const N &n);
 };
@@ -348,11 +353,6 @@ struct Helpers {
       return BinNat::succ(Helpers::template length<T1>(*a1));
     }
   }
-};
-
-struct FileStructEmptyQualifier {
-  static N a(const List<Nat> &x0_);
-  static std::optional<List<Nat>> b(const List<Nat> &l);
 };
 
 template <Monad _tcI0, typename T2>

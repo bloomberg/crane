@@ -12,11 +12,11 @@ enum class Comparison;
 struct Positive;
 struct N;
 struct Z;
-enum class Comparison { EQ, LT, GT };
 
 struct Datatypes {
   static Comparison CompOpp(Comparison r);
 };
+enum class Comparison { EQ, LT, GT };
 
 struct Positive {
   // TYPES

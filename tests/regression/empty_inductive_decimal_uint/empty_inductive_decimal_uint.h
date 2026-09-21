@@ -12,6 +12,18 @@ enum class Bool0;
 struct Uint;
 struct Ascii;
 struct String;
+
+struct Little {
+  static Uint succ(const Uint &d);
+};
+
+struct NilEmpty {
+  static String string_of_uint(const Uint &d);
+};
+
+struct NilZero {
+  static String string_of_uint(const Uint &d);
+};
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -327,10 +339,6 @@ public:
   Uint rev() const { return this->revapp(Uint::nil()); }
 };
 
-struct Little {
-  static Uint succ(const Uint &d);
-};
-
 struct Ascii {
   // DATA
   Bool0 a0;
@@ -433,14 +441,6 @@ public:
     }
     return std::move(*_head);
   }
-};
-
-struct NilEmpty {
-  static String string_of_uint(const Uint &d);
-};
-
-struct NilZero {
-  static String string_of_uint(const Uint &d);
 };
 
 struct EmptyInductiveDecimalUint {
