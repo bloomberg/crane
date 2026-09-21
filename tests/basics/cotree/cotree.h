@@ -52,7 +52,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -245,16 +246,18 @@ struct Cotree {
 
     template <typename _U> tree(const tree<_U> &_other) {
       const auto &[a, children] = std::get<typename tree<_U>::Node>(_other.v());
-      this->v_ = Node{
-          [&]() -> A {
-            if constexpr (crane_convertible<A, const _U &>) {
-              return crane_convert<A>(a);
-            } else {
-              throw std::logic_error("unreachable: inactive constructor field "
-                                     "at this instantiation");
-            }
-          }(),
-          (children ? std::make_shared<List<tree<A>>>(*children) : nullptr)};
+      this->v_ =
+          Node{[&]() -> A {
+                 if constexpr (crane_convertible<A, const _U &>) {
+                   return crane_convert<A>(a);
+                 } else {
+                   throw std::logic_error("unreachable: inactive constructor "
+                                          "field at this instantiation");
+                 }
+               }(),
+               (children ? std::make_shared<List<tree<A>>>(
+                               crane_convert<List<tree<A>>>(*children))
+                         : nullptr)};
     }
 
     static tree<A> node(A a, List<tree<A>> children) {

@@ -57,7 +57,8 @@ template <OrderedType X> struct Make {
                                             "field at this instantiation");
                    }
                  }(),
-                 (a2 ? std::make_shared<Fmap<A>>(*a2) : nullptr)};
+                 (a2 ? std::make_shared<Fmap<A>>(crane_convert<Fmap<A>>(*a2))
+                     : nullptr)};
       }
     }
 

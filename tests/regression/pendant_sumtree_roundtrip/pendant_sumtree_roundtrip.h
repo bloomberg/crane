@@ -56,7 +56,8 @@ public:
                                            "field at this instantiation");
                   }
                 }(),
-                (l ? std::make_shared<List<A>>(*l) : nullptr)};
+                (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
     }
   }
 
@@ -399,16 +400,17 @@ public:
       this->v_ = Nil{};
     } else {
       const auto &[h, n, a2] = std::get<typename T0<_U>::Cons>(_other.v());
-      this->v_ =
-          Cons{[&]() -> A {
-                 if constexpr (crane_convertible<A, const _U &>) {
-                   return crane_convert<A>(h);
-                 } else {
-                   throw std::logic_error("unreachable: inactive constructor "
-                                          "field at this instantiation");
-                 }
-               }(),
-               n, (a2 ? std::make_shared<T0<A>>(*a2) : nullptr)};
+      this->v_ = Cons{
+          [&]() -> A {
+            if constexpr (crane_convertible<A, const _U &>) {
+              return crane_convert<A>(h);
+            } else {
+              throw std::logic_error("unreachable: inactive constructor field "
+                                     "at this instantiation");
+            }
+          }(),
+          n,
+          (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2)) : nullptr)};
     }
   }
 

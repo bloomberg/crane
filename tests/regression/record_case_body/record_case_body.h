@@ -75,7 +75,8 @@ struct RecordCaseBody {
                                             "field at this instantiation");
                    }
                  }(),
-                 (a1 ? std::make_shared<list<A>>(*a1) : nullptr)};
+                 (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
+                     : nullptr)};
       }
     }
 

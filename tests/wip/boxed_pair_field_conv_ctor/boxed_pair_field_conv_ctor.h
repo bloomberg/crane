@@ -149,11 +149,14 @@ public:
     } else {
       if (std::holds_alternative<typename Exp0<_U>::ESELF>(_other.v())) {
         const auto &[a0] = std::get<typename Exp0<_U>::ESELF>(_other.v());
-        this->v_ = ESELF{(a0 ? std::make_shared<Exp0<T>>(*a0) : nullptr)};
+        this->v_ =
+            ESELF{(a0 ? std::make_shared<Exp0<T>>(crane_convert<Exp0<T>>(*a0))
+                      : nullptr)};
       } else {
         const auto &[a0] = std::get<typename Exp0<_U>::ENEG>(_other.v());
-        this->v_ =
-            ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(*a0) : nullptr)};
+        this->v_ = ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
+                                  crane_convert<std::pair<T, Exp0<T>>>(*a0))
+                            : nullptr)};
       }
     }
   }

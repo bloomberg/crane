@@ -49,7 +49,8 @@ struct NestedInductiveNoDrain {
                                             "field at this instantiation");
                    }
                  }(),
-                 (a1 ? std::make_shared<lst<A>>(*a1) : nullptr)};
+                 (a1 ? std::make_shared<lst<A>>(crane_convert<lst<A>>(*a1))
+                     : nullptr)};
       }
     }
 

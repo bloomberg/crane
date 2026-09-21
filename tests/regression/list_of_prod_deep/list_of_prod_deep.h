@@ -40,16 +40,17 @@ struct ListOfProdDeep {
         this->v_ = Lnil{};
       } else {
         const auto &[a0, a1] = std::get<typename lst<_U>::Lcons>(_other.v());
-        this->v_ = Lcons{[&]() -> A {
-                           if constexpr (crane_convertible<A, const _U &>) {
-                             return crane_convert<A>(a0);
-                           } else {
-                             throw std::logic_error(
-                                 "unreachable: inactive constructor field at "
-                                 "this instantiation");
-                           }
-                         }(),
-                         (a1 ? std::make_shared<lst<A>>(*a1) : nullptr)};
+        this->v_ = Lcons{
+            [&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (a1 ? std::make_shared<lst<A>>(crane_convert<lst<A>>(*a1))
+                : nullptr)};
       }
     }
 

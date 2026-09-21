@@ -1167,12 +1167,19 @@ let rec gen_type_conversion_expr ?(skip = fun _ -> false) ~src_ty ~dst_ty expr =
          re-[make_shared]ing a fresh, independent copy of the whole node. *)
       expr
     | Tshared_ptr _src_inner, Tshared_ptr dst_inner ->
-      (* shared_ptr<S> → shared_ptr<T>: null-check + dereference inner *)
+      (* shared_ptr<S> → shared_ptr<T>: null-check, then allocate the pointee
+         read at [T].  Handing the pointee straight to [make_shared] would ask
+         [T] to be constructible from [S], which is only one of the ways a
+         value crosses instantiations -- a [std::pair] is read component by
+         component instead -- so ask the helper for the pointee and allocate
+         what it gives back. *)
       require_header "memory";
       naming_expr ~lambda_ty:dst_ty ~body:(fun x ->
         CPPcond
           ( x,
-            mk_call (CPPalloc (Alloc_heap, dst_inner)) [CPPderef x],
+            mk_call
+              (CPPalloc (Alloc_heap, dst_inner))
+              [CPPconvert (dst_inner, CPPderef x)],
             CPPnullptr ))
     | Tshared_ptr inner, _ ->
       (* shared_ptr<T> → T: dereference.  Also strip Tnamespace from inner

@@ -75,16 +75,17 @@ struct DocComments {
         this->v_ = Mynil{};
       } else {
         const auto &[a, l] = std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (crane_convertible<A, const _U &>) {
-                              return crane_convert<A>(a);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          (l ? std::make_shared<mylist<A>>(*l) : nullptr)};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (l ? std::make_shared<mylist<A>>(crane_convert<mylist<A>>(*l))
+               : nullptr)};
       }
     }
 

@@ -49,7 +49,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 

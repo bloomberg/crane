@@ -51,7 +51,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -146,16 +147,18 @@ struct NestedInd {
       } else {
         const auto &[a0, a1] =
             std::get<typename custom_list<_U>::Ccons>(_other.v());
-        this->v_ = Ccons{
-            [&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
-                return crane_convert<A>(a0);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }(),
-            (a1 ? std::make_shared<custom_list<A>>(*a1) : nullptr)};
+        this->v_ = Ccons{[&]() -> A {
+                           if constexpr (crane_convertible<A, const _U &>) {
+                             return crane_convert<A>(a0);
+                           } else {
+                             throw std::logic_error(
+                                 "unreachable: inactive constructor field at "
+                                 "this instantiation");
+                           }
+                         }(),
+                         (a1 ? std::make_shared<custom_list<A>>(
+                                   crane_convert<custom_list<A>>(*a1))
+                             : nullptr)};
       }
     }
 
@@ -359,7 +362,9 @@ struct NestedInd {
                                           "field at this instantiation");
                  }
                }(),
-               (a1 ? std::make_shared<custom_list<rose<A>>>(*a1) : nullptr)};
+               (a1 ? std::make_shared<custom_list<rose<A>>>(
+                         crane_convert<custom_list<rose<A>>>(*a1))
+                   : nullptr)};
     }
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {

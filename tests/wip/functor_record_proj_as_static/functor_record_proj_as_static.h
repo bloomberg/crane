@@ -138,7 +138,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -1067,17 +1068,21 @@ template <Int I, OrderedType X> struct Raw {
       } else {
         const auto &[a0, a1, a2, a3, a4] =
             std::get<typename tree<_U>::Node>(_other.v());
-        this->v_ =
-            Node{(a0 ? std::make_shared<tree<elt>>(*a0) : nullptr), a1,
-                 [&]() -> elt {
-                   if constexpr (crane_convertible<elt, const _U &>) {
-                     return crane_convert<elt>(a2);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
-                 }(),
-                 (a3 ? std::make_shared<tree<elt>>(*a3) : nullptr), a4};
+        this->v_ = Node{
+            (a0 ? std::make_shared<tree<elt>>(crane_convert<tree<elt>>(*a0))
+                : nullptr),
+            a1,
+            [&]() -> elt {
+              if constexpr (crane_convertible<elt, const _U &>) {
+                return crane_convert<elt>(a2);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (a3 ? std::make_shared<tree<elt>>(crane_convert<tree<elt>>(*a3))
+                : nullptr),
+            a4};
       }
     }
 
@@ -1537,7 +1542,9 @@ template <Int I, OrderedType X> struct Raw {
                    }
                  }(),
                  crane_convert<tree<elt>>(a2),
-                 (a3 ? std::make_shared<enumeration<elt>>(*a3) : nullptr)};
+                 (a3 ? std::make_shared<enumeration<elt>>(
+                           crane_convert<enumeration<elt>>(*a3))
+                     : nullptr)};
       }
     }
 

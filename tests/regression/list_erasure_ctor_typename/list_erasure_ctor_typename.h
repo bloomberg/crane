@@ -53,7 +53,8 @@ struct List {
                                             "field at this instantiation");
                    }
                  }(),
-                 (l ? std::make_shared<typename List::template list<A>>(*l)
+                 (l ? std::make_shared<typename List::template list<A>>(
+                          crane_convert<typename List::template list<A>>(*l))
                     : nullptr)};
       }
     }

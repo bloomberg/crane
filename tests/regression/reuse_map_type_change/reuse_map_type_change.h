@@ -70,7 +70,8 @@ struct ReuseMapTypeChange {
                                             "field at this instantiation");
                    }
                  }(),
-                 (a1 ? crane::make_rc<lst<A>>(*a1) : nullptr)};
+                 (a1 ? crane::make_rc<lst<A>>(crane_convert<lst<A>>(*a1))
+                     : nullptr)};
       }
     }
 

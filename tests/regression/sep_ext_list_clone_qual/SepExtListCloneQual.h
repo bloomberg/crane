@@ -54,7 +54,8 @@ public:
             }
           }(),
           (a1 ? std::make_shared<typename Datatypes::template List<Forest<A>>>(
-                    *a1)
+                    crane_convert<typename Datatypes::template List<Forest<A>>>(
+                        *a1))
               : nullptr)};
     }
   }

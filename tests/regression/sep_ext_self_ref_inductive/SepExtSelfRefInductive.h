@@ -48,18 +48,20 @@ template <S X> struct HashTrie {
       } else {
         const auto &[k, v_1, left, right] =
             std::get<typename Trie<_U>::Node>(_other.v());
-        this->v_ =
-            Node{k,
-                 [&]() -> V {
-                   if constexpr (crane_convertible<V, const _U &>) {
-                     return crane_convert<V>(v_1);
-                   } else {
-                     throw std::logic_error("unreachable: inactive constructor "
-                                            "field at this instantiation");
-                   }
-                 }(),
-                 (left ? std::make_shared<Trie<V>>(*left) : nullptr),
-                 (right ? std::make_shared<Trie<V>>(*right) : nullptr)};
+        this->v_ = Node{
+            k,
+            [&]() -> V {
+              if constexpr (crane_convertible<V, const _U &>) {
+                return crane_convert<V>(v_1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (left ? std::make_shared<Trie<V>>(crane_convert<Trie<V>>(*left))
+                  : nullptr),
+            (right ? std::make_shared<Trie<V>>(crane_convert<Trie<V>>(*right))
+                   : nullptr)};
       }
     }
 

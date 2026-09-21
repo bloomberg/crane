@@ -52,7 +52,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -148,7 +149,9 @@ struct ErasedFnInRecursiveContainer {
                                           "field at this instantiation");
                  }
                }(),
-               (a1 ? std::make_shared<List<rose<A>>>(*a1) : nullptr)};
+               (a1 ? std::make_shared<List<rose<A>>>(
+                         crane_convert<List<rose<A>>>(*a1))
+                   : nullptr)};
     }
 
     static rose<A> node(A a0, List<rose<A>> a1) {

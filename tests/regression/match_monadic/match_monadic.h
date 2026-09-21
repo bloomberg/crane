@@ -56,7 +56,8 @@ public:
     } else {
       const auto &[a0, a1, a2] = std::get<typename Tree<_U>::Node>(_other.v());
       this->v_ =
-          Node{(a0 ? std::make_shared<Tree<A>>(*a0) : nullptr),
+          Node{(a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
+                   : nullptr),
                [&]() -> A {
                  if constexpr (crane_convertible<A, const _U &>) {
                    return crane_convert<A>(a1);
@@ -65,7 +66,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (a2 ? std::make_shared<Tree<A>>(*a2) : nullptr)};
+               (a2 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a2))
+                   : nullptr)};
     }
   }
 

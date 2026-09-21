@@ -50,7 +50,8 @@ public:
                                           "field at this instantiation");
                  }
                }(),
-               (l ? std::make_shared<List<A>>(*l) : nullptr)};
+               (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l))
+                  : nullptr)};
     }
   }
 
@@ -319,17 +320,18 @@ struct DepElim {
         this->v_ = Vnil{};
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<_U>::Vcons>(_other.v());
-        this->v_ = Vcons{n,
-                         [&]() -> A {
-                           if constexpr (crane_convertible<A, const _U &>) {
-                             return crane_convert<A>(a1);
-                           } else {
-                             throw std::logic_error(
-                                 "unreachable: inactive constructor field at "
-                                 "this instantiation");
-                           }
-                         }(),
-                         (a2 ? std::make_shared<vec<A>>(*a2) : nullptr)};
+        this->v_ = Vcons{
+            n,
+            [&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a1);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (a2 ? std::make_shared<vec<A>>(crane_convert<vec<A>>(*a2))
+                : nullptr)};
       }
     }
 

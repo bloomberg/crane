@@ -44,7 +44,8 @@ struct LoopifyFilterFnRef {
         const auto &[a0, a1, a2] =
             std::get<typename tree<_U>::Node>(_other.v());
         this->v_ =
-            Node{(a0 ? std::make_shared<tree<A>>(*a0) : nullptr),
+            Node{(a0 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a0))
+                     : nullptr),
                  [&]() -> A {
                    if constexpr (crane_convertible<A, const _U &>) {
                      return crane_convert<A>(a1);
@@ -53,7 +54,8 @@ struct LoopifyFilterFnRef {
                                             "field at this instantiation");
                    }
                  }(),
-                 (a2 ? std::make_shared<tree<A>>(*a2) : nullptr)};
+                 (a2 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a2))
+                     : nullptr)};
       }
     }
 

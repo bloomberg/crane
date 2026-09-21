@@ -50,7 +50,8 @@ struct LoopifyOption {
                                             "field at this instantiation");
                    }
                  }(),
-                 (l ? std::make_shared<list<A>>(*l) : nullptr)};
+                 (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
+                    : nullptr)};
       }
     }
 

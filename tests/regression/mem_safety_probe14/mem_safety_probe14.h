@@ -352,16 +352,17 @@ struct MemSafetyProbe14 {
       } else {
         const auto &[a0, a1] =
             std::get<typename mylist<_U>::Mycons>(_other.v());
-        this->v_ = Mycons{[&]() -> A {
-                            if constexpr (crane_convertible<A, const _U &>) {
-                              return crane_convert<A>(a0);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          (a1 ? std::make_shared<mylist<A>>(*a1) : nullptr)};
+        this->v_ = Mycons{
+            [&]() -> A {
+              if constexpr (crane_convertible<A, const _U &>) {
+                return crane_convert<A>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }(),
+            (a1 ? std::make_shared<mylist<A>>(crane_convert<mylist<A>>(*a1))
+                : nullptr)};
       }
     }
 

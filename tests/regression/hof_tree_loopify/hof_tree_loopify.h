@@ -42,7 +42,8 @@ struct HofTreeLoopify {
       } else {
         const auto &[l, x, r] = std::get<typename tree<_U>::Node>(_other.v());
         this->v_ =
-            Node{(l ? std::make_shared<tree<A>>(*l) : nullptr),
+            Node{(l ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*l))
+                    : nullptr),
                  [&]() -> A {
                    if constexpr (crane_convertible<A, const _U &>) {
                      return crane_convert<A>(x);
@@ -51,7 +52,8 @@ struct HofTreeLoopify {
                                             "field at this instantiation");
                    }
                  }(),
-                 (r ? std::make_shared<tree<A>>(*r) : nullptr)};
+                 (r ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*r))
+                    : nullptr)};
       }
     }
 
