@@ -848,6 +848,59 @@ let report_unspellable where ty =
     reached twice is declared once. *)
 let ctor_alias_decls : (string * string) list ref = ref []
 
+(** Alias templates whose body mentions template parameters of the declaration
+    that needs them.
+
+    A namespace-scope alias cannot name a function template's own parameter, so
+    the carrier of [`{TFunctor (fun T => two T (FnBody T))}] -- whose body is
+    [two<_CraneTcArg, T1<_CraneTcArg>>] -- has nowhere to be declared as a
+    plain alias.  What can be declared there is a holder parameterised over
+    exactly those names, with the alias as a member:
+
+      template <template <typename> class _F0> struct C_h {
+        template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
+      };
+
+    and the use site writes [C_h<T1>::template c], which is the dependent alias
+    the [Tqualified] branch below already knows how to spell.  Keyed by the
+    body with the captured names replaced, so two declarations that differ only
+    in what they call their parameters share one holder. *)
+let ctor_holder_decls : (string * string) list ref = ref []
+
+(** The C++ identifiers appearing in [text], as whole tokens.  Used to tell
+    whether a rendered type body really names a template parameter, which a
+    structural walk over the type cannot: a custom mapping's replacement text
+    may leave an argument unwritten. *)
+let identifier_tokens text =
+  let is_id c =
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')
+    || c = '_'
+  in
+  let out = ref [] and buf = Buffer.create 16 in
+  let flush () =
+    if Buffer.length buf > 0 then (
+      out := Buffer.contents buf :: !out;
+      Buffer.clear buf )
+  in
+  String.iter (fun c -> if is_id c then Buffer.add_char buf c else flush ()) text;
+  flush ();
+  !out
+
+let ctor_holder_name_for ~base body =
+  match List.assoc_opt body !ctor_holder_decls with
+  | Some name -> name
+  | None ->
+    let taken name =
+      List.exists (fun (_, n) -> String.equal n name) !ctor_holder_decls
+    in
+    let rec fresh i =
+      let name = base ^ "_tch" ^ (if i = 0 then "" else string_of_int i) in
+      if taken name then fresh (i + 1) else name
+    in
+    let name = fresh 0 in
+    ctor_holder_decls := (body, name) :: !ctor_holder_decls;
+    name
+
 (** The type variable an alias template abstracts over, and the sentinel used
     to find out whether one is needed at all: rendering the constructor
     applied to it says whether the application is just a head plus this
@@ -1194,13 +1247,76 @@ let rec pp_cpp_type ?(lead = true) par vl t =
          [itree] is [std::shared_ptr<ITree<%t1>>] and a composite Rocq carrier
          is [std::pair<_CraneTcArg, Box<_CraneTcArg>>]; neither can be cut
          back, and the same reading of the same rendering covers both. *)
+      (* The template parameters of the enclosing declaration that the body
+         names.  An alias whose body mentions one cannot live at namespace
+         scope, so those are what the holder abstracts over. *)
+      let captured probe =
+        let seen = ref [] in
+        let rec go t =
+          match t with
+          | Tvar (i, None) ->
+            if not (List.mem i !seen) then seen := !seen @ [i]
+          | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+          | Tvariant ts ->
+            List.iter go ts
+          | Tfun (dom, cod) -> List.iter go dom; go cod
+          | Tconst t | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
+          | Tqualified (t, _) | Tdecay t | Ttyctor t ->
+            go t
+          | Tapply (t, ts) -> go t; List.iter go ts
+          | _ -> ()
+        in
+        go probe; !seen
+      in
       let alias_for_probe ~base probe =
         let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
         if
           String.equal rendered
             (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
         then None
-        else Some (ctor_alias_name_for ~base rendered)
+        else
+          (* Only a name the body actually {e writes} has to be abstracted
+             over.  A custom mapping's replacement text need not use every
+             argument -- [itree]'s spells only its last -- so a parameter that
+             the probe carries structurally but the rendering drops would
+             otherwise mint a holder with an unused parameter, and the alias
+             would be declared as a partial specialisation of nothing. *)
+          let names = identifier_tokens rendered in
+          let captured probe =
+            List.filter
+              (fun i ->
+                List.mem
+                  (Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                  names )
+              (captured probe)
+          in
+          match captured probe with
+          | [] -> Some (ctor_alias_name_for ~base rendered)
+          | vars ->
+            (* Rendered a second time with the captured names replaced by the
+               holder's own, so that two declarations differing only in what
+               they call their parameters share one holder. *)
+            let renamed =
+              List.fold_left
+                (fun acc (k, i) ->
+                  map_cpp_type
+                    (function
+                      | Tvar (j, None) when j = i ->
+                        Tid_external ("_F" ^ string_of_int k, [])
+                      | t -> t )
+                    acc )
+                probe
+                (List.mapi (fun k i -> (k, i)) vars)
+            in
+            let body = Pp.string_of_ppcmds (pp_rec false renamed) in
+            let name = ctor_holder_name_for ~base body in
+            Some
+              ( name ^ "<"
+              ^ String.concat ", "
+                  (List.map
+                     (fun i -> Pp.string_of_ppcmds (print_cpp_type_var vl i))
+                     vars )
+              ^ ">::template c" )
       in
       (* A custom mapping arrives applied to its real arguments, so the
          sentinel has to be put in the carrier's place first. *)
@@ -3669,7 +3785,42 @@ let take_ctor_alias_decls () =
       !ctor_alias_decls
   in
   ctor_alias_decls := [];
-  l
+  let holders =
+    List.rev_map
+      (fun (body, name) ->
+        (* Every captured parameter is a type constructor: it is named applied
+           to the alias's own argument, which is what made the body an
+           abstraction rather than a type in the first place. *)
+        let arity =
+          let rec count i = if i > 8 then i
+            else
+              let probe = "_F" ^ string_of_int i in
+              (* [_F0] is present iff the body spells it. *)
+              let rec mem j =
+                j + String.length probe <= String.length body
+                && ( String.sub body j (String.length probe) = probe
+                   || mem (j + 1) )
+              in
+              if mem 0 then count (i + 1) else i
+          in
+          count 0
+        in
+        str "template <"
+        ++ prlist_with_sep (fun () -> str ", ")
+             (fun i ->
+               str "template <typename> class _F" ++ int i )
+             (List.init arity (fun i -> i))
+        ++ str "> struct "
+        ++ str name
+        ++ str " { template <typename "
+        ++ str ctor_alias_tvar
+        ++ str "> using c = "
+        ++ str body
+        ++ str "; };" )
+      !ctor_holder_decls
+  in
+  ctor_holder_decls := [];
+  holders @ l
 
 (** Print a complete template parameter including name and optional default *)
 let pp_template_param (tt, id) =

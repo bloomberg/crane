@@ -2606,9 +2606,45 @@ let empty_slot =
     spells an instantiation of [g] -- its type, its factory calls, and the
     constructor structs a match qualifies -- has to agree on this. *)
 let apply_hkt_tyctors g temps =
+  (* A template-template position takes a {e unary} constructor, and what
+     reaches it may be an application of more than one argument: Rocq's
+     [TFunctor (fun T => two T (FnBody T))] normalises to [two] applied to
+     both, with the binder gone.  Naming that head alone spells a constructor
+     of the wrong arity, and the declaration it appears in does not compile.
+
+     Putting the binder back is what the position wants, and the printer
+     already mints an alias template for a body carrying the sentinel
+     ({!Minicpp.abstract_cpp_type}).  The argument the position varies in is
+     the leading one -- the class applies its carrier to the traversed type,
+     and this idiom writes that type first.
+
+     The unary case goes through the same rule and comes out unchanged:
+     [box<_CraneTcArg>] is a head plus the sentinel, which the printer
+     recognises and prints as the bare name. *)
+  let abstract_leading_arg t =
+    let args =
+      match t with
+      (* A custom mapping is excluded: its replacement text says for itself
+         which argument the C++ template varies in, and that is not in general
+         the leading one -- [itree]'s is its last.  The printer substitutes the
+         sentinel through the mapping rather than into the argument list. *)
+      | Tglob (g, args, _) when not (Table.is_custom g) -> args
+      | Tid (_, args) | Tid_external (_, args) | Tapply (_, args) -> args
+      | _ -> []
+    in
+    match args with
+    | over :: _ :: _ -> (
+      (* Only a constructor of arity above one needs abstracting.  A unary one
+         is already a head plus its argument, which the printer cuts to the
+         bare name; substituting the sentinel there would hand it a body it
+         reads as an abstraction rather than an application, and it would mint
+         an alias for a template that can simply be named. *)
+      match Minicpp.abstract_cpp_type ~over t with Some b -> b | None -> t )
+    | _ -> t
+  in
   List.mapi
     (fun i t ->
-      if Table.is_hkt_ind_param g i then Ttyctor t
+      if Table.is_hkt_ind_param g i then Ttyctor (abstract_leading_arg t)
       else
         match t with
         | Tapply ((Tvar _ as head), _) when Table.is_phantom_type_param g i ->
@@ -3862,10 +3898,14 @@ and dict_carrier_type_args env tvars id args =
     | _ -> None
   in
   let* cod = dict_ml_type dict in
+  (* Abstracted over the {e leading} argument, as {!apply_hkt_tyctors} does:
+     the class applies its carrier to the traversed type, and this idiom writes
+     that type first, so the two agree on one body and the printer mints one
+     alias for both. *)
   let* over =
     match cod with
-    | Miniml.Tglob (_, (_ :: _ as ts), _) | Miniml.Tapp (_, (_ :: _ as ts)) ->
-      Some (template_arg_of_ml_type env tvars (List.nth ts (List.length ts - 1)))
+    | Miniml.Tglob (_, (t0 :: _), _) | Miniml.Tapp (_, (t0 :: _)) ->
+      Some (template_arg_of_ml_type env tvars t0)
     | _ -> None
   in
   let* carrier =

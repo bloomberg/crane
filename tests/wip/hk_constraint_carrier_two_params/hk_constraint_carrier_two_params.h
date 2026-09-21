@@ -17,6 +17,10 @@ template <typename A> struct List;
 template <typename T, typename Body> struct two;
 template <typename T, typename Body> struct outer1;
 
+template <template <typename> class _F0> struct _crane_carrier_tch {
+  template <typename _CraneTcArg> using c = two<_CraneTcArg, _F0<_CraneTcArg>>;
+};
+
 struct Nat {
   // TYPES
   struct O {};
@@ -257,10 +261,10 @@ template <typename T, typename Body> struct outer1 {
 };
 
 template <template <typename> class T1, typename F2>
-outer1<std::any, two<std::any, T1<std::any>>>
-TFunctor_outer1(std::type_identity_t<TFunctor<T1>>,
-                std::type_identity_t<TFunctor<two>> h0, F2 &&f,
-                const outer1<std::any, two<std::any, T1<std::any>>> &m) {
+outer1<std::any, two<std::any, T1<std::any>>> TFunctor_outer1(
+    std::type_identity_t<TFunctor<T1>>,
+    std::type_identity_t<TFunctor<_crane_carrier_tch<T1>::template c>> h0,
+    F2 &&f, const outer1<std::any, two<std::any, T1<std::any>>> &m) {
   return outer1<std::any, std::any>{tfmap(std::move(h0), f, m.o_inner)};
 }
 
