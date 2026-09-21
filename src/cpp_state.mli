@@ -314,6 +314,11 @@ val wrapper_module_table : (Names.ModPath.t, string) Hashtbl.t
     [reset_cpp_state]. *)
 val collision_wrapper_table : (Names.ModPath.t, unit) Hashtbl.t
 
+(** Module paths a collision wrapper absorbed without a collision of their own;
+    for these, [wrapper_qualify_name] prepends the wrapper's name to the child's
+    own qualifier instead of replacing it. Cleared by [reset_cpp_state]. *)
+val wrapper_bystander_table : (Names.ModPath.t, unit) Hashtbl.t
+
 (** The C++ concept name of each type class whose own name does not settle it,
     because another module declares a class of the same name and a concept is
     declared at file scope. Populated from

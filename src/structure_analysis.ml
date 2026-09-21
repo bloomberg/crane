@@ -33,6 +33,7 @@ type t = {
   inductive_names : (string * ModPath.t) list;
   global_scope_enums : GlobRef.t list;
   collision_wrappers : (ModPath.t * string) list;
+  wrapper_bystanders : (ModPath.t * string) list;
   functor_app_sources : (ModPath.t * ModPath.t) list;
   eponymous_records : GlobRef.t list;
   concept_renames : (GlobRef.t * string) list;
@@ -677,9 +678,11 @@ let has_sibling_inductive
     declarations then live inside a struct named after the file-level module. *)
 let collect_collision_wrappers
     (names : (string, ModPath.t) Hashtbl.t) (modules : module_info list) :
-    (ModPath.t * string) list =
+    (ModPath.t * string) list * (ModPath.t * string) list =
   let acc = ref [] in
   let add mp name = acc := (mp, name) :: !acc in
+  let bystanders = ref [] in
+  let add_bystander mp name = bystanders := (mp, name) :: !bystanders in
   List.iter
     (fun mi ->
       let mp = mi.modpath and sel = mi.sels in
@@ -752,11 +755,28 @@ let collect_collision_wrappers
              halves of a single struct spelled differently: [Helpers::length]
              for the one that came from [Module N], a bare [map_monad] for the
              one the file declared itself. *)
-          register_decl_modpaths sel
+          register_decl_modpaths sel;
+          (* The wrapper absorbs the file's other children too, but keeps their
+             own nesting: a sibling that does not collide is rendered inside the
+             wrapper as the struct it already was.  So its name survives and
+             only wants the wrapper's in front of it -- which is why these are
+             kept apart from the wrapped children above, whose own name is
+             flattened away. *)
+          List.iter
+            (fun (l, se) ->
+              match se with
+              | SEmodule m when not (is_colliding_child l se) ->
+                add_bystander (MPdot (mp, l)) parent_name;
+                ( match m.ml_mod_expr with
+                | MEstruct (inner_mp, _) -> add_bystander inner_mp parent_name
+                | MEident alias_mp -> add_bystander alias_mp parent_name
+                | _ -> () )
+              | _ -> () )
+            sel
         end
       end )
     modules;
-  List.rev !acc
+  (List.rev !acc, List.rev !bystanders)
 
 (** Collect every eponymous record: a record inductive whose name is, up to
     case, the name of the module that declares it, and which is therefore
@@ -953,7 +973,9 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
      built from it. *)
   let names = Hashtbl.create 16 in
   List.iter (fun (n, mp) -> Hashtbl.replace names n mp) inductive_names;
-  let collision_wrappers = collect_collision_wrappers names sorted_modules in
+  let collision_wrappers, wrapper_bystanders =
+    collect_collision_wrappers names sorted_modules
+  in
   (* 6. Collect the eponymous records, for the same reason. *)
   let eponymous_records = collect_eponymous_records s in
   let concept_renames = collect_concept_renames s in
@@ -963,6 +985,7 @@ let analyze (reg : Method_registry.t) (s : ml_structure) : t =
     inductive_names;
     global_scope_enums;
     collision_wrappers;
+    wrapper_bystanders;
     functor_app_sources;
     eponymous_records;
     concept_renames;

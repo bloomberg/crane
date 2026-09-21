@@ -2035,6 +2035,7 @@ let install_analysis
        inductive_names;
        global_scope_enums;
        collision_wrappers;
+       wrapper_bystanders;
        functor_app_sources = app_sources;
        eponymous_records;
        concept_renames;
@@ -2061,6 +2062,13 @@ let install_analysis
       Hashtbl.replace wrapper_module_table mp name;
       Hashtbl.replace collision_wrapper_table mp () )
     collision_wrappers;
+  (* Only [wrapper_module_table]: a bystander is nested inside the wrapper, not
+     flattened into it, and [collision_wrapper_table] is what says "flattened". *)
+  List.iter
+    (fun (mp, name) ->
+      Hashtbl.replace wrapper_module_table mp name;
+      Hashtbl.replace wrapper_bystander_table mp () )
+    wrapper_bystanders;
   List.iter
     (fun (mi : Structure_analysis.module_info) ->
       match mi.wrapper_name with

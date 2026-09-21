@@ -106,6 +106,15 @@ type t = {
           name resolver is built from it before rendering begins, and a table
           the printer went on adding to would be one the resolver had already
           read. *)
+  wrapper_bystanders : (ModPath.t * string) list;
+      (** [(modpath, wrapper_struct_name)] for every module that such a wrapper
+          absorbs without a collision of its own.  The wrapper is one struct and
+          holds all of the file's children, but only the colliding ones are
+          flattened into it; a bystander keeps its own nesting, so its name
+          survives and wants the wrapper's in front of it rather than in place
+          of it.
+
+          Here for the same reason as {!collision_wrappers}. *)
   functor_app_sources : (ModPath.t * ModPath.t) list;
       (** [(modpath, source)] for every module that is an alias for, or an
           application of, another module: [Module M := N] gives [(M, N)], and

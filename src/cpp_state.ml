@@ -763,6 +763,13 @@ let wrapper_module_table : (ModPath.t, string) Hashtbl.t =
 let collision_wrapper_table : (ModPath.t, unit) Hashtbl.t =
   owned_table "collision_wrapper_table"
 
+(** Module paths a collision wrapper absorbed without a collision of their own.
+    These keep their own nesting inside the wrapper struct, so
+    {!wrapper_qualify_name} puts the wrapper's name in front of theirs rather
+    than in place of it. *)
+let wrapper_bystander_table : (ModPath.t, unit) Hashtbl.t =
+  owned_table "wrapper_bystander_table"
+
 (** The name each type class's concept is emitted under, for the classes whose
     own name does not settle it: a concept is declared at file scope, so two
     classes called [C] in different modules are told apart by their module's
@@ -927,6 +934,11 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
           in
           struct_name ^ "::" ^ func_part
         | _ -> name
+      else if Hashtbl.mem wrapper_bystander_table mp then
+        (* Nested rather than flattened: the child's own qualifier stays and the
+           wrapper's name goes in front of it, unless it is already there. *)
+        let prefix = struct_name ^ "::" in
+        if String.starts_with ~prefix name then name else prefix ^ name
       else
         name
     | _ -> name )

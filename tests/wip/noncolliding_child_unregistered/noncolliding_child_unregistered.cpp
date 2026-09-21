@@ -43,7 +43,7 @@ bool AstLib::RawIDOrd::eq_dec(AstLib::RawIDOrd::t x0_,
 }
 
 bool AstLib::eq_dec_raw_id(const Raw_id &a, const Raw_id &b) {
-  if (RawIDOrd::eq_dec(a, b)) {
+  if (AstLib::RawIDOrd::eq_dec(a, b)) {
     return true;
   } else {
     return false;
@@ -59,7 +59,7 @@ Nat AstLib::pick(Nat a, Nat b) {
 }
 
 bool via_non_colliding(const Raw_id &a, const Raw_id &b) {
-  if (RawIDOrd::eq_dec(a, b)) {
+  if (AstLib::RawIDOrd::eq_dec(a, b)) {
     return true;
   } else {
     return false;
