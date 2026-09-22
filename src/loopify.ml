@@ -1394,16 +1394,48 @@ let borrowed_value_param_pointee = function
     Some t
   | _ -> None
 
+(** Extract the underlying type variable id from a forwarding-reference type.
+    [Tref(Tref(Tvar(_, Some id)))] → [Some id] *)
+let rec extract_fwd_ref_tvar = function
+  | Tref inner -> extract_fwd_ref_tvar inner
+  | Tvar (_, Some id) -> Some id
+  | _ -> None
+
+(** The arrow a template parameter is constrained to, when it is a callable one.
+    [tparams] holds [(kind, name)] pairs from the surrounding template header;
+    a [TTfun (dom, cod)] kind is what becomes the
+    [std::is_invocable_r_v<cod, F &, dom &...>] clause. *)
+let lookup_tparam_fun_type tparams id =
+  let name = Id.to_string id in
+  List.find_map
+    (fun (tt, tparam_id) ->
+      match tt with
+      | TTfun (dom, cod) when String.equal (Id.to_string tparam_id) name ->
+        Some (Tfun (dom, cod))
+      | _ -> None )
+    tparams
+
 (** Compute the shadow variable type for a tail-recursive loop.
 
     When [pointer_safe] is [true] and the parameter is a borrowed value-type
     ([const T&] where [T] is a value-type inductive), the shadow becomes
-    [const T*] (raw pointer).  Otherwise the shadow inherits the parameter's
-    type verbatim. *)
-let tail_shadow_type ~pointer_safe ty =
+    [const T*] (raw pointer).
+
+    A callable parameter arrives as a deduced template parameter — the caller's
+    closure type — and a shadow exists only because the back edge reassigns it.
+    Those two facts cannot both hold of one variable: a closure type has exactly
+    one value, so nothing the loop builds is assignable to it.  The shadow has
+    to be a type that can hold every callable the loop puts in it, which is the
+    arrow the parameter's constraint already states.
+
+    Otherwise the shadow inherits the parameter's type verbatim. *)
+let tail_shadow_type ~tparams ~pointer_safe ty =
   match (pointer_safe, borrowed_value_param_pointee ty) with
   | true, Some t -> Tptr (Tconst t)
-  | _ -> ty
+  | _ ->
+    ( match Option.bind (extract_fwd_ref_tvar ty) (lookup_tparam_fun_type tparams) with
+    | Some arrow -> arrow
+    | None -> ty )
 
 (** Generate the initialiser expression for a shadow variable.
 
@@ -2266,7 +2298,7 @@ let optimize_last_use_moves ~self_ref_candidate ~last_use_candidate stmts =
   in
   process stmts
 
-let build_shadow_setup check params body =
+let build_shadow_setup tparams check params body =
   let varying = find_varying_params check params body in
   let pointer_safe = tail_pointer_safe_flags check params body () in
   let varying_params = filter_by_mask varying params in
@@ -2274,7 +2306,7 @@ let build_shadow_setup check params body =
   let shadow_params =
     List.map2
       (fun (id, ty) safe ->
-        (shadow_name id, tail_shadow_type ~pointer_safe:safe ty))
+        (shadow_name id, tail_shadow_type ~tparams ~pointer_safe:safe ty))
       varying_params varying_pointer_safe
   in
   let subs =
@@ -2388,10 +2420,10 @@ let drop_unread_shadows shadow_decls body =
     @param ret_ty Return type of the function
     @param body Function body statements
     @return Transformed body with while loop structure *)
-let transform_tail ?(param_inits = []) check params ret_ty body =
+let transform_tail ?(param_inits = []) tparams check params ret_ty body =
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup check params body
+    build_shadow_setup tparams check params body
   in
   let is_void = ret_ty = Tvoid in
   (* Shadow variable declarations (only for varying params) *)
@@ -2481,17 +2513,6 @@ type double_decomp = {
   dd_combine : cpp_expr list -> cpp_expr -> cpp_expr -> cpp_expr;
       (** [dd_combine saved_vars left_result right_result] *)
 }
-
-(** True if any template parameter is higher-order (a function type or
-    concept constraint).  Such parameters prevent TMC because the loopified
-    version would need to forward the higher-order param into the stack
-    frame, which complicates template instantiation. *)
-let has_higher_order_template_param tparams =
-  List.exists
-    (function
-      | TTfun _ | TTconcept _ -> true
-      | _ -> false )
-    (List.map fst tparams)
 
 (** {3 Expression decomposition}
 
@@ -3713,11 +3734,11 @@ let rewrite_tmc_visit_stmt ?(cursor_used = ref false) ~vt_ret check ti
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) check ti params ret_ty body =
+let transform_tmc ?(param_inits = []) tparams check ti params ret_ty body =
   let vt_ret = if is_value_type_ret ret_ty then Some ret_ty else None in
   let { ss_varying = varying; ss_varying_params = varying_params;
         ss_shadow_params = shadow_params; ss_subs = subs } =
-    build_shadow_setup check params body
+    build_shadow_setup tparams check params body
   in
   (* For value-type returns, _head is shared_ptr<ret_ty> and _write points
      into the shared_ptr chain.  For pointer returns, _head is the bare type. *)
@@ -3744,11 +3765,14 @@ let transform_tmc ?(param_inits = []) check ti params ret_ty body =
           | Some custom -> custom
           | None -> tail_shadow_init orig_id shadow_ty ty
         in
+        (* Declare the shadow at the shadow's type, not the parameter's: where
+           {!tail_shadow_type} chose something else, it chose it because the
+           parameter's own type cannot hold what the loop will put here. *)
         let decl_ty = match shadow_ty with
           | Tptr _ -> shadow_ty
           | _ ->
-            if has_custom_init then strip_ref_type ty
-            else strip_ref_and_const_type ty
+            if has_custom_init then strip_ref_type shadow_ty
+            else strip_ref_and_const_type shadow_ty
         in
         Sasgn (shadow_id, Declare decl_ty, init_expr) )
       varying_params
@@ -3984,24 +4008,8 @@ let lookup_var_type env id = List.assoc_opt id env
 (** Given template parameters and a type variable id, find the return type of a
     TTfun constraint if the template param is function-typed. *)
 let lookup_tparam_return_type tparams id =
-  let name = Id.to_string id in
-  List.find_map
-    (fun (tt, tparam_id) ->
-      if String.equal (Id.to_string tparam_id) name then
-        match
-          tt
-        with
-        | TTfun (_, cod) -> Some cod
-        | _ -> None
-      else
-        None )
-    tparams
-
-(** Extract the underlying type variable id from a forwarding-reference type.
-    [Tref(Tref(Tvar(_, Some id)))] → [Some id] *)
-let rec extract_fwd_ref_tvar = function
-  | Tref inner -> extract_fwd_ref_tvar inner
-  | Tvar (_, Some id) -> Some id
+  match lookup_tparam_fun_type tparams id with
+  | Some (Tfun (_, cod)) -> Some cod
   | _ -> None
 
 (** The C++ [bool] type, as the printer spells it. *)
@@ -6056,9 +6064,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
       | None ->
       (* Double decomposition failed — try N-call decomposition *)
       match decompose_all_calls check e with
-      | Some acd
-        when List.length acd.acd_calls >= 2
-             && not (has_higher_order_template_param tparams) ->
+      | Some acd when List.length acd.acd_calls >= 2 ->
         gen_chained_call_frames ctx acd
       | _ ->
         (* Cannot decompose — execute inline *)
@@ -8250,7 +8256,7 @@ let loopify_inner_lambdas ~tparams body =
         match kind with
         | Tail_recursion ->
           report_outcome ~name ~check ~strategy:Lp_tail
-            (transform_tail check params ret_ty lbody)
+            (transform_tail tparams check params ret_ty lbody)
         | Nontail_recursion ->
           report_outcome ~name ~check ~strategy:Lp_frame
             (transform_nontail ~fn_name:name check tparams params ret_ty
@@ -8308,7 +8314,7 @@ let loopify_inner_lambdas ~tparams body =
           match kind with
           | Tail_recursion ->
             report_outcome ~name ~check ~strategy:Lp_tail
-              (transform_tail check params ret_ty lbody)
+              (transform_tail tparams check params ret_ty lbody)
           | Nontail_recursion ->
             report_outcome ~name ~check ~strategy:Lp_frame
               (transform_nontail ~fn_name:name check tparams params ret_ty
@@ -8661,7 +8667,7 @@ let apply_nontail_loopification ?(param_inits = []) ?fn_name ?adopted check
        real C++ self-call.  That is exactly the stack growth this pass exists to
        remove, so check the postcondition and fall back to the frame transform,
        which handles the scrutinising shape via a continuation frame. *)
-    let tmc = transform_tmc ~param_inits check ti params ret_ty body in
+    let tmc = transform_tmc ~param_inits tparams check ti params ret_ty body in
     if classify check tmc = No_recursion then
       {nt_body = tmc; nt_outcome = Lp_tmc; nt_used_param_inits = true}
     else frame ()
@@ -9134,7 +9140,7 @@ let transform_fundef_exn ~tparams (f : dfun) params body =
         match kind with
         | No_recursion -> (body, None)
         | Tail_recursion ->
-          (transform_tail check params ret_ty body, Some Lp_tail)
+          (transform_tail tparams check params ret_ty body, Some Lp_tail)
         | Nontail_recursion ->
           let r =
             apply_nontail_loopification ~fn_name:name ?adopted check tparams
@@ -9188,6 +9194,12 @@ let transform_fundef ~tparams (f : dfun) params body =
     @param mf             The method record to transform
     @return An [Fmethod] field with the loopified body *)
 let transform_method ~tparams ~self_ty mf =
+  (* [tparams] arrives holding only the enclosing struct's parameters.  A
+     method's body is written under its own template header too, and a
+     parameter declared there is the one most likely to constrain how the body
+     may be rewritten -- a callable argument is a method parameter, never a
+     struct one. *)
+  let tparams = tparams @ mf.mf_tparams in
   let n_params = List.length mf.mf_params in
   let this_pos = mf.mf_this_pos in
   (* Cofixpoint guard: same reasoning as {!transform_fundef} — if the
@@ -9370,6 +9382,7 @@ let transform_method ~tparams ~self_ty mf =
           ( report_outcome ~name ~check:self_check ~strategy:Lp_tail
               (transform_tail
                  ~param_inits:[(self_id, CPPthis)]
+                 tparams
                  self_check
                  augmented_params
                  mf.mf_ret_type
