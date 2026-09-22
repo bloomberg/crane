@@ -9739,3 +9739,14 @@
   (alias runtest)
   (deps template_merge_outlined_member.t.exe)
   (action (run ./template_merge_outlined_member.t.exe))))
+
+(subdir nested_owner_two_template_heads
+ (rule
+  (targets nested_owner_two_template_heads.t.exe)
+  (deps Use.vo nested_owner_two_template_heads.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_owner_two_template_heads.t.exe nested_owner_two_template_heads.cpp nested_owner_two_template_heads.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_owner_two_template_heads.t.exe)
+  (action (run ./nested_owner_two_template_heads.t.exe))))
