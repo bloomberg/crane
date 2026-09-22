@@ -1310,6 +1310,42 @@ let rec pp_cpp_type ?(lead = true) par vl t =
         go probe; !seen
       in
       let alias_for_probe ~base probe =
+        (* A captured parameter is named {e applied} to the alias's own
+           argument -- that is what makes the body an abstraction rather than a
+           type, and it is what lets the holder declare every parameter it
+           takes as a type constructor.  A variable the body names bare is not
+           a carrier parameter; it is a type the body mentions, and mentioning
+           it at the use site writes a name from the declaration's quantifier.
+           An instance method's body is emitted without that quantifier, so
+           [_crane_carrier_tch<T1>] there names a scope the function is not in.
+           What the body has instead is the erasure it was emitted under, and
+           [std::any] is how the rest of it already spells that. *)
+        let applied_vars =
+          let seen = ref [] in
+          let rec go t =
+            match t with
+            | Tapply (Tvar (i, _), ts) ->
+              seen := i :: !seen;
+              List.iter go ts
+            | Tglob (_, ts, _) | Tid (_, ts) | Tid_external (_, ts)
+            | Tvariant ts ->
+              List.iter go ts
+            | Tfun (dom, cod) -> List.iter go dom; go cod
+            | Tconst t | Tshared_ptr t | Tref t | Tptr t | Tnamespace (_, t)
+            | Tqualified (t, _) | Tdecay t | Ttyctor t ->
+              go t
+            | Tapply (t, ts) -> go t; List.iter go ts
+            | _ -> ()
+          in
+          go probe; !seen
+        in
+        let probe =
+          map_cpp_type
+            (function
+              | Tvar (i, _) when not (List.mem i applied_vars) -> Tany
+              | t -> t )
+            probe
+        in
         let rendered = Pp.string_of_ppcmds (pp_rec false probe) in
         if
           String.equal rendered

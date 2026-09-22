@@ -1,11 +1,14 @@
 #include "hk_carrier_written_at_partial_app.h"
 
+template <typename _CraneTcArg>
+using _crane_carrier_tc = std::function<Exp0<_CraneTcArg>(Exp0<std::any>)>;
+
 Phi<std::any> TFunctor_phi(std::type_identity_t<TFunctor<Exp0>> h,
                            std::function<std::any(std::any)> f,
                            const Phi<std::any> &p) {
   const auto &[es0] = p;
   return Phi<std::any>::phi0(es0.template map<std::any>(
-      tfmap<_crane_carrier_tch<T1>::template c>(std::move(h), std::move(f))));
+      tfmap<_crane_carrier_tc>(std::move(h), std::move(f))));
 }
 
 Nat HkCarrierWrittenAtPartialApp::bump(Nat n) { return Nat::s(std::move(n)); }

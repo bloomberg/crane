@@ -17,11 +17,6 @@ template <typename A> struct List;
 template <typename T> struct Exp0;
 template <typename T> struct Phi;
 
-template <template <typename> class _F0> struct _crane_carrier_tch {
-  template <typename _CraneTcArg>
-  using c = std::function<Exp0<_CraneTcArg>(Exp0<_F0>)>;
-};
-
 struct HkCarrierWrittenAtPartialApp {
   static Nat bump(Nat n);
   static Phi<Nat> on_phi(const Phi<Nat> &p);
