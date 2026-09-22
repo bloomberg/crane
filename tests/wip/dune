@@ -148,3 +148,13 @@
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
 
+(subdir hk_carrier_written_at_partial_app
+ (rule
+  (targets hk_carrier_written_at_partial_app.t.exe)
+  (deps HkCarrierWrittenAtPartialApp.vo hk_carrier_written_at_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_written_at_partial_app.t.exe hk_carrier_written_at_partial_app.cpp hk_carrier_written_at_partial_app.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_written_at_partial_app.t.exe)
+  (action (run ./hk_carrier_written_at_partial_app.t.exe))))
