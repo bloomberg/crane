@@ -9717,3 +9717,14 @@
   (alias runtest)
   (deps bystander_named_bare.t.exe)
   (action (run ./bystander_named_bare.t.exe))))
+
+(subdir method_body_names_later_struct
+ (rule
+  (targets method_body_names_later_struct.t.exe)
+  (deps Use.vo method_body_names_later_struct.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_body_names_later_struct.t.exe method_body_names_later_struct.cpp method_body_names_later_struct.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_body_names_later_struct.t.exe)
+  (action (run ./method_body_names_later_struct.t.exe))))

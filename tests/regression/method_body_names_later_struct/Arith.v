@@ -1,5 +1,5 @@
 From Crane Require Import Mapping.Std.
-From CraneTestsWIP Require Import method_body_names_later_struct.A.
+From CraneTestsRegression Require Import method_body_names_later_struct.A.
 
 (** Named after the inductive, so the collision puts this file's contents in a
     struct of their own and flattens [Zed]'s members into it. *)
