@@ -497,47 +497,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<uint64_t> to_nat(uint64_t _x) const {
-    const T *_self = this;
-
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
-      const T *_self;
-      uint64_t _x;
-    };
-
-    /// _Cont_FS: resumes after recursive call, then processes rest.
-    struct _Cont_FS {};
-
-    using _Frame = std::variant<_Enter, _Cont_FS>;
-    Sig<uint64_t> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self, _x});
-    /// Loopified to_nat: _Enter -> _Cont_FS.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const T *_self = _f._self;
-        uint64_t _x = _f._x;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename T::F1>(_sv.v())) {
-          _result = Sig<uint64_t>::exist(UINT64_C(0));
-        } else {
-          const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
-          _stack.emplace_back(_Cont_FS{});
-          _stack.emplace_back(_Enter{crane_raw(a1), n1});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_FS>(_frame));
-        Sig<uint64_t> _rc1 = std::move(_result);
-        const auto &[x0] = _rc1;
-        _result = Sig<uint64_t>::exist((x0 + 1));
-      }
-    }
-    return _result;
-  }
+  Sig<uint64_t> to_nat(uint64_t) const;
 };
 
 struct PendantSumtreeRoundtripCase {
@@ -919,6 +879,17 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
     return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
   };
   return fold_right_fix(n, v, List<T1>::nil0());
+}
+
+inline Sig<uint64_t> T::to_nat(uint64_t) const {
+  if (std::holds_alternative<typename T::F1>(this->v())) {
+    return Sig<uint64_t>::exist(UINT64_C(0));
+  } else {
+    const auto &[n1, a1] = std::get<typename T::FS>(this->v());
+    const auto &_sv0 = a1->to_nat(n1);
+    const auto &[x0] = _sv0;
+    return Sig<uint64_t>::exist((x0 + 1));
+  }
 }
 
 #endif // INCLUDED_PENDANT_SUMTREE_ROUNDTRIP

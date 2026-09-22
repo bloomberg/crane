@@ -141,33 +141,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  bool raw_id_dec(const Raw_id &y) const {
-    if (std::holds_alternative<typename Raw_id::Name>(this->v())) {
-      const auto &[a0] = std::get<typename Raw_id::Name>(this->v());
-      if (std::holds_alternative<typename Raw_id::Name>(y.v())) {
-        const auto &[a00] = std::get<typename Raw_id::Name>(y.v());
-        if (PeanoNat::eq_dec(a0, a00)) {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    } else {
-      const auto &[a0] = std::get<typename Raw_id::Anon>(this->v());
-      if (std::holds_alternative<typename Raw_id::Name>(y.v())) {
-        return false;
-      } else {
-        const auto &[a00] = std::get<typename Raw_id::Anon>(y.v());
-        if (PeanoNat::eq_dec(a0, a00)) {
-          return true;
-        } else {
-          return false;
-        }
-      }
-    }
-  }
+  bool raw_id_dec(const Raw_id &y) const;
 };
 
 struct AstLib {
@@ -184,5 +158,33 @@ bool via_non_colliding(const Raw_id &a, const Raw_id &b);
 Nat via_colliding(const Nat &x0_, const Nat &x1_);
 bool via_file(const Raw_id &x0_, const Raw_id &x1_);
 Nat keep_coll(const Collider &r);
+
+inline bool Raw_id::raw_id_dec(const Raw_id &y) const {
+  if (std::holds_alternative<typename Raw_id::Name>(this->v())) {
+    const auto &[a0] = std::get<typename Raw_id::Name>(this->v());
+    if (std::holds_alternative<typename Raw_id::Name>(y.v())) {
+      const auto &[a00] = std::get<typename Raw_id::Name>(y.v());
+      if (PeanoNat::eq_dec(a0, a00)) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  } else {
+    const auto &[a0] = std::get<typename Raw_id::Anon>(this->v());
+    if (std::holds_alternative<typename Raw_id::Name>(y.v())) {
+      return false;
+    } else {
+      const auto &[a00] = std::get<typename Raw_id::Anon>(y.v());
+      if (PeanoNat::eq_dec(a0, a00)) {
+        return true;
+      } else {
+        return false;
+      }
+    }
+  }
+}
 
 #endif // INCLUDED_NONCOLLIDING_CHILD_UNREGISTERED

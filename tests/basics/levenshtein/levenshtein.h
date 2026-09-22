@@ -158,90 +158,7 @@ struct Ascii {
     return {a0, a1, a2, a3, a4, a5, a6, a7};
   }
 
-  Sumbool ascii_dec(const Ascii &b) const {
-    const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = *this;
-    const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
-    switch (Bool::bool_dec(a0, a00)) {
-    case Sumbool::LEFT: {
-      switch (Bool::bool_dec(a1, a10)) {
-      case Sumbool::LEFT: {
-        switch (Bool::bool_dec(a2, a20)) {
-        case Sumbool::LEFT: {
-          switch (Bool::bool_dec(a3, a30)) {
-          case Sumbool::LEFT: {
-            switch (Bool::bool_dec(a4, a40)) {
-            case Sumbool::LEFT: {
-              switch (Bool::bool_dec(a5, a50)) {
-              case Sumbool::LEFT: {
-                switch (Bool::bool_dec(a6, a60)) {
-                case Sumbool::LEFT: {
-                  switch (Bool::bool_dec(a7, a70)) {
-                  case Sumbool::LEFT: {
-                    return Sumbool::LEFT;
-                  }
-                  case Sumbool::RIGHT: {
-                    return Sumbool::RIGHT;
-                  }
-                  default:
-                    std::unreachable();
-                  }
-                  break;
-                }
-                case Sumbool::RIGHT: {
-                  return Sumbool::RIGHT;
-                }
-                default:
-                  std::unreachable();
-                }
-                break;
-              }
-              case Sumbool::RIGHT: {
-                return Sumbool::RIGHT;
-              }
-              default:
-                std::unreachable();
-              }
-              break;
-            }
-            case Sumbool::RIGHT: {
-              return Sumbool::RIGHT;
-            }
-            default:
-              std::unreachable();
-            }
-            break;
-          }
-          case Sumbool::RIGHT: {
-            return Sumbool::RIGHT;
-          }
-          default:
-            std::unreachable();
-          }
-          break;
-        }
-        case Sumbool::RIGHT: {
-          return Sumbool::RIGHT;
-        }
-        default:
-          std::unreachable();
-        }
-        break;
-      }
-      case Sumbool::RIGHT: {
-        return Sumbool::RIGHT;
-      }
-      default:
-        std::unreachable();
-      }
-      break;
-    }
-    case Sumbool::RIGHT: {
-      return Sumbool::RIGHT;
-    }
-    default:
-      std::unreachable();
-    }
-  }
+  Sumbool ascii_dec(const Ascii &b) const;
 };
 
 struct String {
@@ -305,28 +222,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  String append(String s2) const {
-    std::shared_ptr<String> _head{};
-    std::shared_ptr<String> *_write = &_head;
-    const String *_loop_self = this;
-    String _loop_s2 = std::move(s2);
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<String>(std::move(_loop_s2));
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell =
-            std::make_shared<String>(typename String::String0(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
-        _loop_self = crane_raw(a1);
-        continue;
-      }
-    }
-    return std::move(*_head);
-  }
+  String append(String s2) const;
 
   Nat length() const {
     std::shared_ptr<Nat> _head{};
@@ -779,5 +675,99 @@ struct Levenshtein {
   static Nat levenshtein_computed(const String &s, const String &t);
   static Nat levenshtein(const String &x0_, const String &x1_);
 };
+
+inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
+  const auto &[a0, a1, a2, a3, a4, a5, a6, a7] = *this;
+  const auto &[a00, a10, a20, a30, a40, a50, a60, a70] = b;
+  switch (Bool::bool_dec(a0, a00)) {
+  case Sumbool::LEFT: {
+    switch (Bool::bool_dec(a1, a10)) {
+    case Sumbool::LEFT: {
+      switch (Bool::bool_dec(a2, a20)) {
+      case Sumbool::LEFT: {
+        switch (Bool::bool_dec(a3, a30)) {
+        case Sumbool::LEFT: {
+          switch (Bool::bool_dec(a4, a40)) {
+          case Sumbool::LEFT: {
+            switch (Bool::bool_dec(a5, a50)) {
+            case Sumbool::LEFT: {
+              switch (Bool::bool_dec(a6, a60)) {
+              case Sumbool::LEFT: {
+                switch (Bool::bool_dec(a7, a70)) {
+                case Sumbool::LEFT: {
+                  return Sumbool::LEFT;
+                }
+                case Sumbool::RIGHT: {
+                  return Sumbool::RIGHT;
+                }
+                default:
+                  std::unreachable();
+                }
+                break;
+              }
+              case Sumbool::RIGHT: {
+                return Sumbool::RIGHT;
+              }
+              default:
+                std::unreachable();
+              }
+              break;
+            }
+            case Sumbool::RIGHT: {
+              return Sumbool::RIGHT;
+            }
+            default:
+              std::unreachable();
+            }
+            break;
+          }
+          case Sumbool::RIGHT: {
+            return Sumbool::RIGHT;
+          }
+          default:
+            std::unreachable();
+          }
+          break;
+        }
+        case Sumbool::RIGHT: {
+          return Sumbool::RIGHT;
+        }
+        default:
+          std::unreachable();
+        }
+        break;
+      }
+      case Sumbool::RIGHT: {
+        return Sumbool::RIGHT;
+      }
+      default:
+        std::unreachable();
+      }
+      break;
+    }
+    case Sumbool::RIGHT: {
+      return Sumbool::RIGHT;
+    }
+    default:
+      std::unreachable();
+    }
+    break;
+  }
+  case Sumbool::RIGHT: {
+    return Sumbool::RIGHT;
+  }
+  default:
+    std::unreachable();
+  }
+}
+
+inline String String::append(String s2) const {
+  if (std::holds_alternative<typename String::EmptyString>(this->v())) {
+    return s2;
+  } else {
+    const auto &[a0, a1] = std::get<typename String::String0>(this->v());
+    return String::string0(a0, a1->append(std::move(s2)));
+  }
+}
 
 #endif // INCLUDED_LEVENSHTEIN

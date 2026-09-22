@@ -142,6 +142,13 @@ let impl_decls = function
         defs;
       List.map (fun (ds, env, _) -> (env, ds)) defs
 
+(** Member definitions a datatype struct at namespace scope gave up because
+    their bodies name a module's struct, which is emitted after every datatype
+    and cannot be moved in front of one it holds by value.  Written at the very
+    end of the header by the assembly in {!Cpp}, which is the only place later
+    than every module struct.  In emission order. *)
+let deferred_member_defs : Pp.t list ref = ref []
+
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
     other inductives become variant-like structs with constructors.
@@ -553,9 +560,62 @@ let ind_header_decls kn ind =
        them, so the members that cross the cycle are written after the whole
        group. *)
     let group =
-      if is_mutual && not (!render_ctx).rc_in_struct then
-        Member_hoist.split_group group
-      else group
+      if (!render_ctx).rc_in_struct then
+        group
+      else
+        let group = if is_mutual then Member_hoist.split_group group else group in
+        (* The other cycle a struct at namespace scope can be in, and the one
+           its own layout says nothing about.  A function promoted to a method
+           here may have come from a module, and its body may still call that
+           module's other functions -- but a module's struct is emitted after
+           every datatype, and cannot be moved in front of one it holds by
+           value.  Only the body: out-lining leaves the signature where it
+           was.
+
+           Not the datatype's own home module, though.  Its wrapper is where
+           the datatype itself was hoisted out of, so a member naming a
+           sibling there is naming something already written -- and moving
+           such a member out costs more than it buys, because the definition
+           then has to repeat a return type that named the struct's own
+           nested types in class scope. *)
+        let home = MutInd.modpath kn in
+        let own_nspace_names =
+          Array.to_list
+            (Array.map
+               (fun r -> Some (String.capitalize_ascii (str_global Type r)))
+               names )
+        in
+        let group, defs =
+          Member_hoist.split_named ~body_only:true
+            ~names:(fun r ->
+              let mp = modpath_of_r r in
+              (not (ModPath.equal mp home))
+              && Hashtbl.mem wrapper_module_table mp
+              (* A module path in the table says where the name was written in
+                 Rocq, not which struct it ends up in: a function promoted onto
+                 a datatype is emitted with that datatype, among the structs
+                 this one is already sitting between.  Reaching for the modpath
+                 to answer "which struct holds this" is the same mistake the
+                 collision wrappers made, where registration and rendering
+                 disagreed about where a declaration belonged; it is worth
+                 distrusting the modpath here for the same reason. *)
+              && is_registered_method r = None
+              (* And not the struct this datatype is written inside of.  At
+                 namespace scope the inductive is wrapped in a struct named
+                 after itself, and a module of that same name is merged into
+                 it -- so the callee is a sibling already above us, not a
+                 struct still to come. *)
+              && not (List.mem (Hashtbl.find_opt wrapper_module_table mp)
+                        own_nspace_names) )
+            group
+        in
+        (* Rendered here rather than carried to the assembly as declarations:
+           the name environment a member definition is spelled in is this one,
+           and by the end of the header the visibility stack has been unwound
+           past it. *)
+        if defs <> [] then
+          deferred_member_defs := !deferred_member_defs @ [pp_decls defs];
+        group
     in
     forward_decls @ group
 

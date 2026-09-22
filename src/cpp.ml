@@ -2176,6 +2176,7 @@ type wrapper_render = {
 let do_struct_with_decl_tracking ~is_header f s =
   ignore (Translation.take_lifted_decls ());
   hoisted_module_structs := [];
+  Cpp_ind.deferred_member_defs := [];
   Hashtbl.clear emitted_member_lifted;
   Translation.clear_seen_lifted_refs ();
   init_std_names ();
@@ -2604,6 +2605,15 @@ let do_struct_with_decl_tracking ~is_header f s =
       hoisted_module_structs := [];
       prlist_with_sep cut2 (fun x -> x) l ++ cut2 ()
   in
+  (* Last of all: a datatype's method whose body names a module's struct, which
+     is emitted after every datatype.  Nothing else in the header is later. *)
+  let deferred_members =
+    match !Cpp_ind.deferred_member_defs with
+    | [] -> mt ()
+    | ds ->
+      Cpp_ind.deferred_member_defs := [];
+      cut2 () ++ prlist_with_sep cut2 (fun x -> x) ds
+  in
   let deferred_lifted = deferred_lifted () in
   v 0
     ( forward_decls
@@ -2613,7 +2623,8 @@ let do_struct_with_decl_tracking ~is_header f s =
     ++ p
     ++ pass2_post_pp
     ++ deferred_lifted
-    ++ deferred_defs )
+    ++ deferred_defs
+    ++ deferred_members )
   ++ fnl ()
 
 (** Main entry point: render structure to C++ implementation file. *)

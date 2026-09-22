@@ -108,36 +108,8 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  bool le_dec(const Zed &y) const {
-    switch (Arith::norm(this->raw_cmp(y))) {
-    case Comparison::GT: {
-      return false;
-    }
-    default: {
-      return true;
-    }
-    }
-  }
-
-  Comparison raw_cmp(const Zed &y) const {
-    if (std::holds_alternative<typename Zed::Zp>(this->v())) {
-      const auto &[a0] = std::get<typename Zed::Zp>(this->v());
-      if (std::holds_alternative<typename Zed::Zp>(y.v())) {
-        const auto &[a00] = std::get<typename Zed::Zp>(y.v());
-        return PeanoNat::compare(a0, a00);
-      } else {
-        return Comparison::GT;
-      }
-    } else {
-      const auto &[a0] = std::get<typename Zed::Zn>(this->v());
-      if (std::holds_alternative<typename Zed::Zp>(y.v())) {
-        return Comparison::LT;
-      } else {
-        const auto &[a00] = std::get<typename Zed::Zn>(y.v());
-        return PeanoNat::compare(a00, a0);
-      }
-    }
-  }
+  bool le_dec(const Zed &y) const;
+  Comparison raw_cmp(const Zed &y) const;
 };
 
 struct Arith {
@@ -147,5 +119,36 @@ struct Arith {
 
 bool le(const Zed &x0_, const Zed &x1_);
 Zed round(const Zed &x0_);
+
+inline bool Zed::le_dec(const Zed &y) const {
+  switch (Arith::norm(this->raw_cmp(y))) {
+  case Comparison::GT: {
+    return false;
+  }
+  default: {
+    return true;
+  }
+  }
+}
+
+inline Comparison Zed::raw_cmp(const Zed &y) const {
+  if (std::holds_alternative<typename Zed::Zp>(this->v())) {
+    const auto &[a0] = std::get<typename Zed::Zp>(this->v());
+    if (std::holds_alternative<typename Zed::Zp>(y.v())) {
+      const auto &[a00] = std::get<typename Zed::Zp>(y.v());
+      return PeanoNat::compare(a0, a00);
+    } else {
+      return Comparison::GT;
+    }
+  } else {
+    const auto &[a0] = std::get<typename Zed::Zn>(this->v());
+    if (std::holds_alternative<typename Zed::Zp>(y.v())) {
+      return Comparison::LT;
+    } else {
+      const auto &[a00] = std::get<typename Zed::Zn>(y.v());
+      return PeanoNat::compare(a00, a0);
+    }
+  }
+}
 
 #endif // INCLUDED_METHOD_BODY_NAMES_LATER_STRUCT

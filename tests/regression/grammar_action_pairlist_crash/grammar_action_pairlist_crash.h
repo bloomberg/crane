@@ -102,10 +102,7 @@ public:
 
   explicit Val(VStr _v) : v_(std::move(_v)) {}
 
-  static Val vassoc(std::deque<std::pair<std::string, Val>> a0) {
-    return Val(VAssoc{std::make_shared<std::deque<std::pair<std::string, Val>>>(
-        std::move(a0))});
-  }
+  static Val vassoc(std::deque<std::pair<std::string, Val>> a0);
 
   static Val vbool(bool a0) { return Val(VBool{a0}); }
 
@@ -113,9 +110,7 @@ public:
 
   static Val vint(uint64_t a0) { return Val(VInt{a0}); }
 
-  static Val vlist(std::deque<Val> a0) {
-    return Val(VList{std::make_shared<std::deque<Val>>(std::move(a0))});
-  }
+  static Val vlist(std::deque<Val> a0);
 
   static Val vnull() { return Val(VNull{}); }
 
@@ -257,5 +252,14 @@ const std::deque<grammar_entry> entries =
         std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                         std::pair<std::any, std::any>>>{}));
 uint64_t num_entries(std::monostate _x);
+
+inline Val Val::vassoc(std::deque<std::pair<std::string, Val>> a0) {
+  return Val(VAssoc{std::make_shared<std::deque<std::pair<std::string, Val>>>(
+      std::move(a0))});
+}
+
+inline Val Val::vlist(std::deque<Val> a0) {
+  return Val(VList{std::make_shared<std::deque<Val>>(std::move(a0))});
+}
 
 #endif // INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH

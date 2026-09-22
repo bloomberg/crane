@@ -220,10 +220,7 @@ struct STRefNat {
   // CREATORS
   static STRefNat mkstref(uint64_t s) { return {s}; }
 
-  uint64_t STRefToIxNat() const {
-    const auto &[s] = *this;
-    return s;
-  }
+  uint64_t STRefToIxNat() const;
 };
 
 struct nat_ix_stref {
@@ -282,5 +279,10 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 acc_test2_ext();
 std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 bankacc_test1_ext();
+
+inline uint64_t STRefNat::STRefToIxNat() const {
+  const auto &[s] = *this;
+  return s;
+}
 
 #endif // INCLUDED_OBJECT_MODEL
