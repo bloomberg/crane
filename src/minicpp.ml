@@ -653,6 +653,39 @@ let abstract_cpp_type ~over ty =
   in
   if !fired then Some abstracted else None
 
+(** [tapply head args] is [head] applied to [args], reduced where [head] is an
+    abstraction.
+
+    A {!Ttyctor} over a body carrying the {!ctor_alias_tvar} sentinel is an
+    alias template written out as its body, and applying it is a substitution
+    that can simply be performed.  Performing it matters because the two forms
+    are not equally spellable.  The abstraction has a name only where the
+    printer can declare it one, and a body naming a template parameter of the
+    enclosing declaration has no namespace-scope alias to be -- it becomes a
+    member of a holder, spelled [H<T1>::template c].  As a template name, at a
+    template template argument, that is exactly right.  Applied, it is a
+    typename-specifier naming an alias template member, which is ill-formed
+    however it is punctuated ([temp.res]).  The body with the argument
+    substituted is the same type and is a plain one.
+
+    Only a saturated application of an abstraction reduces.  A [Ttyctor] whose
+    body holds no sentinel is a bare head rather than an abstraction -- what
+    the printer cuts back to a name -- and there is nothing there to
+    substitute for. *)
+let tapply head args =
+  match (head, args) with
+  | Ttyctor body, [ arg ] ->
+    let fired = ref false in
+    let reduced =
+      map_cpp_type
+        (fun t ->
+          if t = Tid_external (ctor_alias_tvar, []) then (fired := true; arg)
+          else t )
+        body
+    in
+    if !fired then reduced else Tapply (head, args)
+  | _ -> Tapply (head, args)
+
 (** What a branch throws when the scrutinee's indices rule it out.
 
     Two places recognise such a branch -- the coercion seam, where extraction
@@ -738,7 +771,10 @@ let rec subst_cpp_tvars (sub : int -> cpp_type option) (ty : cpp_type) : cpp_typ
   | Tvariant ts -> Tvariant (List.map go ts)
   | Tnamespace (r, t) -> Tnamespace (r, go t)
   | Tqualified (t, id) -> Tqualified (go t, id)
-  | Tapply (t, ts) -> Tapply (go t, List.map go ts)
+  (* Substituting into the head of an application is where an abstraction
+     arrives in head position: the type variable stood for a higher-kinded
+     class parameter, and what replaces it is that parameter's carrier. *)
+  | Tapply (t, ts) -> tapply (go t) (List.map go ts)
   | Tdecay t -> Tdecay (go t)
   (* Unlike {!map_cpp_type}, this does reach inside a [Ttyctor]: substituting
      a type variable for what it stands for -- the carrier of a higher-kinded

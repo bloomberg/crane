@@ -1230,7 +1230,27 @@ let rec pp_cpp_type ?(lead = true) par vl t =
       ( match head with
       | Tglob (r, _, _) when ref_has_no_cpp_name r ->
         pp_list (pp_rec false) args
-      | _ -> pp_rec false head ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
+      | _ ->
+        (* Non-dependent is what the head usually is, but not always: a
+           carrier whose body names a template parameter of the enclosing
+           declaration has no namespace-scope alias to be, so it is minted as
+           a member of a holder and comes back spelled [H<T1>::template c].
+           That is a dependent qualified name, and applying it yields a type,
+           which needs the [typename] the {!Tqualified} arm above would have
+           given it.  The head is asked for its own rendering because only the
+           rendering knows: whether a holder was needed is decided by which
+           names the body actually {e writes}, which is not a property of the
+           type's shape. *)
+        let head_pp = pp_rec false head in
+        let dependent_member =
+          let text = Pp.string_of_ppcmds head_pp in
+          let sep = "::template " in
+          let n = String.length text and m = String.length sep in
+          let rec at i = i + m <= n && (String.sub text i m = sep || at (i + 1)) in
+          at 0
+        in
+        (if dependent_member then leading_typename else mt ())
+        ++ head_pp ++ str "<" ++ pp_list (pp_rec false) args ++ str ">" )
     | Tvariant tys ->
       require_header "variant";
       std_angle "variant" (pp_list (pp_rec false) tys)

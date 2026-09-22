@@ -9837,3 +9837,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir hk_carrier_alias_applied_as_type
+ (rule
+  (targets hk_carrier_alias_applied_as_type.t.exe)
+  (deps HkCarrierAliasAppliedAsType.vo hk_carrier_alias_applied_as_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_alias_applied_as_type.t.exe hk_carrier_alias_applied_as_type.cpp hk_carrier_alias_applied_as_type.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_alias_applied_as_type.t.exe)
+  (action (run ./hk_carrier_alias_applied_as_type.t.exe))))
