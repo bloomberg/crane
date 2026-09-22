@@ -568,6 +568,44 @@ let global_scope_qualifier_for r name_str =
     if Cpp_state.is_shadowed_global_name name_str r then str "::" else mt ()
   | _ -> mt ()
 
+(** The name a type is written under, from outside the struct that owns it.
+
+    A module a name collision forced into a struct keeps its declarations
+    there, so a use of one from elsewhere has to say which struct -- the same
+    answer {!Cpp_state.wrapper_qualify_name} already gives the {i term}
+    printer for a call into such a module.  Only the term printer was asking:
+    an inductive reaches the reader through {!inductive_name_info}, which
+    qualifies for its own reasons, and everything else a wrapped module
+    declares -- a type class instance above all, named as a concept's template
+    argument -- came out bare.
+
+    The exceptions are the ones {!struct_qualifier_for} already makes, and for
+    its reasons: a [using T = ...] alias and a {i lifted} instance are
+    contributed to namespace scope rather than to the struct, so the module
+    path they came from does not say where they went.
+
+    An inductive is excluded outright.  It reaches the reader through
+    {!inductive_name_info} and the [Tnamespace] machinery, which qualify it for
+    their own reasons and by their own spelling; asking here as well turns a
+    settled [List<A>] into [Datatypes::template List<A>].  A type class is
+    excluded for the reason {!concept_name_of_ref} gives: a concept may only be
+    declared at namespace scope, so it is never inside the struct to begin
+    with.
+
+    Inside the struct the qualifier must not be written at all.  The class is
+    incomplete while its own body is being printed, so [Wrapper::member] there
+    names nothing -- and the member is in scope unqualified anyway. *)
+let wrapper_qualified_type_name r name_str =
+  match r with
+  | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> name_str
+  | _ when Table.is_typeclass r -> name_str
+  | _ when Cpp_state.is_global_scope_type r -> name_str
+  | _ ->
+    if (!render_ctx).rc_in_struct then
+      name_str
+    else
+      Cpp_state.wrapper_qualify_name r name_str
+
 (** Check if a global function needs :: prefix to avoid name collision. When
     generating out-of-struct definitions, we add :: to call external functions
     rather than recursing into the struct's own member. *)

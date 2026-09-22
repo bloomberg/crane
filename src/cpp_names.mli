@@ -123,6 +123,10 @@ val struct_qualifier_for : Names.GlobRef.t -> string -> Pp.t
 
 val global_scope_qualifier_for : Names.GlobRef.t -> string -> Pp.t
 
+(** The name a type is written under from outside the wrapper struct that owns
+    it; the name unchanged while that struct's own body is being printed. *)
+val wrapper_qualified_type_name : Names.GlobRef.t -> string -> string
+
 (** Whether the global must be referenced with a global-scope qualifier. *)
 val needs_global_qualifier : Names.GlobRef.t -> bool
 

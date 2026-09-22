@@ -9804,3 +9804,14 @@
   (alias runtest)
   (deps point_free_fix_binder_untyped.t.exe)
   (action (run ./point_free_fix_binder_untyped.t.exe))))
+
+(subdir instance_in_collision_wrapper_named_bare
+ (rule
+  (targets instance_in_collision_wrapper_named_bare.t.exe)
+  (deps User.vo instance_in_collision_wrapper_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_in_collision_wrapper_named_bare.t.exe instance_in_collision_wrapper_named_bare.cpp instance_in_collision_wrapper_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_in_collision_wrapper_named_bare.t.exe)
+  (action (run ./instance_in_collision_wrapper_named_bare.t.exe))))

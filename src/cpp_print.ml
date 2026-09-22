@@ -1031,21 +1031,27 @@ let rec pp_cpp_type ?(lead = true) par vl t =
           cmds
       | _ ->
         (* Non-custom cases *)
-        let type_name = pp_inductive_type_name r in
-        let name_str = Pp.string_of_ppcmds type_name in
+        let bare_str = Pp.string_of_ppcmds (pp_inductive_type_name r) in
+        let struct_qual = struct_qualifier_for r bare_str in
+        let global_qual = global_scope_qualifier_for r bare_str in
+        (* The wrapper qualifier is the last resort: the two qualifiers above
+           say where the name lives whenever they say anything, and stacking
+           this one on top of them spells the same struct twice. *)
+        let name_str =
+          if Pp.ismt struct_qual && Pp.ismt global_qual then
+            wrapper_qualified_type_name r bare_str
+          else bare_str
+        in
+        let type_name = str name_str in
         ( match tys with
         | [] ->
-          typename_prefix_for name_str
-          ++ struct_qualifier_for r name_str
-          ++ global_scope_qualifier_for r name_str
+          typename_prefix_for name_str ++ struct_qual ++ global_qual
           ++ type_name
         | l ->
           let type_name_with_template =
             insert_template_keyword type_name name_str
           in
-          typename_prefix_for name_str
-          ++ struct_qualifier_for r name_str
-          ++ global_scope_qualifier_for r name_str
+          typename_prefix_for name_str ++ struct_qual ++ global_qual
           ++ type_name_with_template
           ++ str "<"
           ++ pp_list (pp_rec false) l
