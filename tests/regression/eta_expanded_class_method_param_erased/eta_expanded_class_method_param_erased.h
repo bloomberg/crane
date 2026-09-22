@@ -1,18 +1,78 @@
-#ifndef INCLUDED_ETA_FOLD_CALLBACK
-#define INCLUDED_ETA_FOLD_CALLBACK
+#ifndef INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED
+#define INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED
 
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <any>
 #include <atomic>
-#include <functional>
+#include <concepts>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
+struct map_alist;
+struct Nat;
 template <typename A> struct List;
+
+struct Nat {
+  // TYPES
+  struct O {};
+
+  struct S {
+    std::shared_ptr<Nat> a0;
+  };
+
+  using variant_t = std::variant<O, S>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Nat() {}
+
+  explicit Nat(O _v) : v_(_v) {}
+
+  explicit Nat(S _v) : v_(std::move(_v)) {}
+
+  static Nat o() { return Nat(O{}); }
+
+  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+
+  // MANIPULATORS
+  ~Nat() {
+    crane::small_vector<std::shared_ptr<Nat>> _stack = {};
+    auto _drain = [&](variant_t &_v) {
+      if (auto *_alt = std::get_if<S>(&_v)) {
+        if (_alt->a0) {
+          _stack.push_back(std::move(_alt->a0));
+        }
+      }
+    };
+    _drain(v_mut());
+    while (!_stack.empty()) {
+      auto _cur = std::move(_stack.back());
+      _stack.pop_back();
+      if (_cur.use_count() == 1) {
+        std::atomic_thread_fence(std::memory_order_acquire);
+        _drain(_cur->v_mut());
+      }
+    }
+  }
+
+  Nat(const Nat &) = default;
+  Nat &operator=(const Nat &) = default;
+  Nat(Nat &&) noexcept = default;
+  Nat &operator=(Nat &&) noexcept = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
 
 template <typename A> struct List {
   // TYPES
@@ -134,83 +194,39 @@ public:
     }
     return _result;
   }
+};
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
-  List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
-    const List<A> *_loop_self = this;
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
-        _loop_self = crane_raw(a1);
-        continue;
-      }
-    }
-    return std::move(*_head);
+template <typename I, typename K, typename V, typename M>
+concept Map = requires {
+  { I::empty() } -> std::convertible_to<M>;
+  {
+    I::add(std::declval<K>(), std::declval<V>(), std::declval<M>())
+  } -> std::convertible_to<M>;
+};
+
+struct map_alist {
+  static List<std::pair<Nat, Nat>> empty() {
+    return List<std::pair<Nat, Nat>>::nil();
+  }
+
+  static List<std::pair<Nat, Nat>> add(Nat k, Nat v,
+                                       List<std::pair<Nat, Nat>> m) {
+    return List<std::pair<Nat, Nat>>::cons(std::make_pair(k, v), std::move(m));
   }
 };
 
-struct EtaFoldCallback {
-  struct box {
-    // DATA
-    List<uint64_t> a0;
+static_assert(Map<map_alist, Nat, Nat, List<std::pair<Nat, Nat>>>);
+List<std::pair<Nat, Nat>> build(const List<std::pair<Nat, Nat>> &l);
+List<std::pair<Nat, Nat>> build_saturated(const List<std::pair<Nat, Nat>> &l);
 
-    // ACCESSORS
-    box clone() const { return {a0}; }
+template <typename F0>
+  requires std::is_invocable_r_v<List<std::pair<Nat, Nat>>, F0 &,
+                                 List<std::pair<Nat, Nat>> &>
+List<std::pair<Nat, Nat>> apply_it(F0 &&f, List<std::pair<Nat, Nat>> x0_) {
+  return f(std::move(x0_));
+}
 
-    // CREATORS
-    static box box0(List<uint64_t> a0) { return {std::move(a0)}; }
-  };
+List<std::pair<Nat, Nat>> partial(const Nat &k, const Nat &v,
+                                  const List<std::pair<Nat, Nat>> &l);
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &>
-  static T1 box_rect(F0 &&f, const box &b) {
-    const auto &[a0] = b;
-    return f(a0);
-  }
-
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, List<uint64_t> &>
-  static T1 box_rec(F0 &&f, const box &b) {
-    const auto &[a0] = b;
-    return f(a0);
-  }
-
-  static uint64_t grab(const box &b, uint64_t k);
-  static inline const uint64_t run = []() {
-    return []() {
-      List<std::function<uint64_t(uint64_t)>> fs =
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
-              .template map<std::function<uint64_t(uint64_t)>>([](uint64_t n) {
-                return [=](uint64_t _x0) mutable -> uint64_t {
-                  return grab(
-                      box::box0(List<uint64_t>::cons(
-                          n, List<uint64_t>::cons((n + UINT64_C(1)),
-                                                  List<uint64_t>::nil()))),
-                      _x0);
-                };
-              });
-      return std::move(fs).template fold_right<uint64_t>(
-          [](std::function<uint64_t(uint64_t)> f, uint64_t eta0_) {
-            return f(eta0_);
-          },
-          UINT64_C(0));
-    }();
-  }();
-};
-
-#endif // INCLUDED_ETA_FOLD_CALLBACK
+#endif // INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED

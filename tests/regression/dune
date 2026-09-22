@@ -9783,3 +9783,13 @@
   (alias runtest)
   (deps modtype_alias_emitted_before_original.t.exe)
   (action (run ./modtype_alias_emitted_before_original.t.exe))))
+(subdir eta_expanded_class_method_param_erased
+ (rule
+  (targets eta_expanded_class_method_param_erased.t.exe)
+  (deps Use.vo eta_expanded_class_method_param_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_expanded_class_method_param_erased.t.exe eta_expanded_class_method_param_erased.cpp eta_expanded_class_method_param_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps eta_expanded_class_method_param_erased.t.exe)
+  (action (run ./eta_expanded_class_method_param_erased.t.exe))))

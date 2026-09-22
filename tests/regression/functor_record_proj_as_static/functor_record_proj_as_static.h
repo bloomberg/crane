@@ -877,8 +877,10 @@ template <OrderedType X> struct Coq_Raw {
   static T3 fold_right_pair(F0 &&f, const List<std::pair<T1, T2>> &l,
                             const T3 &i) {
     return l.template fold_right<T3>(
-        [=](const std::pair<T1, T2> &p) mutable {
-          return [=](T3 _pa0) mutable { return f(p.first, p.second, _pa0); };
+        [=](const std::pair<T1, T2> &p, const T3 &eta0_) mutable {
+          return [=](T3 _pa0) mutable {
+            return f(p.first, p.second, _pa0);
+          }(eta0_);
         },
         i);
   }

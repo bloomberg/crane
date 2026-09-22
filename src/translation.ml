@@ -6008,10 +6008,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         render_numeral info n
       | None -> eta_fun env (MLglob (r, [])) [arg] )
     | None -> eta_fun env (MLglob (r, [])) [arg] )
-  | MLapp (MLcase (typ, scrut, pv), outer_args)
-    when Array.length pv = 1
-         && not (record_fields_of_type typ == []) ->
-    (* Flatten outer args into a single-branch record-projection case body.
+  | MLapp (MLcase (typ, scrut, pv), outer_args) when Array.length pv = 1 ->
+    (* Flatten outer args into a single-branch case body.  A case with one
+       branch is a destructuring and nothing else, whatever it scrutinises --
+       a record, a pair, any one-constructor inductive -- so applying its
+       result is applying the branch body.
        When a typeclass method is partially applied, Rocq extracts it as
        MLcase(instance, [(binds, MLapp(MLrel field, inner_args))]). If this
        MLcase is the callee of an outer MLapp, the inner call only has some
@@ -6131,6 +6132,93 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         in
         go 0 [] binders
       in
+      (* Binders the expected type takes that the term does not write: the
+         body is a function value, and the context wants its parameters in
+         this lambda's own list rather than in a closure it returns.  Under-
+         applied calls are eta-expanded too, but at the C++ level and after
+         this lambda has been built, so the synthesised parameter lands
+         {e inside} it -- [pair -> (list -> list)] where the consumer takes
+         [(pair, list) -> list].  Writing the missing binders here instead
+         makes the body a saturated call, so that expansion never fires.
+
+         The binders are given no ML type on purpose: the derivation below
+         reads an erased parameter's type out of [expected_ty]'s domain at
+         the same index, which is the only place that says what it is. *)
+      let extend n =
+        (* Count the binders that will be {e emitted}, on the same terms the
+           parameter list below is filtered: a binder whose recorded type is
+           dummy is still a parameter where the body names it. *)
+        let emitted_binder i (_, ty) =
+          ( is_runtime_binder ((), ty)
+          && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty) )
+          || Mlutil.ast_occurs (i + 1) a
+        in
+        let k =
+          n - List.length (List.filteri (fun i b -> emitted_binder i b) args)
+        in
+        (* A binder is only worth writing if the slot says what it is.  The
+           synthesised ones are the last [k] of the expected signature's
+           domains, and each has to be a type this lambda could be written
+           against: spelled with no erased position anywhere in it, and
+           naming no type variable out of
+           scope here (the same condition {!slot_param_cpp_ty} imposes, and
+           for the same reason).  Where it is not, the parameter would be
+           declared [const auto &] or [std::any] -- an untyped parameter the
+           consumer cannot resolve, which is worse than the closure the term
+           already returns, and which would also displace the C++-level
+           expansions that do have types to work from. *)
+        (* The expected C++ arity has to be backed by the same number of ML
+           domains that genuinely carry a value.  A reified tree's
+           continuation is typed [unit -> itree ...] and prints as taking one
+           [std::monostate]; the binder is deliberately not emitted, so the
+           C++ signature says one parameter where the term rightly writes
+           none, and the shortfall is a convention rather than a gap. *)
+        let ml_arity_agrees =
+          let real ty =
+            is_runtime_binder ((), ty)
+            && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty)
+          in
+          let rec leading i ty =
+            i = 0
+            ||
+            match resolve_tmeta ty with
+            | Miniml.Tarr (a, b) -> real a && leading (i - 1) b
+            | _ -> false
+          in
+          match slot.expected_ml_ty with
+          | Some ty -> leading n ty
+          | None -> false
+        in
+        let slot_types_the_new_binders =
+          match Option.map (unfold_cpp_typedef env) expected_ty with
+          | Some (Tfun (doms, _)) when List.length doms = n ->
+            let tvars = get_current_type_vars () in
+            List.for_all
+              (fun i ->
+                match List.nth_opt doms i with
+                | Some t ->
+                  (not (Ml_type_util.has_tany_written t))
+                  && Id.Set.for_all
+                       (fun nm -> List.exists (Id.equal nm) tvars)
+                       (Minicpp.tvar_names t)
+                | None -> false )
+              (List.init k (fun i -> n - k + i))
+          | _ -> false
+        in
+        if k <= 0 || (not ml_arity_agrees) || not slot_types_the_new_binders
+        then None
+        else
+          let fresh =
+            List.init k (fun i ->
+                ( Miniml.Tmp (Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
+                  Miniml.Tunknown ) )
+          in
+          Some
+            ( fresh @ args,
+              MLapp
+                ( ast_lift k a,
+                  List.init k (fun i -> MLrel (k - i)) ) )
+      in
       match Option.bind expected_ty fun_ty_of with
       | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->
         (* [collect_lams] yields binders innermost-first; the ones to keep are
@@ -6141,7 +6229,9 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             List.fold_left
               (fun b (x, ty) -> MLlam (x, ty, b))
               a (List.rev inner) )
-        | None -> (args, a) )
+        | None -> ( match extend n with Some r -> r | None -> (args, a) ) )
+      | Some (n, _) when n > 0 -> (
+        match extend n with Some r -> r | None -> (args, a) )
       | _ -> (args, a)
     in
     let lam_params = List.map (fun (x, y) -> (id_of_mlid x, y)) args in
@@ -6225,6 +6315,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           | Some (Tfun (doms, _)) -> Some doms
           | _ -> None
         in
+        (* [filtered_args_with_owned] is innermost-first and the printer
+           reverses it, while a slot's domain list is in source order, so a
+           parameter's index into the two runs opposite ways. *)
+        let n_emitted_params = List.length filtered_args_with_owned in
+        let slot_dom j = n_emitted_params - 1 - j in
         let slot_param_cpp_ty j =
           (* Only a type this lambda could actually be written against.  The
              slot is read off the callee's declaration, so it may name that
@@ -6237,7 +6332,8 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
               (Minicpp.tvar_names t)
           in
           match
-            Option.bind expected_param_cpp_tys (fun doms -> List.nth_opt doms j)
+            Option.bind expected_param_cpp_tys (fun doms ->
+                List.nth_opt doms (slot_dom j) )
           with
           | Some t when in_scope t -> Some t
           | _ -> None
@@ -6353,7 +6449,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                  let assigned =
                    match (ty, expected_param_cpp_tys) with
                    | Tref (Tconst Tauto), Some doms
-                     when ( match List.nth_opt doms j with
+                     when ( match List.nth_opt doms (slot_dom j) with
                           | Some d -> prints_as_any d
                           | None -> false ) ->
                      Tany
@@ -8589,16 +8685,33 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Some t -> isTdummy t
             | None -> false
           in
-          let rec erase_field_tvars ty =
+          (* The field's type as the {e instance} states it: the method's own
+             type variables erased, and the class's own replaced by what this
+             instance fixed them at.
+
+             Both halves answer the same question -- what does the declaration
+             this call resolves to say the parameter's type is.  A class
+             parameter left standing renders as [std::any], which is what the
+             concept says and not what the instance says, and the two only
+             have to agree where the call is saturated.  Where it is not, an
+             eta-expanded call synthesises a parameter from this list and
+             passes it to a call resolved against the instance, so a parameter
+             typed from the class reaches a function declared by the
+             instance. *)
+          let rec at_instance_args ty =
             match resolve_tmeta ty with
             | _ when hkt_class -> ty
             | Miniml.Tvar (_, j) when j > n_class_params || erased_class_param j
               ->
               Miniml.Tunknown
+            | Miniml.Tvar (_, j) as ty -> (
+              match List.nth_opt class_args (j - 1) with
+              | Some arg -> arg
+              | None -> ty )
             | Miniml.Tarr (a, b) ->
-              Miniml.Tarr (erase_field_tvars a, erase_field_tvars b)
+              Miniml.Tarr (at_instance_args a, at_instance_args b)
             | Miniml.Tglob (g, l, a) ->
-              Miniml.Tglob (g, List.map erase_field_tvars l, a)
+              Miniml.Tglob (g, List.map at_instance_args l, a)
             | t -> t
           in
           match fld_ty_opt with
@@ -8606,7 +8719,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             List.filter_map
               (fun t ->
                 if isTdummy t || Table.is_typeclass_type t then None
-                else Some (erase_field_tvars t) )
+                else Some (at_instance_args t) )
               (fst (get_args_and_ret [] ft))
           | None -> []
         in

@@ -458,13 +458,15 @@ struct Equations {
           const auto &[_x2, _x3] = p;
           return x;
         },
-        [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
+        [=](uint64_t n1, uint64_t n2, const gcd_graph &,
+            const T1 &eta0_) mutable {
           const auto &[_x0, _x1] = p;
-          return [=](T1 _pa0) mutable { return f2(n1, n2, _pa0); };
+          return f2(n1, n2, eta0_);
         },
-        [=](uint64_t n1, uint64_t n2, const gcd_graph &) mutable {
+        [=](uint64_t n1, uint64_t n2, const gcd_graph &,
+            const T1 &eta0_) mutable {
           const auto &[_x0, _x1] = p;
-          return [=](T1 _pa0) mutable { return f3(n1, n2, _pa0); };
+          return f3(n1, n2, eta0_);
         },
         p, gcd(p), gcd_graph_correct(p));
   }
@@ -892,11 +894,11 @@ struct Equations {
         [](uint64_t, const collatz_steps_clause_3_graph &, const T1 &x) {
           return x;
         },
-        [=](uint64_t n0, const collatz_steps_graph &) mutable {
-          return [=](T1 _pa0) mutable { return f2(n0, _pa0); };
+        [=](uint64_t n0, const collatz_steps_graph &, const T1 &eta0_) mutable {
+          return [=](T1 _pa0) mutable { return f2(n0, _pa0); }(eta0_);
         },
-        [=](uint64_t n0, const collatz_steps_graph &) mutable {
-          return [=](T1 _pa0) mutable { return f3(n0, _pa0); };
+        [=](uint64_t n0, const collatz_steps_graph &, const T1 &eta0_) mutable {
+          return [=](T1 _pa0) mutable { return f3(n0, _pa0); }(eta0_);
         },
         n, collatz_steps(n), collatz_steps_graph_correct(n));
   }
