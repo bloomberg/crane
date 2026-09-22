@@ -158,3 +158,14 @@
   (alias runtest)
   (deps hk_instance_body_targ_undeclared.t.exe)
   (action (run ./hk_instance_body_targ_undeclared.t.exe))))
+
+(subdir modtype_in_wrapper_named_bare
+ (rule
+  (targets modtype_in_wrapper_named_bare.t.exe)
+  (deps User.vo modtype_in_wrapper_named_bare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_in_wrapper_named_bare.t.exe modtype_in_wrapper_named_bare.cpp modtype_in_wrapper_named_bare.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_in_wrapper_named_bare.t.exe)
+  (action (run ./modtype_in_wrapper_named_bare.t.exe))))
