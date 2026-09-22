@@ -9815,3 +9815,14 @@
   (alias runtest)
   (deps instance_in_collision_wrapper_named_bare.t.exe)
   (action (run ./instance_in_collision_wrapper_named_bare.t.exe))))
+
+(subdir pattern_lambda_binder_over_erased
+ (rule
+  (targets pattern_lambda_binder_over_erased.t.exe)
+  (deps PatternLambdaBinderOverErased.vo pattern_lambda_binder_over_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pattern_lambda_binder_over_erased.t.exe pattern_lambda_binder_over_erased.cpp pattern_lambda_binder_over_erased.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps pattern_lambda_binder_over_erased.t.exe)
+  (action (run ./pattern_lambda_binder_over_erased.t.exe))))

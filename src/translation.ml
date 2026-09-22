@@ -6334,23 +6334,36 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
            parameter's index into the two runs opposite ways. *)
         let n_emitted_params = List.length filtered_args_with_owned in
         let slot_dom j = n_emitted_params - 1 - j in
+        let slot_dom_cpp_ty j =
+          Option.bind expected_param_cpp_tys (fun doms ->
+              List.nth_opt doms (slot_dom j) )
+        in
+        let tvar_in_scope n = List.exists (Id.equal n) tvars in
         let slot_param_cpp_ty j =
           (* Only a type this lambda could actually be written against.  The
              slot is read off the callee's declaration, so it may name that
              declaration's own template parameters, which are no more in scope
              here than the erasure was -- adopting one trades [std::any] for a
              free name. *)
-          let in_scope t =
-            Id.Set.for_all
-              (fun n -> List.exists (Id.equal n) tvars)
-              (Minicpp.tvar_names t)
-          in
-          match
-            Option.bind expected_param_cpp_tys (fun doms ->
-                List.nth_opt doms (slot_dom j) )
-          with
-          | Some t when in_scope t -> Some t
+          match slot_dom_cpp_ty j with
+          | Some t
+            when Id.Set.for_all tvar_in_scope (Minicpp.tvar_names t) ->
+            Some t
           | _ -> None
+        in
+        (* The same domain with the names it borrows from the callee erased.
+           A type variable this lambda cannot name is one the caller's own
+           erasure already dropped -- that is why the binder arrived with no
+           type to begin with -- so [std::any] is what the callee will deduce
+           it to from its other arguments.  Everything around it the slot
+           still spells, and that is more than the binder knows. *)
+        let slot_param_cpp_ty_erased j =
+          Option.map
+            (Minicpp.map_cpp_type (fun t ->
+                 match Minicpp.tvar_name t with
+                 | Some n when not (tvar_in_scope n) -> Minicpp.Tany
+                 | _ -> t ) )
+            (slot_dom_cpp_ty j)
         in
         let cpp_arg_info =
           List.mapi
@@ -6407,8 +6420,27 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      becomes a hard error.  Spelling the type keeps the probe
                      well-formed: CTAD then deduces a signature, and the
                      adapter unboxes at this very type, which is the one the
-                     producer boxed. *)
-                  wrap_param_by_ownership ~is_owned:owned bare_cpp_ty
+                     producer boxed.
+
+                     Which type to spell is the slot's answer where it has
+                     one.  The binder's own is assembled from an ML type whose
+                     erased components were never inferred, so it erases a
+                     whole component the container keeps
+                     ([pair<Nat, std::any>] against a list of
+                     [pair<Nat, Exp0<std::any>>]); the slot spells the
+                     container's shape and leaves only the genuinely erased
+                     leaf to [std::any].
+
+                     It may refine the spelling only as far as still-erased,
+                     though.  The body was generated against the erased view
+                     and unboxes at it; a signature that erases nowhere is one
+                     the body's casts no longer agree with. *)
+                  let refined =
+                    match slot_param_cpp_ty_erased j with
+                    | Some t when Ml_type_util.has_tany_written t -> t
+                    | _ -> bare_cpp_ty
+                  in
+                  wrap_param_by_ownership ~is_owned:owned refined
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
                   (* The type is spelled with erased positions (std::any).  Use
                      [const auto&] so the C++ compiler deduces the concrete
