@@ -18,6 +18,14 @@
     spelled with the escaped field name [this_] rather than the raw Rocq
     label.
 
+    Only one of the two printer sites is covered here.  The fix relaxed the
+    same guard at both the call site and the higher-order site -- the one that
+    prints a projection used as a function value as
+    [[](const auto &_x) { return _x.field; }] -- and nothing in this suite, or
+    in Vellvm, uses a projection higher-order with type arguments or with a
+    keyword field name.  That half is carried by the argument that two sites
+    answering one question should not disagree, and by nothing measured.
+
     Seen in Vellvm at [vellvm_bench.h:8808], from
     [src/rocq/Utils/IntMaps.v:193]:
 
