@@ -21,7 +21,7 @@ List<box<Nat>> HkCallCarrierErased::on_boxes(const List<box<Nat>> &l) {
   return tfmap<_crane_carrier_tc>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
-                  List<std::any> _x1) -> List<std::any> {
+                  List<box<std::any>> _x1) -> List<box<std::any>> {
           return TFunctor_list_<box>(
               [](auto &&_ec0, box<std::any> _ec1) {
                 return TFunctor_box(_ec0, _ec1);
@@ -37,7 +37,8 @@ HkCallCarrierErased::on_outer(const outer<Nat, List<Nat>> &m) {
   return tfmap<_crane_carrier_tc1>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
-                  outer<std::any, std::any> _x1) -> outer<std::any, std::any> {
+                  outer<std::any, List<std::any>> _x1)
+                   -> outer<std::any, List<std::any>> {
           return TFunctor_outer<List>(
               [](auto &&_ec0, List<std::any> _ec1) {
                 return TFunctor_list(_ec0, _ec1);

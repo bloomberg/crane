@@ -9826,3 +9826,14 @@
   (alias runtest)
   (deps pattern_lambda_binder_over_erased.t.exe)
   (action (run ./pattern_lambda_binder_over_erased.t.exe))))
+
+(subdir hk_instance_body_targ_undeclared
+ (rule
+  (targets hk_instance_body_targ_undeclared.t.exe)
+  (deps HkInstanceBodyTargUndeclared.vo hk_instance_body_targ_undeclared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_instance_body_targ_undeclared.t.exe hk_instance_body_targ_undeclared.cpp hk_instance_body_targ_undeclared.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_instance_body_targ_undeclared.t.exe)
+  (action (run ./hk_instance_body_targ_undeclared.t.exe))))

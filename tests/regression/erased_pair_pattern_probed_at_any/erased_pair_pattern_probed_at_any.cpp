@@ -17,7 +17,8 @@ pairs<bool, box<bool>> run(const pairs<Nat, box<Nat>> &m) {
   return tfmap<_crane_carrier_tc>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
-                  pairs<std::any, std::any> _x1) -> pairs<std::any, std::any> {
+                  pairs<std::any, box<std::any>> _x1)
+                   -> pairs<std::any, box<std::any>> {
           return TFunctor_pairs<box>(
               [](auto &&_ec0, box<std::any> _ec1) {
                 return TFunctor_box(_ec0, _ec1);

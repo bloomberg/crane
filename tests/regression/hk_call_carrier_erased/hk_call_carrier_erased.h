@@ -251,7 +251,7 @@ TFunctor_outer(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
       tfmap<List>(
           []() {
             return [](std::function<std::any(std::any)> _x0,
-                      List<std::any> _x1) -> List<std::any> {
+                      List<box<std::any>> _x1) -> List<box<std::any>> {
               return TFunctor_list_<box>(
                   [](auto &&_ec0, box<std::any> _ec1) {
                     return TFunctor_box(_ec0, _ec1);

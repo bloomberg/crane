@@ -17,18 +17,18 @@ holder<Nat, List<Nat>>
 HkDictFromConstraintParam::run(const holder<Nat, List<Nat>> &m) {
   return tfmap<_crane_carrier_tc>(
       []() {
-        return
-            [](std::function<std::any(std::any)> _x0,
-               holder<std::any, std::any> _x1) -> holder<std::any, std::any> {
-              return TFunctor_holder<List>(
-                  [](auto &&_ec0, List<std::any> _ec1) {
-                    return TFunctor_list(_ec0, _ec1);
-                  },
-                  [](auto &&_ec0, box<std::any> _ec1) {
-                    return TFunctor_box(_ec0, _ec1);
-                  },
-                  _x0, _x1);
-            };
+        return [](std::function<std::any(std::any)> _x0,
+                  holder<std::any, List<std::any>> _x1)
+                   -> holder<std::any, List<std::any>> {
+          return TFunctor_holder<List>(
+              [](auto &&_ec0, List<std::any> _ec1) {
+                return TFunctor_list(_ec0, _ec1);
+              },
+              [](auto &&_ec0, box<std::any> _ec1) {
+                return TFunctor_box(_ec0, _ec1);
+              },
+              _x0, _x1);
+        };
       }(),
       [](Nat x) { return Nat::s(x); }, m);
 }

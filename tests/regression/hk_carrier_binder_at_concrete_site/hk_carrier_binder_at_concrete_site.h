@@ -172,8 +172,8 @@ const Convert<_crane_carrier_tc> Convert_holder =
       return tfmap<_crane_carrier_tc>(
           []() {
             return [](std::function<std::any(std::any)> _x0,
-                      holder<std::any, std::any> _x1)
-                       -> holder<std::any, std::any> {
+                      holder<std::any, box<std::any>> _x1)
+                       -> holder<std::any, box<std::any>> {
               return TFunctor_holder<box>(
                   [](auto &&_ec0, box<std::any> _ec1) {
                     return TFunctor_box(_ec0, _ec1);

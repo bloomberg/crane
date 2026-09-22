@@ -650,10 +650,17 @@ let insert_template_keyword name_pp name_str =
 (** Print a type variable by de Bruijn index, looking up in [vl]. Falls back to
     [T<n>] if index is out of range.
 
+    Out of range covers both ends: a scope shorter than the type -- a
+    declaration read before its own quantifiers are in hand -- leaves the
+    variable unnamed, and so does index [0], which is what an unnamed variable
+    carries.  Neither is an error here; the fallback spelling is.
+
     @param vl  list of type variable names (de Bruijn, 1-indexed from the right)
     @param i   1-based de Bruijn index into [vl] *)
 let print_cpp_type_var vl i =
-  try pp_tvar (List.nth vl (pred i)) with Failure _ -> str "T" ++ int i
+  match if i >= 1 then List.nth_opt vl (pred i) else None with
+  | Some name -> pp_tvar name
+  | None -> str "T" ++ int i
 
 (** Set of parameter IDs whose C++ type is [Tany] (std::any) in the
     current method being printed.  Set before printing a method body,

@@ -457,6 +457,54 @@ val prune_unwritten_args : Minicpp.cpp_type -> Minicpp.cpp_type
     erased argument in a position nothing writes never reaches the C++. *)
 val has_tany_written : Minicpp.cpp_type -> bool
 
+(** [refine_param_from_slot ~tvars ~slot bare] spells a parameter from the
+    slot it flows into rather than from its own uninferred type.  Type
+    variables [slot] borrows from the callee's declaration -- the ones neither
+    [tvars] nor [bare] can name -- are the ones the caller's erasure already
+    dropped, which is why the parameter has nothing better to say; they become
+    [std::any] and the rest of the slot's spelling stands.
+
+    [bare] counts as a scope of its own, and not as a convenience.  A name the
+    parameter's own type already spells is nameable here by construction,
+    whatever [tvars] says -- and [tvars] holds the enclosing declaration's
+    quantifiers, so it does not hold one the {e lambda} invents.  A rank-2
+    carrier arrives exactly so: [bare = MemM<T2>] with [T2] bound by the lambda
+    itself.  Erasing it spells [MemM<std::any>] and takes the template head
+    with it, and the same happens to the codomain
+    ([stateT<st, itree_tc, T2>]), which is how the two halves of one lambda
+    come apart.
+
+    A name [bare] already spells, it also keeps.  The slot is the callee's
+    declaration with this call's arguments substituted in, and a substitution
+    that does not describe this call resolves a name to something else
+    entirely -- [void], at one site.  Erasing a name the parameter cannot spell
+    is the whole point; replacing one it can is a different operation, so the
+    result must still mention every name [bare] mentions.
+
+    And the slot must {e say} something, which it may fail to do while still
+    differing structurally.  Two differences that say nothing: which spelling
+    of erasure it uses ([Tany] node or [dummy_type] marker), and what de Bruijn
+    index it gives a type variable -- the slot's indices are the callee's, so
+    they are not the caller's to adopt even where the name agrees.  The
+    comparison normalises both away, and an unchanged slot is no slot at all.
+
+    Erasure bounds it at both ends, and [bare] is returned unchanged outside
+    them.  A parameter whose own type erases nowhere has nothing to gain and a
+    name to lose -- the slot would spell its [T1] as [std::any].  And the
+    result must erase somewhere too: the body was generated against the erased
+    view and unboxes at it, so a slot that erases nowhere is one the body's
+    [std::any_cast]s no longer agree with.
+
+    Both ends ask {!has_erased_type_in_type}, which is the widest of the three
+    erasure predicates and deliberately so.  The question is whether the type
+    {e is} erased, not whether the erasure is visible in the spelling
+    ({!has_tany_written} says no for [std::optional<std::any>], which writes no
+    type argument) nor whether it has reached [std::any] yet
+    ({!has_tany_in_type} says no while the position still holds a
+    [dummy_type] marker). *)
+val refine_param_from_slot :
+  tvars:Names.Id.t list -> slot:Minicpp.cpp_type -> Minicpp.cpp_type -> Minicpp.cpp_type
+
 (** [(index, name)] of every type variable in a C++ type, sorted by index. *)
 val get_tvars_indexed : Minicpp.cpp_type -> (int * Names.Id.t) list
 

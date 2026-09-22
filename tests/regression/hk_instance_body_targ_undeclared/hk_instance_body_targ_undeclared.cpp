@@ -17,7 +17,8 @@ HkInstanceBodyTargUndeclared::on_option(const std::optional<List<Nat>> &o) {
   return tfmap<_crane_carrier_tc>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
-                  std::optional<std::any> _x1) -> std::optional<std::any> {
+                  std::optional<List<std::any>> _x1)
+                   -> std::optional<List<std::any>> {
           return TFunctor_option<List>(
               [](auto &&_ec0, List<std::any> _ec1) {
                 return TFunctor_list(_ec0, _ec1);
@@ -33,7 +34,7 @@ HkInstanceBodyTargUndeclared::on_list(const List<List<Nat>> &l) {
   return tfmap<_crane_carrier_tc1>(
       []() {
         return [](std::function<std::any(std::any)> _x0,
-                  List<std::any> _x1) -> List<std::any> {
+                  List<List<std::any>> _x1) -> List<List<std::any>> {
           return TFunctor_list_<List>(
               [](auto &&_ec0, List<std::any> _ec1) {
                 return TFunctor_list(_ec0, _ec1);

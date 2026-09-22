@@ -2738,6 +2738,13 @@ let apply_hkt_tyctors g temps =
         | _ -> t )
     temps
 
+(** The name a type variable carries in [tvars], where it has one.  MiniML
+    numbers them from one, and a scope shorter than the type -- a declaration
+    read before its own quantifiers are in hand -- simply leaves the variable
+    unnamed rather than being an error. *)
+let tvar_name_at tvars i =
+  if i >= 1 then List.nth_opt tvars (pred i) else None
+
 let rec convert_ml_type_to_cpp_type
     env
     ?(ns : Refset'.t = Refset'.empty)
@@ -2987,17 +2994,12 @@ let rec convert_ml_type_to_cpp_type
           (* External inductive: value type, namespace-qualified *)
           Tnamespace (g, core)
     | _ -> core )
-  | Miniml.Tvar (_, i) ->
-    ( try Tvar (i, Some (List.nth tvars (pred i)))
-      with Failure _ -> Tvar (i, None) )
+  | Miniml.Tvar (_, i) -> Tvar (i, tvar_name_at tvars i)
   (* A higher-kinded variable applied to arguments.  The head stays a type
      variable here; [Gen_decls.apply_hkt_resolutions] rewrites it to the
      instance's associated type, leaving [Tapply] to render the application. *)
   | Tapp (i, args) ->
-    let head =
-      try Tvar (i, Some (List.nth tvars (pred i)))
-      with Failure _ -> Tvar (i, None)
-    in
+    let head = Tvar (i, tvar_name_at tvars i) in
     Tapply (head, List.map (convert_ml_type_to_cpp_type env ~ns tvars) args)
   | Tmeta {contents = Some t} -> convert_ml_type_to_cpp_type env ~ns tvars t
   | Tmeta {id = i} ->
@@ -6351,20 +6353,6 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             Some t
           | _ -> None
         in
-        (* The same domain with the names it borrows from the callee erased.
-           A type variable this lambda cannot name is one the caller's own
-           erasure already dropped -- that is why the binder arrived with no
-           type to begin with -- so [std::any] is what the callee will deduce
-           it to from its other arguments.  Everything around it the slot
-           still spells, and that is more than the binder knows. *)
-        let slot_param_cpp_ty_erased j =
-          Option.map
-            (Minicpp.map_cpp_type (fun t ->
-                 match Minicpp.tvar_name t with
-                 | Some n when not (tvar_in_scope n) -> Minicpp.Tany
-                 | _ -> t ) )
-            (slot_dom_cpp_ty j)
-        in
         let cpp_arg_info =
           List.mapi
             (fun j (id, ty, owned) ->
@@ -6436,9 +6424,11 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
                      and unboxes at it; a signature that erases nowhere is one
                      the body's casts no longer agree with. *)
                   let refined =
-                    match slot_param_cpp_ty_erased j with
-                    | Some t when Ml_type_util.has_tany_written t -> t
-                    | _ -> bare_cpp_ty
+                    match slot_dom_cpp_ty j with
+                    | Some slot ->
+                      Ml_type_util.refine_param_from_slot ~tvars ~slot
+                        bare_cpp_ty
+                    | None -> bare_cpp_ty
                   in
                   wrap_param_by_ownership ~is_owned:owned refined
                 | None when Ml_type_util.has_tany_written bare_cpp_ty ->
@@ -10712,9 +10702,57 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
             else
               (missing_args, cod)
           in
+          (* The domains the callee's own declaration spells.  [ty] came from
+             the ML type {e this call} instantiates, and a higher-kinded class
+             parameter is erased there, so a parameter the declaration writes
+             [std::optional<T1<std::any>>] arrives as [std::optional<std::any>]
+             -- the carrier is simply gone.  It is not gone from the call,
+             which has already recovered it into [all_type_args]; and the
+             callee's {e uninstantiated} C++ type is where that carrier still
+             has a name to be substituted for.  Substituting the explicit
+             arguments back into it reconstructs what the declaration says,
+             which is the slot each eta parameter has to fit. *)
+          let decl_doms, decl_cod =
+            let subst =
+              let by_index =
+                List.mapi (fun k t -> (k + 1, t)) all_type_args
+              in
+              fun i -> List.assoc_opt i by_index
+            in
+            match
+              Option.map
+                (fun t -> Minicpp.subst_cpp_tvars subst (cpp_of_ml env t))
+                (find_type_opt id)
+            with
+            | Some (Tfun (doms, dcod)) -> (doms, Some dcod)
+            | _ -> ([], None)
+          in
+          (* The eta parameters fill the callee's {e trailing} domains; the
+             arguments the call already has fill the leading ones. *)
+          let slot_dom i =
+            List.nth_opt decl_doms
+              (List.length decl_doms - List.length missing_args + i)
+          in
+          let tvars = get_current_type_vars () in
+          (* Whether the declaration had anything to say about this call's
+             parameters.  It is the same question for the result, so it is
+             asked once: a declaration that could not refine a single parameter
+             is one whose substitution does not describe this call, and reading
+             the result off it would be reading the same wrong thing. *)
+          let decl_spoke = ref false in
           let eta_args =
             List.mapi
               (fun i ty ->
+                let ty =
+                  match slot_dom i with
+                  | Some slot ->
+                    let refined =
+                      Ml_type_util.refine_param_from_slot ~tvars ~slot ty
+                    in
+                    if refined <> ty then decl_spoke := true;
+                    refined
+                  | None -> ty
+                in
                 let wrapped =
                   match ty with
                   | Tshared_ptr _ -> Tref (Tconst ty)
@@ -10778,6 +10816,16 @@ and eta_fun ?(slot = empty_slot) ?expected_ty env f args =
               let surplus = List.filteri (fun i _ -> i >= k) eta_vars in
               mk_apply (mk_call cglob (captured_args @ fill)) surplus
             | None -> mk_call cglob call_args
+          in
+          (* The result is the callee's, so it is read off the declaration for
+             the same reason the parameters are: what the call returns is
+             [std::optional<T1<std::any>>], not the [std::optional<std::any>]
+             the erased ML type says. *)
+          let cod =
+            match decl_cod with
+            | Some slot when !decl_spoke ->
+              Ml_type_util.refine_param_from_slot ~tvars ~slot cod
+            | _ -> cod
           in
           let ret_ty, body =
             if cod = Tvoid then
