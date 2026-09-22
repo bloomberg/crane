@@ -9871,6 +9871,13 @@
   (deps collision_wrapper_drops_child_module.t.exe)
   (action (run ./collision_wrapper_drops_child_module.t.exe))))
 
-
-
-
+(subdir loop_transform_reassigns_closure_typed_var
+ (rule
+  (targets loop_transform_reassigns_closure_typed_var.t.exe)
+  (deps LoopTransformReassignsClosureTypedVar.vo loop_transform_reassigns_closure_typed_var.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_transform_reassigns_closure_typed_var.t.exe loop_transform_reassigns_closure_typed_var.cpp loop_transform_reassigns_closure_typed_var.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps loop_transform_reassigns_closure_typed_var.t.exe)
+  (action (run ./loop_transform_reassigns_closure_typed_var.t.exe))))

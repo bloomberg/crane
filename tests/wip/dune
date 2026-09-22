@@ -148,14 +148,3 @@
   (deps hk_carrier_written_at_partial_app.t.exe)
   (action (run ./hk_carrier_written_at_partial_app.t.exe))))
 
-
-(subdir loop_transform_reassigns_closure_typed_var
- (rule
-  (targets loop_transform_reassigns_closure_typed_var.t.exe)
-  (deps LoopTransformReassignsClosureTypedVar.vo loop_transform_reassigns_closure_typed_var.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loop_transform_reassigns_closure_typed_var.t.exe loop_transform_reassigns_closure_typed_var.cpp loop_transform_reassigns_closure_typed_var.t.cpp)))
- (rule
-  (alias runtest)
-  (deps loop_transform_reassigns_closure_typed_var.t.exe)
-  (action (run ./loop_transform_reassigns_closure_typed_var.t.exe))))
