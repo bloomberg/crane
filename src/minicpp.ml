@@ -1382,10 +1382,19 @@ and dstruct = {
     the definition cannot recover the qualifier from [dm_owner] alone. *)
 and dmember_def = {
   dm_owner : GlobRef.t;
-  dm_enclosing : GlobRef.t option;
+  dm_enclosing : dm_wrapper option;
   dm_tparams : (template_type * Id.t) list;
   dm_field : out_of_line_member;
 }
+
+(** The namespace struct an out-of-line member's owner is written inside of.
+
+    [dw_sole_child] records that the owner is the only declaration in it, which
+    is half of what decides whether the two are written as one struct -- the
+    other half is whether anything was queued to be added to the wrapper, which
+    only the printer knows.  Kept here because the shape of the wrapper is not
+    recoverable once the member has been lifted out of it. *)
+and dm_wrapper = {dw_ref : GlobRef.t; dw_sole_child : bool}
 
 (** A type alias declaration.
 

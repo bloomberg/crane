@@ -4435,17 +4435,21 @@ let nspace_wrapper_name id =
     | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
     | _ -> string_of_ppcmds (pp_global Type id) )
 
-(** Whether that wrapper and the struct inside it are written as one struct
-    rather than two.  A lone non-template struct is merged into its wrapper and
-    takes the wrapper's name; a template, or a wrapper that other declarations
-    were added to, keeps both levels and so keeps its own name underneath.
+(** Whether a wrapper and the struct inside it are written as one struct
+    rather than two.  A sole struct is merged into its wrapper and takes the
+    wrapper's name; a wrapper holding anything else, or one that declarations
+    were queued against, keeps both levels, and the struct inside keeps its own
+    name underneath.
+
+    Whether that struct is a template has nothing to do with it -- both merge
+    branches below handle one -- so this asks only about the wrapper.
 
     Asked by {!pp_cpp_decl_raw} of the declaration and by the out-of-line
     member definition of its owner, which must agree about how many names the
     qualifier has. *)
-let nspace_merges ~(tparams : (template_type * Id.t) list) (id : GlobRef.t) :
-    bool =
-  tparams = [] && not (Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name id))
+let nspace_merges (w : dm_wrapper) : bool =
+  w.dw_sole_child
+  && not (Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name w.dw_ref))
 
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.
@@ -4528,15 +4532,21 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
     let struct_name_str = nspace_wrapper_name id in
-    let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
-    ( match (decls, has_pending) with
-    | ([Dstruct {ds_tparams; ds_constraint; _}], false) ->
+    (* The same question the out-of-line definition of a member asks, asked
+       through the same function so the two cannot drift apart. *)
+    let merges =
+      nspace_merges
+        { dw_ref = id;
+          dw_sole_child = (match decls with [Dstruct _] -> true | _ -> false) }
+    in
+    ( match (decls, merges) with
+    | ([Dstruct {ds_tparams; ds_constraint; _}], true) ->
       register_forward_struct_decl
         ~name:(str struct_name_str)
         ~tparams:ds_tparams
         ~cstr:ds_constraint
     | _ -> () );
-    ( match (decls, has_pending) with
+    ( match (decls, merges) with
     | ( [
           Dstruct
             {
@@ -4546,7 +4556,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
               _;
             };
         ],
-        false ) ->
+        true ) ->
       (* MERGE non-template: struct Nat { ... } *)
       let struct_name = str struct_name_str in
       let f_s =
@@ -4580,7 +4590,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
               _;
             };
         ],
-        false ) ->
+        true ) ->
       (* MERGE template: template<typename A> struct List { ... } *)
       let struct_name = str struct_name_str in
       let f_s =
@@ -4892,12 +4902,19 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
        and its own name is not capitalised -- the capitalisation below is the
        namespace struct's name, which is only the whole answer when the
        inductive was promoted into it and has no struct of its own. *)
-    let sname =
+    (* Two names, because they answer different questions: [own_name] is what
+       the struct calls itself, which is what a destructor repeats, and [sname]
+       is how the outside reaches it. *)
+    let own_name, sname =
       match dm_enclosing with
-      | Some encl when not (nspace_merges ~tparams:dm_tparams encl) ->
-        str (nspace_wrapper_name encl ^ "::" ^ str_global Type dm_owner)
-      | _ -> str (String.capitalize_ascii (str_global Type dm_owner))
+      | Some w when not (nspace_merges w) ->
+        let own = str_global Type dm_owner in
+        (own, nspace_wrapper_name w.dw_ref ^ "::" ^ own)
+      | _ ->
+        let own = String.capitalize_ascii (str_global Type dm_owner) in
+        (own, own)
     in
+    let sname = str sname in
     let qual =
       match dm_tparams with
       | [] -> sname
@@ -4907,7 +4924,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     with_render_ctx
       (fun c -> {c with rc_in_template = c.rc_in_template || dm_tparams <> []})
       (fun () ->
-        pp_cpp_field ~struct_name:sname
+        pp_cpp_field ~struct_name:(str own_name)
           ~mode:(Mm_defined (qual, dm_tparams))
           env (field_of_member dm_field) )
   | Dfields ds ->

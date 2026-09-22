@@ -63,7 +63,15 @@ let rec split_struct
     (* What the struct below is spelled under from outside.  Only the nearest
        one: a member is written [Outer::inner::m], and anything further out is
        already in scope where the definition lands. *)
-    let enclosing = match r with None -> enclosing | Some _ -> r in
+    let enclosing =
+      match r with
+      | None -> enclosing
+      | Some dw_ref ->
+        let dw_sole_child =
+          match decls with [Dstruct _] -> true | _ -> false
+        in
+        Some {dw_ref; dw_sole_child}
+    in
     let decls, defs =
       List.fold_right
         (fun d (decls, defs) ->
