@@ -6144,6 +6144,15 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
          The binders are given no ML type on purpose: the derivation below
          reads an erased parameter's type out of [expected_ty]'s domain at
          the same index, which is the only place that says what it is. *)
+      (* [extend n] -- the binders the expected signature takes that the term
+         does not write, or [None] where there are none worth writing.
+
+         Each test below has to run only once the ones before it have passed:
+         the count decides whether anything is missing at all, and the later
+         ones index the last [k] domains, which is not a meaningful range
+         until [k] is known to be positive.  Written as nested [if]s rather
+         than one condition for that reason -- OCaml's [let] is strict, so a
+         guard placed after the computation it guards never runs. *)
       let extend n =
         (* Count the binders that will be {e emitted}, on the same terms the
            parameter list below is filtered: a binder whose recorded type is
@@ -6156,24 +6165,23 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
         let k =
           n - List.length (List.filteri (fun i b -> emitted_binder i b) args)
         in
-        (* A binder is only worth writing if the slot says what it is.  The
-           synthesised ones are the last [k] of the expected signature's
-           domains, and each has to be a type this lambda could be written
-           against: spelled with no erased position anywhere in it, and
-           naming no type variable out of
-           scope here (the same condition {!slot_param_cpp_ty} imposes, and
-           for the same reason).  Where it is not, the parameter would be
-           declared [const auto &] or [std::any] -- an untyped parameter the
-           consumer cannot resolve, which is worse than the closure the term
-           already returns, and which would also displace the C++-level
-           expansions that do have types to work from. *)
-        (* The expected C++ arity has to be backed by the same number of ML
-           domains that genuinely carry a value.  A reified tree's
-           continuation is typed [unit -> itree ...] and prints as taking one
-           [std::monostate]; the binder is deliberately not emitted, so the
-           C++ signature says one parameter where the term rightly writes
-           none, and the shortfall is a convention rather than a gap. *)
-        let ml_arity_agrees =
+        if k < 0 then
+          (* The term writes {e more} binders than the signature declares.
+             Nothing is missing, and the surplus is not this function's
+             business: a slot typed [std::function<T(U)>] against a
+             two-binder lambda is an ordinary curried result, which the
+             [split_after_runtime] branch above handles where the codomain
+             says so. *)
+          None
+        else if k = 0 then None
+        else if
+          (* The expected C++ arity has to be backed by the same number of ML
+             domains that genuinely carry a value.  A reified tree's
+             continuation is typed [unit -> itree ...] and prints as taking
+             one [std::monostate]; the binder is deliberately not emitted, so
+             the C++ signature says one parameter where the term rightly
+             writes none, and the shortfall is a convention rather than a
+             gap. *)
           let real ty =
             is_runtime_binder ((), ty)
             && not ((!tctx).itree_mode = Reified && ml_type_is_unit ty)
@@ -6185,27 +6193,35 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
             | Miniml.Tarr (a, b) -> real a && leading (i - 1) b
             | _ -> false
           in
-          match slot.expected_ml_ty with
-          | Some ty -> leading n ty
-          | None -> false
-        in
-        let slot_types_the_new_binders =
-          match Option.map (unfold_cpp_typedef env) expected_ty with
-          | Some (Tfun (doms, _)) when List.length doms = n ->
-            let tvars = get_current_type_vars () in
-            List.for_all
-              (fun i ->
-                match List.nth_opt doms i with
-                | Some t ->
-                  (not (Ml_type_util.has_tany_written t))
-                  && Id.Set.for_all
-                       (fun nm -> List.exists (Id.equal nm) tvars)
-                       (Minicpp.tvar_names t)
-                | None -> false )
-              (List.init k (fun i -> n - k + i))
-          | _ -> false
-        in
-        if k <= 0 || (not ml_arity_agrees) || not slot_types_the_new_binders
+          not (match slot.expected_ml_ty with Some ty -> leading n ty | None -> false)
+        then None
+        else if
+          (* A binder is only worth writing if the slot says what it is.  The
+             synthesised ones are the last [k] of the expected signature's
+             domains, and each has to be a type this lambda could be written
+             against: spelled with no erased position anywhere in it, and
+             naming no type variable out of scope here (the same condition
+             {!slot_param_cpp_ty} imposes, and for the same reason).  Where it
+             is not, the parameter would be declared [const auto &] or
+             [std::any] -- an untyped parameter the consumer cannot resolve,
+             which is worse than the closure the term already returns, and
+             which would also displace the C++-level expansions that do have
+             types to work from. *)
+          not
+            ( match Option.map (unfold_cpp_typedef env) expected_ty with
+            | Some (Tfun (doms, _)) when List.length doms = n ->
+              let tvars = get_current_type_vars () in
+              List.for_all
+                (fun i ->
+                  match List.nth_opt doms i with
+                  | Some t ->
+                    (not (Ml_type_util.has_tany_written t))
+                    && Id.Set.for_all
+                         (fun nm -> List.exists (Id.equal nm) tvars)
+                         (Minicpp.tvar_names t)
+                  | None -> false )
+                (List.init k (fun i -> n - k + i))
+            | _ -> false )
         then None
         else
           let fresh =
@@ -6215,9 +6231,7 @@ and gen_expr ?(expected_ty : cpp_type option) ?(slot = empty_slot) env
           in
           Some
             ( fresh @ args,
-              MLapp
-                ( ast_lift k a,
-                  List.init k (fun i -> MLrel (k - i)) ) )
+              MLapp (ast_lift k a, List.init k (fun i -> MLrel (k - i))) )
       in
       match Option.bind expected_ty fun_ty_of with
       | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->
