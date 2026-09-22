@@ -9761,3 +9761,14 @@
   (alias runtest)
   (deps modtype_in_wrapper_named_bare.t.exe)
   (action (run ./modtype_in_wrapper_named_bare.t.exe))))
+
+(subdir functor_record_proj_as_static
+ (rule
+  (targets functor_record_proj_as_static.t.exe)
+  (deps FunctorRecordProjAsStatic.vo functor_record_proj_as_static.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_record_proj_as_static.t.exe functor_record_proj_as_static.cpp functor_record_proj_as_static.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_record_proj_as_static.t.exe)
+  (action (run ./functor_record_proj_as_static.t.exe))))

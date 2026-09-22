@@ -1,23 +1,22 @@
-(** A record field of a module obtained by *functor application* is projected
-    as a module-scoped static call instead of a member access.
+(** A record field of a module obtained by *functor application*, projected
+    from outside that module's struct.
 
-    [IM.this m] should be [m.this_] -- and is, everywhere inside the generated
-    [IM] struct itself ([Raw::is_empty<T1>(m.this_)] and friends). But a
-    definition *outside* that struct gets
+    [IM.this m] is [m.this_].  It used to come out as a module-scoped static
+    call instead,
 
       return raw_size<T1>(IM::template this_<T1>(m));
 
-    giving
+    giving [error: no member named 'this_' in 'Make<Z_as_OT>'] -- a call to
+    something that was never going to exist, since a projection that is never
+    used higher-order is not emitted as a function at all.  The rewrite that
+    turns a projection into a member access was guarded on the projection
+    having no type arguments, and this one is applied at [A].  A record in an
+    ordinary [Module ... End] did not reproduce it: there the projection is
+    monomorphic by the time it is called.
 
-      error: no member named 'this_' in 'Make<Z_as_OT>'
-
-    [this_] is a data member of [IM::bst<T1>], not a static member of [IM].
-
-    A record declared in an ordinary [Module ... End] does *not* reproduce:
-    there the projection comes out correctly as [m.this_]. The functor
-    application is what is needed, presumably because the field arrives
-    through the functor's signature rather than from a local record
-    declaration.
+    The field is named [this], so the test also pins that the member access is
+    spelled with the escaped field name [this_] rather than the raw Rocq
+    label.
 
     Seen in Vellvm at [vellvm_bench.h:8808], from
     [src/rocq/Utils/IntMaps.v:193]:

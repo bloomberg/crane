@@ -920,6 +920,14 @@ let ctor_alias_name_for ~base body =
     ctor_alias_decls := (body, name) :: !ctor_alias_decls;
     name
 
+(** The C++ name of the field a projection reads.
+
+    It is the projection's own label, escaped the same way the field was when
+    the record's struct was written -- a record with a field named [this] has
+    one named [this_], and a projection of it has to say so too. *)
+let projection_field_name (r : GlobRef.t) : string =
+  Common.modular_rename Term (Label.to_id (label_of_r r))
+
 (** Pretty-print a MiniCpp type as C++ source text.
 
     @param par  whether to parenthesize (for precedence in function types)
@@ -1717,8 +1725,8 @@ and pp_cpp_expr env args t =
       str ("[](" ^ params ^ ") { return _x" ^ string_of_int this_pos ^ accessor)
       ++ pp_method_call_name x method_name _tys
       ++ str ("(" ^ call_args ^ "); }")
-  | CPPglob (x, [], _) when Table.is_projection x ->
-    let field_name = label_of_r x |> Names.Label.to_string in
+  | CPPglob (x, _, _) when Table.is_projection x ->
+    let field_name = projection_field_name x in
     str "[](const auto &_x) { return _x." ++ str field_name ++ str "; }"
   | CPPglob (x, tys, _) ->
     (* Determine the base name for a global reference *)
@@ -2066,8 +2074,14 @@ and pp_cpp_expr env args t =
       | _ -> CErrors.anomaly (Pp.str "ternary: unexpected custom_case branch structure")
     in
     str "(" ++ pp scrut ++ str " ? " ++ pp e1 ++ str " : " ++ pp e2 ++ str ")"
-  | CPPfun_call (_, CPPglob (r, [], _), {rev = [arg]}) when Table.is_projection r ->
-    let field_name = label_of_r r |> Names.Label.to_string in
+  (* A projection reads a field, and the field's name does not depend on what
+     the record was instantiated at, so the type arguments are ignored rather
+     than required to be absent.  Applied at a type -- as a projection of a
+     module obtained by functor application is -- this used to miss and fall
+     through to the ordinary qualified call, naming a function that a
+     suppressed projection never has. *)
+  | CPPfun_call (_, CPPglob (r, _, _), {rev = [arg]}) when Table.is_projection r ->
+    let field_name = projection_field_name r in
     pp_cpp_expr env args arg ++ str "." ++ str field_name
   | CPPfun_call (_, f, ts) ->
     (* For constructor calls, compute the expected C++ element type for each

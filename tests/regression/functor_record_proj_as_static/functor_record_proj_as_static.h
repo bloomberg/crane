@@ -1918,7 +1918,7 @@ template <typename T1> Nat raw_size(const IM::Raw::tree<T1> &x0_) {
 }
 
 template <typename T1> Nat im_size(const IM::template bst<T1> &m) {
-  return raw_size<T1>(IM::template this_<T1>(m));
+  return raw_size<T1>(m.this_);
 }
 
 struct Qp {
