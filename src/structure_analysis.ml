@@ -704,6 +704,19 @@ let collect_collision_wrappers
               | _ -> false )
             sel
         in
+        (* Collision forces the child inside the wrapper; it does not decide
+           how.  A child the wrapper absorbs declaration by declaration has no
+           struct of its own left, so its name is flattened away.  A child that
+           is a functor application is emitted as a single [using] name, and
+           that name is the whole of it -- there is nothing to absorb, and
+           flattening it would leave the alias unwritten and every path into it
+           spelled with the wrapper in place of the child. *)
+        let is_flattened_child l se =
+          match se with
+          | SEmodule {ml_mod_expr = MEstruct _ | MEident _; _} ->
+            is_colliding_child l se
+          | _ -> false
+        in
         if colliding <> [] then begin
           (* The wrapper is a new struct at file scope, named after the file.
              A file whose module is named after it -- the usual shape, one
@@ -739,12 +752,13 @@ let collect_collision_wrappers
           in
           List.iter
             (fun (l, se) ->
-              add (MPdot (mp, l)) parent_name;
               match se with
               | SEmodule {ml_mod_expr = MEstruct (inner_mp, inner_sel); _} ->
+                add (MPdot (mp, l)) parent_name;
                 add inner_mp parent_name;
                 register_decl_modpaths inner_sel
               | SEmodule {ml_mod_expr = MEident alias_mp; _} ->
+                add (MPdot (mp, l)) parent_name;
                 add alias_mp parent_name
               | _ -> () )
             colliding;
@@ -765,7 +779,7 @@ let collect_collision_wrappers
           List.iter
             (fun (l, se) ->
               match se with
-              | SEmodule m when not (is_colliding_child l se) ->
+              | SEmodule m when not (is_flattened_child l se) ->
                 add_bystander (MPdot (mp, l)) parent_name;
                 ( match m.ml_mod_expr with
                 | MEstruct (inner_mp, _) -> add_bystander inner_mp parent_name

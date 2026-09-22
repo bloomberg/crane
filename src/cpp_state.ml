@@ -915,7 +915,17 @@ let wrapper_qualify_name (r : GlobRef.t) (name : string) : string =
     let mp = modpath_of_r r in
     ( match Hashtbl.find_opt wrapper_module_table mp with
     | Some struct_name when not (String.contains name ':') ->
-      struct_name ^ "::" ^ name
+      (* A bare name is the one a use written inside the reference's own module
+         would say, and the wrapper's name alone does not get back to it: a
+         bystander keeps its own struct, so the path runs through that struct
+         too.  Flattened children have no struct left to name, and for them the
+         wrapper's name is the whole of it. *)
+      let through_child =
+        if Hashtbl.mem wrapper_bystander_table mp then
+          Common.emitted_module_name mp ^ "::"
+        else ""
+      in
+      struct_name ^ "::" ^ through_child ^ name
     | Some struct_name when String.contains name ':' ->
       (* Name is already qualified (e.g., "N::add" from visibility stack). Only
          strip the child qualifier for collision-wrapped entries (e.g., BinNat

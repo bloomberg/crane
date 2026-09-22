@@ -2328,12 +2328,17 @@ let do_struct_with_decl_tracking ~is_header f s =
         let is_colliding_child l _se =
           Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
         in
+        (* Whether a wrapper formed is not the same question as which children
+           it flattens: a bystander is recorded only when one did, so a child
+           in either table says the struct is there to be written. *)
+        let is_wrapped_child l =
+          Hashtbl.mem collision_wrapper_table (MPdot (mp, l))
+          || Hashtbl.mem wrapper_bystander_table (MPdot (mp, l))
+        in
         let has_child_collision =
           List.exists
             (fun (l, se) ->
-              match se with
-              | SEmodule _ -> is_colliding_child l se
-              | _ -> false )
+              match se with SEmodule _ -> is_wrapped_child l | _ -> false )
             sel
         in
         if has_child_collision then (
@@ -2343,7 +2348,7 @@ let do_struct_with_decl_tracking ~is_header f s =
             List.find_map
               (fun (l, se) ->
                 match se with
-                | SEmodule _ when is_colliding_child l se ->
+                | SEmodule _ when is_wrapped_child l ->
                   Hashtbl.find_opt wrapper_module_table (MPdot (mp, l))
                 | _ -> None )
               sel

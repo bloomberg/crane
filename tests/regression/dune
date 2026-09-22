@@ -9859,3 +9859,18 @@
   (alias runtest)
   (deps functor_field_forwards_to_param.t.exe)
   (action (run ./functor_field_forwards_to_param.t.exe))))
+
+(subdir collision_wrapper_drops_child_module
+ (rule
+  (targets collision_wrapper_drops_child_module.t.exe)
+  (deps User.vo collision_wrapper_drops_child_module.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} collision_wrapper_drops_child_module.t.exe collision_wrapper_drops_child_module.cpp collision_wrapper_drops_child_module.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps collision_wrapper_drops_child_module.t.exe)
+  (action (run ./collision_wrapper_drops_child_module.t.exe))))
+
+
+
+
