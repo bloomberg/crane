@@ -664,9 +664,10 @@ let abstract_cpp_type ~over ty =
     enclosing declaration has no namespace-scope alias to be -- it becomes a
     member of a holder, spelled [H<T1>::template c].  As a template name, at a
     template template argument, that is exactly right.  Applied, it is a
-    typename-specifier naming an alias template member, which is ill-formed
-    however it is punctuated ([temp.res]).  The body with the argument
-    substituted is the same type and is a plain one.
+    dependent qualified name and needs the [typename] the printer supplies for
+    one -- well-formed, but well-formed only because of a decision taken
+    somewhere else.  The body with the argument substituted is the same type
+    and is a plain one, which needs no such agreement.
 
     Only a saturated application of an abstraction reduces.  A [Ttyctor] whose
     body holds no sentinel is a bare head rather than an abstraction -- what

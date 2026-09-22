@@ -2556,10 +2556,20 @@ let phantom_aware_temps
   | _ -> List.map (fun id -> (TTtypename, id)) tvars
 
 (** Substitute [CPPglob id] with [repl] in expressions and statements. Uses
-    generic AST visitors for structural recursion. *)
+    generic AST visitors for structural recursion.
+
+    Identity here is the {i user} name, not the canonical one {!globref_equal}
+    compares.  Every caller substitutes a declaration's own reference for a
+    self-call, and what makes an occurrence a self-call is that it is printed at
+    the name being declared -- a property of the user name, since that is the
+    one the C++ spelling comes from.  Two references can share a canonical name
+    and still be different C++ names: [Include M] inside a functor re-exports
+    [M]'s fields as constants of the including module, so the forwarder's body
+    and the forwarder itself agree canonically and differ in exactly the
+    qualifier that keeps the call from being a call to itself. *)
 let rec glob_subst_expr (id : GlobRef.t) (repl : cpp_expr) (e : cpp_expr) =
   match e with
-  | CPPglob (id', _, _) when globref_equal id id' ->
+  | CPPglob (id', _, _) when GlobRef.UserOrd.equal id id' ->
     repl
   | _ -> map_expr (glob_subst_expr id repl) (glob_subst_stmt id repl) Fun.id e
 

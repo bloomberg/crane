@@ -9848,3 +9848,14 @@
   (alias runtest)
   (deps hk_carrier_alias_applied_as_type.t.exe)
   (action (run ./hk_carrier_alias_applied_as_type.t.exe))))
+
+(subdir functor_field_forwards_to_param
+ (rule
+  (targets functor_field_forwards_to_param.t.exe)
+  (deps FunctorFieldForwardsToParam.vo functor_field_forwards_to_param.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_field_forwards_to_param.t.exe functor_field_forwards_to_param.cpp functor_field_forwards_to_param.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_field_forwards_to_param.t.exe)
+  (action (run ./functor_field_forwards_to_param.t.exe))))
