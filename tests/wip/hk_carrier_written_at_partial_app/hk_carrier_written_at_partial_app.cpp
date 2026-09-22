@@ -1,10 +1,5 @@
 #include "hk_carrier_written_at_partial_app.h"
 
-template <template <typename> class _F0> struct _crane_carrier_tch {
-  template <typename _CraneTcArg>
-  using c = std::function<Exp0<_CraneTcArg>(Exp0<_F0>)>;
-};
-
 Phi<std::any> TFunctor_phi(std::type_identity_t<TFunctor<Exp0>> h,
                            std::function<std::any(std::any)> f,
                            const Phi<std::any> &p) {

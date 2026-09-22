@@ -2583,7 +2583,7 @@ let do_struct_with_decl_tracking ~is_header f s =
     in
     (* Aliases go wherever they were minted; see
        {!Cpp_print.take_ctor_alias_decls}. *)
-    match structs @ Cpp_print.take_ctor_alias_decls () with
+    match structs @ Cpp_print.take_ctor_alias_decls ~is_header () with
     | [] -> mt ()
     | l -> prlist_with_sep fnl (fun x -> x) l ++ cut2 ()
   in

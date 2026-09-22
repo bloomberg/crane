@@ -3804,7 +3804,7 @@ let take_forward_struct_decls () =
     is minted by whichever file writes the use that needs it, and a use in the
     implementation file is reached while the header has already been handed
     over -- so it has to be declared where it was minted. *)
-let take_ctor_alias_decls () =
+let take_ctor_alias_decls ~is_header () =
   let l =
     List.rev_map
       (fun (body, name) ->
@@ -3818,7 +3818,18 @@ let take_ctor_alias_decls () =
       !ctor_alias_decls
   in
   ctor_alias_decls := [];
+  (* A holder is a struct, and a struct may be defined once.  An alias above
+     may be minted in whichever file writes the use, because repeating a
+     [using] with the same definition is legal and a use in the implementation
+     file is reached after the header has been handed over; repeating a
+     [struct] is not, so the same reasoning gives [vellvm_bench.cpp:5]
+     redefining [vellvm_bench.h:173].  The header is the one file everything
+     sees, so every holder is declared there and the registry is not drained
+     until it has been -- which also keeps a holder's name stable across the
+     two passes, since the name is chosen fresh against this list. *)
   let holders =
+    if not is_header then []
+    else
     List.rev_map
       (fun (body, name) ->
         (* Every captured parameter is a type constructor: it is named applied
@@ -3852,7 +3863,7 @@ let take_ctor_alias_decls () =
         ++ str "; };" )
       !ctor_holder_decls
   in
-  ctor_holder_decls := [];
+  if is_header then ctor_holder_decls := [];
   holders @ l
 
 (** Print a complete template parameter including name and optional default *)
