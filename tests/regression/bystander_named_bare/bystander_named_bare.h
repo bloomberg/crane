@@ -154,23 +154,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename M>
-concept Ord = requires {
-  typename M::t;
-  {
-    M::eq_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
-  } -> std::same_as<bool>;
-};
-
-template <Ord X> struct Make {
-  template <typename elt> using tbl = List<std::pair<typename X::t, elt>>;
-
-  template <typename T1> static const tbl<T1> &empty() {
-    static const tbl<T1> v = List<std::pair<typename X::t, T1>>::nil();
-    return v;
-  }
-};
-
 struct Collider {
   // TYPES
   struct Tag0 {};
@@ -204,9 +187,26 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+template <typename M>
+concept Ord = requires {
+  typename M::t;
+  {
+    M::eq_dec(std::declval<typename M::t>(), std::declval<typename M::t>())
+  } -> std::same_as<bool>;
+};
+
 struct PeanoNat {
   static bool leb(const Nat &n, const Nat &m);
   static bool eq_dec(const Nat &n, const Nat &m);
+};
+
+template <Ord X> struct Make {
+  template <typename elt> using tbl = List<std::pair<typename X::t, elt>>;
+
+  template <typename T1> static const tbl<T1> &empty() {
+    static const tbl<T1> v = List<std::pair<typename X::t, T1>>::nil();
+    return v;
+  }
 };
 
 struct Raw_id {

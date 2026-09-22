@@ -269,8 +269,6 @@ enum class Comparison { EQ, LT, GT };
 template <typename M>
 concept EqLtLe = requires { typename M::t; };
 
-template <EqLtLe O, typename P> struct MakeOrderTac {};
-
 struct Positive {
   // TYPES
   struct XI {
@@ -387,6 +385,8 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+template <EqLtLe O, typename P> struct MakeOrderTac {};
+
 template <typename X> struct Compare {
   // TYPES
   struct LT {};
@@ -468,6 +468,23 @@ template <OrderedType O> struct OrderedTypeFacts {
 
 template <OrderedType O> struct KeyOrderedType {
   using MO = OrderedTypeFacts<O>;
+};
+
+struct BinInt {
+  static Z double_(const Z &x);
+  static Z succ_double(const Z &x);
+  static Z pred_double(const Z &x);
+  static Z pos_sub(const Positive &x, const Positive &y);
+  static Z add(Z x, Z y);
+  static Z opp(const Z &x);
+  static Z sub(const Z &m, const Z &n);
+  static Z mul(const Z &x, const Z &y);
+  static Comparison compare(const Z &x, const Z &y);
+  static bool leb(const Z &x, const Z &y);
+  static bool ltb(const Z &x, const Z &y);
+  static bool eqb(const Z &x, const Z &y);
+  static Z max(Z n, Z m);
+  static bool eq_dec(const Z &x, const Z &y);
 };
 
 template <OrderedType X> struct Coq_Raw {
@@ -922,23 +939,6 @@ template <OrderedType X> struct Coq_Raw {
       }
     }
   }
-};
-
-struct BinInt {
-  static Z double_(const Z &x);
-  static Z succ_double(const Z &x);
-  static Z pred_double(const Z &x);
-  static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
-  static Z opp(const Z &x);
-  static Z sub(const Z &m, const Z &n);
-  static Z mul(const Z &x, const Z &y);
-  static Comparison compare(const Z &x, const Z &y);
-  static bool leb(const Z &x, const Z &y);
-  static bool ltb(const Z &x, const Z &y);
-  static bool eqb(const Z &x, const Z &y);
-  static Z max(Z n, Z m);
-  static bool eq_dec(const Z &x, const Z &y);
 };
 
 template <typename M>

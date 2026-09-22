@@ -9772,3 +9772,14 @@
   (alias runtest)
   (deps functor_record_proj_as_static.t.exe)
   (action (run ./functor_record_proj_as_static.t.exe))))
+
+(subdir modtype_alias_emitted_before_original
+ (rule
+  (targets modtype_alias_emitted_before_original.t.exe)
+  (deps Use.vo modtype_alias_emitted_before_original.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} modtype_alias_emitted_before_original.t.exe modtype_alias_emitted_before_original.cpp modtype_alias_emitted_before_original.t.cpp)))
+ (rule
+  (alias runtest)
+  (deps modtype_alias_emitted_before_original.t.exe)
+  (action (run ./modtype_alias_emitted_before_original.t.exe))))

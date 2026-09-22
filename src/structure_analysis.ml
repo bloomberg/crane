@@ -344,7 +344,7 @@ let topological_sort
        indices it depends on. *)
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
     List.iteri
-      (fun i ((_mp, sel), _wn) ->
+      (fun i ((mp_i, sel), _wn) ->
         if is_main_entry i then
           ()
         else (* Collect unique dependencies for this module. *)
@@ -375,23 +375,23 @@ let topological_sort
             | None -> ()
           in
           (* Everything this module names: the references in its declarations,
-             and the modules its submodules are built from.  [Module M := F X]
-             is emitted as [using M = F<X>], which no forward declaration
-             breaks the cycle of, so [X]'s module has to come first. *)
-          let rec scan_sel sel = List.iter (fun (_l, se) -> scan_elem se) sel
-          and scan_elem = function
-            | SEdecl d -> Modutil.decl_iter_references add_dep add_dep add_dep d
-            | SEmodule m -> scan_mexpr m.ml_mod_expr
-            | SEmodtype _ -> ()
-          and scan_mexpr = function
-            | MEident mp -> add_dep_mp mp
-            | MEapply (me, arg) ->
-              scan_mexpr me;
-              scan_mexpr arg
-            | MEfunctor (_, _, body) -> scan_mexpr body
-            | MEstruct (_, sel) -> scan_sel sel
-          in
-          scan_sel sel;
+             the modules its submodules are built from, and the modules its
+             module types and signatures name.  [Module M := F X] is emitted as
+             [using M = F<X>], which no forward declaration breaks the cycle
+             of, so [X]'s module has to come first; [Module Type T := O.U] is
+             emitted as [concept T = U<M>], which likewise cannot precede [U].
+
+             The traversal is {!Modutil.struct_iter} rather than a local one,
+             because a hand-written walk answers "what does this module name"
+             only for the cases it happens to list.  This one used to return
+             nothing at all for a module type, so a file whose content is a
+             bare alias depended on nothing, sorted with the roots, and was
+             written ahead of the file it aliases. *)
+          Modutil.struct_iter
+            (Modutil.decl_iter_references add_dep add_dep add_dep)
+            (Modutil.spec_iter_references add_dep add_dep add_dep)
+            add_dep_mp
+            [(mp_i, sel)];
           let dep_list = Hashtbl.fold (fun k () acc -> k :: acc) dep_set [] in
           if dep_list <> [] then
             Hashtbl.replace deps i dep_list )

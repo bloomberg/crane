@@ -194,15 +194,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <Ord X> struct Make {
-  template <typename elt> using tbl = List<std::pair<typename X::t, elt>>;
-
-  template <typename T1> static const tbl<T1> &empty() {
-    static const tbl<T1> v = List<std::pair<typename X::t, T1>>::nil();
-    return v;
-  }
-};
-
 struct PeanoNat {
   static bool leb(const Nat &n, const Nat &m);
   static bool eq_dec(const Nat &n, const Nat &m);
@@ -252,6 +243,15 @@ struct AstLib {
   };
 
   static Nat pick(Nat a, Nat b);
+};
+
+template <Ord X> struct Make {
+  template <typename elt> using tbl = List<std::pair<typename X::t, elt>>;
+
+  template <typename T1> static const tbl<T1> &empty() {
+    static const tbl<T1> v = List<std::pair<typename X::t, T1>>::nil();
+    return v;
+  }
 };
 
 bool viaQualified(const Raw_id &a, const Raw_id &b);
