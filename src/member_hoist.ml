@@ -50,18 +50,24 @@ let field_names ?(body_only = false) (p : GlobRef.t -> bool) (f : cpp_field) :
     out of the struct's scope, where a nested name like [variant_t] no longer
     resolves. *)
 let rec split_struct
-    ?(body_only = false) ~(names : GlobRef.t -> bool) (d : cpp_decl) :
-    cpp_decl * cpp_decl list =
-  let split_struct = split_struct ~body_only ~names in
+    ?(body_only = false) ?enclosing ~(names : GlobRef.t -> bool) (d : cpp_decl)
+    : cpp_decl * cpp_decl list =
+  let split_struct ?(enclosing = enclosing) d =
+    split_struct ~body_only ?enclosing ~names d
+  in
   match d with
   | Dtemplate (tps, cstr, inner) ->
     let inner, defs = split_struct inner in
     (Dtemplate (tps, cstr, inner), defs)
   | Dnspace (r, decls) ->
+    (* What the struct below is spelled under from outside.  Only the nearest
+       one: a member is written [Outer::inner::m], and anything further out is
+       already in scope where the definition lands. *)
+    let enclosing = match r with None -> enclosing | Some _ -> r in
     let decls, defs =
       List.fold_right
         (fun d (decls, defs) ->
-          let d, ds = split_struct d in
+          let d, ds = split_struct ~enclosing d in
           (d :: decls, ds @ defs) )
         decls ([], [])
     in
@@ -75,7 +81,10 @@ let rec split_struct
           | Some m when field_names ~body_only names f ->
             defs :=
               Dmember_def
-                {dm_owner = ds.ds_ref; dm_tparams = ds.ds_tparams; dm_field = m}
+                { dm_owner = ds.ds_ref;
+                  dm_enclosing = enclosing;
+                  dm_tparams = ds.ds_tparams;
+                  dm_field = m }
               :: !defs;
             (Fmember_decl m, vis, tag)
           | _ -> (f, vis, tag) )

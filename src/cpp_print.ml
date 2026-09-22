@@ -4426,6 +4426,27 @@ let rec decl_body = function
   | Dasgn (_, _, e) -> ([], [Sreturn (Some e)])
   | _ -> ([], [])
 
+(** The name the struct wrapping an inductive at namespace scope is written
+    under.  An inductive's wrapper is named after the inductive, capitalised;
+    anything else is spelled as itself. *)
+let nspace_wrapper_name id =
+  Table.escape_reserved_struct_name
+    ( match id with
+    | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
+    | _ -> string_of_ppcmds (pp_global Type id) )
+
+(** Whether that wrapper and the struct inside it are written as one struct
+    rather than two.  A lone non-template struct is merged into its wrapper and
+    takes the wrapper's name; a template, or a wrapper that other declarations
+    were added to, keeps both levels and so keeps its own name underneath.
+
+    Asked by {!pp_cpp_decl_raw} of the declaration and by the out-of-line
+    member definition of its owner, which must agree about how many names the
+    qualifier has. *)
+let nspace_merges ~(tparams : (template_type * Id.t) list) (id : GlobRef.t) :
+    bool =
+  tparams = [] && not (Hashtbl.mem pending_wrapper_decls (nspace_wrapper_name id))
+
 (** Pretty-print a MiniCpp declaration as C++ source. Handles templates,
     namespaces/structs, functions, assignments, enums, etc.
 
@@ -4506,12 +4527,7 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
     let ds = pp_list_stmt (fun d -> pp_cpp_decl_raw env (sub d)) decls in
     h (str "namespace " ++ str "{") ++ fnl () ++ ds ++ fnl () ++ str "};"
   | Dnspace (Some id, decls) ->
-    let struct_name_str =
-      Table.escape_reserved_struct_name
-        ( match id with
-        | GlobRef.IndRef _ -> String.capitalize_ascii (str_global Type id)
-        | _ -> string_of_ppcmds (pp_global Type id) )
-    in
+    let struct_name_str = nspace_wrapper_name id in
     let has_pending = Hashtbl.mem pending_wrapper_decls struct_name_str in
     ( match (decls, has_pending) with
     | ([Dstruct {ds_tparams; ds_constraint; _}], false) ->
@@ -4868,10 +4884,20 @@ and pp_cpp_decl_raw env (settled : Cpp_erasure.settled) =
       ++ str ";" )
   | Dstruct_fwd (tparams, r) ->
     h (pp_template_header tparams ++ str "struct " ++ pp_global Type r ++ str ";")
-  | Dmember_def {dm_owner; dm_tparams; dm_field} ->
+  | Dmember_def {dm_owner; dm_enclosing; dm_tparams; dm_field} ->
     (* The struct is behind us, so its own name is no longer in scope: the
-       member is written under the qualifier that names it from outside. *)
-    let sname = str (String.capitalize_ascii (str_global Type dm_owner)) in
+       member is written under the qualifier that names it from outside.
+
+       An inductive wrapped in a namespace struct is spelled [Outer::inner],
+       and its own name is not capitalised -- the capitalisation below is the
+       namespace struct's name, which is only the whole answer when the
+       inductive was promoted into it and has no struct of its own. *)
+    let sname =
+      match dm_enclosing with
+      | Some encl when not (nspace_merges ~tparams:dm_tparams encl) ->
+        str (nspace_wrapper_name encl ^ "::" ^ str_global Type dm_owner)
+      | _ -> str (String.capitalize_ascii (str_global Type dm_owner))
+    in
     let qual =
       match dm_tparams with
       | [] -> sname

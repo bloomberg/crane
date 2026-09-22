@@ -1106,9 +1106,15 @@ and dstruct = {
 
     [dm_tparams] are the {e struct's} template parameters, not the member's:
     they are what both the [template <...>] line and the [Owner<A>::]
-    qualifier are built from, so the two cannot disagree. *)
+    qualifier are built from, so the two cannot disagree.
+
+    [dm_enclosing] is the namespace struct the owner is written inside of,
+    when there is one.  An inductive at namespace scope is wrapped in a struct
+    named after itself, so its own name is not how the outside spells it, and
+    the definition cannot recover the qualifier from [dm_owner] alone. *)
 and dmember_def = {
   dm_owner : GlobRef.t;
+  dm_enclosing : GlobRef.t option;
   dm_tparams : (template_type * Id.t) list;
   dm_field : out_of_line_member;
 }

@@ -13,8 +13,6 @@
 
 template <typename A> struct List;
 
-struct Nat {};
-
 template <typename A> struct List {
   // TYPES
   struct Nil {};
